@@ -9,6 +9,8 @@ import {
   StartRecordingOptions,
 } from "./types";
 
+import type { RecordingFailure } from "../../bindings/RecordingFailure";
+
 export const getRecordingSnapshot = () =>
   invoke<RecordingSnapshot>("get_recording_snapshot");
 
@@ -57,4 +59,16 @@ export const startReplayBuffer = async (options: StartRecordingOptions) => {
 
 export const stopReplayBuffer = async () => {
   await invoke<null>("stop_replay_buffer");
+};
+
+/** Sent to the island each time the failure it says changes. From
+ * `src-tauri/src/recording/failures.rs`, which keeps them in turn. */
+export const RECORDING_FAILURES_EVENT = "recording://failures";
+
+/** The failure in front of any waiting, or null with none. */
+export const getRecordingFailure = () =>
+  invoke<RecordingFailure | null>("recording_failure");
+
+export const dismissRecordingFailure = async (id: number) => {
+  await invoke<null>("dismiss_recording_failure", { id });
 };

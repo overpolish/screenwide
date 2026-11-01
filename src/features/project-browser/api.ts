@@ -35,7 +35,18 @@ export const PROJECT_STILL_EVENT = "projects://still";
 export const openProjectFile = (file: string) =>
   invoke<null>("open_project_file", { file });
 
+/** Asks for a project anywhere on disk and opens it; resolves once it is
+ * open or none was picked. */
 export const openOtherProject = () => invoke<null>("open_other_project");
+
+/** Sent when a project asked for from outside the app, by Finder, Explorer
+ * or a second launch, would not open, and the browser has come out to say
+ * why. */
+export const PROJECT_OPEN_FAILED_EVENT = "projects://open-failed";
+
+/** Why each such project would not open, oldest first; each is given once. */
+export const takeProjectOpenFailures = () =>
+  invoke<string[]>("take_project_open_failures");
 
 export const revealProject = (file: string) =>
   invoke<null>("reveal_project", { file });

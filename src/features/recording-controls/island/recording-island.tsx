@@ -15,13 +15,14 @@ import { Countdown, Finishing, Starting } from "./island-live";
 import { PanelBody } from "./island-panel-body";
 import { RecordingRow } from "./island-recording";
 import { RestingRow } from "./island-resting";
-import { islandWarning } from "./island-warning";
+import { islandFailure, islandWarning } from "./island-warning";
 
 import type {
   IslandInputKind,
   IslandPanel,
   RecordingIslandProps,
 } from "./island-types";
+import type { IslandWarning } from "./island-warning";
 import type { IslandAnchor } from "../../../primitives/island/island-geometry";
 
 /** Each part hangs under the controls that open it. */
@@ -33,6 +34,22 @@ const ANCHORS: Record<IslandPanel, IslandAnchor> = {
   source: "start",
   systemAudio: "start",
 };
+
+/** A warning or a failure on a line of its own, its action at the end. */
+function NoticeLine({ notice }: { notice: IslandWarning }) {
+  return (
+    <Alert
+      action={
+        notice.action ? (
+          <Button onPress={notice.onAction}>{notice.action}</Button>
+        ) : undefined
+      }
+      color="error"
+    >
+      {notice.message}
+    </Alert>
+  );
+}
 
 // The recording controls on the island: what is recorded, the inputs, a
 // screenshot and Record, with what will be recorded shown beneath them. Any
@@ -82,7 +99,14 @@ export function RecordingIsland(props: RecordingIslandProps) {
     if (!isOn) setPanel((current) => (current === kind ? "source" : current));
   };
 
-  const warning = phase === "idle" ? islandWarning(props, setPanel) : undefined;
+  // A failure is the newer news, so it goes before a warning, which comes
+  // back once the failure is dismissed if it still holds.
+  const failure = islandFailure(props);
+  const notice =
+    phase === "idle" ? (failure ?? islandWarning(props, setPanel)) : undefined;
+  const noticeKey = props.failure
+    ? `failure-${String(props.failure.id)}`
+    : "warning";
   const isLive = phase === "recording" || phase === "paused";
   const showsControls = phase === "paused" || isHovered;
 
@@ -102,35 +126,26 @@ export function RecordingIsland(props: RecordingIslandProps) {
     anchor = ANCHORS[panel];
     section = (
       <>
-        {/* What stops recording is said above the source. The parts below
-            slide to make room for it, on the island's own curve, rather
-            than jumping while the black around them grows. It takes the
-            source's width rather than setting its own, so a long message
-            wraps instead of widening the island. */}
+        {/* What stops recording, or what just failed, is said above the
+            source. The parts below slide to make room for it, on the
+            island's own curve, rather than jumping while the black around
+            them grows. It takes the source's width rather than setting its
+            own, so a long message wraps instead of widening the island. */}
         <AnimatePresence initial={false} mode="popLayout">
-          {warning && panel === "source" ? (
+          {notice && panel === "source" ? (
             <motion.div
               animate={{ opacity: 1 }}
               className="w-0 min-w-full"
               exit={{ opacity: 0 }}
               initial={{ opacity: 0 }}
-              key="warning"
-              role="status"
+              key={noticeKey}
+              role={failure ? "alert" : "status"}
               transition={{
                 duration: motionDurations.state,
                 ease: motionEasings.out,
               }}
             >
-              <Alert
-                action={
-                  warning.action ? (
-                    <Button onPress={warning.onAction}>{warning.action}</Button>
-                  ) : undefined
-                }
-                color="error"
-              >
-                {warning.message}
-              </Alert>
+              <NoticeLine notice={notice} />
             </motion.div>
           ) : null}
         </AnimatePresence>
@@ -173,6 +188,15 @@ export function RecordingIsland(props: RecordingIslandProps) {
       below = props.annotate.tools;
       section = props.annotate.options;
       anchor = props.annotate.anchor;
+    } else if (failure) {
+      // A failure while recording, such as the replay buffer stopping,
+      // hangs under the row at a reading width rather than waiting for the
+      // recording to end.
+      section = (
+        <div className="w-max max-w-80" role="alert">
+          <NoticeLine notice={failure} />
+        </div>
+      );
     }
   }
 

@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 pub(crate) mod commands;
+pub(crate) mod failures;
 pub(crate) mod replay;
 mod session;
 pub(crate) mod sleep;

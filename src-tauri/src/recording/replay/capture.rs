@@ -77,7 +77,7 @@ pub(super) fn start(
       on_failure: Arc::new(move |reason: String| {
         super::report(
           &reporter,
-          &screenwide_i18n::t!("alert-replay-stopped"),
+          &screenwide_i18n::t!("recording-controls-island-replay-stopped"),
           &reason,
         );
         let app = reporter.clone();

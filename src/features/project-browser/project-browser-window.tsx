@@ -35,6 +35,7 @@ import {
   type ProjectLocation,
   type ProjectSummary,
 } from "./types";
+import { opening, useOpenFailures } from "./use-open-failures";
 import { useProjectCopy } from "./use-project-copy";
 import { useScrubStrips } from "./use-scrub-strips";
 import { useUndoDelete } from "./use-undo-delete";
@@ -164,6 +165,7 @@ export function ProjectBrowserWindow() {
   const copy = useProjectCopy(run);
   const scrub = useScrubStrips();
   forgetStripRef.current = scrub.forget;
+  useOpenFailures(setError);
   const titleOf = (file: string | undefined) =>
     projects?.find((project) => project.file === file)?.title ?? "";
 
@@ -230,10 +232,10 @@ export function ProjectBrowserWindow() {
             }
       }
       onOpen={(file) => {
-        run(openProjectFile(file));
+        run(opening(openProjectFile(file)));
       }}
       onOpenFile={() => {
-        run(openOtherProject());
+        run(opening(openOtherProject()));
       }}
       onOpenLocation={(path) => {
         run(openProjectLocation(path));

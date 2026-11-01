@@ -19,10 +19,16 @@ pub async fn open_project_file(app: AppHandle, file: PathBuf) -> Result<(), Stri
     .map_err(|error| error.to_string())?
 }
 
-/// Picks a project from anywhere on disk, for one the browser does not list.
+/// Picks a project from anywhere on disk, for one the browser does not list,
+/// and opens it. A failure is the browser's to show, as for a listed one.
 #[tauri::command]
-pub fn open_other_project(app: AppHandle) {
-  crate::editor::choose_and_open_project(&app);
+pub async fn open_other_project(app: AppHandle) -> Result<(), String> {
+  tauri::async_runtime::spawn_blocking(move || match crate::editor::choose_project(&app) {
+    Some(file) => crate::editor::open_project(&app, &file),
+    None => Ok(()),
+  })
+  .await
+  .map_err(|error| error.to_string())?
 }
 
 /// Shows the project's folder, selected, in Finder or Explorer.

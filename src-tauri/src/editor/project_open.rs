@@ -8,37 +8,37 @@ use super::recording_sidecar::{valid_cursor, valid_keyboard};
 use super::*;
 use screenwide_export::media_preview;
 
-/// Asks for a project and opens it.
-pub fn choose_and_open_project(app: &AppHandle) {
-  let app = app.clone();
-  tauri::async_runtime::spawn_blocking(move || {
-    use tauri_plugin_dialog::DialogExt;
-    let mut dialog = app
-      .dialog()
-      .file()
-      .set_title(screenwide_i18n::t!("dialog-open-project"))
-      .add_filter(
-        screenwide_i18n::t!("dialog-project-filter"),
-        &[screenwide_project::EXTENSION],
-      );
-    if let Ok(directory) = crate::projects_folder::projects_directory(&app) {
-      dialog = dialog.set_directory(directory);
-    }
-    let Some(file) = dialog
-      .blocking_pick_file()
-      .and_then(|path| path.into_path().ok())
-    else {
-      return;
-    };
-    open_and_report(&app, &file);
-  });
+/// Asks for a project anywhere on disk. Blocks until the user picks one or
+/// cancels.
+pub fn choose_project(app: &AppHandle) -> Option<PathBuf> {
+  use tauri_plugin_dialog::DialogExt;
+  let mut dialog = app
+    .dialog()
+    .file()
+    .set_title(screenwide_i18n::t!("dialog-open-project"))
+    .add_filter(
+      screenwide_i18n::t!("dialog-project-filter"),
+      &[screenwide_project::EXTENSION],
+    );
+  if let Ok(directory) = crate::projects_folder::projects_directory(app) {
+    dialog = dialog.set_directory(directory);
+  }
+  dialog
+    .blocking_pick_file()
+    .and_then(|path| path.into_path().ok())
 }
 
 /// Opens `file` off the calling thread: for opens asked for from outside the
-/// app, by Finder, Explorer or a second launch.
+/// app, by Finder, Explorer or a second launch. A project that cannot be
+/// opened brings the browser out to say why, since nothing else may be on
+/// screen to say it.
 pub fn open_project_detached(app: &AppHandle, file: PathBuf) {
   let app = app.clone();
-  tauri::async_runtime::spawn_blocking(move || open_and_report(&app, &file));
+  tauri::async_runtime::spawn_blocking(move || {
+    if let Err(error) = open_project(&app, &file) {
+      crate::project_browser::open_failures::report(&app, error);
+    }
+  });
 }
 
 /// The project a launch was asked to open: the last argument naming a
@@ -60,18 +60,6 @@ pub fn is_project_file(path: &Path) -> bool {
   path
     .extension()
     .is_some_and(|extension| extension.eq_ignore_ascii_case(screenwide_project::EXTENSION))
-}
-
-/// A project that cannot be opened says why in an alert, since nothing else
-/// is on screen to say it.
-fn open_and_report(app: &AppHandle, file: &Path) {
-  if let Err(error) = open_project(app, file) {
-    crate::alert::show(
-      app,
-      &screenwide_i18n::t!("alert-project-open-failed"),
-      &error,
-    );
-  }
 }
 
 /// Opens the project whose manifest is `file` in the editor its kind uses, in

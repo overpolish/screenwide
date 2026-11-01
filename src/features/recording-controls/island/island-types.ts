@@ -69,6 +69,10 @@ export type IslandMoment = {
   noteMs: number | null;
 };
 
+/** Something that failed, said until it is dismissed: what failed, in the
+ * user's language, and why, in English. `id` tells one from the next. */
+export type IslandFailure = { id: number; message: string; title: string };
+
 /** The replay buffer, where it can run: off, on, or still starting. */
 export type IslandReplay = { status: "off" | "on" | "starting" };
 
@@ -110,6 +114,9 @@ export type RecordingIslandProps = {
   countdown?: number;
   /** Seconds recorded so far. */
   elapsed?: number;
+  /** The failure in front of any waiting, said on its own line: above what
+   * will be recorded, in place of a warning, or under the recording's row. */
+  failure?: IslandFailure | null;
   /** While recording, shows what is recorded from: the confidence checks
    * setting. */
   hasConfidenceChecks?: boolean;
@@ -132,6 +139,8 @@ export type RecordingIslandProps = {
   onCancelWindowPick?: () => void;
   onChooseWindow?: () => void;
   onDiscard?: () => void;
+  /** Failure `id` has been read; the next, if any, takes its place. */
+  onDismissFailure?: (id: number) => void;
   onDisplayChange?: (id: number) => void;
   /** The island has tucked itself away after `isShown` turned false. */
   onHidden?: () => void;

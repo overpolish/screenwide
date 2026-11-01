@@ -64,17 +64,18 @@ pub(super) fn emit_error(app: &AppHandle, phase: &'static str, message: &str) {
 }
 
 /// A failure the user has to be told about: emitted as `emit_error` does, and
-/// said in an alert. Rejections by the state machine, such as a second Stop
-/// or a Pause while idle, go through `emit_error` alone, since nothing failed.
+/// said on the recording island. Rejections by the state machine, such as a
+/// second Stop or a Pause while idle, go through `emit_error` alone, since
+/// nothing failed.
 pub(super) fn report_failure(app: &AppHandle, phase: &'static str, message: &str) {
   emit_error(app, phase, message);
   let title = match phase {
-    "start" => screenwide_i18n::t!("alert-recording-start-failed"),
-    "capture" => screenwide_i18n::t!("alert-recording-capture-failed"),
-    "resume" => screenwide_i18n::t!("alert-recording-resume-failed"),
-    _ => screenwide_i18n::t!("alert-recording-finish-failed"),
+    "start" => screenwide_i18n::t!("recording-controls-island-start-failed"),
+    "capture" => screenwide_i18n::t!("recording-controls-island-capture-failed"),
+    "resume" => screenwide_i18n::t!("recording-controls-island-resume-failed"),
+    _ => screenwide_i18n::t!("recording-controls-island-finish-failed"),
   };
-  crate::alert::show(app, &title, message);
+  super::failures::report(app, &title, message);
 }
 
 pub(super) fn require_status(

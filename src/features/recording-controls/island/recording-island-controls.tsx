@@ -44,6 +44,7 @@ import { RecordingIsland } from "./recording-island";
 import { regionDisplays } from "./region-displays";
 import { useIslandInputs } from "./use-island-inputs";
 import { useIslandSources } from "./use-island-sources";
+import { useRecordingFailure } from "./use-recording-failure";
 import {
   cancelWindowPick,
   changeRecordingMode,
@@ -158,6 +159,7 @@ export function RecordingIslandControls({
   // Not gated on an idle recording as Record is: the buffer runs beside a
   // recording, and the tray offers it during one.
   const { replay, setReplayOn } = useReplayBuffer(canStartRecording(readiness));
+  const failures = useRecordingFailure();
 
   return (
     <RecordingIsland
@@ -194,6 +196,7 @@ export function RecordingIslandControls({
         thumbnail: sources.monitorThumbnails[display.id],
       }))}
       elapsed={elapsedMs / 1_000}
+      failure={failures.failure}
       hasConfidenceChecks={hasConfidenceChecks}
       isScreenLocked={readiness.isScreenLocked}
       isShown={island.isShown}
@@ -211,6 +214,7 @@ export function RecordingIslandControls({
       onDiscard={() => {
         cancelRecording().catch(report("discard"));
       }}
+      onDismissFailure={failures.dismiss}
       onDisplayChange={(id) => {
         const display = displays.find((candidate) => candidate.id === id);
         if (display) sources.setSelectedMonitor(display);

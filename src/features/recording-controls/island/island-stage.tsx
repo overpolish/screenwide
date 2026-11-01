@@ -14,13 +14,16 @@ import {
 } from "./island-preview";
 import {
   stageMicrophone,
+  stageWrittenBytes,
   useStageCamera,
+  useStageFailures,
   useStageReplay,
 } from "./island-stage-state";
 import { RecordingIsland } from "./recording-island";
 
 import type {
   IslandDisplay,
+  IslandFailure,
   IslandInput,
   IslandInputKind,
   IslandMode,
@@ -63,6 +66,8 @@ export type IslandStageProps = Pick<
   chosenWindow?: IslandWindow;
   /** The displays to choose from; two when not given. */
   displays?: IslandDisplay[];
+  /** Failures Rust would keep, said in turn as OK puts each away. */
+  failures?: IslandFailure[];
   /** The confidence checks setting: shows what is recorded from. */
   hasConfidenceChecks?: boolean;
   /** The countdown setting: Record counts down before starting. */
@@ -101,6 +106,7 @@ export function IslandStage(props: IslandStageProps) {
   const [display, setDisplay] = useState(1);
   const [chosenWindow, setChosenWindow] = useState(props.chosenWindow);
   const [moment, setMoment] = useState(props.moment ?? null);
+  const failures = useStageFailures(props.failures);
   const camera = useStageCamera(
     props.isCameraFlipped,
     props.isCameraLoading,
@@ -205,6 +211,7 @@ export function IslandStage(props: IslandStageProps) {
       >
         <RecordingIsland
           {...camera}
+          {...failures}
           annotate={props.annotate}
           camera={inputs.camera}
           chosenRegion={props.chosenRegion}
@@ -284,13 +291,7 @@ export function IslandStage(props: IslandStageProps) {
             level: level("systemAudio", props.systemAudioLevel),
           }}
           windowPick={props.windowPick}
-          writtenBytes={
-            props.showsSize
-              ? elapsed < 1
-                ? null
-                : Math.round(elapsed * 2_600_000)
-              : undefined
-          }
+          writtenBytes={stageWrittenBytes(props.showsSize, elapsed)}
         />
       </div>
     </div>

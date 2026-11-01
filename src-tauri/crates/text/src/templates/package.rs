@@ -5,7 +5,7 @@
 //! its manifest at the top and the fonts it brings, with their licences, in
 //! `fonts/`. Only those files travel: anything else in a folder or a zip is
 //! left behind, so a package can carry nothing the app would not read.
-//! Errors are in English, for an alert's detail.
+//! Errors are in English, for the reason after a failure's title.
 
 mod zip_files;
 

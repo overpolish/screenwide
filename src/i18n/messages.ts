@@ -5,19 +5,6 @@
 
 /** Every message, with the placeholders it takes; `null` for none. */
 export type Messages = {
-  "alert-dismiss": null;
-  "alert-project-open-failed": null;
-  "alert-recording-capture-failed": null;
-  "alert-recording-finish-failed": null;
-  "alert-recording-resume-failed": null;
-  "alert-recording-start-failed": null;
-  "alert-replay-restart-failed": null;
-  "alert-replay-save-failed": null;
-  "alert-replay-start-failed": null;
-  "alert-replay-stopped": null;
-  "alert-template-export-failed": null;
-  "alert-template-import-failed": null;
-  "alert-template-remove-failed": null;
   "annotate-clear": null;
   "annotate-clear-label": null;
   "annotate-close-label": null;
@@ -611,6 +598,9 @@ export type Messages = {
   "editor-scene-side-by-side": null;
   "editor-scene-stacked": null;
   "editor-screenshot-preview": null;
+  "editor-template-export-failed": { reason: string | number };
+  "editor-template-import-failed": { reason: string | number };
+  "editor-template-remove-failed": { reason: string | number };
   "editor-timeline-annotation": { tool: string | number };
   "editor-timeline-annotation-pinned": { tool: string | number };
   "editor-timeline-audio-track": { number: string | number };
@@ -756,6 +746,7 @@ export type Messages = {
   "project-browser-name-unusable": null;
   "project-browser-no-results": { query: string | number };
   "project-browser-no-results-title": null;
+  "project-browser-open-failed": { reason: string | number };
   "project-browser-open-file": null;
   "project-browser-open-in-file-manager": { platform: string | number };
   "project-browser-open-project": { title: string | number };
@@ -801,10 +792,17 @@ export type Messages = {
   "recording-controls-island": null;
   "recording-controls-island-camera-locked": null;
   "recording-controls-island-cancel-pick": null;
+  "recording-controls-island-capture-failed": null;
   "recording-controls-island-change-window": null;
   "recording-controls-island-choose-another": null;
   "recording-controls-island-choose-window": null;
+  "recording-controls-island-dismiss-failure": null;
   "recording-controls-island-elapsed": { time: string | number };
+  "recording-controls-island-failure": {
+    reason: string | number;
+    title: string | number;
+  };
+  "recording-controls-island-finish-failed": null;
   "recording-controls-island-input-options": { input: string | number };
   "recording-controls-island-microphone-locked": null;
   "recording-controls-island-mode-none": null;
@@ -819,8 +817,14 @@ export type Messages = {
     width: string | number;
   };
   "recording-controls-island-replay": null;
+  "recording-controls-island-replay-restart-failed": null;
+  "recording-controls-island-replay-save-failed": null;
+  "recording-controls-island-replay-start-failed": null;
+  "recording-controls-island-replay-stopped": null;
+  "recording-controls-island-resume-failed": null;
   "recording-controls-island-screen-locked": null;
   "recording-controls-island-source": null;
+  "recording-controls-island-start-failed": null;
   "recording-controls-measuring-size": null;
   "recording-controls-microphone": null;
   "recording-controls-microphone-level": null;

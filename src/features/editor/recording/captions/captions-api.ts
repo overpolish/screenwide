@@ -106,8 +106,9 @@ export const addTextTemplateFonts = async () => {
 };
 
 /** Asks for a template's zip or its folder's manifest and makes it one of
- * yours: the template, or nothing where none was imported. The app says
- * why in an alert where one could not be. */
+ * yours: the template, or nothing where none was picked. Each of these
+ * rejects with a whole translated sentence, for an error line, where the
+ * template could not be imported, exported or removed. */
 export const importTextTemplate = () =>
   invoke<TextTemplate | null>("import_text_template");
 

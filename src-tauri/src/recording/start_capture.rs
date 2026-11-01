@@ -24,6 +24,9 @@ pub fn start(app: &AppHandle, options: StartRecordingOptions) -> Result<(), Stri
     crate::editor::release_recording_workspace(app);
     return Err(error);
   }
+  // What the island said before belongs to an earlier attempt; anything that
+  // fails this time says so again.
+  super::failures::clear(app);
   let generation = state(app).begin_start();
   let countdown_seconds = crate::settings::current(app).recording_countdown_seconds;
 

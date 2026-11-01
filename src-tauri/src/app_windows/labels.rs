@@ -16,8 +16,6 @@ pub enum WindowLabel {
   /// editor cannot take the other's panel away.
   ToolPanelRecording,
   ToolPanelScreenshot,
-  /// The shared alert that reports a failure, nobody's child.
-  Alert,
   /// The shared tooltip, a floating panel that describes whatever is hovered.
   Tooltip,
   #[cfg(target_os = "macos")]
@@ -46,7 +44,6 @@ impl WindowLabel {
     Self::ExportScreenshot,
     Self::ToolPanelRecording,
     Self::ToolPanelScreenshot,
-    Self::Alert,
     Self::Tooltip,
     #[cfg(target_os = "macos")]
     Self::Permissions,
@@ -71,7 +68,6 @@ impl WindowLabel {
       Self::ExportScreenshot => "export-screenshot",
       Self::ToolPanelRecording => "tool-panel-recording",
       Self::ToolPanelScreenshot => "tool-panel-screenshot",
-      Self::Alert => "alert",
       Self::Tooltip => "tooltip",
       #[cfg(target_os = "macos")]
       Self::Permissions => "permissions",
@@ -111,7 +107,7 @@ impl WindowLabel {
       Self::RegionSelector => t!("window-titles-region-selector"),
       Self::StandaloneListbox => t!("window-titles-listbox"),
       Self::Update => t!("window-titles-update"),
-      Self::Alert | Self::Tooltip | Self::Annotate | Self::Ruler | Self::TextRecognition => {
+      Self::Tooltip | Self::Annotate | Self::Ruler | Self::TextRecognition => {
         t!("window-titles-app")
       }
     }

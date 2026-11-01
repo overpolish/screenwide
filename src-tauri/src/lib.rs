@@ -1,6 +1,5 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
-mod alert;
 mod annotate;
 mod app_accent;
 mod app_locale;
@@ -55,7 +54,8 @@ pub fn run() {
     .manage(annotate::AnnotateState::default())
     .manage(audio_preview::AudioPreviewState::default())
     .manage(camera_preview::CameraPreviewState::default())
-    .manage(alert::AlertState::default())
+    .manage(project_browser::open_failures::OpenFailures::default())
+    .manage(recording::failures::RecordingFailures::default())
     .manage(editor::EditorState::default())
     .manage(editor::recording_preview_player::RecordingPreviewPlayerState::default())
     .manage(editor::screenshot_preview::ScreenshotPreviewState::default())

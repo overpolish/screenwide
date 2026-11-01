@@ -4,9 +4,10 @@
 //! Templates in and out of the app: one imported from a zip or a
 //! template's folder into yours, any exported as a zip to share, and one of
 //! yours removed. Each change to yours is told to every window, which asks
-//! for the templates again. A failure says why in an alert, so the panel
-//! has nothing to report itself. And the fonts yours bring, for the
-//! webviews to name families in.
+//! for the templates again. A failure is the asking surface's to show, as an
+//! error line: each command fails with a whole translated sentence saying
+//! what failed, followed by why. And the fonts yours bring, for the webviews
+//! to name families in.
 
 use std::path::{Path, PathBuf};
 
@@ -80,7 +81,7 @@ fn import(app: &AppHandle, path: &Path) -> Result<TextTemplate, String> {
 
 /// Asks for a template's zip, or its folder's manifest, and makes it one of
 /// yours, in place of any of yours with its id. Gives the template, or
-/// nothing where none was picked or it could not be imported.
+/// nothing where none was picked.
 #[tauri::command]
 pub async fn import_text_template(
   app: AppHandle,
@@ -89,7 +90,7 @@ pub async fn import_text_template(
   tauri::async_runtime::spawn_blocking(move || {
     // Parented to the asking window, so the sheet does not attach to some
     // hidden window instead.
-    let picked = app
+    let Some(picked) = app
       .dialog()
       .file()
       .set_title(screenwide_i18n::t!("dialog-import-template"))
@@ -99,24 +100,17 @@ pub async fn import_text_template(
       )
       .set_parent(&window)
       .blocking_pick_file()
-      .and_then(|path| path.into_path().ok())?;
-    match import(&app, &picked) {
-      Ok(template) => {
-        let _ = app.emit(TEXT_TEMPLATES_EVENT, ());
-        Some(template)
-      }
-      Err(error) => {
-        crate::alert::show(
-          &app,
-          &screenwide_i18n::t!("alert-template-import-failed"),
-          &error,
-        );
-        None
-      }
-    }
+      .and_then(|path| path.into_path().ok())
+    else {
+      return Ok(None);
+    };
+    let template = import(&app, &picked)
+      .map_err(|reason| screenwide_i18n::t!("editor-template-import-failed", reason = reason))?;
+    let _ = app.emit(TEXT_TEMPLATES_EVENT, ());
+    Ok(Some(template))
   })
   .await
-  .map_err(|error| error.to_string())
+  .map_err(|error| error.to_string())?
 }
 
 /// Asks where to save template `id` as a zip, and saves it there: one of
@@ -128,17 +122,9 @@ pub async fn export_text_template(
   id: TextTemplateId,
 ) -> Result<(), String> {
   tauri::async_runtime::spawn_blocking(move || {
-    let package = match TemplatePackage::of(&id) {
-      Ok(package) => package,
-      Err(error) => {
-        crate::alert::show(
-          &app,
-          &screenwide_i18n::t!("alert-template-export-failed"),
-          &error,
-        );
-        return;
-      }
-    };
+    let failed =
+      |reason: String| screenwide_i18n::t!("editor-template-export-failed", reason = reason);
+    let package = TemplatePackage::of(&id).map_err(failed)?;
     let Some(destination) = app
       .dialog()
       .file()
@@ -149,18 +135,12 @@ pub async fn export_text_template(
       .blocking_save_file()
       .and_then(|path| path.into_path().ok())
     else {
-      return;
+      return Ok(());
     };
-    if let Err(error) = package.write_zip(&destination) {
-      crate::alert::show(
-        &app,
-        &screenwide_i18n::t!("alert-template-export-failed"),
-        &error,
-      );
-    }
+    package.write_zip(&destination).map_err(failed)
   })
   .await
-  .map_err(|error| error.to_string())
+  .map_err(|error| error.to_string())?
 }
 
 /// Moves your template `id` to the Trash, or the Recycle Bin. Captions in
@@ -168,17 +148,12 @@ pub async fn export_text_template(
 #[tauri::command]
 pub async fn remove_text_template(app: AppHandle, id: TextTemplateId) -> Result<(), String> {
   tauri::async_runtime::spawn_blocking(move || {
-    match user_folder(&app).and_then(|folder| remove_user_template(&id, &folder)) {
-      Ok(()) => {
-        let _ = app.emit(TEXT_TEMPLATES_EVENT, ());
-      }
-      Err(error) => crate::alert::show(
-        &app,
-        &screenwide_i18n::t!("alert-template-remove-failed"),
-        &error,
-      ),
-    }
+    user_folder(&app)
+      .and_then(|folder| remove_user_template(&id, &folder))
+      .map_err(|reason| screenwide_i18n::t!("editor-template-remove-failed", reason = reason))?;
+    let _ = app.emit(TEXT_TEMPLATES_EVENT, ());
+    Ok(())
   })
   .await
-  .map_err(|error| error.to_string())
+  .map_err(|error| error.to_string())?
 }

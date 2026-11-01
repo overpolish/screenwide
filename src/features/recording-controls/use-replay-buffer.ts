@@ -11,7 +11,6 @@ import { startRecordingOptions } from "./recording-request";
 import { initialReplaySnapshot, ReplaySnapshot } from "./types";
 
 const REPLAY_STATE_EVENT = "replay://state";
-const REPLAY_ERROR_EVENT = "replay://error";
 const REPLAY_START_REQUESTED_EVENT = "replay://start-requested";
 
 const turnOn = () => startReplayBuffer(startRecordingOptions());
@@ -45,14 +44,6 @@ export function useReplayBuffer(canStart: boolean) {
   useEffect(() => {
     const unlisteners: UnlistenFn[] = [];
     let disposed = false;
-    // A tray start still in flight. Rust reports a failed start before the
-    // state that follows it, so the error always finds this still set.
-    let trayStartPending = false;
-    const failTrayStart = () => {
-      if (!trayStartPending) return;
-      trayStartPending = false;
-      revealControls();
-    };
     const keep = (listener: UnlistenFn) => {
       if (disposed) listener();
       else unlisteners.push(listener);
@@ -60,25 +51,19 @@ export function useReplayBuffer(canStart: boolean) {
 
     void listen<ReplaySnapshot>(REPLAY_STATE_EVENT, ({ payload }) => {
       setSnapshot(payload);
-      if (payload.status !== "starting") trayStartPending = false;
-    }).then(keep);
-    // Rust says what went wrong in an alert; this window shows itself for a
-    // failed tray start so the input warnings sit beside it.
-    void listen<{ message: string }>(REPLAY_ERROR_EVENT, ({ payload }) => {
-      console.error(`Replay buffer: ${payload.message}`);
-      failTrayStart();
     }).then(keep);
     // Readiness only sees missing devices while the controls are open, so a
-    // start that passes it can still fail in Rust; both paths show them.
+    // start that passes it can still fail in Rust, which says why on the
+    // island and brings it out. A start Rust refuses outright shows the
+    // controls here instead.
     void listen(REPLAY_START_REQUESTED_EVENT, () => {
       if (!canStartRef.current) {
         revealControls();
         return;
       }
-      trayStartPending = true;
       turnOn().catch((error: unknown) => {
         console.error("Could not turn on the replay buffer", error);
-        failTrayStart();
+        revealControls();
       });
     }).then(keep);
     getReplaySnapshot()

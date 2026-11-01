@@ -51,7 +51,7 @@ pub use project_name::rename_project;
 #[cfg(target_os = "macos")]
 pub use project_open::is_project_file;
 pub use project_open::{
-  choose_and_open_project, open_kind, open_project, open_project_detached, project_argument,
+  choose_project, open_kind, open_project, open_project_detached, project_argument,
 };
 pub use screenshot_project::present_screenshot;
 pub(crate) mod project_look;

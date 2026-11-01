@@ -102,3 +102,20 @@ recording-controls-island-choose-window = Choose a window
 # Stops picking a window by clicking it, keeping the one chosen before.
 recording-controls-island-cancel-pick = Cancel
 recording-controls-island-record-options = Recording options
+
+## A failure the island says on a line of its own, until it is dismissed. The
+## reason after the title stays in English: it comes from the capture layers.
+
+recording-controls-island-start-failed = Recording could not start
+recording-controls-island-capture-failed = Recording ran into a problem
+recording-controls-island-resume-failed = Recording could not resume
+recording-controls-island-finish-failed = Recording could not finish
+recording-controls-island-replay-start-failed = Replay buffer could not turn on
+# After the computer wakes from sleep.
+recording-controls-island-replay-restart-failed = Replay buffer could not turn back on
+recording-controls-island-replay-stopped = Replay buffer stopped
+recording-controls-island-replay-save-failed = Replay could not be saved
+# The line itself: what failed, then why.
+recording-controls-island-failure = { $title }: { $reason }
+# Puts the failure away; the next one, if any, takes its place.
+recording-controls-island-dismiss-failure = OK

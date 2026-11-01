@@ -151,3 +151,5 @@ project-browser-deleted =
        *[other] Moved { $count } projects to Recently Deleted.
     }
 project-browser-undo = Undo
+# A project that would not open. The reason stays in English.
+project-browser-open-failed = Project could not open: { $reason }

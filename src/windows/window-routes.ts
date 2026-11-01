@@ -15,10 +15,6 @@ type WindowLoader = () => Promise<ComponentType>;
  * is allowed in React there, so it loads nothing at all.
  */
 const WINDOW_ROUTES: Record<string, WindowLoader | null> = {
-  "/alert": () =>
-    import("../features/alert/alert-window").then(
-      (module) => module.AlertWindow,
-    ),
   "/annotate": null,
   "/editor": () =>
     import("./editor-entry").then((module) => module.EditorEntry),

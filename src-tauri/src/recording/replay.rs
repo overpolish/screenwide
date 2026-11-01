@@ -41,7 +41,6 @@ use screenwide_capture::StartRecordingOptions;
 pub const REPLAY_LENGTH: Duration = Duration::from_secs(30);
 
 const REPLAY_STATE_EVENT: &str = "replay://state";
-const REPLAY_ERROR_EVENT: &str = "replay://error";
 
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq, Serialize, TS)]
 #[serde(rename_all = "camelCase")]
@@ -63,12 +62,6 @@ pub struct ReplaySnapshot {
   /// A clip is being written.
   pub saving: bool,
   pub status: ReplayStatus,
-}
-
-#[derive(Clone, Serialize)]
-#[serde(rename_all = "camelCase")]
-struct ReplayErrorPayload {
-  message: String,
 }
 
 #[derive(Default)]
@@ -138,18 +131,12 @@ fn update<T>(app: &AppHandle, change: impl FnOnce(&mut Inner) -> T) -> T {
   result
 }
 
-/// Tells the user the buffer failed: as an event for the island, and in an alert
-/// titled `title`, since the buffer may have been started from the tray or by
-/// a wake with nothing else on screen.
+/// Tells the user the buffer failed, on the recording island under the
+/// failure `title`. The buffer may have been started from the tray or by a
+/// wake with nothing else on screen, so the island comes out for it.
 fn report(app: &AppHandle, title: &str, message: &str) {
   eprintln!("Replay buffer: {message}");
-  let _ = app.emit(
-    REPLAY_ERROR_EVENT,
-    ReplayErrorPayload {
-      message: message.to_owned(),
-    },
-  );
-  crate::alert::show(app, title, message);
+  super::failures::report(app, title, message);
 }
 
 /// Starts the buffer with `options`, the recording controls' settings as they are
@@ -188,7 +175,7 @@ pub fn start(app: &AppHandle, options: StartRecordingOptions) -> Result<(), Stri
             inner.options = None;
             report(
               &app,
-              &screenwide_i18n::t!("alert-replay-start-failed"),
+              &screenwide_i18n::t!("recording-controls-island-replay-start-failed"),
               &error,
             );
             None
@@ -256,7 +243,7 @@ pub fn save(app: &AppHandle) -> Result<(), String> {
       if let Err(error) = capture::save(&app, &running, at) {
         report(
           &app,
-          &screenwide_i18n::t!("alert-replay-save-failed"),
+          &screenwide_i18n::t!("recording-controls-island-replay-save-failed"),
           &error,
         );
       }

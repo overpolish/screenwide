@@ -90,3 +90,23 @@ export function islandWarning(
     },
   };
 }
+
+/** The failure in front, as the island says it: what failed, then why, with
+ * OK to put it away. Unlike a warning it is no condition that clears
+ * itself, so it stays until it is dismissed or a new recording starts. */
+export function islandFailure({
+  failure,
+  onDismissFailure,
+}: RecordingIslandProps): IslandWarning | undefined {
+  if (!failure) return undefined;
+  return {
+    action: t("recording-controls-island-dismiss-failure"),
+    message: t("recording-controls-island-failure", {
+      reason: failure.message,
+      title: failure.title,
+    }),
+    onAction: () => {
+      onDismissFailure?.(failure.id);
+    },
+  };
+}

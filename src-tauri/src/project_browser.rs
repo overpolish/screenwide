@@ -11,6 +11,7 @@
 pub(crate) mod actions;
 pub(crate) mod copying;
 mod drives;
+pub(crate) mod open_failures;
 pub(crate) mod recently_deleted;
 pub(crate) mod scrub;
 

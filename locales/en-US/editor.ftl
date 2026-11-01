@@ -95,3 +95,9 @@ editor-eta-days =
     }
 editor-eta-hours = { $count } hr
 editor-eta-minutes = { $count } min
+
+## Your caption templates, in and out of the app. The reason stays in English.
+
+editor-template-import-failed = Template could not be imported: { $reason }
+editor-template-export-failed = Template could not be exported: { $reason }
+editor-template-remove-failed = Template could not be removed: { $reason }

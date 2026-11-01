@@ -9,15 +9,16 @@ import { CameraThumbnail } from "../../recording-inputs/camera-thumbnail";
 import { SamplePicture } from "./island-stage-picture";
 
 import type {
+  IslandFailure,
   IslandInput,
   IslandInputKind,
   IslandReplay,
 } from "./island-types";
 
 // The stage's stand-ins for what the app would drive: the camera's picture,
-// which follows Flip, and the replay buffer, off unless a story says
-// otherwise, which turned on starts for a moment before it is on, as the
-// real buffer does while it sets up its capture.
+// which follows Flip; the replay buffer, off unless a story says otherwise,
+// which turned on starts for a moment before it is on, as the real buffer
+// does while it sets up its capture; and the failures Rust would keep.
 
 const STARTING_MS = 900;
 
@@ -93,3 +94,27 @@ export function stageMicrophone({
         : inputs.microphone.warning,
   };
 }
+
+/** Failures said in turn, as Rust keeps them: OK puts the one in front
+ * away and the next takes its place. */
+export function useStageFailures(initial: IslandFailure[] | undefined) {
+  const [failures, setFailures] = useState(initial ?? []);
+  return {
+    failure: failures.length > 0 ? failures[0] : null,
+    onDismissFailure: (id: number) => {
+      setFailures((current) => current.filter((failure) => failure.id !== id));
+    },
+  };
+}
+
+/** The recording's size so far, growing as the stage records: null until
+ * first measured, and none when the size setting is off. */
+export const stageWrittenBytes = (
+  showsSize: boolean | undefined,
+  elapsed: number,
+) =>
+  showsSize
+    ? elapsed < 1
+      ? null
+      : Math.round(elapsed * 2_600_000)
+    : undefined;

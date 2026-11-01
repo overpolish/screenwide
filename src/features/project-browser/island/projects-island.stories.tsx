@@ -5,6 +5,7 @@ import { userEvent, within } from "storybook/test";
 
 import { projects } from "../project-browser-fixtures";
 import { projectBrowserMeta } from "../project-browser-story-meta";
+import { openFailure } from "../use-open-failures";
 
 import type { ProjectBrowser } from "../project-browser";
 import type { Meta, StoryObj } from "@storybook/react-vite";
@@ -53,6 +54,23 @@ export const Deleted: Story = {
 
 export const ActionFailed: Story = {
   args: { error: "That name cannot be used" },
+};
+
+export const ProjectWouldNotOpen: Story = {
+  args: {
+    error: openFailure(
+      "The recording is missing from this project. Expected it at ~/Movies/Screenwide/Demo.screenwide/media/recording.mp4",
+    ),
+  },
+};
+
+export const SeveralWouldNotOpen: Story = {
+  args: {
+    error: [
+      openFailure("This recording was discarded"),
+      openFailure("The project file is not valid JSON"),
+    ].join("\n"),
+  },
 };
 
 export const MovingWhileSelecting: Story = {

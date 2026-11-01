@@ -172,3 +172,7 @@ The recording editor has the tool column beside its picture and its modes in the
 | Magnifier zoom/corners, other annotation options | Instant by design | annotations are their own layer, sent by the annotation sync, not the picture's settings |
 | Drags on the picture, undo, redo | Instant by design | a drag already follows the pointer, and an undo puts things back |
 | Reduced motion | Instant | a change is drawn whole on its first step |
+
+## Your caption templates' failures
+
+Importing, exporting and removing one of your caption templates (`text_template_files.rs`) has no surface in the editor today: the template panel that offered them went with the move to islands, and nothing calls the commands. With the standalone alert window gone, they no longer say a failure themselves; each rejects with a whole translated sentence, the failure then the English reason (`editor-template-import-failed` and its siblings), for whichever surface offers them again to show as an error `Alert` line: the Text island's template picker (`IslandAside`), or failing that the editor island's foot.

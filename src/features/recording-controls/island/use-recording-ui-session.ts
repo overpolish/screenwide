@@ -152,8 +152,9 @@ export function useRecordingUiSession() {
     isPicking = false;
     setWindowPick(null);
   });
-  // Rust puts failures the user has to know about in an alert; the island
-  // follows the state Rust reverted to and logs the detail.
+  // Failures the user has to know about come to the island through
+  // `useRecordingFailure`; this logs the detail of every error, rejections
+  // by the state machine included, and follows the state Rust reverted to.
   useTauriEvent("recording://error", (payload) => {
     const error = payload as RecordingError;
     console.error(`Recording ${error.phase} failed: ${error.message}`);

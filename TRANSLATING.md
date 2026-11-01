@@ -11,9 +11,9 @@ Screenwide follows the language order in the system settings: the first language
 
 ## What gets translated
 
-Everything a person reads in the interface: labels, buttons, menus, tooltips, accessible names, alert titles and the main sentence of each alert. Some text stays in English on purpose:
+Everything a person reads in the interface: labels, buttons, menus, tooltips, accessible names, and what a failure says failed. Some text stays in English on purpose:
 
-- The technical detail under an alert, such as an error from the system or from FFmpeg. It is there for bug reports.
+- The technical reason after a failure, such as an error from the system or from FFmpeg. It is there for bug reports.
 - Log output and developer errors.
 - Names of keys baked into exported videos by the keyboard overlay, and audio track names written into exported files.
 
