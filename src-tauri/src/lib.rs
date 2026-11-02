@@ -28,14 +28,14 @@ mod recording_sources;
 mod ruler;
 mod screenshots;
 mod settings;
+#[cfg(any(target_os = "macos", target_os = "windows"))]
+mod settings_preview;
 mod shortcuts;
 mod silence;
 mod startup;
 #[cfg(debug_assertions)]
 mod storybook_native;
 mod text_recognition;
-#[cfg(target_os = "macos")]
-mod tool_preview;
 mod tooltip_window;
 mod transcription;
 #[cfg(desktop)]

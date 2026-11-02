@@ -24,7 +24,7 @@ import {
   type Ref,
 } from "react";
 
-import { isMacHost } from "../../lib/platform";
+import { isWindows } from "../../lib/platform";
 import { cn } from "../../lib/styling";
 
 import { keyLabel } from "./key-label";
@@ -88,7 +88,7 @@ const mappedKey = (children: ReactNode) => {
   if (typeof children !== "string") return { children };
 
   const key = children.trim().toLowerCase();
-  const glyph = isMacHost ? macGlyphs.get(key) : undefined;
+  const glyph = isWindows() ? undefined : macGlyphs.get(key);
   if (glyph) {
     const { Glyph } = glyph;
     return {

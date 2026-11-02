@@ -29,6 +29,9 @@ export const stampPlatform = (platform: Platform) => {
   }
 };
 
-/** Whether the document wears the Windows skin, which a story can switch. */
+/** Whether the document wears the Windows skin, which a story can switch.
+ * Outside a page, such as in a unit test, the host's. */
 export const isWindows = () =>
-  document.documentElement.dataset.platform === "windows";
+  typeof document === "undefined"
+    ? isWindowsHost
+    : document.documentElement.dataset.platform === "windows";

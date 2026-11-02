@@ -72,8 +72,9 @@ pub(super) const WINDOW_SIZE: (f64, f64) = (900.0, 640.0);
 /// regardless: its motion takes about half this.
 const HIDE_FALLBACK: Duration = Duration::from_secs(1);
 
-/// The notch of the screen the island is on, as the screen reports it.
-#[derive(Clone, Copy, Debug, Serialize)]
+/// A screen's notch, as the screen reports it, in points.
+#[derive(Clone, Copy, Debug, Serialize, ts_rs::TS)]
+#[ts(export)]
 pub struct IslandNotch {
   pub height: f64,
   pub width: f64,

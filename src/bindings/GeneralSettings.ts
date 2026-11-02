@@ -35,6 +35,15 @@ showRecordingSize: boolean,
  */
 autoZoom: boolean, 
 /**
+ * The frame rate a recording is made at: 30 or 60.
+ */
+recordingFps: number, 
+/**
+ * Whether cameras are asked for cadences that keep in step with lights
+ * on 50 Hz power, so the picture does not flicker under them.
+ */
+cameraAntiFlicker: boolean, 
+/**
  * Custom scene layouts saved from the Scene panel, oldest first, offered
  * in every recording.
  */

@@ -17,6 +17,7 @@ import {
   CameraDevice,
   cameraRequestFps,
   InputDevice,
+  type RecordingFps,
   SystemAudioSource,
 } from "../../recording-inputs/types";
 
@@ -29,16 +30,11 @@ const listOrEmpty = async <T>(list: () => Promise<T[]>): Promise<T[]> => {
   return Array.isArray(result) ? result : [];
 };
 
-const requestFps = () => {
-  const { cameraPal, fps } = useRecordingInputStore.getState();
-  return cameraRequestFps(fps, cameraPal);
-};
-
 /** The camera chosen, at its largest picture among the modes it offers at
- * the cadences now asked for, kept so whenever the list is read again. */
-const selectCamera = (camera: CameraDevice) => {
+ * the cadences asked for, kept so whenever the list is read again. */
+const selectCamera = (camera: CameraDevice, requestFps: number[]) => {
   const state = useRecordingInputStore.getState();
-  const mode = bestCameraMode(camera, requestFps());
+  const mode = bestCameraMode(camera, requestFps);
   if (
     state.selectedCamera?.id !== camera.id ||
     JSON.stringify(state.selectedCameraMode) !== JSON.stringify(mode)
@@ -55,44 +51,46 @@ const firstDefault = <T extends InputDevice>(devices: T[]) =>
  * The devices behind the island's three inputs, read as the controls open so
  * each input can name what it would record, and an input with nothing chosen
  * yet takes the system's default rather than reading as unset. The cameras
- * are read again when the frame rate or anti-flicker changes, as the modes
- * they offer follow both.
+ * are read again when the frame rate or anti-flicker changes in Settings, as
+ * the modes they offer follow both.
  */
 export function useIslandDevices({
+  antiFlicker,
+  fps,
   isActive,
   isCameraLocked,
   isMicrophoneLocked,
 }: {
+  antiFlicker: boolean;
+  fps: RecordingFps;
   isActive: boolean;
   isCameraLocked: boolean;
   isMicrophoneLocked: boolean;
 }) {
-  const fps = useRecordingInputStore((state) => state.fps);
-  const cameraPal = useRecordingInputStore((state) => state.cameraPal);
   const [cameras, setCameras] = useState<CameraDevice[]>([]);
   const [microphones, setMicrophones] = useState<InputDevice[]>([]);
   const [audioSources, setAudioSources] = useState<SystemAudioSource[]>([
     ALL_SYSTEM_AUDIO,
   ]);
+  const cadences = cameraRequestFps(fps, antiFlicker).join(" ");
 
   useEffect(() => {
     if (!isActive || isCameraLocked) return;
     let disposed = false;
-    void listOrEmpty(() => listCameras(cameraRequestFps(fps, cameraPal))).then(
-      (next) => {
-        if (disposed) return;
-        setCameras(next);
-        const selected = useRecordingInputStore.getState().selectedCamera;
-        const camera =
-          next.find((device) => device.id === selected?.id) ??
-          (selected ? null : firstDefault(next));
-        if (camera) selectCamera(camera);
-      },
-    );
+    const requestFps = cadences.split(" ").map(Number);
+    void listOrEmpty(() => listCameras(requestFps)).then((next) => {
+      if (disposed) return;
+      setCameras(next);
+      const selected = useRecordingInputStore.getState().selectedCamera;
+      const camera =
+        next.find((device) => device.id === selected?.id) ??
+        (selected ? null : firstDefault(next));
+      if (camera) selectCamera(camera, requestFps);
+    });
     return () => {
       disposed = true;
     };
-  }, [cameraPal, fps, isActive, isCameraLocked]);
+  }, [cadences, isActive, isCameraLocked]);
 
   useEffect(() => {
     if (!isActive || isMicrophoneLocked) return;
@@ -126,7 +124,7 @@ export function useIslandDevices({
       const state = useRecordingInputStore.getState();
       if (kind === "camera") {
         const camera = cameras.find((device) => device.id === ids[0]);
-        if (camera) selectCamera(camera);
+        if (camera) selectCamera(camera, cadences.split(" ").map(Number));
       } else if (kind === "microphone") {
         const microphone = microphones.find((device) => device.id === ids[0]);
         if (microphone) state.setSelectedMicrophone(microphone);
@@ -141,7 +139,7 @@ export function useIslandDevices({
         );
       }
     },
-    [audioSources, cameras, microphones],
+    [audioSources, cadences, cameras, microphones],
   );
 
   return { audioSources, cameras, changeDevice, microphones };

@@ -61,7 +61,7 @@ thread_local! {
 
 /// The notch, from the screen's safe area and the menu bar either side of
 /// it: present only where both sides are.
-fn notch_of(screen: &NSScreen) -> Option<IslandNotch> {
+pub(super) fn notch_of(screen: &NSScreen) -> Option<IslandNotch> {
   let top = screen.safeAreaInsets().top;
   let left = screen.auxiliaryTopLeftArea();
   let right = screen.auxiliaryTopRightArea();
@@ -77,7 +77,10 @@ fn notch_of(screen: &NSScreen) -> Option<IslandNotch> {
 /// The screen the island sits on: the display set for it while connected,
 /// otherwise the primary display, the one with the menu bar, which AppKit
 /// lists first.
-fn island_screen(mtm: MainThreadMarker, preferred: Option<u32>) -> Option<Retained<NSScreen>> {
+pub(super) fn island_screen(
+  mtm: MainThreadMarker,
+  preferred: Option<u32>,
+) -> Option<Retained<NSScreen>> {
   let screens = NSScreen::screens(mtm);
   preferred
     .and_then(|id| screens.iter().find(|screen| display_id(screen) == Some(id)))

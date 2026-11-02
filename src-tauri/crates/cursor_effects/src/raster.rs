@@ -24,6 +24,7 @@ mod platform_windows;
 use self::platform_windows as platform;
 
 mod fallback;
+pub(super) mod system_arrow;
 
 pub(super) fn uses_same_artwork(left: CursorStyle, right: CursorStyle) -> bool {
   // A custom cursor is recorded without its pixels, so it draws the system

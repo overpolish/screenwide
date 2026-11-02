@@ -201,7 +201,7 @@ pub fn set_shortcut_binding(
     .as_deref()
     .map(|value| value.parse::<Shortcut>().map(|value| value.id()))
     .transpose()
-    .map_err(|error| error.to_string())?;
+    .map_err(|_| screenwide_i18n::t!("settings-error-shortcut-invalid"))?;
 
   if settings
     .bindings
@@ -211,10 +211,10 @@ pub fn set_shortcut_binding(
     .filter_map(|value| value.parse::<Shortcut>().ok())
     .any(|value| Some(value.id()) == requested_id)
   {
-    return Err("That shortcut is already assigned to another action".to_owned());
+    return Err(screenwide_i18n::t!("settings-error-shortcut-taken"));
   }
   if requested_id.is_some_and(screenwide_moments::settings::uses_shortcut) {
-    return Err("That shortcut already places a moment".to_owned());
+    return Err(screenwide_i18n::t!("settings-error-shortcut-moment"));
   }
 
   if let Some(existing) = existing.as_deref() {
@@ -225,11 +225,13 @@ pub fn set_shortcut_binding(
     );
   }
   if let Some(shortcut) = shortcut.as_deref() {
-    if let Err(error) = register_binding(&app, action, shortcut) {
+    // The plugin's own words (logged with the registration's result) mean
+    // nothing to a person; nearly always another app holds the keys.
+    if register_binding(&app, action, shortcut).is_err() {
       if let Some(existing) = existing.as_deref() {
         let _ = register_binding(&app, action, existing);
       }
-      return Err(error);
+      return Err(screenwide_i18n::t!("settings-error-shortcut-unavailable"));
     }
   }
 

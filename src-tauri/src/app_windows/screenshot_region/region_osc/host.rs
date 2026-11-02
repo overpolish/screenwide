@@ -36,6 +36,12 @@ pub(crate) struct ScreenPoint {
 pub(crate) trait RegionDrawable: Send + Sync {
   fn resize(&mut self, gpu: &screenwide_gpu::Gpu, size: (u32, u32));
   fn acquire(&self, gpu: &screenwide_gpu::Gpu) -> Result<Frame, String>;
+  /// A texture drawn into in place of a presented frame, so a test can read
+  /// back what was drawn.
+  #[cfg(test)]
+  fn offscreen(&self) -> Option<wgpu::Texture> {
+    None
+  }
 }
 
 /// Sets text in the overlay's label faces: Inter for chrome, Roboto Mono for

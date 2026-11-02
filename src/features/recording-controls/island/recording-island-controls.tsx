@@ -132,6 +132,8 @@ export function RecordingIslandControls({
     systemAudioEnabled: inputStore.inputs.systemAudio,
   });
   const inputs = useIslandInputs({
+    antiFlicker: settings?.cameraAntiFlicker ?? false,
+    fps: settings?.recordingFps === 30 ? 30 : 60,
     isCameraLocked,
     isCameraShown: island.isShown && panel === "camera",
     isLive,
@@ -237,7 +239,7 @@ export function RecordingIslandControls({
         pauseRecording().catch(report("pause"));
       }}
       onRecord={() => {
-        startRecording(startRecordingOptions()).catch(report("start"));
+        startRecordingOptions().then(startRecording).catch(report("start"));
       }}
       onReplayChange={setReplayOn}
       onResume={() => {

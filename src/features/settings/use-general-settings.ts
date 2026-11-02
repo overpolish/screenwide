@@ -1,14 +1,16 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { listen, UnlistenFn } from "@tauri-apps/api/event";
+import { UnlistenFn } from "@tauri-apps/api/event";
 import { useCallback, useEffect, useState } from "react";
 
 import { GeneralSettings } from "../../bindings/GeneralSettings";
 
-import { getGeneralSettings, setGeneralSettings } from "./api";
-
-const SETTINGS_CHANGED_EVENT = "settings://changed";
+import {
+  getGeneralSettings,
+  listenToGeneralSettings,
+  setGeneralSettings,
+} from "./api";
 
 /**
  * The general settings as they currently stand, and a way to change one of
@@ -28,9 +30,7 @@ export function useEditableGeneralSettings() {
     void getGeneralSettings().then((loaded) => {
       if (!disposed) setSettings(loaded);
     });
-    void listen<GeneralSettings>(SETTINGS_CHANGED_EVENT, ({ payload }) => {
-      setSettings(payload);
-    }).then((listener) => {
+    void listenToGeneralSettings(setSettings).then((listener) => {
       if (disposed) listener();
       else unlisten = listener;
     });

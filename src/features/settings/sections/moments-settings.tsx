@@ -3,13 +3,18 @@
 
 import { Trash2 } from "lucide-react";
 import { useState } from "react";
+import { Button as AriaButton } from "react-aria-components";
 
 import { ConfirmActionButton } from "../../../composites/confirm-action-button/confirm-action-button";
 import { t } from "../../../i18n/i18n";
+import { hotkeyKeys } from "../../../lib/hotkey";
+import { cn } from "../../../lib/styling";
 import { Button } from "../../../primitives/button/button";
 import { TextField } from "../../../primitives/input-fields/text-field";
-import { HotkeyField } from "../hotkey-field/hotkey-field";
+import { keyLabel } from "../../../primitives/keyboard/key-label";
+import { Keyboard, Shortcut } from "../../../primitives/keyboard/keyboard";
 import { SettingsGroup } from "../settings-group";
+import { hotkeyTriggerClassName } from "../shortcuts/hotkey-field/hotkey-trigger-style";
 
 import { KindColorPicker } from "./kind-color-picker";
 import { VoiceNoteSettings } from "./voice-note-settings";
@@ -51,13 +56,49 @@ function KindNameField({
   );
 }
 
+/** A kind's keys, which are set with every other shortcut in the
+ * Shortcuts pane; pressing them takes you to its row there. It looks as
+ * that row's field does, keycaps in a raised field. */
+function KindShortcutLink({
+  kind,
+  onOpen,
+}: {
+  kind: MomentKind;
+  onOpen: () => void;
+}) {
+  const keys = hotkeyKeys(kind.shortcut);
+  return (
+    <AriaButton
+      aria-label={t("settings-moment-shortcut-open", {
+        keys: keys.map(keyLabel).join(" + ") || t("hotkey-field-not-set"),
+        moment: kind.name,
+      })}
+      className={cn(hotkeyTriggerClassName, "shrink-0")}
+      onPress={onOpen}
+    >
+      {keys.length > 0 ? (
+        <Shortcut>
+          {keys.map((key, index) => (
+            <Keyboard key={`${key}-${index.toString()}`}>{key}</Keyboard>
+          ))}
+        </Shortcut>
+      ) : (
+        <span className="truncate text-fg-tertiary">
+          {t("hotkey-field-set")}
+        </span>
+      )}
+    </AriaButton>
+  );
+}
+
 export function MomentsSettingsPanel({
   moments,
-  onCaptureChange,
+  onOpenShortcut,
   transcription,
 }: {
   moments: MomentSettingsState;
-  onCaptureChange: (capturing: boolean) => Promise<void>;
+  /** Opens the Shortcuts pane on the row of the shortcut with this title. */
+  onOpenShortcut: (title: string) => void;
   transcription: TranscriptionControls;
 }) {
   const { addKind, isSaving, preview, save, settings } = moments;
@@ -98,14 +139,13 @@ export function MomentsSettingsPanel({
                 update(kind.id, { name });
               }}
             />
-            <HotkeyField
-              aria-label={t("settings-moment-shortcut", { moment: kind.name })}
-              isDisabled={isSaving}
-              onCaptureChange={onCaptureChange}
-              onChange={(shortcut) => {
-                update(kind.id, { shortcut });
+            <KindShortcutLink
+              kind={kind}
+              onOpen={() => {
+                onOpenShortcut(
+                  t("settings-shortcut-place-moment", { moment: kind.name }),
+                );
               }}
-              value={kind.shortcut}
             />
             <ConfirmActionButton
               confirmLabel={t("settings-moment-confirm-remove", {

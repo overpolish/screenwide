@@ -9,7 +9,9 @@ use std::time::Duration;
 use crate::glide::{core::GlideFrame, region_rect::RegionGravity};
 
 /// How long a move takes, end to end. Short enough to feel like a response to
-/// the gesture rather than a transition being watched.
+/// the gesture rather than a transition being watched. Settings' picture of
+/// Glide moves its window by this and [`eased`] (`glide-move.ts`); change
+/// them together.
 pub(crate) const TWEEN_SECONDS: f64 = 0.22;
 /// One step per display frame, near enough.
 pub(crate) const STEP_INTERVAL: Duration = Duration::from_millis(16);

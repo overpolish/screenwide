@@ -189,18 +189,18 @@ pub(crate) fn invoke_handler() -> impl Fn(tauri::ipc::Invoke) -> bool + Send + S
     text_recognition::copy_recognition_content,
     text_recognition::get_qr_details,
     text_recognition::start_text_recognition,
-    #[cfg(target_os = "macos")]
-    tool_preview::close_tool_preview,
-    #[cfg(target_os = "macos")]
-    tool_preview::close_tool_previews,
-    #[cfg(target_os = "macos")]
-    tool_preview::open_tool_preview,
-    #[cfg(target_os = "macos")]
-    tool_preview::place_tool_preview,
-    #[cfg(target_os = "macos")]
-    tool_preview::set_tool_preview_look,
-    #[cfg(target_os = "macos")]
-    tool_preview::tool_preview_input,
+    #[cfg(any(target_os = "macos", target_os = "windows"))]
+    settings_preview::close_settings_preview,
+    #[cfg(any(target_os = "macos", target_os = "windows"))]
+    settings_preview::close_settings_previews,
+    #[cfg(any(target_os = "macos", target_os = "windows"))]
+    settings_preview::open_settings_preview,
+    #[cfg(any(target_os = "macos", target_os = "windows"))]
+    settings_preview::place_settings_preview,
+    #[cfg(any(target_os = "macos", target_os = "windows"))]
+    settings_preview::set_settings_preview_scene,
+    #[cfg(any(target_os = "macos", target_os = "windows"))]
+    settings_preview::settings_preview_input,
     tooltip_window::fit_tooltip,
     tooltip_window::get_tooltip,
     tooltip_window::hide_tooltip,
@@ -212,7 +212,9 @@ pub(crate) fn invoke_handler() -> impl Fn(tauri::ipc::Invoke) -> bool + Send + S
     settings::preferences::browse_default_location,
     settings::preferences::get_general_settings,
     settings::preferences::set_general_settings,
+    settings::system_cursor::render_system_cursor,
     settings::wallpapers::list_system_wallpapers,
+    settings::wallpapers::render_desktop_wallpaper,
     settings::show_settings,
     shortcuts::diagnostics::report_shortcut_diagnostic,
     shortcuts::get_shortcut_settings,
@@ -228,6 +230,7 @@ pub(crate) fn invoke_handler() -> impl Fn(tauri::ipc::Invoke) -> bool + Send + S
     app_windows::region_gesture::finish_region_selector_gesture,
     app_windows::hide_recording_ui,
     app_windows::open_recording_ui,
+    app_windows::display_notch::display_notches,
     app_windows::finish_hiding_island,
     app_windows::island_presence,
     app_windows::island_ready_to_move,

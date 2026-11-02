@@ -117,6 +117,7 @@ export type Messages = {
   "controls-field-clear": null;
   "controls-key-alt": null;
   "controls-key-backspace": null;
+  "controls-key-caps-lock": null;
   "controls-key-command": null;
   "controls-key-control": null;
   "controls-key-ctrl": null;
@@ -124,6 +125,7 @@ export type Messages = {
   "controls-key-down": null;
   "controls-key-enter": null;
   "controls-key-escape": null;
+  "controls-key-fn": null;
   "controls-key-left": null;
   "controls-key-mouse-back": null;
   "controls-key-mouse-forward": null;
@@ -661,6 +663,16 @@ export type Messages = {
   "glide-region-top-half": null;
   "hotkey-field-cancelled": null;
   "hotkey-field-capture-failed": { error: string | number };
+  "hotkey-field-chip-reserved-apps": {
+    keys: string | number;
+    use: string | number;
+  };
+  "hotkey-field-chip-reserved-system": {
+    keys: string | number;
+    platform: string | number;
+    use: string | number;
+  };
+  "hotkey-field-chip-taken": { action: string | number; keys: string | number };
   "hotkey-field-clear": { label: string | number };
   "hotkey-field-cleared": null;
   "hotkey-field-hold-error": null;
@@ -669,13 +681,35 @@ export type Messages = {
   "hotkey-field-instructions-local": null;
   "hotkey-field-instructions-single": null;
   "hotkey-field-keep-holding": null;
+  "hotkey-field-local-taken": {
+    action: string | number;
+    keys: string | number;
+  };
+  "hotkey-field-modifiers": { key: string | number; label: string | number };
   "hotkey-field-not-set": null;
+  "hotkey-field-pick-free": null;
+  "hotkey-field-pick-modifier": {
+    key: string | number;
+    platform: string | number;
+  };
+  "hotkey-field-pick-reserved-apps": {
+    keys: string | number;
+    use: string | number;
+  };
+  "hotkey-field-pick-reserved-system": {
+    keys: string | number;
+    platform: string | number;
+    use: string | number;
+  };
+  "hotkey-field-pick-start": { key: string | number };
+  "hotkey-field-pick-taken": { action: string | number };
   "hotkey-field-preparing": null;
   "hotkey-field-press-key-or-button": null;
   "hotkey-field-press-shortcut": null;
   "hotkey-field-reset": { label: string | number };
   "hotkey-field-reset-done": null;
   "hotkey-field-set": null;
+  "hotkey-field-suggestions": { key: string | number };
   "hotkey-field-testing-hold": null;
   "hotkey-field-updated": null;
   "hotkey-field-value": { keys: string | number; label: string | number };
@@ -937,6 +971,13 @@ export type Messages = {
   "settings-countdown": null;
   "settings-countdown-off": null;
   "settings-default-folder": null;
+  "settings-error-moment-duplicate": null;
+  "settings-error-ocr-duplicate": null;
+  "settings-error-ruler-duplicate": null;
+  "settings-error-shortcut-invalid": null;
+  "settings-error-shortcut-moment": null;
+  "settings-error-shortcut-taken": null;
+  "settings-error-shortcut-unavailable": null;
   "settings-export-folder-description": null;
   "settings-fps": { fps: string | number };
   "settings-frame-rate": null;
@@ -963,7 +1004,10 @@ export type Messages = {
   "settings-moment-confirm-remove": { moment: string | number };
   "settings-moment-name": { moment: string | number };
   "settings-moment-remove": { moment: string | number };
-  "settings-moment-shortcut": { moment: string | number };
+  "settings-moment-shortcut-open": {
+    keys: string | number;
+    moment: string | number;
+  };
   "settings-moments-footnote": null;
   "settings-new-moment": null;
   "settings-ocr-activate": null;
@@ -972,14 +1016,62 @@ export type Messages = {
   "settings-ocr-enabled": null;
   "settings-ocr-select-all": null;
   "settings-ocr-select-all-description": null;
+  "settings-preview-dashboard-title": null;
+  "settings-preview-note-first": null;
+  "settings-preview-note-second": null;
+  "settings-preview-note-title": null;
+  "settings-preview-window-button": null;
+  "settings-preview-window-title": null;
   "settings-projects-folder": null;
   "settings-projects-folder-description": null;
   "settings-projects-folder-reset": null;
   "settings-recording": null;
+  "settings-recording-controls": null;
   "settings-recording-folder": null;
   "settings-recording-folder-reset": null;
   "settings-recording-size": null;
   "settings-recording-size-description": null;
+  "settings-recording-video": null;
+  "settings-reserved-app-windows": null;
+  "settings-reserved-close": null;
+  "settings-reserved-close-window": null;
+  "settings-reserved-copy": null;
+  "settings-reserved-cut": null;
+  "settings-reserved-dock": null;
+  "settings-reserved-emoji": null;
+  "settings-reserved-find": null;
+  "settings-reserved-force-quit": null;
+  "settings-reserved-full-screen": null;
+  "settings-reserved-help": null;
+  "settings-reserved-hide": null;
+  "settings-reserved-hide-others": null;
+  "settings-reserved-input-source": null;
+  "settings-reserved-lock": null;
+  "settings-reserved-log-out": null;
+  "settings-reserved-minimize": null;
+  "settings-reserved-mission-control": null;
+  "settings-reserved-new": null;
+  "settings-reserved-new-tab": null;
+  "settings-reserved-open": null;
+  "settings-reserved-paste": null;
+  "settings-reserved-print": null;
+  "settings-reserved-quit": null;
+  "settings-reserved-redo": null;
+  "settings-reserved-save": null;
+  "settings-reserved-screenshot": null;
+  "settings-reserved-security": null;
+  "settings-reserved-select-all": null;
+  "settings-reserved-settings": null;
+  "settings-reserved-spaces": null;
+  "settings-reserved-spotlight": null;
+  "settings-reserved-start": null;
+  "settings-reserved-switch-apps": null;
+  "settings-reserved-switch-tabs": null;
+  "settings-reserved-switch-windows": null;
+  "settings-reserved-task-manager": null;
+  "settings-reserved-undo": null;
+  "settings-reserved-window-menu": null;
+  "settings-reserved-windows-key": null;
   "settings-ruler-centerlines": null;
   "settings-ruler-copy": null;
   "settings-ruler-copy-colour": null;
@@ -1009,6 +1101,8 @@ export type Messages = {
   "settings-screenshot-folder-reset": null;
   "settings-screenshots": null;
   "settings-search-keywords-annotate": null;
+  "settings-search-keywords-anti-flicker": null;
+  "settings-search-keywords-auto-zoom": null;
   "settings-search-keywords-countdown": null;
   "settings-search-keywords-folders": null;
   "settings-search-keywords-frame-rate": null;
@@ -1031,6 +1125,7 @@ export type Messages = {
   "settings-section-glide": null;
   "settings-section-moments": null;
   "settings-section-ocr": null;
+  "settings-section-recording": null;
   "settings-section-ruler": null;
   "settings-section-shortcuts": null;
   "settings-section-tools": null;
@@ -1039,13 +1134,53 @@ export type Messages = {
   "settings-shortcut-copy-screenshot": null;
   "settings-shortcut-copy-screenshot-description": null;
   "settings-shortcut-pause-resume": null;
+  "settings-shortcut-place-moment": { moment: string | number };
   "settings-shortcut-save-replay": null;
   "settings-shortcut-save-replay-description": null;
   "settings-shortcut-screenshot": null;
   "settings-shortcut-screenshot-description": null;
   "settings-shortcut-start-stop": null;
   "settings-shortcut-toggle-controls": null;
+  "settings-shortcuts-assigned": {
+    keys: string | number;
+    shortcut: string | number;
+  };
+  "settings-shortcuts-clash": { others: string | number };
+  "settings-shortcuts-clash-remove": { shortcut: string | number };
   "settings-shortcuts-feature-off": { feature: string | number };
+  "settings-shortcuts-free": null;
+  "settings-shortcuts-hint": null;
+  "settings-shortcuts-hint-hold": { shortcut: string | number };
+  "settings-shortcuts-hint-selected": { shortcut: string | number };
+  "settings-shortcuts-hold": { shortcut: string | number };
+  "settings-shortcuts-map": null;
+  "settings-shortcuts-refused-none": { key: string | number };
+  "settings-shortcuts-refused-reserved-apps": {
+    keys: string | number;
+    use: string | number;
+  };
+  "settings-shortcuts-refused-reserved-system": {
+    keys: string | number;
+    platform: string | number;
+    use: string | number;
+  };
+  "settings-shortcuts-refused-taken": {
+    action: string | number;
+    keys: string | number;
+  };
+  "settings-shortcuts-reserved-apps": {
+    keys: string | number;
+    use: string | number;
+  };
+  "settings-shortcuts-reserved-system": {
+    keys: string | number;
+    platform: string | number;
+    use: string | number;
+  };
+  "settings-shortcuts-scope": null;
+  "settings-shortcuts-scope-anywhere": null;
+  "settings-shortcuts-scope-ocr": null;
+  "settings-shortcuts-scope-ruler": null;
   "settings-show-controls-on-launch": null;
   "settings-startup": null;
   "settings-transcription-camera-background": null;

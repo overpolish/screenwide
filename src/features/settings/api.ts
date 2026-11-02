@@ -45,6 +45,17 @@ export const getGeneralSettings = () =>
 export const setGeneralSettings = (settings: GeneralSettings) =>
   invoke<GeneralSettings>("set_general_settings", { settings });
 
+/** Fired on every write from any window: the island's toggles, the
+ * editor's saved backgrounds and caption styles, Settings itself. */
+const GENERAL_CHANGED_EVENT = "settings://changed";
+
+export const listenToGeneralSettings = (
+  onChange: (settings: GeneralSettings) => void,
+) =>
+  listen<GeneralSettings>(GENERAL_CHANGED_EVENT, (event) => {
+    onChange(event.payload);
+  });
+
 export const getGlideSettings = () =>
   invoke<GlideSettings>("get_glide_settings");
 

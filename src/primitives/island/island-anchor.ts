@@ -24,8 +24,12 @@ export function useControlAnchor(
     const controlBox = control.getBoundingClientRect();
     const rowBox = row.getBoundingClientRect();
     const middle = controlBox.left + controlBox.width / 2;
+    // The boxes are on screen, the anchor in the island's own px: an island
+    // drawn scaled down, as Settings' pictures draw it, is measured back up.
+    const scale = row.offsetWidth > 0 ? rowBox.width / row.offsetWidth : 1;
     const next = Math.round(
-      direction === "rtl" ? rowBox.right - middle : middle - rowBox.left,
+      (direction === "rtl" ? rowBox.right - middle : middle - rowBox.left) /
+        scale,
     );
     // eslint-disable-next-line @eslint-react/set-state-in-effect
     setAt(next);

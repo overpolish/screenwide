@@ -37,6 +37,7 @@ export function createPreviewApi(
     annotationColors: [],
     autoZoom: true,
     backgroundPresets: [],
+    cameraAntiFlicker: false,
     captionLayout: {},
     captionSettings: {
       censorProfanity: false,
@@ -47,13 +48,14 @@ export function createPreviewApi(
     },
     captionStyles: [],
     captionTemplate: "box",
-    launchAtLogin: false,
+    launchAtLogin: true,
     openLocationAfterExport: true,
     projectDirectory: null,
     recordScreenwideWindows: true,
     recordingControlsDisplay: null,
     recordingCountdownSeconds: 3,
     recordingDirectory: null,
+    recordingFps: 60,
     sceneTemplates: [],
     screenshotDelaySeconds: 3,
     screenshotDirectory: null,
@@ -167,6 +169,7 @@ export function createPreviewApi(
     getShortcutSettings: () => Promise.resolve(shortcuts),
     hideSettings: () => Promise.resolve(null),
     listenToAnnotateSettings: () => Promise.resolve(() => undefined),
+    listenToGeneralSettings: () => Promise.resolve(() => undefined),
     minimize: () => Promise.resolve(),
     setAnnotateSettings: (next) => {
       annotate = next;

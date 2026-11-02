@@ -30,9 +30,10 @@ use screenwide_output::{background_image_swatch, encode_png, parse_hex_colour};
 const MINIMUM_SIZE: u32 = 8;
 const MAXIMUM_SIZE: u32 = 512;
 
-/// Where the rendered swatches live. One file per background and size, named
-/// by a hash of both, so a background already drawn is never drawn again.
-fn cache_directory(app: &AppHandle) -> Result<PathBuf, String> {
+/// Where the rendered swatches live, and the desktop's picture drawn for a
+/// preview. One file per background and size, named by a hash of both, so
+/// a background already drawn is never drawn again.
+pub(crate) fn cache_directory(app: &AppHandle) -> Result<PathBuf, String> {
   let directory = app
     .path()
     .app_cache_dir()

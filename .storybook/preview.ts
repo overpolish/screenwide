@@ -48,7 +48,9 @@ const isNativeMenuWindow =
 
 // The app stamps `data-platform` in `main.tsx` for what the OS dictates:
 // shortcut labels and the traffic-light inset. The look is the same on both,
-// so stories take the host's platform and offer no switch.
+// so stories take the host's platform and offer no switch; a story about
+// what differs, such as the Shortcuts pane's keyboard, pins one with
+// `parameters.platform` (`withPlatform`).
 const hostPlatform = isWindowsHost ? "windows" : "macos";
 
 // The theme decorator applies its class only once the manager has sent the
@@ -370,6 +372,15 @@ const withLocale: Decorator = (Story, { globals }) => {
   );
 };
 
+// Stamped while the story renders, before its parts read it, and on every
+// story, so one pinned to Windows leaves nothing behind for the next.
+// Keyed by platform, so a switch remounts the story.
+const withPlatform: Decorator = (Story, { parameters }) => {
+  const platform = parameters.platform === "windows" ? "windows" : hostPlatform;
+  stampPlatform(platform);
+  return createElement(Fragment, { key: platform }, Story());
+};
+
 export const loaders = [loadStoryLocale];
 
 // A story opens menus in the menu window as its app window would, which
@@ -384,6 +395,7 @@ export const decorators = (
     ? [withNativeMenus, withLocale]
     : [
         withLocale,
+        withPlatform,
         withThemeByClassName({
           defaultTheme: "dark",
           parentSelector: "html",

@@ -130,9 +130,9 @@ pub fn validate(mut settings: MomentSettings) -> Result<MomentSettings, String> 
     if let Some(value) = kind.shortcut.as_deref() {
       let shortcut = value
         .parse::<Shortcut>()
-        .map_err(|error| error.to_string())?;
+        .map_err(|_| screenwide_i18n::t!("settings-error-shortcut-invalid"))?;
       if !shortcuts.insert(shortcut.id()) {
-        return Err("Each moment kind needs a different shortcut".to_owned());
+        return Err(screenwide_i18n::t!("settings-error-moment-duplicate"));
       }
     }
   }

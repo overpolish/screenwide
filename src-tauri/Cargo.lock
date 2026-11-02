@@ -5437,6 +5437,7 @@ dependencies = [
  "screenwide-accent",
  "screenwide-activity",
  "screenwide-annotations",
+ "screenwide-auto-zoom",
  "screenwide-capture",
  "screenwide-compositor",
  "screenwide-cursor-effects",
@@ -5453,6 +5454,7 @@ dependencies = [
  "screenwide-project",
  "screenwide-records",
  "screenwide-scenes",
+ "screenwide-settings-preview",
  "screenwide-sidecar",
  "screenwide-speech",
  "screenwide-text",
@@ -5525,6 +5527,15 @@ dependencies = [
  "serde",
  "serde_json",
  "ts-rs",
+]
+
+[[package]]
+name = "screenwide-auto-zoom"
+version = "0.1.0"
+dependencies = [
+ "screenwide-records",
+ "screenwide-scenes",
+ "serde",
 ]
 
 [[package]]
@@ -5703,6 +5714,7 @@ name = "screenwide-moments"
 version = "0.1.0"
 dependencies = [
  "screenwide-capture",
+ "screenwide-i18n",
  "screenwide-project",
  "serde",
  "serde_json",
@@ -5780,6 +5792,32 @@ dependencies = [
  "serde",
  "serde_json",
  "ts-rs",
+]
+
+[[package]]
+name = "screenwide-settings-preview"
+version = "0.1.0"
+dependencies = [
+ "dispatch2",
+ "image",
+ "objc2",
+ "objc2-app-kit",
+ "objc2-foundation",
+ "objc2-quartz-core",
+ "screenwide-auto-zoom",
+ "screenwide-compositor",
+ "screenwide-cursor-effects",
+ "screenwide-export",
+ "screenwide-gpu",
+ "screenwide-imaging",
+ "screenwide-output",
+ "screenwide-records",
+ "screenwide-scenes",
+ "serde",
+ "serde_json",
+ "ts-rs",
+ "wgpu",
+ "windows 0.62.2",
 ]
 
 [[package]]

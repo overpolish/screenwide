@@ -41,19 +41,6 @@ settings-recording-folder-reset = Use the default recording folder
 settings-screenshot-folder = Screenshot folder
 settings-screenshot-folder-reset = Use the default screenshot folder
 settings-export-folder-description = You can choose a different folder when saving.
-settings-confidence-checks = Show camera and sound while recording
-settings-confidence-checks-description = Check your camera, microphone and computer sound are working.
-settings-recording-size = Show file size while recording
-settings-recording-size-description = See how much disk space the recording takes up.
-settings-auto-zoom = Zoom in automatically
-settings-auto-zoom-description = Zoom in where you click and type.
-settings-countdown = Recording countdown
-settings-countdown-off = Off
-settings-frame-rate = Frame rate
-settings-frame-rate-description = More frames look smoother and make a larger file.
-settings-fps = { $fps } fps
-settings-anti-flicker = Camera anti-flicker
-settings-anti-flicker-description = Stops camera flicker under 50 Hz lights.
 settings-capture = Capture
 settings-include-app = Include { -app-name } in captures
 settings-include-app-description = Show { -app-name }'s own windows in recordings and screenshots.
@@ -61,6 +48,27 @@ settings-screenshot-delay = Delayed Screenshot
 settings-startup = Startup
 settings-launch-at-login = Start when you sign in
 settings-show-controls-on-launch = Show recording controls on startup
+
+## Recording
+
+settings-section-recording = Recording
+# The group of settings for the island while a recording runs.
+settings-recording-controls = Recording controls
+# The group of settings for how the recording itself is made.
+settings-recording-video = Video
+settings-confidence-checks = Show camera and sound while recording
+settings-confidence-checks-description = Check your camera, microphone and computer sound are working.
+settings-recording-size = Show file size while recording
+settings-recording-size-description = See how much disk space the recording takes up.
+settings-auto-zoom = Zoom in automatically
+settings-auto-zoom-description = Adds zooms for you, always editable in the editor.
+settings-countdown = Recording countdown
+settings-countdown-off = Off
+settings-frame-rate = Frame rate
+settings-frame-rate-description = More frames look smoother and make a larger file.
+settings-fps = { $fps } fps
+settings-anti-flicker = Camera anti-flicker
+settings-anti-flicker-description = Stops camera flicker under 50 Hz lights.
 
 ## Glide
 
@@ -138,7 +146,8 @@ settings-ocr-copy-description = Copy selected text, or everything when nothing i
 
 settings-new-moment = New Moment
 settings-moment-name = { $moment } name
-settings-moment-shortcut = { $moment } shortcut
+# The button on a moment's line showing its shortcut, which opens it in the Shortcuts pane. $keys are its keys joined with " + ", or Not set.
+settings-moment-shortcut-open = { $moment } shortcut: { $keys }. Change it in Shortcuts.
 settings-moment-color = { $moment } colour
 settings-moment-remove = Remove { $moment }
 settings-moment-confirm-remove = Confirm removing { $moment }
@@ -194,6 +203,99 @@ settings-shortcut-screenshot = Take a screenshot
 settings-shortcut-screenshot-description = Choose an area of your screen to capture.
 settings-shortcut-copy-screenshot = Copy a screenshot
 settings-shortcut-copy-screenshot-description = Choose an area to copy, ready to paste elsewhere.
+# The row of a moment's shortcut in the Shortcuts pane. $moment is the moment's name, which the user chooses.
+settings-shortcut-place-moment = Place { $moment }
+
+## The Shortcuts pane's keyboard map: a keyboard with each key that does
+## something raised. $shortcut and $action name a shortcut, such as Take a
+## screenshot; $keys are a combination's keys, drawn as keys or named and
+## joined with " + ", such as Command + Shift + S; $key is one key's name.
+## $use is what the system or most apps use a combination for, from the
+## settings-reserved messages, read after "for".
+
+settings-shortcuts-map = Keyboard
+settings-shortcuts-scope = Where the shortcuts work
+settings-shortcuts-scope-anywhere = Anywhere
+settings-shortcuts-scope-ruler = In Ruler
+settings-shortcuts-scope-ocr = In OCR
+settings-shortcuts-hint = Raised keys do something. Choose a shortcut below, then click a key to give it.
+settings-shortcuts-hint-selected = Click a key to give it to “{ $shortcut }”, with the modifiers lit.
+# For a key held while dragging a window, such as Glide's.
+settings-shortcuts-hint-hold = Click the key to hold for “{ $shortcut }”.
+settings-shortcuts-hold = Hold for { $shortcut }
+settings-shortcuts-free = Free
+settings-shortcuts-reserved-system = { $platform ->
+        [windows] Windows
+       *[macos] macOS
+    } uses { $keys } for { $use }.
+settings-shortcuts-reserved-apps = Most apps use { $keys } for { $use }.
+settings-shortcuts-assigned = { $shortcut } is now { $keys }.
+settings-shortcuts-refused-taken = { $keys } is already used by “{ $action }”.
+settings-shortcuts-refused-reserved-system = { $platform ->
+        [windows] Windows
+       *[macos] macOS
+    } uses { $keys } for { $use }. To take them anyway, choose them in the shortcut's field.
+settings-shortcuts-refused-reserved-apps = Most apps use { $keys } for { $use }. To take them anyway, choose them in the shortcut's field.
+settings-shortcuts-refused-none = Every combination with { $key } is taken.
+# Under a shortcut that shares its keys with others. $others names them, joined as a list.
+settings-shortcuts-clash = Same keys as { $others }.
+settings-shortcuts-clash-remove = Remove from { $shortcut }
+
+## What the system or most apps use a combination for, so a shortcut that
+## works anywhere would take it from them. Each is read after "for", as in
+## "macOS uses Shift + Command + 3 for screenshots" or "Most apps use
+## Command + Z for Undo": an app's menu command keeps its menu's name.
+
+settings-reserved-spotlight = Spotlight
+settings-reserved-input-source = switching input sources
+settings-reserved-emoji = Emoji & Symbols
+settings-reserved-switch-apps = switching apps
+settings-reserved-switch-windows = switching between an app's windows
+settings-reserved-switch-tabs = switching tabs
+settings-reserved-screenshot = screenshots
+settings-reserved-lock = locking the screen
+settings-reserved-log-out = logging out
+settings-reserved-dock = showing and hiding the Dock
+settings-reserved-mission-control = Mission Control
+settings-reserved-app-windows = showing an app's windows
+settings-reserved-spaces = moving between spaces
+settings-reserved-force-quit = Force Quit
+settings-reserved-close-window = closing windows
+settings-reserved-window-menu = the window menu
+settings-reserved-start = the Start menu
+settings-reserved-task-manager = Task Manager
+settings-reserved-security = the security options
+settings-reserved-windows-key = its own shortcuts
+settings-reserved-quit = Quit
+settings-reserved-close = Close
+settings-reserved-hide = Hide
+settings-reserved-hide-others = Hide Others
+settings-reserved-minimize = Minimize
+settings-reserved-full-screen = Enter Full Screen
+settings-reserved-help = the Help menu
+settings-reserved-copy = Copy
+settings-reserved-paste = Paste
+settings-reserved-cut = Cut
+settings-reserved-undo = Undo
+settings-reserved-redo = Redo
+settings-reserved-select-all = Select All
+settings-reserved-save = Save
+settings-reserved-find = Find
+settings-reserved-new = New
+settings-reserved-open = Open
+settings-reserved-print = Print
+settings-reserved-new-tab = New Tab
+settings-reserved-settings = Settings
+
+## Why a shortcut could not be saved, from the app.
+
+settings-error-shortcut-taken = Another { -app-name } shortcut already uses those keys. Choose different keys.
+settings-error-shortcut-moment = Those keys already place a moment. Choose different keys.
+settings-error-shortcut-invalid = { -app-name } can’t use those keys as a shortcut. Choose different keys.
+settings-error-shortcut-unavailable = Another app is already using those keys, so { -app-name } can’t. Choose different keys, or quit that app and try again.
+settings-error-ruler-duplicate = Each Ruler shortcut needs its own keys.
+settings-error-ocr-duplicate = Each OCR shortcut needs its own keys.
+settings-error-moment-duplicate = Each moment needs its own shortcut.
 
 ## Search: the field above the sections, its results, and the extra words each
 ## setting is found by. A keywords message is space-separated words people
@@ -220,3 +322,19 @@ settings-search-keywords-shortcut = hotkey keyboard key binding
 settings-search-keywords-updates = version update upgrade
 settings-search-keywords-microphone = mic audio input
 settings-search-keywords-moments = marker bookmark flag
+settings-search-keywords-auto-zoom = zoom focus follow pointer cursor
+settings-search-keywords-anti-flicker = flicker banding lights 50hz pal webcam
+
+## The pictures a setting's preview is drawn on: a sample desktop the tools
+## work on. OCR reads the note back, so it is set in the app's language.
+
+# The first line of a note on the sample desktop, in bold.
+settings-preview-note-title = Launch checklist
+settings-preview-note-first = Record the demo at 60 fps
+settings-preview-note-second = Ship on Thursday
+# The title of a sample app window Annotate points at.
+settings-preview-window-title = Publish changes
+# The button in that sample window.
+settings-preview-window-button = Publish
+# The heading of a sample dashboard with a chart.
+settings-preview-dashboard-title = Weekly views

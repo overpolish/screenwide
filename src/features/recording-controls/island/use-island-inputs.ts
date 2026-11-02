@@ -10,6 +10,7 @@ import {
   systemAudioLabel,
   useRecordingInputStore,
 } from "../../recording-inputs/store";
+import { type RecordingFps } from "../../recording-inputs/types";
 import { useAudioPreview } from "../../recording-inputs/use-audio-preview";
 import { useCameraPreview } from "../../recording-inputs/use-camera-preview";
 import { useRecordingSourceStore } from "../../recording-sources/store";
@@ -32,6 +33,8 @@ type Warnings = Record<IslandInputKind, string | undefined>;
  * the recording's own, from its monitor.
  */
 export function useIslandInputs({
+  antiFlicker,
+  fps,
   isCameraLocked,
   isCameraShown,
   isLive,
@@ -40,6 +43,11 @@ export function useIslandInputs({
   monitor,
   warnings,
 }: {
+  /** Settings' anti-flicker, which the camera is asked for and previewed
+   * with. */
+  antiFlicker: boolean;
+  /** Settings' frame rate, which the camera's cadence follows. */
+  fps: RecordingFps;
   isCameraLocked: boolean;
   /** The camera's panel is open, the one place its picture shows; the
    * camera runs for nothing else, so its light is on only while it is seen. */
@@ -55,7 +63,13 @@ export function useIslandInputs({
   const store = useRecordingInputStore((state) => state);
   const recordingMode = useRecordingSourceStore((state) => state.recordingMode);
   const { audioSources, cameras, changeDevice, microphones } = useIslandDevices(
-    { isActive: isPreviewActive, isCameraLocked, isMicrophoneLocked },
+    {
+      antiFlicker,
+      fps,
+      isActive: isPreviewActive,
+      isCameraLocked,
+      isMicrophoneLocked,
+    },
   );
   const { selectedCamera, selectedCameraMode, selectedSystemAudio } = store;
   const isCameraOn =
@@ -94,7 +108,7 @@ export function useIslandInputs({
       selectedCameraMode !== null,
     deviceId: selectedCamera?.id,
     mode: selectedCameraMode ?? undefined,
-    pal: store.cameraPal,
+    pal: antiFlicker,
   });
   const microphonePreview = useAudioPreview({
     active: isPreviewActive && store.inputs.microphone && !isMicrophoneLocked,

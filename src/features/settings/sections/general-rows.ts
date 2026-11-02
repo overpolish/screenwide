@@ -5,7 +5,8 @@ import { t } from "../../../i18n/i18n";
 
 import type { GeneralSettings } from "../../../bindings/GeneralSettings";
 
-// The rows General draws from lists, shared with Settings search.
+// The rows General and Recording draw from lists, shared with Settings
+// search.
 
 /** The preferences a Switch row can drive. */
 type ToggleKey = {
@@ -18,7 +19,23 @@ export type ToggleItem = {
   description?: string;
 };
 
-export const recordingToggle = (): ToggleItem => ({
+export const captureToggle = (): ToggleItem => ({
+  description: t("settings-include-app-description"),
+  key: "recordScreenwideWindows",
+  title: t("settings-include-app"),
+});
+
+export const launchToggle = (): ToggleItem => ({
+  key: "launchAtLogin",
+  title: t("settings-launch-at-login"),
+});
+
+export const controlsOnLaunchToggle = (): ToggleItem => ({
+  key: "showRecordingControlsOnLaunch",
+  title: t("settings-show-controls-on-launch"),
+});
+
+export const confidenceChecksToggle = (): ToggleItem => ({
   description: t("settings-confidence-checks-description"),
   key: "showRecordingConfidenceChecks",
   title: t("settings-confidence-checks"),
@@ -36,19 +53,11 @@ export const autoZoomToggle = (): ToggleItem => ({
   title: t("settings-auto-zoom"),
 });
 
-export const captureToggle = (): ToggleItem => ({
-  description: t("settings-include-app-description"),
-  key: "recordScreenwideWindows",
-  title: t("settings-include-app"),
+export const antiFlickerToggle = (): ToggleItem => ({
+  description: t("settings-anti-flicker-description"),
+  key: "cameraAntiFlicker",
+  title: t("settings-anti-flicker"),
 });
-
-export const startupToggles = (): ToggleItem[] => [
-  { key: "launchAtLogin", title: t("settings-launch-at-login") },
-  {
-    key: "showRecordingControlsOnLaunch",
-    title: t("settings-show-controls-on-launch"),
-  },
-];
 
 /** The folders Settings names: where projects live, and where exports go. */
 export const folders = () =>

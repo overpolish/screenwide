@@ -22,9 +22,12 @@ const REVEAL_FRAMES = 30;
 export function useSettingsSearch({
   initialQuery = "",
   models,
+  momentNames,
   setSection,
 }: {
   models: readonly TranscriptionModel[];
+  /** The names of the person's moments, whose shortcuts it finds. */
+  momentNames: readonly string[];
   setSection: (section: SettingsSection) => void;
   initialQuery?: string;
 }) {
@@ -37,8 +40,8 @@ export function useSettingsSearch({
   const paneRef = useRef<HTMLElement>(null);
   const resultsRef = useRef<HTMLDivElement>(null);
   const entries = useMemo(
-    () => settingsSearchEntries({ isMac: isMacHost, models }),
-    [models],
+    () => settingsSearchEntries({ isMac: isMacHost, models, momentNames }),
+    [models, momentNames],
   );
   const results = useMemo(
     () => matchSettings(entries, query),
@@ -60,7 +63,11 @@ export function useSettingsSearch({
     let frames = 0;
     let frame = requestAnimationFrame(function look() {
       const pane = paneRef.current;
-      if (pane && revealSetting(pane, opened.entry)) return;
+      if (pane && revealSetting(pane, opened.entry)) {
+        // Revealed, it is done with: a pane opened later starts as usual.
+        setOpened(null);
+        return;
+      }
       frames += 1;
       if (frames < REVEAL_FRAMES) frame = requestAnimationFrame(look);
       else if (import.meta.env.DEV)
@@ -73,17 +80,32 @@ export function useSettingsSearch({
     };
   }, [opened]);
 
+  const open = (entry: SettingsSearchEntry) => {
+    setQuery("");
+    setSection(entry.section);
+    setOpened({ entry });
+  };
+
   return {
     isActive: query.trim() !== "",
-    open: (entry: SettingsSearchEntry) => {
-      setQuery("");
-      setSection(entry.section);
-      setOpened({ entry });
+    open,
+    /** Opens the row of `title` in `section`, as a result would. */
+    openRow: (section: SettingsSection, title: string) => {
+      const entry = entries.find(
+        (candidate) =>
+          candidate.section === section &&
+          candidate.target === "row" &&
+          candidate.title === title,
+      );
+      if (entry) open(entry);
+      else setSection(section);
     },
     paneRef,
     query,
     results,
     resultsRef,
+    /** The title of the row being brought into view, until it is. */
+    revealing: opened?.entry.title ?? null,
     setQuery,
     suggestions,
   };

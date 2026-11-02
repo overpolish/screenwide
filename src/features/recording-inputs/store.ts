@@ -5,21 +5,22 @@ import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 
 import { t } from "../../i18n/i18n";
+import {
+  legacyRecordingFormat,
+  moveRecordingFormat,
+} from "../settings/recording-format-migration";
 
 import {
   CameraDevice,
   CameraResolution,
   InputDevice,
-  RecordingFps,
   RecordingInputs,
-  recordingFpsOptions,
   SystemAudioSource,
 } from "./types";
 
 const STORE_NAME = "screenwide-recording-inputs";
-
-/** Smooth by default; halving it is an explicit choice to make a smaller file. */
-const DEFAULT_FPS: RecordingFps = 60;
+/** 1: the frame rate and anti-flicker left for the settings. */
+const STORE_VERSION = 1;
 
 /** Every app's sound. Its name is the app's language, read through
  * `systemAudioLabel` when shown, so it is not stored with the selection. */
@@ -74,18 +75,12 @@ const isCameraDevice = (value: unknown): value is CameraDevice => {
 
 type RecordingInputStore = {
   cameraFlippedById: Record<string, boolean>;
-  /** Cameras asked for 50 Hz cadences, so they do not flicker under lights
-   * on 50 Hz power (`cameraRequestFps`). */
-  cameraPal: boolean;
-  fps: RecordingFps;
   inputs: RecordingInputs;
   selectedCamera: CameraDevice | null;
   selectedCameraMode: CameraResolution | null;
   selectedMicrophone: InputDevice | null;
   selectedSystemAudio: SystemAudioSource[];
   setCameraFlipped: (cameraId: string, flipped: boolean) => void;
-  setCameraPal: (pal: boolean) => void;
-  setFps: (fps: RecordingFps) => void;
   setInput: (input: keyof RecordingInputs, selected: boolean) => void;
   setSelectedCameraSelection: (
     camera: CameraDevice | null,
@@ -95,12 +90,23 @@ type RecordingInputStore = {
   setSelectedSystemAudio: (sources: SystemAudioSource[]) => void;
 };
 
+/** The inputs' storage from before the frame rate and anti-flicker moved to
+ * the settings (`recording-format-migration.ts`): what it held of them is
+ * handed over, once, and `merge` drops it. */
+const migrateRecordingInputs = (persisted: unknown, version: number) => {
+  if (version < STORE_VERSION)
+    moveRecordingFormat(legacyRecordingFormat(persisted)).catch(
+      (error: unknown) => {
+        console.error("Could not keep the frame rate and anti-flicker", error);
+      },
+    );
+  return persisted as RecordingInputStore;
+};
+
 export const useRecordingInputStore = create<RecordingInputStore>()(
   persist(
     (set) => ({
       cameraFlippedById: {},
-      cameraPal: false,
-      fps: DEFAULT_FPS,
       inputs: {
         camera: false,
         microphone: false,
@@ -117,12 +123,6 @@ export const useRecordingInputStore = create<RecordingInputStore>()(
             [cameraId]: flipped,
           },
         }));
-      },
-      setCameraPal: (cameraPal) => {
-        set({ cameraPal });
-      },
-      setFps: (fps) => {
-        set({ fps });
       },
       setInput: (input, selected) => {
         set((state) => ({
@@ -141,21 +141,21 @@ export const useRecordingInputStore = create<RecordingInputStore>()(
     }),
     {
       merge: (persistedState, currentState) => {
-        // Older builds remembered a mode and anti-flicker per camera. Cameras
-        // now record at their largest picture, and anti-flicker is one
-        // setting, on if it was on for any camera.
+        // Older builds remembered a mode per camera, which cameras no longer
+        // have: they record at their largest picture. The frame rate and
+        // anti-flicker are settings now (`migrateRecordingInputs`).
         const {
           cameraModeIdById: _cameraModeIdById,
-          cameraPalById,
+          cameraPal: _cameraPal,
+          cameraPalById: _cameraPalById,
+          fps: _fps,
           ...persisted
         } = persistedState as Partial<RecordingInputStore> & {
           cameraModeIdById?: unknown;
+          cameraPal?: unknown;
           cameraPalById?: unknown;
+          fps?: unknown;
         };
-        const wasPal =
-          !!cameraPalById &&
-          typeof cameraPalById === "object" &&
-          Object.values(cameraPalById).some((pal) => pal === true);
         return {
           ...currentState,
           ...persisted,
@@ -164,13 +164,6 @@ export const useRecordingInputStore = create<RecordingInputStore>()(
             typeof persisted.cameraFlippedById === "object"
               ? persisted.cameraFlippedById
               : {},
-          cameraPal:
-            typeof persisted.cameraPal === "boolean"
-              ? persisted.cameraPal
-              : wasPal,
-          fps: recordingFpsOptions.includes(persisted.fps as RecordingFps)
-            ? (persisted.fps as RecordingFps)
-            : DEFAULT_FPS,
           inputs: mergeInputs(currentState.inputs, persisted.inputs),
           // Older builds persisted only a physical camera. A formatless
           // camera cannot faithfully preview or record, so discovery chooses
@@ -186,8 +179,10 @@ export const useRecordingInputStore = create<RecordingInputStore>()(
             : [ALL_SYSTEM_AUDIO],
         };
       },
+      migrate: migrateRecordingInputs,
       name: STORE_NAME,
       storage: createJSONStorage(() => localStorage),
+      version: STORE_VERSION,
     },
   ),
 );

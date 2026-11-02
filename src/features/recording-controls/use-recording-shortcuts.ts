@@ -81,7 +81,8 @@ export function useRecordingShortcuts() {
       }
       if (payload !== "startStopRecording") return;
       reportShortcutDiagnostic("received", { action: payload, listenerId });
-      startRecording(startRecordingOptions())
+      startRecordingOptions()
+        .then(startRecording)
         .then(() => {
           reportShortcutDiagnostic("completed", {
             action: payload,

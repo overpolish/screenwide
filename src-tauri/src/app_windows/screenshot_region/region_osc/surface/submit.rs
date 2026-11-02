@@ -30,9 +30,39 @@ impl Surface {
     let gpu = Arc::clone(&self.gpu);
     let shared = gpu.device();
     self.chain.resize(shared, size);
+    #[cfg(test)]
+    if let Some(texture) = self.chain.offscreen() {
+      self.encode(
+        &texture.create_view(&Default::default()),
+        vertices,
+        segments,
+        constants,
+      );
+      return Ok(());
+    }
     let Frame::Ready(frame) = self.chain.acquire(shared)? else {
       return Ok(());
     };
+    self.encode(
+      &frame.texture.create_view(&Default::default()),
+      vertices,
+      segments,
+      constants,
+    );
+    shared.queue.present(frame);
+    Ok(())
+  }
+
+  /// Draws the frame into `target` and submits it.
+  fn encode(
+    &mut self,
+    target: &wgpu::TextureView,
+    vertices: &[Vertex],
+    segments: &[Segment],
+    constants: &RenderConstants,
+  ) {
+    let gpu = Arc::clone(&self.gpu);
+    let shared = gpu.device();
     self.write_vertices(vertices);
     let stride = constants_stride(&shared.device);
     self.write_constants(segments, constants, stride);
@@ -49,7 +79,6 @@ impl Surface {
     }
     .map_or(&gpu.placeholder, |source| &source.view);
     let pipeline = &gpu.pipeline;
-    let target = frame.texture.create_view(&Default::default());
     let mut encoder = shared
       .device
       .create_command_encoder(&wgpu::CommandEncoderDescriptor {
@@ -59,7 +88,7 @@ impl Surface {
       let mut pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
         label: Some("Screenwide region OSC pass"),
         color_attachments: &[Some(wgpu::RenderPassColorAttachment {
-          view: &target,
+          view: target,
           depth_slice: None,
           resolve_target: None,
           // Flip-model back buffers are undefined after a present.
@@ -94,8 +123,6 @@ impl Surface {
       }
     }
     shared.queue.submit([encoder.finish()]);
-    shared.queue.present(frame);
-    Ok(())
   }
 
   fn write_vertices(&mut self, vertices: &[Vertex]) {

@@ -35,7 +35,12 @@ export function IslandDrawing({
         width: `calc(100% + ${px(room * 2)})`,
       }}
     >
-      <g transform={`translate(${String(room)} ${String(room)})`}>
+      {/* Marked so a picture of the island can measure the black it draws
+          (`StageScreen`). */}
+      <g
+        data-island-outline
+        transform={`translate(${String(room)} ${String(room)})`}
+      >
         <path ref={rowPathRef} />
         <path ref={shapePathRef} />
       </g>

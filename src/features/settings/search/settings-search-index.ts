@@ -3,12 +3,14 @@
 
 import { t } from "../../../i18n/i18n";
 import {
+  antiFlickerToggle,
   autoZoomToggle,
   captureToggle,
+  confidenceChecksToggle,
+  controlsOnLaunchToggle,
   folders,
+  launchToggle,
   recordingSizeToggle,
-  recordingToggle,
-  startupToggles,
 } from "../sections/general-rows";
 import {
   glideToggles,
@@ -61,9 +63,12 @@ const shortcutRow = ({
 export function settingsSearchEntries({
   isMac,
   models,
+  momentNames,
 }: {
   isMac: boolean;
   models: readonly TranscriptionModel[];
+  /** The names of the person's moments. */
+  momentNames: readonly string[];
 }): SettingsSearchEntry[] {
   const entries: SettingsSearchEntry[] = [];
   // The rows of one group: `at(section, group)(rows, keywords)`.
@@ -94,16 +99,6 @@ export function settingsSearchEntries({
     folders(),
     t("settings-search-keywords-folders"),
   );
-  const recording = at("general", t("settings-recording"));
-  recording([recordingToggle(), recordingSizeToggle(), autoZoomToggle()]);
-  recording(
-    [row(t("settings-countdown"))],
-    t("settings-search-keywords-countdown"),
-  );
-  recording(
-    [row(t("settings-frame-rate"), t("settings-frame-rate-description"))],
-    t("settings-search-keywords-frame-rate"),
-  );
   const capture = at("general", t("settings-capture"));
   capture([captureToggle()]);
   capture(
@@ -111,7 +106,7 @@ export function settingsSearchEntries({
     t("settings-search-keywords-countdown"),
   );
   at("general", t("settings-startup"))(
-    startupToggles(),
+    [launchToggle(), controlsOnLaunchToggle()],
     t("settings-search-keywords-startup"),
   );
   at("general")(
@@ -119,6 +114,21 @@ export function settingsSearchEntries({
     t("settings-search-keywords-updates"),
     "group",
   );
+
+  // Recording
+  const controls = at("recording", t("settings-recording-controls"));
+  controls([confidenceChecksToggle(), recordingSizeToggle()]);
+  controls(
+    [row(t("settings-countdown"))],
+    t("settings-search-keywords-countdown"),
+  );
+  const video = at("recording", t("settings-recording-video"));
+  video(
+    [row(t("settings-frame-rate"), t("settings-frame-rate-description"))],
+    t("settings-search-keywords-frame-rate"),
+  );
+  video([autoZoomToggle()], t("settings-search-keywords-auto-zoom"));
+  video([antiFlickerToggle()], t("settings-search-keywords-anti-flicker"));
 
   // Tools
   const glide = t("settings-section-glide");
@@ -196,6 +206,12 @@ export function settingsSearchEntries({
   );
   at("hotkeys", t("settings-screenshots"))(
     screenshotShortcuts().map(shortcutRow),
+    shortcut,
+  );
+  at("hotkeys", t("settings-section-moments"))(
+    momentNames.map((moment) =>
+      row(t("settings-shortcut-place-moment", { moment })),
+    ),
     shortcut,
   );
   at("hotkeys", glide)(

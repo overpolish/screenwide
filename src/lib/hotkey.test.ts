@@ -7,7 +7,10 @@ import {
   hotkeyFromEvent,
   hotkeyKeys,
   hotkeysEqual,
+  hotkeyValue,
+  keyCodeFromEvent,
   mouseControlFromButton,
+  parseHotkey,
 } from "./hotkey";
 
 const key = {
@@ -69,6 +72,37 @@ describe("hotkey capture", () => {
     expect(hotkeyFromEvent({ ...key, metaKey: true, shiftKey: true })).toBe(
       "Super+Shift+KeyR",
     );
+  });
+  it("refuses Shift alone for a shortcut that works anywhere", () => {
+    expect(hotkeyFromEvent({ ...key, shiftKey: true })).toBeNull();
+    expect(hotkeyFromEvent({ ...key, shiftKey: true }, "local-shortcut")).toBe(
+      "Shift+KeyR",
+    );
+    expect(keyCodeFromEvent({ ...key, shiftKey: true })).toBe("KeyR");
+    expect(
+      keyCodeFromEvent({ ...key, code: "ShiftLeft", key: "Shift" }),
+    ).toBeNull();
+  });
+  it("reads a shortcut's key and modifiers, aliases resolved", () => {
+    expect(parseHotkey("CommandOrControl+Shift+KeyS", true)).toEqual({
+      code: "KeyS",
+      modifiers: ["Super", "Shift"],
+    });
+    expect(parseHotkey("CommandOrControl+Shift+KeyS", false)).toEqual({
+      code: "KeyS",
+      modifiers: ["Control", "Shift"],
+    });
+    expect(hotkeyValue("KeyS", ["Shift", "Alt", "Super"])).toBe(
+      "Super+Alt+Shift+KeyS",
+    );
+  });
+  it("names punctuation by what is printed on it", () => {
+    expect(hotkeyKeys("Super+Shift+Slash", true)).toEqual([
+      "Shift",
+      "Command",
+      "/",
+    ]);
+    expect(hotkeyKeys("Control+Backquote", false)).toEqual(["Control", "`"]);
   });
   it("allows local unmodified keys and preserves the pressed modifier", () => {
     expect(

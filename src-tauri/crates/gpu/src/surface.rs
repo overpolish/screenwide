@@ -119,6 +119,16 @@ impl Surface {
     self.surface.configure(&gpu.device, &self.config);
   }
 
+  /// Presents each frame at a display refresh, one a refresh, and hands out
+  /// a frame only once a refresh has freed one, so a caller drawing in a
+  /// loop is paced by the display rather than a timer. For a picture that
+  /// moves on its own, such as a recording played back; one that follows
+  /// the pointer keeps presenting at once.
+  pub fn wait_for_display(&mut self, gpu: &Gpu) {
+    self.config.present_mode = wgpu::PresentMode::Fifo;
+    self.surface.configure(&gpu.device, &self.config);
+  }
+
   /// Matches the swap chain to a physical size. No frame may be held across
   /// a resize. Consecutive frames are usually the same size, and a resize is
   /// a reallocation.

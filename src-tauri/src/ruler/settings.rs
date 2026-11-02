@@ -50,7 +50,7 @@ impl Runtime {
         other.modifiers == binding.modifiers
           && (other.mac_key == binding.mac_key || other.windows_key == binding.windows_key)
       }) {
-        return Err("Each Ruler action needs a different shortcut".to_owned());
+        return Err(screenwide_i18n::t!("settings-error-ruler-duplicate"));
       }
       compiled.push((action, binding));
     }

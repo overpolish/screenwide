@@ -27,6 +27,7 @@ edition = "2021"
 screenwide-accent = { path = "crates/accent" }
 screenwide-activity = { path = "crates/activity" }
 screenwide-annotations = { path = "crates/annotations" }
+screenwide-auto-zoom = { path = "crates/auto_zoom" }
 screenwide-capture = { path = "crates/capture" }
 screenwide-compositor = { path = "crates/compositor" }
 screenwide-cursor-effects = { path = "crates/cursor_effects" }
@@ -44,6 +45,7 @@ screenwide-placement = { path = "crates/placement" }
 screenwide-project = { path = "crates/project" }
 screenwide-records = { path = "crates/records" }
 screenwide-scenes = { path = "crates/scenes" }
+screenwide-settings-preview = { path = "crates/settings_preview" }
 screenwide-sidecar = { path = "crates/sidecar" }
 screenwide-speech = { path = "crates/speech" }
 screenwide-text = { path = "crates/text" }
@@ -175,6 +177,7 @@ sys-locale.workspace = true
 screenwide-accent.workspace = true
 screenwide-activity.workspace = true
 screenwide-annotations.workspace = true
+screenwide-auto-zoom.workspace = true
 screenwide-capture.workspace = true
 screenwide-compositor.workspace = true
 screenwide-cursor-effects.workspace = true
@@ -192,6 +195,7 @@ screenwide-output.workspace = true
 screenwide-project.workspace = true
 screenwide-records.workspace = true
 screenwide-scenes.workspace = true
+screenwide-settings-preview.workspace = true
 screenwide-sidecar.workspace = true
 screenwide-speech.workspace = true
 screenwide-text.workspace = true

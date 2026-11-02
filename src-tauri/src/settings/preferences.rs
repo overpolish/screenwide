@@ -42,6 +42,11 @@ pub struct GeneralSettings {
   /// Whether a new recording opens with zoom scenes made from its clicks and
   /// typing.
   pub auto_zoom: bool,
+  /// The frame rate a recording is made at: 30 or 60.
+  pub recording_fps: u32,
+  /// Whether cameras are asked for cadences that keep in step with lights
+  /// on 50 Hz power, so the picture does not flicker under them.
+  pub camera_anti_flicker: bool,
   /// Custom scene layouts saved from the Scene panel, oldest first, offered
   /// in every recording.
   pub scene_templates: Vec<SceneTemplate>,
@@ -81,6 +86,8 @@ impl Default for GeneralSettings {
       show_recording_confidence_checks: true,
       show_recording_size: false,
       auto_zoom: true,
+      recording_fps: 60,
+      camera_anti_flicker: false,
       scene_templates: Vec::new(),
       caption_styles: Vec::new(),
       caption_template: TextTemplateId::default(),
@@ -131,6 +138,9 @@ fn write(app: &AppHandle, settings: &GeneralSettings) -> Result<(), String> {
 fn validate(settings: &GeneralSettings) -> Result<(), String> {
   if !matches!(settings.recording_countdown_seconds, 0 | 3 | 5) {
     return Err("The countdown must be off, 3 seconds or 5 seconds".to_owned());
+  }
+  if !matches!(settings.recording_fps, 30 | 60) {
+    return Err("The frame rate must be 30 or 60 frames a second".to_owned());
   }
   if !matches!(settings.screenshot_delay_seconds, 3 | 5 | 10) {
     return Err("The screenshot delay must be 3, 5 or 10 seconds".to_owned());

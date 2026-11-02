@@ -7,6 +7,7 @@ import {
   Keyboard,
   PencilRuler,
   Settings,
+  Video,
 } from "lucide-react";
 import { type ReactNode } from "react";
 
@@ -14,6 +15,7 @@ import { sectionTitle, type SettingsSection } from "./settings-sections";
 
 const icons: [SettingsSection, ReactNode][] = [
   ["general", <Settings key="general" />],
+  ["recording", <Video key="recording" />],
   ["tools", <PencilRuler key="tools" />],
   ["moments", <Flag key="moments" />],
   ["transcription", <AudioLines key="transcription" />],

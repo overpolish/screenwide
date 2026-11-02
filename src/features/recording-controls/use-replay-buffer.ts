@@ -13,7 +13,7 @@ import { initialReplaySnapshot, ReplaySnapshot } from "./types";
 const REPLAY_STATE_EVENT = "replay://state";
 const REPLAY_START_REQUESTED_EVENT = "replay://start-requested";
 
-const turnOn = () => startReplayBuffer(startRecordingOptions());
+const turnOn = () => startRecordingOptions().then(startReplayBuffer);
 
 /** Shows the recording controls, whose warnings say what kept the buffer
  * from starting. */

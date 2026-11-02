@@ -57,3 +57,22 @@ fn keeps_launching_without_the_controls_as_saved_for_the_recording_bar() {
 
   assert!(!settings.show_recording_controls_on_launch);
 }
+
+#[test]
+fn records_smoothly_without_anti_flicker_until_chosen() {
+  let settings: GeneralSettings = serde_json::from_str("{}").unwrap();
+
+  assert_eq!(settings.recording_fps, 60);
+  assert!(!settings.camera_anti_flicker);
+}
+
+#[test]
+fn refuses_a_frame_rate_settings_does_not_offer() {
+  let settings = GeneralSettings {
+    recording_fps: 24,
+    ..GeneralSettings::default()
+  };
+
+  assert!(super::validate(&settings).is_err());
+  assert!(super::validate(&GeneralSettings::default()).is_ok());
+}

@@ -43,6 +43,22 @@ impl RegionDrawable for Drawable {
   }
 }
 
+#[cfg(test)]
+struct Offscreen(wgpu::Texture);
+
+#[cfg(test)]
+impl RegionDrawable for Offscreen {
+  fn resize(&mut self, _gpu: &screenwide_gpu::Gpu, _size: (u32, u32)) {}
+
+  fn acquire(&self, _gpu: &screenwide_gpu::Gpu) -> Result<Frame, String> {
+    Ok(Frame::Skipped)
+  }
+
+  fn offscreen(&self) -> Option<wgpu::Texture> {
+    Some(self.0.clone())
+  }
+}
+
 pub(crate) struct PreviewSurface {
   surface: Surface,
 }
@@ -54,7 +70,19 @@ impl PreviewSurface {
     size: (u32, u32),
     scale: f64,
   ) -> Result<Self, String> {
-    let mut surface = Surface::preview(gpu()?, Box::new(Drawable(drawable)), size, scale);
+    Self::on(Box::new(Drawable(drawable)), size, scale)
+  }
+
+  /// A surface drawing into `texture` rather than onto the screen, so a test
+  /// can read back what it draws.
+  #[cfg(test)]
+  pub(crate) fn offscreen(texture: wgpu::Texture, scale: f64) -> Result<Self, String> {
+    let size = (texture.width(), texture.height());
+    Self::on(Box::new(Offscreen(texture)), size, scale)
+  }
+
+  fn on(drawable: Box<dyn RegionDrawable>, size: (u32, u32), scale: f64) -> Result<Self, String> {
+    let mut surface = Surface::preview(gpu()?, drawable, size, scale);
     surface.display_id = PREVIEW_DISPLAY_ID;
     surface.visible = true;
     surface.show_handles = false;

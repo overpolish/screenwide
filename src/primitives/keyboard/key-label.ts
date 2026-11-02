@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { t } from "../../i18n/i18n";
-import { isMacHost } from "../../lib/platform";
+import { isWindows } from "../../lib/platform";
 
 /**
  * A key's name in the app's language: the modifiers and named keys, written
@@ -21,11 +21,13 @@ export const keyLabel = (key: string) => {
     case "meta":
     case "super":
     case "win":
-      return isMacHost ? t("controls-key-command") : t("controls-key-windows");
+      return isWindows()
+        ? t("controls-key-windows")
+        : t("controls-key-command");
     case "control":
     case "ctrl":
     case "⌃":
-      return isMacHost ? t("controls-key-control") : t("controls-key-ctrl");
+      return isWindows() ? t("controls-key-ctrl") : t("controls-key-control");
     case "option":
     case "⌥":
       return t("controls-key-option");
@@ -45,6 +47,10 @@ export const keyLabel = (key: string) => {
       return t("controls-key-delete");
     case "backspace":
       return t("controls-key-backspace");
+    case "capslock":
+      return t("controls-key-caps-lock");
+    case "fn":
+      return t("controls-key-fn");
     case "up":
       return t("controls-key-up");
     case "down":

@@ -24,6 +24,7 @@ pub use recording_ui::{__cmd__open_recording_ui, __tauri_command_name_open_recor
 pub use recording_ui::{__cmd__recording_ui_visible, __tauri_command_name_recording_ui_visible};
 pub use recording_ui::{__cmd__toggle_recording_ui, __tauri_command_name_toggle_recording_ui};
 
+pub(crate) mod display_notch;
 pub(crate) mod island;
 #[cfg(target_os = "macos")]
 mod island_macos;

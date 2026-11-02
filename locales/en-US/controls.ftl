@@ -50,6 +50,9 @@ controls-key-enter = Enter
 controls-key-tab = Tab
 controls-key-delete = Delete
 controls-key-backspace = Backspace
+controls-key-caps-lock = Caps Lock
+# The Function key at the corner of a laptop keyboard.
+controls-key-fn = Fn
 # The arrow keys, which a Mac draws as arrows and names this way to a screen reader.
 controls-key-up = Up
 controls-key-down = Down

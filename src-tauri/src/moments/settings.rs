@@ -43,7 +43,7 @@ pub fn set_moment_settings(
     .filter_map(|value| value.parse::<Shortcut>().ok())
     .any(|shortcut| crate::shortcuts::assigned_to_action(&app, shortcut.id()));
   if taken {
-    return Err("That shortcut is already assigned to another action".to_owned());
+    return Err(screenwide_i18n::t!("settings-error-shortcut-taken"));
   }
   let transcribing = settings::save(&path(&app)?, settings.clone())?.transcribe_notes;
   // A recording under way picks up the new shortcuts at once.

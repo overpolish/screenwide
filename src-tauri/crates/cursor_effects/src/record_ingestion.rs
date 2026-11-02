@@ -16,7 +16,10 @@ impl CursorCompositor {
     Self::from_records(&records, &typing)
   }
 
-  pub(super) fn from_records(records: &[CursorRecord], typing: &[u64]) -> Result<Self, String> {
+  /// The cursor in `records`, hidden from each of the `typing` moments
+  /// until it next moves: a recording's tracks already read, or a pointer
+  /// scripted for a preview.
+  pub fn from_records(records: &[CursorRecord], typing: &[u64]) -> Result<Self, String> {
     let source = records
       .iter()
       .find_map(|record| match record {
