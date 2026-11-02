@@ -39,12 +39,9 @@ const listBoxItemVariants = tv({
 type ListBoxItemProps = AriaListBoxItemProps & {
   children?: React.ReactNode;
   className?: string;
-  /**
-   * @default true
-   * @description
-   * Whether the item reserves a leading check gutter. A menu of actions keeps
-   * no selection, so it turns this off and the content starts at the inset.
-   */
+  // A menu of actions keeps no selection, so it turns this off and the
+  // content starts at the inset.
+  /** Reserves a leading check gutter. */
   showsSelection?: boolean;
 };
 

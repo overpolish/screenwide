@@ -7,17 +7,27 @@ import { useDateFormatter } from "react-aria";
 
 import { EditableTitle } from "../../../composites/editable-title/editable-title";
 import { t } from "../../../i18n/i18n";
+import { findIn } from "../../../lib/found-text";
 import { cn } from "../../../lib/styling";
 import { IconButton } from "../../../primitives/button/icon-button";
 import { Text } from "../../../primitives/text/text";
 import { formatBytes } from "../../editor/duration";
+import { beatLabel } from "../../editor/timeline/beat-clip/beat-label";
+import { Minimap } from "../../editor/timeline/minimap/minimap";
+import { foundText } from "../../editor/tool-panels/transcript/transcript-found-text";
 import {
   boundsAnchor,
   PopupMenuAnchor,
   pointerAnchor,
 } from "../../popup-panel/use-popup-menu";
+import {
+  beatAt,
+  lineAt,
+  type ProjectReading,
+} from "../activity/project-reading";
+import { recordedStyle } from "../list/project-list";
 
-import { ProjectCardPreview } from "./project-card-preview";
+import { ProjectCardPicture } from "./project-card-picture";
 
 import type { ProjectSummary, ScrubStrip } from "../types";
 
@@ -34,72 +44,101 @@ export type ProjectCardProps = {
   onToggleSelection: () => void;
   project: ProjectSummary;
   thumbnail: string | null;
-  /** In place of when it was last edited, such as how long a deleted
-   * project has before it goes to the Trash. */
+  /** Replaces the date, such as the days left before the Trash. */
   footnote?: string;
-  /** Absent where a project cannot be opened; a plain press then chooses
-   * it. */
+  /** Search text, marked in the name and caption. */
+  found?: string;
+  /** Where a search found something, in recorded seconds. */
+  hits?: readonly number[];
+  /** Pointed at elsewhere, such as in the storage strip. */
+  isLinked?: boolean;
+  onHoverChange?: (isHovered: boolean) => void;
+  /** Opens it in the editor; absent, a press chooses it. */
   onOpen?: () => void;
-  /** Resolves once the project is renamed, and rejects when it is not.
-   * Absent where a project cannot be renamed. */
+  /** Rejects when the rename fails; absent where it cannot be renamed. */
   onRename?: (title: string) => Promise<void>;
+  /** A moment to show, such as a search find, in recorded seconds. */
+  previewAt?: number | null;
+  /** What happened in it: undefined while it is read, null for none. */
+  reading?: ProjectReading | null;
   /** Undefined until asked for; null for a recording without one. */
   scrubStrip?: ScrubStrip | null;
 };
 
-/** When it was last edited, as short as still tells it apart: the time for
- * today's, the day for this year's, the full date before that. The date
- * groups above the cards already say roughly when. */
-function useEditedAt() {
-  const time = useDateFormatter({ timeStyle: "short" });
+/** When it was recorded, in the style `recordedStyle` picks for it. */
+function useRecordedAt() {
+  const weekday = useDateFormatter({
+    hour: "numeric",
+    minute: "2-digit",
+    weekday: "long",
+  });
   const day = useDateFormatter({ day: "numeric", month: "short" });
   const date = useDateFormatter({ dateStyle: "medium" });
-  return (modifiedMs: number) => {
-    const edited = new Date(modifiedMs);
-    const now = new Date();
-    if (edited.toDateString() === now.toDateString())
-      return time.format(edited);
-    return edited.getFullYear() === now.getFullYear()
-      ? day.format(edited)
-      : date.format(edited);
+  return (createdMs: number) => {
+    const formatter = { date, day, weekday }[
+      recordedStyle(createdMs, new Date())
+    ];
+    return formatter.format(new Date(createdMs));
   };
 }
 
-/**
- * One project: its picture, its name, and when it was last edited with the
- * disk it takes. Its actions are in a menu, opened from the More button that
- * comes up under the pointer or a right click, the way Finder offers them.
- */
+// Actions open from More or a right click, as Finder offers them.
+/** A project's picture, name, date and size on disk. */
 export function ProjectCard({
   footnote,
+  found,
+  hits = [],
+  isLinked = false,
   isSelected,
   isSelectionMode,
   onExtendSelection,
+  onHoverChange,
   onMenu,
   onOpen,
   onRename,
   onScrubRequest,
   onToggleSelection,
+  previewAt = null,
   project,
+  reading,
   scrubStrip,
   thumbnail,
 }: ProjectCardProps) {
   // A refused rename leaves the field showing what was typed; remounting it
   // puts the project's own name back.
   const [refusals, setRefusals] = useState(0);
-  const editedAt = useEditedAt();
-  const details =
-    footnote ??
-    (!project.available
-      ? t("project-browser-unavailable")
-      : project.modifiedMs === null
-        ? null
-        : project.sizeBytes === null
-          ? editedAt(project.modifiedMs)
-          : t("project-browser-card-details", {
-              date: editedAt(project.modifiedMs),
-              size: formatBytes(project.sizeBytes),
-            }));
+  const [pointerAt, setPointerAt] = useState<number | null>(null);
+  const whenRecorded = useRecordedAt();
+  const map = reading?.map;
+  const playsMs = map ? map.duration * 1000 : project.durationMs;
+  const toShare = (recorded: number) =>
+    map ? map.toPlayed(recorded) / Math.max(map.duration, 1e-6) : null;
+  // The pointer first, then a find pointed at elsewhere, then a search's
+  // first find; at rest, the still.
+  const restAt =
+    previewAt !== null
+      ? toShare(previewAt)
+      : hits.length > 0
+        ? toShare(hits[0])
+        : null;
+  const at = pointerAt ?? restAt;
+  const recordedAt =
+    at !== null && map ? map.toRecorded(at * map.duration) : null;
+  let caption: string | null = null;
+  if (reading && recordedAt !== null) {
+    const beat = beatAt(reading, recordedAt);
+    caption =
+      lineAt(reading, recordedAt)?.text ?? (beat ? beatLabel(beat.beat) : null);
+  }
+  const marked = (text: string) => {
+    const match = found ? findIn(text, found) : null;
+    return foundText(text, match ? [match] : undefined);
+  };
+  const details = !project.available
+    ? t("project-browser-unavailable")
+    : (footnote ??
+      (project.createdMs === null ? null : whenRecorded(project.createdMs)));
+
   return (
     <article
       aria-label={project.title}
@@ -107,18 +146,25 @@ export function ProjectCard({
         "group/card flex min-w-0 flex-col gap-inline",
         !project.available && "opacity-60",
       )}
+      data-project-file={project.file}
       onContextMenu={(event) => {
         event.preventDefault();
         onMenu(pointerAnchor(event.clientX, event.clientY));
       }}
+      onPointerEnter={() => onHoverChange?.(true)}
+      onPointerLeave={() => onHoverChange?.(false)}
     >
-      <ProjectCardPreview
+      <ProjectCardPicture
+        at={at}
+        caption={caption === null ? null : marked(caption)}
+        isLinked={isLinked}
         isSelected={isSelected}
         isSelectionMode={isSelectionMode}
+        onPointAt={setPointerAt}
         onPress={(event) => {
           // Finder's modifiers: Shift takes a range, Command (Control on
-          // Windows) one more. A plain press opens and leaves the choice as
-          // it was, or chooses where there is nothing to open.
+          // Windows) one more. A plain press opens it, or chooses it where
+          // it cannot be opened.
           if (event.shiftKey) onExtendSelection();
           else if (event.metaKey || event.ctrlKey || !onOpen)
             onToggleSelection();
@@ -126,6 +172,21 @@ export function ProjectCard({
         }}
         onScrubRequest={onScrubRequest}
         onSelectedChange={onToggleSelection}
+        overview={
+          reading ? (
+            <Minimap
+              at={at}
+              beats={reading.beats.map(({ beat, span }) => ({
+                ...span,
+                color: beat.kind === "moment" ? beat.color : undefined,
+              }))}
+              finds={hits}
+              isPicture
+              map={reading.map}
+            />
+          ) : null
+        }
+        playsMs={playsMs}
         project={project}
         scrubStrip={scrubStrip}
         thumbnail={thumbnail}
@@ -136,6 +197,7 @@ export function ProjectCard({
             {project.available && onRename ? (
               <EditableTitle
                 className="truncate focus:text-clip"
+                found={found}
                 key={refusals}
                 label={t("project-browser-project-name")}
                 onChange={(title) => {
@@ -147,21 +209,32 @@ export function ProjectCard({
               />
             ) : (
               <span className="block truncate" dir="auto">
-                {project.title}
+                {marked(project.title)}
               </span>
             )}
           </Text>
-          <Text className="truncate tabular-nums" variant="caption">
-            {details}
-          </Text>
+          {/* When and how much, apart by layout rather than a dot. */}
+          <div className="flex min-w-0 items-baseline justify-between gap-separate">
+            <Text className="truncate tabular-nums" variant="caption">
+              {details}
+            </Text>
+            {project.available && project.sizeBytes !== null ? (
+              <Text
+                className="shrink-0 text-fg-tertiary tabular-nums"
+                variant="caption"
+              >
+                {formatBytes(project.sizeBytes)}
+              </Text>
+            ) : null}
+          </div>
         </div>
-        {/* Out of the way until the card is pointed at or the button is
-            reached from the keyboard; a right click opens the same menu. */}
+        {/* Always there, so the actions are found without pointing at
+            the card first; a right click opens the same menu. */}
         <IconButton
           aria-label={t("project-browser-more-actions", {
             title: project.title,
           })}
-          className="shrink-0 opacity-0 transition-opacity group-hover/card:opacity-100 data-[focus-visible]:opacity-100"
+          className="shrink-0"
           onPress={(event) => {
             onMenu(boundsAnchor(event.target.getBoundingClientRect()));
           }}

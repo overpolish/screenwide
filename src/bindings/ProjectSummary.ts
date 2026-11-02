@@ -15,10 +15,17 @@ available: boolean,
  * When it goes on to the system Trash, for a project in Recently
  * Deleted; None elsewhere.
  */
-expiresMs: number | null, durationMs: number | null, file: string, kind: ProjectKind | null, 
+expiresMs: number | null, durationMs: number | null, 
+/**
+ * When the project was made, which is when it was recorded or the
+ * screenshot taken: its folder's creation time, as the manifest keeps no
+ * time of its own. None where the file system does not keep one.
+ */
+createdMs: number | null, file: string, kind: ProjectKind | null, 
 /**
  * When the manifest last changed, which is when the project was last
- * edited.
+ * edited: what tells a cached picture or reading it is out of date, never
+ * shown.
  */
 modifiedMs: number | null, 
 /**

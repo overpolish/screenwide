@@ -4,7 +4,6 @@
 import { ReactNode } from "react";
 
 import { TranscriptMatch } from "./transcript-search";
-import { FOUND_TEXT_CLASS } from "./transcript-unit-styles";
 import { TranscriptUnit } from "./transcript-units";
 
 /** Where the matches fall in each unit's text, as `[from, to)` letter
@@ -31,7 +30,8 @@ export function foundRanges(
   return { owners, ranges };
 }
 
-/** `text` with the letters a search found in it tinted, the rest as it is. */
+/** `text` with the letters a search found in it tinted, the rest as it is.
+ * A unit that is chosen keeps the choice's surface whole instead. */
 export function foundText(
   text: string,
   ranges: readonly [number, number][] | undefined,
@@ -42,7 +42,7 @@ export function foundText(
   for (const [from, to] of ranges) {
     if (from > at) pieces.push(text.slice(at, from));
     pieces.push(
-      <span className={FOUND_TEXT_CLASS} key={from}>
+      <span className="found-text" key={from}>
         {text.slice(from, to)}
       </span>,
     );

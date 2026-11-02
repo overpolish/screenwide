@@ -3,14 +3,16 @@
 
 import { createElement } from "react";
 import { useArgs } from "storybook/preview-api";
-import { fn } from "storybook/test";
+import { fn, userEvent, within } from "storybook/test";
 
+import { t } from "../../i18n/i18n";
 import { featureStage } from "../../storybook/feature-story-stage";
 
 import { ProjectBrowser, type ProjectBrowserProps } from "./project-browser";
+import { readings } from "./project-browser-activity-fixtures";
 import {
   locations,
-  projects,
+  recentProjects,
   scrubStrips,
   thumbnails,
 } from "./project-browser-fixtures";
@@ -52,7 +54,8 @@ export const projectBrowserMeta = {
     deleted: null,
     error: null,
     locations,
-    projects,
+    projects: recentProjects,
+    readings,
     scrubStrips,
     selected: RECENT,
     thumbnails,
@@ -65,6 +68,7 @@ export const projectBrowserMeta = {
         ...Object.keys(events),
         "locations",
         "projects",
+        "readings",
         "scrubStrips",
         "thumbnails",
       ],
@@ -76,3 +80,16 @@ export const projectBrowserMeta = {
     return createElement(LiveProjectBrowser, { ...args, updateArgs });
   },
 } satisfies Meta<typeof ProjectBrowser>;
+
+// Presses the project's segment in the storage strip.
+export const goToCard =
+  (title: string) =>
+  async ({ canvasElement }: { canvasElement: HTMLElement }) => {
+    const strip = await within(canvasElement).findByRole("toolbar", {
+      name: t("project-browser-storage"),
+    });
+    // By the title alone: the label wraps it in direction isolates.
+    await userEvent.click(
+      within(strip).getByRole("button", { name: new RegExp(title) }),
+    );
+  };

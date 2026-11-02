@@ -31,29 +31,25 @@ export type BeatClipProps = {
   isSelected: boolean;
   /** Told a press, whose event says whether Shift extends the choice. */
   onPress: (event: React.MouseEvent) => void;
-  /** The recording's shape, width over height, which its pictures keep.
-   * Known before any picture is read, so a picture's place is held at its
-   * size while it loads and nothing moves when it arrives. */
+  // Known before any picture is read, so a picture's place is held at its
+  // size while it loads and nothing moves when it arrives.
+  /** The recording's width over height, which its pictures keep. */
   pictureAspect: number;
   scale: TimelineScale;
   span: Span;
   /** The strip's width, in px. */
   width: number;
-  /** Whether what it draws over the picture, such as a shortcut's keys, is
-   * hidden: it is drawn as an outline, still there to press. */
+  /** Draws what it puts over the picture, such as keys, as an outline. */
   isHidden?: boolean;
   /** Whether it is lifted to be moved, carried with the pointer. */
   isLifted?: boolean;
   /** Told a press on it, which may go on to drag it to play elsewhere. */
   onGrab?: (event: React.PointerEvent) => void;
-  /** The beat's sound, as peaks from 0 to 1: a line's voice, or the noise
-   * that made a moment loud. */
+  /** The beat's sound, as peaks from 0 to 1. */
   peaks?: number[];
-  /** The screen at the beat, or null while it is read from the video;
-   * none where the screen is not in the export. */
+  /** The screen at the beat: null while read, absent when not exported. */
   thumbnail?: string | null;
-  /** What trims it, given once it can be trimmed; its handles show while
-   * it is chosen. */
+  /** Trims it; its handles show while it is chosen. */
   trim?: BeatTrim;
 };
 

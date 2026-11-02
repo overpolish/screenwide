@@ -14,6 +14,8 @@ use ts_rs::TS;
 
 use screenwide_timeline_edit::PersistedTimelineEdit;
 
+use crate::ReadError;
+
 const FORMAT_VERSION: u16 = 1;
 
 /// Every manifest write is a read, a change and a replace. Autosaves and the
@@ -237,20 +239,19 @@ pub fn resolve(file: &Path, name: &str) -> Result<PathBuf, String> {
   Ok(path)
 }
 
-pub fn read(file: &Path) -> Result<Manifest, String> {
+pub fn read(file: &Path) -> Result<Manifest, ReadError> {
   #[derive(Deserialize)]
   struct Version {
     version: u16,
   }
 
-  let bytes =
-    std::fs::read(file).map_err(|error| format!("The project could not be read: {error}"))?;
-  let Version { version } = serde_json::from_slice(&bytes)
-    .map_err(|_| format!("{} is not a Screenwide project", file.display()))?;
+  let bytes = std::fs::read(file).map_err(ReadError::Unreadable)?;
+  let Version { version } =
+    serde_json::from_slice(&bytes).map_err(|_| ReadError::NotProject(file.to_path_buf()))?;
   if version > FORMAT_VERSION {
-    return Err("This project was made by a newer version of Screenwide".to_owned());
+    return Err(ReadError::Newer);
   }
-  serde_json::from_slice(&bytes).map_err(|error| format!("The project file is damaged: {error}"))
+  serde_json::from_slice(&bytes).map_err(ReadError::Damaged)
 }
 
 pub fn write(file: &Path, manifest: &Manifest) -> Result<(), String> {

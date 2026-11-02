@@ -7,8 +7,9 @@
 
 use super::PlayerSources;
 use screenwide_compositor::compositor::cursor_placement::placed_cursor;
-use screenwide_compositor::compositor::still_overlay::compose_output_layers;
-use screenwide_cursor_effects::CursorEffectSettings;
+use screenwide_compositor::compositor::still::{compose_still, StillInputs};
+use screenwide_compositor::compositor::PictureLook;
+use screenwide_cursor_effects::{CursorEffectSettings, GpuCursor};
 use screenwide_export::camera_effects::cpu::StillEffects;
 use screenwide_export::decode::source_frame_image;
 use screenwide_export::recording_model::{RecordingOutputSettings, CAMERA_IN_FRONT};
@@ -42,11 +43,15 @@ pub(super) fn composed_frame_image(
     .filter(|_| bake_camera)
     .map(|path| source_frame_image(path, position_ms, camera_duration_ms))
     .transpose()?;
+  // How the effects left each picture: the canvas casts a cut-out person's
+  // shadow from their outline and enlarges an enhanced one along its edges,
+  // as it does for the frames the effects pass draws for the export.
+  let (mut screen_look, mut camera_look) = (PictureLook::default(), PictureLook::default());
   if let Some(mut effects) = StillEffects::new(sources.camera_effects_now(), STILL_MATTE_SIDE) {
     if sources.primary_kind == screenwide_project::PrimaryRecordingKind::Camera {
-      effects.apply(&mut screen, position_ms);
+      screen_look = effects.apply(&mut screen, position_ms);
     } else if let Some(camera) = camera.as_mut() {
-      effects.apply(camera, position_ms.min(camera_duration_ms));
+      camera_look = effects.apply(camera, position_ms.min(camera_duration_ms));
     }
   }
   let primary = &recording_output.primary;
@@ -77,16 +82,24 @@ pub(super) fn composed_frame_image(
       )
     })
     .transpose()?;
-  compose_output_layers(
+  screenwide_output::validate_output_settings(screen.width, screen.height, primary)?;
+  compose_still(
     &screen,
     primary,
-    position_ms as f64 / 1_000.0,
-    true,
-    cursor.as_ref(),
-    camera.as_ref(),
-    overlay.as_ref(),
-    keyboard.as_ref(),
-    cursor_effects.clip_at_video_edge,
-    false,
+    StillInputs {
+      seconds: position_ms as f64 / 1_000.0,
+      cursor: cursor.map(|cursor| GpuCursor {
+        clip_at_video_edge: cursor_effects.clip_at_video_edge,
+        ..cursor
+      }),
+      camera: camera
+        .as_ref()
+        .zip(overlay.as_ref())
+        .and_then(|(camera, overlay)| overlay.still_camera(camera, camera_look)),
+      keyboard,
+      foreground_only: false,
+      look: screen_look,
+      transparent_background: true,
+    },
   )
 }

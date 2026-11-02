@@ -56,8 +56,7 @@ function ExportIsland({
   );
 }
 
-/** What a setting asked for does to the story's export, as the editor
- * would do it. */
+// What a setting asked for does to the story's export, as the editor would.
 const patched = (
   shown: ToolPanelExport,
   patch: ToolPanelExportPatch,
@@ -122,8 +121,6 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-// The frame at the playhead compared across the divider, then the looks,
-// four cards, each with its file's size.
 export const Video: Story = {};
 
 // The editor at its least height: the parts above Export scroll, fading at
@@ -132,18 +129,15 @@ export const ShortWindow: Story = {
   parameters: { stageHeight: 480 },
 };
 
-// The sizes on their way: the cards stand at once, each with a quiet stub
-// in place of its size until it lands.
+// Each card holds a stub in place of its size until it lands.
 export const Measuring: Story = {
   args: { export: { ...VIDEO, quality: MEASURING_QUALITY } },
 };
 
-// Some sizes landed and shown, the rest still stubs.
 export const PartlyMeasured: Story = {
   args: { export: { ...VIDEO, quality: PARTLY_MEASURED_QUALITY } },
 };
 
-// The arrow keys move the choice from look to look.
 export const ChooseWithArrows: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
@@ -161,7 +155,6 @@ export const ChooseWithArrows: Story = {
   },
 };
 
-// The compared frame being made, softened under a spinner.
 export const LoadingCompare: Story = {
   args: { export: { ...VIDEO, compare: COMPARE_LOADING } },
 };

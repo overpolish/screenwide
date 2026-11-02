@@ -19,7 +19,7 @@ type SliderNumberFieldProps = {
   minValue: number;
   onChange: (value: number) => void;
   value: number;
-  /** Width of the slider and value; a reset takes its own room before it. */
+  /** Width of the slider and value; a reset adds its own. */
   className?: string;
   /** Offers a reset while the value differs from it. */
   defaultValue?: number;

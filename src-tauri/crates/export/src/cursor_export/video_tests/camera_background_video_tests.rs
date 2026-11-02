@@ -15,15 +15,15 @@ use std::path::Path;
 use std::process::Command;
 use std::sync::Arc;
 
-const WIDTH: u32 = 320;
-const HEIGHT: u32 = 180;
+pub(super) const WIDTH: u32 = 320;
+pub(super) const HEIGHT: u32 = 180;
 /// Where the 160 by 120 camera is drawn, one pixel to one: x, y, width and
 /// height on the canvas.
-const CAMERA: (u32, u32, u32, u32) = (80, 30, 160, 120);
+pub(super) const CAMERA: (u32, u32, u32, u32) = (80, 30, 160, 120);
 
 /// A movie two seconds long at `size`, drawn by the lavfi `filter` after a
 /// black frame.
-fn movie(path: &Path, filter: &str, size: (u32, u32)) {
+pub(super) fn movie(path: &Path, filter: &str, size: (u32, u32)) {
   assert!(Command::new(screenwide_sidecar::ffmpeg_path())
     .args([
       "-hide_banner",
@@ -46,7 +46,7 @@ fn movie(path: &Path, filter: &str, size: (u32, u32)) {
 }
 
 /// The frame `seconds` into the export at `destination`, as RGB.
-fn frame_of(destination: &Path, seconds: &str) -> impl Fn(u32, u32) -> [u8; 3] {
+pub(super) fn frame_of(destination: &Path, seconds: &str) -> impl Fn(u32, u32) -> [u8; 3] {
   let frame = Command::new(screenwide_sidecar::ffmpeg_path())
     .args(["-hide_banner", "-loglevel", "error", "-ss", seconds, "-i"])
     .arg(destination)
@@ -72,7 +72,7 @@ fn frame_of(destination: &Path, seconds: &str) -> impl Fn(u32, u32) -> [u8; 3] {
 /// A red camera with a matte holding the person on its left half only, and
 /// effects showing `background` behind them from the start of the video to
 /// `end_ms`, with a blue picture to hand.
-fn camera_with_matte(
+pub(super) fn camera_with_matte(
   directory: &Path,
   background: CameraBackground,
   end_ms: u64,
@@ -116,7 +116,7 @@ fn camera_with_matte(
   }
 }
 
-fn output_settings() -> screenwide_output::ScreenshotOutputSettings {
+pub(super) fn output_settings() -> screenwide_output::ScreenshotOutputSettings {
   let mut output = screenwide_output::fixtures::test_output_settings(WIDTH, HEIGHT);
   output.background_color = "#00ff00".into();
   output.mesh_colors.clear();
@@ -132,7 +132,7 @@ fn output_settings() -> screenwide_output::ScreenshotOutputSettings {
   output
 }
 
-fn directory(name: &str) -> std::path::PathBuf {
+pub(super) fn directory(name: &str) -> std::path::PathBuf {
   let directory = std::env::temp_dir().join(format!(
     "screenwide-camera-background-{name}-{}",
     std::process::id()
@@ -141,7 +141,7 @@ fn directory(name: &str) -> std::path::PathBuf {
   directory
 }
 
-const VIDEO: VideoExportOptions = VideoExportOptions {
+pub(super) const VIDEO: VideoExportOptions = VideoExportOptions {
   compression: 0,
   resolution_scale_percent: 100,
   source_scale_percent: 100,

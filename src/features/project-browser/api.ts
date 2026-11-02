@@ -4,6 +4,7 @@
 import { invoke } from "@tauri-apps/api/core";
 
 import type {
+  ProjectActivity,
   ProjectLocation,
   ProjectSource,
   ProjectSummary,
@@ -28,6 +29,11 @@ export const getProjectThumbnail = (file: string) =>
  * while it has none. */
 export const getScrubStrip = (file: string) =>
   invoke<ScrubStripFile | null>("get_scrub_strip", { file });
+
+/** What happened in a recording, for its card's overview and for search; null
+ * for a screenshot or a project that cannot be read. */
+export const getProjectActivity = (file: string) =>
+  invoke<ProjectActivity | null>("get_project_activity", { file });
 
 /** Sent with a project's manifest when the editor has drawn it a new still. */
 export const PROJECT_STILL_EVENT = "projects://still";

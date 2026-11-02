@@ -1,11 +1,11 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! What happened over the recording open in the editor, for the timeline to
-//! find its beats in: the clicks and typing the cursor and key files hold,
-//! and what the picture did, from the readings the capture wrote beside the
-//! movie. Each is read only if its file is there; a recording made without
-//! one has none of it.
+//! What happened over a recording, for the timeline to find its beats in and
+//! the project browser to draw and search: the clicks and typing the cursor
+//! and key files hold, and what the picture did, from the readings the
+//! capture wrote beside the movie. Each is read only if its file is there; a
+//! recording made without one has none of it.
 
 use std::path::{Path, PathBuf};
 
@@ -14,12 +14,14 @@ use screenwide_records::cursor::{ButtonState, CursorRecord};
 use screenwide_records::keyboard::KeyboardRecord;
 use serde::Serialize;
 use tauri::{AppHandle, Manager};
+use ts_rs::TS;
 
 use crate::editor::{EditorArtifact, EditorState};
 
 /// A press of the pointer, when it went down.
-#[derive(Clone, Debug, Serialize)]
+#[derive(Clone, Debug, Serialize, TS)]
 #[serde(rename_all = "camelCase")]
+#[ts(export)]
 pub struct RecordingClick {
   /// 2 for a double click, and so on.
   pub count: u8,
@@ -28,18 +30,21 @@ pub struct RecordingClick {
 }
 
 /// A stretch where the picture was not at rest.
-#[derive(Clone, Debug, Serialize)]
+#[derive(Clone, Debug, Serialize, TS)]
 #[serde(rename_all = "camelCase")]
+#[ts(export)]
 pub struct RecordingPictureSpan {
   pub end_ms: u64,
   pub start_ms: u64,
   /// `moving` where something moved by itself, `new` where much of the
   /// picture was new: another page, another app.
+  #[ts(type = "\"moving\" | \"new\"")]
   pub state: &'static str,
 }
 
-#[derive(Clone, Debug, Default, Serialize)]
+#[derive(Clone, Debug, Default, Serialize, TS)]
 #[serde(rename_all = "camelCase")]
+#[ts(export)]
 pub struct RecordingActivity {
   pub clicks: Vec<RecordingClick>,
   pub picture: Vec<RecordingPictureSpan>,
@@ -86,25 +91,31 @@ pub async fn get_recording_activity(
   artifact_id: u64,
 ) -> Result<RecordingActivity, String> {
   let sources = sources(&app, artifact_id)?;
-  tauri::async_runtime::spawn_blocking(move || read(&sources))
-    .await
-    .map_err(|error| error.to_string())
+  tauri::async_runtime::spawn_blocking(move || {
+    read(
+      sources.cursor.as_deref(),
+      sources.keyboard.as_deref(),
+      &sources.movie,
+    )
+  })
+  .await
+  .map_err(|error| error.to_string())
 }
 
 /// A file that cannot be read gives nothing rather than failing the rest:
 /// each reading stands on its own.
-fn read(sources: &Sources) -> RecordingActivity {
+pub(crate) fn read(
+  cursor: Option<&Path>,
+  keyboard: Option<&Path>,
+  movie: &Path,
+) -> RecordingActivity {
   RecordingActivity {
-    clicks: sources
-      .cursor
-      .as_deref()
+    clicks: cursor
       .and_then(|path| screenwide_records::cursor::read(path).ok())
       .map(|records| clicks(&records))
       .unwrap_or_default(),
-    picture: picture(&sources.movie),
-    typing: sources
-      .keyboard
-      .as_deref()
+    picture: picture(movie),
+    typing: keyboard
       .and_then(|path| screenwide_records::keyboard::read(path).ok())
       .map(|records| typing(&records))
       .unwrap_or_default(),

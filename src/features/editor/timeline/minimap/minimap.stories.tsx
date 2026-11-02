@@ -21,10 +21,10 @@ import { Minimap } from "./minimap";
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 
-/** The fewest seconds the strip zooms in to, as the editor allows. */
+// The fewest seconds the editor lets the strip zoom in to.
 const FEWEST_S = 3;
 
-/** The sample's beats, three of them moments of different kinds. */
+// Three of the sample's beats are moments of different kinds.
 const BEATS = STORY_BEATS.map((beat, index) => ({
   ...beat,
   color: ({ 2: "#ff8d28", 7: "#0088ff", 11: "#34c759" } as const)[index],
@@ -33,15 +33,14 @@ const BEATS = STORY_BEATS.map((beat, index) => ({
 type StoryProps = {
   onSqueezeChange: (squeeze: number) => void;
   onViewChange: (view: View) => void;
-  /** Where the playhead is, as a share of the edited recording. */
+  // A share of the edited recording.
   playheadAt: number;
   squeeze: number;
   view: View;
 };
 
-/** The sample recording's overview. The window and the squeeze are kept
- * here, the window inside the recording, as the strip keeps it, and logged
- * to Actions once a drag rests; Controls start it afresh. */
+// Keeps the window and squeeze as the strip does, logging a drag once it
+// rests; Controls start it afresh.
 function LiveMinimap({ playheadAt, ...props }: StoryProps) {
   const [playhead] = useState(createPlayhead);
   const [squeeze, setSqueeze] = useState(props.squeeze);
@@ -105,3 +104,18 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {};
+
+export const Picture: Story = {
+  parameters: { controls: { include: ["playheadAt"] } },
+  render: ({ playheadAt }) => (
+    <div className="py-2" dir="ltr" style={{ width: STORY_TRACK_PX }}>
+      <Minimap
+        at={playheadAt}
+        beats={BEATS}
+        finds={[STORY_DURATION * 0.3, STORY_DURATION * 0.62]}
+        isPicture
+        map={storySqueeze(0)}
+      />
+    </div>
+  ),
+};

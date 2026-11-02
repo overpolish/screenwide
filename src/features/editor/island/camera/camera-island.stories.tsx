@@ -45,8 +45,7 @@ const EFFECTS: ToolPanelCameraEffects = {
   working: { background: false, colour: false },
 };
 
-/** A kept mug, a removed lamp and a painted line, the last waiting its
- * turn to be followed. */
+// A kept mug, a removed lamp, and a painted line not yet followed.
 const PICKS: ToolPanelCameraObjects["picks"] = [
   { followed: true, following: null, id: 1, keep: true, painted: false },
   { followed: true, following: null, id: 2, keep: false, painted: false },
@@ -205,8 +204,7 @@ export const DownloadingModel: Story = {
   },
 };
 
-// The cutout and the colour measure both being made, the first time each
-// is asked for.
+// The cutout and the colour measure both being made.
 export const Working: Story = {
   args: {
     effects: {
@@ -254,8 +252,6 @@ export const ObjectsNeedModel: Story = {
   },
 };
 
-// Picking on the preview, one object chosen and another being followed
-// through the recording.
 export const PickingObjects: Story = {
   args: {
     effects: {
@@ -310,8 +306,8 @@ export const AtDefaultPlacement: Story = {
   args: { isAtDefaultPlacement: true },
 };
 
-// A recording of the camera alone: the camera is its own picture, padded,
-// turned and recentred as a screen is, with no Follow face.
+// The camera is its own picture, turned and recentred as a screen is, with
+// no Follow face.
 export const CameraOnly: Story = {
   args: {
     picture: {
@@ -325,8 +321,7 @@ export const CameraOnly: Story = {
   },
 };
 
-// Over a scene, the camera-only recording's inset, corners, turn, Recenter
-// and Reset placement are the scene's own; the note says so.
+// Over a scene, the inset, corners, turn and placement are the scene's own.
 export const CameraOnlyInScene: Story = {
   args: { ...CameraOnly.args, isInScene: true },
 };

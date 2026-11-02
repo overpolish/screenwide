@@ -11,8 +11,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 
 const WIDTH = 640;
 
-/** The blade on a row of the strip's height, following the pointer across
- * it from where Controls put it. */
+// Follows the pointer from where Controls put it.
 function LiveBlade({ x: initial }: { x: number }) {
   const [x, setX] = useState(initial);
   return (

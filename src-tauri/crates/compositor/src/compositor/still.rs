@@ -22,6 +22,7 @@ pub struct StillCamera<'a> {
   pub radius: u32,
   pub drop_shadow: bool,
   pub on_top: bool,
+  pub look: PictureLook,
 }
 
 /// What one still draws besides the picture and its annotations.
@@ -32,6 +33,8 @@ pub struct StillInputs<'a> {
   pub camera: Option<StillCamera<'a>>,
   pub keyboard: Option<KeyboardOverlay>,
   pub foreground_only: bool,
+  /// How the camera's effects left `image`, where the picture is the camera.
+  pub look: PictureLook,
   /// Whether the canvas outside its rounded corners stays transparent, or is
   /// opaque black as an encoder that has no alpha would see it.
   pub transparent_background: bool,
@@ -66,14 +69,14 @@ pub fn compose_still_on(
 ) -> Result<CapturedImage, String> {
   let gpu = compositor.gpu();
   let (width, height) = screenwide_output::output_dimensions(settings)?;
-  let mut source = compositor.screenshot_source(image)?;
+  let mut source = compositor.still_source(image, inputs.look)?;
   source.picture = Some(std::sync::Arc::new(image.clone()));
   let camera = inputs
     .camera
     .as_ref()
     .map(|camera| {
       Ok::<_, String>((
-        compositor.screenshot_source(camera.image)?,
+        compositor.still_source(camera.image, camera.look)?,
         BakeGeometry {
           crop_x: camera.crop[0],
           crop_y: camera.crop[1],

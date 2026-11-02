@@ -51,6 +51,7 @@ mod whole_blur;
 pub use camera::CameraComposition;
 pub use canvas_pipelines::EveryAnnotationKind;
 pub use layer::{CanvasGeometry, LayerDraw, LayerPlacement};
+pub use source::PictureLook;
 
 use self::constants::Constants;
 

@@ -195,9 +195,7 @@ export function ExportOptions({
                 onChange: (deleteProjectAfterExport) => {
                   onPatch({ deleteProjectAfterExport });
                 },
-                title: t("editor-export-delete-after", {
-                  platform: platformArg(),
-                }),
+                title: t("editor-export-delete-after"),
               })}
             </div>
           </IslandFlow>

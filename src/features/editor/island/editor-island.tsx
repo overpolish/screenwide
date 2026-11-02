@@ -1,19 +1,15 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { AnimatePresence, motion } from "motion/react";
+import { AnimatePresence } from "motion/react";
 import { type ReactNode, useMemo, useState } from "react";
 
 import { t } from "../../../i18n/i18n";
 import { Island, type IslandProps } from "../../../primitives/island/island";
 import { IslandCrossfade } from "../../../primitives/island/island-crossfade";
 import { type IslandAnchor } from "../../../primitives/island/island-geometry";
-import {
-  focusIn,
-  leave,
-  reveal,
-} from "../../../primitives/island/island-motion";
 import { useSize } from "../../../primitives/island/island-size";
+import { IslandSwap } from "../../../primitives/island/island-swap";
 
 // The editor's one island, for whatever is in hand: a row saying what it is,
 // its actions at the row's end, and its choices beneath. It is one block, an
@@ -47,11 +43,6 @@ export type EditorIslandProps = Pick<
   content: EditorIslandContent;
 };
 
-/** The row and line leaving go quickly, as a section's part does
- * (`IslandCrossfade`), so the two never read as laid over each other while
- * the new ones are revealed a beat after the black begins to move. */
-const leaving = { ...focusIn.exit, transition: leave };
-
 export function EditorIsland({ content, ...island }: EditorIslandProps) {
   // The row keeps its own width as sections change beneath it, so its title
   // and actions stay put while the black reshapes round a section; a
@@ -83,49 +74,39 @@ export function EditorIsland({ content, ...island }: EditorIslandProps) {
       aria-label={t("editor-island-label")}
       below={
         content.below ? (
-          <AnimatePresence initial={belowArrives} mode="popLayout">
-            <motion.div
-              animate={reveal.animate}
-              exit={leaving}
-              initial={reveal.initial}
-              key={content.key}
-              ref={belowRef}
-              style={{ minWidth: rowNaturalWidth }}
-              transition={reveal.transition}
-            >
-              {content.below}
-            </motion.div>
-          </AnimatePresence>
+          <IslandSwap
+            initial={belowArrives}
+            ref={belowRef}
+            style={{ minWidth: rowNaturalWidth }}
+            swapKey={content.key}
+          >
+            {content.below}
+          </IslandSwap>
         ) : undefined
       }
       row={
-        <AnimatePresence initial={false} mode="popLayout">
-          <motion.div
-            animate={reveal.animate}
-            className="min-w-0 grow"
-            exit={leaving}
-            initial={reveal.initial}
-            key={content.key}
-            transition={reveal.transition}
+        <IslandSwap
+          className="min-w-0 grow"
+          initial={false}
+          swapKey={content.key}
+        >
+          <div
+            className="flex h-10 w-max max-w-full items-center justify-between gap-separate px-1"
+            ref={rowRef}
+            // Across the island where it is wider, and at least the line
+            // under it; both left out when its own width is read, which is
+            // then its content's (`w-max`). Held to the black as a part
+            // arrives, only that part gives way (`IslandRowPresence`).
+            style={{ minWidth: `max(${String(rowWidth)}px, 100%)` }}
           >
-            <div
-              className="flex h-10 w-max max-w-full items-center justify-between gap-separate px-1"
-              ref={rowRef}
-              // Across the island where it is wider, and at least the line
-              // under it; both left out when its own width is read, which is
-              // then its content's (`w-max`). Held to the black as a part
-              // arrives, only that part gives way (`IslandRowPresence`).
-              style={{ minWidth: `max(${String(rowWidth)}px, 100%)` }}
-            >
-              <div className="flex shrink-0 items-center">{content.title}</div>
-              {content.actions ? (
-                <div className="flex min-w-0 items-center gap-separate *:shrink-0">
-                  {content.actions}
-                </div>
-              ) : null}
-            </div>
-          </motion.div>
-        </AnimatePresence>
+            <div className="flex shrink-0 items-center">{content.title}</div>
+            {content.actions ? (
+              <div className="flex min-w-0 items-center gap-separate *:shrink-0">
+                {content.actions}
+              </div>
+            ) : null}
+          </div>
+        </IslandSwap>
       }
       // Its title keeps to the island's start and its actions to its end
       // when what hangs under the row is wider than it.

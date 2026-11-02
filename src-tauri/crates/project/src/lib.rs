@@ -30,6 +30,7 @@ mod folder;
 pub mod library;
 mod listing;
 mod manifest;
+mod read_error;
 mod relocate;
 
 pub use deleted::{delete, expire, listed as recently_deleted, restore, KEEP_MS};
@@ -42,6 +43,7 @@ pub use manifest::{
   read, resolve, update, write, Manifest, PrimaryRecordingKind, ProjectKind, RecordingManifest,
   RecordingMedia, RecordingOrigin, ScreenshotLayer, ScreenshotManifest,
 };
+pub use read_error::ReadError;
 pub use relocate::{duplicate, move_into};
 
 /// The extension of the manifest, and the file type the app opens.

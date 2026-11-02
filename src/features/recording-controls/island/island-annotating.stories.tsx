@@ -16,13 +16,11 @@ import { islandMeta } from "./island-story-meta";
 import type { AnnotateSection } from "../../annotate/island/use-annotate-parts";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 
-/** Logs the annotate actions the story does not carry out. */
+// Logs the annotate actions the story does not carry out.
 const onClear = fn();
 const onUndo = fn();
 
-/** The stage recording, with the annotate tools laid under its row. Their
- * choices are kept by the story; Close puts them away, as leaving annotate
- * does, and the island folds back to the recording's one row. */
+// Keeps the tools' choices; Close puts them away, as leaving annotate does.
 function AnnotatingStage({
   initialSection,
   ...props

@@ -3,6 +3,8 @@
 
 import { fn } from "storybook/test";
 
+import { featureStage } from "../../storybook/feature-story-stage";
+
 import { CopyableText } from "./copyable-text";
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
@@ -16,16 +18,10 @@ const meta = {
     value: "https://screenwide.app",
   },
   component: CopyableText,
-  decorators: [
-    (Story) => (
-      <div className="w-96">
-        <Story />
-      </div>
-    ),
-  ],
+  decorators: [featureStage({ width: 384 })],
   parameters: {
     controls: { include: ["value"] },
-    layout: "centered",
+    layout: "fullscreen",
   },
   title: "Legacy/Text Recognition/Copyable Text",
 } satisfies Meta<typeof CopyableText>;
@@ -34,17 +30,6 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {};
-
-export const LongContent: Story = {
-  args: {
-    value: Array.from(
-      { length: 12 },
-      (_, index) =>
-        `Line ${String(index + 1)}: WIFI:T:WPA;S:Screenwide Studio;P:correct-horse-battery-staple;; and a longer trailing sentence so that wrapping is exercised as well as scrolling.`,
-    ).join("\n\n"),
-  },
-  parameters: { controls: { disable: true } },
-};
 
 export const Empty: Story = {
   args: { value: "" },

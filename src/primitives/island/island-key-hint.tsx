@@ -15,8 +15,7 @@ export function IslandKeyHint({
   className,
   message,
 }: {
-  /** The key as a hotkey binding names it, such as `Alt` or
-   * `CommandOrControl`, drawn as the platform names it. */
+  /** A hotkey binding, such as `CommandOrControl`, named per platform. */
   binding: string;
   /** The hint, given the key's placeable. */
   message: (key: string) => string;

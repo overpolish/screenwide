@@ -44,12 +44,8 @@ editor-export-reveal-when-done =
         [windows] Show in Explorer when done
        *[other] Show in Finder when done
     }
-# The project is moved to the system's bin once the export is written. $platform is windows or macos.
-editor-export-delete-after =
-    { $platform ->
-        [windows] Move to the Recycle Bin after exporting
-       *[other] Move to Recently Deleted after exporting
-    }
+# The project is moved to the app's Recently Deleted once the export is written.
+editor-export-delete-after = Move to Recently Deleted after exporting
 editor-export-action = Export
 # $reason is the system's own explanation, in English.
 editor-export-failed = The export failed. { $reason }

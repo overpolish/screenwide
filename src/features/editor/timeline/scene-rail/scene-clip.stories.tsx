@@ -16,7 +16,6 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 const WIDTH = 320;
 const scale = timelineScale(recordedTime(32));
 
-/** One scene, at the start of a strip of its own. */
 function Clip(props: SceneClipProps) {
   return (
     <div className="relative h-5" dir="ltr" style={{ width: WIDTH }}>
@@ -25,8 +24,7 @@ function Clip(props: SceneClipProps) {
   );
 }
 
-/** One scene alone, filling a strip as long as it is, so a short one in a
- * grid leaves no room empty beside it. */
+// A short scene in a grid leaves no room empty beside it.
 function Fitted({
   seconds,
   ...props
@@ -62,15 +60,13 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-// Each story's stage is as wide as what it draws, so it sits centred and
-// never scrolls for room it does not use.
+// Each story's stage is as wide as what it draws, so it never scrolls.
 export const Default: Story = {
   decorators: [featureStage({ width: WIDTH })],
 };
 
-// What a scene shows grows with its width: bare, its layout, then its name,
-// cut short until it fits; a scene a few pixels wide is still pressed
-// across more than it is drawn.
+// What a scene shows grows with its width; a scene a few pixels wide is
+// still pressed across more than it is drawn.
 export const Widths: Story = {
   decorators: [featureStage({ width: 336 })],
   parameters: { controls: { disable: true } },
@@ -97,8 +93,7 @@ export const Widths: Story = {
   ),
 };
 
-// Every layout, drawn as the Scene island's tiles draw it, at rest, chosen,
-// and with the screen turned in depth.
+// Every layout as the Scene island's tiles draw it.
 export const Layouts: Story = {
   decorators: [featureStage({ width: 720 })],
   parameters: { controls: { disable: true } },

@@ -23,13 +23,10 @@ import { EditorPanelProps } from "./editor-panel-props";
 import { ScreenshotSection } from "./editor-preview-section";
 import { RecordingSection } from "./recording-section";
 
-/**
- * The editor window: the title bar with its modes, then the recording's or
- * the screenshot's picture with its tool column, islands and, for a
- * recording, the timeline strip. The islands, the Export island among them,
- * are fed the editor's settings from here and hand changes back through
- * these props.
- */
+// The islands, the Export island among them, are fed the editor's settings
+// from here and hand changes back through these props.
+/** The editor window: title bar, picture, tool column, islands and, for a
+ * recording, the timeline. */
 export function EditorPanel(props: EditorPanelProps) {
   const {
     artifact,

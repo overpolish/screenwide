@@ -17,8 +17,7 @@ type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {};
 
-/** `count` colours of your own around the colour wheel, in two lightnesses,
- * as `#rrggbb`. */
+// `count` colours round the colour wheel, in two lightnesses.
 const savedAround = (count: number) =>
   Array.from({ length: count }, (_, index) => {
     const hue = (index * 360) / count;

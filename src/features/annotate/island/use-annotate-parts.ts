@@ -13,13 +13,11 @@ export type AnnotateSection = "colors" | "pen";
 
 /** What the annotate tools take wherever an island shows them. */
 export type AnnotatePartsProps = {
-  /** Every change is a settings edit: the tools and the Settings page are one
-   * state, so what is chosen here dresses the next stroke and shows up there
-   * without either being reloaded.
-   *
-   * `immediate` is for an edit that has to reach the overlay before the next
-   * stroke rather than when the hand settles, where there is no drag to wait
-   * for. */
+  // The tools and the Settings page are one state, so a choice here dresses
+  // the next stroke and shows up there without a reload. `immediate` is for
+  // an edit that must reach the overlay before the next stroke, with no drag
+  // to wait for.
+  /** A settings edit. */
   onChange: (patch: Partial<AnnotateSettings>, immediate?: boolean) => void;
   onClear: () => void;
   /** Closes the overlay, the way Escape does. */
@@ -28,8 +26,7 @@ export type AnnotatePartsProps = {
   settings: AnnotateSettings;
   /** What hangs under the tools when they first show. */
   initialSection?: AnnotateSection;
-  /** The colours of your own, as the editor kept them. Shown after the
-   * palette. */
+  /** Colours of your own, shown after the palette. */
   savedColors?: string[];
 };
 

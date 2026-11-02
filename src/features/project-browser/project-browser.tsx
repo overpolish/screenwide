@@ -1,10 +1,9 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { Clock, Folder, FolderRoot, HardDrive, Trash2 } from "lucide-react";
+import { Clock, Folder, Trash2 } from "lucide-react";
 import { useState } from "react";
 
-import { SidebarNav } from "../../composites/sidebar-nav/sidebar-nav";
 import { WindowHeader } from "../../composites/window-header/window-header";
 import { WindowShell } from "../../composites/window-shell/window-shell";
 import { t } from "../../i18n/i18n";
@@ -13,9 +12,11 @@ import { SearchField } from "../../primitives/input-fields/search-field";
 
 import { ProjectListPane } from "./list/project-list-pane";
 import { ListMessage } from "./list/project-list-placeholders";
+import { ProjectBrowserSidebar } from "./project-browser-sidebar";
+import { createPointedCard } from "./storage/pointed-card";
+import { type GoToCard } from "./storage/use-go-to-card";
 import {
   DELETED,
-  locationGlyph,
   RECENT,
   type CopyingProjects,
   type DeletedProjects,
@@ -23,15 +24,9 @@ import {
   type ProjectSummary,
   type ScrubStrip,
 } from "./types";
-import { useLocationMenu } from "./use-location-menu";
 
+import type { ProjectReading } from "./activity/project-reading";
 import type { KindFilter } from "./list/project-list";
-
-const locationGlyphs = {
-  folder: Folder,
-  "folder-root": FolderRoot,
-  "hard-drive": HardDrive,
-};
 
 export type ProjectBrowserProps = {
   error: string | null;
@@ -58,6 +53,8 @@ export type ProjectBrowserProps = {
   onTrash: (files: string[]) => void;
   /** Null while the selected source is being read. */
   projects: ProjectSummary[] | null;
+  /** What happened in each recording, by manifest; null for nothing. */
+  readings: Record<string, ProjectReading | null>;
   /** The sidebar's selection: `RECENT`, `DELETED`, or a location's path. */
   selected: string;
   /** Each project's still by its manifest, once there is one. */
@@ -66,12 +63,13 @@ export type ProjectBrowserProps = {
   copying?: CopyingProjects | null;
   /** Shown while the last delete can still be undone from the island. */
   deleted?: DeletedProjects | null;
+  /** The search on opening, for a story. */
+  initialQuery?: string;
   /** Absent while projects cannot be duplicated, and then not offered. */
   onDuplicate?: (files: string[]) => void;
   /** Absent while projects cannot be moved, and then not offered. */
   onMove?: (files: string[], location: string) => void;
-  /** Asks for a recording's scrub strip, the first time its card is
-   * pointed at. */
+  /** Asks for a recording's scrub strip when its card is first pointed at. */
   onRequestScrubStrip?: (file: string) => void;
   /** Puts the last projects deleted back. */
   onUndoDelete?: () => void;
@@ -79,19 +77,13 @@ export type ProjectBrowserProps = {
   scrubStrips?: Record<string, ScrubStrip | null>;
 };
 
-/**
- * The projects the app knows: the recent ones, wherever they are, the ones
- * in the projects folder and any folder added to the sidebar, and the ones
- * deleted in the last 30 days. Laid out as Settings is: the search and the
- * sources down the side, the source's name as the window's title. A folder
- * in the sidebar is opened or taken off it from its right-click menu. The
- * search and the kind filter hold across sources; the choice of projects
- * does not.
- */
+/** The projects window: recent, folder and deleted projects, searchable by
+ * what happened in them. */
 export function ProjectBrowser({
   copying,
   deleted,
   error,
+  initialQuery = "",
   locations,
   onAddLocation,
   onClose,
@@ -113,17 +105,24 @@ export function ProjectBrowser({
   onTrash,
   onUndoDelete,
   projects,
+  readings,
   scrubStrips,
   selected,
   thumbnails,
 }: ProjectBrowserProps) {
-  const [query, setQuery] = useState("");
+  // The search and the kind filter hold across sources; the choice of
+  // projects does not.
+  const [query, setQuery] = useState(initialQuery);
+  // When the query was last typed, which a date in it is read from, so "an
+  // hour ago" is the hour up to then.
+  const [queriedAt, setQueriedAt] = useState(() => new Date());
   const [kind, setKind] = useState<KindFilter>("all");
+  // The project pointed at in the storage strip, which lights its card, and
+  // the card pointed at, which lights its segment.
+  const [stripPointed, setStripPointed] = useState<string | null>(null);
+  const [pointedCard] = useState(createPointedCard);
+  const [goTo, setGoTo] = useState<GoToCard | null>(null);
   const location = locations.find(({ path }) => path === selected);
-  const showLocationMenu = useLocationMenu({
-    onOpen: onOpenLocation,
-    onRemove: onRemoveLocation,
-  });
   const title =
     selected === DELETED
       ? t("project-browser-recently-deleted")
@@ -133,13 +132,11 @@ export function ProjectBrowser({
     selected === DELETED ? (
       <ListMessage
         glyph={<Trash2 />}
-        text={t("project-browser-empty-deleted")}
         title={t("project-browser-empty-deleted-title")}
       />
     ) : location ? (
       <ListMessage
         glyph={<Folder />}
-        text={t("project-browser-empty-location")}
         title={t("project-browser-empty-title")}
       />
     ) : (
@@ -148,7 +145,6 @@ export function ProjectBrowser({
           <Button onPress={onOpenFile}>{t("project-browser-open-file")}</Button>
         }
         glyph={<Clock />}
-        text={t("project-browser-empty-recent")}
         title={t("project-browser-empty-title")}
       />
     );
@@ -158,9 +154,21 @@ export function ProjectBrowser({
       header={
         <WindowHeader
           actions={
-            <Button onPress={onOpenFile} variant="ghost">
-              {t("project-browser-open-file")}
-            </Button>
+            <>
+              <SearchField
+                aria-label={t("project-browser-search-label")}
+                className="w-56"
+                onChange={(text) => {
+                  setQuery(text);
+                  setQueriedAt(new Date());
+                }}
+                placeholder={t("project-browser-search-placeholder")}
+                value={query}
+              />
+              <Button onPress={onOpenFile} variant="ghost">
+                {t("project-browser-open-file")}
+              </Button>
+            </>
           }
           onClose={onClose}
           onMinimize={onMinimize}
@@ -168,61 +176,25 @@ export function ProjectBrowser({
         />
       }
     >
-      {/* Only the sidebar keeps the window inset; the projects run to the
-          window's end and bottom edges so the scroll fade lands there. */}
+      {/* Only the sidebar keeps the window inset; the projects run to
+              the window's end and bottom edges so the scroll fade lands
+              there. */}
       <div className="flex min-h-0 grow gap-group ps-inset">
-        <div className="flex shrink-0 flex-col gap-separate pb-inset">
-          <SearchField
-            aria-label={t("project-browser-search-label")}
-            onChange={setQuery}
-            placeholder={t("project-browser-search-placeholder")}
-            value={query}
-          />
-          <SidebarNav
-            aria-label={t("project-browser-locations")}
-            className="grow"
-            isExpandable={false}
-            isExpanded
-            items={[
-              {
-                icon: <Clock />,
-                id: RECENT,
-                label: t("project-browser-recent"),
-              },
-              // A folder that is not there, such as one on a drive that is
-              // not connected, is shown but cannot be chosen; its menu can
-              // still take it off the sidebar.
-              ...locations.map((item) => {
-                const Glyph = locationGlyphs[locationGlyph(item)];
-                return {
-                  icon: <Glyph />,
-                  id: item.path,
-                  isDisabled: !item.available,
-                  label: item.name,
-                };
-              }),
-              {
-                icon: <Trash2 />,
-                id: DELETED,
-                isPinned: true,
-                label: t("project-browser-recently-deleted"),
-              },
-            ]}
-            onItemContextMenu={(id, point) => {
-              const clicked = locations.find(({ path }) => path === id);
-              if (clicked) void showLocationMenu(clicked, point);
-            }}
-            onSelectionChange={onSelect}
-            selected={selected}
-          />
-          <Button
-            className="self-start"
-            onPress={onAddLocation}
-            variant="ghost"
-          >
-            {t("project-browser-add-location")}
-          </Button>
-        </div>
+        <ProjectBrowserSidebar
+          linked={stripPointed}
+          locations={locations}
+          onAddLocation={onAddLocation}
+          onGoTo={(file) => {
+            setGoTo({ file });
+          }}
+          onLink={setStripPointed}
+          onOpenLocation={onOpenLocation}
+          onRemoveLocation={onRemoveLocation}
+          onSelect={onSelect}
+          pointedCard={pointedCard}
+          projects={projects ?? []}
+          selected={selected}
+        />
         <ProjectListPane
           actions={
             selected === DELETED
@@ -239,16 +211,25 @@ export function ProjectBrowser({
           deleted={deleted ?? null}
           empty={empty}
           error={error}
+          goTo={goTo}
+          isDated={selected !== RECENT && selected !== DELETED}
           key={selected}
           kind={kind}
+          linked={stripPointed}
           locations={locations}
+          onClearSearch={() => {
+            setQuery("");
+          }}
           onKindChange={setKind}
           onOpen={onOpen}
+          onPoint={pointedCard.set}
           onRename={onRename}
           onRequestScrubStrip={onRequestScrubStrip}
           onUndoDelete={onUndoDelete}
           projects={projects}
+          queriedAt={queriedAt}
           query={query}
+          readings={readings}
           scrubStrips={scrubStrips}
           thumbnails={thumbnails}
         />

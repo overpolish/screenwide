@@ -18,9 +18,8 @@ const WIDTH = 640;
 const DURATION = 120;
 const scale = timelineScale(recordedTime(DURATION));
 
-/** The rail, keeping what is chosen, retimed and drawn, each scene kept
- * between its neighbours, as the editor keeps them; Controls start it
- * afresh with what they set. */
+// Keeps each scene between its neighbours as the editor does; Controls start
+// it afresh.
 function LiveRail(args: SceneRailProps) {
   const [scenes, setScenes] = useState(args.scenes);
   const [selected, setSelected] = useState(args.selected);

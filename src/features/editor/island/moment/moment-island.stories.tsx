@@ -91,7 +91,6 @@ export const Playing: Story = {
   args: { note: { ...note, isPlaying: true, progress: 0.4 } },
 };
 
-// Long enough that what was said scrolls.
 export const LongTranscript: Story = {
   args: {
     note: {

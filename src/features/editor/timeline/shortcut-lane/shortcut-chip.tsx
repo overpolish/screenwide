@@ -32,11 +32,9 @@ export type ShortcutChipProps = {
   shortcut: TimelineShortcut;
   /** Where it was pressed, in px along the strip. */
   x: number;
-  /** How far past the tick its keys sit, in px, clear of the shortcut
-   * before. */
+  /** How far past the tick its keys sit, in px. */
   labelOffset?: number;
-  /** Told how wide its keys are drawn, in px, so the lane can set the next
-   * shortcut's clear of them. */
+  /** How wide its keys are drawn, in px, to set the next one clear. */
   onMeasure?: (width: number) => void;
 };
 

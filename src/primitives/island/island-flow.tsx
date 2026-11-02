@@ -10,17 +10,12 @@ import { arrive, focusIn, glide, leave, reveal } from "./island-motion";
 
 const still = { duration: 0 };
 
-/** A run of an island's parts, in a line or a column (`className` lays it
- * out), whose parts come and go with choices made elsewhere on the island.
- * The parts that stay glide to their new places on the island's own curve,
- * as the black reshapes round them on it, rather than jumping there while
- * the black is still on its way. One leaving is lifted out of the flow
- * (`popLayout`) and blurs away where it was; one arriving is laid out in its
- * place at once and revealed there once the others have mostly made room,
- * as a section's parts swap (`IslandCrossfade`). A part keeps its identity
- * by its key, or by its place among the children where it has none, so a
- * part given in place of another (`a ? <A /> : <B />`) needs a key of its
- * own to be seen leaving. */
+// A line or column of island parts (`className` lays it out) that come and go
+// with choices made elsewhere. Parts that stay glide on the island's curve as
+// the black reshapes; one leaving is lifted out (`popLayout`) and blurs away;
+// one arriving is revealed once the others have mostly made room, as
+// `IslandCrossfade` swaps. A part keeps its identity by key, or by position
+// without one, so `a ? <A /> : <B />` needs keys to be seen leaving.
 export function IslandFlow({
   children,
   className,

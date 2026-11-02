@@ -18,13 +18,11 @@ import {
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 
-/** How wide a second is drawn, in px. */
 const PX_PER_S = 10;
-/** Room, in px, each side of a strip for the hit area and handles that
- * reach past a short bar's ends. */
+// Room each side of a strip for the hit area and handles that reach past a
+// short bar's ends.
 const MARGIN_PX = 24;
 
-/** A strip `seconds` long, with room each side, the bar placed in it. */
 function Strip({
   seconds,
   ...props
@@ -43,7 +41,6 @@ function Strip({
   );
 }
 
-/** One bar alone, filling a strip as long as it is. */
 function Fitted({
   seconds,
   ...props
@@ -55,12 +52,9 @@ function Fitted({
   );
 }
 
-/** How long the Default story's strip is, in seconds. */
 const STRIP_S = 40;
 
-/** A bar in a strip it can be moved along, pressed to choose it and its
- * ends dragged once chosen, as the editor would; Controls start it
- * afresh. */
+// Moves, chooses and retimes as the editor would; Controls start it afresh.
 function LiveBar(props: Omit<AnnotationBarProps, "scale" | "width">) {
   const [span, setSpan] = useState(props.span);
   const [isSelected, setIsSelected] = useState(props.isSelected);

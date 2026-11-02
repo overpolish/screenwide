@@ -53,8 +53,7 @@ const tracks = (microphone: Microphone, decibels = -4): SoundTrack[] => [
   { decibels: 0, id: "system", label: "System audio" },
 ];
 
-/** A tool turned on or off in a story: on lands at once, as a story has no
- * track to clean. */
+// On lands at once, as a story has no track to clean.
 const withTool = (
   microphone: Microphone,
   tool: SoundTool,
@@ -173,8 +172,7 @@ export const StudioSound: Story = {
   },
 };
 
-// Reduce noise and Auto volume both at work, the first time each is asked
-// for.
+// Reduce noise and Auto volume both at work.
 export const Working: Story = {
   args: {
     tracks: tracks({

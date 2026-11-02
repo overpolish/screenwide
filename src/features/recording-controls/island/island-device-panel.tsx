@@ -49,14 +49,16 @@ function CameraFrame({
     >
       {children}
       {/* Translucent black, the island's own colour, reads over any
-          picture; on, it is chosen and takes the primary colour. */}
+          picture; on, it is a held toggle, raised in the primary colour
+          as one is everywhere, since the island's fill would not read
+          over the picture. */}
       <button
         aria-label={t("recording-controls-flip")}
         aria-pressed={isFlipped}
         className={cn(
           "absolute end-2 bottom-2 flex size-island-control items-center justify-center rounded-full backdrop-blur-sm transition-colors",
           isFlipped
-            ? "bg-primary text-on-primary hover:bg-primary-hover"
+            ? "bg-primary text-on-primary primary-raised hover:bg-primary-hover active:bg-primary-pressed active:primary-raised-pressed"
             : "bg-island/60 text-fg hover:bg-island/80",
         )}
         onClick={() => onFlipChange?.(!isFlipped)}

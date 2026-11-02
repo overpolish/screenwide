@@ -54,41 +54,36 @@ export type IslandProps = {
   row: ReactNode;
   /** Where under the row the section hangs. */
   anchor?: IslandAnchor;
-  /** A control in the row to hang the section centred under, in place of
-   * `anchor`, for a small part that belongs to that control alone. */
+  /** A row control to centre the section under, in place of `anchor`. */
   anchorControl?: HTMLElement | null;
-  /** A second line under the row, in the row's black, centred under the
-   * notch whatever the row does beside it; the section hangs under it
-   * rather than under the row (`island-stack-layout.ts`). A row growing on
-   * one side widens the island on that side alone, and nothing under it
-   * moves. */
+  // Centred under the notch whatever the row does beside it, so a row growing
+  // on one side widens the island on that side alone and nothing under it
+  // moves (`island-stack-layout.ts`).
+  /** A second line under the row, in its black; the section hangs below. */
   below?: ReactNode;
   /** Whether it is out; hidden, it is tucked into the notch, or gone. */
   isShown?: boolean;
-  /** The notch of the screen the island is on, measured; leave it out on a
-   * screen without one. */
+  /** The screen's measured notch; left out on a screen without one. */
   notch?: IslandNotch | null;
   /** The island has tucked itself away after `isShown` turned false. */
   onHidden?: () => void;
-  /** The pointer coming onto the island, which takes in its row and what
-   * hangs from it, and leaving it, a moment after it goes, so a slip does
-   * not close what hovering opened. */
+  // Leaving is reported a moment after the pointer goes, so a slip does not
+  // close what hovering opened.
+  /** The pointer coming onto the row or section, or leaving them. */
   onHoverChange?: (isHovered: boolean) => void;
-  /** Where the row and what hangs from it are, in the page, as they move:
-   * for a window that lets clicks through everywhere but the island. */
+  /** The row's and section's places in the page, for click-through. */
   onShapeChange?: (parts: IslandPart[]) => void;
-  /** The row spans the island where what hangs under it is wider, so its
-   * parts keep to the island's ends rather than centring over the black,
-   * stretching with the black as it glides. Not under a notch, where the
-   * row keeps its gap under the notch. */
+  // So its parts keep to the island's ends rather than centring over the
+  // black. Not under a notch, where the row keeps its gap under the notch.
+  /** Stretches the row to a wider section's width. */
   rowFillsWidth?: boolean;
   /** What hangs beneath the row, if anything. */
   section?: ReactNode;
-  /** Every section takes at least the row's width, so the island is one
-   * block rather than a row with parts hanging off it. */
+  /** Makes each section at least the row's width, as one block. */
   sectionSpansRow?: boolean;
-  /** Without a notch, it shrinks on past a speck to nothing: for an island
-   * on a picture, where a speck would read as something left behind. */
+  // For an island on a picture, where a speck would read as something left
+  // behind.
+  /** Without a notch, shrinks past a speck to nothing. */
   shrinksToNothing?: boolean;
 };
 

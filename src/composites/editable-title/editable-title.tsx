@@ -3,6 +3,7 @@
 
 import { useEffect, useLayoutEffect, useRef } from "react";
 
+import { useFoundHighlight } from "../../lib/found-text";
 import { cn, elementFocusVisible, focusStyles } from "../../lib/styling";
 
 /** Every name edited here becomes a file name, so the characters Windows
@@ -13,13 +14,13 @@ const FORBIDDEN_CHARACTERS = /[<>:"/\\|?*]/g;
 const withoutForbidden = (text: string) =>
   text.replace(FORBIDDEN_CHARACTERS, "");
 
-/**
- * A name edited where it is shown: click and type, Enter or a click away
- * keeps it, Escape puts it back. Nothing moves when editing starts, and an
- * emptied name keeps the one it had. Text styles come from the parent.
- */
+// Enter or a click away keeps the name, Escape puts it back. Nothing moves
+// when editing starts, an emptied name keeps the one it had, and text styles
+// come from the parent.
+/** A name edited where it is shown. */
 export function EditableTitle({
   className,
+  found,
   label,
   onChange,
   title,
@@ -29,6 +30,8 @@ export function EditableTitle({
   onChange: (title: string) => void;
   title: string;
   className?: string;
+  /** Search text, marked in the name. */
+  found?: string;
 }) {
   const titleRef = useRef<HTMLSpanElement>(null);
   useEffect(() => {
@@ -77,6 +80,8 @@ export function EditableTitle({
       titleRef.current.textContent = title;
     }
   }, [title]);
+  // After the name is set, so its letters are there to mark.
+  useFoundHighlight(titleRef, found);
 
   return (
     <span

@@ -49,17 +49,8 @@ export const Contents: Story = {
   ),
 };
 
-export const LongText: Story = {
-  args: {
-    label:
-      "/Users/dom/Movies/Screenwide/Recordings/2026/September/Product walkthrough - final take.screenwide",
-  },
-  parameters: { controls: { disable: true } },
-};
-
-// The trigger opens the tooltip window, which only the app has: in
-// `pnpm dev:storybook-native` hovering the button shows the label above, and
-// in a browser nothing does.
+// The tooltip window only exists in the app: hovering shows it in
+// `pnpm dev:storybook-native`, and nothing in a browser.
 export const Trigger: Story = {
   render: ({ label }) => (
     <TooltipTrigger tooltip={label}>

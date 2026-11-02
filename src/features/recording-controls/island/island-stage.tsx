@@ -61,8 +61,9 @@ export type IslandStageProps = Pick<
   camera?: Partial<IslandInput>;
   /** The area already dragged out. */
   chosenRegion?: IslandRegion;
-  /** The window already picked; Choose a Window picks the sample windows in
-   * turn, standing in for the picker on the screen. */
+  // Choose a Window picks the sample windows in turn, standing in for the
+  // picker on the screen.
+  /** The window already picked. */
   chosenWindow?: IslandWindow;
   /** The displays to choose from; two when not given. */
   displays?: IslandDisplay[];
@@ -86,14 +87,12 @@ export type IslandStageProps = Pick<
   microphoneLevel?: number;
   /** Something wrong with the microphone, named; the stage words it. */
   microphoneProblem?: "missing";
-  /** A moment placed by its shortcut; a voice note's time runs on while the
-   * stage records. */
+  /** A moment placed by its shortcut; a voice note runs on while recording. */
   moment?: IslandMoment;
-  /** The replay buffer, off when not given; null where it cannot run.
-   * Turned on, it starts for a moment before it is on. */
+  // Turned on, it starts for a moment before it is on.
+  /** The replay buffer, off when absent; null where it cannot run. */
   replay?: IslandReplay | null;
-  /** The recording size setting: shows the size so far, growing as the
-   * stage records. */
+  /** The recording size setting: shows the size so far. */
   showsSize?: boolean;
   systemAudio?: Partial<IslandInput>;
   /** System audio level, 0 to 1. */

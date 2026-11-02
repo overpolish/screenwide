@@ -7,12 +7,10 @@ import { cn } from "../../lib/styling";
 
 import { ISLAND, px } from "./island-geometry";
 
-/** The island's outline, under everything it holds (`useIslandOutline`
- * draws it, and sizes its box to it). It carries the shadow itself, so
- * what the island holds changing, as the recording's time does each
- * second, does not redraw it. Drawn from the row's start, it is mirrored
- * right to left. Its box has room round the island for the shadow, which
- * is drawn only inside the box. */
+// The island's outline, under everything it holds (`useIslandOutline` draws
+// it and sizes its box). It carries the shadow itself, so content changing,
+// as the recording's time does each second, does not redraw it. Mirrored
+// right to left; its box leaves room for the shadow, drawn only inside it.
 export function IslandDrawing({
   isShown,
   rowPathRef,

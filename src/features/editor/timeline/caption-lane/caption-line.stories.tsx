@@ -12,11 +12,9 @@ import { storyCaption } from "./caption-story-fixtures";
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 
-/** How wide a second is drawn, in px. */
 const PX_PER_S = 10;
 
-/** One line alone, filling a strip as long as it is, so a short one in a
- * grid leaves no room empty beside it. */
+// A short line in a grid leaves no room empty beside it.
 function Line(props: Omit<CaptionLineProps, "scale" | "width">) {
   const width = props.line.end * PX_PER_S;
   return (
@@ -58,8 +56,7 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-// Each story's stage is as wide as what it draws, so it sits centred and
-// never scrolls for room it does not use.
+// Each story's stage is as wide as what it draws, so it never scrolls.
 export const Default: Story = {
   decorators: [featureStage({ width: WIDTHS[0].line.end * PX_PER_S })],
 };

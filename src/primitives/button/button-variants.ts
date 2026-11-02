@@ -6,7 +6,7 @@ import { tv } from "../../lib/variants";
 
 export const buttonVariants = tv({
   base: [
-    "relative inline-flex h-control-height cursor-default items-center justify-center gap-inline rounded-control px-inset text-label transition select-none",
+    "relative inline-flex h-control-height cursor-default items-center gap-inline rounded-control px-inset text-label transition select-none",
     "[&_svg.lucide]:size-icon [&_svg]:shrink-0 [&_svg]:transform-gpu",
     focusStyles,
     elementFocusVisible,
@@ -34,12 +34,20 @@ export const buttonVariants = tv({
     },
   ],
   defaultVariants: {
+    align: "center",
     color: "neutral",
     isDisabled: false,
     skin: "window",
     variant: "solid",
   },
   variants: {
+    // Where the content sits in a button wider than it. A list made of
+    // buttons, such as `SidebarNav`'s rows, starts each icon and label at
+    // the inset, the edge a button's label starts at.
+    align: {
+      center: "justify-center",
+      start: "justify-start text-start",
+    },
     // Only a solid button has a colour: the primary action is always filled.
     color: {
       neutral: "",

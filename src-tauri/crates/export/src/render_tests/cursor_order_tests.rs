@@ -84,6 +84,7 @@ fn composed(annotations: Vec<Annotation>, at: (f32, f32)) -> Vec<u8> {
       camera: None,
       keyboard: None,
       foreground_only: false,
+      look: Default::default(),
       transparent_background: false,
     },
   )

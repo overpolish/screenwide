@@ -88,13 +88,10 @@ function TooltipPresenter({
   return null;
 }
 
-/**
- * A tooltip drawn in a window of its own, as every tooltip is: nothing
- * floats in the page, and the Editor's preview is a native surface layered
- * over the webview that would cover a tooltip drawn there. Outside Tauri, in
- * a browser, there is no window to open, so nothing is shown, as with the
- * pop-up panels; `pnpm dev:storybook-native` opens the real window.
- */
+// Every tooltip opens in a window of its own: nothing floats in the page, and
+// the Editor's preview is a native surface over the webview that would cover
+// one drawn there. In a browser there is no window, so nothing shows, as with
+// the pop-up panels; `pnpm dev:storybook-native` opens the real one.
 export function TooltipTrigger({
   children,
   className,

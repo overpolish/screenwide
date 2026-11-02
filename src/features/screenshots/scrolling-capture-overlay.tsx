@@ -21,11 +21,10 @@ type ScrollingCaptureOverlayProps = {
   phase?: ScrollingCapturePhase;
 };
 
-/**
- * The window shown over the region being captured. The backend cannot know how
- * far a page scrolls before it stops, so there is no percentage to show and the
- * spinner carries the whole "still working" signal.
- */
+// The backend cannot know how far a page scrolls before it stops, so there is
+// no percentage to show and the spinner carries the whole "still working"
+// signal.
+/** The window shown over the region being captured. */
 export function ScrollingCaptureOverlay({
   cancellable,
   finished = false,

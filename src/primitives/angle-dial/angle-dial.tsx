@@ -60,14 +60,13 @@ export type AngleDialProps = {
   onChange: (degrees: number) => void;
   /** Angle in degrees. */
   value: number;
-  /** On the island, what turns in place of the notch, drawn pointing at
-   * twelve o'clock. */
+  /** On the island, a glyph that turns in place of the notch, drawn
+   * pointing up. */
   children?: ReactNode;
   className?: string;
   color?: keyof typeof notchColors;
   isDisabled?: boolean;
-  /** Rests on the eighths of a turn, as a counter's aim does; otherwise it
-   * turns to the degree. */
+  /** Turns in eighths of a turn, not degrees. */
   isStepped?: boolean;
 };
 

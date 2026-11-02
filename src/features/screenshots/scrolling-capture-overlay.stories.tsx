@@ -24,8 +24,7 @@ export const Capturing: Story = { args: { phase: "capturing" } };
 
 export const Stitching: Story = { args: { phase: "stitching" } };
 
-/** Escape can be taken by another app, and then it is not offered. */
+// Another app can hold Escape, and then it is not offered.
 export const NotCancellable: Story = { args: { cancellable: false } };
 
-/** The moment between the capture settling and the window closing. */
 export const Finishing: Story = { args: { finished: true } };

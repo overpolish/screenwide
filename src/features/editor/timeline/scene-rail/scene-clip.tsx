@@ -32,8 +32,8 @@ export type TimelineScene = Span & {
 
 export type SceneClipProps = {
   isSelected: boolean;
-  /** Told a press on one of a chosen scene's ends, which takes hold of it;
-   * the moves and release that follow bubble up from it. */
+  // The moves and release that follow bubble up from the grabbed end.
+  /** A press on one of a chosen scene's ends. */
   onGrabEdge: (event: React.PointerEvent, edge: "end" | "start") => void;
   onPress: () => void;
   scale: TimelineScale;

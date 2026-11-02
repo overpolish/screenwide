@@ -66,9 +66,8 @@ export type AnnotationLaneProps = {
   /** The strip's width, in px. */
   width: number;
   selected?: string;
-  /** Where a dragged end settles while ⌘ is held, given the annotation it
-   * belongs to, whose own edges are left out; without it, ends go where
-   * they are let go. */
+  /** Where a dragged end settles while ⌘ is held, given its annotation,
+   * whose own edges are left out. */
   snap?: SnapFor;
 };
 

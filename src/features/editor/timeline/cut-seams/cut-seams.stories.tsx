@@ -20,8 +20,7 @@ type StoryProps = {
   onRestore: (ids: string[]) => void;
 };
 
-/** The seams on a row of the strip's height, the cuts closed up, putting
- * them back as the editor would; Controls start it afresh. */
+// Puts cuts back as the editor would; Controls start it afresh.
 function LiveSeams({ cuts: initial, onRestore }: StoryProps) {
   const [cuts, setCuts] = useState(initial);
   const scale = timelineScale(

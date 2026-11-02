@@ -12,7 +12,6 @@ import { createPlayhead } from "./scrub-playhead";
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 
-/** How often the story's clock moves the playhead while playing. */
 const TICK_MS = 100;
 
 const meta = {

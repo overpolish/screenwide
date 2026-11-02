@@ -92,8 +92,7 @@ export type EditorPanelProps = {
   onSelectedTrackChange?: (trackId: RecordingTrackId | null) => void;
   onSubtitlesChange?: (subtitles: ExportSubtitles) => void;
   onToggleMaximize?: () => void;
-  /** Plays the audio stream `streamIndex` this much louder or quieter than
-   * it was recorded, in decibels. */
+  /** A stream's gain over its recorded level, in decibels. */
   onTrackVolumeChange?: (streamIndex: number, decibels: number) => void;
   recordingOutput?: RecordingOutputSettings;
   recordingPreviewError?: string | null;

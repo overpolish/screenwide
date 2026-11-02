@@ -5,33 +5,12 @@ import { Lock, LockOpen } from "lucide-react";
 import { ToggleButton } from "react-aria-components";
 
 import { t } from "../../../../../i18n/i18n";
-import { cn, focusStyles } from "../../../../../lib/styling";
+import { cn } from "../../../../../lib/styling";
+import { buttonVariants } from "../../../../../primitives/button/button-variants";
 
 import { ColorPickerSwatch } from "./color-picker-swatch";
 
 import type { SwatchSize } from "../../../../../primitives/swatch/swatch-styles";
-
-// Painted as any on/off button: raised neutral while off, primary while on,
-// so the two differ in both appearances. The raised material is a tint meant
-// for the window's surface, so the open lock lays it over that surface
-// rather than over the swatch's colour. Disabled, a lock that is on stays
-// visible, so the state is not lost. On a small swatch the badge is an
-// icon's size rather than a part's, so it covers a corner and not the
-// colour.
-const lockStyles =
-  (size: SwatchSize) =>
-  ({ isSelected }: { isSelected: boolean }) =>
-    cn(
-      focusStyles,
-      "group/lock absolute -end-1 -bottom-1 flex items-center justify-center rounded-full transition-opacity",
-      size === "md" ? "size-part-height" : "size-icon-sm",
-      isSelected
-        ? "bg-primary text-on-primary primary-raised data-[disabled]:opacity-40 data-[hovered]:bg-primary-hover data-[pressed]:bg-primary-pressed data-[pressed]:primary-raised-pressed"
-        : "bg-surface text-fg opacity-0 group-hover/swatch:opacity-100 data-[disabled]:opacity-0 data-[focus-visible]:opacity-100",
-    );
-
-const raisedLayer =
-  "absolute inset-0 rounded-full control-raised group-data-[hovered]/lock:control-raised-hover group-data-[pressed]/lock:control-raised-pressed";
 
 /** One of a mesh's colours: pressed, it opens a colour picker; its corner
  * lock, or a secondary click, keeps it through a new palette. */
@@ -66,22 +45,46 @@ export function MeshPaletteColor({
       size={size}
       value={value}
     >
-      <ToggleButton
-        aria-label={t("background-palette-lock", { index: index + 1 })}
-        className={lockStyles(size)}
-        isDisabled={isDisabled}
-        isSelected={isLocked}
-        onChange={onLockedChange}
-      >
-        {isLocked ? (
-          <Lock aria-hidden="true" className="size-icon-xs" />
-        ) : (
-          <>
-            <span aria-hidden="true" className={raisedLayer} />
-            <LockOpen aria-hidden="true" className="relative size-icon-xs" />
-          </>
+      {/* The lock is a button as any on/off one is, raised neutral while off
+       * and primary while on, so the two differ in both appearances; its
+       * glyph says which too. The raised material is a tint meant for the
+       * window's surface, so the open lock stands on that surface rather
+       * than on the swatch's colour. It shows under the pointer or keyboard
+       * focus. Disabled, a lock that is on stays visible, faded as a
+       * disabled button is, so the state is not lost; one that is off hides.
+       * On a small swatch the badge is an icon's size rather than a part's,
+       * so it covers a corner and not the colour. */}
+      <span
+        className={cn(
+          "absolute -end-1 -bottom-1 flex rounded-full transition-opacity",
+          size === "md" ? "size-part-height" : "size-icon-sm",
+          !isLocked && "bg-surface opacity-0",
+          !isLocked &&
+            !isDisabled &&
+            "group-hover/swatch:opacity-100 has-data-[focus-visible]:opacity-100",
         )}
-      </ToggleButton>
+      >
+        <ToggleButton
+          aria-label={t("background-palette-lock", { index: index + 1 })}
+          className={({ isSelected }) =>
+            cn(
+              buttonVariants(
+                isSelected ? { color: "primary", isDisabled } : { isDisabled },
+              ),
+              "size-full rounded-full px-0 [&_svg.lucide]:size-icon-xs",
+            )
+          }
+          isDisabled={isDisabled}
+          isSelected={isLocked}
+          onChange={onLockedChange}
+        >
+          {isLocked ? (
+            <Lock aria-hidden="true" />
+          ) : (
+            <LockOpen aria-hidden="true" />
+          )}
+        </ToggleButton>
+      </span>
     </ColorPickerSwatch>
   );
 }

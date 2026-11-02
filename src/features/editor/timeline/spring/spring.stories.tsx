@@ -14,23 +14,19 @@ import { Spring, type SpringProps } from "./spring";
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 
-/** How wide a second is drawn, as it plays, in px. */
+// Per second of play, not of recording.
 const PX_PER_S = 10;
-/** The recording either side of the lull, in seconds: room for its end
- * handle, and enough to see where it starts and stops. */
+// Room for the end handle, and to see where the lull starts and stops.
 const MARGIN_S = 2;
-/** A lull 12 seconds long as recorded. */
 const SPAN = { end: MARGIN_S + 12, start: MARGIN_S };
-/** How long the lull plays while it squeezes with the rest. */
+// How long the lull plays while it squeezes with the rest.
 const SQUEEZED_S = 4;
 
 type StoryProps = Omit<SpringProps, "scale" | "width">;
 
-/** One lull on a row of the strip's height, the strip as long as the lull
- * plays with a little either side, so it is drawn as the timeline would
- * draw it. Pressing chooses it, and its end and a double-click change how
- * it plays, as the editor would; the drags are kept here and logged to
- * Actions once they rest. */
+// Drawn on a strip as long as the lull plays, with a little either side.
+// Pressing chooses it, and its end and a double-click change how it plays,
+// as the editor would; drags are logged to Actions once they rest.
 function LiveSpring(props: StoryProps) {
   const [state, setState] = useState(props);
   const logPlay = useRestingAction(props.onPlayChange);
@@ -80,7 +76,6 @@ function LiveSpring(props: StoryProps) {
   );
 }
 
-/** A lull as Controls set it; they start it afresh. */
 const Row = (props: StoryProps) => (
   <LiveSpring key={JSON.stringify(props)} {...props} />
 );
@@ -110,14 +105,13 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-// Each story's stage is as wide as what it draws, so it sits centred and
-// never scrolls for room it does not use.
+// Each story's stage is as wide as what it draws, so it never scrolls.
 export const Default: Story = {
   decorators: [featureStage({ width: (SQUEEZED_S + MARGIN_S * 2) * PX_PER_S })],
 };
 
-// How it plays, as its badge says: squeezed faster, retimed slower than
-// recorded, kept as recorded, and dead air not yet dealt with.
+// Squeezed faster, retimed slower, kept as recorded, and dead air not yet
+// dealt with.
 export const Plays: Story = {
   decorators: [featureStage({ width: 344 })],
   parameters: { controls: { disable: true } },
@@ -179,9 +173,8 @@ export const States: Story = {
   ),
 };
 
-// A lull where the picture stays still, and one where it moves by itself
-// part of the way, such as a page loading: a screen playing sits on the coil
-// there, since that holds down how fast the whole lull plays.
+// A screen playing sits on the coil where the picture moves by itself, such
+// as a page loading, since that holds down how fast the whole lull plays.
 export const Moving: Story = {
   decorators: [featureStage({ width: 304 })],
   parameters: { controls: { disable: true } },

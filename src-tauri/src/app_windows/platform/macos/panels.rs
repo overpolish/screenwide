@@ -200,6 +200,17 @@ pub(in super::super) fn ensure_recording_panel(
   if let Ok(panel) = registered_panel(window) {
     return Ok(panel);
   }
+  // Callers reach here from worker threads (the Ruler starts on one), but
+  // turning a window into a panel sets its level, which AppKit allows only
+  // on the main thread.
+  if objc2::MainThreadMarker::new().is_none() {
+    let (sender, receiver) = std::sync::mpsc::sync_channel(1);
+    let main_window = window.clone();
+    window.run_on_main_thread(move || {
+      let _ = sender.send(ensure_recording_panel(&main_window));
+    })?;
+    return receiver.recv().map_err(|_| tauri::Error::WindowNotFound)?;
+  }
 
   let level = recording_panel_level(window).ok_or(tauri::Error::WindowNotFound)?;
   if window.label().starts_with("glide") {

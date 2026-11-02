@@ -102,9 +102,8 @@ export const Variants: Story = {
   render: ({ onChange }) => <VariantGrid onChange={onChange} />,
 };
 
-// With `off`, the glyph itself says which state the toggle is in, so being on
-// keeps the button's look rather than filling it. A live toggle, using the
-// shared render, so a press plays the change from one glyph to the other.
+// With `off`, the glyph shows the state, so being on does not fill the
+// button.
 export const WithOffIcon: Story = {
   args: { "aria-label": "Play", children: <Pause />, off: <Play /> },
 };

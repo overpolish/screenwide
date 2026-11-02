@@ -71,8 +71,6 @@ export const Hidden: Story = {
   args: { settings: { ...DEFAULT_KEYBOARD_EFFECTS, bake: false } },
 };
 
-// Some shortcuts deleted, with the way to bring them back.
 export const DeletedShortcuts: Story = { args: { canRestoreShortcuts: true } };
 
-// Two shortcuts chosen on the strip, with deleting them at the row's end.
 export const ShortcutsChosen: Story = { args: { chosen: 2 } };

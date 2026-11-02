@@ -22,6 +22,7 @@ fn export(request: CursorExportRequest<'_>) -> Result<ExportRunResult, String> {
 }
 
 mod camera_background_video_tests;
+mod camera_cut_out_still_tests;
 mod camera_effect_video_tests;
 mod caption_video_tests;
 mod compare_fit_video_tests;

@@ -20,20 +20,20 @@ type ScrollAreaProps = {
   children?: ReactNode;
   className?: string;
   constrainHeight?: boolean;
-  /** The edge a horizontal scroll starts from follows this direction. `auto`
-   * takes it from the content's own letters, for a strip that holds a name. */
+  /** Which end a horizontal scroll starts from; `auto` reads the content. */
   dir?: "auto" | "ltr" | "rtl";
   edgeEffect?: "fade" | "none";
   /** Runs into a rounded window corner. */
   inWindowCorner?: boolean;
-  /** Called once the viewport is set up and scrolls, which happens a moment
-   * after mounting: what is to be scrolled into view first waits for it. */
+  // Scrolling something into view first has to wait for this, a moment after
+  // mounting.
+  /** Called once the viewport is set up and scrolls. */
   onInitialized?: (viewport: HTMLElement) => void;
   orientation?: "horizontal" | "vertical";
-  /** Whether scrolling past an end springs back, as it does on macOS, or
-   * stops there. `none` suits a box whose height follows its window: it can
-   * be a few px short of its content, and a spring larger than all there is
-   * to scroll reads as the content jumping. */
+  // `none` suits a box whose height follows its window: it can be a few px
+  // short of its content, and a spring larger than all there is to scroll
+  // reads as the content jumping.
+  /** Whether scrolling past an end springs back or stops. */
   overscroll?: "bounce" | "none";
   rootClassName?: string;
   scrollbarAutoHide?: "scroll" | "never";

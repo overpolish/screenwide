@@ -15,7 +15,7 @@ const meta = {
     projects: deletedProjects,
     selected: DELETED,
   },
-  title: "Legacy/Project Browser/Recently Deleted",
+  title: "Features/Project Browser/Recently Deleted",
 } satisfies Meta<typeof ProjectBrowser>;
 
 export default meta;

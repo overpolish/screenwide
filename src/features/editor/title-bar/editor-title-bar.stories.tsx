@@ -32,7 +32,6 @@ const EVERY_PART: CaptureParts = {
   transcript: "heard",
 };
 
-/** An audio recording's: its sound and the microphone's transcript. */
 const AUDIO_PARTS: CaptureParts = {
   ...EVERY_PART,
   camera: false,
@@ -41,8 +40,7 @@ const AUDIO_PARTS: CaptureParts = {
   picture: null,
 };
 
-/** The editor's modes for `kind`, and a recording's Tracks, pressed open
- * and shut as in the editor. */
+// Pressed open and shut as in the editor.
 function Modes({
   isDisabled,
   kind,
@@ -52,7 +50,7 @@ function Modes({
   kind: EditorKind;
   onModeChange: (mode: EditorMode | null) => void;
   isDisabled?: boolean;
-  /** What the capture holds in its export; every part by default. */
+  // Every part by default.
   parts?: CaptureParts;
 }) {
   const [mode, setMode] = useState<EditorMode | null>(null);
@@ -78,8 +76,8 @@ function Modes({
 
 const onModeChange = fn();
 
-/** The title bar, with what the recording holds in its export as controls,
- * so the modes are seen growing in and shrinking out as each is switched. */
+// What the recording holds in its export is in Controls, so the modes are
+// seen growing in and shrinking out as each is switched.
 type StoryArgs = ComponentProps<typeof EditorTitleBar> & CaptureParts;
 
 const meta = {
@@ -165,7 +163,7 @@ type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {};
 
-/** The editor window's minimum width, so each bar in the grid spans one. */
+// The editor window's minimum width.
 const MINIMUM_WIDTH = 800;
 
 export const MinimumWidth: Story = {

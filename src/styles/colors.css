@@ -165,10 +165,11 @@
     --color-error: oklch(70% 0.19 25);
   }
 
-  /* One appearance for a subtree whatever the window's own, such as badges
-     and checkboxes over a picture that is light or dark in itself: the text
-     and fill colours, which is all such a subtree draws. The values repeat
-     the appearance blocks above and must stay in step with them. */
+  /* One appearance for a subtree whatever the window's own, such as badges,
+     checkboxes and a card's overview over a picture that is light or dark in
+     itself: the text, fill and primary colours, which is all such a subtree
+     draws. The values repeat the appearance blocks above and must stay in
+     step with them. */
   .appearance-light {
     --color-fg: oklch(18% 0.01 47.6 / 82%);
     --color-fg-secondary: oklch(18% 0.01 47.6 / 60%);
@@ -180,6 +181,10 @@
     --alpha-fg-disabled: 0.28;
     --color-fill: oklch(18% 0.01 47.6 / 7%);
     --color-fill-strong: oklch(18% 0.01 47.6 / 12%);
+    --color-primary: oklch(26% 0.012 47.6);
+    --color-on-primary: white;
+    --color-primary-hover: oklch(21% 0.012 47.6);
+    --color-primary-pressed: oklch(17% 0.012 47.6);
   }
 
   .appearance-dark {
@@ -193,5 +198,9 @@
     --alpha-fg-disabled: 0.3;
     --color-fill: oklch(98% 0.005 47.6 / 8%);
     --color-fill-strong: oklch(98% 0.005 47.6 / 14%);
+    --color-primary: oklch(93% 0.008 47.6);
+    --color-on-primary: oklch(22% 0.012 47.6);
+    --color-primary-hover: oklch(97% 0.006 47.6);
+    --color-primary-pressed: oklch(86% 0.008 47.6);
   }
 }

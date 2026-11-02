@@ -30,8 +30,7 @@ const SWAP_ANIMATION: MotionProps = {
 const ARMED = { color: "primary", variant: "solid" } as const;
 
 type ConfirmActionButtonProps = {
-  /** What the second press does, said while armed and shown on the text
-   * button. */
+  /** What the second press does; shown while armed. */
   confirmLabel: string;
   /** What the first press offers to do. */
   label: string;

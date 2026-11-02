@@ -80,10 +80,7 @@ fn refuses_a_project_from_a_newer_version() {
   let file = directory.join("Future.screenwide");
   std::fs::write(&file, br#"{"version":999,"kind":"hologram"}"#).unwrap();
 
-  assert_eq!(
-    read(&file).err().as_deref(),
-    Some("This project was made by a newer version of Screenwide")
-  );
+  assert!(matches!(read(&file), Err(ReadError::Newer)));
   let _ = std::fs::remove_dir_all(directory);
 }
 

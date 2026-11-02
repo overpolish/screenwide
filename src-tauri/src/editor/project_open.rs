@@ -3,6 +3,10 @@
 
 //! Opening a project from disk into the recording editor.
 
+mod open_failure;
+
+pub(in crate::editor) use open_failure::OpenFailure;
+
 use super::artifact_present::{present_recording_from, Origin};
 use super::recording_sidecar::{valid_cursor, valid_keyboard};
 use super::*;
@@ -63,10 +67,15 @@ pub fn is_project_file(path: &Path) -> bool {
 }
 
 /// Opens the project whose manifest is `file` in the editor its kind uses, in
-/// place of whatever that editor had open.
+/// place of whatever that editor had open. Fails with a sentence saying what
+/// is wrong, for the person who asked; the details go to the log.
 pub fn open_project(app: &AppHandle, file: &Path) -> Result<(), String> {
+  open(app, file).map_err(|failure| failure.into_reason(file))
+}
+
+fn open(app: &AppHandle, file: &Path) -> Result<(), OpenFailure> {
   if screenwide_project::is_cancelled(file) {
-    return Err("This recording was discarded".to_owned());
+    return Err(OpenFailure::discarded());
   }
   if let Some(kind) = open_kind(app, file) {
     // Opened again while its close waits on the browser's pictures: it
@@ -75,6 +84,8 @@ pub fn open_project(app: &AppHandle, file: &Path) -> Result<(), String> {
       super::keep_recording_editor_open();
     }
     workspace::focus_pending(app, kind);
+    // Opened again all the same, so it comes first in Recent.
+    screenwide_project::library::remember(app, file);
     return Ok(());
   }
   // A name given while it was last open, which the app stopped before
@@ -93,13 +104,10 @@ pub fn open_project(app: &AppHandle, file: &Path) -> Result<(), String> {
     primary_kind,
     source_scale_factor,
     origin: _,
-  } = manifest.recorded()?.clone();
-  let primary = screenwide_project::resolve(file, &media.primary)?;
+  } = manifest.recorded().map_err(OpenFailure::damaged)?.clone();
+  let primary = screenwide_project::resolve(file, &media.primary).map_err(OpenFailure::damaged)?;
   if !primary.is_file() {
-    return Err(format!(
-      "The recording is missing from this project. Expected it at {}",
-      primary.display()
-    ));
+    return Err(OpenFailure::recording_missing(&primary));
   }
   // Before anything draws, so the project's images find their pictures on a
   // computer that has never stored them. Then tidied, in case it was last
@@ -108,11 +116,12 @@ pub fn open_project(app: &AppHandle, file: &Path) -> Result<(), String> {
   super::project_look::clean_pictures(file);
   // A track that is gone, or that a crash cut off before it held anything
   // readable, leaves the recording without it rather than refusing it.
-  let optional = |name: Option<String>| -> Result<Option<PathBuf>, String> {
+  let optional = |name: Option<String>| -> Result<Option<PathBuf>, OpenFailure> {
     Ok(
       name
         .map(|name| screenwide_project::resolve(file, &name))
-        .transpose()?
+        .transpose()
+        .map_err(OpenFailure::damaged)?
         .filter(|path| path.is_file()),
     )
   };
@@ -126,11 +135,9 @@ pub fn open_project(app: &AppHandle, file: &Path) -> Result<(), String> {
   if primary_kind == PrimaryRecordingKind::Screen
     && primary_info.is_none_or(|info| info.width == 0 || info.height == 0)
   {
-    // Without readable dimensions there is no layout to preview it in.
-    return Err(
-      "The recording in this project cannot be played. It may have stopped before any picture was saved."
-        .to_owned(),
-    );
+    // Without readable dimensions there is no layout to preview it in. It
+    // may have stopped before any picture was saved.
+    return Err(OpenFailure::recording_unplayable());
   }
   #[cfg(any(target_os = "macos", target_os = "windows"))]
   let (duration_ms, width, height) = primary_info.map_or((0, 0, 0), |info| {
@@ -183,6 +190,7 @@ pub fn open_project(app: &AppHandle, file: &Path) -> Result<(), String> {
     },
     Origin::Project,
   )
+  .map_err(OpenFailure::from)
 }
 
 /// The editor that has the project whose manifest is `file` open, if one does.

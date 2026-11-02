@@ -5,10 +5,12 @@ type PictureTone = "dark" | "light";
 
 /** The parts of a picture something is drawn over, as shares of it measured
  * from the side text starts on: the start of its top edge, as a project
- * card's selection box, and the ends of its top and bottom edges, as a
- * card's badges. */
+ * card's selection box, the ends of its top and bottom edges, as a card's
+ * badges, and the start of its bottom edge, as what a card says is
+ * happening where it is pointed at. */
 const CORNERS = {
   bottomEnd: { height: 0.22, width: 0.45, x: 0.55, y: 0.78 },
+  bottomStart: { height: 0.22, width: 0.55, x: 0, y: 0.78 },
   topEnd: { height: 0.22, width: 0.45, x: 0.55, y: 0 },
   topStart: { height: 0.22, width: 0.2, x: 0, y: 0 },
 };
@@ -87,6 +89,7 @@ export function pictureTones(
 
   return {
     bottomEnd: toneOf(CORNERS.bottomEnd),
+    bottomStart: toneOf(CORNERS.bottomStart),
     topEnd: toneOf(CORNERS.topEnd),
     topStart: toneOf(CORNERS.topStart),
   };

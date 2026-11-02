@@ -24,7 +24,8 @@ import {
 // deleted after. The squeeze is taken hold of at the end of what plays and
 // follows the pointer: dragged in, the overview shortens under it and the
 // hatch grows beyond it; dragged out, the time comes back until the hatch
-// is gone.
+// is gone. As a picture only, as on a project's card, it is the line and
+// ticks of what plays, with a playhead and search finds, and takes no pointer.
 
 type Drag = {
   edge: "end" | "move" | "start";
@@ -35,13 +36,16 @@ type Drag = {
 
 const share = (part: number) => `${String(part * 100)}%`;
 
-export type MinimapProps = {
+type MinimapBeats = {
   /** The beats, drawn as ticks; a moment's in its kind's colour,
    * `#rrggbb`, so the moments worth keeping stand out of the whole. */
   beats: (Span & { color?: string })[];
   /** How the recording plays now, which places the ticks and sets how much
    * of the recording's length the overview spans. */
   map: TimeMap;
+};
+
+type MinimapControls = {
   /** The most the lulls can be squeezed by, in seconds. */
   maxSqueeze: number;
   /** Told how many seconds the lulls are squeezed by: 0 plays them as
@@ -57,9 +61,79 @@ export type MinimapProps = {
   /** What is taken out of the recording, drawn past the end. */
   taken: TakenOut;
   view: View;
+  isPicture?: false;
 };
 
-export function Minimap({
+type MinimapPicture = {
+  /** Drawn only: no window, no squeeze, nothing taken out, nothing to press. */
+  isPicture: true;
+  /** The playhead, as its share of what plays; none when null. */
+  at?: number | null;
+  /** Where a search found something, in recorded seconds. */
+  finds?: readonly number[];
+};
+
+export type MinimapProps = MinimapBeats & (MinimapControls | MinimapPicture);
+
+export function Minimap(props: MinimapProps) {
+  return props.isPicture ? (
+    <PictureMinimap {...props} />
+  ) : (
+    <ControlledMinimap {...props} />
+  );
+}
+
+/** The line along the overview and a tick for each beat on it. */
+function MinimapTicks({ beats, map }: MinimapBeats) {
+  const scale = timelineScale(map);
+  return (
+    <>
+      <span className="absolute inset-x-0 top-1/2 h-px -translate-y-1/2 bg-fill-strong" />
+      {beats.map((beat) => (
+        <span
+          aria-hidden
+          className="absolute inset-y-0.5 min-w-px rounded-full bg-fg-tertiary"
+          key={beat.start}
+          style={{
+            backgroundColor: beat.color,
+            insetInlineStart: share(scale.toX(beat.start)),
+            width: share(scale.toX(beat.end, true) - scale.toX(beat.start)),
+          }}
+        />
+      ))}
+    </>
+  );
+}
+
+function PictureMinimap({
+  at = null,
+  beats,
+  finds = [],
+  map,
+}: MinimapBeats & MinimapPicture) {
+  const scale = timelineScale(map);
+  return (
+    <div aria-hidden className="pointer-events-none relative h-3" dir="ltr">
+      <MinimapTicks beats={beats} map={map} />
+      {/* Two finds in the same second are one dot. */}
+      {[...new Set(finds.map(Math.round))].map((find) => (
+        <span
+          className="absolute top-1/2 size-2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary"
+          key={find}
+          style={{ insetInlineStart: share(scale.toX(find)) }}
+        />
+      ))}
+      {at === null ? null : (
+        <span
+          className="absolute -inset-y-0.5 w-px bg-primary"
+          style={{ insetInlineStart: share(at) }}
+        />
+      )}
+    </div>
+  );
+}
+
+function ControlledMinimap({
   beats,
   map,
   maxSqueeze,
@@ -69,7 +143,7 @@ export function Minimap({
   squeeze,
   taken,
   view,
-}: MinimapProps) {
+}: MinimapBeats & MinimapControls) {
   const ref = useRef<HTMLDivElement>(null);
   const playheadRef = useRef<HTMLSpanElement>(null);
   const dragRef = useRef<Drag | null>(null);
@@ -80,7 +154,6 @@ export function Minimap({
     x: number;
   } | null>(null);
   const [isDragging, setIsDragging] = useState(false);
-  const scale = timelineScale(map);
   /** The recording's length, which the overview's room spans. */
   const whole = Math.max(map.duration + takenTotal(taken), 1e-6);
   const played = map.duration / whole;
@@ -156,19 +229,7 @@ export function Minimap({
         ref={ref}
         style={{ width: share(played) }}
       >
-        <span className="absolute inset-x-0 top-1/2 h-px -translate-y-1/2 bg-fill-strong" />
-        {beats.map((beat) => (
-          <span
-            aria-hidden
-            className="absolute inset-y-0.5 min-w-px rounded-full bg-fg-tertiary"
-            key={beat.start}
-            style={{
-              backgroundColor: beat.color,
-              insetInlineStart: share(scale.toX(beat.start)),
-              width: share(scale.toX(beat.end, true) - scale.toX(beat.start)),
-            }}
-          />
-        ))}
+        <MinimapTicks beats={beats} map={map} />
         <span
           aria-hidden
           className="absolute -inset-y-0.5 w-px bg-primary"

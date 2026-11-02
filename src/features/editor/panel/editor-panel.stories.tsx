@@ -75,19 +75,9 @@ const audioPreviewLayout = {
   width: 0,
 };
 
-/**
- * Storybook-only. Every preview surface - screenshot and recording alike - is
- * painted by the native GPU compositor, which cannot run outside the desktop
- * app, so those areas render as empty `data-recording-preview-viewport`
- * containers here. This decorator wraps the stories in `.sb-gpu-preview` so a
- * CSS rule in `.storybook/styles.css` can label that empty region with a
- * placeholder.
- *
- * `Opening` (`artifact` is `null`) has no viewport at all and is left
- * unwrapped. The audio recording story is wrapped but renders an audio-waveform
- * visualizer with no viewport element, so the placeholder never appears there -
- * which is correct, since that area is not a blank GPU surface.
- */
+// The native compositor paints every preview, and cannot run here, so a rule
+// in `.storybook/styles.css` labels the empty viewport inside
+// `.sb-gpu-preview`. `Opening` has no viewport and is left unwrapped.
 const withGpuPreviewPlaceholder: Decorator = (Story, context) => {
   const artifact = context.args.artifact as EditorArtifact | null | undefined;
   if (!artifact) return <Story />;
@@ -102,6 +92,7 @@ const events = {
   onBakeCameraChange: fn(),
   onBrowse: fn(),
   onCameraCompressionChange: fn(),
+  onCameraKeyChange: fn(),
   onCameraOverlayChange: fn(),
   onCameraResolutionScaleChange: fn(),
   onCancel: fn(),
@@ -123,6 +114,7 @@ const events = {
   onRenameProject: fn(),
   onResolutionScaleChange: fn(),
   onSave: fn(),
+  onScreenshotFormatChange: fn(),
   onScreenshotOutputChange: fn(),
   onSelectedScreenshotItemChange: fn(),
   onSelectedTrackChange: fn(),

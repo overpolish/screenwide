@@ -9,9 +9,12 @@ import { cn } from "../../../lib/styling";
 import { Text } from "../../../primitives/text/text";
 
 /** A line of what is going on, its glyph in a slot the size of a control so
- * it stands as far from the island's edge as a control would. A long line,
- * such as several failures one to a line, wraps rather than widening the
- * island past a reading width. */
+ * it stands as far from the island's edge as a control would, and its words
+ * ending as far from the other edge as the glyph stands from its own. A
+ * notice stays on one line and the island grows to fit it, as its other
+ * rows do; only a failure wraps, since it can be several, one to a line, and
+ * would otherwise widen the island past a reading width, a word too long
+ * for it included. */
 export function IslandStatus({
   children,
   glyph,
@@ -36,7 +39,11 @@ export function IslandStatus({
       </span>
       <Text
         as="span"
-        className="w-max max-w-80 py-1 whitespace-pre-line"
+        className={
+          isError
+            ? "w-max max-w-80 py-1 break-words whitespace-pre-line"
+            : "truncate"
+        }
         role={isError ? "alert" : "status"}
         variant="label"
       >

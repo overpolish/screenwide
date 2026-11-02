@@ -4,7 +4,7 @@
 //! What the browser shows of each project, read from its manifest alone.
 
 use std::path::{Path, PathBuf};
-use std::time::UNIX_EPOCH;
+use std::time::{SystemTime, UNIX_EPOCH};
 
 use serde::Serialize;
 use ts_rs::TS;
@@ -70,10 +70,15 @@ pub struct ProjectSummary {
   /// Deleted; None elsewhere.
   pub expires_ms: Option<u64>,
   pub duration_ms: Option<u64>,
+  /// When the project was made, which is when it was recorded or the
+  /// screenshot taken: its folder's creation time, as the manifest keeps no
+  /// time of its own. None where the file system does not keep one.
+  pub created_ms: Option<u64>,
   pub file: PathBuf,
   pub kind: Option<SummaryKind>,
   /// When the manifest last changed, which is when the project was last
-  /// edited.
+  /// edited: what tells a cached picture or reading it is out of date, never
+  /// shown.
   pub modified_ms: Option<u64>,
   /// Everything in the project's folder, in bytes: what keeping it costs.
   pub size_bytes: Option<u64>,
@@ -84,17 +89,26 @@ pub struct ProjectSummary {
   pub tracks: Option<ProjectTracks>,
 }
 
+/// Milliseconds since the epoch, for a time the file system gave.
+fn epoch_ms(time: std::io::Result<SystemTime>) -> Option<u64> {
+  time
+    .ok()
+    .and_then(|time| time.duration_since(UNIX_EPOCH).ok())
+    .and_then(|age| u64::try_from(age.as_millis()).ok())
+}
+
 pub fn summarize(file: &Path) -> ProjectSummary {
   let title = file
     .file_stem()
     .and_then(|stem| stem.to_str())
     .unwrap_or_default()
     .to_owned();
-  let modified_ms = std::fs::metadata(file)
-    .and_then(|metadata| metadata.modified())
-    .ok()
-    .and_then(|time| time.duration_since(UNIX_EPOCH).ok())
-    .and_then(|age| u64::try_from(age.as_millis()).ok());
+  let modified_ms = epoch_ms(std::fs::metadata(file).and_then(|metadata| metadata.modified()));
+  // The folder, which the capture makes as it starts and which renaming or
+  // moving keeps; the manifest is written again on every save.
+  let created_ms = file
+    .parent()
+    .and_then(|root| epoch_ms(std::fs::metadata(root).and_then(|metadata| metadata.created())));
   match read(file) {
     Ok(manifest) => {
       let recording = manifest
@@ -105,6 +119,7 @@ pub fn summarize(file: &Path) -> ProjectSummary {
         available: true,
         expires_ms: None,
         duration_ms: recording.and_then(|recording| recording.duration_ms),
+        created_ms,
         file: file.to_path_buf(),
         kind: match manifest.kind {
           ProjectKind::Recording => recording.map(|recording| recording.primary_kind.into()),
@@ -122,6 +137,7 @@ pub fn summarize(file: &Path) -> ProjectSummary {
       available: false,
       expires_ms: None,
       duration_ms: None,
+      created_ms,
       file: file.to_path_buf(),
       kind: None,
       modified_ms,
@@ -156,7 +172,7 @@ pub fn folder_size(root: &Path) -> u64 {
   total
 }
 
-/// Every project directly inside `folder`, most recently edited first.
+/// Every project directly inside `folder`, most recently made first.
 pub fn in_folder(folder: &Path) -> Vec<ProjectSummary> {
   let Ok(entries) = std::fs::read_dir(folder) else {
     return Vec::new();
@@ -175,7 +191,7 @@ pub fn in_folder(folder: &Path) -> Vec<ProjectSummary> {
     .filter(|file| !is_cancelled(file))
     .map(|file| summarize(&file))
     .collect();
-  projects.sort_by_key(|project| std::cmp::Reverse(project.modified_ms));
+  projects.sort_by_key(|project| std::cmp::Reverse(project.created_ms));
   projects
 }
 

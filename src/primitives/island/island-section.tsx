@@ -16,10 +16,9 @@ import { useSwapHold } from "./island-swap-hold";
 import type { islandLayout } from "./island-layout";
 import type { IslandShapeValues } from "./island-outline-sync";
 
-/** What hangs beneath the island's row: a box only as wide as what it
- * holds, under the part of the row it belongs to. The box paints nothing;
- * the island's outline is drawn round it, from `values`, which it is
- * animated by. */
+// What hangs beneath the row: a box only as wide as what it holds, under the
+// part of the row it belongs to. It paints nothing; the island's outline is
+// drawn round it from `values`, which animate it.
 export function IslandSection({
   children,
   isFromMiddle,
@@ -41,11 +40,10 @@ export function IslandSection({
   isOpening: boolean;
   isShown: boolean;
   layout: ReturnType<typeof islandLayout>;
-  /** Whether the island moves sideways to balance its row round a notch.
-   * Then what hangs is held against the move (`sectionX`) and put where it
-   * will rest at once (`island-section-settle.ts`); otherwise it rides with
-   * its box, easing along, and parts swapped are held in place
-   * (`island-swap-hold.ts`). */
+  // Then what hangs is held against the move (`sectionX`) and put where it
+  // will rest at once (`island-section-settle.ts`); otherwise it rides with
+  // its box and swapped parts are held in place (`island-swap-hold.ts`).
+  /** Whether the island moves sideways to balance its row round a notch. */
   movesSideways: boolean;
   /** The element holding what hangs, to be measured. */
   onElement: (element: HTMLDivElement | null) => void;

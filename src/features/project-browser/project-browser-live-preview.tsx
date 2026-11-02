@@ -5,14 +5,14 @@ import { useRef } from "react";
 
 import { ProjectBrowser, type ProjectBrowserProps } from "./project-browser";
 import { projectsFor } from "./project-browser-fixtures";
-
-import type { ProjectSummary } from "./types";
+import { RECENT, type ProjectSummary } from "./types";
 
 /** The browser in a story, answering some events as the app would so it can
- * be tried: the sidebar switches source, and Delete takes the cards away
- * with an Undo on the island that brings them back. Each event still
- * reaches its arg, for the Actions panel. `updateArgs` is the story's own,
- * from `useArgs`, which only a story's render may call. */
+ * be tried: the sidebar switches source, opening a project brings it to the
+ * top of Recent, and Delete takes the cards away with an Undo on the island
+ * that brings them back. Each event still reaches its arg, for the Actions
+ * panel. `updateArgs` is the story's own, from `useArgs`, which only a
+ * story's render may call. */
 export function LiveProjectBrowser({
   updateArgs,
   ...args
@@ -33,6 +33,17 @@ export function LiveProjectBrowser({
             title: removedRef.current[0]?.title ?? "",
           },
           projects: listed.filter(({ file }) => !files.includes(file)),
+        });
+      }}
+      onOpen={(file) => {
+        args.onOpen(file);
+        if (args.selected !== RECENT) return;
+        const listed = args.projects ?? [];
+        updateArgs({
+          projects: [
+            ...listed.filter((project) => project.file === file),
+            ...listed.filter((project) => project.file !== file),
+          ],
         });
       }}
       onSelect={(next) => {

@@ -15,8 +15,7 @@ type WindowShellProps = {
   className?: string;
   /** Left out by a sheet, which has no title bar of its own. */
   header?: ReactNode;
-  /** `content` lets the page be as tall as what it holds, for a window that
-   * fits itself to it with `useFitWindowHeight`. */
+  /** `content` for a window that fits its height with `useFitWindowHeight`. */
   height?: "fill" | "content";
   ref?: Ref<HTMLElement>;
 };

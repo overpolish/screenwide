@@ -30,7 +30,6 @@ const MANY_KINDS = [
   "shape",
 ] as const;
 
-/** The strip as Controls set it; they start it afresh. */
 const Live = (props: LiveStripProps) => (
   <LiveStrip
     key={JSON.stringify([props.selection, props.squeeze, props.recording])}
@@ -94,24 +93,22 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-// A minute and a half, opened on its first minute or so.
 export const Default: Story = {};
 
-// Short enough to fit whole as it opens, with nothing squeezed: the strip
-// ends where the recording does, the squeeze's handle right there.
+// Fits whole as it opens, nothing squeezed: the squeeze's handle is at the
+// end.
 export const Short: Story = {
   args: { recording: storyRecording({ duration: 24 }), squeeze: 0 },
 };
 
-// Squeezed as far as it goes: what the squeeze took is hatched past the
-// end, where the recording would still run, and the handle is where the
-// hatch begins.
+// What the squeeze took is hatched past the end, the handle where the hatch
+// begins.
 export const Squeezed: Story = {
   args: { recording: storyRecording({ duration: 24 }), squeeze: 1 },
 };
 
-// The fourth beat moved to play after the ninth: a mark at the foot of the
-// beats wherever play jumps, each putting it back when pressed.
+// A mark at the foot of the beats wherever play jumps, which puts the move
+// back when pressed.
 export const Reordered: Story = {
   args: {
     moves: [
@@ -123,7 +120,6 @@ export const Reordered: Story = {
   },
 };
 
-// Eight minutes: the minimap's window is a sliver of it.
 export const Long: Story = {
   args: { recording: storyRecording({ duration: 480 }) },
 };
@@ -146,7 +142,7 @@ export const AnnotationSelected: Story = {
   args: { selection: { id: "text", kind: "annotation" } },
 };
 
-// A stretch the scissors drew across a lull and into the beat after it.
+// A stretch drawn across a lull and into the beat after it.
 export const RangeSelected: Story = {
   args: {
     selection: longLull
@@ -159,15 +155,12 @@ export const RangeSelected: Story = {
   },
 };
 
-// Two beats with their middles cut, each leaving a seam to put it back.
 export const Cuts: Story = {
   args: { recording: storyRecording({ duration: 90, isCut: true }) },
 };
 
-// Short enough to fit whole, cut twice and squeezed halfway: the band past
-// the end holds what was squeezed, then what was deleted, each saying how
-// much. Restoring a cut or squeezing glides the strip and the band
-// together.
+// The band past the end holds what was squeezed, then what was deleted;
+// restoring a cut or squeezing glides the strip and band together.
 export const CutAndSqueezed: Story = {
   args: { recording: storyRecording({ duration: 60, isCut: true }) },
 };
@@ -176,8 +169,7 @@ export const CrowdedAnnotations: Story = {
   args: { recording: storyRecording({ duration: 90, isCrowded: true }) },
 };
 
-// Twenty annotations over the same stretch: the lanes grow to four and
-// scroll past them, and the rest of the strip stays put.
+// The lanes grow to four and scroll past them; the rest stays put.
 export const ManyAnnotations: Story = {
   args: {
     recording: {
@@ -201,7 +193,6 @@ export const NoVoice: Story = {
   args: { recording: storyRecording({ duration: 90, isVoiced: false }) },
 };
 
-// The pictures not read from the video yet.
 export const ThumbnailsLoading: Story = {
   args: { recording: storyRecording({ duration: 90, isLoading: true }) },
 };
@@ -209,8 +200,8 @@ export const ThumbnailsLoading: Story = {
 // The view follows the playhead, a page at a time.
 export const Playing: Story = { args: { isPlaying: true } };
 
-// With ⌥ held the scissors are in hand: a blade follows the pointer, a drag
-// draws a stretch to cut, and the chosen lull's end trims.
+// A blade follows the pointer, a drag draws a stretch to cut, and the chosen
+// lull's end trims.
 export const OptionHeld: Story = {
   args: {
     isAltHeld: true,

@@ -4,6 +4,7 @@
 import { useArgs } from "storybook/preview-api";
 import { fn } from "storybook/test";
 
+import { featureStage } from "../../../storybook/feature-story-stage";
 import { StoryGrid, StoryGridRow } from "../../../storybook/story-grid";
 
 import { HotkeyField } from "./hotkey-field";
@@ -39,11 +40,12 @@ const meta = {
     value: DEFAULT_SHORTCUT,
   },
   component: HotkeyField,
+  decorators: [featureStage({ width: 320 })],
   parameters: {
     controls: {
       include: ["captureMode", "isClearable", "isDisabled", "value"],
     },
-    layout: "centered",
+    layout: "fullscreen",
   },
   // A recorded shortcut lands in the args, as Settings would save it.
   render: function Render(args) {

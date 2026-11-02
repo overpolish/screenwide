@@ -45,8 +45,8 @@ export const locations: ProjectLocation[] = [
   },
 ];
 
-/** Edit times relative to today, so the date groups read the same whenever
- * the story is opened. */
+/** Times relative to today, so the date groups and the cards' dates read
+ * the same whenever the story is opened. */
 export const daysAgo = (days: number, hour: number) => {
   const now = new Date();
   return new Date(
@@ -69,11 +69,13 @@ const project = (
   overrides: Partial<ProjectSummary> = {},
 ): ProjectSummary => ({
   available: true,
+  createdMs: daysAgo(0, 10),
   durationMs: 94_000,
   expiresMs: null,
   file: `/Users/demo/Movies/Screenwide/${title}/${title}.screenwide`,
   kind: "screen",
-  modifiedMs: daysAgo(0, 10),
+  // Last edited when it was recorded, unless a project says otherwise.
+  modifiedMs: overrides.createdMs ?? daysAgo(0, 10),
   replay: false,
   sizeBytes: 148_000_000,
   title,
@@ -84,58 +86,66 @@ const project = (
 export const projects = [
   project("Product demo"),
   project("Onboarding walkthrough", {
+    createdMs: daysAgo(0, 9),
     durationMs: 612_000,
-    modifiedMs: daysAgo(0, 9),
     replay: true,
     sizeBytes: 812_000_000,
     tracks: tracks("screen", "camera", "systemAudio", "microphone"),
   }),
   project("Weekly update", {
+    createdMs: daysAgo(1, 16),
     durationMs: 245_000,
     kind: "camera",
-    modifiedMs: daysAgo(1, 16),
     sizeBytes: 320_000_000,
     tracks: tracks("camera", "microphone"),
   }),
   project("Settings redesign", {
+    createdMs: daysAgo(1, 11),
     durationMs: 71_000,
-    modifiedMs: daysAgo(1, 11),
     sizeBytes: 96_000_000,
   }),
   project("Podcast intro", {
+    createdMs: daysAgo(3, 11),
     durationMs: 45_000,
     kind: "audio",
-    modifiedMs: daysAgo(3, 11),
     sizeBytes: 4_200_000,
     tracks: tracks("microphone"),
   }),
   project("Release notes", {
     available: false,
+    createdMs: daysAgo(12, 14),
     durationMs: null,
     kind: null,
-    modifiedMs: daysAgo(12, 14),
     sizeBytes: null,
     tracks: null,
   }),
   project("Pricing page", {
+    createdMs: daysAgo(20, 15),
     durationMs: null,
     kind: "screenshot",
-    modifiedMs: daysAgo(20, 15),
     sizeBytes: 2_400_000,
     tracks: null,
   }),
   project("Launch teaser", {
+    createdMs: daysAgo(45, 12),
     durationMs: 31_000,
-    modifiedMs: daysAgo(45, 12),
     sizeBytes: 61_000_000,
     tracks: tracks("screen"),
   }),
   project("Bug report", {
+    createdMs: daysAgo(400, 9),
     durationMs: 18_000,
-    modifiedMs: daysAgo(400, 9),
+    // Opened and edited today, which leaves it among last year's.
+    modifiedMs: daysAgo(0, 11),
     sizeBytes: 22_000_000,
   }),
 ];
+
+/** Recent: the projects most recently opened first, which is not the order
+ * they were recorded in. */
+export const recentProjects = [8, 0, 3, 1, 6, 2, 4, 5, 7].map(
+  (index) => projects[index],
+);
 
 /** Projects deleted in the last 30 days, each with the time it has left
  * before it goes to the Trash. */
@@ -152,7 +162,7 @@ export const projectsFor = (source: string): ProjectSummary[] => {
     return projects.filter(({ available }) => available);
   if (source === locations[1].path) return [projects[3], projects[6]];
   if (source === locations[2].path) return [];
-  return projects;
+  return recentProjects;
 };
 
 const W = 480;

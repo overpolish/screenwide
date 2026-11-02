@@ -6,6 +6,7 @@ import { listen } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { useEffect, useRef, useState } from "react";
 
+import { useProjectReadings } from "./activity/use-project-readings";
 import {
   addProjectLocation,
   deleteProject,
@@ -166,6 +167,7 @@ export function ProjectBrowserWindow() {
   const scrub = useScrubStrips();
   forgetStripRef.current = scrub.forget;
   useOpenFailures(setError);
+  const readings = useProjectReadings(projects);
   const titleOf = (file: string | undefined) =>
     projects?.find((project) => project.file === file)?.title ?? "";
 
@@ -278,6 +280,7 @@ export function ProjectBrowserWindow() {
         run(restoreProjects(undo.take()));
       }}
       projects={projects}
+      readings={readings}
       scrubStrips={scrub.strips}
       selected={selected}
       thumbnails={thumbnails}

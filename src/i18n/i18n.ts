@@ -168,7 +168,26 @@ export function t<Id extends MessageId>(
   id: Id,
   ...[args]: MessageArgs<Id>
 ): string {
-  for (const bundle of [active.bundle, active.fallback]) {
+  return format([active.bundle, active.fallback], id, args);
+}
+
+/**
+ * The message `id` as the source language writes it, whatever language is
+ * in use: for words the app reads rather than shows, such as the search's
+ * date words, which stay understood in English beside a translation's own
+ * and in the pseudo-locales, whose spellings no one types.
+ */
+export const sourceText = <Id extends MessageId>(
+  id: Id,
+  ...[args]: MessageArgs<Id>
+) => format([sourceBundle], id, args);
+
+function format<Id extends MessageId>(
+  bundles: readonly (FluentBundle | null)[],
+  id: Id,
+  args: MessageArgs<Id>[0],
+): string {
+  for (const bundle of bundles) {
     const message = bundle?.getMessage(id);
     if (!bundle || !message?.value) continue;
     const errors: Error[] = [];

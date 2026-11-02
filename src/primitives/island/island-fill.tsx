@@ -6,13 +6,11 @@ import { useReducedMotion } from "motion/react";
 import { motionDurationCss } from "../../lib/motion";
 import { cn } from "../../lib/styling";
 
-/** The fill behind one of the island's round controls: it grows in under the
- * pointer, deepens where the control is chosen or what it opens is open, and
- * shrinks away when it is left, so nothing on the island lights or goes out
- * at once. It sits behind the control's content, so the control is
- * `isolate`. Inside a button marked `group` the pointer is read from the
- * button's own hover, skipped while it is disabled; a control that is no
- * button says whether it is hovered. */
+// Grows in under the pointer, deepens while chosen or open, and shrinks away
+// when left, so nothing on the island lights or goes out at once. It sits
+// behind the control's content, so the control is `isolate`. Inside a button
+// marked `group` the pointer is read from the button's hover, skipped while
+// disabled; any other control passes `isHovered`.
 export function IslandFill({
   isChosen,
   isHovered,

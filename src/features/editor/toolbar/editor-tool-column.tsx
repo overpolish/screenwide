@@ -45,8 +45,7 @@ export type EditorTool = AnnotationKind | "crop" | "select";
 export type EditorToolColumnProps = {
   /** Whether a mode is open, which puts the tool in hand down. */
   isModeOpen: boolean;
-  /** A capture without a picture (audio) has nothing to draw on, so its
-   * column stands empty. */
+  /** An audio capture has nothing to draw on, so its column stands empty. */
   kind: EditorKind;
   /** Told the tool taken up; a pen pressed again goes back to Select. */
   onToolChange: (tool: EditorTool) => void;

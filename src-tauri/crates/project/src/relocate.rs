@@ -154,8 +154,29 @@ fn copy_into(
     let _ = std::fs::remove_dir_all(&destination);
     return Err(format!("{title} could not be copied: {error}"));
   }
+  keep_created(root, &destination);
   Ok((destination, name))
 }
+
+/// Gives a copied project folder the creation time of the one it was copied
+/// from: the browser shows it as when the project was recorded, which moving
+/// it to another drive or duplicating it does not change. Only macOS lets a
+/// folder's be set; elsewhere a copy's is when it was made.
+#[cfg(target_os = "macos")]
+fn keep_created(from: &Path, to: &Path) {
+  use std::os::macos::fs::FileTimesExt;
+  let Ok(created) = std::fs::metadata(from).and_then(|metadata| metadata.created()) else {
+    return;
+  };
+  if let Err(error) =
+    File::open(to).and_then(|folder| folder.set_times(FileTimes::new().set_created(created)))
+  {
+    eprintln!("Could not keep the project's creation time: {error}");
+  }
+}
+
+#[cfg(not(target_os = "macos"))]
+fn keep_created(_: &Path, _: &Path) {}
 
 /// Copies the folders and files under `from` into `to`, keeping each file's
 /// modification time: a project's manifest time is when it was last edited,

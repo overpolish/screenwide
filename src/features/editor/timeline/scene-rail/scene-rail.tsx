@@ -57,11 +57,9 @@ function sceneRoom(scenes: Span[], duration: number, moment: number) {
 }
 
 export type SceneRailProps = {
-  /** The recording's length, in recorded seconds: the last scene's room
-   * ends there. */
+  /** The recording's length, in recorded seconds. */
   duration: number;
-  /** Told a stretch drawn along the empty rail, from where it was pressed
-   * to where it was let go, either way round. */
+  /** A stretch drawn along the empty rail, either way round. */
   onDraw: (from: number, to: number) => void;
   onRetime: (id: string, start: number, end: number) => void;
   onSelect: (id: string) => void;
@@ -69,13 +67,11 @@ export type SceneRailProps = {
   scenes: TimelineScene[];
   /** The strip's width, in px. */
   width: number;
-  /** Told where a drawn or dragged end has snapped, or null where none
-   * has, so the strip can draw the guide. */
+  /** Where a drawn or dragged end has snapped, or null, for the guide. */
   onGuide?: (seconds: number | null) => void;
   selected?: string;
   /** Where a drawn or dragged end settles while ⌘ or Ctrl is held, given
-   * the scene dragged, if any, whose own edges are left out: on something
-   * in reach, or where it is. */
+   * the scene dragged, whose own edges are left out. */
   snap?: SnapFor;
 };
 

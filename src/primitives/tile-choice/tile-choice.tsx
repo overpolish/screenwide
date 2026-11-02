@@ -49,12 +49,11 @@ export function TileChoice<Id extends string>({
   items: TileChoiceItem<Id>[];
   onChange: (id: Id) => void;
   value: Id;
-  /** Tiles to a row: fewer make each tile, and its picture, larger. */
+  /** Tiles to a row. */
   columns?: 2 | 3;
-  /** The pictures' width over their height, the same for every tile. */
+  /** The pictures' width over their height. */
   pictureAspect?: number;
-  /** Whether each tile shows its name under its picture; it is the tile's
-   * accessible name either way. */
+  /** Shows each name under its picture; it names the tile either way. */
   showsLabels?: boolean;
 }) {
   const isIsland = useSkin() === "island";

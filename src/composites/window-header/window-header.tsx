@@ -21,8 +21,8 @@ import { EditableTitle } from "../editable-title/editable-title";
 type WindowHeaderProps = {
   title: string;
   actions?: ReactNode;
-  /** Laid out between the title and the actions, centred where there is
-   * room: the editor's modes. */
+  /** Centred between the title and the actions, such as the editor's
+   * modes. */
   center?: ReactNode;
   /** Off for a window the system places, such as a sheet. */
   isDraggable?: boolean;

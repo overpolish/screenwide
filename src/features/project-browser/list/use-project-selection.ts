@@ -3,7 +3,39 @@
 
 import { useRef, useState } from "react";
 
+import type { ProjectActions } from "./use-project-menu";
+
 const NONE: ReadonlySet<string> = new Set();
+
+/**
+ * The actions, with the choice ending as projects are deleted, moved,
+ * restored or sent to the Trash, as a file browser's does. Those projects
+ * leave the list, and a choice kept for them comes back whenever the list
+ * shows them again, as it can for a moment while it reloads, bringing the
+ * island's selection row back over the notice of what was done.
+ */
+export function clearingChoice(
+  actions: ProjectActions,
+  clear: () => void,
+): ProjectActions {
+  const then =
+    <Args extends unknown[]>(act: (...args: Args) => void) =>
+    (...args: Args) => {
+      clear();
+      act(...args);
+    };
+  if ("onRestore" in actions)
+    return {
+      ...actions,
+      onRestore: then(actions.onRestore),
+      onTrash: then(actions.onTrash),
+    };
+  return {
+    ...actions,
+    onDelete: then(actions.onDelete),
+    onMove: actions.onMove && then(actions.onMove),
+  };
+}
 
 /**
  * Which listed projects are chosen, by manifest, with the gestures a file

@@ -10,8 +10,7 @@ import { ShortcutChip, type ShortcutChipProps } from "./shortcut-chip";
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 
-/** One shortcut on a row of the lane's height, its tick at the row's start
- * and room for its keys after it. */
+// Room for its keys after its tick.
 function Chip(props: Omit<ShortcutChipProps, "x">) {
   return (
     <div className="relative h-5 w-20" dir="ltr">

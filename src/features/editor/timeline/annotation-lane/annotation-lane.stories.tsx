@@ -17,9 +17,8 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 const WIDTH = 640;
 const scale = timelineScale(recordedTime(64));
 
-/** The lane, keeping what is chosen, retimed and restacked as the editor
- * would, its ends snapping with ⌘ to the other annotations' as the strip's
- * do; Controls start it afresh with what they set. */
+// Keeps choices, retimes and restacks as the editor would, ends snapping with
+// ⌘; Controls start it afresh.
 function LiveLane(args: AnnotationLaneProps) {
   const [annotations, setAnnotations] = useState(args.annotations);
   const [selected, setSelected] = useState(args.selected);
@@ -103,9 +102,8 @@ export const Default: Story = {};
 
 export const Selected: Story = { args: { selected: "arrow" } };
 
-// Pinned annotations follow the content under them: hatched where it is out
-// of view and they are hidden, ticked where each was put right by hand, and
-// drawn in the warning colour where the tracker is unsure of the content.
+// Hatched where the content is out of view, ticked where put right by hand,
+// in the warning colour where the tracker is unsure.
 export const Pinned: Story = {
   args: {
     annotations: [

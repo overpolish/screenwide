@@ -9,6 +9,7 @@
 //! would ask for access to folders the user never pointed it at.
 
 pub(crate) mod actions;
+pub(crate) mod activity;
 pub(crate) mod copying;
 mod drives;
 pub(crate) mod open_failures;

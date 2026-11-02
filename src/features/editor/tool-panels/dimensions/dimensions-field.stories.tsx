@@ -4,6 +4,8 @@
 import { useArgs } from "storybook/preview-api";
 import { fn } from "storybook/test";
 
+import { featureStage } from "../../../../storybook/feature-story-stage";
+
 import { DimensionsField } from "./dimensions-field";
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
@@ -22,9 +24,10 @@ const meta = {
     width: 1920,
   },
   component: DimensionsField,
+  decorators: [featureStage({ width: 240 })],
   parameters: {
     controls: { include: ["height", "isDisabled", "width"] },
-    layout: "centered",
+    layout: "fullscreen",
   },
   // Edits land in the args, as the Frame island's canvas size takes them, so
   // the kept ratio can be tried: change the width and the height follows.

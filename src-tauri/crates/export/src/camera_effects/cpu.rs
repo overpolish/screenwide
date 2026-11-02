@@ -11,6 +11,7 @@ use ::image::RgbaImage;
 use super::live::LiveCameraEffects;
 use super::CameraBackground;
 use screenwide_annotations::pin::LumaFrame;
+use screenwide_compositor::compositor::PictureLook;
 use screenwide_imaging::CapturedImage;
 
 /// How much smaller than the frame the room is blurred at: a still's blur is
@@ -34,13 +35,25 @@ impl StillEffects {
     Some(Self { live, matte })
   }
 
-  /// Draws the effects on `frame`, the camera at `ms`.
-  pub fn apply(&mut self, frame: &mut CapturedImage, ms: u64) {
+  /// Draws the effects on `frame`, the camera at `ms`, and says how they
+  /// left it, for the canvas to draw it as it draws a frame the GPU's
+  /// effects pass drew: a person cut out where the background is taken away
+  /// to nothing there, as `gpu.rs` marks it.
+  pub fn apply(&mut self, frame: &mut CapturedImage, ms: u64) -> PictureLook {
     let matte = self
       .matte
       .as_mut()
       .and_then(|matte| matte.at(ms).ok().flatten());
     apply(frame, (matte.as_deref(), ms), &self.live);
+    let cut_out = matte.is_some()
+      && self
+        .live
+        .background_at(ms)
+        .is_some_and(|at| at.background == CameraBackground::Transparent);
+    PictureLook {
+      enhanced: self.live.enhance,
+      cut_out,
+    }
   }
 
   /// Whether the frames it draws may keep a transparent background, which a

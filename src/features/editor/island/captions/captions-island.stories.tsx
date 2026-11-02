@@ -30,7 +30,7 @@ function CaptionsIsland({
   );
 }
 
-/** A few families, as the system would offer them. */
+// A few families, as the system would offer them.
 const FAMILIES: FontFamily[] = [
   { italic: true, name: "Georgia", weights: [400, 700] },
   { italic: true, name: "Helvetica Neue", weights: [300, 400, 500, 700] },
@@ -134,7 +134,6 @@ export const KeyWord: Story = { args: { look: storyTextStyle("supersize") } };
 // Hidden, there is nothing else to set, so the section folds away.
 export const Hidden: Story = { args: { enabled: false } };
 
-// Captions taken out of the video, to bring back.
 export const CaptionsTakenOut: Story = { args: { hiddenCount: 2 } };
 
 // Until the transcript's words are in, only its row: the Script island out

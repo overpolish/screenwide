@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { type Meta, type StoryObj } from "@storybook/react-vite";
+import { fn } from "storybook/test";
 
 import { featureStage } from "../../storybook/feature-story-stage";
 
@@ -48,9 +49,9 @@ const meta = {
     currentVersion: "0.1.0",
     downloadProgress: null,
     error: null,
-    onInstall: () => undefined,
-    onRemindLater: () => undefined,
-    onSkipVersion: () => undefined,
+    onInstall: fn(),
+    onRemindLater: fn(),
+    onSkipVersion: fn(),
     releaseDate: "2026-08-18T12:00:00Z",
     releaseNotes: releaseNotesHtml,
     status: "available" as const,
@@ -58,7 +59,10 @@ const meta = {
   },
   component: UpdatePrompt,
   decorators: [featureStage({ window: "update" })],
-  parameters: { layout: "fullscreen" },
+  parameters: {
+    controls: { exclude: ["onInstall", "onRemindLater", "onSkipVersion"] },
+    layout: "fullscreen",
+  },
   title: "Legacy/Updates/Update Prompt",
 } satisfies Meta<typeof UpdatePrompt>;
 

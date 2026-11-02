@@ -6,6 +6,7 @@
 //! frame and them.
 
 use super::still::{compose_still, StillCamera, StillInputs};
+use super::PictureLook;
 use screenwide_cursor_effects::GpuCursor;
 use screenwide_imaging::CapturedImage;
 use screenwide_keyboard_effects::KeyboardOverlay;
@@ -35,6 +36,36 @@ pub struct StillOverlay {
   pub camera_on_top: u32,
 }
 
+impl StillOverlay {
+  /// `camera` placed as this overlay places the camera bubble, drawn as
+  /// `look` says the camera's effects left it; none where it has no frame.
+  pub fn still_camera<'a>(
+    &self,
+    camera: &'a CapturedImage,
+    look: PictureLook,
+  ) -> Option<StillCamera<'a>> {
+    (self.camera_frame_width > 0).then(|| StillCamera {
+      image: camera,
+      crop: [
+        self.camera_crop_x,
+        self.camera_crop_y,
+        self.camera_crop_width,
+        self.camera_crop_height,
+      ],
+      frame: (
+        self.camera_frame_x,
+        self.camera_frame_y,
+        self.camera_frame_width,
+        self.camera_frame_height,
+      ),
+      radius: self.camera_radius,
+      drop_shadow: self.camera_drop_shadow != 0,
+      on_top: self.camera_on_top != 0,
+      look,
+    })
+  }
+}
+
 /// `image` composed on the canvas `settings` describe, through the shared
 /// compositor. `overlay` carries the camera bubble's placement; `cursor` is
 /// placed on the canvas.
@@ -53,24 +84,7 @@ pub fn compose_output_layers(
 ) -> Result<CapturedImage, String> {
   screenwide_output::validate_output_settings(image.width, image.height, settings)?;
   let camera = match (camera, overlay) {
-    (Some(camera), Some(overlay)) if overlay.camera_frame_width > 0 => Some(StillCamera {
-      image: camera,
-      crop: [
-        overlay.camera_crop_x,
-        overlay.camera_crop_y,
-        overlay.camera_crop_width,
-        overlay.camera_crop_height,
-      ],
-      frame: (
-        overlay.camera_frame_x,
-        overlay.camera_frame_y,
-        overlay.camera_frame_width,
-        overlay.camera_frame_height,
-      ),
-      radius: overlay.camera_radius,
-      drop_shadow: overlay.camera_drop_shadow != 0,
-      on_top: overlay.camera_on_top != 0,
-    }),
+    (Some(camera), Some(overlay)) => overlay.still_camera(camera, PictureLook::default()),
     _ => None,
   };
   compose_still(
@@ -85,6 +99,7 @@ pub fn compose_output_layers(
       camera,
       keyboard: keyboard.copied(),
       foreground_only,
+      look: PictureLook::default(),
       transparent_background,
     },
   )

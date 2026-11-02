@@ -267,6 +267,7 @@ pub(crate) fn invoke_handler() -> impl Fn(tauri::ipc::Invoke) -> bool + Send + S
     project_browser::copying::move_projects,
     project_browser::copying::duplicate_projects,
     project_browser::scrub::get_scrub_strip,
+    project_browser::activity::get_project_activity,
     project_browser::actions::forget_recent_project,
     project_browser::actions::add_project_location,
     project_browser::actions::remove_project_location,

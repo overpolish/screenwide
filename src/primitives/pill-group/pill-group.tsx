@@ -26,14 +26,11 @@ export type PillGroupItem = {
   id: string;
   /** Geometry for the label itself, e.g. a truncation cap on a window title. */
   labelClassName?: string;
-  /**
-   * Fires on every press of the segment, after any selection change it
-   * caused, the way a Screen segment opens its display chooser whether it
-   * was just chosen or already was. `anchor` is the segment's bounding rect,
-   * so a native menu can hang off it; `fromKeyboard` is true when the press
-   * came without a pointer, so what opens can take focus rather than leaving
-   * it on the segment. Arrow-key selection is not a press.
-   */
+  // Fires whether the press chose the segment or it already was chosen, as
+  // a Screen segment opens its display chooser either way. `anchor` lets a
+  // native menu hang off the segment; `fromKeyboard` lets what opens take
+  // focus. Arrow-key selection is not a press.
+  /** Every press of the segment, after any selection change. */
   onPress?: (anchor: DOMRect, fromKeyboard: boolean) => void;
 } & (
   | { label: string; ariaLabel?: string; icon?: ReactNode }

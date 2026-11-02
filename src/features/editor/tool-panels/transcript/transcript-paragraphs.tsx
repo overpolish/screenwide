@@ -80,7 +80,7 @@ export function transcriptParagraphElements({
                 className={cn(
                   isFound &&
                     found.owners[index - 1] === found.owners[index] &&
-                    "bg-warning/35",
+                    "found-text",
                   isChosen && isWithin(chosen, index - 1) && "bg-selected",
                 )}
               >

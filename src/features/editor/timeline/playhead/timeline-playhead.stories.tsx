@@ -14,13 +14,12 @@ import { TimelinePlayhead } from "./timeline-playhead";
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 
-/** A strip's height of room under the knob, the knob dragged along it and
- * the drag logged to Actions once it rests. */
+// Logs a drag to Actions once it rests.
 function StoryPlayhead({
   at,
   onScrub,
 }: {
-  /** Where the playhead starts, as a share of the recording. */
+  // A share of the recording.
   at: number;
   onScrub: (event: React.PointerEvent, phase: ScrubPhase) => void;
 }) {

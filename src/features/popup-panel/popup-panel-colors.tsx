@@ -10,12 +10,9 @@ import { reportPopupPanelPick } from "./use-popup-panel-picker";
 
 import type { PopupPanelColorsContent } from "./picker-content";
 
-/**
- * A colour grid in the panel window: each colour pressed, or chosen in the
- * system Colours panel behind Custom, is reported to the window that opened
- * it, and the panel stays open to try another. A colour kept or forgotten is
- * reported the same way, since the list of them belongs to that window.
- */
+// The panel stays open to try another colour. A colour kept or forgotten is
+// reported too, since the list of them belongs to the window that opened it.
+/** A colour grid in a panel window, reporting each pick to its opener. */
 export function PopupPanelColors({
   content,
   id,

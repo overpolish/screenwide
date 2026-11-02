@@ -41,23 +41,17 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 type ScriptStoryProps = EditorIslandStoryProps &
   ScriptTranscriptStoryActions & {
     captions: RecordingCaptions;
-    /** Spelling put right in the transcript. */
     corrections: TranscriptCorrection[];
-    /** Whether the Captions island is out too, at the opposite corner, as
-     * the Captions mode opens the two. */
+    // The Captions island out too, at the opposite corner.
     hasCaptions: boolean;
-    /** Whether a save is running, so the script can be read and not
-     * edited. */
+    // A save is running: the script can be read, not edited.
     isLocked: boolean;
-    /** Whether the take is long enough to scroll within the island. */
+    // A take long enough to scroll within the island.
     isLong: boolean;
-    /** Whether the captions have been made yet. */
     isMade: boolean;
-    /** With the captions, or on its own to cut. */
     mode: "captions" | "transcript";
     onCaptionsChange: (patch: CaptionsPatch) => void;
     playheadMs: number;
-    /** Where the transcript stands, on its own. */
     transcript: IslandTranscript;
   };
 
@@ -67,7 +61,7 @@ const CAPTIONS: RecordingCaptions = {
   style: storyTextStyle("box"),
 };
 
-/** The Captions island out with the Script island in the Captions mode. */
+// The Captions island out with the Script island in the Captions mode.
 const pairedCaptions = ({
   captions,
   onCaptionsChange,
@@ -221,15 +215,12 @@ type Story = StoryObj<typeof meta>;
 
 export const Captions: Story = {};
 
-// With the Captions island, as the Captions mode opens the two at opposite
-// corners: a rule turned on there, such as hiding filler words, shows in
-// the script.
+// A rule turned on in the Captions island, such as hiding filler words,
+// shows in the script.
 export const WithCaptions: Story = { args: { hasCaptions: true } };
 
-// The pair before the transcript's words are in, here while transcribing:
-// the Script island says so as it does on its own, and the Captions island
-// is only its row, so moving between Transcript and Captions leaves the
-// Script as it was, where it was, as the Captions island comes out.
+// The Captions island is only its row until the words are in, so moving
+// between Transcript and Captions leaves the Script where it was.
 export const WithCaptionsWhileTranscribing: Story = {
   args: {
     hasCaptions: true,
@@ -238,7 +229,6 @@ export const WithCaptionsWhileTranscribing: Story = {
   },
 };
 
-// A template that sets a key word apart: each caption's reads bold.
 export const KeyWords: Story = {
   args: { captions: { ...CAPTIONS, style: storyTextStyle("supersize") } },
 };
@@ -247,22 +237,16 @@ export const KeyWords: Story = {
 // plain.
 export const BeforeCaptionsAreMade: Story = { args: { isMade: false } };
 
-// A take long enough that the script scrolls within the island, faded at
-// the edge where there is more.
 export const LongScript: Story = { args: { isLong: true } };
 
-// On its own, to cut, as the Transcript mode opens it. Choose words by
-// clicking or dragging, hold Command (Ctrl) to remove or restore them,
-// drag chosen words to move them, double-click to correct, Space to play.
-// Hover a Remove to see what it would take.
+// Choose words by clicking or dragging, hold Command (Ctrl) to remove or
+// restore them, drag to move them, double-click to correct, Space to play.
 export const Transcript: Story = { args: { mode: "transcript" } };
 
-// A save is running: the script can be read and words chosen, not edited.
 export const TranscriptWhileSaving: Story = {
   args: { isLocked: true, mode: "transcript" },
 };
 
-// The transcription model is not on this computer yet.
 export const TranscriptModelToDownload: Story = {
   args: {
     mode: "transcript",

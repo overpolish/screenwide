@@ -5,7 +5,12 @@ import { describe, expect, it } from "vitest";
 
 import { withoutIsolates as plain } from "../../../i18n/testing";
 
-import { filterProjects, groupByDate, timeLeft } from "./project-list";
+import {
+  filterByKind,
+  groupByDate,
+  recordedStyle,
+  timeLeft,
+} from "./project-list";
 
 import type { ProjectSummary } from "../types";
 
@@ -14,6 +19,7 @@ const project = (
   overrides: Partial<ProjectSummary> = {},
 ): ProjectSummary => ({
   available: true,
+  createdMs: null,
   durationMs: null,
   expiresMs: null,
   file: `/projects/${title}.screenwide`,
@@ -43,8 +49,8 @@ describe("groupByDate", () => {
   it("splits days at local midnight", () => {
     expect(
       labels([
-        project("just after midnight", { modifiedMs: at(2026, 9, 8, 0, 0) }),
-        project("a minute before", { modifiedMs: at(2026, 9, 7, 23, 59) }),
+        project("just after midnight", { createdMs: at(2026, 9, 8, 0, 0) }),
+        project("a minute before", { createdMs: at(2026, 9, 7, 23, 59) }),
       ]),
     ).toEqual([
       ["Today", ["just after midnight"]],
@@ -52,29 +58,27 @@ describe("groupByDate", () => {
     ]);
   });
 
-  it("bounds the rolling groups at 7 and 30 days before today", () => {
+  it("bounds the rolling group at 7 days before today, then goes by month", () => {
     expect(
       labels([
-        project("7 days", { modifiedMs: at(2026, 9, 1) }),
-        project("8 days", { modifiedMs: at(2026, 8, 30, 23) }),
-        project("30 days", { modifiedMs: at(2026, 8, 8) }),
-        project("31 days", { modifiedMs: at(2026, 8, 7, 23) }),
+        project("7 days", { createdMs: at(2026, 9, 1) }),
+        project("8 days", { createdMs: at(2026, 8, 30, 23) }),
+        project("31 days", { createdMs: at(2026, 8, 7, 23) }),
       ]),
     ).toEqual([
       ["Previous 7 Days", ["7 days"]],
-      ["Previous 30 Days", ["8 days", "30 days"]],
       [
         new Intl.DateTimeFormat("en-US", { month: "long" }).format(
-          new Date(2026, 8, 7),
+          new Date(2026, 8, 30),
         ),
-        ["31 days"],
+        ["8 days", "31 days"],
       ],
     ]);
   });
 
   it("names the year only for months of earlier years", () => {
     const [label] = labels([
-      project("last year", { modifiedMs: at(2025, 11, 31) }),
+      project("last year", { createdMs: at(2025, 11, 31) }),
     ]);
     expect(label[0]).toBe(
       new Intl.DateTimeFormat("en-US", {
@@ -88,17 +92,45 @@ describe("groupByDate", () => {
     expect(
       labels([
         project("undated"),
-        project("morning", { modifiedMs: at(2026, 9, 8, 9) }),
-        project("afternoon", { modifiedMs: at(2026, 9, 8, 14) }),
+        project("morning", { createdMs: at(2026, 9, 8, 9) }),
+        project("afternoon", { createdMs: at(2026, 9, 8, 14) }),
       ]),
     ).toEqual([
       ["Today", ["afternoon", "morning"]],
       ["Unknown Date", ["undated"]],
     ]);
   });
+
+  it("goes by when a project was recorded, not when it was last edited", () => {
+    expect(
+      labels([
+        project("opened today", {
+          createdMs: at(2025, 11, 31),
+          modifiedMs: at(2026, 9, 8, 15),
+        }),
+        project("recorded today", {
+          createdMs: at(2026, 9, 8, 9),
+          modifiedMs: at(2026, 9, 8, 9),
+        }),
+      ]).map(([, titles]) => titles),
+    ).toEqual([["recorded today"], ["opened today"]]);
+  });
 });
 
-describe("filterProjects", () => {
+describe("recordedStyle", () => {
+  it("names the weekday within the last six days, whose weekdays differ", () => {
+    expect(recordedStyle(at(2026, 9, 8, 9), now)).toBe("weekday");
+    expect(recordedStyle(at(2026, 9, 2, 0, 0), now)).toBe("weekday");
+    expect(recordedStyle(at(2026, 9, 1, 23, 59), now)).toBe("day");
+  });
+
+  it("gives the day and month this year and the full date before it", () => {
+    expect(recordedStyle(at(2026, 0, 1), now)).toBe("day");
+    expect(recordedStyle(at(2025, 11, 31, 23, 59), now)).toBe("date");
+  });
+});
+
+describe("filterByKind", () => {
   const projects = [
     project("Product Demo"),
     project("Demo voiceover", { kind: "audio" }),
@@ -106,24 +138,13 @@ describe("filterProjects", () => {
   ];
   const titles = (list: ProjectSummary[]) => list.map(({ title }) => title);
 
-  it("matches the query anywhere in the title, ignoring case", () => {
-    expect(titles(filterProjects(projects, "  demo ", "all"))).toEqual([
-      "Product Demo",
-      "Demo voiceover",
-    ]);
-  });
-
-  it("applies the kind and the query together", () => {
-    expect(titles(filterProjects(projects, "demo", "audio"))).toEqual([
-      "Demo voiceover",
-    ]);
+  it("keeps the kind chosen", () => {
+    expect(titles(filterByKind(projects, "audio"))).toEqual(["Demo voiceover"]);
   });
 
   it("keeps a project of unknown kind only under all", () => {
-    expect(titles(filterProjects(projects, "", "all"))).toContain("Missing");
-    expect(titles(filterProjects(projects, "", "screen"))).toEqual([
-      "Product Demo",
-    ]);
+    expect(titles(filterByKind(projects, "all"))).toContain("Missing");
+    expect(titles(filterByKind(projects, "screen"))).toEqual(["Product Demo"]);
   });
 });
 

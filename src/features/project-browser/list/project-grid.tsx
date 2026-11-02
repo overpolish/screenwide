@@ -4,8 +4,8 @@
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { type ReactNode, useEffect, useState } from "react";
 
-import { t } from "../../../i18n/i18n";
 import { motionDurations, motionEasings } from "../../../lib/motion";
+import { cn } from "../../../lib/styling";
 import { Text } from "../../../primitives/text/text";
 
 import type { ProjectSummary } from "../types";
@@ -14,6 +14,12 @@ import type { ProjectSummary } from "../types";
  * arrive with the last of them, so a long list is not slow to fill. */
 const STAGGERED = 12;
 const STAGGER_S = 0.025;
+
+/** The cards' columns: as many as fit across the pane, each at least wide
+ * enough for an overview to show its beats apart, sharing what is left over, so
+ * a card is never more than a little wider than that unless it is alone. */
+export const CARD_COLUMNS =
+  "grid grid-cols-[repeat(auto-fill,minmax(15rem,1fr))] gap-x-separate gap-y-group";
 
 const travel = {
   duration: motionDurations.travel,
@@ -64,11 +70,11 @@ export function ProjectGrid({
         {groups.map((group) => (
           <motion.section
             animate={{ opacity: 1 }}
-            aria-label={group.label ?? t("project-browser-search-results")}
+            aria-label={group.label ?? undefined}
             className="flex flex-col gap-separate"
             exit={{ opacity: 0 }}
             initial={{ opacity: 0 }}
-            key={group.label ?? "results"}
+            key={group.label ?? "all"}
             layout={layout}
             transition={travel}
           >
@@ -77,7 +83,7 @@ export function ProjectGrid({
                 {group.label}
               </Text>
             ) : null}
-            <div className="relative grid grid-cols-[repeat(auto-fill,minmax(13rem,1fr))] gap-x-separate gap-y-group">
+            <div className={cn("relative", CARD_COLUMNS)}>
               <AnimatePresence mode="popLayout">
                 {group.projects.map((project) => {
                   const appear = {

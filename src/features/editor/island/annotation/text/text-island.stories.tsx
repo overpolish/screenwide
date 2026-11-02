@@ -30,14 +30,13 @@ function TextIsland({
   return <EditorIslandStage content={textIsland(props)} isShown={isShown} />;
 }
 
-/** A template's look as a text placed by hand takes it up. */
+// A template's look as a text placed by hand takes it up.
 const titleLook = (template: string): TextStyle =>
   titleTemplates(STORY_TEXT_TEMPLATES).styles.find(
     (style) => style.template === template,
   ) ?? storyTextStyle(template);
 
-/** A few families, as the system would offer them, so the font list has
- * more than the built-in face to show where there is no system to ask. */
+// Where no system can be asked, so the font list has more than one face.
 const FAMILIES: FontFamily[] = [
   { italic: true, name: "Georgia", weights: [400, 700] },
   { italic: true, name: "Helvetica Neue", weights: [300, 400, 500, 700] },
@@ -115,8 +114,7 @@ type Story = StoryObj<typeof meta>;
 
 export const Recording: Story = {};
 
-// A template that sets a word apart in an accent: its words to choose from,
-// over a few lines, the accent's face, and the accent's colour.
+// A template that sets a word apart in an accent.
 export const Accent: Story = {
   args: {
     look: titleLook("editorial"),

@@ -9,22 +9,19 @@ import { useId, useState } from "react";
 import { ToggleButton, ToggleButtonGroup } from "react-aria-components";
 
 import { t } from "../../i18n/i18n";
-import {
-  motionDurationCss,
-  motionDurations,
-  motionEasings,
-} from "../../lib/motion";
-import { cn, elementFocusVisible, focusStyles } from "../../lib/styling";
-import { IconButton } from "../../primitives/button/icon-button";
+import { motionDurations, motionEasings } from "../../lib/motion";
+import { cn } from "../../lib/styling";
+import { Button } from "../../primitives/button/button";
+import { buttonVariants } from "../../primitives/button/button-variants";
 
 type SidebarNavItem = {
   icon: ReactNode;
   id: string;
   label: string;
   isDisabled?: boolean;
-  /** Sits at the foot of the list, apart from the rows above it, the way a
-   * source list keeps its Trash at the bottom. Still one of the same rows
-   * for selection and the arrow keys. */
+  // As a source list keeps its Trash at the bottom; still one of the rows
+  // for selection and the arrow keys.
+  /** Sits at the foot of the list, apart from the rows above. */
   isPinned?: boolean;
 };
 
@@ -40,30 +37,16 @@ export type SidebarNavProps = {
   isExpandable?: boolean;
   isExpanded?: boolean;
   onExpandedChange?: (expanded: boolean) => void;
-  /** A right click on a row, with the row's id and the pointer's position in
-   * the window. */
+  /** A right click on a row, at the pointer's place in the window. */
   onItemContextMenu?: (id: string, point: { x: number; y: number }) => void;
 };
 
 /** The widths the sidebar moves between: its labels shown, and only its
- * icons, where it is a control's height across so each row is a square. */
+ * icons. Collapsed, it is a button's inset, an icon and the inset again, so
+ * each icon stays where it sits in the open sidebar while the labels come
+ * and go. */
 const EXPANDED_WIDTH = "12rem";
-const COLLAPSED_WIDTH = "1.75rem";
-
-// A row reads as a button: a control's height, the label type, a 16px icon.
-// Its inset is the tight one so that collapsed, at a control's height across,
-// the icon sits centred in a square. Rows sit 2px apart so neighbouring
-// highlights stay apart. A row comes up on the fill under the pointer and
-// deeper while pressed; the chosen one is filled in the primary colour, so
-// where you are reads at a glance.
-const rowClassName = [
-  "group relative flex h-control-height w-full cursor-default items-center gap-inline overflow-hidden rounded-control px-inset-sm text-start text-label text-fg outline-none transition-colors",
-  "data-[hovered]:not-data-[selected]:bg-fill data-[pressed]:not-data-[selected]:bg-fill-strong",
-  "data-[selected]:bg-primary data-[selected]:text-on-primary data-[selected]:primary-raised",
-  "data-[disabled]:opacity-40",
-  focusStyles,
-  elementFocusVisible,
-];
+const COLLAPSED_WIDTH = "calc(var(--spacing-inset) * 2 + var(--spacing-icon))";
 
 export function SidebarNav({
   "aria-label": label,
@@ -130,6 +113,7 @@ export function SidebarNav({
       >
         <ToggleButtonGroup
           aria-label={label}
+          // Rows sit 2px apart so neighbouring fills stay apart.
           className="flex flex-1 flex-col gap-0.5"
           disallowEmptySelection
           isDisabled={isDisabled}
@@ -144,25 +128,30 @@ export function SidebarNav({
           {items.map((item) => (
             <ToggleButton
               aria-label={item.label}
-              className={cn(rowClassName, item.isPinned && "mt-auto")}
+              // A row is a ghost button with its content at the start, so its
+              // inset, height, type, fills and focus ring are a button's and
+              // it lines up with the buttons beside it. The chosen row is a
+              // held toggle, filled in the primary colour as
+              // `IconToggleButton` is, so where you are reads at a glance.
+              className={({ isDisabled, isSelected }) =>
+                cn(
+                  buttonVariants(
+                    isSelected
+                      ? { align: "start", color: "primary", isDisabled }
+                      : { align: "start", isDisabled, variant: "ghost" },
+                  ),
+                  "w-full overflow-hidden",
+                  item.isPinned && "mt-auto",
+                )
+              }
               // React Aria takes `id` as the row's key and does not put it
               // on the button, so the context menu reads it from here.
               data-item-id={item.id}
               id={item.id}
               isDisabled={item.isDisabled}
               key={item.id}
-              style={{
-                transitionDuration: reducedMotion
-                  ? "0s"
-                  : motionDurationCss("state"),
-              }}
             >
-              <span
-                aria-hidden
-                className="flex size-icon shrink-0 transform-gpu items-center justify-center [&_svg]:size-icon [&_svg]:transform-gpu"
-              >
-                {item.icon}
-              </span>
+              {item.icon}
               <motion.span
                 animate={{ opacity: expanded ? 1 : 0 }}
                 aria-hidden
@@ -177,7 +166,9 @@ export function SidebarNav({
         </ToggleButtonGroup>
       </div>
       {isExpandable && (
-        <IconButton
+        // A button rather than a square `IconButton`, so it is as wide as the
+        // collapsed sidebar and its glyph stands on the rows' icon column.
+        <Button
           aria-controls={groupId}
           aria-expanded={expanded}
           aria-label={toggleLabel}
@@ -196,7 +187,7 @@ export function SidebarNav({
           >
             <ChevronRight className="transform-gpu rtl:-scale-x-100" />
           </motion.span>
-        </IconButton>
+        </Button>
       )}
     </motion.nav>
   );

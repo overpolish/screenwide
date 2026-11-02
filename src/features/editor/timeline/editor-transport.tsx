@@ -22,16 +22,16 @@ import { ElapsedTime } from "./timeline-elapsed-time";
 // stands over the editor only play answers: the scissors are set back.
 
 export type EditorTransportProps = {
-  /** How long the recording plays, in the edited time: it shortens as
-   * pauses are squeezed and stretches are cut. */
+  /** How long the recording plays once squeezed and cut, in ms. */
   durationMs: number;
   /** Whether a drag across the strip draws a stretch to cut. */
   isCutting: boolean;
   isPlaying: boolean;
   onCuttingChange: (isCutting: boolean) => void;
   onPlayingChange: (isPlaying: boolean) => void;
-  /** Where the playhead is, in the same edited time; its time is written
-   * straight to the readout, so playing never renders the transport. */
+  // Its time is written straight to the readout, so playing never renders
+  // the transport.
+  /** Where the playhead is, in the edited time. */
   playhead: Playhead;
   /** Only play answers: nothing is cut. */
   isLocked?: boolean;

@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import type { ProjectActivity } from "../../bindings/ProjectActivity";
 import type { ProjectKind } from "../../bindings/ProjectKind";
 import type { ProjectLocation } from "../../bindings/ProjectLocation";
 import type { ProjectSource } from "../../bindings/ProjectSource";
@@ -9,6 +10,7 @@ import type { ProjectTracks } from "../../bindings/ProjectTracks";
 import type { ScrubStripFile } from "../../bindings/ScrubStripFile";
 
 export type {
+  ProjectActivity,
   ProjectKind,
   ProjectLocation,
   ProjectSource,

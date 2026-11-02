@@ -22,7 +22,6 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 const WIDTH = 240;
 const scale = timelineScale(recordedTime(24));
 
-/** One beat, at the start of a row of the strip's height. */
 function Row(props: BeatClipProps) {
   return (
     <div className="relative h-11" dir="ltr" style={{ width: WIDTH }}>
@@ -31,8 +30,7 @@ function Row(props: BeatClipProps) {
   );
 }
 
-/** One beat alone, filling a strip as long as it is, so a short one in a
- * grid leaves no room empty beside it. */
+// A short beat in a grid leaves no room empty beside it.
 function Fitted({
   seconds,
   ...props
@@ -94,8 +92,7 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-// Each story's stage is as wide as what it draws, so it sits centred and
-// never scrolls for room it does not use.
+// Each story's stage is as wide as what it draws, so it never scrolls.
 export const Default: Story = {
   decorators: [featureStage({ width: WIDTH })],
 };
@@ -140,7 +137,6 @@ export const Widths: Story = {
   ),
 };
 
-// At rest, chosen, and with what it draws over the picture hidden.
 export const States: Story = {
   decorators: [featureStage({ width: 808 })],
   parameters: { controls: { disable: true } },
@@ -168,8 +164,7 @@ export const States: Story = {
   },
 };
 
-// A moment in each colour a kind can take: its flag in the colour, ink
-// that reads on it, and too narrow for the flag, the colour alone.
+// Too narrow for its flag, a moment shows its colour alone.
 export const MomentColors: Story = {
   decorators: [featureStage({ width: 184 })],
   parameters: { controls: { disable: true } },
@@ -191,8 +186,7 @@ export const MomentColors: Story = {
   ),
 };
 
-// A recording's own shape, wide, square or tall, kept by its thumbnail;
-// only its width changes, so the row of glyphs and titles keeps its height.
+// Only the width follows the shape, so the row keeps its height.
 export const ThumbnailShapes: Story = {
   decorators: [featureStage({ width: 648 })],
   parameters: { controls: { disable: true } },
@@ -223,8 +217,7 @@ export const ThumbnailShapes: Story = {
   ),
 };
 
-// The pictures are still being read from the video: each place is held at
-// the recording's shape, so nothing moves when they arrive.
+// Each picture's place is held at the recording's shape while it loads.
 export const Loading: Story = {
   decorators: [featureStage({ width: 528 })],
   parameters: { controls: { disable: true } },

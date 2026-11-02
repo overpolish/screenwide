@@ -38,8 +38,7 @@ export function PositionGrid<T extends string>({
   onChange,
   value,
 }: {
-  /** The places in reading order, the top row first: nine, or four with
-   * two `columns`. */
+  /** Nine places, or four with two `columns`, top row first. */
   items: readonly PositionGridItem<T>[];
   onChange: (id: T) => void;
   value: T;

@@ -112,3 +112,28 @@ fn a_duplicate_holds_everything_keeps_edit_times_and_drops_a_name_given_while_op
   assert_eq!(heard, folder_size(file.parent().unwrap()));
   cleanup(&file);
 }
+
+#[cfg(target_os = "macos")]
+#[test]
+fn a_duplicate_keeps_when_the_project_was_made() {
+  use std::os::macos::fs::FileTimesExt;
+  let file = scratch_project("duplicate-created");
+  let root = file.parent().unwrap();
+  let made = std::time::UNIX_EPOCH + std::time::Duration::from_secs(1_700_000_000);
+  std::fs::File::open(root)
+    .unwrap()
+    .set_times(std::fs::FileTimes::new().set_created(made))
+    .unwrap();
+
+  let copy = duplicate(&file, "Scratch", &mut |_| {}).unwrap();
+
+  let created = |file: &std::path::Path| {
+    std::fs::metadata(file.parent().unwrap())
+      .unwrap()
+      .created()
+      .unwrap()
+  };
+  assert_eq!(created(&copy), made);
+  assert_eq!(summarize(&copy).created_ms, Some(1_700_000_000_000));
+  cleanup(&file);
+}

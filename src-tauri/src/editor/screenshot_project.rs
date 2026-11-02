@@ -14,6 +14,7 @@ pub(crate) mod workspace;
 
 use super::artifact::next_id;
 use super::artifact_present::{present_new, Origin};
+use super::project_open::OpenFailure;
 use super::*;
 use screenwide_project::{ScreenshotLayer, ScreenshotManifest};
 
@@ -67,7 +68,7 @@ pub fn present_screenshot(
         .capture_reservation
         .lock()
         .unwrap_or_else(|poisoned| poisoned.into_inner()) = None;
-      return open(app, &project);
+      return open(app, &project).map_err(|failure| failure.into_reason(&project));
     };
     items.push(item);
     *state
@@ -164,7 +165,7 @@ pub(super) fn keep_layer(
 /// Opens the screenshot project whose manifest is `file` in the editor, in
 /// place of whatever screenshot it holds: that one is saved, so nothing is
 /// lost.
-pub(super) fn open(app: &AppHandle, file: &Path) -> Result<(), String> {
+pub(super) fn open(app: &AppHandle, file: &Path) -> Result<(), OpenFailure> {
   let open = matches!(
     app
       .state::<EditorState>()
@@ -184,7 +185,7 @@ pub(super) fn open(app: &AppHandle, file: &Path) -> Result<(), String> {
   let manifest = screenwide_project::read(file)?;
   let screenshot = manifest
     .screenshot
-    .ok_or_else(|| "This project is not a screenshot".to_owned())?;
+    .ok_or_else(|| OpenFailure::damaged("This project is not a screenshot"))?;
   // A layer's first annotations seed it until the editor has saved the
   // layer itself; after that they are part of what was saved.
   let seeds_layers = manifest.look.is_none();
@@ -192,8 +193,9 @@ pub(super) fn open(app: &AppHandle, file: &Path) -> Result<(), String> {
     .layers
     .iter()
     .map(|layer| {
-      let image = image::open(screenwide_project::resolve(file, &layer.image)?)
-        .map_err(|error| format!("A picture in this project could not be read: {error}"))?
+      let path = screenwide_project::resolve(file, &layer.image).map_err(OpenFailure::damaged)?;
+      let image = image::open(&path)
+        .map_err(|error| OpenFailure::picture_unreadable(format!("{}: {error}", path.display())))?
         .into_rgba8();
       Ok(ScreenshotItem {
         annotations: if seeds_layers {
@@ -214,9 +216,11 @@ pub(super) fn open(app: &AppHandle, file: &Path) -> Result<(), String> {
         scale_factor: layer.scale_factor,
       })
     })
-    .collect::<Result<Vec<_>, String>>()?;
+    .collect::<Result<Vec<_>, OpenFailure>>()?;
   if items.is_empty() {
-    return Err("This screenshot project has no pictures".to_owned());
+    return Err(OpenFailure::damaged(
+      "The screenshot project has no pictures",
+    ));
   }
   screenwide_project::library::remember(app, file);
   present_new(
@@ -233,4 +237,5 @@ pub(super) fn open(app: &AppHandle, file: &Path) -> Result<(), String> {
     },
     Origin::Project,
   )
+  .map_err(OpenFailure::from)
 }

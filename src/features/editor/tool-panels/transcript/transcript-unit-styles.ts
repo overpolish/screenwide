@@ -44,11 +44,6 @@ export const unitClass = (
     isPreviewed && "bg-error/25 text-error",
   );
 
-/** The letters a search found inside a word: a warning tint behind just
- * them, in the body colour so an unsure word stays readable over it. A word
- * that is chosen keeps the choice's surface whole instead. */
-export const FOUND_TEXT_CLASS = "bg-warning/35 text-fg";
-
 // A pause reads as a compact, rounded chip rather than a word: tertiary
 // text on a subtle fill, struck through once it is cut, on the strong fill
 // while it is the silence playing, with the same selected surface a word

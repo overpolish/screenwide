@@ -21,7 +21,7 @@ import type {
 } from "../../tool-panels/frame/background/background";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 
-/** A mesh kept from before, as a saved tile. */
+// A mesh kept from before, as a saved tile.
 const NEBULA: Background = {
   colors: ["#1A1A2E", "#16213E", "#0F3460", "#E94560"],
   generator: "mesh",

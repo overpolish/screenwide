@@ -20,15 +20,14 @@ export type TextFieldProps = Omit<
   "children" | "className"
 > & {
   className?: string;
-  /** Decorative glyph before the value; the label still names the field. */
+  /** Decorative glyph before the value. */
   icon?: ReactNode;
-  /** Ends the field with the clear button a search field has, once
-   * something is typed. Needs `value` and `onChange`. */
+  /** Shows a clear button once typed in; needs `value` and `onChange`. */
   isClearable?: boolean;
-  /** Keeps the sunken frame on the island too, where a field otherwise
-   * shows its frame only under the pointer: for a value that must read as
-   * typed into at a glance, such as the name of a file about to be
-   * written. */
+  // On the island a field otherwise shows its frame only under the pointer;
+  // this is for a value that must read as typed into at a glance, such as
+  // the name of a file about to be written.
+  /** Keeps the sunken frame on the island. */
   isFramed?: boolean;
   label?: string;
   placeholder?: string;

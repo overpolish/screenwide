@@ -38,16 +38,16 @@ export type NumberFieldProps = AriaNumberFieldProps &
     className?: string;
     label?: string;
     leftSection?: React.ReactNode;
-    /** Called for each keystroke that reads as a number, instead of
-     * `onChange`, which React Aria fires on blur or Enter. Give this to a field
-     * whose value is read from outside the window it is typed in, where a value
-     * waiting behind an unfocused field is a value the reader never sees. Plain
-     * numeric entry only: a formatted field would need a parse of its own. */
+    // For a field whose value is read from outside the window it is typed
+    // in, where a value waiting behind an unfocused field is never seen.
+    // Plain numeric entry only: a formatted field would need its own parse.
+    /** Called on each keystroke that reads as a number, in place of
+     * `onChange`, which fires on blur or Enter. */
     onTypedChange?: (value: number) => void;
     placeholder?: string;
-    /** On the island, the characters the field keeps room for, so a value
-     * typed or set within them leaves its width, and its neighbours, where
-     * they are. Its figures sit at the end. */
+    // Keeps the field's width, and its neighbours, still while a value is
+    // typed.
+    /** On the island, the characters the field keeps room for. */
     reservedLength?: number;
     rightSection?: React.ReactNode;
   };

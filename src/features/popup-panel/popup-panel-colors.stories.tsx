@@ -21,6 +21,4 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-/** The colour grid a caption's colour well opens, with one colour of your
- * own after the palette. */
 export const Chosen: Story = {};

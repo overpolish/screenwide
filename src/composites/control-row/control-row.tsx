@@ -19,7 +19,7 @@ export type ControlRowProps = {
   className?: string;
   controlClassName?: string;
   description?: string;
-  /** An icon tile or glyph before the text, as the Privacy list shows one. */
+  /** An icon tile or glyph before the text. */
   leading?: ReactNode;
   /** Something beside the title, such as a badge. */
   titleAccessory?: ReactNode;

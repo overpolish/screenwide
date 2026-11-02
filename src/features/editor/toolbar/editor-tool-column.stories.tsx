@@ -13,7 +13,7 @@ import {
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 
-/** The column's own width, with room for the stage to frame it. */
+// The column's own width, with room for the stage to frame it.
 const STAGE_WIDTH = 120;
 
 const meta = {

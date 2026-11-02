@@ -59,16 +59,13 @@ export type AnnotationBarProps = {
   span: Span;
   /** The strip's width, in px. */
   width: number;
-  /** Whether it is being dragged up or down, following the pointer rather
-   * than gliding to its `top`. */
+  /** Being dragged across lanes, following the pointer. */
   isLifted?: boolean;
-  /** Told each move of a drag, and null when it is let go; without it, the
-   * bar only moves in time. */
+  /** Each move of a drag, then null; without it, it only moves in time. */
   onHold?: (hold: BarHold | null) => void;
   /** Its pin, where it follows the content under it. */
   pin?: TimelineAnnotationPin;
-  /** Where a dragged end settles while ⌘ (Ctrl on Windows) is held;
-   * without it, ends go where they are let go. */
+  /** Where a dragged end settles while ⌘ (Ctrl on Windows) is held. */
   snap?: Snap;
   /** Where it sits, in px from the top of the strip. */
   top?: number;

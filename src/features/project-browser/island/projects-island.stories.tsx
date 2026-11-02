@@ -3,6 +3,7 @@
 
 import { userEvent, within } from "storybook/test";
 
+import { t } from "../../../i18n/i18n";
 import { projects } from "../project-browser-fixtures";
 import { projectBrowserMeta } from "../project-browser-story-meta";
 import { openFailure } from "../use-open-failures";
@@ -12,13 +13,13 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 
 const meta = {
   ...projectBrowserMeta,
-  title: "Legacy/Project Browser/Island",
+  title: "Features/Project Browser/Island",
 } satisfies Meta<typeof ProjectBrowser>;
 
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-/** Chooses the first cards, as ticking their boxes does. */
+// Ticks the first cards' boxes.
 const choose =
   (count: number): Story["play"] =>
   async ({ canvasElement }) => {
@@ -56,21 +57,25 @@ export const ActionFailed: Story = {
   args: { error: "That name cannot be used" },
 };
 
+// The reasons are the app's own sentences, read while rendering so the
+// story shows them in the language chosen.
 export const ProjectWouldNotOpen: Story = {
-  args: {
-    error: openFailure(
-      "The recording is missing from this project. Expected it at ~/Movies/Screenwide/Demo.screenwide/media/recording.mp4",
-    ),
-  },
+  render: (args) =>
+    meta.render({
+      ...args,
+      error: openFailure(t("project-browser-open-failed-recording-missing")),
+    }),
 };
 
 export const SeveralWouldNotOpen: Story = {
-  args: {
-    error: [
-      openFailure("This recording was discarded"),
-      openFailure("The project file is not valid JSON"),
-    ].join("\n"),
-  },
+  render: (args) =>
+    meta.render({
+      ...args,
+      error: [
+        openFailure(t("project-browser-open-failed-discarded")),
+        openFailure(t("project-browser-open-failed-damaged")),
+      ].join("\n"),
+    }),
 };
 
 export const MovingWhileSelecting: Story = {

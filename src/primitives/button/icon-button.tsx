@@ -37,8 +37,9 @@ type IconButtonProps = AriaButtonProps &
 
 type IconToggleButtonProps = Omit<AriaToggleButtonProps, "children"> &
   Omit<MotionProps, "children"> & {
-    /** A glyph, or one drawn from whether it is on, which then shows its
-     * state itself: the button neither fills nor swaps it. */
+    // A glyph drawn from the state shows that state itself: the button
+    // neither fills nor swaps it.
+    /** The glyph, or a function of whether it is on. */
     children: ReactNode | ((state: { isSelected: boolean }) => ReactNode);
     className?: string;
     /** The glyph shown while off. Without one, being on fills the button. */

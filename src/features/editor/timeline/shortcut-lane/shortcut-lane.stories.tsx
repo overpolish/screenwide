@@ -14,8 +14,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 // A strip 64 seconds long, 640 px wide, so a second is 10 px.
 const WIDTH = 640;
 
-/** The lane, keeping what is chosen and deleted, as the editor would;
- * Controls start it afresh with what they set. */
+// Keeps choices and deletions as the editor would; Controls start it afresh.
 function LiveLane(args: ShortcutLaneProps) {
   const [shortcuts, setShortcuts] = useState(args.shortcuts);
   const [selected, setSelected] = useState(args.selected);
@@ -74,8 +73,7 @@ export const Default: Story = {};
 // Two chosen together, as Shift-pressing gathers them; Delete removes both.
 export const SeveralChosen: Story = { args: { selected: ["copy", "shot"] } };
 
-// Pressed in quick succession: each tick where it was pressed, the keys set
-// side by side rather than over each other.
+// Keys set side by side rather than over each other.
 export const Crowded: Story = {
   args: {
     shortcuts: [
