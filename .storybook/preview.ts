@@ -335,7 +335,6 @@ const preview: Preview = {
           "Composites",
           "Features",
           "Legacy",
-          "Explorations",
         ],
       },
     },
