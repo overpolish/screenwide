@@ -937,6 +937,10 @@ export type Messages = {
   "ruler-island-tools": null;
   "ruler-island-undo": null;
   "ruler-island-vertical-guide": null;
+  "screenshots-quick-cancel": null;
+  "screenshots-quick-clipboard": null;
+  "screenshots-quick-editor": null;
+  "screenshots-quick-island": null;
   "screenshots-scrolling-cancel": null;
   "screenshots-scrolling-cancel-hint": { key: string | number };
   "screenshots-scrolling-capturing": null;

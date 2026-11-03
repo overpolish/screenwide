@@ -53,6 +53,7 @@ pub fn set_screenshot_region_session(
   }
   if !active && session_was_active {
     crate::annotate::set_screenshot_mode(&app, false);
+    crate::screenshots::quick_island::withdraw(&app);
   }
   escape::sync(
     &app,
@@ -110,9 +111,11 @@ pub fn set_recording_controls_borrowed(app: AppHandle, borrowed: bool) -> tauri:
       false,
       WindowLabel::StandaloneListbox.as_str(),
     )?;
-    crate::recording_sources::window_pick::cancel(&app);
-    // At once: the capture that follows must not find it on screen.
-    super::super::island::hide_at_once(&app)?;
+    // At once: the capture that follows must not find it on screen. The
+    // session's own island is kept out of the shot, so it stays.
+    if !crate::screenshots::quick_island::is_up() {
+      super::super::island::hide_at_once(&app)?;
+    }
     return Ok(());
   }
 

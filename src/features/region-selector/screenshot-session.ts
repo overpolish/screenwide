@@ -11,7 +11,11 @@ import {
 } from "../recording-sources/api";
 import { useRecordingSourceStore } from "../recording-sources/store";
 import { Region } from "../recording-sources/types";
-import { captureStill, ScreenshotDestination } from "../screenshots/api";
+import {
+  captureStill,
+  ScreenshotDestination,
+  showQuickScreenshotIsland,
+} from "../screenshots/api";
 import { cancelTextRecognition } from "../text-recognition/api";
 
 import { setRulerScreenshotMode } from "./ruler-screenshot-mode";
@@ -33,6 +37,20 @@ const selectScreenshotAction = (action: ScreenshotShortcutAction) => {
   sessionDestination =
     action === "takeScreenshotToClipboard" ? "clipboard" : "editor";
   sessionAction = action;
+};
+
+// The island is advisory: a session goes on without it.
+const showIsland = () =>
+  showQuickScreenshotIsland(
+    sessionDestination === "clipboard" ? "clipboard" : "editor",
+  ).catch((error: unknown) => {
+    console.error("Could not show the screenshot island", error);
+  });
+
+/** The other shortcut, pressed mid-session, changes where the shot goes. */
+const switchScreenshotAction = async (action: ScreenshotShortcutAction) => {
+  selectScreenshotAction(action);
+  await showIsland();
 };
 
 async function runCleanupSteps(steps: CleanupStep[]) {
@@ -83,6 +101,10 @@ const beginScreenshotCapture = async (action: ScreenshotShortcutAction) => {
     // the selected monitor may be unchanged, so no dependency effect is
     // guaranteed to do this for us.
     await setRegionSelectorPassthrough(false);
+    // After the Ruler and Annotate have stepped back, as both put the island
+    // away, and before the recording controls are borrowed, so they leave
+    // the island's window to it.
+    await showIsland();
     setScreenshotCapture(true);
   } catch (error: unknown) {
     try {
@@ -144,7 +166,7 @@ export const handleScreenshotShortcut = (action: ScreenshotShortcutAction) =>
       return;
     }
     if (active) {
-      selectScreenshotAction(action);
+      await switchScreenshotAction(action);
       return;
     }
     await beginScreenshotCapture(action);
@@ -161,7 +183,7 @@ export const handoffScreenshotShortcut = (action: ShortcutAction) =>
       if (sessionAction === action) {
         await endScreenshotCapture();
       } else {
-        selectScreenshotAction(action);
+        await switchScreenshotAction(action);
       }
       return;
     }

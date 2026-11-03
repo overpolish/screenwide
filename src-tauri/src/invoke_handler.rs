@@ -179,6 +179,8 @@ pub(crate) fn invoke_handler() -> impl Fn(tauri::ipc::Invoke) -> bool + Send + S
     ruler::island::commands::return_ruler_keyboard,
     ruler::set_ruler_screenshot_mode,
     screenshots::delayed::start_delayed_screenshot,
+    screenshots::quick_island::quick_screenshot_island_state,
+    screenshots::quick_island::show_quick_screenshot_island,
     screenshots::scrolling::command::capture_scrolling_still,
     screenshots::scrolling::island::cancel_scrolling_capture,
     screenshots::scrolling::island::scrolling_capture_island_state,

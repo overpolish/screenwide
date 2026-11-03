@@ -17,6 +17,7 @@ pub(crate) use self::macos::platform::capture_monitor_thumbnail;
 mod output_tests;
 #[cfg(target_os = "windows")]
 mod platform_windows;
+pub(crate) mod quick_island;
 #[cfg(test)]
 mod recenter_tests;
 pub(crate) mod scrolling;
@@ -88,9 +89,11 @@ pub(crate) async fn capture(
 ) -> Result<CapturedImage, String> {
   // Read as the shutter fires, the same way a recording reads it as it starts.
   // A preserved ruler is intentionally part of this shot. The screenshot
-  // region and recording controls have already faded out before the shutter.
+  // region and recording controls have already faded out before the shutter;
+  // Quick Screenshot's island steps out here if the shot would take it.
   let include_own_windows =
     include_ruler || crate::settings::current(app).record_screenwide_windows;
+  quick_island::before_shutter(app, include_own_windows);
 
   capture_content(target, include_own_windows, show_cursor).await
 }

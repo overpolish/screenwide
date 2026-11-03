@@ -2,9 +2,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { invoke } from "@tauri-apps/api/core";
+import { emit } from "@tauri-apps/api/event";
 
 import { Region } from "../recording-sources/types";
 
+import type { QuickScreenshotDestination } from "../../bindings/QuickScreenshotDestination";
 import type { ScrollingCaptureIslandState } from "../../bindings/ScrollingCaptureIslandState";
 
 export type ScreenshotDestination = "editor" | "clipboard" | "both";
@@ -41,6 +43,20 @@ export const getScrollingCaptureIslandState = () =>
 /** Stops the scrolling capture at its next step, as Escape does. */
 export const cancelScrollingCapture = () =>
   invoke<null>("cancel_scrolling_capture");
+
+/** Brings the island out for a Quick Screenshot session, or tells it where
+ * the shot now goes. */
+export const showQuickScreenshotIsland = (
+  destination: QuickScreenshotDestination,
+) => invoke<null>("show_quick_screenshot_island", { destination });
+
+export const getQuickScreenshotIslandState = () =>
+  invoke<QuickScreenshotDestination | null>("quick_screenshot_island_state");
+
+/** Ends the Quick Screenshot session, as Escape does: the region selector,
+ * which owns the session, listens for it. */
+export const cancelQuickScreenshot = () =>
+  emit("screenshot-region://dismiss-requested");
 
 /** Hides the recording UI and takes `target` once the Settings delay has run
  * down; the shot always opens in the editor. */

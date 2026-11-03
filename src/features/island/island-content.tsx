@@ -9,7 +9,9 @@ import { RecordingIslandControls } from "../recording-controls/island/recording-
 import { selectStatus, useRecordingStore } from "../recording-controls/store";
 import { RulerIsland } from "../ruler/island/ruler-island";
 import { useRulerIsland } from "../ruler/island/use-ruler-island";
+import { QuickScreenshotIsland } from "../screenshots/island/quick-screenshot-island";
 import { ScrollingCaptureIsland } from "../screenshots/island/scrolling-capture-island";
+import { useQuickScreenshotIsland } from "../screenshots/island/use-quick-screenshot-island";
 import { useScrollingCaptureIsland } from "../screenshots/island/use-scrolling-capture-island";
 import { TextRecognitionIsland } from "../text-recognition/island/text-recognition-island";
 import { useTextRecognitionIsland } from "../text-recognition/island/use-text-recognition-island";
@@ -21,17 +23,20 @@ import { useIslandSwap } from "./use-island-swap";
 import type { IslandHost } from "./island-window";
 
 /** What the island shows: a scrolling capture while one runs, as it takes
- * the screen over; Text Recognition's or the Ruler's tools while either is
- * up, even during a recording, as neither can be used without them; the
- * annotate tools on their own island while the overlay draws with no
- * recording under way; a new version while one is offered, which comes out
- * only while the island is free; and otherwise the recording's, with the
- * annotate tools under its row while the overlay draws. */
+ * the screen over; Quick Screenshot's while its overlay waits for an area,
+ * over the Ruler, which steps back for it; Text Recognition's or the Ruler's
+ * tools while either is up, even during a recording, as neither can be used
+ * without them; the annotate tools on their own island while the overlay
+ * draws with no recording under way; a new version while one is offered,
+ * which comes out only while the island is free; and otherwise the
+ * recording's, with the annotate tools under its row while the overlay
+ * draws. */
 export function IslandContent({ island }: { island: IslandHost }) {
   const isDrawing = useAnnotateDrawing();
   const editing = useAnnotateEditing();
   const ruler = useRulerIsland();
   const scrolling = useScrollingCaptureIsland();
+  const quickScreenshot = useQuickScreenshotIsland();
   const textRecognition = useTextRecognitionIsland();
   const update = useUpdateIsland();
   const status = useRecordingStore(selectStatus);
@@ -40,17 +45,19 @@ export function IslandContent({ island }: { island: IslandHost }) {
   const swap = useIslandSwap(
     scrolling.isUp
       ? "scrollingCapture"
-      : textRecognition.isUp
-        ? "textRecognition"
-        : ruler.isUp
-          ? "ruler"
-          : status !== "idle"
-            ? "recording"
-            : annotate
-              ? "annotate"
-              : update.isUp
-                ? "update"
-                : "recording",
+      : quickScreenshot.isUp
+        ? "quickScreenshot"
+        : textRecognition.isUp
+          ? "textRecognition"
+          : ruler.isUp
+            ? "ruler"
+            : status !== "idle"
+              ? "recording"
+              : annotate
+                ? "annotate"
+                : update.isUp
+                  ? "update"
+                  : "recording",
     island,
   );
 
@@ -65,6 +72,15 @@ export function IslandContent({ island }: { island: IslandHost }) {
         {...swap.host}
         onCancel={scrolling.onCancel}
         state={scrolling.state}
+      />
+    );
+  }
+  if (swap.kind === "quickScreenshot" && quickScreenshot.destination) {
+    return (
+      <QuickScreenshotIsland
+        {...swap.host}
+        destination={quickScreenshot.destination}
+        onClose={quickScreenshot.onClose}
       />
     );
   }

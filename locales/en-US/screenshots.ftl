@@ -21,3 +21,13 @@ screenshots-scrolling-finishing-note = Almost done.
 screenshots-scrolling-cancel = Cancel
 # Under the progress while Escape stops the capture. $key is the key, drawn as a keycap.
 screenshots-scrolling-cancel-hint = Press { $key } to cancel.
+
+## The island while Quick Screenshot waits for an area to be drawn
+
+# Names the island for assistive technology.
+screenshots-quick-island = Quick screenshot
+# The island's title: where the area drawn goes, set by the shortcut pressed.
+screenshots-quick-editor = Draw an area to open in the editor
+screenshots-quick-clipboard = Draw an area to copy
+# Names the close button, which ends the screenshot without taking one.
+screenshots-quick-cancel = Cancel screenshot
