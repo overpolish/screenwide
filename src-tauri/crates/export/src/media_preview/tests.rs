@@ -120,6 +120,7 @@ fn audio_only_export_does_not_carry_the_recorded_video() {
     Path::new("/tmp/audio.m4a"),
     &selection,
     AudioLayout::SeparateTracks,
+    AudioFile::M4a,
   );
   let args = args
     .iter()
@@ -128,6 +129,38 @@ fn audio_only_export_does_not_carry_the_recorded_video() {
 
   assert!(!args.iter().any(|argument| argument.contains(":v:")));
   assert!(args.windows(2).any(|pair| pair == ["-map", "0:a:1"]));
+}
+
+#[test]
+fn a_wav_holds_its_tracks_mixed_as_pcm_and_never_copies_the_aac() {
+  let available = tracks(2);
+  let wav = |streams: &[usize]| {
+    audio_export_args(
+      Path::new("/tmp/recording.mov"),
+      Path::new("/tmp/audio.wav"),
+      &TrackSelection::new(&available, streams),
+      AudioFile::Wav.layout(AudioLayout::SeparateTracks),
+      AudioFile::Wav,
+    )
+    .iter()
+    .map(|argument| argument.to_string_lossy().into_owned())
+    .collect::<Vec<_>>()
+  };
+
+  let both = wav(&[0, 1]);
+  assert!(both
+    .iter()
+    .any(|argument| argument.contains("amix=inputs=2")));
+  assert_eq!(
+    both.iter().filter(|argument| *argument == "-map").count(),
+    1
+  );
+  assert!(both.windows(2).any(|pair| pair == ["-c:a", "pcm_s16le"]));
+  assert!(both.windows(2).any(|pair| pair == ["-f", "wav"]));
+
+  let one = wav(&[1]);
+  assert!(one.windows(2).any(|pair| pair == ["-c:a", "pcm_s16le"]));
+  assert!(!one.iter().any(|argument| argument == "copy"));
 }
 
 #[test]

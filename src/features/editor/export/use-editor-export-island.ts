@@ -6,13 +6,14 @@ import { useEffect, useState } from "react";
 import { useExportIslandKeys } from "../shortcuts/export-island-keys";
 
 import { CameraOutput } from "./camera-output";
-import { applyExportPatch, exportIslandSnapshot } from "./editor-export";
+import { exportIslandSnapshot } from "./editor-export";
 import { putAwayExport } from "./export-file-api";
 import {
   resetExportIsland,
   setExportIslandOpen,
   useExportIslandStore,
 } from "./export-island-store";
+import { applyExportPatch } from "./export-patch";
 import { useExportLightDismiss } from "./use-export-light-dismiss";
 import { useExportProgressStore } from "./use-export-progress";
 
@@ -112,6 +113,7 @@ export function useEditorExportIsland(
         fileStem,
         isCancelingSave: props.isCancelingSave ?? false,
         isSaving,
+        recordingFormat: props.recordingFormat ?? "mp4",
         resolutionScalePercent: props.resolutionScalePercent ?? 100,
         screenshotFormat: props.screenshotFormat ?? "png",
         subtitles: props.subtitles ?? "none",
@@ -137,6 +139,7 @@ export function useEditorExportIsland(
           props.onDeleteProjectAfterExportChange ?? noop,
         onExport: props.onSave ?? noop,
         onFileStemChange: props.onFileStemChange ?? noop,
+        onRecordingFormatChange: props.onRecordingFormatChange ?? noop,
         onResolutionScaleChange: props.onResolutionScaleChange ?? noop,
         onScreenshotFormatChange: props.onScreenshotFormatChange ?? noop,
         onSubtitlesChange: props.onSubtitlesChange ?? noop,

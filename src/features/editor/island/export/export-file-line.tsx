@@ -8,19 +8,24 @@ import { t } from "../../../../i18n/i18n";
 import { TextField } from "../../../../primitives/input-fields/text-field";
 import { PillGroup } from "../../../../primitives/pill-group/pill-group";
 
+import type { RecordingFormat } from "../../../../bindings/RecordingFormat";
 import type { ScreenshotFormat } from "../../../../bindings/ScreenshotFormat";
+import type { ToolPanelRecordingFormat } from "../../tools/tool-panel-export";
 
 /** The file the export writes, first in the section: its name, typed in
  * place; the folder it goes in, which is chosen again from its button; and
- * its format, a choice for a screenshot, or for a recording, whose
- * container is set, the one format it is written in, chosen and disabled. */
+ * its format: a screenshot's picture format, or a recording's video or its
+ * sound alone. A recording with one format, such as one with no sound, shows
+ * it chosen and disabled. */
 export function ExportFileLine({
   directory,
   extension,
   fileStem,
   onBrowse,
   onFileStemChange,
+  onRecordingFormatChange,
   onScreenshotFormatChange,
+  recordingFormat,
   screenshotFormat,
 }: {
   /** Null before a folder is known. */
@@ -29,7 +34,10 @@ export function ExportFileLine({
   fileStem: string;
   onBrowse: () => void;
   onFileStemChange: (fileStem: string) => void;
+  onRecordingFormatChange: (format: RecordingFormat) => void;
   onScreenshotFormatChange: (format: ScreenshotFormat) => void;
+  /** Null for a screenshot. */
+  recordingFormat: ToolPanelRecordingFormat | null;
   /** Null for a recording. */
   screenshotFormat: ScreenshotFormat | null;
 }) {
@@ -56,9 +64,22 @@ export function ExportFileLine({
           }}
           selected={screenshotFormat}
         />
+      ) : recordingFormat && recordingFormat.offered.length > 1 ? (
+        <PillGroup
+          aria-label={t("editor-export-format")}
+          className="ms-auto"
+          items={recordingFormat.offered.map(({ extension, format }) => ({
+            id: format,
+            label: extension.toUpperCase(),
+          }))}
+          onSelectionChange={(id) => {
+            onRecordingFormatChange(id as RecordingFormat);
+          }}
+          selected={recordingFormat.selected}
+        />
       ) : (
-        // A recording's container is set, so it is the one format offered,
-        // chosen and not to be changed, drawn as a screenshot's choice is.
+        // One format offered, chosen and not to be changed, drawn as a
+        // choice is.
         <PillGroup
           aria-label={t("editor-export-format")}
           className="ms-auto"

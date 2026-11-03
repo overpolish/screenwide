@@ -4,6 +4,7 @@
 import type { CameraKey } from "../../../bindings/CameraKey";
 import type { ExportPreviewCanvas } from "../../../bindings/ExportPreviewCanvas";
 import type { ExportSubtitles } from "../../../bindings/ExportSubtitles";
+import type { RecordingFormat } from "../../../bindings/RecordingFormat";
 import type { ScreenshotFormat } from "../../../bindings/ScreenshotFormat";
 import type { CameraOutput } from "../export/camera-output";
 import type { ExportLook } from "../export/export-looks";
@@ -69,6 +70,13 @@ export type ToolPanelExportProgress = {
   phase: ExportPhase;
 };
 
+/** The formats a recording is offered in, each with the extension its file
+ * takes, and the one chosen. */
+export type ToolPanelRecordingFormat = {
+  offered: { extension: string; format: RecordingFormat }[];
+  selected: RecordingFormat;
+};
+
 /**
  * What the Export island shows, published by the editor while it is out. Its
  * options exist only where the export holds what they act on: null where
@@ -101,6 +109,9 @@ export type ToolPanelExport = {
   progress: ToolPanelExportProgress | null;
   /** Null for a screenshot, audio, or where compression is not available. */
   quality: ToolPanelExportQuality | null;
+  /** A recording's formats: its video, and its sound alone as M4A or WAV
+   * where it has any; null for a screenshot. */
+  recordingFormat: ToolPanelRecordingFormat | null;
   /** Whether the file manager shows the file once it is written: a general
    * setting, which every export shares. */
   revealWhenDone: boolean;
@@ -131,5 +142,6 @@ export type ToolPanelExportPatch = Partial<
   /** Write the file. */
   export?: true;
   look?: ExportLook;
+  recordingFormat?: RecordingFormat;
   screenshotFormat?: ScreenshotFormat;
 };

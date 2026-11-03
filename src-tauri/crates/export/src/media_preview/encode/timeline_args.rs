@@ -1,8 +1,14 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+mod commands;
 #[cfg(test)]
 mod tests;
+
+pub(crate) use commands::{
+  timeline_audio_export_args, timeline_audio_mapping_args, timeline_camera_export_args,
+  timeline_selected_export_args,
+};
 
 use super::*;
 use screenwide_timeline::TimelineRange;
@@ -115,6 +121,7 @@ fn append_audio_filters(
   audio_input: usize,
   selection: &TrackSelection,
   layout: AudioLayout,
+  encoding: AudioEncoding,
 ) {
   let ranges = timeline.ranges();
   let mut outputs = Vec::new();
@@ -176,7 +183,7 @@ fn append_audio_filters(
     }
   }
   if !selection.stream_indices().is_empty() {
-    args.extend(["-c:a", "aac", "-b:a", "192k"].map(OsString::from));
+    args.extend(encoding.codec_args(false).into_iter().map(OsString::from));
   }
 }
 
@@ -186,6 +193,7 @@ fn filter_args(
   audio_input: usize,
   selection: &TrackSelection,
   layout: AudioLayout,
+  encoding: AudioEncoding,
   video: VideoExportOptions,
 ) -> Vec<OsString> {
   let mut filters = Vec::new();
@@ -200,6 +208,7 @@ fn filter_args(
     audio_input,
     selection,
     layout,
+    encoding,
   );
   if filters.is_empty() {
     return vec![OsString::from("-an")];
@@ -210,82 +219,4 @@ fn filter_args(
   ];
   result.extend(args);
   result
-}
-
-fn base_args(source: &Path) -> Vec<OsString> {
-  let mut args: Vec<OsString> = ["-hide_banner", "-loglevel", "error", "-nostdin", "-y", "-i"]
-    .map(OsString::from)
-    .into();
-  args.push(source.into());
-  args
-}
-
-fn finish(mut args: Vec<OsString>, destination: &Path) -> Vec<OsString> {
-  args.extend(EXPORT_MP4_OUTPUT.map(OsString::from));
-  args.push(destination.into());
-  args
-}
-
-pub(crate) fn timeline_audio_mapping_args(
-  timeline: &TimelinePlan,
-  audio_input: usize,
-  selection: &TrackSelection,
-  layout: AudioLayout,
-) -> Vec<OsString> {
-  filter_args(
-    timeline,
-    None,
-    audio_input,
-    selection,
-    layout,
-    VideoExportOptions {
-      compression: 0,
-      resolution_scale_percent: 100,
-      source_scale_percent: 100,
-    },
-  )
-}
-
-pub(crate) fn timeline_selected_export_args(
-  source: &Path,
-  destination: &Path,
-  selection: &TrackSelection,
-  layout: AudioLayout,
-  video: VideoExportOptions,
-  timeline: &TimelinePlan,
-) -> Vec<OsString> {
-  let mut args = base_args(source);
-  args.extend(["-progress", "pipe:1", "-nostats"].map(OsString::from));
-  args.extend(filter_args(timeline, Some(0), 0, selection, layout, video));
-  finish(args, destination)
-}
-
-pub(crate) fn timeline_camera_export_args(
-  audio_source: &Path,
-  camera_source: &Path,
-  destination: &Path,
-  selection: &TrackSelection,
-  layout: AudioLayout,
-  video: VideoExportOptions,
-  timeline: &TimelinePlan,
-) -> Vec<OsString> {
-  let mut args = base_args(audio_source);
-  args.push(OsString::from("-i"));
-  args.push(camera_source.into());
-  args.extend(["-progress", "pipe:1", "-nostats"].map(OsString::from));
-  args.extend(filter_args(timeline, Some(1), 0, selection, layout, video));
-  finish(args, destination)
-}
-
-pub(crate) fn timeline_audio_export_args(
-  source: &Path,
-  destination: &Path,
-  selection: &TrackSelection,
-  layout: AudioLayout,
-  timeline: &TimelinePlan,
-) -> Vec<OsString> {
-  let mut args = base_args(source);
-  args.extend(["-progress", "pipe:1", "-nostats"].map(OsString::from));
-  args.extend(timeline_audio_mapping_args(timeline, 0, selection, layout));
-  finish(args, destination)
 }

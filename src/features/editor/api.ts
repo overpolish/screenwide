@@ -34,6 +34,7 @@ import type { CameraKey } from "../../bindings/CameraKey";
 import type { ExportedFile } from "../../bindings/ExportedFile";
 import type { ExportLookQuality } from "../../bindings/ExportLookQuality";
 import type { ExportSubtitles } from "../../bindings/ExportSubtitles";
+import type { RecordingFormat } from "../../bindings/RecordingFormat";
 import type { ScreenshotFormat } from "../../bindings/ScreenshotFormat";
 import type { TextStyle } from "../../bindings/TextStyle";
 
@@ -351,60 +352,31 @@ type SaveExportOptions = RecordingProcessingOptions & {
   /** Moves the recording's project to the Trash once the export is saved. */
   deleteProjectAfterExport: boolean;
   fileStem: string;
+  /** The video, or the sound alone as M4A or WAV. */
+  recordingFormat: RecordingFormat;
   screenshotFormat: ScreenshotFormat;
   /** The subtitle file written beside a recording's video. */
   subtitles: ExportSubtitles;
 };
 
 export const saveExport = ({
-  audioTrackVolumes,
-  bakeCamera,
-  cameraCompression,
   cameraKey,
-  cameraOverlay,
-  cameraResolutionScalePercent,
-  collapseAudio,
-  compression,
-  cursorEffects,
   deleteProjectAfterExport,
-  enabledStreamIndices,
   fileStem,
-  includeCamera,
-  includePrimaryVideo,
-  keyboardEffects,
-  recordingOutput,
-  resolutionScalePercent,
+  recordingFormat,
   screenshotFormat,
-  screenshotOutput,
   subtitles,
-  timelineEdit,
+  ...processing
 }: SaveExportOptions) =>
   invoke<ExportedFile | null>("save_export", {
     fileStem,
     options: {
-      audioTrackVolumes,
-      bakeCamera,
-      cameraCompression,
+      ...recordingProcessingPayload(processing),
       cameraKey,
-      cameraOverlay,
-      cameraResolutionScalePercent,
-      collapseAudio,
-      compression,
-      cursorEffects,
       deleteProjectAfterExport,
-      enabledStreamIndices,
-      includeCamera,
-      includePrimaryVideo,
-      keyboardEffects: normalizedKeyboardEffects(keyboardEffects),
-      recordingOutput: {
-        camera: normalizedScreenshotOutput(recordingOutput.camera),
-        primary: normalizedScreenshotOutput(recordingOutput.primary),
-      },
-      resolutionScalePercent,
+      recordingFormat,
       screenshotFormat,
-      screenshotOutput: normalizedScreenshotWorkspaceOutput(screenshotOutput),
       subtitles,
-      timelineEdit,
     },
   });
 

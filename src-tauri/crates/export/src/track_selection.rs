@@ -36,6 +36,30 @@ pub enum AudioLayout {
   SeparateTracks,
 }
 
+/// What the selected audio is encoded as in the file being produced.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum AudioEncoding {
+  /// AAC, for an MP4 or M4A: copied as recorded where nothing has to be
+  /// decoded, encoded at the mixdown's bitrate where it does.
+  Aac,
+  /// 16-bit PCM, for a WAV. The recording's own audio is AAC, so more bits
+  /// would only hold what was never there.
+  Pcm,
+}
+
+impl AudioEncoding {
+  /// The codec arguments; `copyable` where the tracks pass through the
+  /// export untouched.
+  pub(crate) fn codec_args(self, copyable: bool) -> Vec<String> {
+    let args: &[&str] = match (self, copyable) {
+      (Self::Aac, true) => &["-c:a", "copy"],
+      (Self::Aac, false) => &["-c:a", "aac", "-b:a", MIXDOWN_BITRATE],
+      (Self::Pcm, _) => &["-c:a", "pcm_s16le"],
+    };
+    args.iter().map(|arg| (*arg).to_owned()).collect()
+  }
+}
+
 /// The recorded audio tracks a derived file should carry, in recording order.
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct TrackSelection {

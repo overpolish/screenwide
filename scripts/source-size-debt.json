@@ -1,7 +1,7 @@
 {
-  "src/features/editor/api.ts": 436,
+  "src/features/editor/api.ts": 408,
   "src/features/editor/preview/preview-viewport.tsx": 448,
-  "src/features/editor/editor-window.tsx": 716,
+  "src/features/editor/editor-window.tsx": 714,
   "src/features/editor/timeline/editing/recording-timeline-edit.test.ts": 363,
   "src/features/editor/timeline/editing/recording-timeline-edit.ts": 333,
   "src/features/editor/screenshot/screenshot-output.ts": 431,

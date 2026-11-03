@@ -80,6 +80,14 @@ export const VIDEO: ToolPanelExport = {
   kind: "video",
   progress: null,
   quality: QUALITY,
+  recordingFormat: {
+    offered: [
+      { extension: "mp4", format: "mp4" },
+      { extension: "m4a", format: "m4a" },
+      { extension: "wav", format: "wav" },
+    ],
+    selected: "mp4",
+  },
   revealWhenDone: true,
   screenshotFormat: null,
   subtitles: "srt",
@@ -94,6 +102,7 @@ export const SCREENSHOT: ToolPanelExport = {
   fileStem: "Pricing page",
   kind: "screenshot",
   quality: null,
+  recordingFormat: null,
   screenshotFormat: "png",
   subtitles: null,
 };
@@ -107,4 +116,11 @@ export const AUDIO: ToolPanelExport = {
   fileStem: "Standup notes",
   kind: "audio",
   quality: null,
+  recordingFormat: {
+    offered: [
+      { extension: "m4a", format: "m4a" },
+      { extension: "wav", format: "wav" },
+    ],
+    selected: "m4a",
+  },
 };

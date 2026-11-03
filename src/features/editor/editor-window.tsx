@@ -20,12 +20,10 @@ import {
   cameraOutputChoice,
   exportedRecordingEdits,
 } from "./export/camera-output";
-import { exportLookQualities } from "./export/editor-export";
 import {
   clearExportFailure,
   failExport,
   finishExport,
-  useExportIslandStore,
 } from "./export/export-island-store";
 import { seededExportChoices } from "./export/recording-export-choices";
 import {
@@ -36,9 +34,9 @@ import {
   defaultCameraOverlay,
   recordingSavePlan,
 } from "./export/recording-export-settings";
-import { useExportCompare } from "./export/use-export-compare";
+import { useExportMeasures } from "./export/use-export-measures";
 import { useExportProgress } from "./export/use-export-progress";
-import { useRecordingExportEstimate } from "./export/use-recording-export-estimate";
+import { useRecordingFormat } from "./export/use-recording-format";
 import { openProjectActions } from "./open-project-actions";
 import { EditorPanel } from "./panel/editor-panel";
 import { usePointerAway } from "./preview/use-pointer-away";
@@ -187,6 +185,8 @@ export function EditorWindow() {
   // the previous capture's pixels.
   const artifactId = artifact?.id;
   const saveProgress = useExportProgress(artifactId);
+  const [recordingFormat, chooseRecordingFormat] =
+    useRecordingFormat(artifactId);
   const originalResolutionScale =
     artifact?.kind === "recording" ? sourceScalePercent(artifact) : 100;
   const cameraExport = cameraExportSettings(
@@ -365,19 +365,14 @@ export function EditorWindow() {
     recordingTimelineEdit: exportEdits.timelineEdit,
     resolutionScalePercent,
   };
-  const isExportIslandOpen = useExportIslandStore((state) => state.isOpen);
-  const lookQualities = exportLookQualities(
-    artifact,
-    cameraOutputChoice({ artifact, bakeCamera, enabledVideoTracks }),
+  const { exportCompare, lookQualities, lookSizeBytes } = useExportMeasures(
+    exportInputs,
+    {
+      cameraOutput,
+      recordingFormat,
+      screenshot: { format: screenshotFormat, output: screenshotOutput },
+    },
   );
-  const lookSizeBytes = useRecordingExportEstimate(exportInputs, {
-    isOpen: isExportIslandOpen,
-    looks: lookQualities,
-  });
-  const exportCompare = useExportCompare(exportInputs, {
-    isOpen: isExportIslandOpen,
-    screenshot: { format: screenshotFormat, output: screenshotOutput },
-  });
 
   const onEnabledTracksChange = useCallback(
     (streamIndices: number[]) => {
@@ -617,6 +612,7 @@ export function EditorWindow() {
         }}
         onKeyboardEffectsChange={setKeyboardEffects}
         onMinimize={minimizeEditorWindow}
+        onRecordingFormatChange={chooseRecordingFormat}
         onRecordingOutputChange={(trackId, settings) => {
           setRecordingOutput((current) => ({
             ...current,
@@ -660,6 +656,7 @@ export function EditorWindow() {
             cameraKey,
             deleteProjectAfterExport,
             fileStem,
+            recordingFormat,
             screenshotFormat,
             screenshotOutput,
             subtitles,
@@ -699,6 +696,7 @@ export function EditorWindow() {
           }
           setAudioTrackVolumes({ artifactId, values: next });
         }}
+        recordingFormat={recordingFormat}
         recordingOutput={recordingOutput}
         recordingPreviewError={recordingPreviewError}
         recordingPreviewTracks={recordingPreviewTracks}

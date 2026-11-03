@@ -12,7 +12,10 @@ use screenwide_sidecar::ffmpeg_command;
 use super::*;
 
 mod args;
+mod audio_file;
 mod timeline_args;
+
+pub use audio_file::AudioFile;
 
 pub(super) use args::{audio_export_args, camera_export_args, remux_args, selected_export_args};
 pub(crate) use timeline_args::timeline_audio_mapping_args;
@@ -178,6 +181,7 @@ pub fn export_selected_audio(
   destination: &Path,
   selection: &TrackSelection,
   layout: AudioLayout,
+  file: AudioFile,
   run: ExportRunOptions<'_>,
 ) -> Result<ExportRunResult, String> {
   let ExportRunOptions {
@@ -186,10 +190,11 @@ pub fn export_selected_audio(
     timeline,
     video: _,
   } = run;
+  let layout = file.layout(layout);
   let temporary = remux_temp_path(destination);
   let args = timeline.map_or_else(
-    || audio_export_args(source, &temporary, selection, layout),
-    |timeline| timeline_audio_export_args(source, &temporary, selection, layout, timeline),
+    || audio_export_args(source, &temporary, selection, layout, file),
+    |timeline| timeline_audio_export_args(source, &temporary, selection, layout, timeline, file),
   );
   run_export(args, &temporary, destination, cancelled, on_progress)
 }
@@ -249,6 +254,7 @@ pub type SelectedAudioExport = for<'a> fn(
   &Path,
   &TrackSelection,
   AudioLayout,
+  AudioFile,
   ExportRunOptions<'a>,
 ) -> Result<ExportRunResult, String>;
 

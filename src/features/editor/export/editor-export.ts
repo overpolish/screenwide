@@ -18,15 +18,16 @@ import {
   qualityLook,
   VideoQuality,
 } from "./export-looks";
+import { recordingFormatChoice } from "./recording-format";
 
 import type { CameraKey } from "../../../bindings/CameraKey";
 import type { ExportedFile } from "../../../bindings/ExportedFile";
 import type { ExportSubtitles } from "../../../bindings/ExportSubtitles";
+import type { RecordingFormat } from "../../../bindings/RecordingFormat";
 import type { ScreenshotFormat } from "../../../bindings/ScreenshotFormat";
 import type {
   ToolPanelExport,
   ToolPanelExportCompare,
-  ToolPanelExportPatch,
 } from "../tools/tool-panel-export";
 
 /** The export's settings as the editor window holds them. */
@@ -41,27 +42,10 @@ export type EditorExportSettings = {
   fileStem: string;
   isCancelingSave: boolean;
   isSaving: boolean;
+  recordingFormat: RecordingFormat;
   resolutionScalePercent: number;
   screenshotFormat: ScreenshotFormat;
   subtitles: ExportSubtitles;
-};
-
-/** What the editor window does when the Export island asks. */
-export type EditorExportHandlers = {
-  onBrowse: () => void;
-  onCameraCompressionChange: (compression: number) => void;
-  onCameraKeyChange: (key: CameraKey) => void;
-  onCameraOutputChange: (output: CameraOutput) => void;
-  onCameraResolutionScaleChange: (scale: number) => void;
-  onCancelSave: () => void;
-  onCollapseAudioChange: (collapse: boolean) => void;
-  onCompressionChange: (compression: number) => void;
-  onDeleteProjectAfterExportChange: (remove: boolean) => void;
-  onExport: () => void;
-  onFileStemChange: (fileStem: string) => void;
-  onResolutionScaleChange: (scale: number) => void;
-  onScreenshotFormatChange: (format: ScreenshotFormat) => void;
-  onSubtitlesChange: (subtitles: ExportSubtitles) => void;
 };
 
 type Recording = Extract<EditorArtifact, { kind: "recording" }>;
@@ -149,24 +133,41 @@ export function exportIslandSnapshot({
   settings: EditorExportSettings;
 }): EditorExportSnapshot {
   const recording = artifact?.kind === "recording" ? artifact : null;
-  const kind = recording ? (isAudioOnly ? "audio" : "video") : "screenshot";
+  const recordingFormat =
+    recording &&
+    recordingFormatChoice(recording, {
+      chosen: settings.recordingFormat,
+      isAudioOnly,
+    });
+  const kind = recordingFormat
+    ? recordingFormat.selected === "mp4"
+      ? "video"
+      : "audio"
+    : "screenshot";
   const extension =
     kind === "screenshot"
       ? SCREENSHOT_EXTENSIONS[settings.screenshotFormat]
-      : kind === "audio"
-        ? "m4a"
-        : (artifact?.extension ?? "mp4");
+      : (recordingFormat?.offered.find(
+          ({ format }) => format === recordingFormat.selected,
+        )?.extension ?? "mp4");
+  // The sound alone carries no picture, so nothing about the camera applies.
+  const shownCameraOutput = kind === "video" ? cameraOutput : null;
   const name = exported?.path.split(/[\\/]/).pop() ?? "";
   return {
     cameraKey:
-      cameraOutput === "separate" &&
+      shownCameraOutput === "separate" &&
       removesCameraBackground(recordingTimelineEdit)
         ? settings.cameraKey
         : null,
-    cameraOutput,
+    cameraOutput: shownCameraOutput,
     canExport,
+    // A WAV holds one stream, so its tracks are always mixed.
     collapseAudio:
-      recording && enabledAudioTrackCount > 1 ? settings.collapseAudio : null,
+      recording &&
+      enabledAudioTrackCount > 1 &&
+      recordingFormat?.selected !== "wav"
+        ? settings.collapseAudio
+        : null,
     compare: kind === "audio" ? null : compare,
     deleteProjectAfterExport: settings.deleteProjectAfterExport,
     directory: settings.directory,
@@ -195,6 +196,7 @@ export function exportIslandSnapshot({
             settings,
           })
         : null,
+    recordingFormat,
     screenshotFormat: recording ? null : settings.screenshotFormat,
     subtitles: recording && hasTranscript ? settings.subtitles : null,
   };
@@ -251,36 +253,4 @@ function exportQuality({
       id,
     })),
   };
-}
-
-/** Does what the Export island asks, through the editor window's own
- * handlers, so the coupling between compression and size holds as it does
- * everywhere: a look sets the size first, then the compression. */
-export function applyExportPatch(
-  patch: ToolPanelExportPatch,
-  on: EditorExportHandlers,
-  looks: ExportLookQuality[],
-) {
-  if (patch.fileStem !== undefined) on.onFileStemChange(patch.fileStem);
-  if (patch.browse) on.onBrowse();
-  if (patch.screenshotFormat)
-    on.onScreenshotFormatChange(patch.screenshotFormat);
-  const look = patch.look && looks[EXPORT_LOOKS.indexOf(patch.look)];
-  if (look) {
-    on.onResolutionScaleChange(look.screen.resolutionScalePercent);
-    on.onCompressionChange(look.screen.compression);
-    if (look.camera) {
-      on.onCameraResolutionScaleChange(look.camera.resolutionScalePercent);
-      on.onCameraCompressionChange(look.camera.compression);
-    }
-  }
-  if (patch.subtitles) on.onSubtitlesChange(patch.subtitles);
-  if (patch.cameraOutput) on.onCameraOutputChange(patch.cameraOutput);
-  if (patch.cameraKey) on.onCameraKeyChange(patch.cameraKey);
-  if (patch.collapseAudio !== undefined)
-    on.onCollapseAudioChange(patch.collapseAudio);
-  if (patch.deleteProjectAfterExport !== undefined)
-    on.onDeleteProjectAfterExportChange(patch.deleteProjectAfterExport);
-  if (patch.cancel) on.onCancelSave();
-  if (patch.export) on.onExport();
 }

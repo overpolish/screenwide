@@ -103,14 +103,20 @@ pub(crate) fn audio_export_args(
   destination: &Path,
   selection: &TrackSelection,
   layout: AudioLayout,
+  file: AudioFile,
 ) -> Vec<OsString> {
   let mut args: Vec<OsString> = ["-hide_banner", "-loglevel", "error", "-nostdin", "-y", "-i"]
     .map(OsString::from)
     .into();
   args.push(source.into());
   args.extend(["-progress", "pipe:1", "-nostats"].map(OsString::from));
-  args.extend(selection.audio_args(layout).into_iter().map(OsString::from));
-  args.extend(EXPORT_MP4_OUTPUT.map(OsString::from));
+  args.extend(
+    selection
+      .encoded_audio_args(layout, 0, file.encoding())
+      .into_iter()
+      .map(OsString::from),
+  );
+  args.extend(file.output_args().iter().map(OsString::from));
   args.push(destination.into());
   args
 }

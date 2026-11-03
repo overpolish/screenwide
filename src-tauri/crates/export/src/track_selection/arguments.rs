@@ -5,7 +5,7 @@
 
 use std::path::Path;
 
-use super::{AudioLayout, TrackSelection, MIXDOWN_BITRATE};
+use super::{AudioEncoding, AudioLayout, TrackSelection};
 
 impl TrackSelection {
   /// The FFmpeg arguments that put this selection into the output.
@@ -19,6 +19,16 @@ impl TrackSelection {
   /// The same mapping when video and recorded audio are separate FFmpeg
   /// inputs, such as camera export processing.
   pub fn audio_args_from(&self, layout: AudioLayout, input: usize) -> Vec<String> {
+    self.encoded_audio_args(layout, input, AudioEncoding::Aac)
+  }
+
+  /// The mapping with the audio encoded as `encoding`.
+  pub fn encoded_audio_args(
+    &self,
+    layout: AudioLayout,
+    input: usize,
+    encoding: AudioEncoding,
+  ) -> Vec<String> {
     if self.stream_indices.is_empty() {
       return vec!["-an".to_owned()];
     }
@@ -28,19 +38,21 @@ impl TrackSelection {
     match layout {
       // One track needs no summing, so it crosses untouched rather than being
       // decoded and re-encoded for the sake of passing through a filter.
-      AudioLayout::Mixdown if self.stream_indices.len() == 1 && !processes => vec![
-        "-map".to_owned(),
-        format!("{input}:a:{}", self.stream_indices[0]),
-        "-c:a".to_owned(),
-        "copy".to_owned(),
-      ],
+      AudioLayout::Mixdown if self.stream_indices.len() == 1 && !processes => {
+        let mut args = vec![
+          "-map".to_owned(),
+          format!("{input}:a:{}", self.stream_indices[0]),
+        ];
+        args.extend(encoding.codec_args(true));
+        args
+      }
       AudioLayout::Mixdown if !processes => {
         let inputs: String = self
           .stream_indices
           .iter()
           .map(|index| self.source(input, *index))
           .collect();
-        vec![
+        let mut args = vec![
           "-filter_complex".to_owned(),
           format!(
             "{inputs}amix=inputs={}:normalize=0[mix]",
@@ -48,11 +60,9 @@ impl TrackSelection {
           ),
           "-map".to_owned(),
           "[mix]".to_owned(),
-          "-c:a".to_owned(),
-          "aac".to_owned(),
-          "-b:a".to_owned(),
-          MIXDOWN_BITRATE.to_owned(),
-        ]
+        ];
+        args.extend(encoding.codec_args(false));
+        args
       }
       AudioLayout::Mixdown => {
         let mut filters = opened;
@@ -66,7 +76,7 @@ impl TrackSelection {
           inputs.push_str(&format!("[track{position}]"));
         }
 
-        vec![
+        let mut args = vec![
           "-filter_complex".to_owned(),
           // `normalize=0` is the whole point: amix divides by the number of
           // inputs by default, so including a second track would make the
@@ -78,11 +88,9 @@ impl TrackSelection {
           ),
           "-map".to_owned(),
           "[mix]".to_owned(),
-          "-c:a".to_owned(),
-          "aac".to_owned(),
-          "-b:a".to_owned(),
-          MIXDOWN_BITRATE.to_owned(),
-        ]
+        ];
+        args.extend(encoding.codec_args(false));
+        args
       }
       AudioLayout::SeparateTracks if !processes => {
         let mut args = Vec::with_capacity(self.stream_indices.len() * 2 + 2);
@@ -90,8 +98,7 @@ impl TrackSelection {
           args.push("-map".to_owned());
           args.push(format!("{input}:a:{index}"));
         }
-        args.push("-c:a".to_owned());
-        args.push("copy".to_owned());
+        args.extend(encoding.codec_args(true));
 
         args
       }
@@ -108,12 +115,7 @@ impl TrackSelection {
         }
         filters.pop();
         args.splice(0..0, ["-filter_complex".to_owned(), filters]);
-        args.extend([
-          "-c:a".to_owned(),
-          "aac".to_owned(),
-          "-b:a".to_owned(),
-          MIXDOWN_BITRATE.to_owned(),
-        ]);
+        args.extend(encoding.codec_args(false));
         args
       }
     }

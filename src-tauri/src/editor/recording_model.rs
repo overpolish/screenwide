@@ -89,6 +89,34 @@ impl ScreenshotFormat {
   }
 }
 
+/// What a recording is exported as: its video, or its sound alone.
+#[derive(Clone, Copy, Debug, Default, Deserialize, Eq, PartialEq, Serialize, TS)]
+#[serde(rename_all = "kebab-case")]
+#[ts(export)]
+pub enum RecordingFormat {
+  /// The video, or for a recording of sound alone, its M4A.
+  #[default]
+  Mp4,
+  M4a,
+  Wav,
+}
+
+impl RecordingFormat {
+  /// The file the sound alone is saved as: what M4A and WAV ask for, and
+  /// what MP4 means for a recording with no picture to export.
+  pub const fn sound_file(self) -> screenwide_export::media_preview::AudioFile {
+    match self {
+      Self::Mp4 | Self::M4a => screenwide_export::media_preview::AudioFile::M4a,
+      Self::Wav => screenwide_export::media_preview::AudioFile::Wav,
+    }
+  }
+
+  /// Whether only the sound is asked for, whatever pictures are in.
+  pub const fn is_sound_only(self) -> bool {
+    !matches!(self, Self::Mp4)
+  }
+}
+
 #[derive(Clone, Debug, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct RecordingExportOptions {
@@ -110,6 +138,9 @@ pub struct RecordingExportOptions {
   pub enabled_stream_indices: Vec<usize>,
   pub include_camera: bool,
   pub include_primary_video: bool,
+  /// The video, or the sound alone as M4A or WAV.
+  #[serde(default)]
+  pub recording_format: RecordingFormat,
   pub resolution_scale_percent: u16,
   pub recording_output: RecordingOutputSettings,
   pub screenshot_output: ScreenshotWorkspaceOutputSettings,

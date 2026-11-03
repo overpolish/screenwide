@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import { useState } from "react";
 import { useArgs } from "storybook/preview-api";
 import { expect, fn, userEvent, waitFor, within } from "storybook/test";
 
@@ -58,23 +59,45 @@ function ExportIsland({
 }
 
 // What a setting asked for does to the story's export, as the editor would.
+// A recording's sound alone leaves out what is about the picture, and a WAV
+// mixes its tracks; choosing the video again brings back what the story
+// started with (`original`).
 const patched = (
   shown: ToolPanelExport,
   patch: ToolPanelExportPatch,
+  original: ToolPanelExport,
 ): ToolPanelExport => {
-  const quality = shown.quality && {
-    ...shown.quality,
-    look: patch.look ?? shown.quality.look,
-  };
+  const format = patch.recordingFormat;
+  const isVideo = (format ?? shown.recordingFormat?.selected) === "mp4";
+  const base = shown.quality ?? original.quality;
+  const quality =
+    (format && !isVideo) || !base
+      ? null
+      : { ...base, look: patch.look ?? base.look };
   return {
     ...shown,
     cameraKey: patch.cameraKey ?? shown.cameraKey,
-    cameraOutput: patch.cameraOutput ?? shown.cameraOutput,
-    collapseAudio: patch.collapseAudio ?? shown.collapseAudio,
+    cameraOutput: format
+      ? isVideo
+        ? original.cameraOutput
+        : null
+      : (patch.cameraOutput ?? shown.cameraOutput),
+    collapseAudio: format
+      ? format === "wav"
+        ? null
+        : original.collapseAudio
+      : (patch.collapseAudio ?? shown.collapseAudio),
+    compare: format ? (isVideo ? original.compare : null) : shown.compare,
     deleteProjectAfterExport:
       patch.deleteProjectAfterExport ?? shown.deleteProjectAfterExport,
+    extension: format ?? shown.extension,
     fileStem: patch.fileStem ?? shown.fileStem,
+    kind: format ? (isVideo ? "video" : "audio") : shown.kind,
     quality,
+    recordingFormat:
+      format && shown.recordingFormat
+        ? { ...shown.recordingFormat, selected: format }
+        : shown.recordingFormat,
     revealWhenDone: patch.revealWhenDone ?? shown.revealWhenDone,
     screenshotFormat: patch.screenshotFormat ?? shown.screenshotFormat,
     subtitles: patch.subtitles ?? shown.subtitles,
@@ -106,12 +129,13 @@ const meta = {
   // Every choice changes the story's export, as it would the editor's.
   render: function Render(args) {
     const [, updateArgs] = useArgs<ExportIslandStoryProps>();
+    const [original] = useState(args.export);
     return (
       <ExportIsland
         {...args}
         onPatch={(patch) => {
           args.onPatch(patch);
-          updateArgs({ export: patched(args.export, patch) });
+          updateArgs({ export: patched(args.export, patch, original) });
         }}
       />
     );

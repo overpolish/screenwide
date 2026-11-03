@@ -35,6 +35,7 @@ fn save_recording_media(
     include_camera,
     include_primary_video,
     resolution_scale_percent,
+    recording_format,
     mut recording_output,
     timeline_edit: timeline_model,
     ..
@@ -124,15 +125,23 @@ fn save_recording_media(
   if !include_primary_video && !include_camera && enabled_stream_indices.is_empty() {
     return Err("Select at least one track to export".to_owned());
   }
-  if *primary_kind == PrimaryRecordingKind::Audio {
-    if include_primary_video || include_camera || bake_camera {
-      return Err("This audio recording has no video track to export".to_owned());
-    }
+  if *primary_kind == PrimaryRecordingKind::Audio
+    && (include_primary_video || include_camera || bake_camera)
+  {
+    return Err("This audio recording has no video track to export".to_owned());
+  }
+  // The sound alone: asked for as M4A or WAV, or all that is left with no
+  // picture in the export.
+  if recording_format.is_sound_only()
+    || *primary_kind == PrimaryRecordingKind::Audio
+    || (!include_primary_video && !include_camera)
+  {
     return audio_save::save_audio(audio_save::AudioSaveRequest {
       app: progress_app,
       cancelled: job_cancellation,
       directory: writing,
       duration_ms: export_duration_ms,
+      file: recording_format.sound_file(),
       id: *id,
       layout,
       selected_any: !enabled_stream_indices.is_empty(),
@@ -143,41 +152,25 @@ fn save_recording_media(
     });
   }
   if !include_primary_video {
-    if include_camera {
-      let camera = camera
-        .as_ref()
-        .ok_or_else(|| "There is no camera track to export".to_owned())?;
-      return camera_save::save_camera_as_primary(
-        working,
-        camera,
-        writing,
-        stem,
-        &selection,
-        layout,
-        *id,
-        progress_app,
-        job_cancellation,
-        camera_compression,
-        camera_resolution_scale_percent,
-        camera_output,
-        timeline.as_ref(),
-        camera_effects,
-      );
-    }
-
-    return audio_save::save_audio(audio_save::AudioSaveRequest {
-      app: progress_app,
-      cancelled: job_cancellation,
-      directory: writing,
-      duration_ms: export_duration_ms,
-      id: *id,
-      layout,
-      selected_any: !enabled_stream_indices.is_empty(),
-      selection: &selection,
-      stem,
-      timeline: timeline.as_ref(),
+    let camera = camera
+      .as_ref()
+      .ok_or_else(|| "There is no camera track to export".to_owned())?;
+    return camera_save::save_camera_as_primary(
       working,
-    });
+      camera,
+      writing,
+      stem,
+      &selection,
+      layout,
+      *id,
+      progress_app,
+      job_cancellation,
+      camera_compression,
+      camera_resolution_scale_percent,
+      camera_output,
+      timeline.as_ref(),
+      camera_effects,
+    );
   }
 
   let screen = |camera_effects| Screen {

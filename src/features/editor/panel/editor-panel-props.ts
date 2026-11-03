@@ -25,6 +25,7 @@ import {
 
 import type { CameraKey } from "../../../bindings/CameraKey";
 import type { ExportSubtitles } from "../../../bindings/ExportSubtitles";
+import type { RecordingFormat } from "../../../bindings/RecordingFormat";
 import type { ScreenshotFormat } from "../../../bindings/ScreenshotFormat";
 import type { ExportLookQuality } from "../export/editor-export";
 import type { ToolPanelExportCompare } from "../tools/tool-panel-export";
@@ -80,6 +81,7 @@ export type EditorPanelProps = {
   onFileStemChange?: (fileStem: string) => void;
   onKeyboardEffectsChange?: (settings: KeyboardEffectSettings) => void;
   onMinimize?: () => void;
+  onRecordingFormatChange?: (format: RecordingFormat) => void;
   onRecordingOutputChange?: RecordingOutputChange;
   onRecordingTimelineEditChange?: (edit: RecordingTimelineEdit) => void;
   /** Renames the project, which the window's title names. */
@@ -94,6 +96,8 @@ export type EditorPanelProps = {
   onToggleMaximize?: () => void;
   /** A stream's gain over its recorded level, in decibels. */
   onTrackVolumeChange?: (streamIndex: number, decibels: number) => void;
+  /** The video, or the sound alone as M4A or WAV. */
+  recordingFormat?: RecordingFormat;
   recordingOutput?: RecordingOutputSettings;
   recordingPreviewError?: string | null;
   recordingPreviewLayout?: RecordingPreviewLayout;

@@ -21,7 +21,7 @@ use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use serde::Serialize;
 use ts_rs::TS;
 
-use super::track_selection::{AudioLayout, TrackSelection};
+use super::track_selection::{AudioEncoding, AudioLayout, TrackSelection};
 mod audio;
 mod bake;
 mod encode;
@@ -45,8 +45,8 @@ pub(crate) use encode::timeline_audio_mapping_args;
 #[cfg(target_os = "macos")]
 pub(crate) use encode::StreamedExport;
 pub use encode::{
-  camera_recording_exporter, remuxer, selected_audio_exporter, selected_recording_exporter, Remux,
-  SelectedRecordingExport,
+  camera_recording_exporter, remuxer, selected_audio_exporter, selected_recording_exporter,
+  AudioFile, Remux, SelectedRecordingExport,
 };
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 pub(crate) use encode::{remux_temp_path, run_export};

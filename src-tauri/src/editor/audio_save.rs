@@ -10,6 +10,7 @@ pub(super) struct AudioSaveRequest<'a> {
   pub(super) cancelled: &'a AtomicBool,
   pub(super) directory: &'a Path,
   pub(super) duration_ms: u64,
+  pub(super) file: media_preview::AudioFile,
   pub(super) id: u64,
   pub(super) layout: track_selection::AudioLayout,
   pub(super) selected_any: bool,
@@ -25,6 +26,7 @@ pub(super) fn save_audio(request: AudioSaveRequest<'_>) -> Result<Option<PathBuf
     cancelled,
     directory,
     duration_ms,
+    file,
     id,
     layout,
     selected_any,
@@ -36,7 +38,7 @@ pub(super) fn save_audio(request: AudioSaveRequest<'_>) -> Result<Option<PathBuf
   if !selected_any {
     return Err("Select at least one audio track to export".to_owned());
   }
-  let path = unique_path(directory, stem, AUDIO_EXTENSION, &|candidate| {
+  let path = unique_path(directory, stem, file.extension(), &|candidate| {
     candidate.exists()
   });
   let exporter = media_preview::selected_audio_exporter()
@@ -54,7 +56,7 @@ pub(super) fn save_audio(request: AudioSaveRequest<'_>) -> Result<Option<PathBuf
       source_scale_percent: 100,
     },
   };
-  match exporter(working, &path, selection, layout, run)? {
+  match exporter(working, &path, selection, layout, file, run)? {
     media_preview::ExportRunResult::Completed if path.is_file() => Ok(Some(path)),
     media_preview::ExportRunResult::Completed => {
       Err("The exported audio did not finish publishing".to_owned())

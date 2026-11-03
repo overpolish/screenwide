@@ -130,9 +130,13 @@ export function exportIsland({
           onFileStemChange={(fileStem) => {
             onPatch({ fileStem });
           }}
+          onRecordingFormatChange={(recordingFormat) => {
+            onPatch({ recordingFormat });
+          }}
           onScreenshotFormatChange={(screenshotFormat) => {
             onPatch({ screenshotFormat });
           }}
+          recordingFormat={settings.recordingFormat}
           screenshotFormat={settings.screenshotFormat}
         />
         <ExportOptions onPatch={onPatch} settings={settings} />
