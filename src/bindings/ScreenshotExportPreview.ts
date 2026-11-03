@@ -2,11 +2,12 @@
 import type { ExportPreviewFrame } from "./ExportPreviewFrame";
 
 /**
- * A screenshot compared before it is saved as a JPEG: as drawn, and as the
- * JPEG the export writes.
+ * A screenshot compared before it is saved in a lossy format: as drawn, and
+ * as the JPEG or WebP the export writes.
  */
 export type ScreenshotExportPreview = { exported: ExportPreviewFrame, original: ExportPreviewFrame, 
 /**
- * The picture has see-through pixels, which the JPEG fills with white.
+ * The picture has see-through pixels the format fills with white, as
+ * only JPEG does.
  */
 seeThrough: boolean, };

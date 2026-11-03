@@ -19,6 +19,7 @@ test-support = []
 [dependencies]
 bytemuck.workspace = true
 image.workspace = true
+libwebp-sys.workspace = true
 png.workspace = true
 quantette.workspace = true
 screenwide-annotations.workspace = true

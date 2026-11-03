@@ -256,6 +256,7 @@
       "../LICENSE": "licenses/GPL-3.0.txt",
       "assets/Inter-OFL-1.1.txt": "licenses/Inter-OFL-1.1.txt",
       "assets/Inter-VariableFont_opsz,wght.ttf": "fonts/Inter-VariableFont_opsz,wght.ttf",
+      "assets/libwebp-BSD-3-Clause.txt": "licenses/libwebp-BSD-3-Clause.txt",
       "assets/RobotoMono-OFL-1.1.txt": "licenses/RobotoMono-OFL-1.1.txt",
       "assets/RobotoMono-VariableFont_wght.ttf": "fonts/RobotoMono-VariableFont_wght.ttf",
       "assets/onnxruntime-MIT.txt": "licenses/onnxruntime-MIT.txt",

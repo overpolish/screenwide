@@ -68,6 +68,7 @@ pub enum ScreenshotFormat {
   #[default]
   Png,
   Jpeg,
+  Webp,
 }
 
 impl ScreenshotFormat {
@@ -75,6 +76,15 @@ impl ScreenshotFormat {
     match self {
       Self::Png => "png",
       Self::Jpeg => "jpg",
+      Self::Webp => "webp",
+    }
+  }
+
+  pub fn encode(self, image: &CapturedImage) -> Result<Vec<u8>, String> {
+    match self {
+      Self::Png => screenwide_output::encode_png(image),
+      Self::Jpeg => screenwide_output::encode_jpeg(image),
+      Self::Webp => screenwide_output::encode_webp(image),
     }
   }
 }

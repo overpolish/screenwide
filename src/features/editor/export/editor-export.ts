@@ -104,6 +104,14 @@ const removesCameraBackground = (edit: RecordingTimelineEdit | null) =>
     (range) => range.background === "transparent",
   );
 
+/** The file extension each screenshot format is saved with, as Rust's
+ * `ScreenshotFormat::extension` gives it. */
+const SCREENSHOT_EXTENSIONS: Record<ScreenshotFormat, string> = {
+  jpeg: "jpg",
+  png: "png",
+  webp: "webp",
+};
+
 /** What the Export island shows, from what the editor holds; the general
  * setting it shows is added where the general settings are read
  * (`useEditorToolPanels`). */
@@ -144,9 +152,7 @@ export function exportIslandSnapshot({
   const kind = recording ? (isAudioOnly ? "audio" : "video") : "screenshot";
   const extension =
     kind === "screenshot"
-      ? settings.screenshotFormat === "jpeg"
-        ? "jpg"
-        : "png"
+      ? SCREENSHOT_EXTENSIONS[settings.screenshotFormat]
       : kind === "audio"
         ? "m4a"
         : (artifact?.extension ?? "mp4");

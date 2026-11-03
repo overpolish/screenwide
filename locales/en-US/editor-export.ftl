@@ -16,6 +16,7 @@ editor-export-folder = Folder
 editor-export-format = Format
 editor-export-format-png = PNG
 editor-export-format-jpeg = JPEG
+editor-export-format-webp = WebP
 # Names the four looks, which trade the file's size against its quality.
 editor-export-quality = Quality
 editor-export-look-smallest = Smallest

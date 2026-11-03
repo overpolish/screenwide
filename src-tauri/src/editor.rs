@@ -118,7 +118,7 @@ use ts_rs::TS;
 use crate::screenshots::compose_screenshot;
 use crate::screenshots::{screenshot_directory, unique_path};
 use screenwide_capture::FinalizeInfo;
-use screenwide_output::{encode_jpeg, encode_png, ScreenshotOutputSettings};
+use screenwide_output::ScreenshotOutputSettings;
 use screenwide_project::PrimaryRecordingKind;
 
 pub(crate) fn initialize_cursor_artwork() {

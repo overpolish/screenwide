@@ -111,10 +111,7 @@ pub async fn save_export(
             &|candidate| candidate.exists(),
           );
           let composed = compose_screenshot_workspace(items, &screenshot_output)?;
-          let bytes = match screenshot_format {
-            ScreenshotFormat::Png => encode_png(&composed)?,
-            ScreenshotFormat::Jpeg => encode_jpeg(&composed)?,
-          };
+          let bytes = screenshot_format.encode(&composed)?;
           std::fs::write(&path, bytes).map_err(|error| error.to_string())?;
           Ok(Some(path))
         }

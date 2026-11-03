@@ -207,25 +207,27 @@ pub async fn preview_recording_export_frame(
   .map_err(|error| error.to_string())?
 }
 
-/// A screenshot compared before it is saved as a JPEG: as drawn, and as the
-/// JPEG the export writes.
+/// A screenshot compared before it is saved in a lossy format: as drawn, and
+/// as the JPEG or WebP the export writes.
 #[derive(Debug, Serialize, TS)]
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
 pub struct ScreenshotExportPreview {
   pub exported: ExportPreviewFrame,
   pub original: ExportPreviewFrame,
-  /// The picture has see-through pixels, which the JPEG fills with white.
+  /// The picture has see-through pixels the format fills with white, as
+  /// only JPEG does.
   pub see_through: bool,
 }
 
 /// The open screenshot composed with `screenshot_output`, written as drawn
-/// and as the JPEG the export writes. `None` where a newer one was asked
-/// for before this one was done.
+/// and as the export writes it in `format`. `None` where a newer one was
+/// asked for before this one was done.
 #[tauri::command]
 pub async fn preview_screenshot_export(
   app: AppHandle,
   window: tauri::WebviewWindow,
+  format: ScreenshotFormat,
   screenshot_output: ScreenshotWorkspaceOutputSettings,
 ) -> Result<Option<ScreenshotExportPreview>, String> {
   let kind = kind_of_window(&window)?;
@@ -268,15 +270,16 @@ pub async fn preview_screenshot_export(
       image::ExtendedColorType::Rgba8,
     )
     .map_err(|error| error.to_string())?;
-    let exported = frame_path(&directory, ExportPreviewSide::Export, "jpg")?;
-    std::fs::write(&exported, encode_jpeg(&composed)?).map_err(|error| error.to_string())?;
+    let exported = frame_path(&directory, ExportPreviewSide::Export, format.extension())?;
+    std::fs::write(&exported, format.encode(&composed)?).map_err(|error| error.to_string())?;
     if cancelled.load(Ordering::Acquire) {
       return Ok(None);
     }
     Ok(Some(ScreenshotExportPreview {
       exported: frame(&exported),
       original: frame(&original),
-      see_through: !screenwide_output::is_opaque(&composed.rgba),
+      see_through: format == ScreenshotFormat::Jpeg
+        && !screenwide_output::is_opaque(&composed.rgba),
     }))
   })
   .await

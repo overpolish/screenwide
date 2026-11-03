@@ -9,6 +9,7 @@ import { normalizedScreenshotWorkspaceOutput } from "../screenshot/screenshot-ou
 import type { ExportPreviewFrame } from "../../../bindings/ExportPreviewFrame";
 import type { ExportPreviewSide } from "../../../bindings/ExportPreviewSide";
 import type { ScreenshotExportPreview } from "../../../bindings/ScreenshotExportPreview";
+import type { ScreenshotFormat } from "../../../bindings/ScreenshotFormat";
 import type { ScreenshotWorkspaceOutputSettings } from "../screenshot/screenshot-output";
 
 /** The frame `positionMs` into the recording as the export with `options`
@@ -31,11 +32,13 @@ export const previewRecordingExportFrame = ({
     side,
   });
 
-/** The open screenshot as drawn and as its JPEG; null where a newer one
- * replaced it first. */
+/** The open screenshot as drawn and as the export writes it in `format`, a
+ * lossy one; null where a newer one replaced it first. */
 export const previewScreenshotExport = (
+  format: ScreenshotFormat,
   screenshotOutput: ScreenshotWorkspaceOutputSettings,
 ) =>
   invoke<ScreenshotExportPreview | null>("preview_screenshot_export", {
+    format,
     screenshotOutput: normalizedScreenshotWorkspaceOutput(screenshotOutput),
   });

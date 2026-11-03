@@ -41,7 +41,7 @@ export type ToolPanelComparedFrame = {
 
 /** The picture as it comes out of the export beside it as drawn: a
  * recording's frame at the playhead at the chosen look, or a screenshot as
- * its JPEG. */
+ * its JPEG or WebP. */
 export type ToolPanelExportCompare = {
   /** As the export writes it; null until made. */
   exported: ToolPanelComparedFrame | null;

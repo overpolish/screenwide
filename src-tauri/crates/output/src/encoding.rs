@@ -3,6 +3,9 @@
 
 #[cfg(test)]
 mod tests;
+mod webp;
+
+pub use webp::encode_webp;
 
 use std::collections::HashMap;
 use std::io::Cursor;

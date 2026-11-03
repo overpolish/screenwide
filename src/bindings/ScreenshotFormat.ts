@@ -3,4 +3,4 @@
 /**
  * The picture file a screenshot is saved as.
  */
-export type ScreenshotFormat = "png" | "jpeg";
+export type ScreenshotFormat = "png" | "jpeg" | "webp";

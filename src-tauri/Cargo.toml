@@ -73,6 +73,10 @@ icu_normalizer = "2.2"
 # Every format except AVIF, which the image crate can only encode and nothing
 # here encodes; it is the costliest dependency to compile.
 image = { version = "0.25.10", default-features = false, features = ["rayon", "bmp", "dds", "exr", "ff", "gif", "hdr", "ico", "jpeg", "png", "pnm", "qoi", "tga", "tiff", "webp"] }
+# Lossy WebP with transparency for exported screenshots, which the image
+# crate cannot write (it encodes WebP losslessly only). Builds libwebp from
+# its bundled source; libwebp is BSD-3-Clause.
+libwebp-sys = "0.14.4"
 naga = "30"
 nokhwa = { version = "0.10.11", default-features = false, features = ["decoding", "output-threaded"] }
 objc2 = "0.6.4"

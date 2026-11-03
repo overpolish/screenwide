@@ -49,6 +49,7 @@ export function ExportFileLine({
           items={[
             { id: "png", label: t("editor-export-format-png") },
             { id: "jpeg", label: t("editor-export-format-jpeg") },
+            { id: "webp", label: t("editor-export-format-webp") },
           ]}
           onSelectionChange={(id) => {
             onScreenshotFormatChange(id as ScreenshotFormat);

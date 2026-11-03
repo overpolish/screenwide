@@ -53,10 +53,11 @@ const shown = (frame: ExportPreviewFrame): ToolPanelComparedFrame => ({
 /**
  * What the Export island compares while it is out: a recording's frame at
  * the playhead as drawn, never encoded, beside the same frame at the chosen
- * look; or a screenshot as drawn beside its JPEG. A PNG screenshot is
- * written as drawn, so it has nothing to compare. The Original frame depends
- * on everything the export draws but its look, so choosing another look
- * makes only the exported one again. Null where there is nothing to compare.
+ * look; or a screenshot as drawn beside its JPEG or WebP. A PNG screenshot
+ * is written as drawn, so it has nothing to compare. The Original frame
+ * depends on everything the export draws but its look, so choosing another
+ * look makes only the exported one again. Null where there is nothing to
+ * compare.
  */
 export function useExportCompare(
   inputs: RecordingExportInputs,
@@ -81,8 +82,8 @@ export function useExportCompare(
     artifact.height > 0
       ? artifact
       : null;
-  const isJpeg =
-    artifact?.kind === "screenshot" && screenshot.format === "jpeg";
+  const isLossy =
+    artifact?.kind === "screenshot" && screenshot.format !== "png";
   // The screenshot's two pictures are made together, so they share a key.
   const originalKey = recording
     ? JSON.stringify([
@@ -96,8 +97,8 @@ export function useExportCompare(
         inputs.recordingOutput,
         inputs.recordingTimelineEdit,
       ])
-    : isJpeg
-      ? JSON.stringify([artifact.id, screenshot.output])
+    : isLossy
+      ? JSON.stringify([artifact.id, screenshot.format, screenshot.output])
       : null;
   const exportKey =
     originalKey === null || !recording
@@ -142,7 +143,10 @@ export function useExportCompare(
       const artifactId = latest.inputs.artifact?.id;
       if (artifactId === undefined) return;
       if (latest.inputs.artifact?.kind === "screenshot") {
-        void previewScreenshotExport(latest.screenshot.output)
+        void previewScreenshotExport(
+          latest.screenshot.format,
+          latest.screenshot.output,
+        )
           .then((pair) => {
             if (!isCurrent() || pair === null) return;
             setMade({
