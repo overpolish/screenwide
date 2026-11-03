@@ -5,8 +5,8 @@ import { t } from "../../../../../i18n/i18n";
 import { revealChosen } from "../../../../../primitives/scroll-area/reveal-chosen";
 import { ScrollArea } from "../../../../../primitives/scroll-area/scroll-area";
 import { TileChoice } from "../../../../../primitives/tile-choice/tile-choice";
-import { TemplatePreviewClipView } from "../../../tool-panels/text-style/template-preview-clip";
-import { textTemplateLabel } from "../../../tool-panels/text-style/text-templates";
+import { TemplatePreviewClipView } from "../../../tools/text-style/template-preview-clip";
+import { textTemplateLabel } from "../../../tools/text-style/text-templates";
 
 import { TextPickerLine } from "./text-picker-line";
 

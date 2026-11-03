@@ -130,7 +130,7 @@ fn pad_for_ocr(
     .ok_or_else(|| "Padded text recognition image dimensions are too large".to_string())?;
   let background = border_background(rgba, width, height);
   let mut padded = vec![0; padded_length];
-  for pixel in padded.chunks_exact_mut(4) {
+  for pixel in padded.as_chunks_mut::<4>().0 {
     pixel.copy_from_slice(&background);
   }
 

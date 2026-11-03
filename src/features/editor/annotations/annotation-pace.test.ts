@@ -4,7 +4,7 @@
 import { describe, expect, it } from "vitest";
 
 import { recordingAnnotationClipAt } from "../recording/annotations/recording-annotations";
-import { storyTextStyle } from "../tool-panels/text-style/text-template-fixtures";
+import { storyTextStyle } from "../tools/text-style/text-template-fixtures";
 
 import { annotationDrawInMs, annotationPathMs } from "./annotation-pace";
 import { Annotation, AnnotationShape } from "./annotations";

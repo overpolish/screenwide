@@ -10,7 +10,12 @@ const VIEW: Size = Size {
 };
 
 fn quad_kinds(vertices: &[Vertex]) -> Vec<u32> {
-  vertices.chunks_exact(6).map(|quad| quad[0].kind).collect()
+  vertices
+    .as_chunks::<6>()
+    .0
+    .iter()
+    .map(|quad| quad[0].kind)
+    .collect()
 }
 
 #[test]
@@ -346,7 +351,7 @@ fn a_rounded_crop_shades_its_corners() {
   // Each wedge spans one radius - a quarter of the 80pt shorter side - with uv
   // measured from the arc centre in radii, so it reaches from the centre at
   // zero to the crop corner at one on both axes.
-  for wedge in rounded[4 * 6..8 * 6].chunks_exact(6) {
+  for wedge in rounded[4 * 6..8 * 6].as_chunks::<6>().0 {
     assert!(wedge.iter().any(|vertex| vertex.uv == [0.0, 0.0]));
     assert!(wedge.iter().any(|vertex| vertex.uv == [1.0, 1.0]));
   }

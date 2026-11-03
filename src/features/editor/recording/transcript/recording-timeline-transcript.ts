@@ -30,8 +30,8 @@ import type { SourceCut } from "../../timeline/editing/recording-timeline-cut-ra
 import type {
   TranscriptCorrection,
   TranscriptRange,
-} from "../../tool-panels/tool-panel-transcript";
-import type { TranscriptWord } from "../../tool-panels/transcript/transcript-words";
+} from "../../tools/tool-panel-transcript";
+import type { TranscriptWord } from "../../tools/transcript/transcript-words";
 
 /** The recorded transcript cuts, cut down to what is still cut out. */
 const stillRemovedTranscript = (

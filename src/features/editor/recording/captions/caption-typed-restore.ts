@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { normalizeText } from "../../tool-panels/transcript/transcript-units";
+import { normalizeText } from "../../tools/transcript/transcript-units";
 
 /** Text typed over bytes `start` to `end` of a caption being typed into. */
 export type CaptionRetype = { end: number; start: number; text: string };

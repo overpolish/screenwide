@@ -9,8 +9,8 @@ import { DEFAULT_CAPTION_SETTINGS } from "../../recording/captions/recording-cap
 import {
   STORY_TEXT_TEMPLATES,
   storyTextStyle,
-} from "../../tool-panels/text-style/text-template-fixtures";
-import { sampleTranscriptsModel } from "../../tool-panels/transcript/transcript-panel-fixtures";
+} from "../../tools/text-style/text-template-fixtures";
+import { sampleTranscriptsModel } from "../../tools/transcript/transcript-panel-fixtures";
 import { captionsIsland } from "../captions/captions-island";
 import {
   EditorIslandPairStage,
@@ -34,7 +34,7 @@ import {
 
 import type { RecordingCaptions } from "../../../../bindings/RecordingCaptions";
 import type { CaptionsPatch } from "../../recording/captions/recording-captions";
-import type { TranscriptCorrection } from "../../tool-panels/tool-panel-transcript";
+import type { TranscriptCorrection } from "../../tools/tool-panel-transcript";
 import type { IslandTranscript } from "../island-transcript";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 

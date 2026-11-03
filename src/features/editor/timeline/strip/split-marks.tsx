@@ -4,6 +4,7 @@
 import { Scissors } from "lucide-react";
 
 import { t } from "../../../../i18n/i18n";
+import { TimelineMark } from "../timeline-mark";
 import { at, type TimelineScale } from "../timeline-scale";
 
 // Where the scissors split the recording without cutting anything: a place
@@ -22,24 +23,15 @@ export function SplitMarks({
   splits: number[];
 }) {
   return splits.map((split) => (
-    <button
-      aria-label={t("editor-timeline-remove-split")}
-      className="group absolute inset-y-0 z-10 flex w-4 -translate-x-1/2 cursor-default items-start justify-center outline-none"
-      dir="ltr"
+    <TimelineMark
+      end="top"
+      glyph={<Scissors aria-hidden />}
       key={split}
-      onClick={() => {
+      label={t("editor-timeline-remove-split")}
+      onPress={() => {
         onRemove(split);
       }}
-      onPointerDown={(event) => {
-        event.stopPropagation();
-      }}
       style={at(scale, split)}
-      type="button"
-    >
-      <span className="absolute inset-y-0 w-px bg-fg-secondary" />
-      <span className="relative -mt-1 flex size-4 items-center justify-center rounded-full bg-fg text-surface group-focus-visible:outline-2 group-focus-visible:outline-offset-1 group-focus-visible:outline-focus">
-        <Scissors aria-hidden className="size-icon-xs" />
-      </span>
-    </button>
+    />
   ));
 }

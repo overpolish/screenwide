@@ -1,8 +1,8 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { type GlideRegion } from "../../glide/detection/glide-regions";
 import { GLIDE_MOVE_SECONDS, glideMoveEased } from "../../glide/glide-move";
+import { type GlideRegion } from "../../glide/glide-regions";
 import { cell } from "../../glide/island/glide-island-script";
 import { type GlideIslandPhase } from "../../glide/island/glide-island-types";
 import { type Box, lerp, progress } from "../preview/scenes/scene-kit";

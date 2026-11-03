@@ -28,7 +28,7 @@ import type { ExportSubtitles } from "../../../../bindings/ExportSubtitles";
 import type {
   ToolPanelExport,
   ToolPanelExportPatch,
-} from "../../tool-panels/tool-panel-export";
+} from "../../tools/tool-panel-export";
 
 /** Under the file line, before the export: the picture as it comes out
  * beside it as drawn, where there is one to compare; how good the video

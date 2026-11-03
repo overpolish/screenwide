@@ -8,13 +8,13 @@ import { type ReactNode } from "react";
 import { useTileMotion } from "../../../../composites/color-grid/tile-motion";
 import { t } from "../../../../i18n/i18n";
 import { IconButton } from "../../../../primitives/button/icon-button";
-import { ColorPickerSwatch } from "../../tool-panels/frame/background/color-picker-swatch";
-import { MeshPaletteColor } from "../../tool-panels/frame/background/mesh-palette-color";
-import { useBackgroundEdit } from "../../tool-panels/frame/background/use-background-edit";
+import { ColorPickerSwatch } from "../../tools/frame/background/color-picker-swatch";
+import { MeshPaletteColor } from "../../tools/frame/background/mesh-palette-color";
+import { useBackgroundEdit } from "../../tools/frame/background/use-background-edit";
 
 import { MeshToggle } from "./mesh-toggle";
 
-import type { Background } from "../../tool-panels/frame/background/background";
+import type { Background } from "../../tools/frame/background/background";
 
 /**
  * The background in hand, on the island, as one line: whether it is one

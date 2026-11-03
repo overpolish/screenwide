@@ -30,17 +30,14 @@ import { useScreenshotTool } from "../screenshot/use-screenshot-tool";
 import { useEditorWindowShortcuts } from "../shortcuts/use-editor-window-shortcuts";
 import { useSelectHold } from "../shortcuts/use-select-hold";
 import { usePublishEditorModes } from "../title-bar/editor-title-modes";
+import { NO_CAPTURE_PARTS } from "../toolbar/editor-modes";
+import { EditorToolColumn } from "../toolbar/editor-tool-column";
 import {
   cropAspectKey,
   keepsShape,
   useCropAspectStore,
-} from "../tool-panels/crop/crop-aspect-store";
-import {
-  drawingToolKind,
-  isAnnotationTool,
-} from "../tool-panels/tool-registry";
-import { NO_CAPTURE_PARTS } from "../toolbar/editor-modes";
-import { EditorToolColumn } from "../toolbar/editor-tool-column";
+} from "../tools/crop/crop-aspect-store";
+import { drawingToolKind, isAnnotationTool } from "../tools/tool-registry";
 
 import { ChromeSetBack } from "./chrome-set-back";
 import { ScreenshotSectionProps } from "./editor-preview-section-props";

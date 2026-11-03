@@ -6,11 +6,11 @@ import { type ContextType, useState } from "react";
 import { featureStage } from "../../storybook/feature-story-stage";
 
 import { SettingsApiContext } from "./settings-api-context";
-import { momentsPreviewApi } from "./settings-moments-preview";
+import { momentsPreviewApi } from "./settings-moments-fixtures";
 import {
   transcriptionPreviewApi,
   type TranscriptionPreviewSeed,
-} from "./settings-transcription-preview";
+} from "./settings-transcription-fixtures";
 import { SoftwareUpdateSetting } from "./settings-update-actions";
 import { SettingsWindow } from "./settings-window";
 

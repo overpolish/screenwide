@@ -5,7 +5,6 @@ import { describe, expect, it } from "vitest";
 
 import {
   isWordRemoved,
-  nearestKeptWord,
   pauseEndsParagraph,
   transcriptParagraphs,
   TranscriptWord,
@@ -112,16 +111,5 @@ describe("wordRunSpans", () => {
       { first: 0, last: 0 },
       { first: 2, last: 3 },
     ]);
-  });
-});
-
-describe("nearestKeptWord", () => {
-  const flags = [false, true, true, false];
-
-  it("steps over struck words in the direction of the delete", () => {
-    expect(nearestKeptWord(flags, 2, -1)).toBe(0);
-    expect(nearestKeptWord(flags, 1, 1)).toBe(3);
-    expect(nearestKeptWord(flags, -1, -1)).toBe(-1);
-    expect(nearestKeptWord(flags, 4, 1)).toBe(-1);
   });
 });

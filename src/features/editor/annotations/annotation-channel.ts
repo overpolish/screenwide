@@ -4,7 +4,7 @@
 import { useEffect, useRef, useSyncExternalStore } from "react";
 
 import { SceneRotation } from "../layer-rotation";
-import { ToolPanelAnnotation } from "../tool-panels/tool-panel-selection";
+import { ToolPanelAnnotation } from "../tools/tool-panel-selection";
 import { EditorKind } from "../types";
 
 import { AnnotationStyle, ImageArt, ImagePlay, TextSpan } from "./annotations";

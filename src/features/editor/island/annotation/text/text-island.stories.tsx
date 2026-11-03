@@ -5,11 +5,11 @@ import { useArgs } from "storybook/preview-api";
 import { fn } from "storybook/test";
 
 import { featureStage } from "../../../../../storybook/feature-story-stage";
-import { titleTemplates } from "../../../tool-panels/annotation/text/text-look";
+import { titleTemplates } from "../../../tools/annotation/text/text-look";
 import {
   STORY_TEXT_TEMPLATES,
   storyTextStyle,
-} from "../../../tool-panels/text-style/text-template-fixtures";
+} from "../../../tools/text-style/text-template-fixtures";
 import { EditorIslandStage } from "../../editor-island-stage";
 import {
   editorIslandStoryMeta,

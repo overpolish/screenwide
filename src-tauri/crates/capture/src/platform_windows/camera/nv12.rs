@@ -249,7 +249,13 @@ pub(super) fn mirror_nv12(source: &[u8], target: &mut [u8], width: usize, height
     .chunks_exact(width)
     .zip(target_uv.chunks_exact_mut(width))
   {
-    for (pair, slot) in from.chunks_exact(2).rev().zip(to.chunks_exact_mut(2)) {
+    for (pair, slot) in from
+      .as_chunks::<2>()
+      .0
+      .iter()
+      .rev()
+      .zip(to.as_chunks_mut::<2>().0)
+    {
       slot.copy_from_slice(pair);
     }
   }

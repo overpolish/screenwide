@@ -8,7 +8,6 @@
  * `src-tauri/crates/annotations`.
  */
 
-import { t } from "../../../i18n/i18n";
 import { ANNOTATION_SIZES } from "../../annotations/widths";
 
 import {
@@ -53,7 +52,6 @@ export const BOX_KIND_ROWS: {
     hasShadow: false,
     hasSize: false,
     hasSoftness: false,
-    laneLabel: (_, index) => t("editor-lane-focus", { number: index + 1 }),
     parseShape: focusShape,
     reversible: false,
     startsStill: false,
@@ -78,7 +76,6 @@ export const BOX_KIND_ROWS: {
     hasShadow: false,
     hasSize: true,
     hasSoftness: false,
-    laneLabel: (_, index) => t("editor-lane-redaction", { number: index + 1 }),
     parseShape: redactShape,
     reversible: false,
     startsStill: true,
@@ -101,7 +98,6 @@ export const BOX_KIND_ROWS: {
     hasShadow: false,
     hasSize: true,
     hasSoftness: false,
-    laneLabel: (_, index) => t("editor-lane-shape", { number: index + 1 }),
     parseShape: outlineShape,
     reversible: false,
     startsStill: false,
@@ -126,7 +122,6 @@ export const BOX_KIND_ROWS: {
     hasShadow: false,
     hasSize: false,
     hasSoftness: true,
-    laneLabel: (_, index) => t("editor-lane-spotlight", { number: index + 1 }),
     parseShape: spotlightShape,
     reversible: false,
     startsStill: false,

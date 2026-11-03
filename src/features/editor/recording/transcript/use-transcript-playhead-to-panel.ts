@@ -4,7 +4,7 @@
 import { emitTo } from "@tauri-apps/api/event";
 import { useEffect } from "react";
 
-import { toolPanelLabel } from "../../tool-panels/tool-panel-window";
+import { toolPanelLabel } from "../../tools/tool-panel-window";
 import { EditorKind } from "../../types";
 
 import { RecordingTranscriptPreviewControls } from "./recording-transcript-channel";

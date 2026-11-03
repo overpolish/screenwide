@@ -5,7 +5,7 @@ import { useRef } from "react";
 
 import { useSelectToolMemory } from "../annotations/use-select-tool-memory";
 import { toolDisagreesWithAnnotation } from "../annotations/use-tool-follows-annotation";
-import { isAnnotationTool } from "../tool-panels/tool-registry";
+import { isAnnotationTool } from "../tools/tool-registry";
 
 import { ScreenshotTool } from "./screenshot-column";
 

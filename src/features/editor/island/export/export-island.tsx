@@ -21,7 +21,7 @@ import type {
   ToolPanelExport,
   ToolPanelExportPatch,
   ToolPanelExportProgress,
-} from "../../tool-panels/tool-panel-export";
+} from "../../tools/tool-panel-export";
 import type { EditorIslandContent } from "../editor-island";
 
 // Export, brought out by the title bar's button over the picture, whose

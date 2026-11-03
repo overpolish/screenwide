@@ -23,8 +23,8 @@ fn native_bitmaps_are_dpi_sized_and_premultiplied() {
     );
     let pixels =
       unsafe { std::slice::from_raw_parts(info.bmBits.cast::<u8>(), (size * size * 4) as usize) };
-    assert!(pixels.chunks_exact(4).any(|pixel| pixel[3] > 0));
-    for pixel in pixels.chunks_exact(4) {
+    assert!(pixels.as_chunks::<4>().0.iter().any(|pixel| pixel[3] > 0));
+    for pixel in pixels.as_chunks::<4>().0 {
       assert!(pixel[0] <= pixel[3] && pixel[1] <= pixel[3] && pixel[2] <= pixel[3]);
     }
     unsafe {

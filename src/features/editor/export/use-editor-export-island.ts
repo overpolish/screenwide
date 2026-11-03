@@ -17,7 +17,7 @@ import { useExportLightDismiss } from "./use-export-light-dismiss";
 import { useExportProgressStore } from "./use-export-progress";
 
 import type { EditorPanelProps } from "../panel/editor-panel-props";
-import type { ToolPanelExportPatch } from "../tool-panels/tool-panel-export";
+import type { ToolPanelExportPatch } from "../tools/tool-panel-export";
 
 /** How long the finished Export island stays before it shrinks away. */
 const FINISH_LINGER_MS = 8_000;

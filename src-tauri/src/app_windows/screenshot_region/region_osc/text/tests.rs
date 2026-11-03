@@ -54,7 +54,7 @@ fn coverage_is_stored_premultiplied_so_the_shader_can_divide_it_out() {
   let rgba = premultiply(&[0, 128, 255], ink);
   // Coverage is carried at the ink's alpha, and each ink channel is
   // multiplied by that same alpha.
-  for (pixel, coverage) in rgba.chunks_exact(4).zip([0.0_f32, 128.0, 255.0]) {
+  for (pixel, coverage) in rgba.as_chunks::<4>().0.iter().zip([0.0_f32, 128.0, 255.0]) {
     let alpha = coverage * ink.alpha;
     assert_eq!(pixel[3], alpha.round() as u8);
     assert_eq!(pixel[0], alpha.round() as u8);

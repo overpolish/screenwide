@@ -3,13 +3,7 @@
 
 import { describe, expect, it } from "vitest";
 
-import {
-  canvasRect,
-  scaleCanvasGeometry,
-  sourceRect,
-  translateSourceRect,
-  translateCanvasGeometry,
-} from "./screenshot-geometry";
+import { sourceRect, translateSourceRect } from "./screenshot-geometry";
 
 const expectRectClose = (
   actual: { height: number; width: number; x: number; y: number } | null,
@@ -49,26 +43,5 @@ describe("screenshot source geometry", () => {
       ),
       sourceRect({ height: 0.4, width: 0.3, x: 0.7, y: 0 }),
     );
-  });
-});
-
-describe("screenshot canvas geometry", () => {
-  const geometry = {
-    frame: canvasRect({ height: 200, width: 300, x: 100, y: 50 }),
-    sourceToCanvas: { scale: 2, x: 80, y: 40 },
-  };
-
-  it("moves the frame and image transform through one translation", () => {
-    expect(translateCanvasGeometry(geometry, { x: 25, y: -10 })).toEqual({
-      frame: { height: 200, width: 300, x: 125, y: 40 },
-      sourceToCanvas: { scale: 2, x: 105, y: 30 },
-    });
-  });
-
-  it("scales the frame and image transform around the same anchor", () => {
-    expect(scaleCanvasGeometry(geometry, { x: 100, y: 50 }, 0.5)).toEqual({
-      frame: { height: 100, width: 150, x: 100, y: 50 },
-      sourceToCanvas: { scale: 1, x: 90, y: 45 },
-    });
   });
 });

@@ -1,14 +1,14 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { captionText } from "../../tool-panels/captions/caption-text";
-import { breakIn } from "../../tool-panels/captions/caption-word-choices";
+import { captionText } from "../../tools/captions/caption-text";
+import { breakIn } from "../../tools/captions/caption-word-choices";
 
 import type { Caption } from "../../../../bindings/Caption";
 import type { RecordingCaptions } from "../../../../bindings/RecordingCaptions";
-import type { TranscriptCorrection } from "../../tool-panels/tool-panel-transcript";
-import type { TranscriptWord } from "../../tool-panels/transcript/transcript-words";
-import type { TranscriptMark } from "../../tool-panels/transcript/use-transcript-marks";
+import type { TranscriptCorrection } from "../../tools/tool-panel-transcript";
+import type { TranscriptWord } from "../../tools/transcript/transcript-words";
+import type { TranscriptMark } from "../../tools/transcript/use-transcript-marks";
 
 // Takes for the Script island's stories, and captions made of them as the
 // app makes them: so many words to a caption, a break or a join placed by

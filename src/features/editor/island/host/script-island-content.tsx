@@ -1,17 +1,17 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { sceneOffer } from "../../tool-panels/scene/scene-offer";
-import { forwardToolPanelShortcut } from "../../tool-panels/use-panel-shortcuts";
+import { sceneOffer } from "../../tools/scene/scene-offer";
+import { forwardToolPanelShortcut } from "../../tools/use-panel-shortcuts";
 
-import type { ToolPanelPatch } from "../../tool-panels/tool-panel-patch";
-import type { ToolPanelSnapshot } from "../../tool-panels/tool-panel-store";
+import type { ToolPanelPatch } from "../../tools/tool-panel-patch";
+import type { ToolPanelSnapshot } from "../../tools/tool-panel-store";
 import type {
   ToolPanelTranscript,
   TranscriptRange,
   TranscriptRequest,
-} from "../../tool-panels/tool-panel-transcript";
-import type { TranscriptWord } from "../../tool-panels/transcript/transcript-words";
+} from "../../tools/tool-panel-transcript";
+import type { TranscriptWord } from "../../tools/transcript/transcript-words";
 import type { EditorKind } from "../../types";
 import type { IslandTranscript } from "../island-transcript";
 import type { ScriptTranscriptProps } from "../script/script-island-props";

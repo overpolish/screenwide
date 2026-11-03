@@ -80,18 +80,6 @@ export function wordAt(items: readonly TranscriptRange[], ms: number) {
   return index >= 0 && ms < items[index].endMs ? index : -1;
 }
 
-/** The nearest item from `index` on, stepping by `step`, that the edit still
- * keeps; -1 where there is none. */
-export function nearestKeptWord(
-  removedFlags: readonly boolean[],
-  index: number,
-  step: -1 | 1,
-) {
-  for (let i = index; i >= 0 && i < removedFlags.length; i += step)
-    if (!removedFlags[i]) return i;
-  return -1;
-}
-
 /** A run of items `first` to `last` cover where they are `removed` (or
  * kept), by index into `items`. */
 export type WordRunSpan = { first: number; last: number };

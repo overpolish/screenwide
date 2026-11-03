@@ -4,7 +4,7 @@
 import { listen } from "@tauri-apps/api/event";
 import { useEffect, useRef } from "react";
 
-import { withChoice } from "../../tool-panels/captions/caption-word-choices";
+import { withChoice } from "../../tools/captions/caption-word-choices";
 import { useEditorEditGesture } from "../../use-editor-edit-history";
 import { TranscriptTools } from "../transcript/use-transcript-tools";
 
@@ -18,7 +18,7 @@ import type { RecordingTimelineEdit } from "../../timeline/editing/recording-tim
 import type {
   TranscriptCorrection,
   TranscriptRange,
-} from "../../tool-panels/tool-panel-transcript";
+} from "../../tools/tool-panel-transcript";
 
 /** A caption typed into on the picture, as Rust compared it with what it
  * showed: all the words spelled another way and taken out whole so far,

@@ -16,7 +16,7 @@ import { Badge } from "../../../../primitives/badge/badge";
 import { IconButton } from "../../../../primitives/button/icon-button";
 import { formatBytes } from "../../duration";
 
-import type { ToolPanelExport } from "../../tool-panels/tool-panel-export";
+import type { ToolPanelExport } from "../../tools/tool-panel-export";
 
 /** How far the pointer moves, pressed on the file, before it is a drag. */
 const DRAG_THRESHOLD_PX = 3;

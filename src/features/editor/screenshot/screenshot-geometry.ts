@@ -1,48 +1,20 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-/** A rectangle in a named space. The space is a comment for readers rather
- * than a type-level brand: the Rust models do not distinguish source and
- * canvas rects, so ts-rs cannot reproduce the distinction. */
-type Rect<_Space extends "canvas" | "source"> = {
+/** A rectangle on the source image, in shares of its width and height. */
+export type SourceRect = {
   height: number;
   width: number;
   x: number;
   y: number;
-};
-
-export type CanvasRect = Rect<"canvas">;
-export type SourceRect = Rect<"source">;
-
-export type CanvasGeometry = {
-  /** The outer visible layer frame, including any Recenter inset. */
-  frame: CanvasRect;
-  /** The uniform source-image transform in canvas document coordinates. */
-  sourceToCanvas: {
-    scale: number;
-    x: number;
-    y: number;
-  };
 };
 
 const clamp = (value: number, minimum: number, maximum: number) =>
   Math.min(maximum, Math.max(minimum, value));
 
-const assertFiniteRect = (value: {
-  height: number;
-  width: number;
-  x: number;
-  y: number;
-}) => {
+const assertFiniteRect = (value: SourceRect) => {
   if (Object.values(value).some((coordinate) => !Number.isFinite(coordinate)))
     throw new Error("Rectangle coordinates must be finite");
-};
-
-export const canvasRect = (value: CanvasRect): CanvasRect => {
-  assertFiniteRect(value);
-  if (value.width <= 0 || value.height <= 0)
-    throw new Error("Canvas rectangles must have positive dimensions");
-  return { ...value };
 };
 
 export const sourceRect = (value: SourceRect): SourceRect => {
@@ -83,43 +55,4 @@ export const translateSourceRect = (
         ? bounds.y
         : clamp(rect.y + delta.y, bounds.y, bounds.y + bounds.height - height),
   });
-};
-
-export const translateCanvasGeometry = (
-  geometry: CanvasGeometry,
-  delta: { x: number; y: number },
-): CanvasGeometry => ({
-  frame: canvasRect({
-    ...geometry.frame,
-    x: geometry.frame.x + delta.x,
-    y: geometry.frame.y + delta.y,
-  }),
-  sourceToCanvas: {
-    ...geometry.sourceToCanvas,
-    x: geometry.sourceToCanvas.x + delta.x,
-    y: geometry.sourceToCanvas.y + delta.y,
-  },
-});
-
-export const scaleCanvasGeometry = (
-  geometry: CanvasGeometry,
-  anchor: { x: number; y: number },
-  scale: number,
-): CanvasGeometry => {
-  const factor = Math.max(0.01, scale);
-  const transform = (value: number, pivot: number) =>
-    pivot + (value - pivot) * factor;
-  return {
-    frame: canvasRect({
-      height: geometry.frame.height * factor,
-      width: geometry.frame.width * factor,
-      x: transform(geometry.frame.x, anchor.x),
-      y: transform(geometry.frame.y, anchor.y),
-    }),
-    sourceToCanvas: {
-      scale: geometry.sourceToCanvas.scale * factor,
-      x: transform(geometry.sourceToCanvas.x, anchor.x),
-      y: transform(geometry.sourceToCanvas.y, anchor.y),
-    },
-  };
 };

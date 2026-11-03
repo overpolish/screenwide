@@ -569,17 +569,6 @@ export type Messages = {
   "editor-island-vocal-cleanup": null;
   "editor-island-voice-cleaning": null;
   "editor-island-width": null;
-  "editor-lane-arrow": { number: string | number };
-  "editor-lane-counter": { number: string | number };
-  "editor-lane-drawing": { number: string | number };
-  "editor-lane-focus": { number: string | number };
-  "editor-lane-highlight": { number: string | number };
-  "editor-lane-image": { number: string | number };
-  "editor-lane-magnifier": { number: string | number };
-  "editor-lane-redaction": { number: string | number };
-  "editor-lane-shape": { number: string | number };
-  "editor-lane-spotlight": { number: string | number };
-  "editor-lane-text": { number: string | number };
   "editor-layer-actions": null;
   "editor-opening": null;
   "editor-pin-clear-corrections": null;

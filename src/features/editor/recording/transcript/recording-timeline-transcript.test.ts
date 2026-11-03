@@ -23,7 +23,7 @@ import {
   restoreRecordingTranscriptRanges,
 } from "./recording-timeline-transcript";
 
-import type { TranscriptWord } from "../../tool-panels/transcript/transcript-words";
+import type { TranscriptWord } from "../../tools/transcript/transcript-words";
 
 /** A 100-second recording, so a millisecond is a hundred-thousandth. */
 const DURATION_MS = 100_000;

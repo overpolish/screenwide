@@ -16,7 +16,7 @@ import { comparedPlacement } from "./export-compare-placement";
 import type {
   ToolPanelComparedFrame,
   ToolPanelExportCompare,
-} from "../../tool-panels/tool-panel-export";
+} from "../../tools/tool-panel-export";
 
 /** How far a frame larger than the box sits from its centre at most. */
 const clampOffset = (offset: number, frame: number, box: number) =>

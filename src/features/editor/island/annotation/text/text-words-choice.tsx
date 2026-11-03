@@ -9,7 +9,7 @@ import { PillGroup } from "../../../../../primitives/pill-group/pill-group";
 import {
   isChosenWord,
   textWordLines,
-} from "../../../tool-panels/annotation/text/text-words";
+} from "../../../tools/annotation/text/text-words";
 
 import type { TextSpan } from "../../../../../bindings/TextSpan";
 

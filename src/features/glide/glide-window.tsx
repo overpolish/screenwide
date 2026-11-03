@@ -5,14 +5,13 @@ import { convertFileSrc } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { useEffect, useState } from "react";
 
-import {
-  type GlideAction,
-  type GlideDetection,
-} from "./detection/glide-detection";
-import { type GlideRegion, sameRegion } from "./detection/glide-regions";
 import { type GlideFit } from "./glide-geometry";
+import { type GlideRegion, sameRegion } from "./glide-regions";
 import { GlideIsland } from "./island/glide-island";
 import { type GlideIslandPhase } from "./island/glide-island-types";
+
+import type { GlideAction } from "../../bindings/GlideAction";
+import type { GlideDetection } from "../../bindings/GlideDetection";
 
 type GlideInputEvent =
   | { detection: GlideDetection; type: "detection" }

@@ -5,7 +5,7 @@ import process, { argv, env, exit, platform } from "node:process";
 
 import { spawnPnpm } from "./pnpm.mjs";
 
-const DEFAULT_STORY = "primitives-alert--paragraph";
+const DEFAULT_STORY = "primitives-alert--default";
 const STORYBOOK_ORIGIN = "http://localhost:6006";
 
 const arguments_ = argv.slice(2);

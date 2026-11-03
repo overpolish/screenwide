@@ -9,8 +9,8 @@ import {
 } from "../../export/export-file-api";
 import { exportIsland } from "../export/export-island";
 
-import type { ToolPanelPatch } from "../../tool-panels/tool-panel-patch";
-import type { ToolPanelSnapshot } from "../../tool-panels/tool-panel-store";
+import type { ToolPanelPatch } from "../../tools/tool-panel-patch";
+import type { ToolPanelSnapshot } from "../../tools/tool-panel-store";
 import type { EditorKind } from "../../types";
 import type { EditorIslandContent } from "../editor-island";
 

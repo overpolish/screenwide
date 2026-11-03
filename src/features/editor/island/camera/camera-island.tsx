@@ -23,7 +23,7 @@ import { CameraBackgroundLine } from "./camera-background-line";
 import { EnhanceGlyph, RemoveBackgroundGlyph } from "./camera-glyphs";
 import { CameraObjectsLine } from "./camera-objects-line";
 
-import type { ToolPanelCameraEffects } from "../../tool-panels/tool-panel-selection";
+import type { ToolPanelCameraEffects } from "../../tools/tool-panel-selection";
 import type { EditorIslandContent } from "../editor-island";
 import type { ScreenIslandProps } from "../screen/screen-island";
 

@@ -16,7 +16,7 @@ import { useRecordingTimelineBlade } from "../../timeline/editing/use-recording-
 import { useRecordingTrimPreview } from "../../timeline/editing/use-recording-trim-preview";
 import { Playhead } from "../../timeline/scrub-playhead";
 import { useRecordingTimelineThumbnails } from "../../timeline/tracks/use-recording-timeline-thumbnails";
-import { isAnnotationTool } from "../../tool-panels/tool-registry";
+import { isAnnotationTool } from "../../tools/tool-registry";
 import { RecordingVideoTrackId } from "../../types";
 import { useRecordingAnnotations } from "../annotations/use-recording-annotations";
 import { useRecordingScenes } from "../scenes/use-recording-scenes";

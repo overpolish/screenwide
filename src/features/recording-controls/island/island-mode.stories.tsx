@@ -6,7 +6,7 @@ import {
   PREVIEW_MANY_DISPLAYS,
   PREVIEW_REGIONS,
   PREVIEW_WINDOWS,
-} from "./island-preview";
+} from "./island-fixtures";
 import { islandMeta } from "./island-story-meta";
 
 import type { IslandStage } from "./island-stage";

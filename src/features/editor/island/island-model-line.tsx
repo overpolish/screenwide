@@ -8,7 +8,7 @@ import { Button } from "../../../primitives/button/button";
 import { ProgressBar } from "../../../primitives/progress-bar/progress-bar";
 import { formatBytes } from "../duration";
 
-import type { ToolPanelModel } from "../tool-panels/tool-panel-selection";
+import type { ToolPanelModel } from "../tools/tool-panel-selection";
 
 /** A tool whose model is not on this computer yet, fetched from right here
  * rather than from Settings, on every island alike: the tool's name and the

@@ -150,8 +150,10 @@ pub(super) fn capture_system_packets(
         vec![0.0; sample_count]
       } else {
         bytes[..sample_count * size_of::<f32>()]
-          .chunks_exact(4)
-          .map(|chunk| f32::from_ne_bytes(chunk.try_into().unwrap_or([0; 4])))
+          .as_chunks::<4>()
+          .0
+          .iter()
+          .map(|chunk| f32::from_ne_bytes(*chunk))
           .collect::<Vec<_>>()
       };
       monitor.send_system_audio(&samples);

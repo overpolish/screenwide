@@ -15,12 +15,12 @@ import {
   canBreakIn,
   withBreak,
   withChoice,
-} from "../../tool-panels/captions/caption-word-choices";
+} from "../../tools/captions/caption-word-choices";
 import {
   CaptionMenuAction,
   captionMenuItems,
-} from "../../tool-panels/captions/use-caption-menu";
-import { middleOf } from "../../tool-panels/transcript/transcript-words";
+} from "../../tools/captions/use-caption-menu";
+import { middleOf } from "../../tools/transcript/transcript-words";
 import { useEditorEditGesture } from "../../use-editor-edit-history";
 import { restoreRecordingTranscriptSpelling } from "../transcript/recording-timeline-transcript";
 import { TranscriptTools } from "../transcript/use-transcript-tools";
@@ -30,7 +30,7 @@ import { CaptionsPatch } from "./recording-captions";
 
 import type { RecordingCaptions } from "../../../../bindings/RecordingCaptions";
 import type { RecordingTimelineEdit } from "../../timeline/editing/recording-timeline-edit";
-import type { TranscriptRange } from "../../tool-panels/tool-panel-transcript";
+import type { TranscriptRange } from "../../tools/tool-panel-transcript";
 
 const MENU_WIDTH = 200;
 

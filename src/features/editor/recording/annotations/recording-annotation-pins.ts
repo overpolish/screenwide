@@ -81,24 +81,6 @@ export const clearedPinCorrections = (
   pinnedMs: pin.pinnedMs,
 });
 
-/** `pin` without its keyframe at `ms`. The last keyframe is the pin itself
- * and is kept; taking the one it was made on hands that role to the nearest
- * one left. */
-export const withoutPinKeyframe = (
-  pin: RecordingAnnotationPin,
-  ms: number,
-): RecordingAnnotationPin => {
-  const keyframes = pin.keyframes.filter((keyframe) => keyframe.ms !== ms);
-  if (keyframes.length === 0) return pin;
-  const nearest = keyframes.reduce((best, keyframe) =>
-    Math.abs(keyframe.ms - ms) < Math.abs(best.ms - ms) ? keyframe : best,
-  );
-  return {
-    keyframes,
-    pinnedMs: ms === pin.pinnedMs ? nearest.ms : pin.pinnedMs,
-  };
-};
-
 /** `pin` put at `keyframe`, which takes the place of any keyframe already
  * that close to its moment, keeping that one's size unless it brings its
  * own: a size is only ever changed by a resize. */

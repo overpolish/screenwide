@@ -15,7 +15,7 @@ import {
 import { useEditorExportIsland } from "../export/use-editor-export-island";
 import { EditorTitleModeBar } from "../title-bar/editor-mode-bar";
 import { EditorTitleBar } from "../title-bar/editor-title-bar";
-import { useEditorToolPanels } from "../tool-panels/use-editor-tool-panels";
+import { useEditorToolPanels } from "../tools/use-editor-tool-panels";
 import { currentEditorKind } from "../window-kind";
 
 import { ChromeSetBack } from "./chrome-set-back";

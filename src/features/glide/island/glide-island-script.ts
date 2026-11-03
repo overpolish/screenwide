@@ -1,8 +1,8 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { type GlideRegion } from "../detection/glide-regions";
 import { type Beat, usePlayback } from "../glide-playback";
+import { type GlideRegion } from "../glide-regions";
 
 import type { GlideIslandState } from "./glide-island-types";
 

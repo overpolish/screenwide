@@ -3,13 +3,13 @@
 
 import type { RecordingCaptions } from "../../../../bindings/RecordingCaptions";
 import type { CaptionsPatch } from "../../recording/captions/recording-captions";
-import type { CaptionText } from "../../tool-panels/captions/caption-text";
+import type { CaptionText } from "../../tools/captions/caption-text";
 import type {
   ToolPanelTranscript,
   TranscriptCorrection,
-} from "../../tool-panels/tool-panel-transcript";
-import type { TranscriptEditingProps } from "../../tool-panels/transcript/use-transcript-editing";
-import type { TranscriptMark } from "../../tool-panels/transcript/use-transcript-marks";
+} from "../../tools/tool-panel-transcript";
+import type { TranscriptEditingProps } from "../../tools/transcript/use-transcript-editing";
+import type { TranscriptMark } from "../../tools/transcript/use-transcript-marks";
 import type { IslandTranscript } from "../island-transcript";
 
 /** Words' spelling put right, or back to what was heard, in the

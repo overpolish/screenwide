@@ -121,7 +121,7 @@ mod tests {
       0,
       "the arrow stem must remain hollow"
     );
-    for row in coverage.chunks_exact(80) {
+    for row in coverage.as_chunks::<80>().0 {
       assert!(row[40..].iter().all(|value| *value == 0));
     }
   }

@@ -15,7 +15,7 @@ import {
   annotationToolName,
 } from "../../annotations/annotation-text";
 import { EDITOR_LEFT_COLUMN } from "../editor-left-column";
-import { ANNOTATION_TOOLS } from "../tool-panels/tool-registry";
+import { ANNOTATION_TOOLS } from "../tools/tool-registry";
 
 import { annotationToolLayout } from "./annotation-tool-layout";
 import { type EditorKind } from "./editor-modes";

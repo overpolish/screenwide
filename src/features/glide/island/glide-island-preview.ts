@@ -4,8 +4,8 @@
 import { cell, IDLE } from "./glide-island-script";
 
 import type { GlideIslandState } from "./glide-island-types";
-import type { GlideRegion } from "../detection/glide-regions";
 import type { GlideFit } from "../glide-geometry";
+import type { GlideRegion } from "../glide-regions";
 
 // The states the island's stories show, and every region it draws.
 

@@ -107,7 +107,7 @@ export function NativeRecordingWorkspaceViewport({
     >
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-0 -z-10 bg-black/5 dark:bg-black/25"
+        className="pointer-events-none absolute inset-0 -z-10 bg-recess"
         data-preview-backdrop
       />
       <div

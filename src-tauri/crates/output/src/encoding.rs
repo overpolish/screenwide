@@ -247,13 +247,14 @@ pub fn encode_jpeg(image: &CapturedImage) -> Result<Vec<u8>, String> {
   };
   let rgb: Vec<u8> = image
     .rgba
-    .chunks_exact(4)
-    .flat_map(|pixel| {
-      let alpha = pixel[3];
+    .as_chunks::<4>()
+    .0
+    .iter()
+    .flat_map(|&[red, green, blue, alpha]| {
       [
-        over_white(pixel[0], alpha),
-        over_white(pixel[1], alpha),
-        over_white(pixel[2], alpha),
+        over_white(red, alpha),
+        over_white(green, alpha),
+        over_white(blue, alpha),
       ]
     })
     .collect();

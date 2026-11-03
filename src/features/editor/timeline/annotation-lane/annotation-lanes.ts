@@ -139,8 +139,3 @@ export function restack(
     ),
   );
 }
-
-/** The annotations back to front, as the picture draws them: the bottom
- * lane first. Within a lane, as given. */
-export const renderOrder = <T extends Laned>(annotations: T[]) =>
-  [...annotations].sort((first, second) => second.lane - first.lane);

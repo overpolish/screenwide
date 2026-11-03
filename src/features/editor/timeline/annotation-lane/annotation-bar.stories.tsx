@@ -7,7 +7,7 @@ import { fn } from "storybook/test";
 import { featureStage } from "../../../../storybook/feature-story-stage";
 import { StoryGrid, StoryGridRow } from "../../../../storybook/story-grid";
 import { useRestingAction } from "../../../../storybook/use-resting-action";
-import { ANNOTATION_TOOLS } from "../../tool-panels/tool-registry";
+import { ANNOTATION_TOOLS } from "../../tools/tool-registry";
 import { recordedTime, timelineScale } from "../timeline-scale";
 
 import {

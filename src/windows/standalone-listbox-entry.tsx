@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { ToolPanelSync } from "../features/editor/tool-panels/tool-panel-sync";
+import { ToolPanelSync } from "../features/editor/tools/tool-panel-sync";
 import { PopupPanelSync } from "../features/popup-panel/popup-panel-sync";
 import { PopupPanelWindow } from "../features/popup-panel/popup-panel-window";
 

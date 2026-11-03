@@ -6,10 +6,7 @@ import {
   RecordingOutputSettings,
   screenshotOutputDimensions,
 } from "../../screenshot/screenshot-output";
-import {
-  drawingToolKind,
-  isAnnotationTool,
-} from "../../tool-panels/tool-registry";
+import { drawingToolKind, isAnnotationTool } from "../../tools/tool-registry";
 import { CameraOverlaySettings, RecordingVideoTrackId } from "../../types";
 
 import { RecordingCanvasTool } from "./recording-canvas-tool";

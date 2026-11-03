@@ -5,7 +5,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 import { t } from "../../../../i18n/i18n";
 import { RecordingTimelineEdit } from "../../timeline/editing/recording-timeline-edit";
-import { middleOf } from "../../tool-panels/transcript/transcript-words";
+import { middleOf } from "../../tools/transcript/transcript-words";
 import { EditorArtifact, EditorKind } from "../../types";
 import { useEditorEditGesture } from "../../use-editor-edit-history";
 import { MicrophoneTools } from "../microphone/use-microphone-tools";
@@ -39,8 +39,8 @@ import type {
   ToolPanelTranscript,
   TranscriptRange,
   TranscriptRequest,
-} from "../../tool-panels/tool-panel-transcript";
-import type { TranscriptWord } from "../../tool-panels/transcript/transcript-words";
+} from "../../tools/tool-panel-transcript";
+import type { TranscriptWord } from "../../tools/transcript/transcript-words";
 
 /** The Transcript tool's asks and what the panel shows of it. */
 export type TranscriptTools = {

@@ -27,7 +27,7 @@ import type { CameraKey } from "../../../bindings/CameraKey";
 import type { ExportSubtitles } from "../../../bindings/ExportSubtitles";
 import type { ScreenshotFormat } from "../../../bindings/ScreenshotFormat";
 import type { ExportLookQuality } from "../export/editor-export";
-import type { ToolPanelExportCompare } from "../tool-panels/tool-panel-export";
+import type { ToolPanelExportCompare } from "../tools/tool-panel-export";
 
 export type EditorPanelProps = {
   artifact: EditorArtifact | null;

@@ -10,7 +10,7 @@ import { normalizedScreenshotSelection } from "../../screenshot/screenshot-selec
 import {
   keepsShape,
   recordingCropAspectKey,
-} from "../../tool-panels/crop/crop-aspect-store";
+} from "../../tools/crop/crop-aspect-store";
 
 import { RecordingCanvasTool } from "./recording-canvas-tool";
 

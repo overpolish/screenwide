@@ -5,9 +5,9 @@ import { t } from "../../../../i18n/i18n";
 import { Button } from "../../../../primitives/button/button";
 import { IslandFlow } from "../../../../primitives/island/island-flow";
 import { CornerChoice } from "../../../annotations/options/corner-choice";
-import { DimensionsField } from "../../tool-panels/dimensions/dimensions-field";
-import { BackgroundTiles } from "../../tool-panels/frame/background/background-tiles";
-import { useBackgroundChoice } from "../../tool-panels/frame/background/use-background-choice";
+import { DimensionsField } from "../../tools/dimensions/dimensions-field";
+import { BackgroundTiles } from "../../tools/frame/background/background-tiles";
+import { useBackgroundChoice } from "../../tools/frame/background/use-background-choice";
 import { AnnotationLine } from "../annotation/annotation-island-parts";
 import { PICTURE_CORNERS } from "../picture-corners";
 

@@ -442,7 +442,9 @@ fn hovered_artifacts_add_their_halo_before_the_line() {
   let mut out = Vec::new();
   ruler.add_world_vertices(&mut out, view, 1.0, 1, Point::default(), Instant::now());
   let kinds = out
-    .chunks_exact(6)
+    .as_chunks::<6>()
+    .0
+    .iter()
     .map(|quad| quad[0].kind)
     .collect::<Vec<_>>();
   // The halo goes down first, so the line and its casing stay on top of it.

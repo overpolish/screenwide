@@ -7,11 +7,11 @@ import { FrameToolIcon } from "../../glyphs/frame-tool-icon";
 
 import { FrameSection } from "./frame-section";
 
-import type { DimensionsChange } from "../../tool-panels/dimensions/dimensions-field";
+import type { DimensionsChange } from "../../tools/dimensions/dimensions-field";
 import type {
   Background,
   BackgroundPreset,
-} from "../../tool-panels/frame/background/background";
+} from "../../tools/frame/background/background";
 import type { EditorIslandContent } from "../editor-island";
 
 // The finished picture: how big it is, how round its corners are and what

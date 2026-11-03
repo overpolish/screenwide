@@ -63,7 +63,12 @@ impl Engine {
       let length = cell.0 as usize * cell.1 as usize * 4;
       let raster = unsafe { std::slice::from_raw_parts(bits.cast::<u8>(), length) };
       // White type over black: any one channel is its coverage.
-      raster.chunks_exact(4).map(|pixel| pixel[2]).collect()
+      raster
+        .as_chunks::<4>()
+        .0
+        .iter()
+        .map(|pixel| pixel[2])
+        .collect()
     });
     unsafe {
       SelectObject(self.dc, old_bitmap);

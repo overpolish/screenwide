@@ -50,8 +50,6 @@ export type AnnotationKindRow<Shape extends AnnotationShape> =
     hasSize: boolean;
     /** Whether its edge can fade in from its box, which is its own to choose. */
     hasSoftness: boolean;
-    /** What the timeline lane calls one, `index` being its place in the lane. */
-    laneLabel: (shape: Shape, index: number) => string;
     /** The shape as stored, or null where the compositor could not place it. */
     parseShape: (value: unknown) => Shape | null;
     /** Whether it can be turned round end for end, or for an image,

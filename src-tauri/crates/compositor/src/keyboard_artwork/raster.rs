@@ -130,7 +130,7 @@ fn compose(
       }
     }
   }
-  for (pixel, text) in pixels.chunks_exact_mut(4).zip(coverage) {
+  for (pixel, text) in pixels.as_chunks_mut::<4>().0.iter_mut().zip(coverage) {
     if *text == 0 {
       continue;
     }

@@ -16,8 +16,8 @@ import { RecordingStripBand } from "../../timeline/recording-strip/recording-str
 import { createPlayhead } from "../../timeline/scrub-playhead";
 import { useRecordingPreviewTracks } from "../../timeline/tracks/use-recording-preview-tracks";
 import { usePublishEditorModes } from "../../title-bar/editor-title-modes";
-import { drawingToolKind } from "../../tool-panels/tool-registry";
 import { EditorToolColumn } from "../../toolbar/editor-tool-column";
+import { drawingToolKind } from "../../tools/tool-registry";
 import { useEditorEditGesture } from "../../use-editor-edit-history";
 import { useCopyRecordingFrame } from "../use-copy-recording-frame";
 import { useProjectStill } from "../use-project-still";

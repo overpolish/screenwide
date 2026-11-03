@@ -11,10 +11,7 @@ import {
   recordingTimelineRetainedDuration,
   setRecordingTimelineSegmentPlaybackRate,
 } from "./recording-timeline-edit";
-import {
-  recordingTimelineRangePlaybackRate,
-  setRecordingTimelineRangePlaybackRate,
-} from "./recording-timeline-speed";
+import { setRecordingTimelineRangePlaybackRate } from "./recording-timeline-speed";
 
 describe("recording timeline range speed", () => {
   it("splits one segment at both selected output boundaries", () => {
@@ -43,8 +40,6 @@ describe("recording timeline range speed", () => {
   it("maps a cross-segment selection through each existing rate", () => {
     const cut = cutRecordingTimeline(createRecordingTimelineEdit(42), 0.5);
     const mixed = setRecordingTimelineSegmentPlaybackRate(cut, 1, 0.5);
-    expect(recordingTimelineRangePlaybackRate(mixed, 0, 1)).toBeUndefined();
-
     const edit = setRecordingTimelineRangePlaybackRate(mixed, {
       outputEnd: 2 / 3,
       outputStart: 1 / 6,
@@ -97,7 +92,6 @@ describe("recording timeline range speed", () => {
         playbackRate: Number.NaN,
       }),
     ).toBe(initial);
-    expect(recordingTimelineRangePlaybackRate(initial, 0.2, 0.8)).toBe(1);
   });
 
   it("inherits segment-keyed shortcut deletions across every split piece", () => {

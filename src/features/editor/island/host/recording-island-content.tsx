@@ -6,8 +6,8 @@ import { keyboardIsland } from "../keyboard/keyboard-island";
 import { soundIsland, type SoundTool } from "../sound/sound-island";
 import { tracksIsland } from "../tracks/tracks-island";
 
-import type { ToolPanelPatch } from "../../tool-panels/tool-panel-patch";
-import type { ToolPanelSnapshot } from "../../tool-panels/tool-panel-store";
+import type { ToolPanelPatch } from "../../tools/tool-panel-patch";
+import type { ToolPanelSnapshot } from "../../tools/tool-panel-store";
 import type { EditorIslandContent } from "../editor-island";
 
 // The islands that hold something of the whole recording at once: how the

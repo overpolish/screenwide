@@ -117,7 +117,7 @@ pub(super) fn capture(monitor: &xcap::Monitor) -> Result<RgbaImage, String> {
 
     // GDI stores 32 bit BI_RGB pixels as BGRA. The alpha byte is undefined
     // for a screen DC, so normalize it while converting to image::RgbaImage.
-    for pixel in pixels.chunks_exact_mut(4) {
+    for pixel in pixels.as_chunks_mut::<4>().0 {
       pixel.swap(0, 2);
       pixel[3] = 255;
     }

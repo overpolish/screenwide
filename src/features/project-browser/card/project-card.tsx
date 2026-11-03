@@ -14,7 +14,7 @@ import { Text } from "../../../primitives/text/text";
 import { formatBytes } from "../../editor/duration";
 import { beatLabel } from "../../editor/timeline/beat-clip/beat-label";
 import { Minimap } from "../../editor/timeline/minimap/minimap";
-import { foundText } from "../../editor/tool-panels/transcript/transcript-found-text";
+import { foundText } from "../../editor/tools/transcript/transcript-found-text";
 import {
   boundsAnchor,
   PopupMenuAnchor,

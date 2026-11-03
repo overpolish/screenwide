@@ -4,8 +4,8 @@
 import { useEffect } from "react";
 import { create } from "zustand";
 
-import type { ToolPanelTranscript } from "../../tool-panels/tool-panel-transcript";
-import type { TranscriptWord } from "../../tool-panels/transcript/transcript-words";
+import type { ToolPanelTranscript } from "../../tools/tool-panel-transcript";
+import type { TranscriptWord } from "../../tools/transcript/transcript-words";
 
 /**
  * Which transcript the editor holds of the recording open, published by the

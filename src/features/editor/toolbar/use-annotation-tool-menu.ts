@@ -8,7 +8,7 @@ import {
   closePopupMenu,
   usePopupMenu,
 } from "../../popup-panel/use-popup-menu";
-import { ANNOTATION_TOOLS, AnnotationTool } from "../tool-panels/tool-registry";
+import { ANNOTATION_TOOLS, AnnotationTool } from "../tools/tool-registry";
 
 const MENU_PREFIX = "annotation-tools:";
 /** The longest label and its shortcut key, with room to spare. */

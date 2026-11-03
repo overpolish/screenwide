@@ -10,7 +10,7 @@ import { IslandFlow } from "../../../../primitives/island/island-flow";
 import { IslandRowTitle } from "../../../../primitives/island/row-title/island-row-title";
 import { PositionGrid } from "../../../../primitives/position-grid/position-grid";
 import { OptionToggle } from "../../../annotations/options/option-toggle";
-import { placementOptions } from "../../tool-panels/placement-options";
+import { placementOptions } from "../../tools/placement-options";
 import {
   AnnotationAnimateToggle,
   AnnotationLine,

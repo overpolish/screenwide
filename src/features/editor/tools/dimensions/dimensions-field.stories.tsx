@@ -43,7 +43,7 @@ const meta = {
       />
     );
   },
-  title: "Features/Editor/Tool Panels/Dimensions Field",
+  title: "Features/Editor/Tools/Dimensions Field",
 } satisfies Meta<typeof DimensionsField>;
 
 export default meta;

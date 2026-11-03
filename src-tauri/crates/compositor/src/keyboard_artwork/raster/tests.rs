@@ -37,13 +37,22 @@ fn artwork_pixels_stay_premultiplied() {
   );
   assert!(raster
     .pixels
-    .chunks_exact(4)
+    .as_chunks::<4>()
+    .0
+    .iter()
     .all(|pixel| pixel[0] <= pixel[3] && pixel[1] <= pixel[3] && pixel[2] <= pixel[3]));
   assert!(raster
     .pixels
-    .chunks_exact(4)
+    .as_chunks::<4>()
+    .0
+    .iter()
     .any(|pixel| pixel[3] > 0 && pixel[3] < 255));
-  assert!(raster.pixels.chunks_exact(4).any(|pixel| pixel[3] == 0));
+  assert!(raster
+    .pixels
+    .as_chunks::<4>()
+    .0
+    .iter()
+    .any(|pixel| pixel[3] == 0));
 }
 
 #[test]

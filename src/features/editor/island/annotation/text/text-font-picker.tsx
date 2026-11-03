@@ -17,7 +17,7 @@ import {
   fontInFamily,
   fontStyleId,
   fontStyles,
-} from "../../../tool-panels/text-style/text-fonts";
+} from "../../../tools/text-style/text-fonts";
 
 import { TextPickerLine } from "./text-picker-line";
 import { ItalicToggle } from "./text-toggles";

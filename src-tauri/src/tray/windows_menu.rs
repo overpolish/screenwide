@@ -215,7 +215,12 @@ fn make_bitmap(source: &'static [u8], size: u32) -> Option<HBITMAP> {
   }
   let dst =
     unsafe { std::slice::from_raw_parts_mut(bits.cast::<u8>(), (size * size * 4) as usize) };
-  for (dst, src) in dst.chunks_exact_mut(4).zip(source.chunks_exact(4)) {
+  for (dst, src) in dst
+    .as_chunks_mut::<4>()
+    .0
+    .iter_mut()
+    .zip(source.as_chunks::<4>().0)
+  {
     let a = u32::from(src[3]);
     dst.copy_from_slice(&[
       (u32::from(src[2]) * a / 255) as u8,

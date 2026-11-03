@@ -3,7 +3,7 @@
 
 import { type CropAspect } from "../../island/crop-aspect-choice";
 import { drawnCropRect } from "../../screenshot/screenshot-crop";
-import { sizeOfAspect } from "../../tool-panels/crop/crop-aspect-store";
+import { sizeOfAspect } from "../../tools/crop/crop-aspect-store";
 
 import { MIN_BOX_SHARE, movedSceneBox } from "./recording-scene-custom";
 import { framingWithin, placedPicture } from "./recording-scene-framing";

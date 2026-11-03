@@ -9,7 +9,7 @@ import { DEFAULT_CAPTION_SETTINGS } from "../../recording/captions/recording-cap
 import {
   STORY_TEXT_TEMPLATES,
   storyTextStyle,
-} from "../../tool-panels/text-style/text-template-fixtures";
+} from "../../tools/text-style/text-template-fixtures";
 import { EditorIslandStage } from "../editor-island-stage";
 import {
   editorIslandStoryMeta,

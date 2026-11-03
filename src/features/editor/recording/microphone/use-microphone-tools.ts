@@ -8,7 +8,7 @@ import {
   recordingTimelineSilenceSummary,
   removeRecordingTimelineSilences,
 } from "../../timeline/editing/recording-timeline-silences";
-import { ToolPanelMicrophone } from "../../tool-panels/tool-panel-store";
+import { ToolPanelMicrophone } from "../../tools/tool-panel-store";
 import { EditorArtifact } from "../../types";
 import { useEditorEditGesture } from "../../use-editor-edit-history";
 

@@ -14,7 +14,6 @@ import {
 import {
   clearedPinCorrections,
   pinnedClip,
-  withoutPinKeyframe,
   withPinKeyframe,
 } from "./recording-annotation-pins";
 import {
@@ -113,15 +112,6 @@ describe("pinned recording annotations", () => {
     expect(clearedPinCorrections(pin).keyframes).toEqual([
       { dx: 0, dy: 0, ms: 5_000 },
     ]);
-    // Removing the pinned frame hands its role to the keyframe left.
-    expect(withoutPinKeyframe(pin, 5_000)).toEqual({
-      keyframes: [{ dx: 3, dy: 1, ms: 6_000 }],
-      pinnedMs: 6_000,
-    });
-    expect(withoutPinKeyframe(withoutPinKeyframe(pin, 5_000), 6_000)).toEqual({
-      keyframes: [{ dx: 3, dy: 1, ms: 6_000 }],
-      pinnedMs: 6_000,
-    });
   });
 
   it("puts a keyframe in time order, over any at the same moment", () => {

@@ -1,6 +1,8 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import { t } from "../../../i18n/i18n";
+
 import type {
   IslandDisplay,
   IslandInput,
@@ -8,8 +10,10 @@ import type {
   IslandWindow,
 } from "./island-types";
 
-// Sample devices and displays for the island's stories. The input lists are
-// long enough to scroll, and the cameras come in several shapes.
+// Sample devices and displays for the island's stories and the Settings
+// stage. Device and app names stand in for the names the system reports,
+// which are never translated. The input lists are long enough to scroll, and
+// the cameras come in several shapes.
 
 /** A stand-in display still: a wallpaper of two colours, at a display's
  * shape. The app falls back to a plain fill where a still has not come. */
@@ -124,7 +128,7 @@ export const previewSystemAudio = (
   input: Partial<IslandInput> = {},
 ): IslandInput => ({
   devices: [
-    { id: "all", isPinned: true, label: "All audio" },
+    { id: "all", isPinned: true, label: t("recording-inputs-all-audio") },
     { icon: appIcon("#5ac8fa", "#0a64d6"), id: "safari", label: "Safari" },
     { icon: appIcon("#ff7a8a", "#e0294a"), id: "music", label: "Music" },
     { icon: appIcon("#5ee08a", "#1aa34a"), id: "spotify", label: "Spotify" },

@@ -5,8 +5,8 @@ import { useModel } from "../../recording/microphone/use-model";
 import { useNotePlayback } from "../../timeline/moments/use-note-playback";
 
 import type { NoteTranscript } from "../../timeline/moments/recording-moments";
-import type { ToolPanelModel } from "../../tool-panels/tool-panel-selection";
-import type { ToolPanelStripItem } from "../../tool-panels/tool-panel-strip";
+import type { ToolPanelModel } from "../../tools/tool-panel-selection";
+import type { ToolPanelStripItem } from "../../tools/tool-panel-strip";
 import type { MomentNote, MomentTranscript } from "../moment/moment-island";
 
 // The chosen moment's voice note, played here in the island's own window

@@ -8,7 +8,7 @@ import { AnnotationLine } from "../annotation/annotation-island-parts";
 
 import { BackgroundGlyph } from "./camera-glyphs";
 
-import type { ToolPanelCameraEffects } from "../../tool-panels/tool-panel-selection";
+import type { ToolPanelCameraEffects } from "../../tools/tool-panel-selection";
 
 type CameraBackground = ToolPanelCameraEffects["background"];
 

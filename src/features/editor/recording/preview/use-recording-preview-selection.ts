@@ -15,7 +15,7 @@ import {
 } from "../../screenshot/screenshot-output";
 import { createRecordingTimelineEdit } from "../../timeline/editing/recording-timeline-edit";
 import { useRecordingKeyboardTimelineEditing } from "../../timeline/keyboard/use-recording-keyboard-timeline-editing";
-import { useCropAspectStore } from "../../tool-panels/crop/crop-aspect-store";
+import { useCropAspectStore } from "../../tools/crop/crop-aspect-store";
 import { RecordingVideoTrackId } from "../../types";
 import { useEditorEditGesture } from "../../use-editor-edit-history";
 import { useCaptionSelection } from "../captions/use-caption-selection";

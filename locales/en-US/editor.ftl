@@ -60,20 +60,6 @@ editor-scene-screen-only = Screen only
 editor-scene-side-by-side = Side by side
 editor-scene-stacked = Stacked
 
-## Annotations on the timeline lane, named by kind and place in the lane
-
-editor-lane-arrow = Arrow { $number }
-editor-lane-counter = Counter { $number }
-editor-lane-drawing = Drawing { $number }
-editor-lane-focus = Focus { $number }
-editor-lane-highlight = Highlight { $number }
-editor-lane-image = Image { $number }
-editor-lane-magnifier = Magnifier { $number }
-editor-lane-redaction = Redaction { $number }
-editor-lane-shape = Shape { $number }
-editor-lane-spotlight = Spotlight { $number }
-editor-lane-text = Text { $number }
-
 ## annotation.
 
 editor-pin-pin = Pin to Content

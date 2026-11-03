@@ -3,12 +3,8 @@
 
 import { describe, expect, it } from "vitest";
 
-import { withoutIsolates } from "../../../i18n/testing";
-import { storyTextStyle } from "../tool-panels/text-style/text-template-fixtures";
-
 import { renumberedCounterLists } from "./annotation-counters";
 import { validAnnotations } from "./annotation-documents";
-import { annotationLaneLabel } from "./annotation-kind-lookup";
 import { Annotation } from "./annotations";
 
 const arrow = (id: string): Annotation => ({
@@ -227,25 +223,5 @@ describe("validAnnotations", () => {
       },
     ]);
     expect(read.style.align).toBe("left");
-  });
-});
-
-describe("annotationLaneLabel", () => {
-  it("calls a text box by its first line, and by its place when that is empty", () => {
-    const box = (text: string): Annotation => ({
-      ...counter("t", 1),
-      shape: {
-        kind: "text",
-        look: storyTextStyle("label"),
-        origin: { x: 0, y: 0 },
-        text,
-      },
-    });
-    expect(annotationLaneLabel(box("Save here\nthen quit"), 2)).toBe(
-      "Save here",
-    );
-    expect(withoutIsolates(annotationLaneLabel(box("\nsecond"), 2))).toBe(
-      "Text 3",
-    );
   });
 });

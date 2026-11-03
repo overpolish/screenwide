@@ -7,8 +7,8 @@ import { momentIsland } from "../moment/moment-island";
 import { rangeIsland } from "../range/range-island";
 import { stripGroupIsland } from "../strip-group/strip-group-island";
 
-import type { ToolPanelPatch } from "../../tool-panels/tool-panel-patch";
-import type { ToolPanelStripItem } from "../../tool-panels/tool-panel-strip";
+import type { ToolPanelPatch } from "../../tools/tool-panel-patch";
+import type { ToolPanelStripItem } from "../../tools/tool-panel-strip";
 import type { EditorIslandContent } from "../editor-island";
 import type { EditorIslandKind } from "./editor-island-kind";
 import type { MomentNoteState } from "./use-moment-note";

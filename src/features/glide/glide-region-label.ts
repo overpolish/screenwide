@@ -3,11 +3,11 @@
 
 import { t } from "../../i18n/i18n";
 
-import { type GlideAction } from "./detection/glide-detection";
-import { glideGridRows, type GlideRegion } from "./detection/glide-regions";
+import { glideGridRows, type GlideRegion } from "./glide-regions";
 
-// Regions named in the app's language, the way `describeRegion` names them in
-// English for debugging.
+import type { GlideAction } from "../../bindings/GlideAction";
+
+// Regions named in the app's language.
 
 const columnLabel = ({ colSpan, colStart, gridCols }: GlideRegion) => {
   if (colSpan === gridCols) return null;

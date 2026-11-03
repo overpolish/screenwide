@@ -7,7 +7,7 @@ import { NumberField } from "../../../../primitives/input-fields/number-field";
 import { IslandFlow } from "../../../../primitives/island/island-flow";
 import { PositionGrid } from "../../../../primitives/position-grid/position-grid";
 import { CAPTION_WORDS } from "../../recording/captions/recording-captions";
-import { placementOptions } from "../../tool-panels/placement-options";
+import { placementOptions } from "../../tools/placement-options";
 import { AnnotationLine } from "../annotation/annotation-island-parts";
 import { TextColors } from "../annotation/text/text-colors";
 import { TextLookPickers } from "../annotation/text/text-look-pickers";

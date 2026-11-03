@@ -4,10 +4,7 @@
 import { type ReactNode } from "react";
 
 import { PillGroup } from "../../../primitives/pill-group/pill-group";
-import {
-  OVERLAY_SIZES,
-  useOverlaySizeLabel,
-} from "../tool-panels/placement-options";
+import { OVERLAY_SIZES, useOverlaySizeLabel } from "../tools/placement-options";
 
 import type { OverlaySize } from "../../../bindings/OverlaySize";
 

@@ -22,7 +22,7 @@ import type { ScreenshotWorkspaceOutputSettings } from "../screenshot/screenshot
 import type {
   ToolPanelComparedFrame,
   ToolPanelExportCompare,
-} from "../tool-panels/tool-panel-export";
+} from "../tools/tool-panel-export";
 
 /** Long enough that stepping through the looks, or a playhead dragged,
  * asks for the pictures once, where it stops. */

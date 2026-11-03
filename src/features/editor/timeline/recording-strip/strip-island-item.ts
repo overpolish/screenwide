@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { type ToolPanelStripItem } from "../../tool-panels/tool-panel-strip";
+import { type ToolPanelStripItem } from "../../tools/tool-panel-strip";
 import { type RecordingMoment } from "../moments/recording-moments";
 import { baseOf } from "../strip/strip-part";
 import { type StripSelection } from "../strip/strip-selection";

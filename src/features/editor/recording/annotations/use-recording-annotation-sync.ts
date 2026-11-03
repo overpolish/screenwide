@@ -15,7 +15,7 @@ import {
 } from "../../annotations/annotation-defaults";
 import { RecordingTimelineEdit } from "../../timeline/editing/recording-timeline-edit";
 import { recordingTimelinePlaybackRanges } from "../../timeline/recording-timeline-playback";
-import { drawingToolKind } from "../../tool-panels/tool-registry";
+import { drawingToolKind } from "../../tools/tool-registry";
 import { RecordingVideoTrackId } from "../../types";
 
 import { RecordingAnnotationClip } from "./recording-annotations";

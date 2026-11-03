@@ -5,7 +5,7 @@ import { RefObject, useCallback, useEffect, useMemo, useRef } from "react";
 
 import { useSelectToolMemory } from "../../annotations/use-select-tool-memory";
 import { toolDisagreesWithAnnotation } from "../../annotations/use-tool-follows-annotation";
-import { drawingToolKind } from "../../tool-panels/tool-registry";
+import { drawingToolKind } from "../../tools/tool-registry";
 import { RecordingTrackId, RecordingVideoTrackId } from "../../types";
 
 import { RecordingCanvasTool } from "./recording-canvas-tool";

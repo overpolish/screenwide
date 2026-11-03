@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import type { ToolPanelComparedFrame } from "../../tool-panels/tool-panel-export";
+import type { ToolPanelComparedFrame } from "../../tools/tool-panel-export";
 
 /**
  * Where the exported picture is drawn over the Original one, in the

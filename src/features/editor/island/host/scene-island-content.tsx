@@ -10,12 +10,12 @@ import {
   fittedTemplateBoxes,
 } from "../../recording/scenes/recording-scene-template";
 import { sceneNeedsCamera } from "../../recording/scenes/recording-scenes";
-import { sceneOffer } from "../../tool-panels/scene/scene-offer";
+import { sceneOffer } from "../../tools/scene/scene-offer";
 import { sceneIsland } from "../scene/scene-island";
 
-import type { ToolPanelPatch } from "../../tool-panels/tool-panel-patch";
-import type { ToolPanelScenePane } from "../../tool-panels/tool-panel-scene";
-import type { ToolPanelSnapshot } from "../../tool-panels/tool-panel-store";
+import type { ToolPanelPatch } from "../../tools/tool-panel-patch";
+import type { ToolPanelScenePane } from "../../tools/tool-panel-scene";
+import type { ToolPanelSnapshot } from "../../tools/tool-panel-store";
 import type { EditorIslandContent } from "../editor-island";
 import type { SceneToolGroup } from "../scene/scene-actions";
 import type { ScenePane } from "../scene/scene-framing";

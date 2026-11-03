@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { drawingToolKind } from "../tool-panels/tool-registry";
+import { drawingToolKind } from "../tools/tool-registry";
 
 import type { AnnotationKind } from "../../annotations/types";
 import type { EditorIslandKind } from "../island/host/editor-island-kind";

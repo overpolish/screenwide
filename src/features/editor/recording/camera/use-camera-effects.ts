@@ -3,7 +3,7 @@
 
 import { useEffect, useRef, useState } from "react";
 
-import { ToolPanelCameraEffects } from "../../tool-panels/tool-panel-store";
+import { ToolPanelCameraEffects } from "../../tools/tool-panel-store";
 import { EditorArtifact } from "../../types";
 import { useModel } from "../microphone/use-model";
 

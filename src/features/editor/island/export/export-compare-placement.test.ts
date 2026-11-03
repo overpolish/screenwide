@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 
 import { comparedPlacement } from "./export-compare-placement";
 
-import type { ToolPanelComparedFrame } from "../../tool-panels/tool-panel-export";
+import type { ToolPanelComparedFrame } from "../../tools/tool-panel-export";
 
 /** A frame `width` by `height` showing the canvas at `canvas`. */
 const frame = (

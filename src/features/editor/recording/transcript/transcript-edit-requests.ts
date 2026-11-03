@@ -17,8 +17,8 @@ import {
 import type {
   TranscriptPlayed,
   TranscriptRequest,
-} from "../../tool-panels/tool-panel-transcript";
-import type { TranscriptWord } from "../../tool-panels/transcript/transcript-words";
+} from "../../tools/tool-panel-transcript";
+import type { TranscriptWord } from "../../tools/transcript/transcript-words";
 
 /** The Transcript panel's asks that change the timeline edit. */
 export type TranscriptEditRequest =

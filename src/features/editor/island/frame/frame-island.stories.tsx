@@ -5,8 +5,8 @@ import { useArgs } from "storybook/preview-api";
 import { fn } from "storybook/test";
 
 import { featureStage } from "../../../../storybook/feature-story-stage";
-import { presetName } from "../../tool-panels/frame/background/background";
-import { builtInBackgroundPresets } from "../../tool-panels/frame/background/background-presets";
+import { presetName } from "../../tools/frame/background/background";
+import { builtInBackgroundPresets } from "../../tools/frame/background/background-presets";
 import { EditorIslandStage } from "../editor-island-stage";
 import {
   editorIslandStoryMeta,
@@ -18,7 +18,7 @@ import { frameIsland, type FrameIslandProps } from "./frame-island";
 import type {
   Background,
   BackgroundPreset,
-} from "../../tool-panels/frame/background/background";
+} from "../../tools/frame/background/background";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 
 // A mesh kept from before, as a saved tile.

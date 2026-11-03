@@ -8,7 +8,7 @@ import { useEditorIslandWindow } from "../../island/host/use-editor-island-windo
 import { useEditorWindowShortcuts } from "../../shortcuts/use-editor-window-shortcuts";
 
 import type { StripSelection } from "../../timeline/strip/strip-selection";
-import type { ToolPanelStripItem } from "../../tool-panels/tool-panel-strip";
+import type { ToolPanelStripItem } from "../../tools/tool-panel-strip";
 
 // The one island the recording editor shows over its picture, and which
 // of three it is: the column's or title bar's (a pen, the chosen

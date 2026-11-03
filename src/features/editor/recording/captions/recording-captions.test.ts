@@ -3,7 +3,7 @@
 
 import { describe, expect, it } from "vitest";
 
-import { storyTextStyle } from "../../tool-panels/text-style/text-template-fixtures";
+import { storyTextStyle } from "../../tools/text-style/text-template-fixtures";
 
 import { handLayout, withLayout } from "./caption-layout";
 import {

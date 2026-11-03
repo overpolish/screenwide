@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import type { ToolPanelModel } from "../tool-panels/tool-panel-selection";
+import type { ToolPanelModel } from "../tools/tool-panel-selection";
 
 /** Where the recording's transcript stands, which the captions are made of
  * and the script shows. */

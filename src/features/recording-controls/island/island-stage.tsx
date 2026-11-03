@@ -12,7 +12,7 @@ import {
   previewCamera,
   previewMicrophone,
   previewSystemAudio,
-} from "./island-preview";
+} from "./island-fixtures";
 import {
   stageMicrophone,
   stageWrittenBytes,

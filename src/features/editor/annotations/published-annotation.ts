@@ -10,7 +10,7 @@ import type {
   AnnotationPinAction,
   AnnotationPinView,
 } from "../island/annotation/annotation-pin";
-import type { ToolPanelAnnotation } from "../tool-panels/tool-panel-selection";
+import type { ToolPanelAnnotation } from "../tools/tool-panel-selection";
 
 /** What a workspace whose annotations can be pinned tells of them: how the
  * pin of the one named stands at the playhead (null while it is not pinned,

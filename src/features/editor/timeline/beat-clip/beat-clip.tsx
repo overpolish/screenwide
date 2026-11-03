@@ -97,7 +97,7 @@ export function BeatClip({
     >
       <span
         className={cn(
-          "absolute inset-y-0 flex items-center gap-1.5 overflow-hidden rounded-control text-start text-caption whitespace-nowrap transition-colors group-focus-visible:outline-2 group-focus-visible:outline-offset-1 group-focus-visible:outline-focus",
+          "absolute inset-y-0 flex items-center gap-inline overflow-hidden rounded-control text-start text-caption whitespace-nowrap transition-colors group-focus-visible:outline-2 group-focus-visible:outline-offset-1 group-focus-visible:outline-focus",
           // Padding would hold a narrow block wider than its time, over
           // its neighbours; too narrow for its glyph, it is drawn bare.
           hasGlyph && "px-1",
@@ -122,7 +122,7 @@ export function BeatClip({
                 px={px}
               />
             ) : null}
-            <span className="relative mb-auto flex items-center gap-1.5 pt-1">
+            <span className="relative mb-auto flex items-center gap-inline pt-1">
               {hasGlyph ? <BeatGlyph beat={beat} /> : null}
               {/* What is said is read in the captions under the beats,
                   word by word, so a line is not written twice. */}

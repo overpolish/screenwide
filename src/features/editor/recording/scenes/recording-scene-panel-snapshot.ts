@@ -18,7 +18,7 @@ import { RecordingSceneClip } from "./recording-scenes";
 import type {
   ToolPanelScene,
   ToolPanelScenePane,
-} from "../../tool-panels/tool-panel-scene";
+} from "../../tools/tool-panel-scene";
 
 /** What the scenes are laid out on: the recording's own composition on the
  * screen's `output`, as shares of the canvas, the canvas's shape and the

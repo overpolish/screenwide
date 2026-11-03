@@ -12,8 +12,8 @@ import { captionsIsland } from "../captions/captions-island";
 
 import type { TextLayout } from "../../../../bindings/TextLayout";
 import type { CaptionsPatch } from "../../recording/captions/recording-captions";
-import type { ToolPanelPatch } from "../../tool-panels/tool-panel-patch";
-import type { ToolPanelSnapshot } from "../../tool-panels/tool-panel-store";
+import type { ToolPanelPatch } from "../../tools/tool-panel-patch";
+import type { ToolPanelSnapshot } from "../../tools/tool-panel-store";
 import type { EditorIslandContent } from "../editor-island";
 import type { IslandTranscript } from "../island-transcript";
 

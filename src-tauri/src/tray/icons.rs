@@ -61,7 +61,7 @@ pub fn load(bytes: &'static [u8]) -> tauri::Result<Image<'static>> {
       }
     };
     let mut rgba = image.rgba().to_vec();
-    for pixel in rgba.chunks_exact_mut(4) {
+    for pixel in rgba.as_chunks_mut::<4>().0 {
       pixel[0] = color as u8;
       pixel[1] = (color >> 8) as u8;
       pixel[2] = (color >> 16) as u8;
@@ -89,7 +89,7 @@ pub fn apply_system_foreground(image: Image<'static>) -> Image<'static> {
     [0, 0, 0]
   };
   let mut rgba = image.rgba().to_vec();
-  for pixel in rgba.chunks_exact_mut(4) {
+  for pixel in rgba.as_chunks_mut::<4>().0 {
     if pixel[3] != 0 {
       pixel[..3].copy_from_slice(&color);
     }

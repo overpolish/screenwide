@@ -3,7 +3,7 @@
 
 import { useEffect, useRef, useSyncExternalStore } from "react";
 
-import { type ToolPanelStripItem } from "../../tool-panels/tool-panel-strip";
+import { type ToolPanelStripItem } from "../../tools/tool-panel-strip";
 import { type EditorKind } from "../../types";
 
 /**

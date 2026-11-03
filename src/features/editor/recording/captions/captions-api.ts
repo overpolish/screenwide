@@ -108,15 +108,19 @@ export const addTextTemplateFonts = async () => {
 /** Asks for a template's zip or its folder's manifest and makes it one of
  * yours: the template, or nothing where none was picked. Each of these
  * rejects with a whole translated sentence, for an error line, where the
- * template could not be imported, exported or removed. */
+ * template could not be imported, exported or removed. No UI calls these
+ * three yet; they wait for the in-app template editor.
+ * @public */
 export const importTextTemplate = () =>
   invoke<TextTemplate | null>("import_text_template");
 
-/** Asks where to save template `id` as a zip, and saves it there. */
+/** Asks where to save template `id` as a zip, and saves it there.
+ * @public */
 export const exportTextTemplate = (id: TextTemplateId) =>
   invoke<null>("export_text_template", { id });
 
-/** Moves your template `id` to the Trash. */
+/** Moves your template `id` to the Trash.
+ * @public */
 export const removeTextTemplate = (id: TextTemplateId) =>
   invoke<null>("remove_text_template", { id });
 

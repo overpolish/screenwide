@@ -4,7 +4,6 @@
 import { inheritRecordingKeyboardSegmentEdits } from "../keyboard/recording-keyboard-timeline-edit";
 
 import {
-  layoutRecordingTimelineSegments,
   RecordingTimelineEdit,
   RecordingTimelineSegment,
   recordingTimelineRetainedDuration,
@@ -102,25 +101,4 @@ export function setRecordingTimelineRangePlaybackRate(
     },
     descendantIds,
   );
-}
-
-/** Returns the common rate across a selected output range, if it has one. */
-export function recordingTimelineRangePlaybackRate(
-  edit: RecordingTimelineEdit,
-  outputStart: number,
-  outputEnd: number,
-) {
-  const range = normalizedRange(outputStart, outputEnd);
-  if (!range) return undefined;
-  let playbackRate: number | undefined;
-  for (const segment of layoutRecordingTimelineSegments(edit)) {
-    const overlaps =
-      segment.outputEnd > range.start + RANGE_EPSILON &&
-      segment.outputStart < range.end - RANGE_EPSILON;
-    if (!overlaps) continue;
-    const rate = segment.playbackRate ?? 1;
-    if (playbackRate !== undefined && playbackRate !== rate) return undefined;
-    playbackRate = rate;
-  }
-  return playbackRate;
 }

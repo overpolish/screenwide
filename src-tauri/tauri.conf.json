@@ -15,7 +15,7 @@
     "windows": [
       {
         "label": "editor-recording",
-        "title": "Screenwide Editor",
+        "title": "Editor",
         "url": "/editor",
         "width": 1200,
         "height": 800,
@@ -40,7 +40,7 @@
       },
       {
         "label": "editor-screenshot",
-        "title": "Screenwide Editor",
+        "title": "Editor",
         "url": "/editor",
         "width": 1200,
         "height": 800,
@@ -65,7 +65,7 @@
       },
       {
         "label": "projects",
-        "title": "Screenwide Projects",
+        "title": "Projects",
         "url": "/projects",
         "width": 880,
         "height": 560,
@@ -90,7 +90,7 @@
       },
       {
         "label": "settings",
-        "title": "Screenwide Settings",
+        "title": "Settings",
         "url": "/settings",
         "width": 800,
         "height": 520,
@@ -115,7 +115,7 @@
       },
       {
         "label": "glide",
-        "title": "Screenwide Glide",
+        "title": "Glide",
         "url": "/glide",
         "width": 212,
         "height": 173,
@@ -131,7 +131,7 @@
       },
       {
         "label": "region-selector",
-        "title": "Screenwide Region Selector",
+        "title": "Region Selector",
         "url": "/region-selector",
         "acceptFirstMouse": true,
         "alwaysOnTop": true,
@@ -146,7 +146,7 @@
       },
       {
         "label": "standalone-listbox",
-        "title": "Screenwide Listbox",
+        "title": "Listbox",
         "url": "/standalone-listbox",
         "width": 208,
         "height": 40,
@@ -162,7 +162,7 @@
       },
       {
         "label": "tool-panel-recording",
-        "title": "Screenwide Tool Panel (Recording)",
+        "title": "Tool Panel (Recording)",
         "url": "/standalone-listbox",
         "width": 320,
         "height": 40,
@@ -178,7 +178,7 @@
       },
       {
         "label": "tool-panel-screenshot",
-        "title": "Screenwide Tool Panel (Screenshot)",
+        "title": "Tool Panel (Screenshot)",
         "url": "/standalone-listbox",
         "width": 320,
         "height": 40,
@@ -194,7 +194,7 @@
       },
       {
         "label": "island",
-        "title": "Screenwide Island",
+        "title": "Island",
         "url": "/island",
         "width": 900,
         "height": 640,

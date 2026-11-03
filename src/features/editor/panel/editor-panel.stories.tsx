@@ -145,7 +145,7 @@ const meta = {
     controls: { exclude: Object.keys(events) },
     layout: "fullscreen",
   },
-  title: "Features/Editor/Panel/Editor",
+  title: "Features/Editor/Panel",
 } satisfies Meta<typeof EditorPanel>;
 
 export default meta;

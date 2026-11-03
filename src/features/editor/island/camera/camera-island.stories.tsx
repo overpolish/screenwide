@@ -17,7 +17,7 @@ import type {
   ToolPanelCameraEffects,
   ToolPanelCameraObjects,
   ToolPanelModel,
-} from "../../tool-panels/tool-panel-selection";
+} from "../../tools/tool-panel-selection";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 
 const READY: ToolPanelModel = {

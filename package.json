@@ -10,11 +10,13 @@
       "scripts/build-ffmpeg-windows.mjs"
     ],
     "ignore": [
-      "docs/assets/site.css",
-      "src-tauri/vendor/**"
+      "docs/assets/site.css"
     ],
     "ignoreBinaries": [
-      "otool"
+      "cmake",
+      "ninja",
+      "otool",
+      "rustc"
     ]
   },
   "scripts": {
@@ -81,7 +83,6 @@
     "@resvg/resvg-js": "^2.6.2",
     "@storybook/addon-docs": "10.6.2",
     "@storybook/addon-themes": "^10.6.2",
-    "@storybook/react": "^10.6.2",
     "@storybook/react-vite": "^10.6.2",
     "@tailwindcss/vite": "^4.3.3",
     "@tauri-apps/cli": "^2.12.4",

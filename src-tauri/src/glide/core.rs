@@ -29,20 +29,15 @@ pub(crate) mod tween_motion;
 pub(crate) mod tween_settle;
 pub(crate) mod typing_guard;
 
-// Checkpoint 1 builds and verifies the shared policy before checkpoint 2 makes
-// the native input path its runtime owner.
-#[allow(unused_imports)]
 pub(crate) use detector::{GlideDetection, GlideDetector, GlideSample};
-#[allow(unused_imports)]
 pub(crate) use folds::{GlideAction, GlideDetectorOptions};
 pub(crate) use geometry::{
   corrected_origin, frame_fits, frame_fractions, frames_match, grown_to_min, landing_point,
   GlideFrame,
 };
-#[allow(unused_imports)]
 pub(crate) use regions::GlideRegion;
 pub(crate) use runtime::{GlideEffects, GlideRuntime};
-#[allow(unused_imports)]
+#[cfg(test)]
 pub(crate) use settling::GlidePhase;
 
 #[cfg(test)]

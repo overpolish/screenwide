@@ -16,9 +16,10 @@ const generated = new Set(["src/i18n/messages.ts"]);
 // logic, so a component's states stay in one file however many there are.
 const isStory = (file) => file.endsWith(".stories.tsx");
 
-// Oversized legacy files are frozen at their surveyed size. Refactors remove
-// entries rather than raising ceilings, so new code and completed splits use
-// the normal limit while the remaining debt cannot quietly grow.
+// Oversized legacy files are frozen at their current size. Refactors remove
+// entries rather than raising ceilings, and a ceiling follows its file down as
+// it shrinks, so new code and completed splits use the normal limit while the
+// remaining debt cannot quietly grow back.
 const debtCeilings = new Map(
   Object.entries(
     JSON.parse(await readFile("scripts/source-size-debt.json", "utf8")),
@@ -59,6 +60,10 @@ for (const file of files.sort()) {
     failures.push(`${normalized}: ${lines.toString()} > ${limit.toString()}`);
   else if (debtCeiling !== undefined && lines <= standardLimit)
     failures.push(`${normalized}: remove its cleared source-size debt entry`);
+  else if (debtCeiling !== undefined && lines < debtCeiling)
+    failures.push(
+      `${normalized}: tighten its source-size debt entry to ${lines.toString()}`,
+    );
 }
 
 for (const file of debtCeilings.keys()) {

@@ -7,8 +7,8 @@ import { createElement, Fragment } from "react";
 import { I18nProvider } from "react-aria-components";
 import { themes } from "storybook/theming";
 
-import { sampleCaptions } from "../src/features/editor/tool-panels/captions/caption-text-fixtures";
-import { sampleTranscriptWords } from "../src/features/editor/tool-panels/transcript/transcript-panel-fixtures";
+import { sampleCaptions } from "../src/features/editor/tools/captions/caption-text-fixtures";
+import { sampleTranscriptWords } from "../src/features/editor/tools/transcript/transcript-panel-fixtures";
 import { openPopupPanels } from "../src/features/popup-panel/api";
 import { PopupPanelSync } from "../src/features/popup-panel/popup-panel-sync";
 import { usePopupPanelStore } from "../src/features/popup-panel/store";

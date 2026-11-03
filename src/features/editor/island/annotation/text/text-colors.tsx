@@ -12,7 +12,7 @@ import {
   styleColorLabel,
   type TextColorRole,
   withStyleColor,
-} from "../../../tool-panels/text-style/text-templates";
+} from "../../../tools/text-style/text-templates";
 import {
   AnnotationColorChoice,
   type AnnotationColorProps,

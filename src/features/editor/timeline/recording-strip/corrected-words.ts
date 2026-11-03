@@ -1,8 +1,8 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { type TranscriptCorrection } from "../../tool-panels/tool-panel-transcript";
-import { transcriptUnits } from "../../tool-panels/transcript/transcript-units";
+import { type TranscriptCorrection } from "../../tools/tool-panel-transcript";
+import { transcriptUnits } from "../../tools/transcript/transcript-units";
 
 import { linesOf, type RecordingReadings } from "./recording-beats";
 

@@ -4,8 +4,8 @@
 import { type ReactNode, useId, useState } from "react";
 
 import { IslandFlow } from "../../../../../primitives/island/island-flow";
-import { useFontChoices } from "../../../tool-panels/text-style/text-fonts";
-import { useTemplatePreviews } from "../../../tool-panels/text-style/use-template-previews";
+import { useFontChoices } from "../../../tools/text-style/text-fonts";
+import { useTemplatePreviews } from "../../../tools/text-style/use-template-previews";
 import { IslandPickerColumn } from "../../island-picker-column";
 
 import { TextFontLine, TextFontPanel } from "./text-font-picker";

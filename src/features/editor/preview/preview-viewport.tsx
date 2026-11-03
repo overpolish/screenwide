@@ -31,7 +31,7 @@ import {
   ScreenshotSelectionGestureEvent,
   useScreenshotPreviewSurface,
 } from "../screenshot/use-screenshot-preview-surface";
-import { drawingToolKind } from "../tool-panels/tool-registry";
+import { drawingToolKind } from "../tools/tool-registry";
 import {
   endGestureAfter,
   useEditorEditGesture,
@@ -439,7 +439,7 @@ export function PreviewViewport({
     >
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-0 -z-10 bg-black/5 dark:bg-black/25"
+        className="pointer-events-none absolute inset-0 -z-10 bg-recess"
         data-preview-backdrop
       />
     </div>

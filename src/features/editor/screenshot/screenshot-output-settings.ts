@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { validAnnotations } from "../annotations/annotation-documents";
-import { DEFAULT_GENERATOR_ID } from "../tool-panels/frame/background/background-generators";
+import { DEFAULT_GENERATOR_ID } from "../tools/frame/background/background-generators";
 
 import { randomMeshComposition } from "./screenshot-background";
 import { fullSourceRect, sourceRect, SourceRect } from "./screenshot-geometry";

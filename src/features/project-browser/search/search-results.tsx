@@ -12,7 +12,7 @@ import { ListBoxItem } from "../../../primitives/listbox-item/listbox-item";
 import { Text } from "../../../primitives/text/text";
 import { formatDuration } from "../../editor/duration";
 import { BEAT_GLYPHS } from "../../editor/glyphs/beat-glyphs";
-import { foundText } from "../../editor/tool-panels/transcript/transcript-found-text";
+import { foundText } from "../../editor/tools/transcript/transcript-found-text";
 
 import type { Find, FindKind, SearchResult } from "./project-search";
 import type { TimeMap } from "../../editor/timeline/timeline-scale";

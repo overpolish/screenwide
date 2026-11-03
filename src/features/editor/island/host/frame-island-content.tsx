@@ -2,12 +2,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { browseBackgroundImage } from "../../api";
-import { presetName } from "../../tool-panels/frame/background/background";
+import { presetName } from "../../tools/frame/background/background";
 import { frameIsland } from "../frame/frame-island";
 
-import type { BackgroundPreset } from "../../tool-panels/frame/background/background";
-import type { ToolPanelPatch } from "../../tool-panels/tool-panel-patch";
-import type { ToolPanelSnapshot } from "../../tool-panels/tool-panel-store";
+import type { BackgroundPreset } from "../../tools/frame/background/background";
+import type { ToolPanelPatch } from "../../tools/tool-panel-patch";
+import type { ToolPanelSnapshot } from "../../tools/tool-panel-store";
 import type { EditorIslandContent } from "../editor-island";
 
 /** The canvas: its size and background, and for a screenshot its corners.

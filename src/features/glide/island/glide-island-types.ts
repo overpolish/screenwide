@@ -1,9 +1,9 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import type { GlideAction } from "../detection/glide-detection";
-import type { GlideRegion } from "../detection/glide-regions";
+import type { GlideAction } from "../../../bindings/GlideAction";
 import type { GlideFit } from "../glide-geometry";
+import type { GlideRegion } from "../glide-regions";
 
 /**
  * Where a gesture is, as the island hears it: none under way, gliding, ended

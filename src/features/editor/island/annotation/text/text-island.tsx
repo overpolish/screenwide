@@ -6,12 +6,12 @@ import { IslandRowTitle } from "../../../../../primitives/island/row-title/islan
 import { PillGroup } from "../../../../../primitives/pill-group/pill-group";
 import { alignChoice } from "../../../../annotations/annotation-choices";
 import { TextToolIcon } from "../../../../annotations/annotation-tool-icons";
-import { titleTemplates } from "../../../tool-panels/annotation/text/text-look";
+import { titleTemplates } from "../../../tools/annotation/text/text-look";
 import {
   setsWordsApart,
   textWordLines,
-} from "../../../tool-panels/annotation/text/text-words";
-import { offersOutline } from "../../../tool-panels/text-style/text-templates";
+} from "../../../tools/annotation/text/text-words";
+import { offersOutline } from "../../../tools/text-style/text-templates";
 import {
   AnnotationAnimateToggle,
   type AnnotationColorProps,

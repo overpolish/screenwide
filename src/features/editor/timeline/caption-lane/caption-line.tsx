@@ -50,7 +50,7 @@ export function CaptionLine({
     <button
       aria-label={line.text}
       className={cn(
-        "absolute top-0 flex h-4 cursor-default items-center overflow-hidden rounded-full px-1.5 text-caption whitespace-nowrap outline-none transition-colors focus-visible:outline-2 focus-visible:outline-focus",
+        "absolute top-0 flex h-4 cursor-default items-center overflow-hidden rounded-full px-inset-sm text-caption whitespace-nowrap outline-none transition-colors focus-visible:outline-2 focus-visible:outline-focus",
         isHidden
           ? "border border-dashed border-fg-tertiary text-fg-tertiary hover:bg-fill"
           : "bg-fill text-fg-secondary hover:bg-fill-strong hover:text-fg",

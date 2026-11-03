@@ -5,7 +5,7 @@ import type {
   ToolPanelExport,
   ToolPanelExportCompare,
   ToolPanelExportQuality,
-} from "../../tool-panels/tool-panel-export";
+} from "../../tools/tool-panel-export";
 
 // A two-minute screen recording at 2880 × 1800, measured at each look, as
 // the editor publishes it to the Export island.

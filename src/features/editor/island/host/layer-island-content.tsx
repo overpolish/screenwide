@@ -5,8 +5,8 @@ import { cameraIsland } from "../camera/camera-island";
 import { cropIsland } from "../crop/crop-island";
 import { screenIsland } from "../screen/screen-island";
 
-import type { ToolPanelPatch } from "../../tool-panels/tool-panel-patch";
-import type { ToolPanelSnapshot } from "../../tool-panels/tool-panel-store";
+import type { ToolPanelPatch } from "../../tools/tool-panel-patch";
+import type { ToolPanelSnapshot } from "../../tools/tool-panel-store";
 import type { EditorIslandContent } from "../editor-island";
 
 // The islands of the layers a recording or screenshot is made of: the

@@ -3,7 +3,7 @@
 
 import { describe, expect, it } from "vitest";
 
-import { packLanes, renderOrder, restack, slotAt } from "./annotation-lanes";
+import { packLanes, restack, slotAt } from "./annotation-lanes";
 
 const at = (id: string, lane: number, [start, end]: [number, number]) => ({
   end,
@@ -97,19 +97,6 @@ describe("restack", () => {
     expect(restack(STACK, "focus", { isNew: false, lane: 1 })).toEqual(
       Object.fromEntries(STACK.map(({ id, lane }) => [id, lane])),
     );
-  });
-});
-
-describe("renderOrder", () => {
-  it("draws the bottom lane first and the top lane last", () => {
-    expect(renderOrder(STACK).map(({ id }) => id)).toEqual([
-      "text",
-      "redact",
-      "counter",
-      "focus",
-      "arrow",
-      "highlight",
-    ]);
   });
 });
 

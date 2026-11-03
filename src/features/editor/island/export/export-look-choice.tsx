@@ -10,7 +10,7 @@ import { cn, elementFocusVisible, focusStyles } from "../../../../lib/styling";
 import { formatBytes } from "../../duration";
 
 import type { ExportLook } from "../../export/export-looks";
-import type { ToolPanelExportLook } from "../../tool-panels/tool-panel-export";
+import type { ToolPanelExportLook } from "../../tools/tool-panel-export";
 
 const lookName = (look: ExportLook) => {
   switch (look) {

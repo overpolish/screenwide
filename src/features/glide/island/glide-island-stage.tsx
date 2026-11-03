@@ -8,7 +8,7 @@ import { gliding } from "./glide-island-preview";
 import { type GlideIslandScript, IDLE, useScript } from "./glide-island-script";
 
 import type { GlideIslandState } from "./glide-island-types";
-import type { GlideRegion } from "../detection/glide-regions";
+import type { GlideRegion } from "../glide-regions";
 
 // The island's stories: the island centred on the canvas, where the gesture
 // began, holding one state, playing a gesture through, or showing several

@@ -16,7 +16,7 @@ import { CircularProgress } from "../../../../primitives/circular-progress/circu
 import { IslandFlow } from "../../../../primitives/island/island-flow";
 import { ScrollArea } from "../../../../primitives/scroll-area/scroll-area";
 
-import type { ToolPanelCameraObjects } from "../../tool-panels/tool-panel-selection";
+import type { ToolPanelCameraObjects } from "../../tools/tool-panel-selection";
 
 type Pick = ToolPanelCameraObjects["picks"][number];
 

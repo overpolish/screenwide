@@ -126,11 +126,11 @@ mod windows_platform {
         cleanup_icon(icon, info, dc);
         return None;
       }
-      for pixel in pixels.chunks_exact_mut(4) {
+      for pixel in pixels.as_chunks_mut::<4>().0 {
         pixel.swap(0, 2);
       }
-      if pixels.chunks_exact(4).all(|pixel| pixel[3] == 0) {
-        for pixel in pixels.chunks_exact_mut(4) {
+      if pixels.as_chunks::<4>().0.iter().all(|pixel| pixel[3] == 0) {
+        for pixel in pixels.as_chunks_mut::<4>().0 {
           pixel[3] = 255;
         }
       }

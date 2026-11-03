@@ -1,8 +1,9 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { type GlideAction } from "./detection/glide-detection";
-import { glideGridRows, type GlideRegion } from "./detection/glide-regions";
+import { glideGridRows, type GlideRegion } from "./glide-regions";
+
+import type { GlideAction } from "../../bindings/GlideAction";
 
 /** A rectangle in work-area fractions. */
 export type GlideRect = { height: number; width: number; x: number; y: number };

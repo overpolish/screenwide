@@ -43,7 +43,7 @@ const meta = {
     },
     layout: "fullscreen",
   },
-  title: "Features/Permissions/Permissions Window",
+  title: "Features/Permissions/Window",
 } satisfies Meta<typeof PermissionsWindow>;
 
 export default meta;

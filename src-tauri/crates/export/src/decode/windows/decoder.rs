@@ -247,7 +247,12 @@ fn sample_image(sample: &IMFSample, width: u32, height: u32) -> Result<CapturedI
       std::slice::from_raw_parts(first_row.offset(pitch as isize * row as isize), row_bytes)
     };
     let target = &mut rgba[row * row_bytes..(row + 1) * row_bytes];
-    for (source, target) in source.chunks_exact(4).zip(target.chunks_exact_mut(4)) {
+    for (source, target) in source
+      .as_chunks::<4>()
+      .0
+      .iter()
+      .zip(target.as_chunks_mut::<4>().0)
+    {
       target[0] = source[2];
       target[1] = source[1];
       target[2] = source[0];

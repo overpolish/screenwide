@@ -9,11 +9,11 @@ import { Button } from "../../../../primitives/button/button";
 import { IslandFlow } from "../../../../primitives/island/island-flow";
 import { IslandKeyHint } from "../../../../primitives/island/island-key-hint";
 import { Text } from "../../../../primitives/text/text";
-import { pausesCutBy } from "../../tool-panels/transcript/transcript-pauses";
-import { isHeardInOrder } from "../../tool-panels/transcript/transcript-playback-order";
-import { replacementCorrections } from "../../tool-panels/transcript/transcript-replace";
-import { TranscriptText } from "../../tool-panels/transcript/transcript-text";
-import { useTranscriptEditing } from "../../tool-panels/transcript/use-transcript-editing";
+import { pausesCutBy } from "../../tools/transcript/transcript-pauses";
+import { isHeardInOrder } from "../../tools/transcript/transcript-playback-order";
+import { replacementCorrections } from "../../tools/transcript/transcript-replace";
+import { TranscriptText } from "../../tools/transcript/transcript-text";
+import { useTranscriptEditing } from "../../tools/transcript/use-transcript-editing";
 import { FillerGlyph, ProfanityGlyph } from "../captions/caption-glyphs";
 import { IslandWorkLine } from "../island-work-line";
 

@@ -16,7 +16,7 @@ import {
 } from "../../../popup-panel/api";
 import { usePopupPanelStore } from "../../../popup-panel/store";
 import { useExportIslandStore } from "../../export/export-island-store";
-import { toolPanelLabel } from "../../tool-panels/tool-panel-window";
+import { toolPanelLabel } from "../../tools/tool-panel-window";
 import { EditorKind } from "../../types";
 
 import {

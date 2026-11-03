@@ -11,7 +11,7 @@ import { IslandRowTitle } from "../../../../primitives/island/row-title/island-r
 import { MomentPlayer } from "./moment-player";
 import { MomentTranscriptLine } from "./moment-transcript";
 
-import type { ToolPanelModel } from "../../tool-panels/tool-panel-selection";
+import type { ToolPanelModel } from "../../tools/tool-panel-selection";
 import type { EditorIslandContent } from "../editor-island";
 
 // A moment flagged while recording, in hand: its kind, in the kind's

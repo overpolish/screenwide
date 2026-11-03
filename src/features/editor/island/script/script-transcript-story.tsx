@@ -12,7 +12,7 @@ import {
   TranscriptCorrection,
   TranscriptRange,
   TranscriptScene,
-} from "../../tool-panels/tool-panel-transcript";
+} from "../../tools/tool-panel-transcript";
 import {
   addRanges,
   playedOnward,
@@ -21,13 +21,13 @@ import {
   sampleTranscriptWords,
   sampleWordRange,
   subtractRanges,
-} from "../../tool-panels/transcript/transcript-panel-fixtures";
+} from "../../tools/transcript/transcript-panel-fixtures";
 import {
   idleSilences,
   scenesAfterPick,
   storySceneOffer,
-} from "../../tool-panels/transcript/transcript-panel-story-states";
-import { correctionsWith } from "../../tool-panels/transcript/transcript-units";
+} from "../../tools/transcript/transcript-panel-story-states";
+import { correctionsWith } from "../../tools/transcript/transcript-units";
 import { type EditorIslandContent } from "../editor-island";
 import {
   EditorIslandPairStage,

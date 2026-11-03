@@ -5,6 +5,7 @@ import { Undo2 } from "lucide-react";
 import { useNumberFormatter } from "react-aria";
 
 import { t } from "../../../../i18n/i18n";
+import { TimelineMark } from "../timeline-mark";
 import { at, type Span, type TimelineScale } from "../timeline-scale";
 
 // Where a cut closed up, a seam down the beats: pressed, it puts the cut
@@ -51,26 +52,18 @@ export function CutSeams({
     unitDisplay: "short",
   });
   return runsOf(cuts).map((run) => (
-    <button
-      aria-label={t("editor-timeline-restore-cut", {
+    <TimelineMark
+      end="top"
+      glyph={<Undo2 aria-hidden />}
+      isDashed
+      key={run.ids[0]}
+      label={t("editor-timeline-restore-cut", {
         duration: seconds.format(run.seconds),
       })}
-      className="group absolute inset-y-0 z-10 flex w-4 -translate-x-1/2 cursor-default items-start justify-center outline-none"
-      dir="ltr"
-      key={run.ids[0]}
-      onClick={() => {
+      onPress={() => {
         onRestore(run.ids);
       }}
-      onPointerDown={(event) => {
-        event.stopPropagation();
-      }}
       style={at(scale, run.start)}
-      type="button"
-    >
-      <span className="absolute inset-y-0 w-px border-s border-dashed border-fg-secondary" />
-      <span className="relative -mt-1 flex size-4 items-center justify-center rounded-full bg-fg text-surface group-focus-visible:outline-2 group-focus-visible:outline-offset-1 group-focus-visible:outline-focus">
-        <Undo2 aria-hidden className="size-icon-xs" />
-      </span>
-    </button>
+    />
   ));
 }

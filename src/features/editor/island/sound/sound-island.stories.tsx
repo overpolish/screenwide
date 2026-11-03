@@ -18,7 +18,7 @@ import {
   type SoundTrack,
 } from "./sound-island";
 
-import type { ToolPanelModel } from "../../tool-panels/tool-panel-selection";
+import type { ToolPanelModel } from "../../tools/tool-panel-selection";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 
 const AVAILABLE = (sizeBytes: number): ToolPanelModel => ({

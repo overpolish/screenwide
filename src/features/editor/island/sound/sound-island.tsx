@@ -24,7 +24,7 @@ import { SoundVolumeRow } from "./sound-volume-row";
 import type {
   ToolPanelMicrophone,
   ToolPanelModel,
-} from "../../tool-panels/tool-panel-selection";
+} from "../../tools/tool-panel-selection";
 import type { EditorIslandContent } from "../editor-island";
 
 // The recording's sound, every track at once, as the Cursor and Keyboard

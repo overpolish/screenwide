@@ -27,7 +27,7 @@ import type {
   ToolPanelExport,
   ToolPanelExportCompare,
   ToolPanelExportPatch,
-} from "../tool-panels/tool-panel-export";
+} from "../tools/tool-panel-export";
 
 /** The export's settings as the editor window holds them. */
 export type EditorExportSettings = {

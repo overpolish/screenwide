@@ -6,7 +6,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   ANNOTATION_TOOLS,
   EDITOR_TOOL_SHORTCUTS,
-} from "../tool-panels/tool-registry";
+} from "../tools/tool-registry";
 
 import {
   editorCommandKeyAction,

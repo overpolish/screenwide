@@ -6,7 +6,7 @@ import {
   previewCamera,
   previewMicrophone,
   previewSystemAudio,
-} from "../../recording-controls/island/island-preview";
+} from "../../recording-controls/island/island-fixtures";
 import { useStageCamera } from "../../recording-controls/island/island-stage-state";
 import { RecordingIsland } from "../../recording-controls/island/recording-island";
 import { useDisplayNotches } from "../preview/use-display-notches";
@@ -146,7 +146,9 @@ export function LiveIsland({
 }) {
   const time = useClock(sceneKey(scene));
   const frame = frameAt(scene, time);
-  const camera = useStageCamera(false, false, true);
+  // Settings never opens the camera to play this loop, so the camera's place
+  // shows the app's own picture before a first frame, not a stand-in.
+  const camera = useStageCamera(false, true, true);
   const { island: notch } = useDisplayNotches();
   const wallpaper = useWallpaperSource();
   // Someone talking: the microphone moves quickly, the computer's sound

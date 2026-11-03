@@ -223,7 +223,7 @@ fn render(cursor: HCURSOR, background: u8) -> Result<Vec<u8>, String> {
   let old = unsafe { SelectObject(dc, bitmap.into()) };
   let length = (ARTWORK_SIZE * ARTWORK_SIZE * 4) as usize;
   let pixels = unsafe { std::slice::from_raw_parts_mut(bits.cast::<u8>(), length) };
-  for pixel in pixels.chunks_exact_mut(4) {
+  for pixel in pixels.as_chunks_mut::<4>().0 {
     pixel.fill(background);
     pixel[3] = 255;
   }
@@ -245,9 +245,11 @@ fn render(cursor: HCURSOR, background: u8) -> Result<Vec<u8>, String> {
 fn unmatted(black: &[u8], white: &[u8]) -> Vec<u8> {
   let mut rgba = vec![0_u8; black.len()];
   for ((output, black), white) in rgba
-    .chunks_exact_mut(4)
-    .zip(black.chunks_exact(4))
-    .zip(white.chunks_exact(4))
+    .as_chunks_mut::<4>()
+    .0
+    .iter_mut()
+    .zip(black.as_chunks::<4>().0)
+    .zip(white.as_chunks::<4>().0)
   {
     let background = (0..3)
       .map(|channel| i32::from(white[channel]) - i32::from(black[channel]))

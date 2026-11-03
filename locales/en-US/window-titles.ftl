@@ -1,16 +1,16 @@
 # SPDX-FileCopyrightText: 2026 overpolish
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-### The titles the system gives each window: in the Window menu, the task switcher and to screen readers. Windows draw their own headers, so these rarely appear on screen.
+### The titles the system gives each window: in the Window menu, the Dock's and taskbar's window lists, the task switcher and to screen readers. Each is listed under the app already, so the titles leave out its name. Windows draw their own headers, so these rarely appear on screen.
 
-window-titles-app = Screenwide
-window-titles-editor = Screenwide Editor
-window-titles-tool-panel-recording = Screenwide Tool Panel (Recording)
-window-titles-tool-panel-screenshot = Screenwide Tool Panel (Screenshot)
-window-titles-permissions = Screenwide Permissions
-window-titles-glide = Screenwide Glide
-window-titles-island = Screenwide Island
-window-titles-projects = Screenwide Projects
-window-titles-settings = Screenwide Settings
-window-titles-region-selector = Screenwide Region Selector
-window-titles-listbox = Screenwide Listbox
+window-titles-app = { -app-name }
+window-titles-editor = Editor
+window-titles-tool-panel-recording = Tool Panel (Recording)
+window-titles-tool-panel-screenshot = Tool Panel (Screenshot)
+window-titles-permissions = Permissions
+window-titles-glide = Glide
+window-titles-island = Island
+window-titles-projects = Projects
+window-titles-settings = Settings
+window-titles-region-selector = Region Selector
+window-titles-listbox = Listbox

@@ -6,7 +6,7 @@ import {
   editorToolForShortcut,
   EditorToolId,
   isDrawingTool,
-} from "../tool-panels/tool-registry";
+} from "../tools/tool-registry";
 
 import type { AnnotationKind } from "../../annotations/types";
 

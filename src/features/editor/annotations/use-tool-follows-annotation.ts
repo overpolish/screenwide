@@ -3,7 +3,7 @@
 
 import { useEffect, useRef } from "react";
 
-import { drawingToolKind } from "../tool-panels/tool-registry";
+import { drawingToolKind } from "../tools/tool-registry";
 
 import type { AnnotationKind } from "../../annotations/types";
 

@@ -175,8 +175,8 @@ pub(super) fn grow_from_centre(vertices: &mut [Vertex], view: Size, frame: Rect,
     (1.0 - 2.0 * (frame.origin.y + frame.size.height * 0.5) / view.height.max(1.0)) as f32,
   ];
   for vertex in vertices {
-    for axis in 0..2 {
-      vertex.position[axis] = centre[axis] + (vertex.position[axis] - centre[axis]) * size;
+    for (position, centre) in vertex.position.iter_mut().zip(centre) {
+      *position = centre + (*position - centre) * size;
     }
   }
 }

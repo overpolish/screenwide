@@ -3,7 +3,7 @@
 
 import { describe, expect, it } from "vitest";
 
-import { storyTextStyle } from "../../tool-panels/text-style/text-template-fixtures";
+import { storyTextStyle } from "../../tools/text-style/text-template-fixtures";
 
 import { DEFAULT_CAPTION_SETTINGS } from "./recording-captions";
 import { captionDefaultsSettings } from "./use-text-templates";

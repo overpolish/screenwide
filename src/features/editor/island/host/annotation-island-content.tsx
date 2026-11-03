@@ -3,9 +3,9 @@
 
 import { NEW_LENS_ZOOM } from "../../annotations/annotation-shape-parsers";
 import { browseAnnotationImage } from "../../images/image-api";
-import { shownTextLook } from "../../tool-panels/annotation/text/text-look";
-import { drawingToolShortcut } from "../../tool-panels/tool-registry";
-import { forwardToolPanelShortcut } from "../../tool-panels/use-panel-shortcuts";
+import { shownTextLook } from "../../tools/annotation/text/text-look";
+import { drawingToolShortcut } from "../../tools/tool-registry";
+import { forwardToolPanelShortcut } from "../../tools/use-panel-shortcuts";
 import { arrowIsland } from "../annotation/arrow/arrow-island";
 import { counterIsland } from "../annotation/counter/counter-island";
 import { drawingIsland } from "../annotation/drawing/drawing-island";
@@ -22,8 +22,8 @@ import type { AnnotationAlign } from "../../../../bindings/AnnotationAlign";
 import type { AnnotationHead } from "../../../../bindings/AnnotationHead";
 import type { AnnotationRedaction } from "../../../../bindings/AnnotationRedaction";
 import type { SceneRotation } from "../../../../bindings/SceneRotation";
-import type { ToolPanelPatch } from "../../tool-panels/tool-panel-patch";
-import type { ToolPanelSnapshot } from "../../tool-panels/tool-panel-store";
+import type { ToolPanelPatch } from "../../tools/tool-panel-patch";
+import type { ToolPanelSnapshot } from "../../tools/tool-panel-store";
 import type { EditorKind } from "../../types";
 import type { AnnotationPinAction } from "../annotation/annotation-pin";
 import type { EditorIslandContent } from "../editor-island";

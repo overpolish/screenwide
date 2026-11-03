@@ -11,8 +11,8 @@ import {
 import {
   sendToolPanelRequest,
   useToolPanelStore,
-} from "../../tool-panels/tool-panel-store";
-import { usePanelShortcuts } from "../../tool-panels/use-panel-shortcuts";
+} from "../../tools/tool-panel-store";
+import { usePanelShortcuts } from "../../tools/use-panel-shortcuts";
 
 import {
   isStripIsland,

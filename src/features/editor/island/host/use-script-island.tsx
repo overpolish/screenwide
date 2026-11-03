@@ -7,26 +7,26 @@ import { planRecordingSilences } from "../../recording/microphone/microphone-api
 import {
   captionText,
   type CaptionTextWord,
-} from "../../tool-panels/captions/caption-text";
-import { useCaptionList } from "../../tool-panels/captions/use-caption-list";
-import { useTranscriptChannel } from "../../tool-panels/transcript/transcript-channel";
-import { usePendingCorrections } from "../../tool-panels/transcript/use-pending-corrections";
+} from "../../tools/captions/caption-text";
+import { useCaptionList } from "../../tools/captions/use-caption-list";
+import { useTranscriptChannel } from "../../tools/transcript/transcript-channel";
+import { usePendingCorrections } from "../../tools/transcript/use-pending-corrections";
 import {
   useTranscriptPlayheadFeed,
   useTranscriptWordsFeed,
-} from "../../tool-panels/transcript/use-transcript-feed";
-import { useTranscriptMarks } from "../../tool-panels/transcript/use-transcript-marks";
+} from "../../tools/transcript/use-transcript-feed";
+import { useTranscriptMarks } from "../../tools/transcript/use-transcript-marks";
 import { scriptIsland } from "../script/script-island";
 
 import { scriptTranscriptProps } from "./script-island-content";
 
-import type { ToolPanelPatch } from "../../tool-panels/tool-panel-patch";
-import type { ToolPanelSnapshot } from "../../tool-panels/tool-panel-store";
+import type { ToolPanelPatch } from "../../tools/tool-panel-patch";
+import type { ToolPanelSnapshot } from "../../tools/tool-panel-store";
 import type {
   ToolPanelTranscript,
   TranscriptCorrection,
-} from "../../tool-panels/tool-panel-transcript";
-import type { TranscriptWord } from "../../tool-panels/transcript/transcript-words";
+} from "../../tools/tool-panel-transcript";
+import type { TranscriptWord } from "../../tools/transcript/transcript-words";
 import type { EditorKind } from "../../types";
 import type { EditorIslandContent } from "../editor-island";
 import type { IslandTranscript } from "../island-transcript";

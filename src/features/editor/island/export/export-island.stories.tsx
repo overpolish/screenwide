@@ -25,7 +25,7 @@ import {
 import type {
   ToolPanelExport,
   ToolPanelExportPatch,
-} from "../../tool-panels/tool-panel-export";
+} from "../../tools/tool-panel-export";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 
 type ExportIslandStoryProps = EditorIslandStoryProps & {

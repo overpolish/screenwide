@@ -16,8 +16,10 @@ import { islandMeta } from "./island-story-meta";
 import type { AnnotateSection } from "../../annotate/island/use-annotate-parts";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 
-// Logs the annotate actions the story does not carry out.
+// Logs the annotate actions, including those the story also carries out.
+const onChange = fn();
 const onClear = fn();
+const onDone = fn();
 const onUndo = fn();
 
 // Keeps the tools' choices; Close puts them away, as leaving annotate does.
@@ -30,10 +32,12 @@ function AnnotatingStage({
   const rows = useAnnotateRows({
     initialSection,
     onChange: (patch) => {
+      onChange(patch);
       setSettings((current) => ({ ...current, ...patch }));
     },
     onClear,
     onDone: () => {
+      onDone();
       setIsAnnotating(false);
     },
     onUndo,

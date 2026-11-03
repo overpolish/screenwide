@@ -23,28 +23,21 @@ mod tests;
 
 pub use crop::apply_framed_crop_resize;
 pub use crop::{apply_crop_draw, apply_crop_move, apply_crop_resize};
-// Preserve the original flat module API while implementations live at their
-// feature extension points.
-#[allow(unused_imports)]
 pub use display::{
   rebase_display_fit, rebase_display_fit_mode, DisplayFitRebase, DisplayHandle, DisplayHit,
   DisplayRect, DisplayTarget,
 };
-#[allow(unused_imports)]
 pub use frame_resize::FrameResizeResult;
 pub use geometry::{
   apply_layer_gesture, fit_canvas_to_layers, GestureOperation, LayerGeometry, NormalizedRect,
   WorldRect,
 };
-#[allow(unused_imports)]
 pub use hit_test::hit_test_display;
-#[allow(unused_imports)]
 pub use limits::{
   FRAME_EDGE_BOTTOM, FRAME_EDGE_CENTERED, FRAME_EDGE_LEFT, FRAME_EDGE_RIGHT, FRAME_EDGE_TOP,
 };
 #[cfg(test)]
 use limits::{FRAME_MAX_AREA, FRAME_MIN_SIZE};
 pub use magnifier::crop_magnifier_anchor;
-#[allow(unused_imports)]
 pub use scene::{FrameId, LayerId, WorkspaceFrame, WorkspaceKind, WorkspaceLayer, WorkspaceScene};
 pub use selection_resize::{selection_resize, SelectionResize};

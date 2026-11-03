@@ -162,13 +162,13 @@ export default defineConfig([
   },
   {
     // User-visible text belongs in `locales/`. Stories, tests and the
-    // fixtures behind development previews hold sample data, not copy.
+    // fixtures behind stories and development previews hold sample data, not
+    // copy.
     files: ["src/**/*.{ts,tsx}"],
     ignores: [
       "**/*.stories.tsx",
       "**/*.test.{ts,tsx}",
       "**/*-fixtures.ts",
-      "**/*-preview.ts",
       "src/storybook/**",
     ],
     plugins: { screenwide },

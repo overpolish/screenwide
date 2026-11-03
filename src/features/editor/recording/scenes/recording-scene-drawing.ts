@@ -17,7 +17,7 @@ import { RecordingSceneClip } from "./recording-scenes";
 
 import type { SceneBoxes } from "../../../../bindings/SceneBoxes";
 import type { ScreenshotOutputSettings } from "../../screenshot/screenshot-output";
-import type { SchematicComposition } from "../../tool-panels/scene/scene-schematic";
+import type { SchematicComposition } from "../../tools/scene/scene-schematic";
 
 // A scene's layout as its drawings show it, read the way the Scene island
 // reads the scene under the playhead: a custom scene by its own boxes, a

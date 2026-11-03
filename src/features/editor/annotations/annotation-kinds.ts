@@ -10,7 +10,6 @@
  * in `annotation-draw-in.ts`.
  */
 
-import { t } from "../../../i18n/i18n";
 import { ANNOTATION_SIZES } from "../../annotations/widths";
 
 import { BOX_KIND_ROWS } from "./annotation-box-kinds";
@@ -57,8 +56,6 @@ export const ANNOTATION_KINDS: {
     hasShadow: false,
     hasSize: true,
     hasSoftness: false,
-    // An arrow has no name of its own, so it is called by its place in the lane.
-    laneLabel: (_, index) => t("editor-lane-arrow", { number: index + 1 }),
     parseShape: arrowShape,
     reversible: true,
     startsStill: false,
@@ -82,7 +79,6 @@ export const ANNOTATION_KINDS: {
     hasShadow: false,
     hasSize: true,
     hasSoftness: false,
-    laneLabel: (shape) => t("editor-lane-counter", { number: shape.value }),
     parseShape: counterShape,
     reversible: false,
     startsStill: false,
@@ -106,7 +102,6 @@ export const ANNOTATION_KINDS: {
     hasShadow: false,
     hasSize: true,
     hasSoftness: false,
-    laneLabel: (_, index) => t("editor-lane-drawing", { number: index + 1 }),
     parseShape: drawShape,
     reversible: false,
     startsStill: false,
@@ -129,7 +124,6 @@ export const ANNOTATION_KINDS: {
     hasShadow: false,
     hasSize: false,
     hasSoftness: false,
-    laneLabel: (_, index) => t("editor-lane-highlight", { number: index + 1 }),
     parseShape: highlightShape,
     reversible: false,
     startsStill: false,
@@ -154,7 +148,6 @@ export const ANNOTATION_KINDS: {
     hasShadow: true,
     hasSize: false,
     hasSoftness: false,
-    laneLabel: (_, index) => t("editor-lane-image", { number: index + 1 }),
     parseShape: imageShape,
     reversible: true,
     startsStill: false,
@@ -179,7 +172,6 @@ export const ANNOTATION_KINDS: {
     hasShadow: true,
     hasSize: false,
     hasSoftness: false,
-    laneLabel: (_, index) => t("editor-lane-magnifier", { number: index + 1 }),
     parseShape: magnifyShape,
     reversible: false,
     startsStill: false,
@@ -203,12 +195,6 @@ export const ANNOTATION_KINDS: {
     hasShadow: false,
     hasSize: true,
     hasSoftness: false,
-    // A box is called by what it says: its first line, which the lane
-    // truncates to the room it has, or by its place when that line is empty.
-    laneLabel: (shape, index) => {
-      const line = shape.text.split("\n", 1)[0].trim();
-      return line === "" ? t("editor-lane-text", { number: index + 1 }) : line;
-    },
     parseShape: textShape,
     reversible: false,
     startsStill: false,

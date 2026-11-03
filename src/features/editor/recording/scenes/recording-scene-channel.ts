@@ -4,7 +4,7 @@
 import { useEffect, useRef, useSyncExternalStore } from "react";
 
 import { type CropAspect } from "../../island/crop-aspect-choice";
-import { ToolPanelScene } from "../../tool-panels/tool-panel-scene";
+import { ToolPanelScene } from "../../tools/tool-panel-scene";
 import { EditorKind } from "../../types";
 
 import { ScenePane } from "./recording-scene-order";

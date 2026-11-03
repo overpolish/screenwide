@@ -4,8 +4,8 @@
 import { useState } from "react";
 
 import { useIsFindingFace } from "../../recording/scenes/use-face-tracking-progress";
-import { useBuiltInBackgroundPresets } from "../../tool-panels/frame/use-background-presets";
-import { useToolPanelSnapshot } from "../../tool-panels/use-tool-panel-snapshot";
+import { useBuiltInBackgroundPresets } from "../../tools/frame/use-background-presets";
+import { useToolPanelSnapshot } from "../../tools/use-tool-panel-snapshot";
 import { EditorKind } from "../../types";
 import { type EditorIslandContent } from "../editor-island";
 import { type SceneToolGroup } from "../scene/scene-actions";

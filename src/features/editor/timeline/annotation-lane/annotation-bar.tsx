@@ -10,7 +10,7 @@ import { motionDurations, motionEasings } from "../../../../lib/motion";
 import { cn } from "../../../../lib/styling";
 import { Badge } from "../../../../primitives/badge/badge";
 import { annotationToolLabel } from "../../../annotations/annotation-text";
-import { ANNOTATION_TOOLS } from "../../tool-panels/tool-registry";
+import { ANNOTATION_TOOLS } from "../../tools/tool-registry";
 import { reach, type Span, type TimelineScale } from "../timeline-scale";
 
 import {
