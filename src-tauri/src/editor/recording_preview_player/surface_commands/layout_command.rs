@@ -28,6 +28,7 @@ pub async fn layout_recording_preview_surface(
     session_id,
     viewport,
     viewport_corners,
+    keep_view,
   } = layout;
   let mut manager = state
     .0
@@ -227,6 +228,10 @@ pub async fn layout_recording_preview_surface(
   drop(chrome_batch);
   #[cfg(any(target_os = "macos", target_os = "windows"))]
   surface.set_editor_active(native_editor);
+  #[cfg(any(target_os = "macos", target_os = "windows"))]
+  let kept = keep_view.then(|| surface.displayed_workspace()).flatten();
+  #[cfg(not(any(target_os = "macos", target_os = "windows")))]
+  let _ = keep_view;
   surface.begin_layout();
   surface.set_viewport(
     viewport,
@@ -241,7 +246,7 @@ pub async fn layout_recording_preview_surface(
         .iter()
         .map(|pane| (pane.index, pane.rect))
         .collect::<Vec<_>>();
-      surface.layout_recording_workspace(workspace, natural_size, &pane_rects, defer_resize);
+      surface.layout_recording_workspace(workspace, natural_size, &pane_rects, defer_resize, kept);
     }
   }
   #[cfg(not(any(target_os = "macos", target_os = "windows")))]

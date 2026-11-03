@@ -10,9 +10,10 @@ import {
 } from "../../annotate/island/annotate-preview";
 import { useAnnotateRows } from "../../annotate/island/annotate-rows";
 
-import { IslandStage, type IslandStageProps } from "./island-stage";
+import { IslandStage } from "./island-stage";
 import { islandMeta } from "./island-story-meta";
 
+import type { IslandStageProps } from "./island-stage-props";
 import type { AnnotateSection } from "../../annotate/island/use-annotate-parts";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 

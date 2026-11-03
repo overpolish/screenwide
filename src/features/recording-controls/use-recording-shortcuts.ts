@@ -4,10 +4,6 @@
 import { listen, UnlistenFn } from "@tauri-apps/api/event";
 import { useEffect } from "react";
 
-import {
-  reportShortcutDiagnostic,
-  trackShortcutListener,
-} from "../../lib/shortcut-diagnostics";
 import { hideRecordingUi, toggleRecordingUi } from "../recording-sources/api";
 import { startTextRecognition } from "../text-recognition/api";
 
@@ -29,92 +25,36 @@ export function useRecordingShortcuts() {
   useEffect(() => {
     let unlisten: UnlistenFn | undefined;
     let disposed = false;
-    // Diagnostics probe (duplicate-delivery investigation): this listener
-    // acknowledged nothing, so a third of all dispatches left no trace past
-    // `frontend_dispatch`. The handlers below are unchanged; only the
-    // reporting around them is new.
-    const listener = trackShortcutListener();
-    const { listenerId } = listener;
 
     void listen<ShortcutAction>(SHORTCUT_ACTION_EVENT, ({ payload }) => {
       if (disposed) return;
       if (payload === "toggleRecordingControls") {
-        reportShortcutDiagnostic("received", { action: payload, listenerId });
-        toggleRecordingUi().then(
-          () => {
-            reportShortcutDiagnostic("completed", {
-              action: payload,
-              listenerId,
-            });
-          },
-          (error: unknown) => {
-            reportShortcutDiagnostic("failed", {
-              action: payload,
-              error,
-              listenerId,
-            });
-          },
-        );
+        void toggleRecordingUi();
         return;
       }
       if (payload === "recognizeText") {
-        reportShortcutDiagnostic("received", { action: payload, listenerId });
         void (async () => {
           await hideRecordingUi();
           await startTextRecognition();
-        })()
-          .then(() => {
-            reportShortcutDiagnostic("completed", {
-              action: payload,
-              listenerId,
-            });
-          })
-          .catch((error: unknown) => {
-            reportShortcutDiagnostic("failed", {
-              action: payload,
-              error,
-              listenerId,
-            });
-            console.error("Could not start text recognition", error);
-          });
+        })().catch((error: unknown) => {
+          console.error("Could not start text recognition", error);
+        });
         return;
       }
       if (payload !== "startStopRecording") return;
-      reportShortcutDiagnostic("received", { action: payload, listenerId });
       startRecordingOptions()
         .then(startRecording)
-        .then(() => {
-          reportShortcutDiagnostic("completed", {
-            action: payload,
-            listenerId,
-          });
-        })
         .catch((error: unknown) => {
-          reportShortcutDiagnostic("failed", {
-            action: payload,
-            error,
-            listenerId,
-          });
           console.error("Could not start the recording", error);
         });
-    })
-      .then((handle) => {
-        if (disposed) handle();
-        else {
-          unlisten = handle;
-          reportShortcutDiagnostic("listenerReady", { listenerId });
-        }
-      })
-      .catch((error: unknown) => {
-        listener.release();
-        reportShortcutDiagnostic("listenerFailed", { error });
-      });
+    }).then((handle) => {
+      if (disposed) handle();
+      else unlisten = handle;
+    });
 
     return () => {
       disposed = true;
       unlisten?.();
-      listener.release();
-      reportShortcutDiagnostic("listenerStopped", { listenerId });
     };
   }, []);
 }

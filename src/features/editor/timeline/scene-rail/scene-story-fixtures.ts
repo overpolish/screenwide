@@ -12,6 +12,7 @@ import { CUSTOM, TURN } from "../../island/scene/scene-story-fixtures";
 import { type Span } from "../timeline-scale";
 
 import { type TimelineScene } from "./scene-clip";
+import { drawnSceneSpan, LEAST_DRAWN_S } from "./scene-draw";
 
 // Scenes behind the scene stories: a 16:10 screen and a round 16:9 camera
 // on a 16:9 video, laid out as the Scene island's stories lay them out.
@@ -73,19 +74,12 @@ function roomAt({ duration, scenes }: Rail, moment: number, except?: string) {
 }
 
 /** The scene a drag from `from` to `to` draws, fitted between its
- * neighbours as the editor fits it, or null for a drag too short. */
+ * neighbours and grown to the shortest drawn scene as the editor fits it. */
 export function sceneDrawn(rail: Rail, from: number, to: number) {
-  const start = Math.min(from, to);
-  const end = Math.max(from, to);
-  if (end - start < 1) return null;
-  const room = roomAt(rail, from);
   return storyScene(
     `scene-${String(rail.scenes.length + 1)}`,
     "picture-in-picture",
-    {
-      end: Math.min(end, room.to),
-      start: Math.max(start, room.from),
-    },
+    drawnSceneSpan({ from, to }, roomAt(rail, from), LEAST_DRAWN_S),
   );
 }
 

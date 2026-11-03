@@ -10,6 +10,7 @@ import { type SnapFor } from "../strip/strip-snap";
 import { at, placed, type Span, type TimelineScale } from "../timeline-scale";
 
 import { SceneClip, type TimelineScene } from "./scene-clip";
+import { drawnSceneSpan, LEAST_DRAWN_S } from "./scene-draw";
 
 // The scenes along the top of the strip, each over the stretch it frames,
 // drawn as its layout and named. Press one to choose it, drag a chosen
@@ -20,7 +21,8 @@ import { SceneClip, type TimelineScene } from "./scene-clip";
 // recording keeps the composition it was recorded with. Over the empty rail,
 // a faint scene waits at the pointer, so the rail says what a drag there
 // makes; dragged, it becomes the scene it will be, fitted between its
-// neighbours as the drawn one will be.
+// neighbours as the drawn one will be, and never shorter than the shortest
+// scene a drag draws (`scene-draw.ts`).
 
 /** The least room, in px, the waiting scene is shown in: its glyph's. */
 const GHOST_MIN_PX = 20;
@@ -96,11 +98,22 @@ export function SceneRail({
     if (!box || box.width === 0) return 0;
     return scale.toSeconds((event.clientX - box.left) / box.width);
   };
-  const drawn = draft && {
-    ...sceneRoom(scenes, duration, draft.from),
-    end: Math.max(draft.from, draft.to),
-    start: Math.min(draft.from, draft.to),
+  /** The scene the drag draws, in recorded seconds: at least the shortest
+   * one as it plays, inside the room where it was pressed. */
+  const draftSpan = ({ from, to }: { from: number; to: number }): Span => {
+    const { map } = scale;
+    const room = sceneRoom(scenes, duration, from);
+    const span = drawnSceneSpan(
+      {
+        from: map.toPlayed(Math.min(from, to)),
+        to: map.toPlayed(Math.max(from, to), true),
+      },
+      { from: map.toPlayed(room.from), to: map.toPlayed(room.to, true) },
+      LEAST_DRAWN_S,
+    );
+    return { end: map.toRecorded(span.end), start: map.toRecorded(span.start) };
   };
+  const drawn = draft && draftSpan(draft);
   const hoverRoom =
     hover === null
       ? null
@@ -125,7 +138,11 @@ export function SceneRail({
       to: to?.seconds ?? pointer.to,
     };
     dragRef.current = next;
-    setDraft({ from: next.from, to: next.to });
+    // A press that has not moved draws nothing yet, so a click on the empty
+    // rail never makes a scene.
+    setDraft(
+      pointer.from === pointer.to ? null : { from: next.from, to: next.to },
+    );
   };
   const isDrawing = draft !== null;
   // ⌘ pressed or let go mid-drawing applies at once, without waiting for
@@ -179,7 +196,8 @@ export function SceneRail({
     // back with the next move over the empty rail.
     setHover(null);
     if (drag) onGuide?.(null);
-    if (drag?.kind === "draw") onDraw(drag.from, drag.to);
+    if (drag?.kind === "draw" && drag.pointer.from !== drag.pointer.to)
+      onDraw(drag.from, drag.to);
   };
 
   return (
@@ -234,11 +252,7 @@ export function SceneRail({
         <span
           aria-hidden
           className="pointer-events-none absolute inset-y-0.5 flex items-center gap-1 overflow-hidden rounded-part bg-fill-strong px-1 text-caption whitespace-nowrap text-fg"
-          style={placed(
-            scale,
-            Math.max(drawn.from, drawn.start),
-            Math.min(drawn.to, drawn.end),
-          )}
+          style={placed(scale, drawn.start, drawn.end)}
         >
           <Plus aria-hidden className="size-icon-sm shrink-0" />
           {t("editor-timeline-scene-new")}

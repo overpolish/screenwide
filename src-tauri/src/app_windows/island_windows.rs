@@ -3,10 +3,14 @@
 
 //! The island's window on Windows: at the top of the work area of its
 //! monitor, with no notch to sit under, or by a box, and letting clicks
-//! through everywhere but the island. Windows tells a window nothing of the pointer
-//! moving over other apps without a system-wide hook, so while the island is
-//! up the pointer's position is read at a steady rate, a cheap call, and
-//! click-through changes only when the pointer crosses the island's edge.
+//! through everywhere but the island. Windows tells a window nothing of the
+//! pointer moving over other apps without a system-wide hook, so while the
+//! island is up the pointer's position is read at a steady rate, a cheap
+//! call. Each look also compares the window's extended style with what it
+//! should be and puts it back, rather than acting only when the pointer
+//! crosses the island's edge: tao rewrites the whole word from its own flags
+//! whenever it shows the window, dropping the island's click-through and its
+//! refusal to activate.
 
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{Mutex, PoisonError};
@@ -28,8 +32,6 @@ static WATCHING: AtomicU64 = AtomicU64::new(0);
 static NEXT_WATCH: AtomicU64 = AtomicU64::new(1);
 /// The island is tucking away, and takes no clicks.
 static HIDING: AtomicBool = AtomicBool::new(false);
-/// The pointer is on the island, so its window takes clicks.
-static OVER: AtomicBool = AtomicBool::new(false);
 /// The window's top left on the desktop, in pixels, and the scale of the
 /// monitor it was placed on.
 static PLACED: Mutex<Option<(PhysicalPosition<i32>, f64)>> = Mutex::new(None);
@@ -66,15 +68,18 @@ fn set_passthrough(app: &AppHandle, passthrough: bool) {
   let target = app.clone();
   let _ = app.run_on_main_thread(move || {
     if let Ok(window) = window(&target) {
-      let _ = platform::set_pointer_passthrough(&window, passthrough);
+      let _ = platform::set_island_input(&window, passthrough);
     }
   });
 }
 
 fn update(app: &AppHandle) {
-  let over = !HIDING.load(Ordering::Relaxed) && pointer_on_island();
-  if OVER.swap(over, Ordering::Relaxed) != over {
-    set_passthrough(app, !over);
+  let passthrough = HIDING.load(Ordering::Relaxed) || !pointer_on_island();
+  let Ok(window) = window(app) else {
+    return;
+  };
+  if !platform::island_input_holds(&window, passthrough).unwrap_or(true) {
+    set_passthrough(app, passthrough);
   }
 }
 
@@ -179,10 +184,9 @@ pub(super) fn show(app: &AppHandle) -> tauri::Result<()> {
   *PLACED.lock().unwrap_or_else(PoisonError::into_inner) = Some((position, scale));
 
   HIDING.store(false, Ordering::Relaxed);
-  OVER.store(false, Ordering::Relaxed);
-  platform::set_pointer_passthrough(&window, true)?;
+  platform::set_island_input(&window, true)?;
   island::announce(app, shown);
-  platform::show(&window, 1.0)?;
+  platform::show_island(&window)?;
   apply_level(app)?;
   watch(app.clone());
   Ok(())
@@ -209,6 +213,5 @@ pub(super) fn refresh_hit_area(app: &AppHandle) {
 
 pub(super) fn hide(app: &AppHandle) -> tauri::Result<()> {
   WATCHING.store(0, Ordering::Relaxed);
-  OVER.store(false, Ordering::Relaxed);
-  platform::hide(&window(app)?)
+  platform::hide_island(&window(app)?)
 }

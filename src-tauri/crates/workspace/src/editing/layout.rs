@@ -87,15 +87,17 @@ impl WorkspaceEditor {
 
   /// Lays out the recording panes as one retained workspace: callers submit
   /// the complete pane topology in one operation, and the workspace draws
-  /// every layer in its box.
+  /// every layer in its box. With `keep`, the box `displayed_workspace` gave
+  /// before the viewport changed, the panes stay there on screen.
   pub fn layout_recording_workspace(
     &self,
     _rect: PreviewSurfaceRect,
     natural_size: (u32, u32),
     panes: &[(u32, PreviewSurfaceRect)],
     defer_draw: bool,
+    keep: Option<PreviewSurfaceRect>,
   ) {
-    self.layout_retained_workspace(natural_size, panes, defer_draw, true);
+    self.layout_retained_workspace(natural_size, panes, defer_draw, true, keep);
   }
 
   /// Screenshot markers use `fitPreviewPane`, which never enlarges content
@@ -107,7 +109,7 @@ impl WorkspaceEditor {
     panes: &[(u32, PreviewSurfaceRect)],
     defer_draw: bool,
   ) {
-    self.layout_retained_workspace(natural_size, panes, defer_draw, false);
+    self.layout_retained_workspace(natural_size, panes, defer_draw, false, None);
   }
 
   pub fn layout_retained_workspace(
@@ -116,9 +118,18 @@ impl WorkspaceEditor {
     panes: &[(u32, PreviewSurfaceRect)],
     defer_draw: bool,
     allow_upscale: bool,
+    keep: Option<PreviewSurfaceRect>,
   ) {
     if let Ok(mut state) = self.inner.state.lock() {
       state.workspace_allows_upscale = allow_upscale;
+      // Kept only for the same panes in a viewport that changed around them:
+      // a resize gesture owns the geometry, and a new canvas takes its own
+      // remembered transform.
+      let keep = keep.filter(|_| {
+        state.frame_resize.is_none()
+          && !state.frame_resize_committed
+          && state.workspace_natural_size == Some(natural_size)
+      });
       if state.frame_resize.is_some() {
         // A live drag owns the canvas size too: the re-flow tracks it from
         // the gesture's starts, and the DOM is a layout behind.
@@ -139,10 +150,33 @@ impl WorkspaceEditor {
         }
         state.workspace_natural_size = Some(natural_size);
       }
+      // The panes as laid out in the new viewport, put back where they were
+      // on screen, so what is under the pointer stays under it.
+      let laid = panes.iter().map(|(_, rect)| *rect).reduce(union_rect);
+      if let (Some(displayed), Some(laid)) = (keep, laid) {
+        if laid.width > 0.0 && displayed.width > 0.0 {
+          state.workspace_transform = WorkspaceTransform::placing(state.viewport, laid, displayed);
+        }
+      }
       for (index, rect) in panes {
         self.layout_pane(&mut state, *index, *rect, defer_draw);
       }
     }
+  }
+
+  /// Where the panes are on screen, in the viewport's points, for a layout
+  /// that is to leave them there. Asked before `begin_layout`, which forgets
+  /// which panes are shown.
+  pub fn displayed_workspace(&self) -> Option<PreviewSurfaceRect> {
+    let state = self.inner.state.lock().ok()?;
+    let transform = state.workspace_transform;
+    state
+      .panes
+      .iter()
+      .flatten()
+      .filter(|pane| pane.seen)
+      .map(|pane| transform.apply(state.viewport, pane.base_rect))
+      .reduce(union_rect)
   }
 
   /// Remembered transforms belong to one workspace topology. A recording

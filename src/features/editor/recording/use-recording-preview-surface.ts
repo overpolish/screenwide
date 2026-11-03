@@ -4,10 +4,7 @@
 import { listen } from "@tauri-apps/api/event";
 import { RefObject, useEffect, useRef } from "react";
 
-import {
-  layoutRecordingPreviewSurface,
-  setRecordingPreviewEditorSuspended,
-} from "../api";
+import { setRecordingPreviewEditorSuspended } from "../api";
 import {
   clearBackdropMasks,
   effectiveBackdrop,
@@ -16,6 +13,8 @@ import {
 } from "../preview/preview-backdrop";
 import { RecordingOutputSettings } from "../screenshot/screenshot-output";
 import { CameraOverlaySettings } from "../types";
+
+import { createRecordingLayoutQueue } from "./recording-preview-layout";
 
 import type { SceneRotation } from "./scenes/recording-scenes";
 
@@ -252,37 +251,14 @@ export function useRecordingPreviewSurface({
     if (!isEnabled) return;
     let animation = 0;
     let disposed = false;
-    let inFlight = false;
-    let lastLayout = "";
+    const layouts = createRecordingLayoutQueue({
+      nextRequestId: () => ++layoutRequestIdRef.current,
+      onError,
+    });
+    const queueLayout = layouts.queue;
     // Enabling is ownership, not suspension: a suspended editor stays enabled
     // and keeps its transform, and only its input and chrome go away.
     const nativeEditorActive = nativeEditorOwnsLayout;
-    let pendingLayout:
-      Parameters<typeof layoutRecordingPreviewSurface>[0] | null = null;
-    const queueLayout = (
-      value: Parameters<typeof layoutRecordingPreviewSurface>[0],
-    ) => {
-      const nextLayout = JSON.stringify(value);
-      if (nextLayout === lastLayout) return;
-      lastLayout = nextLayout;
-      const requestId = ++layoutRequestIdRef.current;
-      pendingLayout = { ...value, requestId };
-      flush();
-    };
-    const flush = () => {
-      if (disposed || inFlight || !pendingLayout) return;
-      const next = pendingLayout;
-      pendingLayout = null;
-      inFlight = true;
-      void layoutRecordingPreviewSurface(next)
-        .catch((cause: unknown) => {
-          if (!disposed) onError(String(cause));
-        })
-        .finally(() => {
-          inFlight = false;
-          flush();
-        });
-    };
     const measure = () => {
       // Pointer-rate recording edits are rendered directly by the retained
       // native workspace. ResizeObserver still sees React's live semantic
@@ -387,6 +363,7 @@ export function useRecordingPreviewSurface({
       measure();
       return () => {
         disposed = true;
+        layouts.dispose();
         measureRef.current = () => undefined;
       };
     }
@@ -452,6 +429,7 @@ export function useRecordingPreviewSurface({
     animation = requestAnimationFrame(observeMarkers);
     return () => {
       disposed = true;
+      layouts.dispose();
       cancelAnimationFrame(animation);
       mutationObserver?.disconnect();
       observer.disconnect();

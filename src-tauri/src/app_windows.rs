@@ -53,6 +53,7 @@ mod boot;
 mod capture_affinity;
 #[cfg(target_os = "windows")]
 pub(crate) use capture_affinity::apply_capture_policy;
+#[cfg(not(target_os = "windows"))]
 pub(crate) use capture_affinity::exclude_from_capture;
 #[cfg(target_os = "windows")]
 pub(crate) use capture_affinity::is_capturing;
@@ -66,8 +67,6 @@ pub(crate) mod color_panel;
 mod dismissal;
 #[cfg(target_os = "macos")]
 mod dock_visibility;
-#[cfg(target_os = "windows")]
-pub(crate) mod drag_release;
 mod escape;
 pub(crate) mod geometry;
 mod lifecycle;
@@ -97,8 +96,6 @@ pub use lifecycle::{
 };
 #[cfg(not(target_os = "macos"))]
 pub use lifecycle::{initialize_island, initialize_region_selector, initialize_standalone_listbox};
-#[cfg(target_os = "windows")]
-pub(crate) use platform::round_corners;
 pub use popover_dismissal::manage_transient_popover_dismissal;
 pub use region::{
   hide_region_selector, is_region_selector_visible, set_region_selector_passthrough,
@@ -128,16 +125,6 @@ pub(crate) fn set_host_pointer_passthrough(
   passthrough: bool,
 ) -> tauri::Result<()> {
   platform::set_pointer_passthrough(window, passthrough)
-}
-
-/// Removes a disposable overlay's pixels before Windows runs its native hide
-/// or close transition. This is intentionally reserved for windows that will
-/// be destroyed rather than shown again, because their layered alpha remains
-/// zero afterwards.
-#[cfg(target_os = "windows")]
-pub(crate) fn conceal_disposable_overlay(window: &WebviewWindow) -> tauri::Result<()> {
-  platform::set_opacity(window, 0.0)?;
-  platform::hide(window)
 }
 
 /// The builder for a window created after launch. The windows in

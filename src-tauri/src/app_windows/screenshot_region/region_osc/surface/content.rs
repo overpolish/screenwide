@@ -122,10 +122,6 @@ impl Surface {
     }
   }
 
-  #[cfg_attr(
-    target_os = "windows",
-    expect(dead_code, reason = "tool previews have a macOS host only")
-  )]
   pub(crate) fn is_animating(&self) -> bool {
     self.animating
   }

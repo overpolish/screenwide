@@ -42,6 +42,33 @@ impl WorkspaceTransform {
       y: center_y - height / 2.0,
     }
   }
+
+  /// The transform that shows `pane`, laid out in `viewport`, over
+  /// `displayed`: `apply`'s inverse. `displayed` must have `pane`'s aspect,
+  /// as a box the same panes were last shown in does.
+  pub fn placing(
+    viewport: PreviewSurfaceRect,
+    pane: PreviewSurfaceRect,
+    displayed: PreviewSurfaceRect,
+  ) -> Self {
+    let zoom = displayed.width / pane.width;
+    let viewport_center_x = viewport.width / 2.0;
+    let viewport_center_y = viewport.height / 2.0;
+    let pan = |shown: f64, laid: f64, center: f64| shown - center - (laid - center) * zoom;
+    Self {
+      pan_x: pan(
+        displayed.x + displayed.width / 2.0,
+        pane.x + pane.width / 2.0,
+        viewport_center_x,
+      ),
+      pan_y: pan(
+        displayed.y + displayed.height / 2.0,
+        pane.y + pane.height / 2.0,
+        viewport_center_y,
+      ),
+      zoom,
+    }
+  }
 }
 
 #[cfg(test)]
@@ -92,5 +119,30 @@ mod tests {
       ),
       (pane.x, pane.y, pane.width, pane.height)
     );
+  }
+
+  #[test]
+  fn placing_shows_a_pane_laid_out_again_where_it_was() {
+    // The viewport loses 40 points at the bottom, and the pane fitted into
+    // it comes out smaller and higher, still 16:9; the transform puts it
+    // back where it was shown, zoomed and panned.
+    let before = rect(0.0, 0.0, 800.0, 600.0);
+    let shown = WorkspaceTransform {
+      pan_x: 30.0,
+      pan_y: -12.0,
+      zoom: 1.5,
+    }
+    .apply(before, rect(0.0, 75.0, 800.0, 450.0));
+    let after = rect(0.0, 0.0, 800.0, 560.0);
+    let refitted = rect(48.0, 82.0, 704.0, 396.0);
+    let placed = WorkspaceTransform::placing(after, refitted, shown).apply(after, refitted);
+    for (got, want) in [
+      (placed.x, shown.x),
+      (placed.y, shown.y),
+      (placed.width, shown.width),
+      (placed.height, shown.height),
+    ] {
+      assert!((got - want).abs() < 1e-9, "{got} != {want}");
+    }
   }
 }

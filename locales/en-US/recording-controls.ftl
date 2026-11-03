@@ -10,6 +10,7 @@ recording-controls-mode = Recording type
 recording-controls-mode-screen = Screen
 recording-controls-mode-window = Window
 recording-controls-mode-region = Region
+recording-controls-displays = Display to record
 
 ## Capture buttons
 

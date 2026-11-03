@@ -163,15 +163,14 @@ export function useStoryContent(
         shortcuts: shortcuts.filter(({ id }) => !ids.includes(id)),
       }));
     },
-    /** Draws a scene, and gives it, or null for a drag too short. */
+    /** Draws a scene, and gives it. */
     drawScene: (from: number, to: number) => {
       const drawn = sceneDrawn(rail, from, to);
-      if (drawn)
-        change(({ scenes }) => ({
-          scenes: [...scenes, drawn].sort(
-            (first, second) => first.start - second.start,
-          ),
-        }));
+      change(({ scenes }) => ({
+        scenes: [...scenes, drawn].sort(
+          (first, second) => first.start - second.start,
+        ),
+      }));
       return drawn;
     },
     /** Moves `spans`, in the order they play, to play together before

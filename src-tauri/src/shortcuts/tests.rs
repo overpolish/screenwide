@@ -83,10 +83,18 @@ fn a_saved_file_that_predates_an_action_leaves_it_on_its_default() {
 
 #[test]
 fn a_new_default_on_keys_the_user_already_bound_is_left_unbound() {
+  // Save Replay's default keys, spelled another way: its CommandOrControl
+  // is Command (Super) on macOS and Control elsewhere.
+  let modifier = if cfg!(target_os = "macos") {
+    "Super"
+  } else {
+    "Control"
+  };
+  let taken = format!("{modifier}+Shift+Digit9");
   let stored = ShortcutSettings {
     bindings: vec![ShortcutBinding {
       action: ShortcutAction::TakeScreenshotToClipboard,
-      shortcut: Some("Super+Shift+Digit9".to_owned()),
+      shortcut: Some(taken.clone()),
     }],
   };
   let merged = merge(Some(stored));
@@ -98,11 +106,10 @@ fn a_new_default_on_keys_the_user_already_bound_is_left_unbound() {
       .and_then(|binding| binding.shortcut.clone())
   };
 
-  // Save Replay's default is the same keys spelled another way.
   assert_eq!(shortcut(ShortcutAction::SaveReplay), None);
   assert_eq!(
-    shortcut(ShortcutAction::TakeScreenshotToClipboard).as_deref(),
-    Some("Super+Shift+Digit9")
+    shortcut(ShortcutAction::TakeScreenshotToClipboard),
+    Some(taken)
   );
   // Other new defaults on free keys still arrive.
   assert_eq!(

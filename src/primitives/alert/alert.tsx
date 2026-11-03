@@ -55,7 +55,10 @@ const alertVariants = tv({
       true: {},
     },
     skin: {
+      // No padding here for the action to overhang into, so the line grows
+      // to the control's height and centres the message beside it.
       island: {
+        action: "h-auto",
         base: "items-center gap-inline rounded-none bg-transparent p-0 text-caption text-fg-secondary",
         icon: "[&>svg]:size-icon-sm",
       },

@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 
 import { getPermissionSnapshot } from "../../permissions/api";
 import { listCameras } from "../../recording-inputs/devices-api";
+import { findSavedDevice } from "../../recording-inputs/saved-device";
 import { useRecordingInputStore } from "../../recording-inputs/store";
 import {
   type CameraDevice,
@@ -33,7 +34,7 @@ export function usePreviewCamera(fps: RecordingFps, antiFlicker: boolean) {
         const cameras = await listCameras(cadences.split(" ").map(Number));
         const chosen = useRecordingInputStore.getState().selectedCamera;
         return (
-          cameras.find((device) => device.id === chosen?.id) ??
+          (chosen && findSavedDevice(chosen, cameras)) ??
           cameras.find((device) => device.isDefault) ??
           (cameras.length > 0 ? cameras[0] : null)
         );

@@ -15,7 +15,7 @@ use std::collections::HashMap;
 use std::sync::{LazyLock, Mutex, PoisonError};
 
 use windows::{
-  core::{w, IUnknown, HSTRING, PCWSTR},
+  core::{w, IUnknown, BOOL, HSTRING, PCWSTR},
   Win32::Graphics::{
     Direct2D::{
       Common::{D2D1_ALPHA_MODE_IGNORE, D2D1_COLOR_F, D2D1_PIXEL_FORMAT},
@@ -29,12 +29,13 @@ use windows::{
       IDWriteTextFormat3, IDWriteTextLayout, IDWriteTypography, DWRITE_FACTORY_TYPE_ISOLATED,
       DWRITE_FONT_AXIS_TAG_ITALIC, DWRITE_FONT_AXIS_TAG_WEIGHT, DWRITE_FONT_AXIS_VALUE,
       DWRITE_FONT_FAMILY_MODEL_TYPOGRAPHIC, DWRITE_FONT_FEATURE,
-      DWRITE_FONT_FEATURE_TAG_TABULAR_FIGURES, DWRITE_FONT_LINE_GAP_USAGE_DEFAULT,
-      DWRITE_FONT_METRICS, DWRITE_FONT_METRICS1, DWRITE_FONT_STRETCH_NORMAL,
-      DWRITE_FONT_STYLE_ITALIC, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_WEIGHT,
-      DWRITE_GRID_FIT_MODE_DISABLED, DWRITE_LINE_SPACING, DWRITE_LINE_SPACING_METHOD_UNIFORM,
-      DWRITE_PIXEL_GEOMETRY_FLAT, DWRITE_RENDERING_MODE1_DEFAULT, DWRITE_TEXT_METRICS,
-      DWRITE_TEXT_RANGE, DWRITE_WORD_WRAPPING_NO_WRAP,
+      DWRITE_FONT_FEATURE_TAG_TABULAR_FIGURES, DWRITE_FONT_FILE_TYPE,
+      DWRITE_FONT_LINE_GAP_USAGE_DEFAULT, DWRITE_FONT_METRICS, DWRITE_FONT_METRICS1,
+      DWRITE_FONT_STRETCH_NORMAL, DWRITE_FONT_STYLE_ITALIC, DWRITE_FONT_STYLE_NORMAL,
+      DWRITE_FONT_WEIGHT, DWRITE_GRID_FIT_MODE_DISABLED, DWRITE_LINE_SPACING,
+      DWRITE_LINE_SPACING_METHOD_UNIFORM, DWRITE_PIXEL_GEOMETRY_FLAT,
+      DWRITE_RENDERING_MODE1_DEFAULT, DWRITE_TEXT_METRICS, DWRITE_TEXT_RANGE,
+      DWRITE_WORD_WRAPPING_NO_WRAP,
     },
     Dxgi::Common::DXGI_FORMAT_B8G8R8A8_UNORM,
     Gdi::{CreateCompatibleDC, HDC},
@@ -107,7 +108,8 @@ pub(super) fn with<R>(work: impl FnOnce(&Engine) -> Result<R, String>) -> Result
 
 /// Inter, then the templates' `files`, as one set. Inter goes first, so it
 /// is the set's first face. No owner, so the loader keeps its own copy of
-/// each.
+/// each. A file DirectWrite cannot read as a font is left out, rather than
+/// failing the set and with it every annotation's type.
 unsafe fn app_font_set(
   factory: &IDWriteFactory6,
   loader: &IDWriteInMemoryFontFileLoader,
@@ -122,6 +124,15 @@ unsafe fn app_font_set(
         bytes.len() as u32,
         None::<&IUnknown>,
       )?;
+      let (mut supported, mut kind, mut faces) =
+        (BOOL::default(), DWRITE_FONT_FILE_TYPE::default(), 0);
+      if file
+        .Analyze(&mut supported, &mut kind, None, &mut faces)
+        .is_err()
+        || !supported.as_bool()
+      {
+        continue;
+      }
       IDWriteFontSetBuilder1::AddFontFile(&builder, &file)?;
     }
     builder.CreateFontSet()

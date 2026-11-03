@@ -89,6 +89,22 @@ describe("a scene drawn on the rail", () => {
     lanes.onSceneDraw(4, 6);
     expect(seeks).toEqual([]);
   });
+
+  it("grows a drag too short to the shortest drawn scene, about its middle", () => {
+    const { changed, lanes } = lanesAt(0);
+    lanes.onSceneDraw(4, 4.2);
+    expect(changed).toMatchObject([[{ endMs: 4600, startMs: 3600 }]]);
+  });
+
+  it("slides a grown scene clear of the neighbour it would run into", () => {
+    const { changed, lanes } = lanesAt(0, [
+      { endMs: 4000, id: "before", preset: "full", startMs: 1000 },
+    ]);
+    lanes.onSceneDraw(4.1, 4.2);
+    expect(changed).toMatchObject([
+      [{ id: "before" }, { endMs: 5000, startMs: 4000 }],
+    ]);
+  });
 });
 
 // Ten recorded seconds played with 4 to 6 moved to the end: 0 to 4, then

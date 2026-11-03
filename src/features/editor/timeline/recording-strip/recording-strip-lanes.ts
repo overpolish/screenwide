@@ -9,15 +9,16 @@ import { presetName } from "../../island/scene/scene-names";
 import { sceneLandingMs } from "../../recording/scenes/recording-scene-arrangement";
 import { type TimelineAnnotation } from "../annotation-lane/annotation-lane";
 import { type TimelineScene } from "../scene-rail/scene-clip";
+import { drawnSceneSpan, LEAST_DRAWN_S } from "../scene-rail/scene-draw";
 import { type Playhead } from "../scrub-playhead";
 import { baseOf, partId } from "../strip/strip-part";
 import {
   isPlayheadOutside,
   type StripSelection,
 } from "../strip/strip-selection";
-import { SLIVER_S } from "../strip/strip-split";
 import { type Span, type TimeMap } from "../timeline-scale";
 
+import { playedMs, recordedParts } from "./recording-strip-time";
 import { type RecordingStripSteps } from "./use-recording-strip-edits";
 
 import type { RecordingStripLanes } from "./use-recording-strip";
@@ -33,38 +34,6 @@ import type { RecordingSceneClip } from "../../../../bindings/RecordingSceneClip
 
 /** Shorter than this, in ms, a scene would spend its whole life arriving. */
 const LEAST_SCENE_MS = 500;
-/** Shorter than this, in ms, a drag on the scene rail draws nothing. */
-const LEAST_DRAWN_MS = 1000;
-
-/** A stretch's span in recorded seconds, from its span in played seconds,
- * inside one run. */
-function recordedSpan(map: TimeMap, from: number, to: number) {
-  const start = map.toRecorded(from);
-  // Its end is the last moment it shows, which is in what plays before it.
-  const end = map.toRecorded(Math.max(to - 1e-4, from)) + 1e-4;
-  return { end: Math.max(end, start), start };
-}
-
-/** A clip's parts in recorded seconds, from its span in edited ms: one for
- * each run it plays across, so a clip played across a jump is drawn each
- * side of it. One span from its start to its end would take in what plays
- * elsewhere between them (a stretch moved away from inside it, drawn where
- * it plays now), or run backwards (one moved into it). */
-function recordedParts(
-  map: TimeMap,
-  runs: Span[],
-  { endMs, startMs }: { endMs: number; startMs: number },
-) {
-  return runs.flatMap((run) => {
-    const from = Math.max(startMs / 1000, run.start);
-    const to = Math.min(endMs / 1000, run.end);
-    return to - from >= SLIVER_S ? [recordedSpan(map, from, to)] : [];
-  });
-}
-
-/** Where a recorded moment plays, in edited ms. */
-const playedMs = (map: TimeMap, seconds: number, isEnd?: boolean) =>
-  Math.round(map.toPlayed(seconds, isEnd) * 1000);
 
 export type RecordingStripLaneSource = {
   annotations: {
@@ -216,13 +185,18 @@ export function recordingStripLanes(source: RecordingStripLaneSource) {
       if (!scenes.isAvailable) return;
       const fromMs = playedMs(map, Math.min(from, to));
       const toMs = playedMs(map, Math.max(from, to), true);
-      if (toMs - fromMs < LEAST_DRAWN_MS) return;
+      // Drawn too short, it grows as the rail showed it, not vanishing.
       const room = roomAround(scenes.clips, fromMs);
+      const span = drawnSceneSpan(
+        { from: fromMs, to: toMs },
+        { from: room.from, to: Math.min(room.to, map.duration * 1000) },
+        LEAST_DRAWN_S * 1000,
+      );
       const clip: RecordingSceneClip = {
-        endMs: Math.min(toMs, room.to),
+        endMs: Math.round(span.end),
         id: crypto.randomUUID(),
         preset: "picture-in-picture",
-        startMs: Math.max(fromMs, room.from),
+        startMs: Math.round(span.start),
       };
       if (clip.endMs - clip.startMs < LEAST_SCENE_MS) return;
       steps.step(() => {

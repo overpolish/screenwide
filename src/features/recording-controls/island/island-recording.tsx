@@ -3,8 +3,8 @@
 
 import { Mic, MicOff } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
-import { type CSSProperties, type ReactNode } from "react";
-import { useMeter } from "react-aria";
+import { type CSSProperties, type ReactNode, useState } from "react";
+import { useFocusWithin, useMeter } from "react-aria";
 
 import { t } from "../../../i18n/i18n";
 import { motionDurations, motionEasings } from "../../../lib/motion";
@@ -22,8 +22,10 @@ import type { IslandMoment, RecordingIslandProps } from "./island-types";
 // The island while it records, all on its one row: the recording dot and,
 // with confidence checks on, what is being recorded from; then the size so
 // far, the time, and under the pointer the controls, the row growing
-// sideways to take them rather than hanging them beneath. A moment placed by
-// its shortcut shows in the time's place for as long as it is shown.
+// sideways to take them rather than hanging them beneath. The time takes
+// keyboard focus, and the controls show while focus is on it or them, so
+// they can be reached without a pointer. A moment placed by its shortcut
+// shows in the time's place for as long as it is shown.
 
 const swap = {
   duration: motionDurations.travel,
@@ -166,10 +168,16 @@ export function RecordingRow({
     props.writtenBytes === undefined ? null : (
       <RecordedSize bytes={props.writtenBytes} />
     );
+  // Focus on the time or the controls holds them out, as the pointer does.
+  const [hasFocus, setHasFocus] = useState(false);
+  const { focusWithinProps } = useFocusWithin({
+    onFocusWithinChange: setHasFocus,
+  });
+  const isShowingControls = showsControls || hasFocus;
   return (
     <IslandRow
       end={
-        <>
+        <span className="contents" {...focusWithinProps}>
           {hasNotch ? null : size}
           {/* The time, or a moment in its place, crossfading as one gives
               way to the other. */}
@@ -197,10 +205,11 @@ export function RecordingRow({
                     { time: clock(props.elapsed ?? 0) },
                   )}
                   className={cn(
-                    "px-2 text-label tabular-nums",
+                    "rounded-full px-2 text-label tabular-nums ring-focus outline-none focus-visible:ring-3",
                     isPaused && "text-fg-secondary",
                   )}
                   role="timer"
+                  tabIndex={0}
                 >
                   {clock(props.elapsed ?? 0)}
                 </span>
@@ -211,7 +220,7 @@ export function RecordingRow({
               grows for them, and are lifted out to fade as it shrinks,
               rather than appearing and going at once. */}
           <AnimatePresence initial={false} mode="popLayout">
-            {showsControls ? (
+            {isShowingControls ? (
               <motion.span
                 animate={{ filter: "blur(0px)", opacity: 1, scale: 1 }}
                 className="flex"
@@ -224,7 +233,7 @@ export function RecordingRow({
               </motion.span>
             ) : null}
           </AnimatePresence>
-        </>
+        </span>
       }
       start={
         <span className="flex items-center gap-1 ps-2">

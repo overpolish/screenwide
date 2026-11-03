@@ -13,7 +13,7 @@ mod desktop;
 pub(crate) mod host;
 pub(crate) mod input;
 mod ocr;
-#[cfg(target_os = "macos")]
+#[cfg(any(target_os = "macos", target_os = "windows"))]
 pub(crate) mod preview;
 mod ruler;
 mod segment;

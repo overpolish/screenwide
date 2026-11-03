@@ -230,7 +230,7 @@ export function LiveStrip(props: LiveStripProps) {
       onSceneDraw={(from, to) => {
         props.onSceneDraw(from, to);
         const drawn = edit.drawScene(from, to);
-        if (drawn) setSelection({ id: drawn.id, kind: "scene" });
+        setSelection({ id: drawn.id, kind: "scene" });
       }}
       onSceneRetime={(id, start, end) => {
         log.scene(id, start, end);

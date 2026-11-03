@@ -25,6 +25,8 @@ export type TimeMap = {
 };
 
 export type TimelineScale = {
+  /** How the recording's time plays, which the scale lays out. */
+  map: TimeMap;
   /** The recorded moment under a fraction of the strip's width. */
   toSeconds: (x: number) => number;
   /** Fraction of the strip's width for a recorded moment: 0 to 1 where it
@@ -47,6 +49,7 @@ export function timelineScale(map: TimeMap, view: View = WHOLE): TimelineScale {
   const length = Math.max(map.duration, 1e-6);
   const span = Math.max(view.end - view.start, 1e-6);
   return {
+    map,
     toSeconds: (x) =>
       map.toRecorded(
         (view.start + Math.min(Math.max(x, 0), 1) * span) * length,

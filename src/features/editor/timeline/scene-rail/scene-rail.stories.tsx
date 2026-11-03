@@ -31,7 +31,6 @@ function LiveRail(args: SceneRailProps) {
         onDraw={(from, to) => {
           args.onDraw(from, to);
           const drawn = sceneDrawn({ duration: DURATION, scenes }, from, to);
-          if (!drawn) return;
           setScenes(
             [...scenes, drawn].sort(
               (first, second) => first.start - second.start,

@@ -3,11 +3,12 @@
 
 import { TrianglesCenterlineDashedVertical } from "lucide-react";
 import { type ReactNode, useMemo } from "react";
-import { useCollator } from "react-aria";
+import { useCollator, useMeter } from "react-aria";
+import { ToggleButton } from "react-aria-components";
 
 import { ControlRow } from "../../../composites/control-row/control-row";
 import { t } from "../../../i18n/i18n";
-import { cn } from "../../../lib/styling";
+import { cn, elementFocusVisible, focusStyles } from "../../../lib/styling";
 import { ListBox } from "../../../primitives/listbox/listbox";
 import { ListBoxItem } from "../../../primitives/listbox-item/listbox-item";
 import { revealChosen } from "../../../primitives/scroll-area/reveal-chosen";
@@ -52,20 +53,21 @@ function CameraFrame({
           picture; on, it is a held toggle, raised in the primary colour
           as one is everywhere, since the island's fill would not read
           over the picture. */}
-      <button
+      <ToggleButton
         aria-label={t("recording-controls-flip")}
-        aria-pressed={isFlipped}
         className={cn(
-          "absolute end-2 bottom-2 flex size-island-control items-center justify-center rounded-full backdrop-blur-sm transition-colors",
+          "absolute end-2 bottom-2 flex size-island-control cursor-default items-center justify-center rounded-full backdrop-blur-sm transition-colors",
           isFlipped
-            ? "bg-primary text-on-primary primary-raised hover:bg-primary-hover active:bg-primary-pressed active:primary-raised-pressed"
-            : "bg-island/60 text-fg hover:bg-island/80",
+            ? "bg-primary text-on-primary primary-raised data-[hovered]:bg-primary-hover data-[pressed]:bg-primary-pressed data-[pressed]:primary-raised-pressed"
+            : "bg-island/60 text-fg data-[hovered]:bg-island/80",
+          focusStyles,
+          elementFocusVisible,
         )}
-        onClick={() => onFlipChange?.(!isFlipped)}
-        type="button"
+        isSelected={isFlipped}
+        onChange={onFlipChange}
       >
         <TrianglesCenterlineDashedVertical aria-hidden className="size-icon" />
-      </button>
+      </ToggleButton>
     </div>
   );
 }
@@ -83,6 +85,42 @@ function nextChoice(kind: IslandInputKind, input: IslandInput, id: string) {
     ? apps.filter((chosen) => chosen !== id)
     : [...apps, id];
   return next.length > 0 ? next : pinned.slice(0, 1);
+}
+
+/** An input's level along the part, as its glyph shows it on the row. Off,
+ * it stays at nothing, dimmed with the devices, so the part keeps its
+ * shape when the input is switched. */
+function PanelLevel({
+  isOn,
+  kind,
+  level = 0,
+}: {
+  isOn: boolean;
+  kind: "microphone" | "systemAudio";
+  level?: number;
+}) {
+  const value = isOn ? level * 100 : 0;
+  const { meterProps } = useMeter({
+    "aria-label":
+      kind === "microphone"
+        ? t("recording-controls-microphone-level")
+        : t("recording-controls-system-audio-level"),
+    value,
+  });
+  return (
+    <span
+      {...meterProps}
+      className={cn(
+        "h-1 overflow-hidden rounded-full bg-fill-strong transition-opacity",
+        !isOn && "opacity-40",
+      )}
+    >
+      <span
+        className="block h-full rounded-full bg-fg transition-[width] duration-75"
+        style={{ width: `${String(value)}%` }}
+      />
+    </span>
+  );
 }
 
 export function DevicePanel({
@@ -146,23 +184,9 @@ export function DevicePanel({
           {preview}
         </CameraFrame>
       ) : null}
-      {/* Off, the level bar stays and is disabled with the devices, so the
-          part keeps its shape when the input is switched. It spans the part
-          as the switch and the devices do. */}
+      {/* It spans the part as the switch and the devices do. */}
       {kind !== "camera" ? (
-        <span
-          className={cn(
-            "h-1 overflow-hidden rounded-full bg-fill-strong transition-opacity",
-            !input.isOn && "opacity-50",
-          )}
-        >
-          <span
-            className="block h-full rounded-full bg-fg transition-[width] duration-75"
-            style={{
-              width: `${String(input.isOn ? (input.level ?? 0) * 100 : 0)}%`,
-            }}
-          />
-        </span>
+        <PanelLevel isOn={input.isOn} kind={kind} level={input.level} />
       ) : null}
       {input.warning ? (
         <Text className="px-inset-sm text-error" variant="caption">
@@ -174,10 +198,7 @@ export function DevicePanel({
       <ScrollArea
         constrainHeight
         onInitialized={revealChosen}
-        rootClassName={cn(
-          "max-h-48 transition-opacity",
-          !input.isOn && "opacity-50",
-        )}
+        rootClassName="max-h-48"
       >
         {/* Chosen by the island's own rule rather than the list's: the
             camera and microphone take one, system audio the mix or any
@@ -185,6 +206,9 @@ export function DevicePanel({
             the list would have changed, and the rule picks the next set. */}
         <ListBox
           aria-label={inputName(kind)}
+          // Off, an input's devices are not chosen from; they show what it
+          // would record when switched back on.
+          disabledKeys={input.isOn ? [] : devices.map(({ id }) => id)}
           onSelectionChange={(keys) => {
             if (keys === "all") return;
             const pressed = devices.find(

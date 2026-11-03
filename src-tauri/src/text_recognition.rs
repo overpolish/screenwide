@@ -21,7 +21,7 @@ mod macos;
 mod native_overlay;
 #[cfg(all(test, target_os = "macos"))]
 mod perf_tests;
-#[cfg(target_os = "macos")]
+#[cfg(any(target_os = "macos", target_os = "windows"))]
 pub(crate) mod preview;
 pub(crate) mod snapshot;
 mod text_selection;

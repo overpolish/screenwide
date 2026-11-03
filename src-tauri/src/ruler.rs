@@ -13,7 +13,7 @@ pub(crate) mod island;
 pub(crate) use crate::osc::keyboard_windows::alt_pressed as windows_alt_pressed;
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 mod native_overlay;
-#[cfg(target_os = "macos")]
+#[cfg(any(target_os = "macos", target_os = "windows"))]
 pub(crate) mod preview;
 pub(crate) mod probe;
 pub(crate) mod radius;
@@ -187,21 +187,7 @@ pub fn cancel_ruler(app: AppHandle) {
 pub fn start_detached(app: &AppHandle) {
   let app = app.clone();
   tauri::async_runtime::spawn(async move {
-    let result = start(&app).await;
-    // Diagnostics probe (duplicate-delivery investigation): the ruler is the
-    // most-pressed shortcut and is carried out entirely in Rust, so the
-    // shortcut log otherwise ends at the press. Recorded here rather than at
-    // the call site because only this task sees the settled outcome; a
-    // tray-triggered start records the same entry with no press before it.
-    crate::shortcuts::diagnostics::record(
-      "native_action_result",
-      serde_json::json!({
-        "action": "rulerOverlay",
-        "outcome": if result.is_ok() { "started" } else { "failed" },
-        "error": result.as_ref().err(),
-      }),
-    );
-    if let Err(error) = result {
+    if let Err(error) = start(&app).await {
       eprintln!("Could not start ruler overlay: {error}");
     }
   });

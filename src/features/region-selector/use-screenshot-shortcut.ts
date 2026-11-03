@@ -4,10 +4,7 @@
 import { listen, UnlistenFn } from "@tauri-apps/api/event";
 import { useEffect } from "react";
 
-import {
-  reportShortcutDiagnostic,
-  trackShortcutListener,
-} from "../../lib/shortcut-diagnostics";
+import { reportShortcutDiagnostic } from "../../lib/shortcut-diagnostics";
 import { useRecordingSourceStore } from "../recording-sources/store";
 
 import {
@@ -28,11 +25,6 @@ export function useScreenshotShortcut(enabled = true) {
 
     let unlisten: UnlistenFn | undefined;
     let disposed = false;
-    // Diagnostics probe (duplicate-delivery investigation): one identity per
-    // subscription, claimed before `listen` resolves, so a press handled twice
-    // can be read as two subscriptions, one doubled delivery, or two webviews.
-    const action = trackShortcutListener();
-    const handoff = trackShortcutListener();
 
     // `listen` receives events for any target, so each window must match the
     // shortcut action it owns exactly.
@@ -43,28 +35,17 @@ export function useScreenshotShortcut(enabled = true) {
         // Rust routes active sessions through the dedicated handoff event.
         // Tauri listeners can still observe the original targeted event; do
         // not let that duplicate turn a destination switch into a dismissal.
-        const listenerId = action.listenerId;
-        reportShortcutDiagnostic("received", { action: payload, listenerId });
+        reportShortcutDiagnostic("received", payload);
         if (useRecordingSourceStore.getState().isScreenshotCapture) {
-          reportShortcutDiagnostic("duplicateIgnored", {
-            action: payload,
-            listenerId,
-          });
+          reportShortcutDiagnostic("duplicateIgnored", payload);
           return;
         }
         handleScreenshotShortcut(payload)
           .then(() => {
-            reportShortcutDiagnostic("completed", {
-              action: payload,
-              listenerId,
-            });
+            reportShortcutDiagnostic("completed", payload);
           })
           .catch((error: unknown) => {
-            reportShortcutDiagnostic("failed", {
-              action: payload,
-              error,
-              listenerId,
-            });
+            reportShortcutDiagnostic("failed", payload, error);
             console.error("Could not open the region for a screenshot", error);
           });
       }),
@@ -72,21 +53,13 @@ export function useScreenshotShortcut(enabled = true) {
         SCREENSHOT_SHORTCUT_REQUESTED_EVENT,
         ({ payload }) => {
           if (disposed) return;
-          const listenerId = handoff.listenerId;
-          reportShortcutDiagnostic("received", { action: payload, listenerId });
+          reportShortcutDiagnostic("received", payload);
           handoffScreenshotShortcut(payload)
             .then(() => {
-              reportShortcutDiagnostic("completed", {
-                action: payload,
-                listenerId,
-              });
+              reportShortcutDiagnostic("completed", payload);
             })
             .catch((error: unknown) => {
-              reportShortcutDiagnostic("failed", {
-                action: payload,
-                error,
-                listenerId,
-              });
+              reportShortcutDiagnostic("failed", payload, error);
               console.error(
                 "Could not hand off the screenshot shortcut",
                 error,
@@ -101,12 +74,7 @@ export function useScreenshotShortcut(enabled = true) {
             listener();
           });
         } else {
-          reportShortcutDiagnostic("listenerReady", {
-            listenerId: action.listenerId,
-          });
-          reportShortcutDiagnostic("listenerReady", {
-            listenerId: handoff.listenerId,
-          });
+          reportShortcutDiagnostic("listenerReady");
           unlisten = () => {
             listeners.forEach((listener) => {
               listener();
@@ -115,22 +83,13 @@ export function useScreenshotShortcut(enabled = true) {
         }
       })
       .catch((error: unknown) => {
-        action.release();
-        handoff.release();
-        reportShortcutDiagnostic("listenerFailed", { error });
+        reportShortcutDiagnostic("listenerFailed", undefined, error);
       });
 
     return () => {
+      reportShortcutDiagnostic("listenerStopped");
       disposed = true;
       unlisten?.();
-      action.release();
-      handoff.release();
-      reportShortcutDiagnostic("listenerStopped", {
-        listenerId: action.listenerId,
-      });
-      reportShortcutDiagnostic("listenerStopped", {
-        listenerId: handoff.listenerId,
-      });
     };
   }, [enabled]);
 }

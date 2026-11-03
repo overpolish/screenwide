@@ -11,6 +11,7 @@ mod capture_overlays;
 mod cursor_scrub;
 mod editor;
 mod fault;
+mod file_browser;
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 mod glide;
 mod image_analysis;

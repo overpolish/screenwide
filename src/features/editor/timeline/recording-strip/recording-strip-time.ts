@@ -11,6 +11,7 @@ import {
   type RecordingTimelineEdit,
   recordingTimelineRetainedDuration,
 } from "../editing/recording-timeline-edit";
+import { SLIVER_S } from "../strip/strip-split";
 import { type Span, type TimeMap } from "../timeline-scale";
 
 import type { RecordingTimelineSegment } from "../recording-timeline-types";
@@ -177,3 +178,33 @@ export function recordingStripTime(
     ),
   };
 }
+
+/** A stretch's span in recorded seconds, from its span in played seconds,
+ * inside one run. */
+function recordedSpan(map: TimeMap, from: number, to: number) {
+  const start = map.toRecorded(from);
+  // Its end is the last moment it shows, which is in what plays before it.
+  const end = map.toRecorded(Math.max(to - 1e-4, from)) + 1e-4;
+  return { end: Math.max(end, start), start };
+}
+
+/** A clip's parts in recorded seconds, from its span in edited ms: one for
+ * each run it plays across, so a clip played across a jump is drawn each
+ * side of it. One span from its start to its end would take in what plays
+ * elsewhere between them (a stretch moved away from inside it, drawn where
+ * it plays now), or run backwards (one moved into it). */
+export function recordedParts(
+  map: TimeMap,
+  runs: Span[],
+  { endMs, startMs }: { endMs: number; startMs: number },
+) {
+  return runs.flatMap((run) => {
+    const from = Math.max(startMs / 1000, run.start);
+    const to = Math.min(endMs / 1000, run.end);
+    return to - from >= SLIVER_S ? [recordedSpan(map, from, to)] : [];
+  });
+}
+
+/** Where a recorded moment plays, in edited ms. */
+export const playedMs = (map: TimeMap, seconds: number, isEnd?: boolean) =>
+  Math.round(map.toPlayed(seconds, isEnd) * 1000);

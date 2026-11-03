@@ -58,7 +58,7 @@ pub fn set_pointer_passthrough(window: &WebviewWindow, passthrough: bool) -> tau
 }
 
 #[cfg(target_os = "windows")]
-const fn passthrough_style(style: isize, passthrough: bool) -> isize {
+pub(super) const fn passthrough_style(style: isize, passthrough: bool) -> isize {
   use ::windows::Win32::UI::WindowsAndMessaging::{WS_EX_LAYERED, WS_EX_TRANSPARENT};
 
   let transparent = WS_EX_TRANSPARENT.0 as isize;
@@ -105,15 +105,6 @@ pub fn prepare_to_show(window: &WebviewWindow) -> tauri::Result<()> {
   set_capture_affinity(window, record_screenwide_windows)
 }
 
-/// The island: an overlay like the rest, never activated, and without the
-/// rounded corner the other panels take, as it draws its own shape and
-/// shadow on a transparent window, which the corner would clip.
-#[cfg(target_os = "windows")]
-pub fn initialize_island(window: &WebviewWindow) -> tauri::Result<()> {
-  initialize_overlay(window)?;
-  refuse_activation(window)
-}
-
 #[cfg(target_os = "windows")]
 pub fn initialize_region_selector(window: &WebviewWindow) -> tauri::Result<()> {
   initialize_overlay(window)
@@ -131,27 +122,6 @@ pub fn initialize_standalone_listbox(window: &WebviewWindow) -> tauri::Result<()
 pub fn initialize_tooltip(window: &WebviewWindow) -> tauri::Result<()> {
   initialize_overlay(window)?;
   super::super::round_corners(window)
-}
-
-/// `WS_EX_NOACTIVATE`: a press on the window leaves the foreground, and the
-/// keyboard, where it was. WebView2 still receives the press: the style
-/// refuses activation, not input.
-#[cfg(target_os = "windows")]
-fn refuse_activation(window: &WebviewWindow) -> tauri::Result<()> {
-  use ::windows::Win32::{
-    Foundation::HWND,
-    UI::WindowsAndMessaging::{
-      GetWindowLongPtrW, SetWindowLongPtrW, GWL_EXSTYLE, WS_EX_NOACTIVATE,
-    },
-  };
-
-  let hwnd = HWND(window.hwnd()?.0);
-  let current = unsafe { GetWindowLongPtrW(hwnd, GWL_EXSTYLE) };
-  let next = current | WS_EX_NOACTIVATE.0 as isize;
-  if next != current {
-    unsafe { SetWindowLongPtrW(hwnd, GWL_EXSTYLE, next) };
-  }
-  Ok(())
 }
 
 /// Makes `window` an owned window of `owner`, or ownerless when `owner` is

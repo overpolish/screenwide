@@ -10,11 +10,11 @@ import {
 import { SAMPLE } from "./sample-palette";
 
 /** The menu bar's height without a notch; with one, the bar is as tall as
- * the notch, as macOS draws it. */
+ * the notch, as macOS draws it. Windows has no bar at the top. */
 const MENU_BAR = 24;
 
 export const menuBarHeight = (notch: IslandNotch | null) =>
-  notch ? notch.height : MENU_BAR;
+  isWindows() ? 0 : notch ? notch.height : MENU_BAR;
 
 /** macOS's menu bar along the top of a screen `width` wide: the menus at
  * its start, the status items at its end, and on a Mac with one, the notch

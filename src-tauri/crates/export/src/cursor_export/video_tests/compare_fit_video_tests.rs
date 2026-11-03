@@ -150,8 +150,10 @@ fn lines_up_the_compared_frames_at_the_smaller_looks() {
       "-i",
     ])
     .arg(format!("color=c=black:s={WIDTH}x{HEIGHT}:r=30:d=0.5"))
+    // Near lossless rather than lossless: x264 writes lossless video in the
+    // High 4:4:4 Predictive profile, which Media Foundation cannot decode.
     .args([
-      "-vf", &bands, "-c:v", "libx264", "-qp", "0", "-pix_fmt", "yuv420p",
+      "-vf", &bands, "-c:v", "libx264", "-qp", "1", "-pix_fmt", "yuv420p",
     ])
     .arg(&source)
     .status()

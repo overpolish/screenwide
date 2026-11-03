@@ -61,7 +61,7 @@ pub fn close_exported_editor(app: AppHandle, window: tauri::WebviewWindow) -> Re
 /// Shows the exported file in Finder or File Explorer.
 #[tauri::command]
 pub fn reveal_export_file(app: AppHandle, workspace: EditorKind) -> Result<(), String> {
-  location::reveal(&exported(&app, workspace)?)
+  crate::file_browser::reveal(&exported(&app, workspace)?)
 }
 
 /// Puts the exported file on the clipboard, as Copy in Finder does, so it

@@ -54,4 +54,9 @@ pub struct RecordingPreviewSurfaceLayout {
   viewport: PreviewSurfaceRect,
   /// How round the viewport's corners are where it meets the chrome.
   viewport_corners: PreviewSurfaceCorners,
+  /// Whether the picture stays where it is on screen as the viewport changes:
+  /// sent when the page moved only the viewport's bottom edge, as the strip
+  /// under it grows or shrinks, and not when the window was resized.
+  #[serde(default)]
+  keep_view: bool,
 }

@@ -172,7 +172,7 @@ pub async fn save_export(
     super::super::project_name::settle_name(&app, project);
   }
   if crate::settings::current(&app).open_location_after_export {
-    if let Err(error) = location::reveal(&path) {
+    if let Err(error) = crate::file_browser::reveal(&path) {
       eprintln!("Could not open the export location: {error}");
     }
   }

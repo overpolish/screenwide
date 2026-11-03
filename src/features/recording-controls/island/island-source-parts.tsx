@@ -3,6 +3,7 @@
 
 import { motion, useReducedMotion } from "motion/react";
 import { type ReactNode, useId } from "react";
+import { ToggleButton, ToggleButtonGroup } from "react-aria-components";
 
 import { t } from "../../../i18n/i18n";
 import {
@@ -10,7 +11,7 @@ import {
   motionDurations,
   motionEasings,
 } from "../../../lib/motion";
-import { cn } from "../../../lib/styling";
+import { cn, elementFocusVisible, focusStyles } from "../../../lib/styling";
 import { Button } from "../../../primitives/button/button";
 import { Text } from "../../../primitives/text/text";
 
@@ -25,7 +26,8 @@ import type { IslandDisplay, IslandMode } from "./island-types";
 const MODES: IslandMode[] = ["screen", "window", "region", "none"];
 
 /** The modes, the chosen one on a raised card that slides to the next one
- * chosen, as a pill group's knob does; its text follows the card's arrival. */
+ * chosen, as a pill group's knob does; its text follows the card's arrival.
+ * A radio group: one stop for Tab, the arrow keys move between the modes. */
 export function ModeCards({
   mode,
   onModeChange,
@@ -36,31 +38,33 @@ export function ModeCards({
   const cardId = useId();
   const reducedMotion = useReducedMotion();
   return (
-    <div
+    <ToggleButtonGroup
       aria-label={t("recording-controls-mode")}
       className="grid grid-cols-4 gap-1"
-      role="radiogroup"
+      disallowEmptySelection
+      onSelectionChange={(keys) => {
+        for (const key of keys) onModeChange(key as IslandMode);
+      }}
+      selectedKeys={[mode]}
+      selectionMode="single"
     >
       {MODES.map((item) => (
-        <button
-          aria-checked={mode === item}
+        <ToggleButton
           className={cn(
-            "relative flex flex-col items-center rounded-control py-2 transition-colors",
+            "relative flex cursor-default flex-col items-center rounded-control py-2 transition-colors",
             mode === item
               ? "text-on-primary"
-              : "text-fg-secondary hover:bg-fill hover:text-fg",
+              : "text-fg-secondary data-[hovered]:bg-fill data-[hovered]:text-fg",
+            focusStyles,
+            elementFocusVisible,
           )}
+          id={item}
           key={item}
-          onClick={() => {
-            onModeChange(item);
-          }}
-          role="radio"
           style={{
             transitionDuration: reducedMotion
               ? "0s"
               : motionDurationCss("state"),
           }}
-          type="button"
         >
           {mode === item ? (
             <motion.span
@@ -84,16 +88,17 @@ export function ModeCards({
               {modeName(item)}
             </Text>
           </span>
-        </button>
+        </ToggleButton>
       ))}
-    </div>
+    </ToggleButtonGroup>
   );
 }
 
 /** Each display by its picture, to choose one. Past two they go three
  * across, so a desk of them stays a row or two tall rather than pushing the
  * island down the screen. A lone display is centred at the size it has
- * beside a second, so the picture never hugs one side. */
+ * beside a second, so the picture never hugs one side. One display is
+ * chosen at a time, so it is a radio group, as the modes are. */
 export function DisplayGrid({
   displays,
   onDisplayChange,
@@ -104,30 +109,38 @@ export function DisplayGrid({
   onDisplayChange?: (id: number) => void;
 }) {
   return (
-    <div
+    <ToggleButtonGroup
+      aria-label={t("recording-controls-displays")}
       className={cn(
         "grid gap-inline",
         displays.length > 2 ? "grid-cols-3" : "grid-cols-2",
       )}
+      disallowEmptySelection
+      onSelectionChange={(keys) => {
+        for (const key of keys) onDisplayChange?.(Number(key));
+      }}
+      selectedKeys={[String(selectedDisplayId)]}
+      selectionMode="single"
     >
       {displays.map((display) => (
-        <button
-          aria-pressed={display.id === selectedDisplayId}
+        <ToggleButton
           className={cn(
-            "flex flex-col gap-1 text-start",
+            "group flex cursor-default flex-col gap-1 rounded-control text-start outline-none",
             displays.length === 1 &&
               "col-span-2 w-[calc((100%-var(--spacing-inline))/2)] justify-self-center",
           )}
+          id={String(display.id)}
           key={display.id}
-          onClick={() => onDisplayChange?.(display.id)}
-          type="button"
         >
+          {/* The ring is the picture's: the chosen display's in the primary
+              colour, the focused one's as focus is drawn everywhere. */}
           <span
             className={cn(
               "aspect-video w-full overflow-hidden rounded-control bg-fill ring-2 transition-shadow",
               display.id === selectedDisplayId
                 ? "ring-primary"
-                : "ring-transparent hover:ring-fill-strong",
+                : "ring-transparent group-data-[hovered]:ring-fill-strong",
+              "group-data-[focus-visible]:ring-3 group-data-[focus-visible]:ring-focus",
             )}
           >
             {display.thumbnail ? (
@@ -141,9 +154,9 @@ export function DisplayGrid({
           <Text className="truncate text-center" dir="auto">
             {display.label}
           </Text>
-        </button>
+        </ToggleButton>
       ))}
-    </div>
+    </ToggleButtonGroup>
   );
 }
 

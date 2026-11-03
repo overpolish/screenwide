@@ -6,11 +6,15 @@ mod macos;
 #[cfg(target_os = "windows")]
 mod windows;
 #[cfg(target_os = "windows")]
+pub use self::windows::island_window::{
+  hide_island, initialize_island, island_input_holds, set_island_input, show_island,
+};
+#[cfg(target_os = "windows")]
 pub use self::windows::windows_api::{
-  hide, initialize_editor, initialize_island, initialize_region_selector,
-  initialize_standalone_listbox, initialize_tooltip, is_visible, prepare_to_show,
-  raise_without_activation, restore_recording_level, set_capture_affinity, set_normal_level,
-  set_opacity, set_owner, set_pointer_passthrough, show,
+  hide, initialize_editor, initialize_region_selector, initialize_standalone_listbox,
+  initialize_tooltip, is_visible, prepare_to_show, raise_without_activation,
+  restore_recording_level, set_capture_affinity, set_normal_level, set_opacity, set_owner,
+  set_pointer_passthrough, show,
 };
 
 #[cfg(target_os = "macos")]
@@ -19,7 +23,9 @@ use self::macos::panels::*;
 #[cfg(target_os = "macos")]
 use objc2_foundation::{NSPoint, NSRect, NSSize};
 
-use tauri::{LogicalPosition, LogicalSize, WebviewWindow};
+use tauri::WebviewWindow;
+#[cfg(not(target_os = "windows"))]
+use tauri::{LogicalPosition, LogicalSize};
 
 #[cfg(target_os = "windows")]
 pub use self::windows::band_guard::initialize as initialize_band_guard;
@@ -70,7 +76,7 @@ pub fn set_frame(
   })
 }
 
-#[cfg(not(target_os = "macos"))]
+#[cfg(not(any(target_os = "macos", target_os = "windows")))]
 pub fn set_frame(
   window: &WebviewWindow,
   position: LogicalPosition<f64>,

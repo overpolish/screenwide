@@ -10,7 +10,6 @@ import { IconButton } from "../../../primitives/button/icon-button";
 import { IconSwap } from "../../../primitives/icon-swap/icon-swap";
 import { IslandRow } from "../../../primitives/island/island-row";
 import { IslandOptions } from "../../../primitives/island/options/island-options";
-import { IslandRowPresence } from "../../editor/island/island-row-presence";
 
 import { InputGlyph, SourceChip } from "./island-glyphs";
 import { INPUTS } from "./island-names";
@@ -138,18 +137,15 @@ export function RestingRow({
       }
       start={
         <>
-          {/* Escape cancels a window pick rather than putting the island
-              away, and the pick offers its own Cancel, so while picking
-              this steps aside. */}
-          <IslandRowPresence isShown={!props.windowPick}>
-            <IconButton
-              aria-label={t("recording-controls-island-hide")}
-              className="text-fg-secondary enabled:hover:text-fg"
-              onPress={props.onDismiss}
-            >
-              <X aria-hidden className="size-icon" />
-            </IconButton>
-          </IslandRowPresence>
+          {/* Also during a window pick: putting the island away ends the
+              pick first (`hide_recording_ui`). */}
+          <IconButton
+            aria-label={t("recording-controls-island-hide")}
+            className="text-fg-secondary enabled:hover:text-fg"
+            onPress={props.onDismiss}
+          >
+            <X aria-hidden className="size-icon" />
+          </IconButton>
           <SourceChip
             hasProblem={!canRecord(props)}
             isOpen={panel === "source"}

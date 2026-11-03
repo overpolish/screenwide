@@ -23,19 +23,12 @@ import {
 } from "./island-stage-state";
 import { RecordingIsland } from "./recording-island";
 
+import type { IslandStageProps } from "./island-stage-props";
 import type {
-  IslandDisplay,
-  IslandFailure,
   IslandInput,
   IslandInputKind,
   IslandMode,
-  IslandMoment,
-  IslandReplay,
-  IslandPanel,
   IslandPhase,
-  IslandRegion,
-  IslandWindow,
-  RecordingIslandProps,
 } from "./island-types";
 
 // The island's stories: the island at the top of the canvas, under the
@@ -43,64 +36,6 @@ import type {
 // running the clock, so every story can be used, not only looked at. The
 // inputs' levels are set from the story's controls, to try the meters at
 // any level.
-
-export type IslandStageProps = Pick<
-  RecordingIslandProps,
-  | "annotate"
-  | "notch"
-  | "isScreenLocked"
-  | "isShown"
-  | "onCancelWindowPick"
-  | "onChooseWindow"
-  | "onOpenPermissions"
-  | "onDismiss"
-  | "onScreenshot"
-  | "onHidden"
-  | "onShapeChange"
-  | "windowPick"
-> & {
-  /** Shows the island coming out and going away, over and over. */
-  appears?: boolean;
-  camera?: Partial<IslandInput>;
-  /** The area already dragged out. */
-  chosenRegion?: IslandRegion;
-  // Choose a Window picks the sample windows in turn, standing in for the
-  // picker on the screen.
-  /** The window already picked. */
-  chosenWindow?: IslandWindow;
-  /** The displays to choose from; two when not given. */
-  displays?: IslandDisplay[];
-  /** Failures Rust would keep, said in turn as OK puts each away. */
-  failures?: IslandFailure[];
-  /** The confidence checks setting: shows what is recorded from. */
-  hasConfidenceChecks?: boolean;
-  /** The countdown setting: Record counts down before starting. */
-  hasCountdown?: boolean;
-  /** Seconds already recorded when the story opens recording. */
-  initialElapsed?: number;
-  initialMode?: IslandMode;
-  initialPanel?: IslandPanel;
-  initialPhase?: IslandPhase;
-  /** The camera mirrored; Flip on the camera's picture changes it. */
-  isCameraFlipped?: boolean;
-  /** The camera started but not yet sending its picture. */
-  isCameraLoading?: boolean;
-  microphone?: Partial<IslandInput>;
-  /** Microphone level, 0 to 1. */
-  microphoneLevel?: number;
-  /** Something wrong with the microphone, named; the stage words it. */
-  microphoneProblem?: "missing";
-  /** A moment placed by its shortcut; a voice note runs on while recording. */
-  moment?: IslandMoment;
-  // Turned on, it starts for a moment before it is on.
-  /** The replay buffer, off when absent; null where it cannot run. */
-  replay?: IslandReplay | null;
-  /** The recording size setting: shows the size so far. */
-  showsSize?: boolean;
-  systemAudio?: Partial<IslandInput>;
-  /** System audio level, 0 to 1. */
-  systemAudioLevel?: number;
-};
 
 export function IslandStage(props: IslandStageProps) {
   const [mode, setMode] = useState<IslandMode>(props.initialMode ?? "screen");
@@ -194,7 +129,8 @@ export function IslandStage(props: IslandStageProps) {
   });
 
   // Cancelling a start, or discarding a recording, comes back to rest.
-  const rest = () => {
+  const rest = (told?: () => void) => () => {
+    told?.();
     setPhase("idle");
   };
 
@@ -229,8 +165,12 @@ export function IslandStage(props: IslandStageProps) {
           mode={mode}
           moment={moment}
           notch={props.notch}
-          onCancelCountdown={rest}
-          onCancelStarting={rest}
+          onCameraFlipChange={(isFlipped) => {
+            props.onCameraFlipChange?.(isFlipped);
+            camera.onCameraFlipChange(isFlipped);
+          }}
+          onCancelCountdown={rest(props.onCancelCountdown)}
+          onCancelStarting={rest(props.onCancelStarting)}
           onCancelWindowPick={props.onCancelWindowPick}
           onChooseWindow={() => {
             props.onChooseWindow?.();
@@ -241,39 +181,59 @@ export function IslandStage(props: IslandStageProps) {
             );
           }}
           onDeviceChange={(kind, ids) => {
+            props.onDeviceChange?.(kind, ids);
             setInputs((current) => ({
               ...current,
               [kind]: { ...current[kind], selectedIds: ids },
             }));
           }}
-          onDiscard={rest}
+          onDiscard={rest(props.onDiscard)}
           onDismiss={props.onDismiss}
-          onDisplayChange={setDisplay}
+          onDismissFailure={(id) => {
+            props.onDismissFailure?.(id);
+            failures.onDismissFailure(id);
+          }}
+          onDisplayChange={(id) => {
+            props.onDisplayChange?.(id);
+            setDisplay(id);
+          }}
           onHidden={props.onHidden}
           onInputChange={(kind, isOn) => {
+            props.onInputChange?.(kind, isOn);
             setInputs((current) => ({
               ...current,
               [kind]: { ...current[kind], isOn },
             }));
           }}
-          onModeChange={setMode}
+          onModeChange={(next) => {
+            props.onModeChange?.(next);
+            setMode(next);
+          }}
           onOpenPermissions={props.onOpenPermissions}
+          onPanelChange={props.onPanelChange}
           onPause={() => {
+            props.onPause?.();
             setPhase("paused");
           }}
           onRecord={() => {
+            props.onRecord?.();
             setCount(3);
             setElapsed(0);
             setHoldsStart(false);
             setPhase(props.hasCountdown === false ? "starting" : "countdown");
           }}
-          onReplayChange={changeReplay}
+          onReplayChange={(isOn) => {
+            props.onReplayChange?.(isOn);
+            changeReplay(isOn);
+          }}
           onResume={() => {
+            props.onResume?.();
             setPhase("recording");
           }}
           onScreenshot={props.onScreenshot}
           onShapeChange={props.onShapeChange}
           onStop={() => {
+            props.onStop?.();
             setPhase("finishing");
           }}
           phase={phase}

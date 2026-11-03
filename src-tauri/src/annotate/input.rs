@@ -20,12 +20,12 @@ use screenwide_annotations::{Annotation, AnnotationPoint};
 use super::settings::AnnotateSettings;
 
 mod keys;
-#[cfg(target_os = "macos")]
+#[cfg(any(target_os = "macos", target_os = "windows"))]
 mod sketch;
 mod stroke;
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 use keys::{KEY_BACKSPACE, KEY_FORWARD_DELETE, KEY_Z, TOOL_KEYS};
-#[cfg(target_os = "macos")]
+#[cfg(any(target_os = "macos", target_os = "windows"))]
 pub(super) use sketch::Sketch;
 use stroke::{pen_down, Stroke};
 

@@ -24,8 +24,10 @@
 use crate::measure::{PictureReading, PictureState};
 
 /// The least share of the picture that moves, and is new, in any recording.
+/// Switching between apps that look alike, or whose windows cover part of
+/// the screen, can leave three quarters of it as it was: one measured 0.23.
 const MOVING_SHARE: f32 = 0.002;
-const NEW_SHARE: f32 = 0.25;
+const NEW_SHARE: f32 = 0.15;
 /// How new a recording's median reading is, past which it is busy.
 const BUSY_NOVELTY: f32 = 0.05;
 /// In a busy recording, how rare a new reading is: the share above it.

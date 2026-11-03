@@ -35,7 +35,7 @@ pub(crate) use desktop::{
 pub(crate) use presses::press_taker;
 use presses::surface_passthrough;
 pub(crate) use presses::{presses_taken, take_presses};
-#[cfg(target_os = "macos")]
+#[cfg(any(target_os = "macos", target_os = "windows"))]
 pub(crate) use ruler_updates::{apply_ruler_data, ruler_data};
 pub(crate) use ruler_updates::{
   apply_ruler_result, refresh_ruler_pointer, ruler_expire_copied, ruler_expire_tolerance,

@@ -128,29 +128,18 @@ pub enum FrontendPhase {
 
 /// Persist acknowledgements so event delivery can be distinguished from a
 /// registered shortcut that never reached the frontend that owns the action.
-///
-/// `context_id`, `listener_id` and `live_listeners` are a temporary probe for
-/// the duplicate-delivery bug: one press producing two `received` entries.
-/// They tell apart two subscriptions in one webview (same `context_id`,
-/// different `listener_id`), one subscription delivered twice (both fields
-/// equal) and two webviews sharing a label (different `context_id`). Remove
-/// all three when that is settled.
 #[tauri::command]
 pub fn report_shortcut_diagnostic(
   window: tauri::WebviewWindow,
   phase: FrontendPhase,
   action: Option<super::ShortcutAction>,
   error: Option<String>,
-  context_id: Option<String>,
-  listener_id: Option<u32>,
-  live_listeners: Option<u32>,
 ) {
   record(
     "screenshot_frontend",
     json!({
       "window": window.label(), "phase": phase, "action": action,
       "error": error.map(|text| text.chars().take(2000).collect::<String>()),
-      "contextId": context_id, "listenerId": listener_id, "liveListeners": live_listeners,
     }),
   );
 }

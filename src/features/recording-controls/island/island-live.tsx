@@ -3,10 +3,11 @@
 
 import { Pause, Play, Square, Trash2, X } from "lucide-react";
 import { motion, PresenceContext, useReducedMotion } from "motion/react";
+import { Button as AriaButton } from "react-aria-components";
 
 import { ConfirmActionButton } from "../../../composites/confirm-action-button/confirm-action-button";
 import { t } from "../../../i18n/i18n";
-import { cn } from "../../../lib/styling";
+import { cn, elementFocusVisible, focusStyles } from "../../../lib/styling";
 import { Button } from "../../../primitives/button/button";
 import { IconButton } from "../../../primitives/button/icon-button";
 import { CircularProgress } from "../../../primitives/circular-progress/circular-progress";
@@ -26,11 +27,14 @@ export function Countdown({
   onCancel?: () => void;
 }) {
   return (
-    <button
+    <AriaButton
       aria-label={t("recording-controls-cancel-countdown")}
-      className="relative flex size-island-control items-center justify-center"
-      onClick={onCancel}
-      type="button"
+      className={cn(
+        "relative flex size-island-control cursor-default items-center justify-center rounded-full",
+        focusStyles,
+        elementFocusVisible,
+      )}
+      onPress={onCancel}
     >
       {/* Each second's ring and number animate as they mount, which an
           AnimatePresence with initial={false} above would block, leaving an
@@ -73,7 +77,7 @@ export function Countdown({
           {count}
         </motion.span>
       </PresenceContext>
-    </button>
+    </AriaButton>
   );
 }
 

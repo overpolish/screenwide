@@ -19,10 +19,6 @@ impl Surface {
   }
 
   /// A surface drawing into `chain`, which its owner places and sizes.
-  #[cfg_attr(
-    target_os = "windows",
-    expect(dead_code, reason = "tool previews have a macOS host only")
-  )]
   pub(crate) fn preview(
     gpu: Arc<Gpu>,
     chain: Box<dyn RegionDrawable>,

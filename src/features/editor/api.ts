@@ -37,7 +37,7 @@ import type { ExportSubtitles } from "../../bindings/ExportSubtitles";
 import type { ScreenshotFormat } from "../../bindings/ScreenshotFormat";
 import type { TextStyle } from "../../bindings/TextStyle";
 
-type PreviewSelectionLayout = {
+export type PreviewSelectionLayout = {
   paneIndex: number;
   radiusPercent: number;
   rect: { height: number; width: number; x: number; y: number };
@@ -106,71 +106,6 @@ export const startRecordingPreviewPlayer = ({
 
 export const pauseRecordingPreview = (sessionId: number) =>
   invoke<null>("pause_recording_preview", { sessionId });
-
-export const layoutRecordingPreviewSurface = ({
-  annotationTool,
-  backdrop,
-  bakeCamera,
-  cameraOverlay,
-  nativeEditor,
-  panes,
-  recordingOutput,
-  requestId,
-  scale,
-  selection,
-  selectionTargets,
-  sessionId,
-  viewport,
-  viewportCorners,
-}: {
-  backdrop: [number, number, number, number];
-  bakeCamera: boolean;
-  cameraOverlay: CameraOverlaySettings;
-  nativeEditor: boolean;
-  panes: {
-    index: number;
-    rect: { height: number; width: number; x: number; y: number };
-  }[];
-  recordingOutput: RecordingOutputSettings;
-  requestId: number;
-  scale: number;
-  sessionId: number;
-  viewport: { height: number; width: number; x: number; y: number };
-  /** How round the viewport's corners are where it meets the chrome. */
-  viewportCorners: ViewportCorners;
-  /** The annotation tool in hand, when one is. It rides with the layout so
-   * the tool and the selection it has to agree with reach the native chrome
-   * together: split across two commands, whichever lands first paints the
-   * layer's frame for a frame. */
-  annotationTool?:
-    import("./annotations/annotation-defaults").AnnotationTool | null;
-  selection?: PreviewSelectionLayout | null;
-  selectionTargets?: PreviewSelectionLayout[] | null;
-}) =>
-  invoke<null>("layout_recording_preview_surface", {
-    layout: {
-      annotationTool: annotationTool ?? null,
-      backdrop,
-      bakeCamera,
-      cameraOverlay: normalizedCameraOverlay(
-        cameraOverlay,
-        recordingOutput.primary,
-      ),
-      nativeEditor,
-      panes,
-      recordingOutput: {
-        camera: normalizedScreenshotOutput(recordingOutput.camera),
-        primary: normalizedScreenshotOutput(recordingOutput.primary),
-      },
-      requestId,
-      scale,
-      selection: selection ?? null,
-      selectionTargets: selectionTargets ?? null,
-      sessionId,
-      viewport,
-      viewportCorners,
-    },
-  });
 
 export const seekRecordingPreview = ({
   annotationClips,

@@ -76,10 +76,6 @@ enum Kind {
   /// A tool shown at work inside another window, such as a Settings
   /// picture. Its owner places the drawable and drives its frames, so the
   /// surface has no window of its own to show, raise or time.
-  #[cfg_attr(
-    target_os = "windows",
-    expect(dead_code, reason = "tool previews have a macOS host only")
-  )]
   Preview { size: (u32, u32), scale: f64 },
 }
 

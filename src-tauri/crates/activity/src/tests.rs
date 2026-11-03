@@ -100,6 +100,17 @@ fn on_a_still_screen_another_screen_is_new_then_settles() {
 }
 
 #[test]
+fn on_a_still_screen_a_change_to_a_fifth_of_it_is_new() {
+  // Switching between two apps that look alike, or whose windows cover
+  // part of the screen, changes less than a quarter of the picture.
+  let frames = (0..100)
+    .map(|_| flat(40))
+    .chain((0..40).map(|_| with_block(40, 200, SAMPLE_SIZE.1 / 5, 0)));
+  let found = states(&read(frames));
+  assert_eq!(found[100], PictureState::New);
+}
+
+#[test]
 fn going_back_to_a_screen_seen_moments_ago_is_not_new() {
   // Two screens swapped every second, as flicking between two tabs.
   let frames = (0..200).map(|index| flat(if (index / 10) % 2 == 0 { 40 } else { 200 }));

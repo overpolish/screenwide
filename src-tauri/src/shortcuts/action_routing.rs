@@ -70,18 +70,6 @@ pub(super) const fn requires_frontend_turn(action: ShortcutAction) -> bool {
   )
 }
 
-/// Diagnostics probe (duplicate-delivery investigation): an action carried out
-/// in Rust never reaches a frontend that could acknowledge it, so the log
-/// otherwise stops at `native_shortcut_pressed`. `outcome` names the branch
-/// that ran; `error` is set when that branch reported one. Remove with the
-/// rest of the probe.
-fn record_native_result(action: ShortcutAction, outcome: &str, error: Option<String>) {
-  diagnostics::record(
-    "native_action_result",
-    serde_json::json!({"action": action, "outcome": outcome, "error": error}),
-  );
-}
-
 pub(super) fn run_action(app: &AppHandle, action: ShortcutAction) {
   if !feature_availability::action_enabled(action) {
     diagnostics::record(
@@ -146,43 +134,31 @@ pub(super) fn run_action(app: &AppHandle, action: ShortcutAction) {
         screenwide_capture::RecordingStatus::Recording
           | screenwide_capture::RecordingStatus::Paused
       ) {
-        let result = crate::recording::toggle_pause(app);
-        record_native_result(action, "pause_toggled", result.err());
-      } else {
-        record_native_result(action, "skipped_not_recording", None);
+        let _ = crate::recording::toggle_pause(app);
       }
     }
     ShortcutAction::StartStopRecording => match crate::recording::snapshot(app).status {
       screenwide_capture::RecordingStatus::Idle => notify_frontend(app, action),
       screenwide_capture::RecordingStatus::Recording
       | screenwide_capture::RecordingStatus::Paused => {
-        let result = crate::recording::stop(app);
-        record_native_result(action, "stopped", result.err());
+        let _ = crate::recording::stop(app);
       }
       screenwide_capture::RecordingStatus::Starting => {
-        let result = crate::recording::cancel(app);
-        record_native_result(action, "cancelled", result.err());
+        let _ = crate::recording::cancel(app);
       }
-      screenwide_capture::RecordingStatus::Stopping => {
-        record_native_result(action, "skipped_stopping", None);
-      }
+      screenwide_capture::RecordingStatus::Stopping => {}
     },
     ShortcutAction::RulerOverlay => {
-      // `start_detached` spawns the real work, and records the settled
-      // `native_action_result` itself once the overlay has opened or failed.
       crate::ruler::start_detached(app);
     }
     ShortcutAction::AnnotateOverlay => {
       crate::annotate::toggle_detached(app);
-      record_native_result(action, "toggled", None);
     }
     ShortcutAction::AnnotateClear => {
       crate::annotate::clear(app);
-      record_native_result(action, "cleared", None);
     }
     ShortcutAction::SaveReplay => {
-      let result = crate::recording::replay::save(app);
-      record_native_result(action, "replay_saved", result.err());
+      let _ = crate::recording::replay::save(app);
     }
   }
 }

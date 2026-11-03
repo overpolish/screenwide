@@ -850,6 +850,7 @@ export type Messages = {
   "recording-controls-copy-screenshot": null;
   "recording-controls-delayed-screenshot": null;
   "recording-controls-discard": null;
+  "recording-controls-displays": null;
   "recording-controls-finishing": null;
   "recording-controls-finishing-label": null;
   "recording-controls-flip": null;

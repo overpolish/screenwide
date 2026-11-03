@@ -9,6 +9,7 @@ import {
   listMicrophones,
   listSystemAudioSources,
 } from "../../recording-inputs/devices-api";
+import { findSavedDevice } from "../../recording-inputs/saved-device";
 import {
   ALL_SYSTEM_AUDIO,
   useRecordingInputStore,
@@ -81,11 +82,17 @@ export function useIslandDevices({
     void listOrEmpty(() => listCameras(requestFps)).then((next) => {
       if (disposed) return;
       setCameras(next);
-      const selected = useRecordingInputStore.getState().selectedCamera;
-      const camera =
-        next.find((device) => device.id === selected?.id) ??
-        (selected ? null : firstDefault(next));
-      if (camera) selectCamera(camera, requestFps);
+      const state = useRecordingInputStore.getState();
+      const selected = state.selectedCamera;
+      const camera = selected
+        ? findSavedDevice(selected, next)
+        : firstDefault(next);
+      if (!camera) return;
+      // Found again under a new id, it keeps the mirroring chosen for it.
+      const flips = state.cameraFlippedById;
+      if (selected && selected.id in flips && !(camera.id in flips))
+        state.setCameraFlipped(camera.id, flips[selected.id]);
+      selectCamera(camera, requestFps);
     });
     return () => {
       disposed = true;
@@ -99,9 +106,12 @@ export function useIslandDevices({
       if (disposed) return;
       setMicrophones(next);
       const state = useRecordingInputStore.getState();
-      if (!state.selectedMicrophone) {
-        state.setSelectedMicrophone(firstDefault(next));
-      }
+      const selected = state.selectedMicrophone;
+      const microphone = selected
+        ? findSavedDevice(selected, next)
+        : firstDefault(next);
+      if (microphone && microphone.id !== selected?.id)
+        state.setSelectedMicrophone(microphone);
     });
     return () => {
       disposed = true;
