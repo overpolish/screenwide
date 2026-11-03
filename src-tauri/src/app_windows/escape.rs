@@ -145,8 +145,9 @@ fn dismiss_owner(app: &AppHandle) {
     crate::recording_sources::window_pick::cancel(app);
     return;
   }
-  if super::options::is_standalone_listbox_open() {
-    let _ = super::options::close_all_standalone_listboxes(app.clone(), true);
+  if super::options::is_standalone_listbox_open()
+    && super::options::close_standalone_listboxes_of(app, true, WindowLabel::Island.as_str())
+  {
     return;
   }
   // Teardown runs on the island's later IPC turn rather than unregistering the

@@ -21,8 +21,8 @@ pub(crate) fn close_standalone_listbox(
   close_locked(&app, return_focus, panel)
 }
 
-/// Puts every open panel away: a display change, the recording UI going down,
-/// and Escape all mean whatever is up, wherever it is.
+/// Puts every open panel away: a display change and the recording UI going
+/// down mean whatever is up, wherever it is.
 pub(crate) fn close_all_standalone_listboxes(
   app: AppHandle,
   return_focus: bool,
@@ -36,6 +36,26 @@ pub(crate) fn close_all_standalone_listboxes(
     }
   }
   result
+}
+
+/// Puts away the open panels that hang off `parent` and no others, telling
+/// whether there were any. Escape with the recording controls up closes their
+/// own menus first; an editor's tool panel, also a panel window, is that
+/// editor's, and closing it here left its tool chosen with no island.
+pub(crate) fn close_standalone_listboxes_of(
+  app: &AppHandle,
+  return_focus: bool,
+  parent: &str,
+) -> bool {
+  let _lifecycle = STANDALONE_LISTBOX.lock();
+  let belonging: Vec<String> = open_panel_labels()
+    .into_iter()
+    .filter(|panel| context_for(panel).is_some_and(|context| context.parent_window_label == parent))
+    .collect();
+  for panel in &belonging {
+    let _ = close_locked(app, return_focus, panel);
+  }
+  !belonging.is_empty()
 }
 
 /// Puts away the panels that hang off a window being hidden, minimised or

@@ -41,6 +41,7 @@ pub(crate) mod placement_windows;
 pub(super) use dismissal::dismiss_standalone_listbox_if_outside;
 pub(crate) use lifecycle::{
   close_all_standalone_listboxes, close_standalone_listbox, close_standalone_listbox_for_parent,
+  close_standalone_listboxes_of,
 };
 
 /// Serializes every open and close across all the panel windows, so a show
