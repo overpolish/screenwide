@@ -4,7 +4,6 @@
 import type { ComponentType } from "react";
 
 import { Eraser, Undo2, X } from "lucide-react";
-import { AnimatePresence, motion } from "motion/react";
 
 import { t } from "../../../i18n/i18n";
 import { cn } from "../../../lib/styling";
@@ -12,7 +11,7 @@ import {
   IconButton,
   IconToggleButton,
 } from "../../../primitives/button/icon-button";
-import { focusIn } from "../../../primitives/island/island-motion";
+import { IslandParts } from "../../../primitives/island/island-parts";
 import { swatchEdge } from "../../../primitives/swatch/swatch-styles";
 import { annotationToolName } from "../../annotations/annotation-text";
 
@@ -55,9 +54,8 @@ export function AnnotateToolButtons({
 
 /** The colour in hand, which opens the colours, then undo, clear and close.
  * Undo and clear are done with the colours, so they step back to the pen.
- * A tool that draws in no colour takes the colour away: it is lifted out to
- * blur off while the island closes up, and comes back into focus as it
- * opens for it. */
+ * A tool that draws in no colour takes the colour away, as the island's
+ * parts come and go (`IslandParts`). */
 export function AnnotateActions({
   hasColor,
   onClear,
@@ -74,31 +72,24 @@ export function AnnotateActions({
   showsColors: boolean;
 }) {
   return (
-    <>
-      <AnimatePresence initial={false} mode="popLayout">
-        {hasColor ? (
-          <motion.span
-            key="color"
-            {...focusIn}
-            className="flex"
-            initial={focusIn.exit}
-          >
-            <IconButton
-              aria-expanded={showsColors}
-              aria-label={t("annotation-color")}
-              onPress={onToggleColors}
-              variant="ghost"
-            >
-              <span
-                className={cn("size-icon rounded-full", swatchEdge)}
-                style={{ backgroundColor: settings.defaultColor }}
-              />
-            </IconButton>
-          </motion.span>
-        ) : null}
-      </AnimatePresence>
+    <IslandParts className="flex items-center gap-separate" direction="row">
+      {hasColor ? (
+        <IconButton
+          aria-expanded={showsColors}
+          aria-label={t("annotation-color")}
+          key="color"
+          onPress={onToggleColors}
+          variant="ghost"
+        >
+          <span
+            className={cn("size-icon rounded-full", swatchEdge)}
+            style={{ backgroundColor: settings.defaultColor }}
+          />
+        </IconButton>
+      ) : null}
       <IconButton
         aria-label={t("annotate-undo-label")}
+        key="undo"
         onPress={() => {
           onShowPen();
           onUndo();
@@ -109,6 +100,7 @@ export function AnnotateActions({
       </IconButton>
       <IconButton
         aria-label={t("annotate-clear-label")}
+        key="clear"
         onPress={() => {
           onShowPen();
           onClear();
@@ -119,17 +111,18 @@ export function AnnotateActions({
       </IconButton>
       <IconButton
         aria-label={t("annotate-close-label")}
+        key="close"
         onPress={onDone}
         variant="ghost"
       >
         <X aria-hidden className="size-icon" />
       </IconButton>
-    </>
+    </IslandParts>
   );
 }
 
 /** What hangs under the tools: the colours, or the pen of the tool in hand,
- * swapped as the island swaps its parts. */
+ * one giving way to the other as the island's parts do (`IslandParts`). */
 export function AnnotateOptions({
   onChange,
   pen: Pen,
@@ -141,7 +134,7 @@ export function AnnotateOptions({
   showsColors: boolean;
 }) {
   return (
-    <AnimatePresence initial={false} mode="popLayout">
+    <IslandParts>
       {showsColors ? (
         <AnnotateColors
           key="colors"
@@ -156,6 +149,6 @@ export function AnnotateOptions({
           settings={settings}
         />
       ) : null}
-    </AnimatePresence>
+    </IslandParts>
   );
 }

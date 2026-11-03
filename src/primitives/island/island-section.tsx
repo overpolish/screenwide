@@ -11,12 +11,10 @@ import { type ReactNode } from "react";
 
 import { motionDurations } from "../../lib/motion";
 
-import { IslandSectionContext } from "./island-context";
 import { px } from "./island-geometry";
 import { focusIn } from "./island-motion";
 import { useSectionPlace } from "./island-section-place";
 import { useSectionSettle } from "./island-section-settle";
-import { useSwapHold } from "./island-swap-hold";
 
 import type { islandLayout } from "./island-layout";
 import type { IslandShapeValues } from "./island-outline-sync";
@@ -48,7 +46,7 @@ export function IslandSection({
   layout: ReturnType<typeof islandLayout>;
   // Then what hangs is held against the move (`sectionX`) and put where it
   // will rest at once (`island-section-settle.ts`); otherwise it rides with
-  // its box and swapped parts are held in place (`island-swap-hold.ts`).
+  // its box.
   /** Whether the island moves sideways to balance its row round a notch. */
   movesSideways: boolean;
   /** The element holding what hangs, to be measured. */
@@ -114,13 +112,6 @@ export function IslandSection({
   const opacityTransition = isOpen
     ? { duration: 0 }
     : { delay: motionDurations.travel, duration: 0 };
-  const swapHold = useSwapHold({
-    boxStart: values.start,
-    isEnabled: !movesSideways,
-    isOpen,
-    isOpening,
-    target: sectionStart,
-  });
   const settle = useSectionSettle({
     boxStart: values.start,
     isActive: movesSideways && isOpen && !isOpening,
@@ -209,31 +200,26 @@ export function IslandSection({
             }}
             transition={isHolding ? { duration: 0 } : travel}
           >
-            <IslandSectionContext value={swapHold}>
-              <AnimatePresence initial={false}>
-                {isShown && children ? (
-                  <motion.div
-                    key="section"
-                    {...focusIn}
-                    // Positioned, so a part swapped out is lifted from the
-                    // flow (`popLayout`) and only the incoming one is
-                    // measured.
-                    className="relative flex w-max shrink-0 flex-col gap-inline px-(--island-section-inset) pt-inset-sm pb-(--island-section-inset)"
-                    initial={false}
-                    ref={onElement}
-                    style={
-                      isEndPinned
-                        ? { maxWidth: "100%", minWidth: "100%" }
-                        : stretch > 0
-                          ? { minWidth: px(sectionWidth) }
-                          : undefined
-                    }
-                  >
-                    {children}
-                  </motion.div>
-                ) : null}
-              </AnimatePresence>
-            </IslandSectionContext>
+            <AnimatePresence initial={false}>
+              {isShown && children ? (
+                <motion.div
+                  key="section"
+                  {...focusIn}
+                  className="relative flex w-max shrink-0 flex-col gap-inline px-(--island-section-inset) pt-inset-sm pb-(--island-section-inset)"
+                  initial={false}
+                  ref={onElement}
+                  style={
+                    isEndPinned
+                      ? { maxWidth: "100%", minWidth: "100%" }
+                      : stretch > 0
+                        ? { minWidth: px(sectionWidth) }
+                        : undefined
+                  }
+                >
+                  {children}
+                </motion.div>
+              ) : null}
+            </AnimatePresence>
           </motion.div>
         </motion.div>
       </motion.div>

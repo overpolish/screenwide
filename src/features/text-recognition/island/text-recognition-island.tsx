@@ -8,15 +8,14 @@ import {
   SquareDashedMousePointer,
   X,
 } from "lucide-react";
-import { AnimatePresence } from "motion/react";
-import { Fragment, type ReactNode, useState } from "react";
+import { type ReactNode, useState } from "react";
 
 import { t } from "../../../i18n/i18n";
 import { Button } from "../../../primitives/button/button";
 import { IconButton } from "../../../primitives/button/icon-button";
 import { CircularProgress } from "../../../primitives/circular-progress/circular-progress";
 import { Island, type IslandProps } from "../../../primitives/island/island";
-import { IslandCrossfade } from "../../../primitives/island/island-crossfade";
+import { IslandParts } from "../../../primitives/island/island-parts";
 import { IslandRow } from "../../../primitives/island/island-row";
 import { IslandRowTitle } from "../../../primitives/island/row-title/island-row-title";
 
@@ -214,8 +213,8 @@ export function TextRecognitionIsland({
   const qr = state.phase === "qr" ? state : null;
   const failure =
     qr && qrFailure?.content === qr.content ? qrFailure.failure : null;
-  // Each phase's row is mounted afresh, so it is revealed where it sits as
-  // the island changes shape round it rather than cut in.
+  // Each phase's row is its own part, so one gives way to the next as the
+  // island's parts do (`IslandParts`).
   const shown =
     state.phase === "ready" ? `ready-${String(state.lines > 0)}` : state.phase;
   return (
@@ -232,35 +231,36 @@ export function TextRecognitionIsland({
       onHidden={onHidden}
       onShapeChange={onShapeChange}
       row={
-        <Fragment key={shown}>
-          {state.phase === "qr" ? (
-            <QrCodeRow
-              content={state.content}
-              decodeError={state.decodeError}
-              onAction={onAction}
-              onCopy={onCopyQrCode}
-              onFailure={(next) => {
-                setQrFailure({ content: state.content, failure: next });
-              }}
-              onOpen={onOpenQrCode}
-            />
-          ) : (
-            row({ onAction, state })
-          )}
-        </Fragment>
+        <IslandParts className="min-w-0 grow">
+          <div className="flex min-w-0 grow" key={shown}>
+            {state.phase === "qr" ? (
+              <QrCodeRow
+                content={state.content}
+                decodeError={state.decodeError}
+                onAction={onAction}
+                onCopy={onCopyQrCode}
+                onFailure={(next) => {
+                  setQrFailure({ content: state.content, failure: next });
+                }}
+                onOpen={onOpenQrCode}
+              />
+            ) : (
+              row({ onAction, state })
+            )}
+          </div>
+        </IslandParts>
       }
       section={
         qr ? (
           // Another code pressed swaps what it holds in, as the row swaps.
-          <AnimatePresence initial={false} mode="popLayout">
-            <IslandCrossfade key={qr.content}>
-              <QrCodeSection
-                content={qr.content}
-                decodeError={qr.decodeError}
-                failure={failure}
-              />
-            </IslandCrossfade>
-          </AnimatePresence>
+          <IslandParts>
+            <QrCodeSection
+              content={qr.content}
+              decodeError={qr.decodeError}
+              failure={failure}
+              key={qr.content}
+            />
+          </IslandParts>
         ) : undefined
       }
       sectionSpansRow={qr !== null}

@@ -6,12 +6,10 @@ import { ScrollText } from "lucide-react";
 import { t } from "../../../i18n/i18n";
 import { Button } from "../../../primitives/button/button";
 import { Island, type IslandProps } from "../../../primitives/island/island";
-import { IslandFlow } from "../../../primitives/island/island-flow";
 import { IslandKeyHint } from "../../../primitives/island/island-key-hint";
+import { IslandParts } from "../../../primitives/island/island-parts";
 import { IslandRow } from "../../../primitives/island/island-row";
-import { IslandSwap } from "../../../primitives/island/island-swap";
 import { IslandRowTitle } from "../../../primitives/island/row-title/island-row-title";
-import { IslandRowPresence } from "../../editor/island/island-row-presence";
 import { IslandWorkLine } from "../../editor/island/island-work-line";
 
 import type { ScrollingCaptureIslandState } from "../../../bindings/ScrollingCaptureIslandState";
@@ -68,24 +66,27 @@ export function ScrollingCaptureIsland({
       row={
         <IslandRow
           end={
-            <IslandRowPresence isShown={canCancel}>
-              <Button onPress={onCancel} variant="ghost">
-                {t("screenshots-scrolling-cancel")}
-              </Button>
-            </IslandRowPresence>
+            <IslandParts direction="row">
+              {canCancel ? (
+                <Button key="cancel" onPress={onCancel} variant="ghost">
+                  {t("screenshots-scrolling-cancel")}
+                </Button>
+              ) : null}
+            </IslandParts>
           }
           start={
-            <IslandSwap swapKey={phase}>
+            <IslandParts direction="row">
               <IslandRowTitle
                 glyph={<ScrollText aria-hidden />}
+                key={phase}
                 title={<span role="status">{TITLES[phase]()}</span>}
               />
-            </IslandSwap>
+            </IslandParts>
           }
         />
       }
       section={
-        <IslandFlow className="flex flex-col gap-inline">
+        <IslandParts className="flex flex-col gap-inline">
           <IslandWorkLine key="work" label={NOTES[phase]()} value={null} />
           {canCancel && escapeClaimed ? (
             <IslandKeyHint
@@ -94,7 +95,7 @@ export function ScrollingCaptureIsland({
               message={(key) => t("screenshots-scrolling-cancel-hint", { key })}
             />
           ) : null}
-        </IslandFlow>
+        </IslandParts>
       }
     />
   );

@@ -1,12 +1,9 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { type Ref } from "react";
-
 import { t } from "../../../i18n/i18n";
 import { splitAtPlaceables } from "../../../i18n/split-at-placeable";
 import { hotkeyKeys } from "../../../lib/hotkey";
-import { IslandCrossfade } from "../../../primitives/island/island-crossfade";
 import { Keyboard, Shortcut } from "../../../primitives/keyboard/keyboard";
 import { ListBox } from "../../../primitives/listbox/listbox";
 import { ListBoxItem } from "../../../primitives/listbox-item/listbox-item";
@@ -20,11 +17,9 @@ import {
 
 import type { RulerTolerance } from "../../../bindings/RulerTolerance";
 
-/** What hangs under the row, faded across as it changes. Keyed inside
- * `AnimatePresence` by its section. */
+/** What hangs under the row. */
 export function RulerSectionBody({
   onTolerance,
-  ref,
   section,
   stampKeys,
   tolerance,
@@ -33,44 +28,39 @@ export function RulerSectionBody({
   section: RulerSection;
   stampKeys: RulerStampKeys | null;
   tolerance: RulerTolerance;
-  ref?: Ref<HTMLDivElement>;
 }) {
-  return (
-    <IslandCrossfade ref={ref}>
-      {section === "edges" ? (
-        <ListBox
-          aria-label={t("ruler-island-edges")}
-          disallowEmptySelection
-          onSelectionChange={(keys) => {
-            for (const key of keys)
-              if (key !== tolerance) onTolerance(key as RulerTolerance);
-          }}
-          selectedKeys={[tolerance]}
-          selectionMode="single"
-        >
-          {RULER_TOLERANCES.map(({ id, name }) => (
-            <ListBoxItem id={id} key={id} textValue={name()}>
-              {name()}
-            </ListBoxItem>
-          ))}
-        </ListBox>
+  return section === "edges" ? (
+    <ListBox
+      aria-label={t("ruler-island-edges")}
+      disallowEmptySelection
+      onSelectionChange={(keys) => {
+        for (const key of keys)
+          if (key !== tolerance) onTolerance(key as RulerTolerance);
+      }}
+      selectedKeys={[tolerance]}
+      selectionMode="single"
+    >
+      {RULER_TOLERANCES.map(({ id, name }) => (
+        <ListBoxItem id={id} key={id} textValue={name()}>
+          {name()}
+        </ListBoxItem>
+      ))}
+    </ListBox>
+  ) : (
+    // The note sits the small inset in from the section's edges, as the
+    // circles' glyphs do from theirs.
+    <Text
+      className="block max-w-64 px-inset-sm text-fg-secondary"
+      variant="caption"
+    >
+      {section === "measure" ? (
+        <StampHint stampKeys={stampKeys} />
+      ) : section === "radius" ? (
+        t("ruler-island-radius-hint")
       ) : (
-        // The note sits the small inset in from the section's edges, as the
-        // circles' glyphs do from theirs.
-        <Text
-          className="block max-w-64 px-inset-sm text-fg-secondary"
-          variant="caption"
-        >
-          {section === "measure" ? (
-            <StampHint stampKeys={stampKeys} />
-          ) : section === "radius" ? (
-            t("ruler-island-radius-hint")
-          ) : (
-            t("ruler-island-guide-hint")
-          )}
-        </Text>
+        t("ruler-island-guide-hint")
       )}
-    </IslandCrossfade>
+    </Text>
   );
 }
 

@@ -9,7 +9,7 @@ import { arrive, glide, reveal } from "../island/island-motion";
 // Items coming and going in a list: those that stay glide to their new
 // places on the island's curve, and one arriving is revealed in its place
 // once the others have mostly made room, as an island's parts are
-// (`IslandFlow`). React Aria renders the items and takes one out of its
+// (`IslandParts`). React Aria renders the items and takes one out of its
 // collection the moment it goes, so they cannot be motion components kept
 // while they leave; instead the list's DOM is watched, and each change is
 // played from where the items were (first, last, invert, play). The DOM

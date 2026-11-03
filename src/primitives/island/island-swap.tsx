@@ -62,8 +62,8 @@ class KeepsPlace extends Component<{
 // leaving blurs away where it was, lifted out (`popLayout`) so only the new
 // one sizes the island, and the new one is revealed once it has gone
 // (`arrive`). What it first holds is revealed a beat after the black opens
-// (`reveal`). A section's parts swap with `IslandCrossfade`, which also holds
-// them while the section's box moves.
+// (`reveal`). An island's own parts give way to each other with
+// `IslandParts`.
 export function IslandSwap({
   children,
   className,

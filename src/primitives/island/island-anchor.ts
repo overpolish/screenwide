@@ -1,7 +1,34 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { useLayoutEffect, useState } from "react";
+import { useReducedMotion } from "motion/react";
+import { useEffect, useLayoutEffect, useState } from "react";
+
+import { type IslandAnchor } from "./island-geometry";
+import { leave } from "./island-motion";
+
+/**
+ * `anchor`, taken up only once what the section held has faded where it
+ * stood (`leave`, as `IslandParts` fades a part), so the black moves to hang
+ * under the new place in the same move that reshapes it, rather than
+ * carrying the part going away across with it. At once while the island is
+ * away, and with reduced motion.
+ */
+export function useSettledAnchor(anchor: IslandAnchor, isShown: boolean) {
+  const reduce = useReducedMotion() ?? false;
+  const [settled, setSettled] = useState(anchor);
+  if ((!isShown || reduce) && settled !== anchor) setSettled(anchor);
+  useEffect(() => {
+    if (settled === anchor) return;
+    const taken = window.setTimeout(() => {
+      setSettled(anchor);
+    }, leave.duration * 1000);
+    return () => {
+      window.clearTimeout(taken);
+    };
+  }, [anchor, settled]);
+  return settled;
+}
 
 /**
  * How far along the row, from its start, the middle of `control` is, in px,

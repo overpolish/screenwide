@@ -7,7 +7,7 @@ import { useLocale } from "react-aria";
 
 import { SkinContext } from "../skin/skin";
 
-import { useControlAnchor } from "./island-anchor";
+import { useControlAnchor, useSettledAnchor } from "./island-anchor";
 import { IslandBelow } from "./island-below";
 import { IslandAsideContext, IslandContext } from "./island-context";
 import { IslandDrawing } from "./island-drawing";
@@ -123,8 +123,9 @@ export function Island({
   const rowShift = isShown && notch ? shift : 0;
   const { direction } = useLocale();
   const controlAnchor = useControlAnchor(anchorControl, rowElement, direction);
+  const settledAnchor = useSettledAnchor(anchor, isShown);
   const layout = layOutIsland({
-    anchor: controlAnchor ?? anchor,
+    anchor: controlAnchor ?? settledAnchor,
     below: isStacked ? (measured.belowSize ?? { height: 0, width: 0 }) : null,
     direction,
     hasSection: Boolean(section),

@@ -41,7 +41,7 @@ import type { PickStatus, ShortcutPick } from "./shortcut-pick";
 // best first, the one in hand chosen. A combination that clashes says so
 // on its chip and in the line under them, so it is never taken unseen.
 // The chips ease in one after another, best first, as an island's parts
-// are revealed (`IslandFlow`); for another key, the ones that stay glide
+// are revealed (`IslandParts`); for another key, the ones that stay glide
 // to their new places and the rest blur away.
 
 const still = { duration: 0 };

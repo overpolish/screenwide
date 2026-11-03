@@ -8,9 +8,8 @@ import { t } from "../../../i18n/i18n";
 import { Alert } from "../../../primitives/alert/alert";
 import { Button } from "../../../primitives/button/button";
 import { Island, type IslandProps } from "../../../primitives/island/island";
-import { IslandCrossfade } from "../../../primitives/island/island-crossfade";
+import { IslandParts } from "../../../primitives/island/island-parts";
 import { IslandRow } from "../../../primitives/island/island-row";
-import { IslandSwap } from "../../../primitives/island/island-swap";
 import { IslandRowTitle } from "../../../primitives/island/row-title/island-row-title";
 import { ScrollArea } from "../../../primitives/scroll-area/scroll-area";
 import { Text } from "../../../primitives/text/text";
@@ -145,13 +144,13 @@ export function UpdateIsland(props: UpdateIslandProps) {
   let section = null;
   if (phase === "available" && isNotesOpen)
     section = (
-      <IslandCrossfade key="notes">
+      <div key="notes">
         <Notes onSkip={props.onSkip} releaseNotes={props.releaseNotes} />
-      </IslandCrossfade>
+      </div>
     );
   else if (phase === "downloading")
     section = (
-      <IslandCrossfade key="work">
+      <div key="work">
         <IslandWorkLine
           label={
             downloadProgress === null
@@ -162,23 +161,21 @@ export function UpdateIsland(props: UpdateIslandProps) {
           }
           value={downloadProgress}
         />
-      </IslandCrossfade>
+      </div>
     );
   else if (phase === "installing")
     section = (
-      <IslandCrossfade key="work">
+      <div key="work">
         <IslandWorkLine label={t("updates-restart-note")} value={null} />
-      </IslandCrossfade>
+      </div>
     );
   else if (phase === "error" && error)
     section = (
-      <IslandCrossfade key="error">
-        <div className="w-0 min-w-full">
-          <Alert color="error" role="alert">
-            {error}
-          </Alert>
-        </div>
-      </IslandCrossfade>
+      <div className="w-0 min-w-full" key="error">
+        <Alert color="error" role="alert">
+          {error}
+        </Alert>
+      </div>
     );
 
   return (
@@ -190,9 +187,17 @@ export function UpdateIsland(props: UpdateIslandProps) {
       onShapeChange={onShapeChange}
       row={
         <IslandRow
-          end={end}
+          end={
+            <IslandParts direction="row">
+              {end ? (
+                <span className="flex" key={phase}>
+                  {end}
+                </span>
+              ) : null}
+            </IslandParts>
+          }
           start={
-            <IslandSwap swapKey={phase}>
+            <IslandParts direction="row">
               <IslandRowTitle
                 glyph={
                   phase === "error" ? (
@@ -201,6 +206,7 @@ export function UpdateIsland(props: UpdateIslandProps) {
                     <CircleArrowDown aria-hidden />
                   )
                 }
+                key={phase}
                 note={
                   phase === "available" && released
                     ? t("updates-released", {
@@ -210,11 +216,11 @@ export function UpdateIsland(props: UpdateIslandProps) {
                 }
                 title={<span role="status">{titles[phase]}</span>}
               />
-            </IslandSwap>
+            </IslandParts>
           }
         />
       }
-      section={section}
+      section={section ? <IslandParts>{section}</IslandParts> : undefined}
     />
   );
 }

@@ -9,9 +9,8 @@ import { t } from "../../../i18n/i18n";
 import { Alert } from "../../../primitives/alert/alert";
 import { Button } from "../../../primitives/button/button";
 import { IconButton } from "../../../primitives/button/icon-button";
-import { IslandFlow } from "../../../primitives/island/island-flow";
+import { IslandParts } from "../../../primitives/island/island-parts";
 import { IslandRow } from "../../../primitives/island/island-row";
-import { IslandSwap } from "../../../primitives/island/island-swap";
 import { IslandRowTitle } from "../../../primitives/island/row-title/island-row-title";
 import { ScrollArea } from "../../../primitives/scroll-area/scroll-area";
 import { Text } from "../../../primitives/text/text";
@@ -25,7 +24,7 @@ import type { TextRecognitionIslandAction } from "../../../bindings/TextRecognit
 // where it has one; and under the row what it holds, as wide as the row, to
 // read and select, cut to a few lines with Show all where it runs long. What
 // cannot be done, and what failed, is said as an alert under it. Another
-// code pressed swaps what changes with it (`IslandSwap`), as the black
+// code pressed swaps what changes with it (`IslandParts`), as the black
 // glides to the new row's size.
 
 /** Past this many characters what a code holds is cut to a few lines. */
@@ -71,53 +70,49 @@ export function QrCodeRow({
   onFailure: (failure: QrCodeFailure | null) => void;
 }) {
   const payload = classifyQrPayload(content, decodeError ?? undefined);
-  // Back keeps its place at the row's start while the rest swaps; Close
-  // swaps with the end, since the new end is laid out at once while the
-  // black is still gliding to it, and only what is revealed late stays
-  // inside it.
+  // Back keeps its place at the row's start while the rest gives way to the
+  // next code's, as the island's parts do (`IslandParts`).
   return (
     <IslandRow
       end={
-        <IslandSwap
-          className="flex items-center gap-separate"
-          initial={false}
-          swapKey={content}
-        >
-          {payload.kind === "action" ? (
-            <Button
-              color="primary"
+        <IslandParts direction="row">
+          <div className="flex items-center gap-separate" key={content}>
+            {payload.kind === "action" ? (
+              <Button
+                color="primary"
+                onPress={() => {
+                  onFailure(null);
+                  onOpen(payload.url).catch(() => {
+                    onFailure("open");
+                  });
+                }}
+              >
+                {payload.label}
+              </Button>
+            ) : null}
+            {content ? (
+              <CopyButton
+                aria-label={t("text-recognition-island-qr-copy")}
+                onCopy={() => {
+                  onFailure(null);
+                  return onCopy(content).catch((cause: unknown) => {
+                    onFailure("copy");
+                    throw cause;
+                  });
+                }}
+              />
+            ) : null}
+            <IconButton
+              aria-label={t("text-recognition-island-close")}
+              className={quiet}
               onPress={() => {
-                onFailure(null);
-                onOpen(payload.url).catch(() => {
-                  onFailure("open");
-                });
+                onAction("close");
               }}
             >
-              {payload.label}
-            </Button>
-          ) : null}
-          {content ? (
-            <CopyButton
-              aria-label={t("text-recognition-island-qr-copy")}
-              onCopy={() => {
-                onFailure(null);
-                return onCopy(content).catch((cause: unknown) => {
-                  onFailure("copy");
-                  throw cause;
-                });
-              }}
-            />
-          ) : null}
-          <IconButton
-            aria-label={t("text-recognition-island-close")}
-            className={quiet}
-            onPress={() => {
-              onAction("close");
-            }}
-          >
-            <X aria-hidden className="size-icon" />
-          </IconButton>
-        </IslandSwap>
+              <X aria-hidden className="size-icon" />
+            </IconButton>
+          </div>
+        </IslandParts>
       }
       start={
         <>
@@ -130,12 +125,13 @@ export function QrCodeRow({
           >
             <ArrowLeft aria-hidden className="size-icon rtl:-scale-x-100" />
           </IconButton>
-          <IslandSwap initial={false} swapKey={content}>
+          <IslandParts direction="row">
             <IslandRowTitle
               glyph={<QrCode aria-hidden />}
+              key={content}
               title={<span role="status">{title(payload)}</span>}
             />
-          </IslandSwap>
+          </IslandParts>
         </>
       }
     />
@@ -182,7 +178,7 @@ export function QrCodeSection({
   // spanning the row): what the code holds wraps within it rather than
   // widening the island.
   return (
-    <IslandFlow className="flex w-0 min-w-full flex-col gap-inline">
+    <IslandParts className="flex w-0 min-w-full flex-col gap-inline">
       {content ? (
         <section
           aria-label={t("text-recognition-island-qr-content")}
@@ -225,6 +221,6 @@ export function QrCodeSection({
           {problem}
         </Alert>
       ) : null}
-    </IslandFlow>
+    </IslandParts>
   );
 }

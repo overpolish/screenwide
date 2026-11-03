@@ -1,11 +1,11 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { AnimatePresence } from "motion/react";
 import { useEffect, useState } from "react";
 
 import { t } from "../../../i18n/i18n";
 import { Island, type IslandProps } from "../../../primitives/island/island";
+import { IslandParts } from "../../../primitives/island/island-parts";
 import { IslandRow } from "../../../primitives/island/island-row";
 
 import {
@@ -102,7 +102,7 @@ export function RulerIsland({
       }
       section={
         section ? (
-          <AnimatePresence initial={false} mode="popLayout">
+          <IslandParts>
             <RulerSectionBody
               key={section}
               onTolerance={onTolerance}
@@ -110,7 +110,7 @@ export function RulerIsland({
               stampKeys={stampKeys}
               tolerance={state.tolerance}
             />
-          </AnimatePresence>
+          </IslandParts>
         ) : undefined
       }
     />

@@ -22,7 +22,7 @@ const still = { duration: 0 };
  * one part that gives way (its neighbours do not shrink), squeezed and
  * clipped about its middle, so what was there keeps to the black's ends and
  * the part opens with the black; it is revealed once there is mostly room
- * for it, as a section's parts are (`IslandFlow`). It blurs away as it
+ * for it, as a section's parts are (`IslandParts`). It blurs away as it
  * leaves, lifted out of the row (`popLayout`) so the row starts closing at
  * once; lifted out, it keeps to the row's end with the actions beside it,
  * rather than drifting across them with the row's start. Parts beside it

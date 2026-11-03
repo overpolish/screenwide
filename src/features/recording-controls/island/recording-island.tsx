@@ -1,14 +1,12 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { useReducedMotion } from "motion/react";
 import { type ReactNode, useEffect, useState } from "react";
 
 import { t } from "../../../i18n/i18n";
 import { Alert } from "../../../primitives/alert/alert";
 import { Button } from "../../../primitives/button/button";
 import { Island } from "../../../primitives/island/island";
-import { leave } from "../../../primitives/island/island-motion";
 import { IslandParts } from "../../../primitives/island/island-parts";
 import { IslandRow } from "../../../primitives/island/island-row";
 
@@ -63,15 +61,11 @@ function NoticeLine({ notice }: { notice: IslandWarning }) {
 export function RecordingIsland(props: RecordingIslandProps) {
   const { initialPanel = "source", isShown = true, notch, phase } = props;
   const [panel, setPanel] = useState<IslandPanel>(initialPanel);
-  const [anchoredPanel, setAnchoredPanel] = useState(panel);
   // Each time it comes out, it opens on what it will record again.
   const [wasShown, setWasShown] = useState(isShown);
   if (isShown !== wasShown) {
     setWasShown(isShown);
-    if (isShown) {
-      setPanel(initialPanel);
-      setAnchoredPanel(initialPanel);
-    }
+    if (isShown) setPanel(initialPanel);
   }
   const { onPanelChange } = props;
   useEffect(() => {
@@ -94,23 +88,6 @@ export function RecordingIsland(props: RecordingIslandProps) {
       window.removeEventListener("keydown", onKey);
     };
   }, []);
-
-  // The section hangs under what opened it, and moves there once what was
-  // open has faded where it stood, so the black reshapes in one move after
-  // rather than carrying the part going away across with it.
-  const reduce = useReducedMotion() ?? false;
-  useEffect(() => {
-    if (anchoredPanel === panel) return;
-    const moved = window.setTimeout(
-      () => {
-        setAnchoredPanel(panel);
-      },
-      reduce ? 0 : leave.duration * 1000,
-    );
-    return () => {
-      window.clearTimeout(moved);
-    };
-  }, [anchoredPanel, panel, reduce]);
 
   // An input's glyph only switches it, so several can be flicked on and off
   // without the island changing shape; its chevron alone opens its devices.
@@ -145,7 +122,7 @@ export function RecordingIsland(props: RecordingIslandProps) {
         toggle={toggle}
       />
     );
-    anchor = ANCHORS[anchoredPanel];
+    anchor = ANCHORS[panel];
     section = (
       // What stops recording, or what just failed, is said above the
       // source. It takes the source's width rather than setting its own, so
