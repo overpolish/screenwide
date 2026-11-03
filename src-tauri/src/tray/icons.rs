@@ -180,21 +180,62 @@ pub fn apply_menu_style(menu: &tauri::menu::Menu<tauri::Wry>) {
   };
 }
 
+/// Template images let AppKit supply light/dark, selected, and disabled menu
+/// colours, and macOS 27 hides menu item images unless the item asks for
+/// them; muda sets neither. The tray hands its menu to the status item only
+/// while the menu is open, so the items are prepared as tracking begins.
 #[cfg(target_os = "macos")]
-pub fn apply_templates(tray: &tauri::tray::TrayIcon) -> tauri::Result<()> {
+pub fn show_menu_images(tray: &tauri::tray::TrayIcon) -> tauri::Result<()> {
+  use std::ptr::NonNull;
+
+  use block2::RcBlock;
+  use objc2::runtime::NSObjectProtocol;
+  use objc2::{msg_send, sel};
+  use objc2_app_kit::NSMenuDidBeginTrackingNotification;
+  use objc2_foundation::{NSNotification, NSNotificationCenter};
+
   tray.with_inner_tray_icon(|inner| {
-    // Tauri runs this closure on the main thread. Template images let AppKit
-    // supply light/dark, selected, and disabled menu colors automatically.
-    let Some(mtm) = objc2::MainThreadMarker::new() else {
+    let Some(status_item) = inner.ns_status_item() else {
       return;
     };
-    let Some(menu) = inner.ns_status_item().and_then(|item| item.menu(mtm)) else {
-      return;
-    };
-    for item in menu.itemArray() {
-      if let Some(image) = item.image() {
-        image.setTemplate(true);
+    let block = RcBlock::new(move |notification: NonNull<NSNotification>| {
+      let Some(mtm) = objc2::MainThreadMarker::new() else {
+        return;
+      };
+      let Some(menu) = status_item.menu(mtm) else {
+        return;
+      };
+      // Safety: the notification center passes a live notification.
+      let notification = unsafe { notification.as_ref() };
+      if !notification
+        .object()
+        .is_some_and(|object| std::ptr::addr_eq(&*object, &*menu))
+      {
+        return;
       }
+      let visibility = sel!(setPreferredImageVisibility:);
+      for item in menu.itemArray() {
+        let Some(image) = item.image() else {
+          continue;
+        };
+        image.setTemplate(true);
+        if item.respondsToSelector(visibility) {
+          // Safety: NSMenuItem's own property on macOS 27 and later, checked
+          // above; 1 is NSMenuItemImageVisibilityVisible.
+          let _: () = unsafe { msg_send![&*item, setPreferredImageVisibility: 1isize] };
+        }
+      }
+    });
+    // Posted on the main thread, where AppKit tracks menus. The notification
+    // center retains the observer for the process lifetime; the tray installs
+    // it once.
+    unsafe {
+      NSNotificationCenter::defaultCenter().addObserverForName_object_queue_usingBlock(
+        Some(NSMenuDidBeginTrackingNotification),
+        None,
+        None,
+        &block,
+      );
     }
   })
 }

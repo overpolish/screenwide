@@ -207,7 +207,7 @@ pub fn initialize(app: &mut App) -> tauri::Result<()> {
   windows_theme::install(&tray)?;
 
   #[cfg(target_os = "macos")]
-  icons::apply_templates(&tray)?;
+  icons::show_menu_images(&tray)?;
   #[cfg(not(target_os = "macos"))]
   let _ = tray;
 
@@ -234,8 +234,6 @@ pub fn apply_recording_status(app: &AppHandle, status: RecordingStatus) {
         #[cfg(target_os = "windows")]
         windows_menu::register(&menu_for_registration);
       }
-      #[cfg(target_os = "macos")]
-      let _ = icons::apply_templates(&tray);
     }
   });
 }
