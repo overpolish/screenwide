@@ -13,6 +13,8 @@ mod lifecycle;
 mod location;
 mod recording_file;
 
+pub(crate) use lifecycle::is_exporting;
+
 pub use export_command::{__cmd__save_export, __tauri_command_name_save_export};
 pub use finished::{
   __cmd__close_exported_editor, __cmd__copy_export_file, __cmd__drag_export_file,

@@ -139,6 +139,8 @@ export type RecordingIslandProps = {
   onCancelWindowPick?: () => void;
   onChooseWindow?: () => void;
   onDiscard?: () => void;
+  /** Puts the island away before recording, as Escape does. */
+  onDismiss?: () => void;
   /** Failure `id` has been read; the next, if any, takes its place. */
   onDismissFailure?: (id: number) => void;
   onDisplayChange?: (id: number) => void;

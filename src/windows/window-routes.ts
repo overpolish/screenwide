@@ -34,19 +34,11 @@ const WINDOW_ROUTES: Record<string, WindowLoader | null> = {
     import("./project-browser-entry").then(
       (module) => module.ProjectBrowserEntry,
     ),
-  "/qr-details": () =>
-    import("../features/text-recognition/qr-details-window").then(
-      (module) => module.QrDetailsWindow,
-    ),
   "/region-selector": () =>
     import("./region-selector-entry").then(
       (module) => module.RegionSelectorEntry,
     ),
   "/ruler": null,
-  "/scrolling-capture-overlay": () =>
-    import("../features/screenshots/scrolling-capture-overlay-window").then(
-      (module) => module.ScrollingCaptureOverlayWindow,
-    ),
   "/settings": () =>
     import("./settings-entry").then((module) => module.SettingsEntry),
   "/standalone-listbox": () =>
@@ -57,10 +49,6 @@ const WINDOW_ROUTES: Record<string, WindowLoader | null> = {
   "/tooltip": () =>
     import("../features/tooltip/tooltip-window").then(
       (module) => module.TooltipWindow,
-    ),
-  "/update": () =>
-    import("../features/updates/update-prompt-window").then(
-      (module) => module.UpdatePromptWindow,
     ),
 };
 

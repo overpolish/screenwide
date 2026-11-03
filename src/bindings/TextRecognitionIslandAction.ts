@@ -3,4 +3,4 @@
 /**
  * What a press on the island does.
  */
-export type TextRecognitionIslandAction = "copy" | "copyParagraph" | "selectAnotherArea" | "close";
+export type TextRecognitionIslandAction = "copy" | "copyParagraph" | "selectAnotherArea" | "closeQrCode" | "close";

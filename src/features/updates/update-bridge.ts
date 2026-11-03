@@ -4,8 +4,6 @@
 import { emitTo, listen } from "@tauri-apps/api/event";
 import { useEffect, useRef } from "react";
 
-import { showUpdatePrompt } from "./api";
-
 import type { useUpdate, UpdateStatus } from "./use-update";
 
 export const UPDATE_REQUEST = "screenwide:update-request";
@@ -40,10 +38,17 @@ export function shouldRequestUpdateCheck({
   );
 }
 
-// The update window owns plugin resources and installation. Other windows only
-// request checks and receive serializable status, never run a second updater.
-export function useUpdateBridge(update: ReturnType<typeof useUpdate>) {
+// The island's window owns plugin resources and installation. Other windows
+// only request checks and receive serializable status, never run a second
+// updater. Asked to open an update found, it hands that to `onOpen`: the
+// island shows it with its release notes.
+export function useUpdateBridge(
+  update: ReturnType<typeof useUpdate>,
+  onOpen: () => void,
+) {
   const latestRef = useRef(update);
+  const onOpenRef = useRef(onOpen);
+  onOpenRef.current = onOpen;
   const checkedAtRef = useRef(0);
   const requestedCheckRef = useRef(false);
 
@@ -79,7 +84,7 @@ export function useUpdateBridge(update: ReturnType<typeof useUpdate>) {
           payload.open &&
           (state.status === "available" || state.status === "downloading")
         ) {
-          void showUpdatePrompt().catch(() => undefined);
+          onOpenRef.current();
           return;
         }
         if (

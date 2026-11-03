@@ -19,7 +19,8 @@ import { toolSection } from "./ruler-island-tools";
 // The Ruler's tools on the island: the tools to one side, and what can be
 // done besides measuring to the other; on a Mac with a notch, the notch
 // between them. Under the tool in hand hangs how it is used, and the edge
-// tolerances hang under their control while they are open.
+// tolerances hang under their control while they are open: until it is
+// pressed again, another control on the row is, or Escape.
 
 export type RulerIslandProps = RulerIslandParts &
   Pick<IslandProps, "isShown" | "notch" | "onHidden" | "onShapeChange"> & {
@@ -74,7 +75,12 @@ export function RulerIsland({
           end={
             <RulerActions
               edgesRef={setEdgesButton}
-              onAction={onAction}
+              // A press on the row is done with the tolerances, as picking
+              // a tool is.
+              onAction={(action) => {
+                setShowsEdges(false);
+                onAction(action);
+              }}
               onClose={onClose}
               onToggleEdges={() => {
                 setShowsEdges((current) => !current);

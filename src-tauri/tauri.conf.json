@@ -114,34 +114,6 @@
         "visible": false
       },
       {
-        "label": "update",
-        "title": "Screenwide Software Update",
-        "url": "/update",
-        "width": 620,
-        "height": 520,
-        "minWidth": 560,
-        "minHeight": 460,
-        "center": true,
-        "acceptFirstMouse": true,
-        "alwaysOnTop": false,
-        "decorations": true,
-        "titleBarStyle": "Overlay",
-        "hiddenTitle": true,
-        "trafficLightPosition": { "x": 14, "y": 27 },
-        "minimizable": false,
-        "maximizable": false,
-        "resizable": true,
-        "shadow": true,
-        "skipTaskbar": false,
-        "transparent": true,
-        "windowEffects": {
-          "effects": ["underWindowBackground", "mica"],
-          "radius": 10,
-          "state": "active"
-        },
-        "visible": false
-      },
-      {
         "label": "glide",
         "title": "Screenwide Glide",
         "url": "/glide",

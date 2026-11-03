@@ -36,6 +36,7 @@ pub fn show(app: &AppHandle) -> tauri::Result<()> {
     .effects(WindowEffectsConfig {
       color: None,
       effects: vec![Effect::UnderWindowBackground],
+      interactive: false,
       radius: Some(10.0),
       state: Some(EffectState::Active),
     })

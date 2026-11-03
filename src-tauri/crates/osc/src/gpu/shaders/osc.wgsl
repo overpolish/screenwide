@@ -382,16 +382,17 @@ fn crop_corner(uv: vec2<f32>) -> vec4<f32> {
 // The sheen that passes over the area while it is read. The quad covers the
 // area; its uv is measured in band widths from where the band's centre line
 // crosses the area's middle (`ocr/sweep.rs`), so the band keeps its width
-// and its slant whatever the area's shape. The light is the emphasis colour
-// let halfway towards white, so it shows over light and dark content alike.
+// and its slant whatever the area's shape. The light is the OCR marks' blue
+// (`--color-info`) let halfway towards white, so it shows over light and
+// dark content alike.
 fn ocr_sweep(uv: vec2<f32>) -> vec4<f32> {
   let across = uv.x + OCR_SWEEP_SLANT * uv.y;
   let light = exp(-across * across * 6.0);
   if (light <= 0.002) {
     discard;
   }
-  let emphasis = osc.ocr_colors[3].rgb;
-  return vec4<f32>(mix(vec3<f32>(1.0), emphasis, 0.5), 0.3 * light);
+  let blue = osc.ocr_colors[3].rgb;
+  return vec4<f32>(mix(vec3<f32>(1.0), blue, 0.5), 0.3 * light);
 }
 
 fn ocr_box(kind: u32, uv: vec2<f32>) -> vec4<f32> {

@@ -75,13 +75,14 @@ fn desktop_selection_composes_across_the_monitor_boundary() {
       scale: 1.0,
     },
   ];
-  let selected = state
+  state
     .select_desktop_region(&displays, 1, Rect::from_xywh(1.0, 0.0, 2.0, 1.0))
     .unwrap();
+  let (selected_generation, selected) = state.recognition_input().unwrap();
 
   assert_eq!((selected.width, selected.height), (2, 1));
   assert_eq!(selected.rgba, [[0, 255, 0, 255], [0, 0, 255, 255]].concat());
-  assert_eq!(state.recognition_input().unwrap().0, generation + 1);
+  assert_eq!(selected_generation, generation + 1);
 }
 
 #[test]

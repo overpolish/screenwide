@@ -44,7 +44,7 @@ impl StillOverlay {
     camera: &'a CapturedImage,
     look: PictureLook,
   ) -> Option<StillCamera<'a>> {
-    (self.camera_frame_width > 0).then(|| StillCamera {
+    (self.camera_frame_width > 0).then_some(StillCamera {
       image: camera,
       crop: [
         self.camera_crop_x,

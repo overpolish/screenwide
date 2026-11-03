@@ -37,7 +37,3 @@ export const initialPopupPanelHeight = (
     focusSafeInset;
   return showsAllItems ? height : Math.min(height, popupPanelMaxHeight);
 };
-
-/** `--spacing-section` in logical px. A panel is placed and clamped in window
- * and screen coordinates, where the CSS token cannot be read. */
-export const popupPanelSpacing = 12;

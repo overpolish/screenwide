@@ -3,6 +3,13 @@
 
 import { invoke } from "@tauri-apps/api/core";
 
-export const showUpdatePrompt = () => invoke<null>("show_update_prompt");
+/** Brings the island out to offer an update, if it is free; resolves to
+ * whether it came out. */
+export const presentUpdateIsland = () =>
+  invoke<boolean>("present_update_island");
 
-export const hideUpdatePrompt = () => invoke<null>("hide_update_prompt");
+/** Tucks the island away after an update was put off or skipped. */
+export const withdrawUpdateIsland = () =>
+  invoke<null>("withdraw_update_island");
+
+export const updateIslandShown = () => invoke<boolean>("update_island_shown");

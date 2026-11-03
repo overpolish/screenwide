@@ -96,9 +96,9 @@ pub(crate) async fn capture(
 }
 
 /// A still with Screenwide's own windows always left out, whatever the "Record
-/// Screenwide's windows" setting says: the scrolling capture floats its own
-/// progress overlay over the very region it is photographing, frame after
-/// frame, so that overlay must never reach the sensor.
+/// Screenwide's windows" setting says: the scrolling capture keeps the island
+/// out while it says what the capture is doing, frame after frame, and it may
+/// stand over the very region being photographed.
 pub(crate) async fn capture_excluding_own_windows(
   target: ScreenshotTarget,
 ) -> Result<CapturedImage, String> {

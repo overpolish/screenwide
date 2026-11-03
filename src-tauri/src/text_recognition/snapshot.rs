@@ -5,7 +5,7 @@
 mod tests;
 
 use screenwide_imaging::CapturedImage;
-use std::{collections::HashMap, sync::Mutex};
+use std::{collections::HashMap, sync::Arc, sync::Mutex};
 
 use crate::screenshots;
 use screenwide_capture::desktop_capture::{self, OutputLimits, PixelRect};
@@ -21,7 +21,8 @@ struct MonitorSnapshot {
 pub(super) struct Session {
   pub(super) generation: u64,
   monitors: HashMap<u32, MonitorSnapshot>,
-  selected: Option<CapturedImage>,
+  /// Shared with the recognizer rather than copied to it.
+  selected: Option<Arc<CapturedImage>>,
   pub(super) selection: Option<Rect>,
   pub(super) text: Option<super::text_selection::TextSelection>,
   pub(super) pressed_qr: Option<usize>,
@@ -95,7 +96,7 @@ impl TextRecognitionState {
     true
   }
 
-  pub(super) fn recognition_input(&self) -> Option<(u64, CapturedImage)> {
+  pub(super) fn recognition_input(&self) -> Option<(u64, Arc<CapturedImage>)> {
     let session = self
       .0
       .lock()
@@ -126,7 +127,7 @@ impl TextRecognitionState {
     displays: &[OscDesktopDisplay],
     anchor_id: u32,
     region: Rect,
-  ) -> Result<CapturedImage, String> {
+  ) -> Result<(), String> {
     let mut session = self
       .0
       .lock()
@@ -170,11 +171,11 @@ impl TextRecognitionState {
       plan.desktop_region.width,
       plan.desktop_region.height,
     ));
-    session.selected = Some(selected.clone());
+    session.selected = Some(Arc::new(selected));
     session.text = None;
     session.pressed_qr = None;
     session.generation = session.generation.wrapping_add(1);
-    Ok(selected)
+    Ok(())
   }
 
   pub(super) fn visual_snapshot(&self, generation: u64) -> Option<super::visual::VisualSnapshot> {

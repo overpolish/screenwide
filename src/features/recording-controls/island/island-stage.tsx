@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { useEffect, useState } from "react";
+import { useLocale } from "react-aria";
 
 import { ISLAND } from "../../../primitives/island/island-geometry";
 
@@ -15,6 +16,7 @@ import {
 import {
   stageMicrophone,
   stageWrittenBytes,
+  useStageAppearing,
   useStageCamera,
   useStageFailures,
   useStageReplay,
@@ -51,6 +53,7 @@ export type IslandStageProps = Pick<
   | "onCancelWindowPick"
   | "onChooseWindow"
   | "onOpenPermissions"
+  | "onDismiss"
   | "onScreenshot"
   | "onHidden"
   | "onShapeChange"
@@ -182,30 +185,26 @@ export function IslandStage(props: IslandStageProps) {
     }
   }, [phase, count, holdsStart]);
 
-  // Out, a while to look at it, tucked away, and out again.
-  const [isShown, setIsShown] = useState(!props.appears);
-  useEffect(() => {
-    if (!props.appears) return;
-    const timer = setTimeout(
-      () => {
-        setIsShown((value) => !value);
-      },
-      isShown ? 3200 : 1100,
-    );
-    return () => {
-      clearTimeout(timer);
-    };
-  }, [isShown, props.appears]);
+  const isShown = useStageAppearing(props.appears);
+  const { direction } = useLocale();
 
   const { level, warning: microphoneWarning } = stageMicrophone({
     inputs,
     problem: props.microphoneProblem,
   });
 
+  // Cancelling a start, or discarding a recording, comes back to rest.
+  const rest = () => {
+    setPhase("idle");
+  };
+
+  // The stage is the screen, which stays left to right; the island on it
+  // follows the language, as it does in its own window.
   return (
     <div className="relative size-full" dir="ltr">
       <div
         className="absolute inset-x-0"
+        dir={direction}
         style={{ top: props.notch ? 0 : ISLAND.screenGap }}
       >
         <RecordingIsland
@@ -230,12 +229,8 @@ export function IslandStage(props: IslandStageProps) {
           mode={mode}
           moment={moment}
           notch={props.notch}
-          onCancelCountdown={() => {
-            setPhase("idle");
-          }}
-          onCancelStarting={() => {
-            setPhase("idle");
-          }}
+          onCancelCountdown={rest}
+          onCancelStarting={rest}
           onCancelWindowPick={props.onCancelWindowPick}
           onChooseWindow={() => {
             props.onChooseWindow?.();
@@ -251,9 +246,8 @@ export function IslandStage(props: IslandStageProps) {
               [kind]: { ...current[kind], selectedIds: ids },
             }));
           }}
-          onDiscard={() => {
-            setPhase("idle");
-          }}
+          onDiscard={rest}
+          onDismiss={props.onDismiss}
           onDisplayChange={setDisplay}
           onHidden={props.onHidden}
           onInputChange={(kind, isOn) => {

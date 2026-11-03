@@ -1,8 +1,9 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { fn } from "storybook/test";
+import { fn, userEvent, within } from "storybook/test";
 
+import { t } from "../../../i18n/i18n";
 import { ISLAND } from "../../../primitives/island/island-geometry";
 import { featureStage } from "../../../storybook/feature-story-stage";
 import { PREVIEW_NOTCH } from "../../../storybook/preview-notch";
@@ -23,6 +24,8 @@ const meta = {
   args: {
     isShown: true,
     onAction: fn(),
+    onCopyQrCode: fn(() => Promise.resolve()),
+    onOpenQrCode: fn(() => Promise.resolve()),
     state: { failed: false, phase: "choosing" },
   },
   component: TextRecognitionIsland,
@@ -57,7 +60,7 @@ const meta = {
       </div>
     ) : (
       <div className="flex size-full flex-col items-center gap-separate pt-12">
-        <div className="h-36 w-96 rounded-sm border border-dashed border-emphasis" />
+        <div className="h-36 w-96 rounded-sm border border-dashed border-info" />
         <div className="w-full">
           <TextRecognitionIsland {...args} />
         </div>
@@ -93,4 +96,69 @@ export const OnlyQrCodes: Story = {
 
 export const NothingFound: Story = {
   args: { state: { lines: 0, phase: "ready", qrCodes: 0, selected: false } },
+};
+
+export const QrLink: Story = {
+  args: {
+    state: {
+      content: "https://screenwide.app/download",
+      decodeError: null,
+      phase: "qr",
+    },
+  },
+};
+
+export const QrInformation: Story = {
+  args: {
+    state: {
+      content:
+        "BEGIN:VCARD\nVERSION:3.0\nFN:Ada Lovelace\nORG:Analytical Engines Ltd\nTEL:+44 20 7946 0958\nEMAIL:ada@example.com\nADR:;;12 St James's Square;London;;SW1Y 4JH;United Kingdom\nNOTE:Met at the engine demonstration. Ask about the notes on Bernoulli numbers.\nEND:VCARD",
+      decodeError: null,
+      phase: "qr",
+    },
+  },
+};
+
+export const QrUnsupported: Story = {
+  args: {
+    state: { content: "javascript:alert(1)", decodeError: null, phase: "qr" },
+  },
+};
+
+export const QrDecodeFailure: Story = {
+  args: {
+    state: {
+      content: "",
+      decodeError: "QR-like code could not be decoded.",
+      phase: "qr",
+    },
+  },
+};
+
+export const QrOpenFailure: Story = {
+  args: {
+    ...QrLink.args,
+    onOpenQrCode: fn(() => Promise.reject(new Error("No browser"))),
+  },
+  play: async ({ canvasElement }) => {
+    await userEvent.click(
+      await within(canvasElement).findByRole("button", {
+        name: t("text-recognition-qr-open-link"),
+      }),
+    );
+  },
+};
+
+export const QrCopyFailure: Story = {
+  args: {
+    ...QrLink.args,
+    onCopyQrCode: fn(() => Promise.reject(new Error("Clipboard busy"))),
+  },
+  play: async ({ canvasElement }) => {
+    await userEvent.click(
+      await within(canvasElement).findByRole("button", {
+        name: t("text-recognition-island-qr-copy"),
+      }),
+    );
+  },
 };

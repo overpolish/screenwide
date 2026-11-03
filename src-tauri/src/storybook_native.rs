@@ -43,6 +43,7 @@ pub fn show(app: &AppHandle, preview_url: &str) -> Result<(), Box<dyn Error>> {
     .effects(WindowEffectsConfig {
       color: None,
       effects: vec![preview_effect()],
+      interactive: false,
       radius: Some(10.0),
       state: Some(EffectState::Active),
     })

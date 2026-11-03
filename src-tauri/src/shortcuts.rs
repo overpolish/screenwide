@@ -135,6 +135,12 @@ pub fn resume_shortcut_action(app: AppHandle, action: ShortcutAction) {
   run_action(&app, action);
 }
 
+/// Carries out `action` exactly as its shortcut would, for another way of
+/// asking for it, such as clicking the tray icon.
+pub(crate) fn run(app: &AppHandle, action: ShortcutAction) {
+  run_action(app, action);
+}
+
 pub fn shortcut_for(app: &AppHandle, action: ShortcutAction) -> Option<String> {
   app
     .state::<ShortcutSettingsState>()

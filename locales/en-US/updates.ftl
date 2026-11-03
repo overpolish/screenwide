@@ -1,24 +1,31 @@
 # SPDX-FileCopyrightText: 2026 overpolish
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-### The window offering a new version of the app.
+### A new version of the app, offered on the island.
 
-updates-title = Update Available
-updates-available = A new version of { -app-name } is available.
-updates-available-version = { -app-name } { $version } is available.
-# $current is the version installed now.
-updates-available-versions = { -app-name } { $version } is available. You have { $current }.
+# Names the island for assistive technology.
+updates-island = Software update
+# The island's title when a new version is found. $version is the new version.
+updates-available-version = { -app-name } { $version } is available
 # $date is the release date, already written in the reader's date format.
 updates-released = Released { $date }
-updates-release-notes = Release Notes
+# Opens and closes the release notes under the island.
+updates-whats-new = What's new
+updates-later = Later
+updates-install = Install
+# The release notes, for when there are none to show.
 updates-release-notes-fallback = Improvements and fixes for { -app-name }.
 # The name of a checklist item in the release notes that has none of its own.
 updates-task = Task
-updates-downloading = Downloading and installing
-updates-download-progress = Update download progress
-# $error says what went wrong, in English.
-updates-failed = The update could not be installed. { $error }
-updates-skip = Skip This Version
-updates-remind-later = Remind Me Later
-updates-install = Install Update
-updates-installing = Installing
+# A quiet action under the release notes: never offer this version again.
+updates-skip = Skip this version
+# The island's title while the new version downloads, and while it installs. $version is the new version.
+updates-downloading = Downloading { -app-name } { $version }
+updates-installing = Installing { -app-name } { $version }
+# Beside the download's progress bar. $percent is already formatted, such as 42%.
+updates-download-percent = { $percent } downloaded
+updates-download-starting = Starting the download.
+updates-restart-note = { -app-name } restarts when it is done.
+# The island's title when the new version could not be installed. $version is the new version.
+updates-failed = { -app-name } { $version } was not installed
+updates-try-again = Try again

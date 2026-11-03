@@ -102,6 +102,8 @@ recording-controls-island-choose-window = Choose a window
 # Stops picking a window by clicking it, keeping the one chosen before.
 recording-controls-island-cancel-pick = Cancel
 recording-controls-island-record-options = Recording options
+# At the row's start before recording; puts the island away, as Escape does.
+recording-controls-island-hide = Hide recording controls
 
 ## A failure the island says on a line of its own, until it is dismissed. The
 ## reason after the title stays in English: it comes from the capture layers.

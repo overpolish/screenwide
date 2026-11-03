@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { Check, Circle, ImageDown, OctagonAlert } from "lucide-react";
+import { Check, Circle, ImageDown, OctagonAlert, X } from "lucide-react";
 
 import { t } from "../../../i18n/i18n";
 import { cn } from "../../../lib/styling";
@@ -10,6 +10,7 @@ import { IconButton } from "../../../primitives/button/icon-button";
 import { IconSwap } from "../../../primitives/icon-swap/icon-swap";
 import { IslandRow } from "../../../primitives/island/island-row";
 import { IslandOptions } from "../../../primitives/island/options/island-options";
+import { IslandRowPresence } from "../../editor/island/island-row-presence";
 
 import { InputGlyph, SourceChip } from "./island-glyphs";
 import { INPUTS } from "./island-names";
@@ -21,9 +22,9 @@ import type {
   RecordingIslandProps,
 } from "./island-types";
 
-// The island's row at rest: what is recorded and the inputs to one side,
-// the screenshot and Record to the other; on a Mac with a notch, the notch
-// between them.
+// The island's row at rest: a way to put it away, then what is recorded and
+// the inputs to one side, the screenshot and Record to the other; on a Mac
+// with a notch, the notch between them.
 
 export function RestingRow({
   onToggleInput,
@@ -137,6 +138,18 @@ export function RestingRow({
       }
       start={
         <>
+          {/* Escape cancels a window pick rather than putting the island
+              away, and the pick offers its own Cancel, so while picking
+              this steps aside. */}
+          <IslandRowPresence isShown={!props.windowPick}>
+            <IconButton
+              aria-label={t("recording-controls-island-hide")}
+              className="text-fg-secondary enabled:hover:text-fg"
+              onPress={props.onDismiss}
+            >
+              <X aria-hidden className="size-icon" />
+            </IconButton>
+          </IslandRowPresence>
           <SourceChip
             hasProblem={!canRecord(props)}
             isOpen={panel === "source"}

@@ -6,10 +6,8 @@ import {
   ArrowDown,
   ArrowLeft,
   ArrowRight,
-  ArrowRightToLine,
   ArrowUp,
   ChevronUp,
-  CircleArrowOutUpLeft,
   Command,
   CornerDownLeft,
   Delete,
@@ -45,8 +43,10 @@ const keyboardClassName = {
 };
 
 // A Mac menu draws its modifiers and named keys as symbols; Windows spells
-// every key out, as its menus and keycaps do. Keys come in as `hotkeyKeys`
-// names them or as a story spells them.
+// every key out, as its menus and keycaps do. Escape and Tab are spelled out
+// on a Mac too, as its keyboard prints them: their symbols (⎋, ⇥) are ones
+// few people recognise, unlike the modifiers, Return, Delete and the arrows.
+// Keys come in as `hotkeyKeys` names them or as a story spells them.
 type MacGlyph = {
   Glyph: LucideIcon;
   keys: string[];
@@ -71,8 +71,6 @@ const macGlyphList: MacGlyph[] = [
     keys: ["delete"],
     name: "delete",
   },
-  { Glyph: CircleArrowOutUpLeft, keys: ["esc", "escape"], name: "escape" },
-  { Glyph: ArrowRightToLine, keys: ["tab"], name: "tab" },
   { Glyph: ArrowUp, keys: ["up"], name: "up" },
   { Glyph: ArrowDown, keys: ["down"], name: "down" },
   { Glyph: ArrowLeft, keys: ["left"], name: "left" },

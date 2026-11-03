@@ -4,6 +4,9 @@
 import { invoke } from "@tauri-apps/api/core";
 
 import { Region } from "../recording-sources/types";
+
+import type { ScrollingCaptureIslandState } from "../../bindings/ScrollingCaptureIslandState";
+
 export type ScreenshotDestination = "editor" | "clipboard" | "both";
 
 export type ScreenshotTarget =
@@ -31,6 +34,13 @@ export const captureStill = ({ destination, target }: CaptureStillOptions) =>
 
 export const captureScrollingStill = (target: ScrollingScreenshotTarget) =>
   invoke<null>("capture_scrolling_still", { target });
+
+export const getScrollingCaptureIslandState = () =>
+  invoke<ScrollingCaptureIslandState | null>("scrolling_capture_island_state");
+
+/** Stops the scrolling capture at its next step, as Escape does. */
+export const cancelScrollingCapture = () =>
+  invoke<null>("cancel_scrolling_capture");
 
 /** Hides the recording UI and takes `target` once the Settings delay has run
  * down; the shot always opens in the editor. */

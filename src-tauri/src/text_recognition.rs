@@ -3,11 +3,13 @@
 
 //! Text/OCR recognition and native overlay session state.
 
+use std::sync::{Mutex, PoisonError};
+
 use serde::Serialize;
 use tauri::{AppHandle, Manager, WebviewUrl};
 use tauri_plugin_clipboard_manager::ClipboardExt;
-use ts_rs::TS;
 
+use crate::user_work::UserActivity;
 use crate::{app_windows::WindowLabel, capture_overlays};
 mod adapter;
 mod input;
@@ -17,10 +19,10 @@ pub(crate) mod island;
 mod macos;
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 mod native_overlay;
+#[cfg(all(test, target_os = "macos"))]
+mod perf_tests;
 #[cfg(target_os = "macos")]
 pub(crate) mod preview;
-mod qr;
-pub(crate) mod qr_details;
 pub(crate) mod snapshot;
 mod text_selection;
 pub(crate) mod visual;
@@ -38,9 +40,8 @@ mod recognition_worker;
 pub(crate) mod settings;
 use recognition_worker::recognize;
 
-#[derive(Clone, Copy, Debug, PartialEq, Serialize, TS)]
+#[derive(Clone, Copy, Debug, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
-#[ts(export)]
 pub struct TextRect {
   pub x: f64,
   pub y: f64,
@@ -65,14 +66,12 @@ pub struct RecognizedLine {
   pub characters: Vec<RecognizedCharacter>,
 }
 
-#[derive(Clone, Debug, Serialize, TS)]
+#[derive(Clone, Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-#[ts(export)]
 pub struct RecognizedQrCode {
   pub bounds: TextRect,
   pub content: String,
   #[serde(skip_serializing_if = "Option::is_none")]
-  #[ts(optional)]
   pub decode_error: Option<String>,
 }
 
@@ -89,6 +88,15 @@ fn recognition_windows(app: &AppHandle) -> Vec<tauri::WebviewWindow> {
     .get_webview_window(WindowLabel::TextRecognition.as_str())
     .into_iter()
     .collect()
+}
+
+/// Held from the shortcut until the overlay closes: the app is otherwise
+/// mostly windowless, and App Nap holds every thread of a napped app to
+/// background priority, whatever it asks for.
+static ACTIVITY: Mutex<Option<UserActivity>> = Mutex::new(None);
+
+fn hold_activity(activity: Option<UserActivity>) {
+  *ACTIVITY.lock().unwrap_or_else(PoisonError::into_inner) = activity;
 }
 
 pub(crate) fn is_active(app: &AppHandle) -> bool {
@@ -120,7 +128,6 @@ fn close_recognition_windows(app: &AppHandle, except: Option<&str>) {
 }
 
 pub fn dismiss(app: &AppHandle) {
-  qr_details::hide_without_resume(app);
   // Before the overlay closes: on Windows the island is owned by it.
   island::withdraw(app);
   let had_windows = !recognition_windows(app).is_empty();
@@ -134,6 +141,7 @@ pub fn dismiss(app: &AppHandle) {
     capture_overlays::emit_lifecycle(app, false);
   }
   crate::app_windows::sync_recording_ui_escape(app, crate::ruler::is_active(app));
+  hold_activity(None);
 }
 
 pub async fn start(app: &AppHandle) -> Result<(), String> {
@@ -141,6 +149,7 @@ pub async fn start(app: &AppHandle) -> Result<(), String> {
     return Ok(());
   }
   dismiss(app);
+  hold_activity(Some(UserActivity::begin("Reading text on screen")));
   capture_overlays::dismiss_except(app, &[capture_overlays::CaptureOverlay::TextRecognition]);
   let generation = app.state::<TextRecognitionState>().begin();
   crate::glide::suspend_for_capture(app);
@@ -245,26 +254,12 @@ pub fn copy_recognition_content(app: AppHandle, text: String) -> Result<(), Stri
     .map_err(|error| error.to_string())
 }
 
-#[tauri::command]
-pub fn get_qr_details(
-  state: tauri::State<'_, qr_details::QrDetailsState>,
-) -> Result<RecognizedQrCode, String> {
-  state
-    .current()
-    .ok_or_else(|| "No QR code is selected".to_owned())
-}
-
-#[tauri::command]
-pub fn close_qr_details(app: AppHandle) {
-  qr_details::hide_and_resume(&app);
-}
-
-async fn recognize_current(app: &AppHandle) -> Result<TextRecognitionResult, String> {
+async fn recognize_current(app: &AppHandle) -> Result<(), String> {
   let state = app.state::<TextRecognitionState>();
-  let (generation, image) = state
-    .recognition_input()
-    .ok_or_else(|| "The selected image is no longer available".to_owned())?;
-  let (lines, qr_codes) = match recognize(image.rgba, image.width, image.height).await {
+  let Some((generation, image)) = state.recognition_input() else {
+    return Err("The selected image is no longer available".to_owned());
+  };
+  let (lines, qr_codes) = match recognize(image).await {
     Ok(result) => result,
     Err(error) => {
       if state.is_current_generation(generation) {
@@ -283,8 +278,8 @@ async fn recognize_current(app: &AppHandle) -> Result<TextRecognitionResult, Str
     qr_codes,
     text,
   };
-  if state.install_result(generation, result.clone()) {
+  if state.install_result(generation, result) {
     adapter::show_ready(app, generation);
   }
-  Ok(result)
+  Ok(())
 }

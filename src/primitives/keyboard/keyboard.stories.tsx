@@ -9,9 +9,9 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 
 const variants = ["keycap", "plain"] as const;
 
-// A modifier, a named key, a letter, a digit and a bracket: on the Mac the
-// first two draw as symbols.
-const sampleKeys = ["Command", "Escape", "B", "4", "["];
+// A modifier, two named keys, a letter, a digit and a bracket: on the Mac
+// the modifier and Return draw as symbols, Escape is spelled out.
+const sampleKeys = ["Command", "Return", "Escape", "B", "4", "["];
 const separator = "+" as const;
 
 const meta = {

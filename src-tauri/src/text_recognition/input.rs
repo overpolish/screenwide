@@ -52,6 +52,7 @@ pub(crate) fn selection_finished(
     let capture_app = app.clone();
     let displays = binding.displays.clone();
     let selected = tauri::async_runtime::spawn_blocking(move || {
+      let _urgency = crate::user_work::ThreadUrgency::waited();
       capture_app
         .state::<super::TextRecognitionState>()
         .select_desktop_region(&displays, monitor_id, region)
@@ -83,7 +84,6 @@ pub(crate) fn dispatch_text_input(
   phase: InputPhase,
   point: Point,
   modifiers: u8,
-  display_id: Option<u32>,
 ) -> OscResult {
   let Some(action) = text_action(phase, InputModifiers::from_bits(modifiers)) else {
     return crate::osc::runtime::invalid_result();
@@ -95,6 +95,12 @@ pub(crate) fn dispatch_text_input(
   else {
     return crate::osc::runtime::invalid_result();
   };
+  // A press away from the QR codes puts the one on the island away; one on
+  // another code keeps it until the press lands, so the island swaps one
+  // code for the other rather than showing what was found in between.
+  if phase == InputPhase::Down && !update.qr_cursor {
+    super::island::close_qr_code(app);
+  }
   if let Some(snapshot) = update.snapshot {
     super::adapter::render_window(window, super::visual::RenderPacket::ready(&snapshot));
     super::island::sync_ready(app);
@@ -107,12 +113,7 @@ pub(crate) fn dispatch_text_input(
     });
   }
   if let Some(code) = update.qr_code {
-    let app = app.clone();
-    tauri::async_runtime::spawn(async move {
-      if let Err(error) = super::qr_details::show(&app, code, display_id) {
-        eprintln!("Could not show QR details: {error}");
-      }
-    });
+    super::island::show_qr_code(app, code);
   }
   OscResult {
     cursor: if update.qr_cursor {

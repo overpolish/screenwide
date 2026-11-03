@@ -214,7 +214,11 @@ export function Island({
                     height: rowTarget.height,
                     opacity: isShown || notch ? 1 : 0,
                   }}
-                  className="relative overflow-hidden"
+                  // Clipped rather than hidden, so it is no scroll box: a
+                  // control focused while the row is still short, such as
+                  // one pressed as the island comes out, cannot scroll the
+                  // row up out of place.
+                  className="relative overflow-clip"
                   initial={false}
                   onAnimationComplete={() => {
                     setIsComing(false);

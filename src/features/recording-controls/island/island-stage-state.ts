@@ -18,7 +18,8 @@ import type {
 // The stage's stand-ins for what the app would drive: the camera's picture,
 // which follows Flip; the replay buffer, off unless a story says otherwise,
 // which turned on starts for a moment before it is on, as the real buffer
-// does while it sets up its capture; and the failures Rust would keep.
+// does while it sets up its capture; the failures Rust would keep; and the
+// island coming out and tucking away.
 
 const STARTING_MS = 900;
 
@@ -48,6 +49,25 @@ export function useStageReplay(initial: IslandReplay | null | undefined) {
     );
   };
   return { changeReplay, replay: replay ?? undefined };
+}
+
+/** Out, a while to look at it, tucked away, and out again, where a story
+ * shows the island appearing; otherwise just out. */
+export function useStageAppearing(appears: boolean | undefined) {
+  const [isShown, setIsShown] = useState(!appears);
+  useEffect(() => {
+    if (!appears) return;
+    const timer = setTimeout(
+      () => {
+        setIsShown((value) => !value);
+      },
+      isShown ? 3200 : 1100,
+    );
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [isShown, appears]);
+  return isShown;
 }
 
 /** The island's camera props on the stage: its picture, and Flip, which the

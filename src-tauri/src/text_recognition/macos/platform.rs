@@ -28,6 +28,56 @@ fn clamp_rect(rect: TextRect, bounds: TextRect) -> Option<TextRect> {
   })
 }
 
+/// `vImage_Buffer`: rows of pixels in memory.
+#[repr(C)]
+struct ImageBuffer {
+  data: *mut std::ffi::c_void,
+  height: usize,
+  width: usize,
+  row_bytes: usize,
+}
+
+#[link(name = "Accelerate", kind = "framework")]
+unsafe extern "C" {
+  fn vImagePermuteChannels_ARGB8888(
+    source: *const ImageBuffer,
+    destination: *const ImageBuffer,
+    permute_map: *const u8,
+    flags: u32,
+  ) -> isize;
+}
+
+/// Vision reads BGRA, so the picture's red and blue are swapped into the
+/// locked `buffer` row by row by vImage, which is vectorized: a loop of our
+/// own over every pixel is several times slower, and slower still in a dev
+/// build, where this crate is not optimized.
+fn to_bgra(rgba: &[u8], width: u32, height: u32, buffer: &mut cv::PixelBuf) -> Result<(), String> {
+  let (width, height) = (width as usize, height as usize);
+  if rgba.len() < width * height * 4 {
+    return Err("The selected image is smaller than its size".to_owned());
+  }
+  let source = ImageBuffer {
+    data: rgba.as_ptr().cast_mut().cast(),
+    height,
+    width,
+    row_bytes: width * 4,
+  };
+  let destination = ImageBuffer {
+    data: unsafe { buffer.base_address_mut() }.cast(),
+    height,
+    width,
+    row_bytes: buffer.bytes_per_row(),
+  };
+  // Each destination channel names the source channel it takes.
+  let map = [2_u8, 1, 0, 3];
+  // SAFETY: both buffers span `height` rows of `row_bytes`, the source is only
+  // read, and the destination is the pixel buffer locked by the caller.
+  match unsafe { vImagePermuteChannels_ARGB8888(&source, &destination, map.as_ptr(), 0) } {
+    0 => Ok(()),
+    error => Err(format!("Could not prepare the image for Vision ({error})")),
+  }
+}
+
 pub fn recognize(rgba: &[u8], width: u32, height: u32) -> Result<Vec<RecognizedLine>, String> {
   // Vision hands its requests, results and candidates over autoreleased, and
   // recognition runs on a pool thread that never drains one of its own.
@@ -43,22 +93,9 @@ pub fn recognize(rgba: &[u8], width: u32, height: u32) -> Result<Vec<RecognizedL
   unsafe { pixel_buffer.lock_base_addr(flags) }
     .result()
     .map_err(|error| error.to_string())?;
-  let stride = pixel_buffer.bytes_per_row();
-  let base = unsafe { pixel_buffer.base_address_mut() } as *mut u8;
-  for row in 0..height as usize {
-    let target =
-      unsafe { std::slice::from_raw_parts_mut(base.add(row * stride), width as usize * 4) };
-    let source = &rgba[row * width as usize * 4..(row + 1) * width as usize * 4];
-    for (source, target) in source
-      .as_chunks::<4>()
-      .0
-      .iter()
-      .zip(target.as_chunks_mut::<4>().0.iter_mut())
-    {
-      target.copy_from_slice(&[source[2], source[1], source[0], source[3]]);
-    }
-  }
+  let converted = to_bgra(rgba, width, height, &mut pixel_buffer);
   unsafe { pixel_buffer.unlock_lock_base_addr(flags) };
+  converted?;
 
   let mut request = vn::RecognizeTextRequest::new();
   request.set_revision(vn::RecognizeTextRequest::REVISION_3);

@@ -2,11 +2,13 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { isTauri } from "@tauri-apps/api/core";
+import { openUrl } from "@tauri-apps/plugin-opener";
 import { useEffect, useRef, useState } from "react";
 
 import { useTauriEvent } from "../../../lib/use-tauri-event";
 import {
   cancelTextRecognition,
+  copyRecognitionContent,
   getTextRecognitionIslandState,
   runTextRecognitionIslandAction,
 } from "../api";
@@ -29,6 +31,8 @@ const report = (action: string) => (cause: unknown) => {
 export function useTextRecognitionIsland(): {
   isUp: boolean;
   onAction: (action: TextRecognitionIslandAction) => void;
+  onCopyQrCode: (content: string) => Promise<unknown>;
+  onOpenQrCode: (url: string) => Promise<unknown>;
   state: TextRecognitionIslandState | null;
 } {
   const [state, setState] = useState<TextRecognitionIslandState | null>(null);
@@ -65,6 +69,12 @@ export function useTextRecognitionIsland(): {
         report(`run Text Recognition's ${action}`),
       );
     },
+    onCopyQrCode: copyRecognitionContent,
+    // A code's action done, Text Recognition has served its turn.
+    onOpenQrCode: (url) =>
+      openUrl(url).then(() => {
+        cancelTextRecognition().catch(report("close Text Recognition"));
+      }),
     state: state ?? last,
   };
 }

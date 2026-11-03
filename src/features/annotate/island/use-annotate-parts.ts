@@ -33,8 +33,9 @@ export type AnnotatePartsProps = {
 // The annotate tools' one piece of state, kept the same wherever an island
 // shows them: whether the pen or the colours hang under the tools. The
 // colours stay open while colours are tried; pressing the colour again, a
-// tool or Escape steps back to the pen. A tool that draws in no colour hangs
-// its own pen, even where the colours were open for the tool before it.
+// tool, undo, clear or Escape steps back to the pen. A tool that draws in no
+// colour hangs its own pen, even where the colours were open for the tool
+// before it.
 
 export function useAnnotateParts({
   initialSection = "pen",

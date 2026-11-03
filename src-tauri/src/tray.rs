@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use tauri::menu::{IconMenuItemBuilder, Menu, MenuBuilder};
-use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
+use tauri::tray::TrayIconBuilder;
 use tauri::{App, AppHandle, Wry};
 
 use crate::app_windows;
@@ -10,6 +10,7 @@ use screenwide_capture::RecordingStatus;
 use screenwide_i18n::t;
 
 mod actions;
+mod click;
 mod icons;
 mod replay;
 mod replay_saved;
@@ -174,25 +175,30 @@ fn build_menu(app: &AppHandle, status: RecordingStatus) -> tauri::Result<Menu<Wr
 pub fn initialize(app: &mut App) -> tauri::Result<()> {
   let menu = build_menu(app.handle(), RecordingStatus::Idle)?;
 
+  let clicks = click::ClickFilter::default();
   let tray = TrayIconBuilder::with_id(TRAY_ID)
     .icon(status::icon(status::Shown::Status(RecordingStatus::Idle))?)
     .icon_as_template(cfg!(target_os = "macos"))
     .menu(&menu)
+    // The icon's own click is the recording controls' toggle; the menu
+    // opens on a right click, which the tray handles itself.
     .show_menu_on_left_click(false)
     .tooltip(status::tooltip(status::Shown::Status(
       RecordingStatus::Idle,
     )))
     .on_menu_event(|app, event| actions::handle(app, event.id().as_ref()))
-    .on_tray_icon_event(|tray, event| {
-      if let TrayIconEvent::Click {
-        button: MouseButton::Left,
-        button_state: MouseButtonState::Up,
-        ..
-      } = event
-      {
-        show_main_window(tray.app_handle());
-      }
-    })
+    .on_tray_icon_event(
+      move |tray, event| match clicks.action(&event, click::control_held()) {
+        Some(click::ClickAction::ToggleRecordingControls) => crate::shortcuts::run(
+          tray.app_handle(),
+          crate::shortcuts::ShortcutAction::ToggleRecordingControls,
+        ),
+        Some(click::ClickAction::ShowMenu) => {
+          let _ = tray.with_inner_tray_icon(|inner| inner.show_menu());
+        }
+        None => {}
+      },
+    )
     .build(app)?;
 
   #[cfg(target_os = "windows")]

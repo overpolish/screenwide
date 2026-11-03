@@ -51,6 +51,7 @@ export const islandMeta = {
     microphoneLevel: 0.6,
     onCancelWindowPick: fn(),
     onChooseWindow: fn(),
+    onDismiss: fn(),
     onOpenPermissions: fn(),
     onScreenshot: fn(),
     showsSize: false,

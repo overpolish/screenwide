@@ -102,6 +102,7 @@ export function MomentsSettingsPanel({
   transcription: TranscriptionControls;
 }) {
   const { addKind, isSaving, preview, save, settings } = moments;
+  const [openColor, setOpenColor] = useState<string | null>(null);
   if (!settings) return null;
   const { kinds } = settings;
   const withChange = (id: string, changes: Partial<MomentKind>) => ({
@@ -118,19 +119,23 @@ export function MomentsSettingsPanel({
       {/* One line per moment: everything one is, editable at a glance. */}
       <SettingsGroup footnote={t("settings-moments-footnote")}>
         {kinds.map((kind) => (
-          <div className="flex items-center gap-inline" key={kind.id}>
-            <KindColorPicker
-              color={kind.color}
-              customColor={kind.customColor}
-              isDisabled={isSaving}
-              name={kind.name}
-              onChange={(change) => {
-                update(kind.id, change);
-              }}
-              onPreview={(change) => {
-                preview(withChange(kind.id, change));
-              }}
-            />
+          <KindColorPicker
+            color={kind.color}
+            customColor={kind.customColor}
+            isDisabled={isSaving}
+            isOpen={openColor === kind.id}
+            key={kind.id}
+            name={kind.name}
+            onChange={(change) => {
+              update(kind.id, change);
+            }}
+            onOpenChange={(isOpen) => {
+              setOpenColor(isOpen ? kind.id : null);
+            }}
+            onPreview={(change) => {
+              preview(withChange(kind.id, change));
+            }}
+          >
             <KindNameField
               isDisabled={isSaving}
               key={kind.name}
@@ -162,7 +167,7 @@ export function MomentsSettingsPanel({
               }}
               variant="ghost"
             />
-          </div>
+          </KindColorPicker>
         ))}
         {/* Added at the end of the list it adds to. */}
         <Button

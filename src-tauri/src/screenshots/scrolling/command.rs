@@ -4,15 +4,14 @@
 use chrono::Local;
 use tauri::AppHandle;
 
-use super::{cancel, overlay, progress};
+use super::{cancel, island};
 use crate::screenshots::ScreenshotTarget;
 
-/// Releases Escape and tears the overlay down, telling it the capture is over
-/// so it settles rather than spinning in the moment before the window closes.
-fn finish(app: &AppHandle) {
+/// Releases Escape and puts the island away, saying the capture is over so it
+/// settles rather than spinning as it tucks away.
+async fn finish(app: &AppHandle) {
   cancel::disarm(app);
-  progress::emit_finished(app);
-  overlay::close(app);
+  island::withdraw(app).await;
 }
 
 /// Captures the selected scrollable region into one two-dimensional canvas.
@@ -29,27 +28,25 @@ pub async fn capture_scrolling_still(
   }
 
   crate::editor::reserve_screenshot_workspace(&app)?;
-  // After the dismissal, so the overlay this capture owns is not swept away
-  // with the capture tools it just closed.
   crate::capture_overlays::dismiss_all(&app);
   let _ = crate::app_windows::hide_recording_ui(app.clone());
-  // Armed before the overlay exists so the window is told, as it loads, whether
-  // it can offer a way out.
-  let cancellable = cancel::arm(&app);
-  if let Err(error) = overlay::show(&app, target, cancellable) {
-    cancel::disarm(&app);
-    crate::editor::release_screenshot_workspace(&app);
-    let _ = crate::app_windows::show_recording_ui(&app);
-    return Err(error);
-  }
+  // Armed before the island comes out, so it is told from the first whether
+  // Escape stops the capture.
+  let escape_claimed = cancel::arm(&app);
+  island::present(&app, escape_claimed).await;
 
-  let image = match super::capture_canvas(&app, target).await {
+  // Scrolling and stitching run while the app shows nothing but its island,
+  // where it would otherwise be napped.
+  let activity = crate::user_work::UserActivity::begin("Capturing a scrolling area");
+  let captured = super::capture_canvas(&app, target).await;
+  drop(activity);
+  let image = match captured {
     Ok(image) => image,
     Err(error) => {
       // Stopping on request is an outcome, not a failure: the caller resolves
       // so the toolbar never flashes an error at someone who asked for this.
       let cancelled = cancel::was_requested();
-      finish(&app);
+      finish(&app).await;
       crate::editor::release_screenshot_workspace(&app);
       let _ = crate::app_windows::show_recording_ui(&app);
       return if cancelled { Ok(()) } else { Err(error) };
@@ -63,13 +60,13 @@ pub async fn capture_scrolling_still(
     Vec::new(),
     crate::screenshots::capture_file_stem(Local::now().naive_local()),
   ) {
-    finish(&app);
+    finish(&app).await;
     crate::editor::release_screenshot_workspace(&app);
     let _ = crate::app_windows::show_recording_ui(&app);
     return Err(error);
   }
 
-  finish(&app);
+  finish(&app).await;
 
   Ok(())
 }

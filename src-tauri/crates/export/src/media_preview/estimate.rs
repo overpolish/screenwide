@@ -247,7 +247,7 @@ pub fn estimate_compressed_video_bytes(
   }
   let streams = temporaries
     .iter()
-    .map(|temporary| std::fs::read(temporary))
+    .map(std::fs::read)
     .collect::<Result<Vec<_>, _>>();
   remove_temporaries();
   let streams = streams.map_err(|error| error.to_string())?;

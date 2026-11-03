@@ -54,6 +54,7 @@ export function AnnotateToolButtons({
 }
 
 /** The colour in hand, which opens the colours, then undo, clear and close.
+ * Undo and clear are done with the colours, so they step back to the pen.
  * A tool that draws in no colour takes the colour away: it is lifted out to
  * blur off while the island closes up, and comes back into focus as it
  * opens for it. */
@@ -61,12 +62,14 @@ export function AnnotateActions({
   hasColor,
   onClear,
   onDone,
+  onShowPen,
   onToggleColors,
   onUndo,
   settings,
   showsColors,
 }: Pick<AnnotatePartsProps, "onClear" | "onDone" | "onUndo" | "settings"> & {
   hasColor: boolean;
+  onShowPen: () => void;
   onToggleColors: () => void;
   showsColors: boolean;
 }) {
@@ -96,14 +99,20 @@ export function AnnotateActions({
       </AnimatePresence>
       <IconButton
         aria-label={t("annotate-undo-label")}
-        onPress={onUndo}
+        onPress={() => {
+          onShowPen();
+          onUndo();
+        }}
         variant="ghost"
       >
         <Undo2 aria-hidden className="size-icon rtl:-scale-x-100" />
       </IconButton>
       <IconButton
         aria-label={t("annotate-clear-label")}
-        onPress={onClear}
+        onPress={() => {
+          onShowPen();
+          onClear();
+        }}
         variant="ghost"
       >
         <Eraser aria-hidden className="size-icon" />

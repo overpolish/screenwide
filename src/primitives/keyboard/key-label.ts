@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { t } from "../../i18n/i18n";
+import { platformArg, t } from "../../i18n/i18n";
 import { isWindows } from "../../lib/platform";
 
 /**
@@ -35,14 +35,14 @@ export const keyLabel = (key: string) => {
       return t("controls-key-alt");
     case "esc":
     case "escape":
-      return t("controls-key-escape");
+      return t("controls-key-escape", { platform: platformArg() });
     case "space":
       return t("controls-key-space");
     case "enter":
     case "return":
       return t("controls-key-enter");
     case "tab":
-      return t("controls-key-tab");
+      return t("controls-key-tab", { platform: platformArg() });
     case "delete":
       return t("controls-key-delete");
     case "backspace":

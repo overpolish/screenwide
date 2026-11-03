@@ -3,8 +3,9 @@
 
 //! The island while Text Recognition is up. It comes out at the top of the
 //! screen while an area is drawn, then hangs by the area while it is read
-//! and holds what can be done with what was found. It stands above the
-//! overlay, so the overlay never takes a press meant for it.
+//! and holds what can be done with what was found, or what a QR code pressed
+//! in it holds. It stands above the overlay, so the overlay never takes a
+//! press meant for it.
 //!
 //! The island shows the session rather than keeping its own state: each
 //! change is sent (`text-recognition://island`), and only a change.
@@ -17,14 +18,14 @@ use ts_rs::TS;
 
 use screenwide_osc::{desktop::DesktopBinding, geometry::Rect};
 
-use super::TextRecognitionState;
+use super::{RecognizedQrCode, TextRecognitionState};
 use crate::app_windows::island_placement::{IslandPlacement, LocalRect};
 use crate::app_windows::{self, WindowLabel};
 
 const EVENT: &str = "text-recognition://island";
 
 /// What the island shows of a Text Recognition session.
-#[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize, TS)]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, TS)]
 #[serde(tag = "phase", rename_all = "camelCase")]
 #[ts(export)]
 pub enum TextRecognitionIslandState {
@@ -40,6 +41,13 @@ pub enum TextRecognitionIslandState {
     qr_codes: u32,
     selected: bool,
   },
+  /// A QR code pressed in what was found: what it holds, or why it could not
+  /// be read.
+  Qr {
+    content: String,
+    #[serde(rename = "decodeError")]
+    decode_error: Option<String>,
+  },
 }
 
 /// What a press on the island does.
@@ -52,6 +60,8 @@ pub enum TextRecognitionIslandAction {
   /// The same, joined into one paragraph.
   CopyParagraph,
   SelectAnotherArea,
+  /// Back from a QR code's contents to what was found.
+  CloseQrCode,
   Close,
 }
 
@@ -67,7 +77,7 @@ fn tell(app: &AppHandle, state: Option<TextRecognitionIslandState>) {
   if *shown == state {
     return;
   }
-  *shown = state;
+  shown.clone_from(&state);
   drop(shown);
   let _ = app.emit_to(WindowLabel::Island.as_str(), EVENT, state);
 }
@@ -137,6 +147,29 @@ pub(super) fn sync_ready(app: &AppHandle) {
   }
 }
 
+/// A QR code was pressed: the island says what it holds, in place of what
+/// was found.
+pub(super) fn show_qr_code(app: &AppHandle, code: RecognizedQrCode) {
+  if shown().is_none() {
+    return;
+  }
+  tell(
+    app,
+    Some(TextRecognitionIslandState::Qr {
+      content: code.content,
+      decode_error: code.decode_error,
+    }),
+  );
+}
+
+/// A press on the overlay away from the QR codes, or Back on the island,
+/// puts a QR code's contents away and shows what was found again.
+pub(super) fn close_qr_code(app: &AppHandle) {
+  if matches!(*shown(), Some(TextRecognitionIslandState::Qr { .. })) {
+    sync_ready(app);
+  }
+}
+
 /// The overlay takes a new area, after reading one failed or to read
 /// another, and the island goes back to the top of the screen to say so.
 pub(super) fn choosing(app: &AppHandle, failed: bool) {
@@ -185,12 +218,11 @@ impl TextRecognitionState {
 
 #[tauri::command]
 pub fn text_recognition_island_state() -> Option<TextRecognitionIslandState> {
-  *shown()
+  shown().clone()
 }
 
 #[tauri::command]
 pub fn text_recognition_island_action(app: AppHandle, action: TextRecognitionIslandAction) {
-  super::qr_details::hide_without_resume(&app);
   tauri::async_runtime::spawn(async move {
     let result = match action {
       TextRecognitionIslandAction::Copy => super::copy_selection_and_dismiss(&app, false, true),
@@ -199,6 +231,10 @@ pub fn text_recognition_island_action(app: AppHandle, action: TextRecognitionIsl
       }
       TextRecognitionIslandAction::SelectAnotherArea => {
         super::adapter::choose_again(&app);
+        Ok(())
+      }
+      TextRecognitionIslandAction::CloseQrCode => {
+        close_qr_code(&app);
         Ok(())
       }
       TextRecognitionIslandAction::Close => {

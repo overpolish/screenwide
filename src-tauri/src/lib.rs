@@ -41,6 +41,7 @@ mod transcription;
 #[cfg(desktop)]
 mod tray;
 mod updates;
+mod user_work;
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 mod window_front;
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -66,7 +67,6 @@ pub fn run() {
     .manage(settings::GeneralSettingsState::default())
     .manage(shortcuts::ShortcutSettingsState::default())
     .manage(text_recognition::TextRecognitionState::default())
-    .manage(text_recognition::qr_details::QrDetailsState::default())
     .manage(tooltip_window::TooltipState::default())
     .invoke_handler(invoke_handler::invoke_handler())
     .setup(startup::setup)

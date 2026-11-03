@@ -14,9 +14,6 @@ use super::{hide_instead_of_close, initialize_editor, initialize_normal_window, 
 /// destroying a window that has to be reopenable by label.
 const NORMAL: &[WindowLabel] = &[WindowLabel::Projects, WindowLabel::Settings];
 
-/// Windows that come up hidden but are dismissed by their own feature code.
-const HIDDEN_ON_LAUNCH: &[WindowLabel] = &[WindowLabel::Update];
-
 /// Overlays and transients, which are only ever hidden, never closed.
 const DISMISSED_ON_CLOSE: &[WindowLabel] = &[
   WindowLabel::Island,
@@ -37,7 +34,6 @@ const TITLE_BAR_IN_PAGE: &[WindowLabel] = &[
   WindowLabel::EditorScreenshot,
   WindowLabel::Projects,
   WindowLabel::Settings,
-  WindowLabel::Update,
 ];
 
 /// Takes the native frame back off the title-bar windows. Every one of them is
@@ -61,7 +57,7 @@ fn remove_native_frames(app: &AppHandle) -> tauri::Result<()> {
 pub fn initialize_predefined_windows(app: &AppHandle) -> tauri::Result<()> {
   #[cfg(target_os = "windows")]
   remove_native_frames(app)?;
-  for &label in NORMAL.iter().chain(HIDDEN_ON_LAUNCH) {
+  for &label in NORMAL {
     if let Some(window) = app.get_webview_window(label.as_str()) {
       initialize_normal_window(&window)?;
     }
@@ -74,11 +70,7 @@ pub fn initialize_predefined_windows(app: &AppHandle) -> tauri::Result<()> {
     // Closing an editor window cancels only its own pending capture.
     hide_instead_of_close(app, label);
   }
-  for &label in DISMISSED_ON_CLOSE
-    .iter()
-    .chain(NORMAL)
-    .chain(HIDDEN_ON_LAUNCH)
-  {
+  for &label in DISMISSED_ON_CLOSE.iter().chain(NORMAL) {
     hide_instead_of_close(app, label);
   }
 

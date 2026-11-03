@@ -118,7 +118,7 @@ impl OcrPreview {
     };
     let (sender, receiver) = mpsc::channel();
     std::thread::spawn(move || {
-      let read = tauri::async_runtime::block_on(recognize(image.rgba, image.width, image.height));
+      let read = tauri::async_runtime::block_on(recognize(image));
       let _ = sender.send(read.map(|(lines, qr_codes)| {
         let text = lines
           .iter()

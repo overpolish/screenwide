@@ -1,7 +1,7 @@
 # SPDX-FileCopyrightText: 2026 overpolish
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-### Text recognition: its tools on the island, and the window describing a QR code found on screen.
+### Text recognition: its tools on the island, and what a QR code found on screen holds.
 
 ## The island while text recognition is up
 
@@ -23,15 +23,32 @@ text-recognition-island-nothing-found = No text or QR codes found
 text-recognition-island-select-another = Select another area
 text-recognition-island-close = Close text recognition
 
-## What a QR code holds, shown as the window title
+## A QR code pressed in what was found, on the island
+
+# Goes back from the code to what was found.
+text-recognition-island-qr-back = Back to what was found
+# Copies what the code holds.
+text-recognition-island-qr-copy = Copy what the code holds
+# Names what the code holds, under the island's row.
+text-recognition-island-qr-content = What the code holds
+# Shows the whole of what the code holds where it is cut to a few lines, and cuts it again.
+text-recognition-island-qr-show-all = Show all
+text-recognition-island-qr-show-less = Show less
+text-recognition-qr-copy-failed = Could not copy QR content.
+
+## What a QR code holds, shown as the island's title
 
 text-recognition-qr-text = Text
 text-recognition-qr-wifi = Wi-Fi network
 text-recognition-qr-contact = Contact card
 text-recognition-qr-calendar = Calendar event
+text-recognition-qr-link = Link
+text-recognition-qr-phone = Phone number
+text-recognition-qr-email-address = Email address
+text-recognition-qr-sms = Text message
 text-recognition-qr-unsupported = Unsupported QR
 
-## Actions a QR code offers, shown as the window title and its button
+## Actions a QR code offers, shown as the island's button
 
 text-recognition-qr-open-link = Open link
 text-recognition-qr-call = Call number
@@ -59,12 +76,3 @@ text-recognition-qr-email-incomplete = Email QR is missing a recipient.
 text-recognition-qr-message-incomplete = Message QR is missing a recipient.
 # $scheme is the action's URL scheme, such as "javascript".
 text-recognition-qr-unsupported-action = The { $scheme } action is not supported.
-
-## The QR details window
-
-text-recognition-qr-action-description = This QR code contains an action you can open or copy.
-text-recognition-qr-unsupported-description = { -app-name } cannot perform this QR code’s action.
-text-recognition-qr-information-description = This QR code contains information you can copy.
-text-recognition-qr-content = Detected content
-text-recognition-qr-copy-content = Copy detected content
-text-recognition-qr-copy-failed = Could not copy QR content.

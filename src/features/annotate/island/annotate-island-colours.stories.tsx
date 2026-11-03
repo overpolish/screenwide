@@ -1,6 +1,10 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import { expect, userEvent, waitFor, within } from "storybook/test";
+
+import { t } from "../../../i18n/i18n";
+
 import { annotateIslandMeta } from "./annotate-island-story-meta";
 
 import type { AnnotateIsland } from "./annotate-island";
@@ -16,6 +20,33 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {};
+
+// Undo and clear are done with the colours: each press folds them away to
+// the pen, and they open again from the colour.
+export const ClosedByTheRow: Story = {
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const color = await canvas.findByRole("button", {
+      name: t("annotation-color"),
+    });
+    for (const name of [t("annotate-undo-label"), t("annotate-clear-label")]) {
+      if (color.getAttribute("aria-expanded") !== "true")
+        await userEvent.click(color);
+      await waitFor(() =>
+        expect(
+          canvas.getByRole("radiogroup", { name: t("annotation-color") }),
+        ).toBeVisible(),
+      );
+      await userEvent.click(canvas.getByRole("button", { name }));
+      await expect(color).toHaveAttribute("aria-expanded", "false");
+      await waitFor(() =>
+        expect(
+          canvas.queryByRole("radiogroup", { name: t("annotation-color") }),
+        ).toBeNull(),
+      );
+    }
+  },
+};
 
 // `count` colours round the colour wheel, in two lightnesses.
 const savedAround = (count: number) =>

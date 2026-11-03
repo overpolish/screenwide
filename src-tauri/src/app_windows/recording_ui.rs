@@ -28,6 +28,8 @@ pub fn show_recording_ui(app: &AppHandle) -> tauri::Result<()> {
   }
 
   RECORDING_CONTROLS_VISIBLE.store(true, Ordering::Relaxed);
+  // The controls take the island from an update it may be offering.
+  crate::updates::give_way(app);
   super::island::show(app)?;
   escape::sync(
     app,

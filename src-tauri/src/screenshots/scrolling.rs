@@ -11,13 +11,12 @@ mod cancel;
 mod canvas;
 pub(crate) mod command;
 mod fixed_regions;
+pub(crate) mod island;
 mod matcher;
-mod overlay;
 #[cfg(target_os = "macos")]
 mod platform_macos;
 #[cfg(target_os = "macos")]
 use self::platform_macos as platform;
-mod progress;
 mod scan;
 
 use scan::{prepare_frame, scan_canvas, seek_boundary};
@@ -166,7 +165,6 @@ async fn capture_canvas(
   let (point, scale) = scroll_geometry(app, target)?;
   let original_pointer = platform::place_pointer(point)?;
   let result = async {
-    progress::emit(app, progress::WORKING);
     tokio::time::sleep(Duration::from_millis(120)).await;
     let first = capture_frame(target).await?;
     let horizontal_amount =
@@ -184,7 +182,7 @@ async fn capture_canvas(
     )
     .await?;
     let frames = scan_canvas(app, target, point, scale, top_left).await?;
-    progress::emit(app, progress::STITCHING);
+    island::phase(app, island::ScrollingCapturePhase::Stitching);
     let matched = canvas::collect_matches(frames).await?;
     tauri::async_runtime::spawn_blocking(move || canvas::align_and_compose(matched))
       .await

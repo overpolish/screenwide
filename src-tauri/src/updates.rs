@@ -1,30 +1,76 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-use tauri::{AppHandle, Manager};
+//! A new version offered on the island. The island's page owns the updater:
+//! it checks, and asks for the island when it finds a version to offer. The
+//! island comes out for it only while it is free: nothing recorded or
+//! exported, and the island out for nothing else. The recording controls
+//! taking the island end the offer (`updates://island`), as does the island
+//! going away, which its page hears for itself (`island://hide`).
 
+use std::sync::atomic::{AtomicBool, Ordering};
+
+use tauri::{AppHandle, Emitter};
+
+use crate::app_windows::island_placement::IslandPlacement;
 use crate::app_windows::{self, WindowLabel};
+
+const EVENT: &str = "updates://island";
+
+/// The island was brought out to offer an update; it still offers it only
+/// while it is out.
+static ON_ISLAND: AtomicBool = AtomicBool::new(false);
+
+fn on_island() -> bool {
+  ON_ISLAND.load(Ordering::Relaxed) && app_windows::island::is_shown()
+}
+
+fn tell(app: &AppHandle, on_island: bool) {
+  if ON_ISLAND.swap(on_island, Ordering::Relaxed) != on_island {
+    let _ = app.emit_to(WindowLabel::Island.as_str(), EVENT, on_island);
+  }
+}
+
+/// Something else is taking the island: the offer is over.
+pub(crate) fn give_way(app: &AppHandle) {
+  tell(app, false);
+}
 
 #[tauri::command]
 pub fn update_checks_enabled() -> bool {
   !cfg!(debug_assertions)
 }
 
+/// Brings the island out at the top of the screen to offer an update, if it
+/// is free. Returns whether it came out.
 #[tauri::command]
-pub fn show_update_prompt(app: AppHandle) -> tauri::Result<()> {
-  let window = app
-    .get_webview_window(WindowLabel::Update.as_str())
-    .ok_or(tauri::Error::WindowNotFound)?;
-  #[cfg(target_os = "macos")]
-  app.set_dock_visibility(true)?;
-  app_windows::show(&window, true)?;
-  app_windows::recover_window_position(&app, &window)
+pub fn present_update_island(app: AppHandle) -> tauri::Result<bool> {
+  let is_free = crate::recording::is_idle(&app)
+    && !crate::editor::save::is_exporting(&app)
+    && !app_windows::is_recording_ui_visible()
+    && !app_windows::island::is_shown();
+  if !is_free {
+    return Ok(false);
+  }
+  tell(&app, true);
+  app_windows::island::place(&app, IslandPlacement::Top)?;
+  app_windows::island::show(&app)?;
+  Ok(true)
 }
 
+/// The update was put off or skipped: the island tucks away.
 #[tauri::command]
-pub fn hide_update_prompt(app: AppHandle) -> tauri::Result<()> {
-  if let Some(window) = app.get_webview_window(WindowLabel::Update.as_str()) {
-    app_windows::hide_without_focus_transfer(&window)?;
+pub fn withdraw_update_island(app: AppHandle) -> tauri::Result<()> {
+  if !on_island() {
+    return Ok(());
   }
-  Ok(())
+  give_way(&app);
+  app_windows::island::hide(&app)
+}
+
+/// Whether the island is out offering an update, for a page that loads after
+/// it was told.
+#[tauri::command]
+pub fn update_island_shown() -> bool {
+  on_island()
 }

@@ -17,3 +17,16 @@ pub(super) fn clear_active_export(app: &AppHandle, kind: EditorKind, artifact_id
     active.take();
   }
 }
+
+/// Whether either workspace is exporting, which an update offer waits out.
+pub(crate) fn is_exporting(app: &AppHandle) -> bool {
+  let state = app.state::<EditorState>();
+  EditorKind::ALL.into_iter().any(|kind| {
+    state
+      .slot(kind)
+      .active_export
+      .lock()
+      .unwrap_or_else(|poisoned| poisoned.into_inner())
+      .is_some()
+  })
+}

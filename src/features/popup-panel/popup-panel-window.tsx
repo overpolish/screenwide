@@ -6,7 +6,6 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
 import { EditorIslandPanel } from "../editor/island/host/editor-island-panel";
 import { useTextTemplateFonts } from "../editor/recording/captions/use-text-template-fonts";
 
-import { PopupPanelColors } from "./popup-panel-colors";
 import { PopupPanelList } from "./popup-panel-list";
 import {
   activePopupPanel,
@@ -42,7 +41,7 @@ function currentPanelLabel(): string {
  * One panel window, showing whatever was last opened in it.
  *
  * It is a host and nothing more: what the panel holds - a list of choices or
- * a picker - is decided by the window that opened it.
+ * an editor island's panel - is decided by the window that opened it.
  */
 export function PopupPanelWindow() {
   const panel = currentPanelLabel();
@@ -80,10 +79,6 @@ function PanelContents({
   content: Exclude<PopupPanelContent, PopupPanelIslandContent>;
   panel: string;
 }) {
-  if (content.kind === "colors") {
-    return <PopupPanelColors content={content} id={active.id} />;
-  }
-
   return (
     <PopupPanelList
       content={content}

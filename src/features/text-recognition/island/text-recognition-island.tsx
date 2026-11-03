@@ -8,29 +8,38 @@ import {
   SquareDashedMousePointer,
   X,
 } from "lucide-react";
-import { Fragment, type ReactNode } from "react";
+import { AnimatePresence } from "motion/react";
+import { Fragment, type ReactNode, useState } from "react";
 
 import { t } from "../../../i18n/i18n";
 import { Button } from "../../../primitives/button/button";
 import { IconButton } from "../../../primitives/button/icon-button";
 import { CircularProgress } from "../../../primitives/circular-progress/circular-progress";
 import { Island, type IslandProps } from "../../../primitives/island/island";
+import { IslandCrossfade } from "../../../primitives/island/island-crossfade";
 import { IslandRow } from "../../../primitives/island/island-row";
 import { IslandRowTitle } from "../../../primitives/island/row-title/island-row-title";
+
+import { type QrCodeFailure, QrCodeRow, QrCodeSection } from "./qr-code-island";
 
 import type { TextRecognitionIslandAction } from "../../../bindings/TextRecognitionIslandAction";
 import type { TextRecognitionIslandState } from "../../../bindings/TextRecognitionIslandState";
 
 // Text Recognition on the island. While an area is drawn it sits at the top
 // of the screen and says what to do; once one is drawn it hangs by it, a
-// spinner while it is read, then what can be done with what was found. Each
-// phase is its own row, revealed as the black changes shape round it.
+// spinner while it is read, then what can be done with what was found, or
+// what a QR code pressed in it holds. Each phase is its own row, revealed as
+// the black changes shape round it.
 
 export type TextRecognitionIslandProps = Pick<
   IslandProps,
   "isShown" | "notch" | "onHidden" | "onShapeChange"
 > & {
   onAction: (action: TextRecognitionIslandAction) => void;
+  /** Copies what a QR code holds; rejects when it could not. */
+  onCopyQrCode: (content: string) => Promise<unknown>;
+  /** Opens a QR code's action; rejects when it could not. */
+  onOpenQrCode: (url: string) => Promise<unknown>;
   state: TextRecognitionIslandState;
   /** Which coming-out this is (`IslandHost`). */
   showing?: number;
@@ -93,7 +102,7 @@ function Found({
 }) {
   if (state.lines > 0) {
     return (
-      <span className="flex items-center gap-1">
+      <>
         <Button
           color="primary"
           onPress={() => {
@@ -111,7 +120,7 @@ function Found({
         >
           {t("text-recognition-island-copy-paragraph")}
         </Button>
-      </span>
+      </>
     );
   }
   if (state.qrCodes > 0) {
@@ -128,7 +137,12 @@ function Found({
   );
 }
 
-function row({ onAction, state }: TextRecognitionIslandProps) {
+function row({
+  onAction,
+  state,
+}: Pick<TextRecognitionIslandProps, "onAction"> & {
+  state: Exclude<TextRecognitionIslandState, { phase: "qr" }>;
+}) {
   switch (state.phase) {
     case "choosing":
       return (
@@ -170,10 +184,10 @@ function row({ onAction, state }: TextRecognitionIslandProps) {
       return (
         <IslandRow
           end={
-            <span className="flex items-center gap-1">
+            <>
               <SelectAnother onAction={onAction} />
               <Close onAction={onAction} />
-            </span>
+            </>
           }
           start={<Found onAction={onAction} state={state} />}
         />
@@ -185,17 +199,30 @@ export function TextRecognitionIsland({
   isShown = true,
   notch,
   onAction,
+  onCopyQrCode,
   onHidden,
+  onOpenQrCode,
   onShapeChange,
   showing = 0,
   state,
 }: TextRecognitionIslandProps) {
+  // What failed with the QR code on the island, forgotten with the code.
+  const [qrFailure, setQrFailure] = useState<{
+    content: string;
+    failure: QrCodeFailure | null;
+  } | null>(null);
+  const qr = state.phase === "qr" ? state : null;
+  const failure =
+    qr && qrFailure?.content === qr.content ? qrFailure.failure : null;
   // Each phase's row is mounted afresh, so it is revealed where it sits as
   // the island changes shape round it rather than cut in.
   const shown =
     state.phase === "ready" ? `ready-${String(state.lines > 0)}` : state.phase;
   return (
     <Island
+      // Hung from the end and spanning the row, what a QR code holds is held
+      // to the row's width as the black glides (`IslandSection`).
+      anchor={qr ? "end" : "center"}
       aria-label={t("text-recognition-island")}
       isShown={isShown}
       // A new island each time it moves between the top of the screen and an
@@ -204,7 +231,39 @@ export function TextRecognitionIsland({
       notch={notch}
       onHidden={onHidden}
       onShapeChange={onShapeChange}
-      row={<Fragment key={shown}>{row({ onAction, state })}</Fragment>}
+      row={
+        <Fragment key={shown}>
+          {state.phase === "qr" ? (
+            <QrCodeRow
+              content={state.content}
+              decodeError={state.decodeError}
+              onAction={onAction}
+              onCopy={onCopyQrCode}
+              onFailure={(next) => {
+                setQrFailure({ content: state.content, failure: next });
+              }}
+              onOpen={onOpenQrCode}
+            />
+          ) : (
+            row({ onAction, state })
+          )}
+        </Fragment>
+      }
+      section={
+        qr ? (
+          // Another code pressed swaps what it holds in, as the row swaps.
+          <AnimatePresence initial={false} mode="popLayout">
+            <IslandCrossfade key={qr.content}>
+              <QrCodeSection
+                content={qr.content}
+                decodeError={qr.decodeError}
+                failure={failure}
+              />
+            </IslandCrossfade>
+          </AnimatePresence>
+        ) : undefined
+      }
+      sectionSpansRow={qr !== null}
     />
   );
 }

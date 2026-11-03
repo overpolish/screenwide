@@ -3,4 +3,4 @@
 /**
  * What the island shows of a Text Recognition session.
  */
-export type TextRecognitionIslandState = { "phase": "choosing", failed: boolean, } | { "phase": "reading" } | { "phase": "ready", lines: number, qrCodes: number, selected: boolean, };
+export type TextRecognitionIslandState = { "phase": "choosing", failed: boolean, } | { "phase": "reading" } | { "phase": "ready", lines: number, qrCodes: number, selected: boolean, } | { "phase": "qr", content: string, decodeError: string | null, };

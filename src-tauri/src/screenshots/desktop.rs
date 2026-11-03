@@ -7,35 +7,60 @@ use screenwide_capture::desktop_capture::{CapturePiece, CapturePlan};
 
 use super::CapturedImage;
 
+/// Joins the pieces of an area captured across displays into one picture,
+/// each where it lands, leaving the gaps between displays transparent.
+/// Displays never overlap, so each piece is copied into place, row by row,
+/// rather than blended over what is there.
 pub fn compose(
   plan: &CapturePlan,
-  captured: Vec<(CapturePiece, CapturedImage)>,
+  mut captured: Vec<(CapturePiece, CapturedImage)>,
 ) -> Result<CapturedImage, String> {
-  let mut output = RgbaImage::new(plan.width, plan.height);
+  // An area on one display, at that display's scale, is the piece itself.
+  if let [(piece, image)] = captured.as_slice() {
+    let destination = piece.destination;
+    if (destination.x, destination.y) == (0, 0)
+      && (destination.width, destination.height) == (plan.width, plan.height)
+      && (image.width, image.height) == (plan.width, plan.height)
+    {
+      return Ok(captured.swap_remove(0).1);
+    }
+  }
+  let output_stride = plan.width as usize * 4;
+  let mut output = vec![0_u8; output_stride * plan.height as usize];
   for (piece, image) in captured {
-    let source = RgbaImage::from_raw(image.width, image.height, image.rgba)
-      .ok_or_else(|| "A display capture returned invalid pixels".to_owned())?;
-    let resized = if source.dimensions() == (piece.destination.width, piece.destination.height) {
-      source
+    let destination = piece.destination;
+    let source = if (image.width, image.height) == (destination.width, destination.height) {
+      image.rgba
     } else {
+      let source = RgbaImage::from_raw(image.width, image.height, image.rgba)
+        .ok_or_else(|| "A display capture returned invalid pixels".to_owned())?;
       image::imageops::resize(
         &source,
-        piece.destination.width,
-        piece.destination.height,
+        destination.width,
+        destination.height,
         FilterType::Lanczos3,
       )
+      .into_raw()
     };
-    image::imageops::overlay(
-      &mut output,
-      &resized,
-      i64::from(piece.destination.x),
-      i64::from(piece.destination.y),
-    );
+    let source_stride = destination.width as usize * 4;
+    if source.len() < source_stride * destination.height as usize {
+      return Err("A display capture returned invalid pixels".to_owned());
+    }
+    let left = (destination.x.min(plan.width) as usize) * 4;
+    let width = output_stride.saturating_sub(left).min(source_stride);
+    let rows = (destination
+      .height
+      .min(plan.height.saturating_sub(destination.y))) as usize;
+    for row in 0..rows {
+      let target = (destination.y as usize + row) * output_stride + left;
+      let from = row * source_stride;
+      output[target..target + width].copy_from_slice(&source[from..from + width]);
+    }
   }
   Ok(CapturedImage {
-    width: output.width(),
-    height: output.height(),
-    rgba: output.into_raw(),
+    width: plan.width,
+    height: plan.height,
+    rgba: output,
   })
 }
 

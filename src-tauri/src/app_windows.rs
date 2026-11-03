@@ -90,7 +90,6 @@ pub(crate) use webview_visibility::hide_window as hide;
 
 pub use boot::initialize_predefined_windows;
 pub use dismissal::hide_without_focus_transfer;
-pub(crate) use geometry::centered_logical_position;
 #[cfg(target_os = "macos")]
 pub use lifecycle::get_or_create;
 pub use lifecycle::{

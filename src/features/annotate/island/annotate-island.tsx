@@ -54,6 +54,7 @@ export function AnnotateIsland({
               hasColor={hasColor}
               onClear={onClear}
               onDone={onDone}
+              onShowPen={showPen}
               onToggleColors={toggleColors}
               onUndo={onUndo}
               settings={settings}

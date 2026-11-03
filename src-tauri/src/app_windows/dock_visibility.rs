@@ -13,7 +13,6 @@ fn has_visible_workspace(app: &AppHandle) -> bool {
     WindowLabel::EditorScreenshot,
     WindowLabel::Projects,
     WindowLabel::Settings,
-    WindowLabel::Update,
   ]
   .iter()
   .filter_map(|label| app.get_webview_window(label.as_str()))

@@ -13,11 +13,11 @@ static REQUESTED: AtomicBool = AtomicBool::new(false);
 const ESCAPE: &str = "Escape";
 
 /// Escape is claimed for the length of the capture rather than handled by the
-/// overlay, which is click-through and never focused: the window the capture is
-/// driving keeps key focus throughout, so nothing else could hear the key.
+/// island, which is never focused: the window the capture is driving keeps
+/// key focus throughout, so nothing else could hear the key.
 ///
-/// Returns whether the key was actually claimed, so the overlay only offers a
-/// way out that exists.
+/// Returns whether the key was actually claimed, so the island only names a
+/// key that works.
 pub(super) fn arm(app: &AppHandle) -> bool {
   REQUESTED.store(false, Ordering::Release);
   ESCAPE.parse::<Shortcut>().is_ok_and(|shortcut| {
@@ -41,6 +41,11 @@ pub(super) fn disarm(app: &AppHandle) {
 
 pub(super) fn is_requested() -> bool {
   REQUESTED.load(Ordering::Acquire)
+}
+
+/// Cancel pressed on the island, which stops the capture as Escape does.
+pub(super) fn request() {
+  REQUESTED.store(true, Ordering::Release);
 }
 
 /// The capture unwinds through the ordinary error path, so the message it

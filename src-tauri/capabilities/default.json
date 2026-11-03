@@ -15,12 +15,9 @@
     "tool-panel-recording",
     "tool-panel-screenshot",
     "tooltip",
-    "update",
     "text-recognition",
-    "qr-details",
     "ruler",
     "screenshot-region-*",
-    "scrolling-capture-overlay",
     "permissions"
   ],
   "permissions": [

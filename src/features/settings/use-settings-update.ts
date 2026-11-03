@@ -22,7 +22,7 @@ export function useSettingsUpdate() {
     updateVersion: null,
   });
   const request = (payload: UpdateRequest = {}) => {
-    void emitTo("update", UPDATE_REQUEST, payload).catch((reason: unknown) => {
+    void emitTo("island", UPDATE_REQUEST, payload).catch((reason: unknown) => {
       setSnapshot((current) => ({
         ...current,
         error: String(reason),
@@ -39,7 +39,7 @@ export function useSettingsUpdate() {
         .isVisible()
         .then((visible) => {
           if (visible && !disposed)
-            void emitTo("update", UPDATE_REQUEST, {}).catch(() => undefined);
+            void emitTo("island", UPDATE_REQUEST, {}).catch(() => undefined);
         })
         .catch(() => undefined);
     };

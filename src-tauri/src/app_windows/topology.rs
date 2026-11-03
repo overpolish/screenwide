@@ -40,10 +40,8 @@ const fn policy(label: WindowLabel) -> Policy {
   match label {
     WindowLabel::EditorRecording
     | WindowLabel::EditorScreenshot
-    | WindowLabel::QrDetails
     | WindowLabel::Projects
-    | WindowLabel::Settings
-    | WindowLabel::Update => Policy::Recoverable,
+    | WindowLabel::Settings => Policy::Recoverable,
     #[cfg(target_os = "macos")]
     WindowLabel::Permissions => Policy::Recoverable,
     WindowLabel::Island => Policy::Island,

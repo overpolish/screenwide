@@ -1,9 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-use tauri::{
-  AppHandle, LogicalPosition, LogicalSize, PhysicalPosition, PhysicalSize, WebviewWindow,
-};
+use tauri::{AppHandle, LogicalPosition, PhysicalPosition, PhysicalSize, WebviewWindow};
 
 /// Where a window's page begins on screen, in logical pixels: the origin that
 /// page coordinates, such as a control's bounds, are measured from. The page
@@ -61,17 +59,6 @@ pub(super) fn window_is_on_a_monitor(
   }))
 }
 
-pub(crate) fn centered_logical_position(
-  area_position: LogicalPosition<f64>,
-  area_size: LogicalSize<f64>,
-  window_size: LogicalSize<f64>,
-) -> LogicalPosition<f64> {
-  LogicalPosition::new(
-    area_position.x + (area_size.width - window_size.width).max(0.0) / 2.0,
-    area_position.y + (area_size.height - window_size.height).max(0.0) / 2.0,
-  )
-}
-
 pub(super) fn keep_window_on_a_monitor(
   app: &AppHandle,
   window: &WebviewWindow,
@@ -90,21 +77,4 @@ pub(super) fn keep_window_on_a_monitor(
   }
 
   Ok(())
-}
-
-#[cfg(test)]
-mod tests {
-  use super::*;
-
-  #[test]
-  fn centers_a_logical_window_independent_of_display_scale() {
-    assert_eq!(
-      centered_logical_position(
-        LogicalPosition::new(1_800.0, 0.0),
-        LogicalSize::new(1_920.0, 1_080.0),
-        LogicalSize::new(480.0, 360.0),
-      ),
-      LogicalPosition::new(2_520.0, 360.0)
-    );
-  }
 }

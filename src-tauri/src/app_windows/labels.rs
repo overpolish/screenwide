@@ -22,14 +22,12 @@ pub enum WindowLabel {
   /// The island at the top of the screen: one window, whatever it shows.
   Island,
   Ruler,
-  QrDetails,
   /// The project browser: recent projects and the folders that hold them.
   Projects,
   Settings,
   RegionSelector,
   StandaloneListbox,
   TextRecognition,
-  Update,
 }
 
 impl WindowLabel {
@@ -45,13 +43,11 @@ impl WindowLabel {
     Self::Glide,
     Self::Island,
     Self::Ruler,
-    Self::QrDetails,
     Self::Projects,
     Self::Settings,
     Self::RegionSelector,
     Self::StandaloneListbox,
     Self::TextRecognition,
-    Self::Update,
   ];
 
   pub const fn as_str(self) -> &'static str {
@@ -67,13 +63,11 @@ impl WindowLabel {
       Self::Glide => "glide",
       Self::Island => "island",
       Self::Ruler => "ruler",
-      Self::QrDetails => "qr-details",
       Self::Projects => "projects",
       Self::Settings => "settings",
       Self::RegionSelector => "region-selector",
       Self::StandaloneListbox => "standalone-listbox",
       Self::TextRecognition => "text-recognition",
-      Self::Update => "update",
     }
   }
 
@@ -91,12 +85,10 @@ impl WindowLabel {
       Self::Permissions => t!("window-titles-permissions"),
       Self::Glide => t!("window-titles-glide"),
       Self::Island => t!("window-titles-island"),
-      Self::QrDetails => t!("window-titles-qr-details"),
       Self::Projects => t!("window-titles-projects"),
       Self::Settings => t!("window-titles-settings"),
       Self::RegionSelector => t!("window-titles-region-selector"),
       Self::StandaloneListbox => t!("window-titles-listbox"),
-      Self::Update => t!("window-titles-update"),
       Self::Tooltip | Self::Annotate | Self::Ruler | Self::TextRecognition => {
         t!("window-titles-app")
       }

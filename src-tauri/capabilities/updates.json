@@ -1,8 +1,8 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "updates",
-  "description": "Update installation access for the Screenwide settings window",
-  "windows": ["settings", "update"],
+  "description": "Update installation access for the island, which offers new versions",
+  "windows": ["island"],
   "permissions": [
     "opener:allow-open-url",
     "process:allow-restart",

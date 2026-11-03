@@ -8,8 +8,9 @@ use tauri::AppHandle;
 use super::{
   cancel,
   canvas::{self, CapturedStep, Movement},
+  island::{self, ScrollingCapturePhase},
   matcher::{self, MatchFrame},
-  progress, scroll_once, Axis, Direction, ScreenPoint, CANCELLED, SCROLL_FRACTION,
+  scroll_once, Axis, Direction, ScreenPoint, CANCELLED, SCROLL_FRACTION,
 };
 use crate::screenshots::{CapturedImage, ScreenshotTarget};
 
@@ -113,7 +114,7 @@ pub(super) async fn scan_canvas(
   let mut current = first;
   let mut horizontal_direction = Direction::Forward;
   let mut horizontal_scrollable = true;
-  progress::emit(app, progress::CAPTURING);
+  island::phase(app, ScrollingCapturePhase::Capturing);
 
   loop {
     if cancel::is_requested() {

@@ -23,3 +23,5 @@ export const InputsOff: Story = {
     systemAudio: { isOn: false },
   },
 };
+
+export const RightToLeft: Story = { globals: { direction: "rtl" } };

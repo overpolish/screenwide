@@ -4,7 +4,6 @@
 ### Controls every window shares: fields, lists, window buttons and key caps.
 
 controls-no-items = No items found.
-controls-no-content = No Content
 controls-sidebar-collapse = Collapse sidebar
 controls-sidebar-expand = Expand sidebar
 controls-document-name = Document name
@@ -44,10 +43,19 @@ controls-key-control = Control
 controls-key-ctrl = Ctrl
 controls-key-alt = Alt
 controls-key-windows = Win
-controls-key-escape = Esc
+# Spelled out, as each platform prints it on the key: a Mac's keyboard
+# writes "esc" in lower case, Windows "Esc".
+controls-key-escape = { $platform ->
+        [windows] Esc
+       *[macos] esc
+    }
 controls-key-space = Space
 controls-key-enter = Enter
-controls-key-tab = Tab
+# Spelled out rather than drawn as ⇥, which few people recognise.
+controls-key-tab = { $platform ->
+        [windows] Tab
+       *[macos] tab
+    }
 controls-key-delete = Delete
 controls-key-backspace = Backspace
 controls-key-caps-lock = Caps Lock

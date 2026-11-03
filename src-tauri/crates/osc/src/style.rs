@@ -128,13 +128,13 @@ pub extern "C" fn screenwide_osc_control_palette(light_mode: u32) -> ControlPale
   control_palette(light_mode != 0)
 }
 
-/// OCR highlights in `--color-emphasis`, the colour of where you are, and
-/// unreadable QR codes in `--color-error`. Recognised text is a faint wash
-/// and selected text a stronger one, as text selection is, neither with a
-/// border: its outline is its fill. QR codes, which a click opens, carry an
+/// OCR highlights in `--color-info`, the blue the Ruler draws its guides in,
+/// and unreadable QR codes in `--color-error`. Recognised text is a faint
+/// wash and selected text a stronger one, as text selection is, neither with
+/// a border: its outline is its fill. QR codes, which a click opens, carry an
 /// outline, as does the area read.
 pub fn ocr_palette(light_appearance: bool) -> OcrPalette {
-  let [red, green, blue] = screenwide_accent::accent_rgb();
+  let [red, green, blue, _] = info(light_appearance);
   let [error_red, error_green, error_blue, _] = error(light_appearance);
   let line = [red, green, blue, 0.14];
   let selection = [red, green, blue, 0.40];
@@ -194,8 +194,8 @@ mod tests {
 
   #[test]
   fn ocr_text_is_tinted_without_a_border_and_only_qr_codes_are_outlined() {
-    let [red, green, blue] = screenwide_accent::accent_rgb();
     for light_appearance in [true, false] {
+      let [red, green, blue, _] = info(light_appearance);
       let palette = ocr_palette(light_appearance);
       assert_eq!(palette.primary_fill, palette.primary_outline);
       assert_eq!(palette.selection_fill, palette.selection_outline);

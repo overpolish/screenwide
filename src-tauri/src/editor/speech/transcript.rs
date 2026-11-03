@@ -108,6 +108,9 @@ pub async fn transcribe_recording(
   }
   let mut progress = reporter(&app, artifact_id);
   let result = tauri::async_runtime::spawn_blocking(move || {
+    // Someone waits on its progress, often with the editor out of sight,
+    // where the app would otherwise be napped.
+    let _activity = crate::user_work::UserActivity::begin_keeping_awake("Transcribing a recording");
     transcribe(
       &source,
       model_file,

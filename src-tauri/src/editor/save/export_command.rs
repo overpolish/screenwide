@@ -86,6 +86,9 @@ pub async fn save_export(
   // write and lose its source on a disk or mux failure, making Retry impossible
   // even though the recording remained on disk.
   let (result, artifact) = tauri::async_runtime::spawn_blocking(move || {
+    // An export runs for minutes, often while its window is covered or the
+    // app is out of sight, where it would otherwise be napped.
+    let _activity = crate::user_work::UserActivity::begin_keeping_awake("Exporting");
     let result = (|| -> Result<Option<PathBuf>, String> {
       std::fs::create_dir_all(&writing).map_err(|error| error.to_string())?;
 

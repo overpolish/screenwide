@@ -17,6 +17,7 @@ import {
   usePermissionStore,
 } from "../../permissions/store";
 import { useRecordingInputStore } from "../../recording-inputs/store";
+import { hideRecordingUi } from "../../recording-sources/api";
 import { useRecordingSourceStore } from "../../recording-sources/store";
 import { type RecordingMode } from "../../recording-sources/types";
 import { useGeneralSettings } from "../../settings/use-general-settings";
@@ -215,6 +216,10 @@ export function RecordingIslandControls({
       onChooseWindow={chooseWindow}
       onDiscard={() => {
         cancelRecording().catch(report("discard"));
+      }}
+      onDismiss={() => {
+        // What Escape does here (`recording-ui://dismiss-requested`).
+        void hideRecordingUi();
       }}
       onDismissFailure={failures.dismiss}
       onDisplayChange={(id) => {
