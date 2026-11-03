@@ -151,10 +151,18 @@ pub(super) fn rect(x: f64, y: f64, width: f64, height: f64) -> NSRect {
 }
 
 /// Runs `change` in a transaction of its own with implicit animations off,
-/// so a move lands at once from any thread.
+/// so a move lands at once from any thread. Off the main thread the change
+/// is flushed too: a Metal present there opens an implicit transaction that
+/// nothing on that thread ever commits, and a commit nested in it waits for
+/// it, so a layer moved off the main thread stayed where it was until
+/// something on the main thread committed (the audio ribbon not showing,
+/// or staying over the picture until a click).
 pub(super) fn transaction(change: impl FnOnce()) {
   CATransaction::begin();
   CATransaction::setDisableActions(true);
   change();
   CATransaction::commit();
+  if objc2::MainThreadMarker::new().is_none() {
+    CATransaction::flush();
+  }
 }

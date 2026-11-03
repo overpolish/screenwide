@@ -47,6 +47,25 @@ pub(crate) struct RibbonLook {
   pub(crate) flat: [f32; 4],
 }
 
+impl RibbonLook {
+  /// `--color-primary` in sRGB for the appearance the bars are drawn in,
+  /// read from their backdrop: `oklch(26% 0.012 47.6)` on a light one,
+  /// `oklch(93% 0.008 47.6)` on a dark one.
+  pub(crate) fn primary(light_backdrop: bool) -> [f32; 4] {
+    let [red, green, blue] = if light_backdrop {
+      [41u8, 34, 31]
+    } else {
+      [237, 230, 227]
+    };
+    [
+      f32::from(red) / 255.0,
+      f32::from(green) / 255.0,
+      f32::from(blue) / 255.0,
+      1.0,
+    ]
+  }
+}
+
 pub(crate) struct AudioRibbonRenderer {
   gpu: &'static Gpu,
   surface: Surface,

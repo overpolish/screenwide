@@ -87,13 +87,12 @@ impl AudioRibbon {
   }
 
   fn draw(&mut self) -> Result<(), String> {
-    let [red, green, blue] = screenwide_accent::accent_rgb();
     self
       .renderer
       .draw(RibbonLook {
         scale: self.scale,
         playhead: self.playhead,
-        color: [red, green, blue, 1.0],
+        color: RibbonLook::primary(self.neutral == 0.0),
         flat: [self.neutral, self.neutral, self.neutral, 0.25],
       })
       .map(|_| ())
