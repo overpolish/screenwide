@@ -5,7 +5,7 @@ import { ShieldAlert } from "lucide-react";
 
 import { t } from "../../../../../i18n/i18n";
 import { Alert } from "../../../../../primitives/alert/alert";
-import { IslandFlow } from "../../../../../primitives/island/island-flow";
+import { IslandParts } from "../../../../../primitives/island/island-parts";
 import { IslandRowTitle } from "../../../../../primitives/island/row-title/island-row-title";
 import { AnnotationRedactionGroup } from "../../../../annotations/annotation-redaction-group";
 import { RedactToolIcon } from "../../../../annotations/annotation-tool-icons";
@@ -106,7 +106,7 @@ export function redactionIsland(
     anchor: "end",
     key: `redaction-${id}`,
     section: (
-      <IslandFlow className="flex flex-col gap-separate">
+      <IslandParts className="flex flex-col gap-separate">
         <AnnotationLine>
           <AnnotationRedactionGroup
             onChange={(next) => {
@@ -186,7 +186,7 @@ export function redactionIsland(
           </Alert>
         ) : null}
         <AnnotationPinNote onPinAction={props.onPinAction} pin={props.pin} />
-      </IslandFlow>
+      </IslandParts>
     ),
     title: (
       <IslandRowTitle

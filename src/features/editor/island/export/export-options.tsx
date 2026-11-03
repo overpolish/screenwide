@@ -1,20 +1,13 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import { type CSSProperties, type ReactNode, useRef, useState } from "react";
+import { type CSSProperties, type ReactNode, useRef } from "react";
 
 import { ControlRow } from "../../../../composites/control-row/control-row";
 import { platformArg, t } from "../../../../i18n/i18n";
 import { Alert } from "../../../../primitives/alert/alert";
 import { Button } from "../../../../primitives/button/button";
-import { IslandFlow } from "../../../../primitives/island/island-flow";
-import {
-  arrive,
-  focusIn,
-  glide,
-  reveal,
-} from "../../../../primitives/island/island-motion";
+import { IslandParts } from "../../../../primitives/island/island-parts";
 import { PillGroup } from "../../../../primitives/pill-group/pill-group";
 import { ScrollArea } from "../../../../primitives/scroll-area/scroll-area";
 import { Switch } from "../../../../primitives/switch/switch";
@@ -38,9 +31,9 @@ import type {
  * words what it does, a `ControlRow` with a `Switch`, and a choice it
  * brings is a row of pills on the same line, before the switch, while the
  * option is on. Last is Export, or the last export's failure with Try again
- * in its place. Parts come and go as options change, the others gliding
- * (`IslandFlow`). In a window too short for it all, the parts above Export
- * scroll, so Export stays in view (`useExportBodyRoom`). */
+ * in its place. Parts and rows come and go as options change, each its own
+ * part (`IslandParts`). In a window too short for it all, the parts above
+ * Export scroll, so Export stays in view (`useExportBodyRoom`). */
 export function ExportOptions({
   onPatch,
   settings: shown,
@@ -69,7 +62,13 @@ export function ExportOptions({
     <ControlRow key={title} title={title}>
       {(controlProps) => (
         <div className="flex items-center">
-          <RowChoice>{choice}</RowChoice>
+          <IslandParts className="flex items-center" direction="row">
+            {choice ? (
+              <div className="flex pe-separate" key="choice">
+                {choice}
+              </div>
+            ) : null}
+          </IslandParts>
           <Switch
             {...controlProps}
             isSelected={isSelected}
@@ -99,7 +98,7 @@ export function ExportOptions({
           overscroll="none"
           rootClassName="max-h-(--export-body-room)"
         >
-          <IslandFlow className="flex flex-col gap-separate">
+          <IslandParts className="flex flex-col gap-separate">
             {shown.compare ? (
               <ExportCompare compare={shown.compare} key="compare" />
             ) : null}
@@ -123,7 +122,7 @@ export function ExportOptions({
                 value={shown.quality.look}
               />
             ) : null}
-            <div className="flex flex-col gap-inline" key="options">
+            <IslandParts className="flex flex-col gap-inline" key="options">
               {shown.subtitles === null
                 ? null
                 : switchRow({
@@ -207,11 +206,11 @@ export function ExportOptions({
                 },
                 title: t("editor-export-delete-after"),
               })}
-            </div>
-          </IslandFlow>
+            </IslandParts>
+          </IslandParts>
         </ScrollArea>
       </div>
-      <IslandFlow>
+      <IslandParts>
         {shown.failure === null ? (
           <div className="flex justify-end" key="export">
             <Button
@@ -244,58 +243,7 @@ export function ExportOptions({
             {t("editor-export-failed", { reason: shown.failure })}
           </Alert>
         )}
-      </IslandFlow>
+      </IslandParts>
     </div>
   );
-}
-
-/** A row's pills before its switch. Unlike `IslandFlow`, which lifts a part
- * leaving out of the flow, they stay in the row and fold their own width
- * away as they blur: the row is aligned to its end, so a lifted part was
- * pinned to a left edge sliding toward the switch and passed under it,
- * barely seen. The switch holds still either way. The pills are taller than
- * a switch's row, so their height folds with their width, but only between
- * the row's own height and theirs: folded from nothing, the row would sit at
- * its height while the first part of the fold passed and then change in a
- * blink at one end of it. */
-function RowChoice({ children }: { children: ReactNode }) {
-  const reduce = useReducedMotion();
-  const still = { duration: 0 };
-  const [rowHeight] = useState(islandRowHeight);
-  return (
-    <AnimatePresence initial={false}>
-      {children ? (
-        <motion.div
-          animate={{ ...reveal.animate, height: "auto", width: "auto" }}
-          className="flex items-center justify-end overflow-hidden"
-          // The fade takes as long as the fold, so the pills are seen going
-          // rather than gone before the row has closed up.
-          exit={{
-            ...focusIn.exit,
-            height: rowHeight,
-            transition: reduce ? still : glide,
-            width: 0,
-          }}
-          initial={{ ...reveal.initial, height: rowHeight, width: 0 }}
-          key="choice"
-          transition={
-            reduce ? still : { ...arrive, height: glide, width: glide }
-          }
-        >
-          <div className="flex shrink-0 pe-separate">{children}</div>
-        </motion.div>
-      ) : null}
-    </AnimatePresence>
-  );
-}
-
-/** The island row's least height, in px, which the pills' height folds
- * down to: the `island-row` token as the page has it. */
-function islandRowHeight() {
-  const probe = document.createElement("div");
-  probe.style.height = "var(--spacing-island-row)";
-  document.body.append(probe);
-  const height = probe.getBoundingClientRect().height;
-  probe.remove();
-  return height;
 }

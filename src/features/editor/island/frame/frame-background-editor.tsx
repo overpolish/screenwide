@@ -2,12 +2,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { Dices } from "lucide-react";
-import { AnimatePresence, motion } from "motion/react";
 import { type ReactNode } from "react";
 
-import { useTileMotion } from "../../../../composites/color-grid/tile-motion";
 import { t } from "../../../../i18n/i18n";
 import { IconButton } from "../../../../primitives/button/icon-button";
+import { IslandParts } from "../../../../primitives/island/island-parts";
 import { ColorPickerSwatch } from "../../tools/frame/background/color-picker-swatch";
 import { MeshPaletteColor } from "../../tools/frame/background/mesh-palette-color";
 import { useBackgroundEdit } from "../../tools/frame/background/use-background-edit";
@@ -24,8 +23,8 @@ import type { Background } from "../../tools/frame/background/background";
  * background can turn into the other kind at any time and neither moves
  * as the colours between them change. The colours are keyed by their place,
  * so turning a mesh into one colour keeps the first where it is while the
- * rest go, and turning it back brings them in beside it, as kept tiles come
- * and go in the tiles above (`useTileMotion`). The colours are the tiles'
+ * rest go, and turning it back brings them in beside it, as the island's
+ * parts come and go (`IslandParts`). The colours are the tiles'
  * size, so they read as the tile they came from. Keeping what was built is
  * the Custom tile's, by a right click, as in the colour grid.
  */
@@ -37,20 +36,12 @@ export function FrameBackgroundEditor({
   value: Background;
 }) {
   const edit = useBackgroundEdit({ onChange, value });
-  const { away, shown, slide } = useTileMotion();
   // A colour is named by its place, shared by a mesh's first and the one
   // colour, so that one stays where it is as the rest come or go.
   const placed = (place: number, swatch: ReactNode) => (
-    <motion.span
-      animate={shown}
-      className="flex"
-      exit={away}
-      initial={away}
-      key={place}
-      {...slide}
-    >
+    <span className="flex" key={place}>
       {swatch}
-    </motion.span>
+    </span>
   );
   const swatches =
     edit.kind === "mesh"
@@ -95,16 +86,10 @@ export function FrameBackgroundEditor({
             edit.setKind(isMesh ? "mesh" : "solid");
           }}
         />
-        <div
-          aria-label={t("background-colors")}
-          // Positioned, so a colour on its way out is lifted out of the row
-          // here while the others slide to their places.
-          className="relative flex items-center gap-inline"
-          role="group"
-        >
-          <AnimatePresence initial={false} mode="popLayout">
+        <div aria-label={t("background-colors")} role="group">
+          <IslandParts className="flex items-center gap-inline" direction="row">
             {swatches}
-          </AnimatePresence>
+          </IslandParts>
         </div>
       </div>
       <IconButton

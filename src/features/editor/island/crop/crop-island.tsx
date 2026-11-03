@@ -5,7 +5,7 @@ import { Crop } from "lucide-react";
 
 import { t } from "../../../../i18n/i18n";
 import { Button } from "../../../../primitives/button/button";
-import { IslandFlow } from "../../../../primitives/island/island-flow";
+import { IslandParts } from "../../../../primitives/island/island-parts";
 import { IslandRowTitle } from "../../../../primitives/island/row-title/island-row-title";
 import { AnnotationLine } from "../annotation/annotation-island-parts";
 import { type CropAspect, CropAspectChoice } from "../crop-aspect-choice";
@@ -39,7 +39,7 @@ export function cropIsland(props: CropIslandProps): EditorIslandContent {
   return {
     key: "crop",
     section: (
-      <IslandFlow className="flex flex-col gap-separate">
+      <IslandParts className="flex flex-col gap-separate">
         <AnnotationLine key="aspect">
           <CropAspectChoice
             canLock={props.canLock}
@@ -55,7 +55,7 @@ export function cropIsland(props: CropIslandProps): EditorIslandContent {
             {t("editor-island-reset-crop")}
           </Button>
         </div>
-      </IslandFlow>
+      </IslandParts>
     ),
     title: (
       <IslandRowTitle

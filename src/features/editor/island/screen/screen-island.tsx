@@ -5,7 +5,7 @@ import { Monitor } from "lucide-react";
 
 import { t } from "../../../../i18n/i18n";
 import { Button } from "../../../../primitives/button/button";
-import { IslandFlow } from "../../../../primitives/island/island-flow";
+import { IslandParts } from "../../../../primitives/island/island-parts";
 import { IslandRowTitle } from "../../../../primitives/island/row-title/island-row-title";
 import { CornerChoice } from "../../../annotations/options/corner-choice";
 import { ShadowToggle } from "../../../annotations/options/shadow-toggle";
@@ -72,7 +72,7 @@ export function screenIsland(props: ScreenIslandProps): EditorIslandContent {
   return {
     key: "screen",
     section: (
-      <IslandFlow className="flex flex-col gap-separate">
+      <IslandParts className="flex flex-col gap-separate">
         <AnnotationLine key="looks">
           <ScreenInsetChoice
             inset={props.inset}
@@ -109,7 +109,7 @@ export function screenIsland(props: ScreenIslandProps): EditorIslandContent {
             {t("editor-island-reset-placement")}
           </Button>
         </div>
-      </IslandFlow>
+      </IslandParts>
     ),
     title: (
       <IslandRowTitle

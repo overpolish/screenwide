@@ -1,11 +1,16 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { animate, type MotionValue, useTransform } from "motion/react";
+import {
+  animate,
+  type MotionValue,
+  type Transition,
+  useTransform,
+} from "motion/react";
 import { useLayoutEffect, useRef, useState } from "react";
 
+import { useTravelRef } from "./island-follow";
 import { px } from "./island-geometry";
-import { glide } from "./island-motion";
 
 import type { islandLayout } from "./island-layout";
 import type { IslandShapeValues } from "./island-outline-sync";
@@ -22,6 +27,7 @@ export function useSectionPlace({
   layout,
   rowWidth,
   stretch,
+  travel,
   values,
 }: {
   isFromMiddle: boolean;
@@ -31,6 +37,8 @@ export function useSectionPlace({
   rowWidth: MotionValue<number>;
   /** How far what the section holds is stretched across its box. */
   stretch: number;
+  /** How the box moves to its place (`useIslandFollow`). */
+  travel: Transition;
   values: IslandShapeValues["section"];
 }) {
   const { closed, inset, isOpen, rowTarget, sectionStart, sectionWidth } =
@@ -94,10 +102,15 @@ export function useSectionPlace({
   // than running a move of its own, so the two are one shape every frame:
   // a part coming into the row with it, as a control that comes with the
   // section, would otherwise set the row moving a frame before the section
-  // is measured and open, and the row would flare out past it. What it
-  // holds is held against the box from the same value.
+  // is measured and open, and the row would flare out past it. So too for
+  // as long as the island is coming out (`isFromMiddle` while open): the
+  // section opens a moment after the row starts growing, and its own
+  // opening can end long before the row's, and running its own move it
+  // trailed the row as a narrower box under a wider one. What it holds is
+  // held against the box from the same value.
   const followsRow =
-    isOpeningInPlace && Math.abs(sectionWidth - layout.width) < 0.5;
+    (isOpening || (isFromMiddle && isOpen)) &&
+    Math.abs(sectionWidth - layout.width) < 0.5;
   const targetStart = isOpen
     ? sectionStart
     : isFromMiddle
@@ -106,6 +119,7 @@ export function useSectionPlace({
   const targetWidth = isOpen ? sectionWidth : isFromMiddle ? closed : foldWidth;
   // The first place is taken at once, as a box shown already in place.
   const isPlacedRef = useRef(false);
+  const travelRef = useTravelRef(travel);
   useLayoutEffect(() => {
     if (followsRow) {
       const follow = (width: number) => {
@@ -122,15 +136,15 @@ export function useSectionPlace({
       return;
     }
     const moves = [
-      animate(values.start, px(targetStart), glide),
-      animate(values.width, targetWidth, glide),
+      animate(values.start, px(targetStart), travelRef.current),
+      animate(values.width, targetWidth, travelRef.current),
     ];
     return () => {
       moves.forEach((move) => {
         move.stop();
       });
     };
-  }, [followsRow, rowWidth, targetStart, targetWidth, values]);
+  }, [followsRow, rowWidth, targetStart, targetWidth, travelRef, values]);
   // While the box follows the row open, or folds in place, what it holds is
   // held where it will rest by how far the box is from there, read off the
   // box's own start every frame, so the two can never drift: nothing once

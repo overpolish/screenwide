@@ -3,7 +3,7 @@
 
 import { t } from "../../../../i18n/i18n";
 import { Button } from "../../../../primitives/button/button";
-import { IslandFlow } from "../../../../primitives/island/island-flow";
+import { IslandParts } from "../../../../primitives/island/island-parts";
 import { CornerChoice } from "../../../annotations/options/corner-choice";
 import { DimensionsField } from "../../tools/dimensions/dimensions-field";
 import { BackgroundTiles } from "../../tools/frame/background/background-tiles";
@@ -20,7 +20,7 @@ import type { FrameIslandProps } from "./frame-island";
  * there are any to set, and putting its size back. The island is as wide
  * as that first line needs. The colours' line comes into place under the
  * tiles for a mesh or a colour of your own, and goes for a solid tile or a
- * picture, the lines after it gliding to make room (`IslandFlow`). */
+ * picture, the lines after it gliding to make room (`IslandParts`). */
 export function FrameSection(props: FrameIslandProps) {
   const choice = useBackgroundChoice({
     onChange: props.onBackgroundChange,
@@ -29,7 +29,7 @@ export function FrameSection(props: FrameIslandProps) {
     value: props.background,
   });
   return (
-    <IslandFlow className="flex flex-col gap-separate">
+    <IslandParts className="flex flex-col gap-separate">
       <AnnotationLine key="size">
         <div aria-label={t("editor-island-size")} role="group">
           <DimensionsField
@@ -52,7 +52,7 @@ export function FrameSection(props: FrameIslandProps) {
        * line above sets the island's width and the tiles wrap to it. Their
        * box reaches the small inset past them on every side, as the colour
        * grid's does, so a chosen tile's outline at the edge stays inside it
-       * and is not cut off while the part moves (`IslandFlow`). */}
+       * and is not cut off while the part moves (`IslandParts`). */}
       <div
         className="-m-inset-sm w-0 min-w-[calc(100%+var(--spacing-inset-sm)*2)] p-inset-sm"
         key="tiles"
@@ -79,6 +79,6 @@ export function FrameSection(props: FrameIslandProps) {
           {t("editor-island-frame-original-size")}
         </Button>
       </div>
-    </IslandFlow>
+    </IslandParts>
   );
 }

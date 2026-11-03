@@ -4,7 +4,7 @@
 import { useState } from "react";
 
 import { t } from "../../../../../i18n/i18n";
-import { IslandFlow } from "../../../../../primitives/island/island-flow";
+import { IslandParts } from "../../../../../primitives/island/island-parts";
 import { PillGroup } from "../../../../../primitives/pill-group/pill-group";
 import {
   offeredColors,
@@ -26,7 +26,7 @@ import type { TextStyle } from "../../../../../bindings/TextStyle";
  * Where the template stops using the colour in hand, the type's is. The
  * names come into focus above the grid as a second colour comes into use,
  * as an outline turned on does, the grid gliding down to make room, and
- * blur away as the last but one goes (`IslandFlow`). */
+ * blur away as the last but one goes (`IslandParts`). */
 export function TextColors({
   look,
   onLookChange,
@@ -39,7 +39,7 @@ export function TextColors({
   const [picked, setPicked] = useState<TextColorRole>("text");
   const role = roles.includes(picked) ? picked : "text";
   return (
-    <IslandFlow className="flex flex-col gap-inline">
+    <IslandParts className="flex flex-col gap-inline">
       {roles.length > 1 ? (
         <PillGroup
           aria-label={t("editor-island-text-color-role")}
@@ -61,6 +61,6 @@ export function TextColors({
           onLookChange(withStyleColor(look, role, color));
         }}
       />
-    </IslandFlow>
+    </IslandParts>
   );
 }

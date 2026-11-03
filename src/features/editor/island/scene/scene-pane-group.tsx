@@ -4,7 +4,7 @@
 import { ControlRow } from "../../../../composites/control-row/control-row";
 import { t } from "../../../../i18n/i18n";
 import { NumberField } from "../../../../primitives/input-fields/number-field";
-import { IslandFlow } from "../../../../primitives/island/island-flow";
+import { IslandParts } from "../../../../primitives/island/island-parts";
 import { IslandFigure } from "../island-figure";
 
 import type { SceneFramingProps, ScenePane } from "./scene-framing";
@@ -34,7 +34,7 @@ export function ScenePaneGroup(
   return (
     // As wide as its rows need. Rows sit as close as the island's own parts
     // do.
-    <IslandFlow className="flex flex-col gap-inline">
+    <IslandParts className="flex flex-col gap-inline">
       <ControlRow title={t("editor-island-scene-zoom")}>
         {(controlProps) => (
           <IslandFigure
@@ -96,6 +96,6 @@ export function ScenePaneGroup(
           </IslandFigure>
         )}
       </ControlRow>
-    </IslandFlow>
+    </IslandParts>
   );
 }

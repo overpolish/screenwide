@@ -11,7 +11,7 @@ import {
 
 import { t } from "../../../../i18n/i18n";
 import { cn } from "../../../../lib/styling";
-import { IslandFlow } from "../../../../primitives/island/island-flow";
+import { IslandParts } from "../../../../primitives/island/island-parts";
 import { ScrollArea } from "../../../../primitives/scroll-area/scroll-area";
 import {
   TileChoice,
@@ -192,7 +192,7 @@ export function SceneLayoutGroup(props: SceneFramingProps) {
     // stretched to the island's box. The tiles and the options of the one
     // chosen stand apart; the options' own rows sit as close as the
     // island's parts do.
-    <IslandFlow
+    <IslandParts
       className={cn(
         "flex min-w-full flex-col gap-separate",
         SCENE_ISLAND_WIDTH.part,
@@ -218,6 +218,6 @@ export function SceneLayoutGroup(props: SceneFramingProps) {
       {optionsKind === null ? null : (
         <SceneLayoutOptions key={optionsKind} {...props} />
       )}
-    </IslandFlow>
+    </IslandParts>
   );
 }

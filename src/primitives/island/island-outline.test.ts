@@ -76,4 +76,36 @@ describe("islandOutline", () => {
     );
     expect(endCorner + startCorner).toBeLessThanOrEqual(20);
   });
+
+  it("never draws the top corners past a row shorter or narrower than them", () => {
+    // Growing out of nothing, the row is for a moment smaller than its
+    // corners; drawn whole, they ran past its sides into points.
+    for (const shape of [
+      { height: 0, width: 120 },
+      { height: 6, width: 120 },
+      { height: 48, width: 10 },
+    ]) {
+      const path = islandOutline({ row: { ...row, ...shape }, section: null });
+      const ys = [...path.matchAll(/[AMV][^A-Z]*/g)].flatMap((step) => {
+        const numbers = step[0].slice(1).trim().split(/\s+/).map(Number);
+        return step[0][0] === "V" ? numbers : [numbers[numbers.length - 1]];
+      });
+      const xs = [...path.matchAll(/[AMH][^A-Z]*/g)].map((step) => {
+        const numbers = step[0].slice(1).trim().split(/\s+/).map(Number);
+        return step[0][0] === "A"
+          ? numbers[numbers.length - 2]
+          : step[0][0] === "M"
+            ? numbers[0]
+            : numbers[0];
+      });
+      for (const y of ys) {
+        expect(y).toBeGreaterThanOrEqual(-0.01);
+        expect(y).toBeLessThanOrEqual(shape.height + 0.01);
+      }
+      for (const x of xs) {
+        expect(x).toBeGreaterThanOrEqual(-0.01);
+        expect(x).toBeLessThanOrEqual(shape.width + 0.01);
+      }
+    }
+  });
 });

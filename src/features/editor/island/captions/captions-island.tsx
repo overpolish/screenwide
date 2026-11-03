@@ -4,11 +4,11 @@
 import { Captions } from "lucide-react";
 
 import { t } from "../../../../i18n/i18n";
+import { IslandParts } from "../../../../primitives/island/island-parts";
 import { IslandRowTitle } from "../../../../primitives/island/row-title/island-row-title";
 import { OptionToggle } from "../../../annotations/options/option-toggle";
 import { type AnnotationColorProps } from "../annotation/annotation-island-parts";
 import { WordByWordToggle } from "../annotation/text/text-toggles";
-import { IslandRowPresence } from "../island-row-presence";
 import { ShowGlyph } from "../keyboard/keyboard-glyphs";
 
 import { CaptionsSection } from "./captions-section";
@@ -79,22 +79,24 @@ export function captionsIsland(
   const isReady = transcript.status === "ready";
   return {
     actions: isReady ? (
-      <>
-        <IslandRowPresence isShown={props.enabled}>
+      <IslandParts className="flex items-center gap-separate" direction="row">
+        {props.enabled ? (
           <WordByWordToggle
+            key="word-by-word"
             onChange={(revealWords) => {
               props.onLookChange({ revealWords });
             }}
             revealWords={props.look.revealWords}
           />
-        </IslandRowPresence>
+        ) : null}
         <OptionToggle
           glyph={(isOn) => <ShowGlyph isShown={isOn} />}
           isOn={props.enabled}
+          key="show"
           label={t("editor-island-captions-show")}
           onChange={props.onEnabledChange}
         />
-      </>
+      </IslandParts>
     ) : undefined,
     // Hung from the row's start, so the pickers' column opens past its end.
     anchor: "start",

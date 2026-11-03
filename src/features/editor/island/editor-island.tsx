@@ -1,23 +1,24 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { AnimatePresence } from "motion/react";
 import { type ReactNode, useMemo, useState } from "react";
 
 import { t } from "../../../i18n/i18n";
 import { Island, type IslandProps } from "../../../primitives/island/island";
-import { IslandCrossfade } from "../../../primitives/island/island-crossfade";
 import { type IslandAnchor } from "../../../primitives/island/island-geometry";
+import { IslandParts } from "../../../primitives/island/island-parts";
 import { useSize } from "../../../primitives/island/island-size";
-import { IslandSwap } from "../../../primitives/island/island-swap";
+
+import { useHeldSection } from "./use-held-section";
 
 // The editor's one island, for whatever is in hand: a row saying what it is,
 // its actions at the row's end, and its choices beneath. It is one block, an
 // inspector: what is beneath always spans the row, a note included, which
 // sits at the block's foot; only a column of choices too many to hold
 // inline opens beside it (`IslandAside`). Choosing something else changes
-// what it holds in place: the row and the line under it clear into the new
-// ones and the section crossfades, while the black reshapes round them.
+// what it holds in place, as every island does (`IslandParts`): the row,
+// the line under it and the section fade where they stand, the black
+// reshapes, and the new ones come into focus.
 
 export type EditorIslandContent = {
   /** Which thing is in hand; a new key brings in a new row and section. */
@@ -67,6 +68,7 @@ export function EditorIsland({ content, ...island }: EditorIslandProps) {
     setHadBelow(hasBelow);
     setBelowArrives(hasBelow);
   }
+  const holdsSection = useHeldSection(content.key, Boolean(content.section));
   return (
     <Island
       {...island}
@@ -74,29 +76,26 @@ export function EditorIsland({ content, ...island }: EditorIslandProps) {
       aria-label={t("editor-island-label")}
       below={
         content.below ? (
-          <IslandSwap
-            initial={belowArrives}
-            ref={belowRef}
-            style={{ minWidth: rowNaturalWidth }}
-            swapKey={content.key}
-          >
-            {content.below}
-          </IslandSwap>
+          <IslandParts initial={belowArrives}>
+            <div
+              key={content.key}
+              ref={belowRef}
+              style={{ minWidth: rowNaturalWidth }}
+            >
+              {content.below}
+            </div>
+          </IslandParts>
         ) : undefined
       }
       row={
-        <IslandSwap
-          className="min-w-0 grow"
-          initial={false}
-          swapKey={content.key}
-        >
+        <IslandParts className="min-w-0 grow">
           <div
             className="flex h-10 w-max max-w-full items-center justify-between gap-separate px-1"
+            key={content.key}
             ref={rowRef}
             // Across the island where it is wider, and at least the line
             // under it; both left out when its own width is read, which is
-            // then its content's (`w-max`). Held to the black as a part
-            // arrives, only that part gives way (`IslandRowPresence`).
+            // then its content's (`w-max`).
             style={{ minWidth: `max(${String(rowWidth)}px, 100%)` }}
           >
             <div className="flex shrink-0 items-center">{content.title}</div>
@@ -106,18 +105,20 @@ export function EditorIsland({ content, ...island }: EditorIslandProps) {
               </div>
             ) : null}
           </div>
-        </IslandSwap>
+        </IslandParts>
       }
       // Its title keeps to the island's start and its actions to its end
       // when what hangs under the row is wider than it.
       rowFillsWidth
       section={
-        content.section ? (
-          <AnimatePresence initial={false} mode="popLayout">
-            <IslandCrossfade key={content.sectionKey ?? content.key}>
-              <div>{content.section}</div>
-            </IslandCrossfade>
-          </AnimatePresence>
+        content.section || holdsSection ? (
+          <IslandParts>
+            {content.section ? (
+              <div key={content.sectionKey ?? content.key}>
+                {content.section}
+              </div>
+            ) : null}
+          </IslandParts>
         ) : undefined
       }
       sectionSpansRow

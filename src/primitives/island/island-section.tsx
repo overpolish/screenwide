@@ -1,14 +1,19 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { AnimatePresence, motion, type MotionValue } from "motion/react";
+import {
+  AnimatePresence,
+  motion,
+  type MotionValue,
+  type Transition,
+} from "motion/react";
 import { type ReactNode } from "react";
 
 import { motionDurations } from "../../lib/motion";
 
 import { IslandSectionContext } from "./island-context";
 import { px } from "./island-geometry";
-import { focusIn, glide } from "./island-motion";
+import { focusIn } from "./island-motion";
 import { useSectionPlace } from "./island-section-place";
 import { useSectionSettle } from "./island-section-settle";
 import { useSwapHold } from "./island-swap-hold";
@@ -30,6 +35,7 @@ export function IslandSection({
   onOpened,
   rowWidth,
   sectionX,
+  travel,
   values,
 }: {
   children: ReactNode;
@@ -54,6 +60,8 @@ export function IslandSection({
   /** Holds what hangs still while the island moves sideways under the
    * notch. */
   sectionX: MotionValue<number>;
+  /** How the box moves to a new size (`useIslandFollow`). */
+  travel: Transition;
   values: IslandShapeValues["section"];
 }) {
   const {
@@ -95,18 +103,17 @@ export function IslandSection({
     layout,
     rowWidth,
     stretch,
+    travel,
     values,
   });
 
-  // In place, the section is there at once and gone once folded; out of the
-  // middle it fades.
-  const opacityTransition = isFromMiddle
-    ? isOpen
-      ? { duration: motionDurations.state }
-      : { delay: motionDurations.state, duration: motionDurations.state }
-    : isOpen
-      ? { duration: 0 }
-      : { delay: motionDurations.travel, duration: 0 };
+  // The section's black is there at once and gone once folded, coming out
+  // or going back in as much as opening in place: what it holds fades on
+  // its own (`useIslandPresence`), and a black fading apart from the row's
+  // showed the row as a hard-edged band over a fainter section.
+  const opacityTransition = isOpen
+    ? { duration: 0 }
+    : { delay: motionDurations.travel, duration: 0 };
   const swapHold = useSwapHold({
     boxStart: values.start,
     isEnabled: !movesSideways,
@@ -132,7 +139,7 @@ export function IslandSection({
           top: values.top,
           width: values.width,
         }}
-        transition={glide}
+        transition={travel}
       >
         <motion.div
           animate={{
@@ -147,7 +154,7 @@ export function IslandSection({
           initial={false}
           onAnimationComplete={onOpened}
           style={{ height: values.height, opacity: values.opacity }}
-          transition={{ ...glide, opacity: opacityTransition }}
+          transition={{ ...travel, opacity: opacityTransition }}
         >
           <motion.div
             animate={
@@ -200,7 +207,7 @@ export function IslandSection({
               // share of this box rather than a width of its own.
               ...(!isOpen && heldStretch > 0 ? { width: lastPlace.width } : {}),
             }}
-            transition={isHolding ? { duration: 0 } : glide}
+            transition={isHolding ? { duration: 0 } : travel}
           >
             <IslandSectionContext value={swapHold}>
               <AnimatePresence initial={false}>

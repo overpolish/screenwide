@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { motion } from "motion/react";
+import { LayoutGroup, motion } from "motion/react";
 import { type ReactNode, useMemo, useRef, useState } from "react";
 import { useLocale } from "react-aria";
 
@@ -11,23 +11,25 @@ import { useControlAnchor } from "./island-anchor";
 import { IslandBelow } from "./island-below";
 import { IslandAsideContext, IslandContext } from "./island-context";
 import { IslandDrawing } from "./island-drawing";
+import { IslandFollowContext, useIslandFollow } from "./island-follow";
 import {
   type IslandAnchor,
   islandCssVariables,
   type IslandNotch,
 } from "./island-geometry";
 import { useIslandHover } from "./island-hover";
-import { fade, glide } from "./island-motion";
+import { useIslandMeasures } from "./island-measures";
+import { fade } from "./island-motion";
 import { useOpening } from "./island-opening";
 import {
   type IslandPart,
   useIslandOutline,
   useIslandShapeValues,
 } from "./island-outline-sync";
+import { useIslandPresence } from "./island-presence";
 import { IslandRowBox } from "./island-row-box";
 import { useRowOffset } from "./island-row-offset";
 import { IslandSection } from "./island-section";
-import { useSize } from "./island-size";
 import { layOutIsland } from "./island-stack-layout";
 
 // A shape at the top of the screen in the notch's black: a row of controls,
@@ -71,8 +73,9 @@ export type IslandProps = {
   // close what hovering opened.
   /** The pointer coming onto the row or section, or leaving them. */
   onHoverChange?: (isHovered: boolean) => void;
-  /** The row's and section's places in the page, for click-through. */
-  onShapeChange?: (parts: IslandPart[]) => void;
+  /** The row's and section's places in the page, for click-through, and
+   * from the island's own middle and top, for placing it. */
+  onShapeChange?: (parts: IslandPart[], fromMiddle: IslandPart[]) => void;
   // So its parts keep to the island's ends rather than centring over the
   // black. Not under a notch, where the row keeps its gap under the notch.
   /** Stretches the row to a wider section's width. */
@@ -92,7 +95,7 @@ export function Island({
   anchorControl,
   "aria-label": label,
   below,
-  isShown = true,
+  isShown: isAsked = true,
   notch = null,
   onHidden,
   onHoverChange,
@@ -103,32 +106,14 @@ export function Island({
   sectionSpansRow = false,
   shrinksToNothing = false,
 }: IslandProps) {
-  const [rowElement, setRowElement] = useState<HTMLDivElement | null>(null);
-  const [sectionElement, setSectionElement] = useState<HTMLDivElement | null>(
-    null,
-  );
-  const [belowElement, setBelowElement] = useState<HTMLDivElement | null>(null);
-  const [aside, setAside] = useState<HTMLDivElement | null>(null);
   const fillsWidth = rowFillsWidth && notch === null;
-  // What the row needs, not the island's width it may be stretched to.
-  const rowSize = useSize(rowElement, { isNatural: fillsWidth });
-  // What the section needs, not the box's width it may be stretched to.
-  const sectionSize = useSize(sectionElement, { isNatural: true });
-  const belowSize = useSize(belowElement);
-  // Its last size outlives it, so a section without one reaches nowhere.
-  const asideSize = useSize(aside);
-  const reach = aside ? (asideSize?.width ?? 0) : 0;
+  const measured = useIslandMeasures(fillsWidth);
+  const { rowElement } = measured;
   const [shift, setShift] = useState(0);
 
   const hover = useIslandHover(onHoverChange);
 
-  // From the moment the island is shown or hidden until its row has settled.
-  const [wasShown, setWasShown] = useState(isShown);
-  const [isComing, setIsComing] = useState(false);
-  if (wasShown !== isShown) {
-    setWasShown(isShown);
-    setIsComing(true);
-  }
+  const { contentOpacity, isComing, isShown } = useIslandPresence(isAsked);
   const context = useMemo(
     () => ({ isShown, notch, setShift }),
     [isShown, notch],
@@ -140,15 +125,15 @@ export function Island({
   const controlAnchor = useControlAnchor(anchorControl, rowElement, direction);
   const layout = layOutIsland({
     anchor: controlAnchor ?? anchor,
-    below: isStacked ? (belowSize ?? { height: 0, width: 0 }) : null,
+    below: isStacked ? (measured.belowSize ?? { height: 0, width: 0 }) : null,
     direction,
     hasSection: Boolean(section),
     isShown,
     notch,
-    reach,
+    reach: measured.reach,
     rowShift,
-    rowSize,
-    sectionSize,
+    rowSize: measured.rowSize,
+    sectionSize: measured.sectionSize,
     shrinksToNothing,
     spansRow: sectionSpansRow,
   });
@@ -157,6 +142,7 @@ export function Island({
   // island comes out of the notch or goes back in.
   const isFromMiddle = !isShown || isComing;
   const { finish, isOpening } = useOpening(isOpen);
+  const { follow, travel } = useIslandFollow();
 
   const { islandX, rowLayerRef, rowX, sectionX, shapeWidth } = useRowOffset({
     fillsWidth,
@@ -165,12 +151,13 @@ export function Island({
     rowElement,
     rowTarget: rowShift,
     shiftTarget: layout.islandShift,
+    travel,
     width,
   });
 
   // The parts are laid out and animated as boxes that paint nothing; the
   // black is their outline, drawn from the same animated values.
-  const values = useIslandShapeValues({ flare, radius, top });
+  const values = useIslandShapeValues({ flare, radius, top }, travel);
   const rowPathRef = useRef<SVGPathElement>(null);
   const shapePathRef = useRef<SVGPathElement>(null);
   const clipRef = useRef<HTMLDivElement>(null);
@@ -196,7 +183,7 @@ export function Island({
       >
         {/* The black is the notch's whatever the theme, so what it holds is
             always drawn dark, and in the island's dress. */}
-        <div aria-hidden={!isShown} className="dark relative text-fg">
+        <div aria-hidden={!isAsked} className="dark relative text-fg">
           <SkinContext value="island">
             <IslandDrawing
               isShown={isShown}
@@ -207,89 +194,101 @@ export function Island({
                 which is drawn from the row's start: in a right-to-left page
                 the clip is mirrored as the black is, and what it holds is
                 mirrored back. */}
-            <div className="relative rtl:-scale-x-100" ref={clipRef}>
-              <div className="relative rtl:-scale-x-100">
-                <motion.div
-                  animate={{
-                    height: rowTarget.height,
-                    opacity: isShown || notch ? 1 : 0,
-                  }}
-                  // Clipped rather than hidden, so it is no scroll box: a
-                  // control focused while the row is still short, such as
-                  // one pressed as the island comes out, cannot scroll the
-                  // row up out of place.
-                  className="relative overflow-clip"
-                  initial={false}
-                  onAnimationComplete={() => {
-                    setIsComing(false);
-                    if (!isShown) onHidden?.();
-                  }}
-                  style={{
-                    height: values.row.height,
-                    opacity: values.row.opacity,
-                    width: shapeWidth,
-                  }}
-                  transition={{
-                    ...glide,
-                    opacity: fade(isShown, notch !== null),
-                  }}
-                >
-                  <motion.div
-                    className="absolute inset-x-0 top-0 flex justify-center"
-                    ref={rowLayerRef}
-                    style={{
-                      x: rowX,
-                      // Only once out: coming out, the row is laid out in its
-                      // place and revealed as the black opens round it.
-                      ...(fillsWidth && isShown && !isComing
-                        ? { "--island-row-hold": "100%" }
-                        : {}),
-                    }}
-                  >
-                    {/* Round the presence, not in it: a row on its way out still
-                  hears the island, and folds into the notch as it goes. */}
-                    <IslandContext value={context}>
-                      <IslandRowBox
-                        fillsWidth={fillsWidth}
-                        isShown={isShown}
-                        label={label}
-                        onElement={setRowElement}
+            <motion.div
+              className="relative rtl:-scale-x-100"
+              ref={clipRef}
+              style={{ opacity: contentOpacity }}
+            >
+              {/* One layout group, so a part that stays glides with the
+                  black when a change elsewhere in the island moves it,
+                  even where its own part did not change (`IslandParts`). */}
+              <LayoutGroup>
+                <IslandFollowContext value={follow}>
+                  <div className="relative rtl:-scale-x-100">
+                    <motion.div
+                      animate={{
+                        height: rowTarget.height,
+                        opacity: isShown || notch ? 1 : 0,
+                      }}
+                      // Clipped rather than hidden, so it is no scroll box: a
+                      // control focused while the row is still short, such as
+                      // one pressed as the island comes out, cannot scroll the
+                      // row up out of place.
+                      className="relative overflow-clip"
+                      initial={false}
+                      onAnimationComplete={() => {
+                        if (!isShown) onHidden?.();
+                      }}
+                      style={{
+                        height: values.row.height,
+                        opacity: values.row.opacity,
+                        width: shapeWidth,
+                      }}
+                      transition={{
+                        ...travel,
+                        opacity: fade(isShown, notch !== null),
+                      }}
+                    >
+                      <motion.div
+                        className="absolute inset-x-0 top-0 flex justify-center"
+                        ref={rowLayerRef}
+                        style={{
+                          x: rowX,
+                          // Only once out: coming out, the row is laid out in its
+                          // place and revealed as the black opens round it.
+                          ...(fillsWidth && isShown && !isComing
+                            ? { "--island-row-hold": "100%" }
+                            : {}),
+                        }}
                       >
-                        {row}
-                      </IslandRowBox>
-                    </IslandContext>
-                  </motion.div>
-                  {/* Kept while there is no line, so one going away folds
+                        {/* Round the presence, not in it: a row on its way out still
+                  hears the island, and folds into the notch as it goes. */}
+                        <IslandContext value={context}>
+                          <IslandRowBox
+                            fillsWidth={fillsWidth}
+                            isShown={isShown}
+                            label={label}
+                            onElement={measured.setRowElement}
+                          >
+                            {row}
+                          </IslandRowBox>
+                        </IslandContext>
+                      </motion.div>
+                      {/* Kept while there is no line, so one going away folds
                       into the row with what it held rather than vanishing
                       from an island still its height. */}
-                  <IslandBelow
-                    islandX={islandX}
-                    isShown={isStacked}
-                    onElement={setBelowElement}
-                    top={rowSize?.height ?? 0}
-                    width={belowSize?.width}
-                  >
-                    {below}
-                  </IslandBelow>
-                </motion.div>
-                <IslandAsideContext value={setAside}>
-                  <IslandSection
-                    isFromMiddle={isFromMiddle}
-                    isOpening={isOpening}
-                    isShown={isShown}
-                    layout={layout}
-                    movesSideways={notch !== null && !isStacked}
-                    onElement={setSectionElement}
-                    onOpened={finish}
-                    rowWidth={shapeWidth}
-                    sectionX={sectionX}
-                    values={values.section}
-                  >
-                    {section}
-                  </IslandSection>
-                </IslandAsideContext>
-              </div>
-            </div>
+                      <IslandBelow
+                        islandX={islandX}
+                        isShown={isStacked}
+                        onElement={measured.setBelowElement}
+                        top={measured.rowSize?.height ?? 0}
+                        travel={travel}
+                        width={measured.belowSize?.width}
+                      >
+                        {below}
+                      </IslandBelow>
+                    </motion.div>
+                    <IslandAsideContext value={measured.setAside}>
+                      <IslandSection
+                        isFromMiddle={isFromMiddle}
+                        isOpening={isOpening}
+                        isShown={isShown}
+                        layout={layout}
+                        movesSideways={notch !== null && !isStacked}
+                        onElement={measured.setSectionElement}
+                        onOpened={finish}
+                        rowWidth={shapeWidth}
+                        sectionX={sectionX}
+                        travel={travel}
+                        values={values.section}
+                      >
+                        {section}
+                      </IslandSection>
+                    </IslandAsideContext>
+                  </div>
+                </IslandFollowContext>
+              </LayoutGroup>
+            </motion.div>
           </SkinContext>
         </div>
       </motion.div>

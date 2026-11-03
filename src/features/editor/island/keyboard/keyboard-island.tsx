@@ -6,7 +6,7 @@ import { Keyboard, Trash2 } from "lucide-react";
 import { ConfirmActionButton } from "../../../../composites/confirm-action-button/confirm-action-button";
 import { t } from "../../../../i18n/i18n";
 import { Button } from "../../../../primitives/button/button";
-import { IslandFlow } from "../../../../primitives/island/island-flow";
+import { IslandParts } from "../../../../primitives/island/island-parts";
 import { IslandRowTitle } from "../../../../primitives/island/row-title/island-row-title";
 import { PositionGrid } from "../../../../primitives/position-grid/position-grid";
 import { OptionToggle } from "../../../annotations/options/option-toggle";
@@ -15,7 +15,6 @@ import {
   AnnotationAnimateToggle,
   AnnotationLine,
 } from "../annotation/annotation-island-parts";
-import { IslandRowPresence } from "../island-row-presence";
 import { OverlaySizeChoice } from "../overlay-size-choice";
 
 import { AppearanceGlyph, KeycapSizeGlyph, ShowGlyph } from "./keyboard-glyphs";
@@ -53,18 +52,20 @@ export function keyboardIsland(
   const { onChange, settings } = props;
   return {
     actions: (
-      <>
-        <IslandRowPresence isShown={settings.bake}>
+      <IslandParts className="flex items-center gap-separate" direction="row">
+        {settings.bake ? (
           <AnnotationAnimateToggle
             isAnimated={settings.animation !== "none"}
+            key="animate"
             onChange={(isAnimated) => {
               onChange({ animation: isAnimated ? "pop" : "none" });
             }}
           />
-        </IslandRowPresence>
+        ) : null}
         <OptionToggle
           glyph={(isOn) => <ShowGlyph isShown={isOn} />}
           isOn={settings.bake}
+          key="show"
           label={t("editor-island-keyboard-show")}
           onChange={(bake) => {
             onChange({ bake });
@@ -74,16 +75,17 @@ export function keyboardIsland(
           <ConfirmActionButton
             confirmLabel={t("editor-island-keyboard-confirm-delete")}
             icon={<Trash2 aria-hidden />}
+            key="delete"
             label={t("editor-island-keyboard-delete", { count: props.chosen })}
             onConfirm={props.onDeleteChosen}
             variant="ghost"
           />
         ) : null}
-      </>
+      </IslandParts>
     ),
     key: "keyboard",
     section: settings.bake ? (
-      <IslandFlow className="flex flex-col gap-separate">
+      <IslandParts className="flex flex-col gap-separate">
         <AnnotationLine>
           <OverlaySizeChoice
             aria-label={t("editor-island-size")}
@@ -119,7 +121,7 @@ export function keyboardIsland(
             </Button>
           </div>
         ) : null}
-      </IslandFlow>
+      </IslandParts>
     ) : undefined,
     title: (
       <IslandRowTitle

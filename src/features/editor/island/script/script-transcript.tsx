@@ -6,8 +6,8 @@ import { useEffect, useMemo, useRef } from "react";
 
 import { t } from "../../../../i18n/i18n";
 import { Button } from "../../../../primitives/button/button";
-import { IslandFlow } from "../../../../primitives/island/island-flow";
 import { IslandKeyHint } from "../../../../primitives/island/island-key-hint";
+import { IslandParts } from "../../../../primitives/island/island-parts";
 import { Text } from "../../../../primitives/text/text";
 import { pausesCutBy } from "../../tools/transcript/transcript-pauses";
 import { isHeardInOrder } from "../../tools/transcript/transcript-playback-order";
@@ -85,7 +85,7 @@ export function ScriptTranscript({
   // under it along with the island's black rather than jumping.
   return (
     <div className="w-80" ref={rootRef}>
-      <IslandFlow className="flex flex-col gap-separate">
+      <IslandParts className="flex flex-col gap-separate">
         {isReplacing ? (
           <ScriptReplaceLine
             found={found}
@@ -131,7 +131,11 @@ export function ScriptTranscript({
         {/* Each chip shows only while it has something to take; the line
             goes with the last. */}
         {pauses + cleanup.fillers.length + cleanup.profanity.length > 0 ? (
-          <IslandFlow className="flex items-center gap-inline" key="clean-up">
+          <IslandParts
+            className="flex items-center gap-inline"
+            direction="row"
+            key="clean-up"
+          >
             {silences && pauses > 0 ? (
               <ScriptRemoveChip
                 count={pauses}
@@ -171,7 +175,7 @@ export function ScriptTranscript({
                 onRemove={cleanup.removeProfanity}
               />
             ) : null}
-          </IslandFlow>
+          </IslandParts>
         ) : null}
         <div className="flex justify-end gap-separate" key="actions">
           <Button isDisabled={isLocked} onPress={props.onTranscribe}>
@@ -184,7 +188,7 @@ export function ScriptTranscript({
             {t("editor-island-script-restore-all")}
           </Button>
         </div>
-      </IslandFlow>
+      </IslandParts>
     </div>
   );
 }

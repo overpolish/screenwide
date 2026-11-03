@@ -65,6 +65,27 @@ export const fade = (isShown: boolean, hasNotch: boolean) => {
   return { delay: motionDurations.travel, duration: motionDurations.travel };
 };
 
+/** What the island holds as the island comes out: unseen while the black
+ * grows, then faded in where it stands, starting a little before the black
+ * has settled so it does not wait on the last of the ease. Nothing slides
+ * in with the black's edge. */
+export const contentIn = {
+  delay: motionDurations.travel - 0.1,
+  duration: motionDurations.travel,
+  ease: motionEasings.out,
+} as const;
+
+/** What the island holds as the island goes: faded out where it stands,
+ * and the empty black closes once it has mostly gone (`closesAfter`). */
+export const contentOut = {
+  duration: motionDurations.state,
+  ease: motionEasings.out,
+} as const;
+
+/** How long the black waits, in seconds, while what it holds fades out
+ * before it closes. */
+export const closesAfter = motionDurations.state - motionDurations.feedback;
+
 /** How long the island stays open after the pointer leaves, in ms, so a
  * slip, or the island moving as it changes shape, does not slam it shut. */
 export const HOVER_LINGER_MS = 350;

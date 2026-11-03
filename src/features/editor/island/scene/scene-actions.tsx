@@ -14,7 +14,7 @@ import { ToggleButtonGroup } from "react-aria-components";
 import { ConfirmActionButton } from "../../../../composites/confirm-action-button/confirm-action-button";
 import { t } from "../../../../i18n/i18n";
 import { IconToggleButton } from "../../../../primitives/button/icon-button";
-import { IslandRowPresence } from "../island-row-presence";
+import { IslandParts } from "../../../../primitives/island/island-parts";
 
 import type { SceneGroup } from "./scene-framing";
 
@@ -22,7 +22,7 @@ import type { SceneGroup } from "./scene-framing";
 // beneath, filled while it is, and, for a scene, deleting it, which asks
 // twice. A group is always open, so pressing the open one leaves it open.
 // A group comes and goes with the layout, as the camera's does with a
-// layout that places it, in its place among the others (`IslandRowPresence`).
+// layout that places it, in its place among the others (`IslandParts`).
 
 /** The groups of options the scene tool opens: a scene's framing, and with
  * no scene in hand the planned zooms too. */
@@ -68,7 +68,7 @@ export function SceneActions({
       {groups.length > 0 ? (
         <ToggleButtonGroup
           aria-label={t("editor-island-scene-groups")}
-          className="flex min-w-0 items-center gap-separate"
+          className="flex min-w-0 items-center"
           disallowEmptySelection
           onSelectionChange={(keys) => {
             const group = groups.find((each) => keys.has(each));
@@ -76,20 +76,24 @@ export function SceneActions({
           }}
           selectedKeys={open === null ? [] : [open]}
           selectionMode="single"
-          // Inline, over the row's `*:shrink-0`, so a group arriving can
-          // give way while the black opens for it.
-          style={{ flexShrink: 1 }}
         >
-          {GROUPS.map((group) => {
-            const Glyph: LucideIcon = GROUP_GLYPHS[group];
-            return (
-              <IslandRowPresence isShown={groups.includes(group)} key={group}>
-                <IconToggleButton aria-label={groupLabel(group)} id={group}>
+          <IslandParts
+            className="flex items-center gap-separate"
+            direction="row"
+          >
+            {GROUPS.filter((group) => groups.includes(group)).map((group) => {
+              const Glyph: LucideIcon = GROUP_GLYPHS[group];
+              return (
+                <IconToggleButton
+                  aria-label={groupLabel(group)}
+                  id={group}
+                  key={group}
+                >
                   <Glyph aria-hidden className="size-icon" />
                 </IconToggleButton>
-              </IslandRowPresence>
-            );
-          })}
+              );
+            })}
+          </IslandParts>
         </ToggleButtonGroup>
       ) : null}
       {onDelete ? (

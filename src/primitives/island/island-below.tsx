@@ -6,13 +6,15 @@ import {
   animate,
   motion,
   type MotionValue,
+  type Transition,
   useMotionValue,
   useTransform,
 } from "motion/react";
 import { type ReactNode, useLayoutEffect, useRef } from "react";
 
+import { useTravelRef } from "./island-follow";
 import { ISLAND } from "./island-geometry";
-import { focusIn, glide } from "./island-motion";
+import { focusIn } from "./island-motion";
 
 // A second line under the island's row, in the row's black: centred under
 // the notch, or the island's middle where there is none, whatever the row
@@ -27,6 +29,7 @@ export function IslandBelow({
   islandX,
   onElement,
   top,
+  travel,
   width,
 }: {
   children: ReactNode;
@@ -37,23 +40,26 @@ export function IslandBelow({
   onElement: (element: HTMLDivElement | null) => void;
   /** Where the line starts down the black: under the row. */
   top: number;
+  /** How the line eases to a new centre (`useIslandFollow`). */
+  travel: Transition;
   /** The line's measured width, eased to its new centre as it changes. */
   width: number | undefined;
 }) {
   const recentring = useMotionValue(0);
   const x = useTransform(() => recentring.get() - islandX.get());
   const widthRef = useRef(width);
+  const travelRef = useTravelRef(travel);
   useLayoutEffect(() => {
     const previous = widthRef.current;
     widthRef.current = width;
     if (previous === undefined || width === undefined || previous === width)
       return;
     recentring.set(recentring.get() + (width - previous) / 2);
-    const easing = animate(recentring, 0, glide);
+    const easing = animate(recentring, 0, travelRef.current);
     return () => {
       easing.stop();
     };
-  }, [recentring, width]);
+  }, [recentring, travelRef, width]);
 
   return (
     <motion.div

@@ -2,10 +2,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { Paintbrush, Trash2 } from "lucide-react";
-import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useRef } from "react";
 
-import { useTileMotion } from "../../../../composites/color-grid/tile-motion";
 import { ConfirmActionButton } from "../../../../composites/confirm-action-button/confirm-action-button";
 import { ControlRow } from "../../../../composites/control-row/control-row";
 import { t } from "../../../../i18n/i18n";
@@ -13,7 +11,7 @@ import { cn } from "../../../../lib/styling";
 import { Button } from "../../../../primitives/button/button";
 import { IconToggleButton } from "../../../../primitives/button/icon-button";
 import { CircularProgress } from "../../../../primitives/circular-progress/circular-progress";
-import { IslandFlow } from "../../../../primitives/island/island-flow";
+import { IslandParts } from "../../../../primitives/island/island-parts";
 import { ScrollArea } from "../../../../primitives/scroll-area/scroll-area";
 
 import type { ToolPanelCameraObjects } from "../../tools/tool-panel-selection";
@@ -95,14 +93,16 @@ export function CameraObjectsLine({
       ?.querySelector(`[data-object="${String(chosen)}"]`)
       ?.scrollIntoView({ block: "nearest", inline: "nearest" });
   }, [chosen]);
-  const { away, shown, slide } = useTileMotion();
   return (
     <ControlRow title={t("editor-island-camera-objects")}>
       {(controlProps) => (
         <div {...controlProps} className="min-w-0" role="group">
           {/* The strip, the bin and Pick each come and go as objects are
               picked, chosen and removed, the others gliding to make room. */}
-          <IslandFlow className="flex min-w-0 items-center gap-inline">
+          <IslandParts
+            className="flex min-w-0 items-center gap-inline"
+            direction="row"
+          >
             {picks.length > 0 ? (
               // A few marks show at once; more scroll, so a long list of
               // picks never widens the island.
@@ -112,37 +112,26 @@ export function CameraObjectsLine({
                 rootClassName="min-w-0 max-w-32"
                 scrollbarHidden
               >
-                {/* Positioned, so a mark on its way out is lifted out of the
-                    strip here while the rest slide to their places, as kept
-                    colours do in the colour grid. */}
-                <div className="relative flex w-max" ref={stripRef}>
-                  <AnimatePresence initial={false} mode="popLayout">
+                <div ref={stripRef}>
+                  <IslandParts className="flex w-max" direction="row">
                     {picks.map((pick) => (
-                      <motion.span
-                        animate={shown}
-                        className="flex"
-                        exit={away}
-                        initial={away}
+                      <IconToggleButton
+                        aria-label={
+                          pick.keep
+                            ? t("editor-island-camera-object-kept")
+                            : t("editor-island-camera-object-removed")
+                        }
+                        data-object={pick.id}
+                        isSelected={pick.id === chosen}
                         key={pick.id}
-                        {...slide}
+                        onChange={() => {
+                          onShow(pick.id);
+                        }}
                       >
-                        <IconToggleButton
-                          aria-label={
-                            pick.keep
-                              ? t("editor-island-camera-object-kept")
-                              : t("editor-island-camera-object-removed")
-                          }
-                          data-object={pick.id}
-                          isSelected={pick.id === chosen}
-                          onChange={() => {
-                            onShow(pick.id);
-                          }}
-                        >
-                          <PickMark pick={pick} />
-                        </IconToggleButton>
-                      </motion.span>
+                        <PickMark pick={pick} />
+                      </IconToggleButton>
                     ))}
-                  </AnimatePresence>
+                  </IslandParts>
                 </div>
               </ScrollArea>
             ) : null}
@@ -168,7 +157,7 @@ export function CameraObjectsLine({
                 ? t("editor-island-camera-objects-done")
                 : t("editor-island-camera-objects-pick")}
             </Button>
-          </IslandFlow>
+          </IslandParts>
         </div>
       )}
     </ControlRow>

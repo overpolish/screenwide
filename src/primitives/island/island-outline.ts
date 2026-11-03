@@ -137,10 +137,21 @@ function reachRadii(
   return { bottom: Math.min(corner, shown - top), join, top };
 }
 
-export function islandOutline({ row, section }: IslandOutlineShape): string {
-  const { height, width } = row;
+export function islandOutline({
+  row: given,
+  section,
+}: IslandOutlineShape): string {
+  const { height, width } = given;
   const shown = section ? section.height : 0;
-  if (!section || shown < 0.5) {
+  const hasSection = section !== null && shown >= 0.5;
+  // Coming out of nothing or shrinking to it, the black is for a moment
+  // shorter or narrower than its top corners: held to what it has, they
+  // never run past its sides into points.
+  const row = {
+    ...given,
+    top: Math.min(given.top, width / 2, hasSection ? height : height / 2),
+  };
+  if (!hasSection) {
     const radius = Math.min(row.radius, height / 2, width / 2);
     return [
       ...topEdge(row),

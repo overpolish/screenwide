@@ -5,7 +5,7 @@ import { Volume2 } from "lucide-react";
 import { type ReactNode } from "react";
 
 import { t } from "../../../../i18n/i18n";
-import { IslandFlow } from "../../../../primitives/island/island-flow";
+import { IslandParts } from "../../../../primitives/island/island-parts";
 import { IslandRowTitle } from "../../../../primitives/island/row-title/island-row-title";
 import { OptionToggle } from "../../../annotations/options/option-toggle";
 import { AnnotationLine } from "../annotation/annotation-island-parts";
@@ -37,7 +37,7 @@ import type { EditorIslandContent } from "../editor-island";
 // way, which it does only while Auto volume is on, so it shows only then. A
 // tool whose model is not on this computer yet offers the download in its
 // place, and a tool at work shows how far it has got, each on a line that
-// comes and goes as the others glide (`IslandFlow`). Remove silences is not
+// comes and goes as the others glide (`IslandParts`). Remove silences is not
 // here: it sits with the pauses on the strip and with Transcript.
 
 /** A microphone tool that can be turned on. */
@@ -81,7 +81,7 @@ export function soundIsland(props: SoundIslandProps): EditorIslandContent {
   return {
     key: "sound",
     section: (
-      <IslandFlow className="flex flex-col gap-separate">
+      <IslandParts className="flex flex-col gap-separate">
         {props.tracks.flatMap((track) => [
           <SoundVolumeRow
             decibels={track.decibels}
@@ -95,7 +95,7 @@ export function soundIsland(props: SoundIslandProps): EditorIslandContent {
             ? microphoneParts(track.id, track.microphone, props)
             : []),
         ])}
-      </IslandFlow>
+      </IslandParts>
     ),
     title: (
       <IslandRowTitle

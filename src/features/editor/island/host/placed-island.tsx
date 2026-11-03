@@ -69,9 +69,6 @@ export function PlacedIsland({
   if (shown && heldAt !== at) setHeldAt(at);
   const placeAt = shown ? at : heldAt;
   const holderRef = useRef<HTMLDivElement>(null);
-  // Where the island was put last, and how wide the window was then: an
-  // island held to the window's right moves with that edge.
-  const placedRef = useRef({ width: window.innerWidth, x: 0, y: 0 });
   /** How far the middle of an island `width` wide over `point` stands from
    * the holder's edge, the window's left running left to right, kept over
    * the picture. */
@@ -87,7 +84,11 @@ export function PlacedIsland({
   // on every frame it changes. In a corner, its end or start edge stays
   // `EDGE_PX` in from the picture's, and its top `EDGE_PX` down; over a
   // strip item, its middle over `at` while that keeps it over the picture,
-  // and its foot `EDGE_PX` up from the picture's.
+  // and its foot `EDGE_PX` up from the picture's. Placed from where its
+  // parts are from its own middle (`bounds`), as its shape's values have
+  // them: placed from where they were measured on the page, a frame behind
+  // the values, it chased its own move and rocked as it grew or shrank.
+  // Returns where the island's middle and top now stand in the window.
   const place = (bounds: Bounds | null) => {
     const holder = holderRef.current;
     // A corner's island may reach the window's foot; a strip item's stands
@@ -96,21 +97,14 @@ export function PlacedIsland({
       ISLAND_ROOM,
       `${String(window.innerHeight - inset.top - (placeAt === null ? 0 : inset.bottom) - 2 * EDGE_PX)}px`,
     );
-    if (!holder || !bounds) {
-      // Nothing out to move; the next island is measured where it is.
-      placedRef.current.width = window.innerWidth;
-      return { x: 0, y: 0 };
-    }
+    if (!holder || !bounds) return null;
     const width = bounds.end - bounds.start;
     const height = bounds.bottom - bounds.top;
-    const placed = placedRef.current;
     // The holder centres the island's black, but a column of choices opened
     // past one side of it (`IslandAside`) reaches out on that side alone, so
-    // the parts' middle leans off the black's. The parts were measured with
-    // the island where it was put last; the lean is kept as it moves, so the
-    // whole of it, column and all, stays inside the window.
-    const holderMiddle = fromRight ? placed.width - placed.x : placed.x;
-    const lean = (bounds.start + bounds.end) / 2 - holderMiddle;
+    // the parts' middle leans off the black's; the lean is kept as it
+    // moves, so the whole of it, column and all, stays inside the window.
+    const lean = (bounds.start + bounds.end) / 2;
     const endInset = fromRight ? inset.right : inset.left;
     const startInset = fromRight ? inset.left : inset.right;
     const middle =
@@ -127,27 +121,25 @@ export function PlacedIsland({
             EDGE_PX + inset.top,
             window.innerHeight - inset.bottom - height - EDGE_PX,
           );
-    const edgeShift = fromRight ? window.innerWidth - placed.width : 0;
-    const moved = {
-      x: (fromRight ? -1 : 1) * (x - placed.x) + edgeShift,
-      y: y - placed.y,
-    };
-    placedRef.current = { width: window.innerWidth, x, y };
     holder.style.transform = `translate(${String(fromRight ? -x : x)}px, ${String(y)}px)`;
-    return moved;
+    return { left: fromRight ? window.innerWidth - x : x, top: y };
   };
 
-  // The parts as last placed, to be moved again without changing shape.
+  // The parts from the island's middle as last reported, to be placed
+  // again without changing shape.
   const partsRef = useRef<PopupPanelPart[]>([]);
-  const report = (parts: PopupPanelPart[]) => {
-    const moved = place(boundsOf(parts));
-    // The parts were measured where the island was before it moved.
-    partsRef.current = parts.map((part) => ({
-      ...part,
-      x: part.x + moved.x,
-      y: part.y + moved.y,
-    }));
-    onParts(partsRef.current);
+  const report = (fromMiddle: PopupPanelPart[]) => {
+    partsRef.current = fromMiddle;
+    const origin = place(boundsOf(fromMiddle));
+    onParts(
+      origin
+        ? fromMiddle.map((part) => ({
+            ...part,
+            x: part.x + origin.left,
+            y: part.y + origin.top,
+          }))
+        : [],
+    );
   };
 
   // Another place, a picture lying elsewhere in the window, or a window of
@@ -183,7 +175,9 @@ export function PlacedIsland({
             setHeld(null);
             report([]);
           }}
-          onShapeChange={report}
+          onShapeChange={(_onPage, fromMiddle) => {
+            report(fromMiddle);
+          }}
         />
       ) : null}
     </div>

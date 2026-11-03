@@ -5,8 +5,8 @@ import { Video } from "lucide-react";
 
 import { t } from "../../../../i18n/i18n";
 import { Button } from "../../../../primitives/button/button";
-import { IslandFlow } from "../../../../primitives/island/island-flow";
 import { IslandKeyHint } from "../../../../primitives/island/island-key-hint";
+import { IslandParts } from "../../../../primitives/island/island-parts";
 import { IslandRowTitle } from "../../../../primitives/island/row-title/island-row-title";
 import { CornerChoice } from "../../../annotations/options/corner-choice";
 import { OptionToggle } from "../../../annotations/options/option-toggle";
@@ -37,7 +37,7 @@ import type { ScreenIslandProps } from "../screen/screen-island";
 // that line's end, and objects put right where the cutout has them wrong.
 // A tool whose model is not on this computer yet offers the download in
 // its place, and a tool at work shows how far it has got, each on a line
-// that comes and goes as the others glide (`IslandFlow`). Over a scene,
+// that comes and goes as the others glide (`IslandParts`). Over a scene,
 // which may round the camera and have it follow the face its own way, the
 // corners and the following are that scene's, and a note at the island's
 // foot says so. Reset placement, at the foot, puts the camera back where a
@@ -108,7 +108,7 @@ export function cameraIsland(props: CameraIslandProps): EditorIslandContent {
   return {
     key: "camera",
     section: (
-      <IslandFlow className="flex flex-col gap-separate">
+      <IslandParts className="flex flex-col gap-separate">
         <AnnotationLine key="looks">
           <OptionToggle
             glyph={(isOn) => <EnhanceGlyph isEnhanced={isOn} />}
@@ -238,7 +238,7 @@ export function cameraIsland(props: CameraIslandProps): EditorIslandContent {
             {t("editor-island-reset-placement")}
           </Button>
         </div>
-      </IslandFlow>
+      </IslandParts>
     ),
     title: (
       <IslandRowTitle

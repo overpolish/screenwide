@@ -1,10 +1,15 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { animate, type MotionValue, useMotionValue } from "motion/react";
+import {
+  animate,
+  type MotionValue,
+  type Transition,
+  useMotionValue,
+} from "motion/react";
 import { useLayoutEffect, useRef } from "react";
 
-import { glide } from "./island-motion";
+import { useTravelRef } from "./island-follow";
 
 // Where the island and what its row holds sit sideways as the row changes.
 // Around a notch the island moves by the shift that keeps the notch over its
@@ -27,6 +32,7 @@ export function useRowOffset({
   rowElement,
   rowTarget,
   shiftTarget,
+  travel,
   width,
 }: {
   /** The row spans the island, its parts at the black's ends, so there is
@@ -43,6 +49,8 @@ export function useRowOffset({
   rowTarget: number;
   /** Where the island should sit, in px from centre. */
   shiftTarget: number;
+  /** How the black moves to a new size (`useIslandFollow`). */
+  travel: Transition;
   /** How wide the row's black should be, in px. */
   width: number;
 }): {
@@ -66,6 +74,7 @@ export function useRowOffset({
   const sectionX = useMotionValue(0);
   const rowLayerRef = useRef<HTMLDivElement>(null);
   const rowWidthRef = useRef<number | null>(null);
+  const travelRef = useTravelRef(travel);
 
   useLayoutEffect(() => {
     const update = () => {
@@ -89,8 +98,8 @@ export function useRowOffset({
       heading.set(shiftTarget);
       rowHeading.set(rowTarget);
     }
-    const settling = animate(islandX, shiftTarget, glide);
-    const widening = animate(shapeWidth, width, glide);
+    const settling = animate(islandX, shiftTarget, travelRef.current);
+    const widening = animate(shapeWidth, width, travelRef.current);
     placeRow(
       rowLayerRef.current,
       rowHeading.get() - islandX.get() + recentring.get(),
@@ -108,6 +117,7 @@ export function useRowOffset({
     rowTarget,
     shapeWidth,
     shiftTarget,
+    travelRef,
     width,
   ]);
 
@@ -120,7 +130,7 @@ export function useRowOffset({
     if (next === undefined || previous === null || next === previous) return;
     if (hasNotch || fillsWidth) return;
     recentring.set(recentring.get() + (next - previous) / 2);
-    animate(recentring, 0, glide);
+    animate(recentring, 0, travelRef.current);
     placeRow(
       rowLayerRef.current,
       rowHeading.get() - islandX.get() + recentring.get(),

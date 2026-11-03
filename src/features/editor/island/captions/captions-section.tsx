@@ -4,7 +4,7 @@
 import { t } from "../../../../i18n/i18n";
 import { Button } from "../../../../primitives/button/button";
 import { NumberField } from "../../../../primitives/input-fields/number-field";
-import { IslandFlow } from "../../../../primitives/island/island-flow";
+import { IslandParts } from "../../../../primitives/island/island-parts";
 import { PositionGrid } from "../../../../primitives/position-grid/position-grid";
 import { CAPTION_WORDS } from "../../recording/captions/recording-captions";
 import { placementOptions } from "../../tools/placement-options";
@@ -35,7 +35,7 @@ export function CaptionsSection(props: CaptionsIslandProps) {
         // Parts that come and go with the template (the key word's size,
         // the line count of captions set in lines) do so in place, the rest
         // gliding to make room.
-        <IslandFlow className="flex flex-col gap-separate">
+        <IslandParts className="flex flex-col gap-separate">
           <AnnotationLine key="size">
             <CaptionSizeChoice
               key="size"
@@ -66,7 +66,7 @@ export function CaptionsSection(props: CaptionsIslandProps) {
             />
             {/* Beside where they sit, how much a caption holds: its lines
                 over its words, the two together as tall as the grid. */}
-            <IslandFlow
+            <IslandParts
               className="flex flex-col items-end gap-inline"
               key="fill"
             >
@@ -96,9 +96,9 @@ export function CaptionsSection(props: CaptionsIslandProps) {
                 step={1}
                 value={look.maxWords}
               />
-            </IslandFlow>
+            </IslandParts>
           </AnnotationLine>
-        </IslandFlow>
+        </IslandParts>
       }
       still={false}
       templates={props.templates}

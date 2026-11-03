@@ -7,7 +7,7 @@ import { type ReactNode } from "react";
 import { ConfirmActionButton } from "../../../../composites/confirm-action-button/confirm-action-button";
 import { t } from "../../../../i18n/i18n";
 import { IconToggleButton } from "../../../../primitives/button/icon-button";
-import { IslandFlow } from "../../../../primitives/island/island-flow";
+import { IslandParts } from "../../../../primitives/island/island-parts";
 import { AnnotationColors } from "../../../annotations/options/annotation-colors";
 import { DrawInIcon } from "../../glyphs/draw-in-icon";
 
@@ -24,12 +24,15 @@ import { DrawInIcon } from "../../glyphs/draw-in-icon";
  * heights, such as a position grid beside a pair of pills, centre on one
  * another. A control that comes and goes with a choice elsewhere comes
  * into focus or blurs away in its place while the others glide to theirs
- * (`IslandFlow`). */
+ * (`IslandParts`). */
 export function AnnotationLine({ children }: { children: ReactNode }) {
   return (
-    <IslandFlow className="flex items-center justify-between gap-separate has-[>:only-child]:justify-center">
+    <IslandParts
+      className="flex items-center justify-between gap-separate has-[>:only-child]:justify-center"
+      direction="row"
+    >
       {children}
-    </IslandFlow>
+    </IslandParts>
   );
 }
 

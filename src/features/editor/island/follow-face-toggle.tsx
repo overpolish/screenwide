@@ -1,11 +1,11 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { AnimatePresence, motion } from "motion/react";
+import { motion } from "motion/react";
 
 import { t } from "../../../i18n/i18n";
 import { CircularProgress } from "../../../primitives/circular-progress/circular-progress";
-import { focusIn } from "../../../primitives/island/island-motion";
+import { IslandParts } from "../../../primitives/island/island-parts";
 import { useGlyphMotion } from "../../annotations/options/glyph-motion";
 import { OptionToggle } from "../../annotations/options/option-toggle";
 
@@ -40,7 +40,7 @@ function FollowFaceGlyph({ isFollowing }: { isFollowing: boolean }) {
 /** Whether the camera keeps the speaker's face in the middle of its crop:
  * for the whole recording on the Camera island, for one scene on the Scene
  * island. While the face is first looked for, a spinner beside the toggle
- * comes into focus as the island's parts do. */
+ * comes and goes as the island's parts do (`IslandParts`). */
 export function FollowFaceToggle({
   isFindingFace,
   isFollowing,
@@ -51,31 +51,22 @@ export function FollowFaceToggle({
   onChange: (isFollowing: boolean) => void;
 }) {
   return (
-    <span className="flex items-center gap-inline">
-      <AnimatePresence initial={false}>
-        {isFollowing && isFindingFace ? (
-          <motion.span
-            animate={focusIn.animate}
-            className="flex"
-            exit={focusIn.exit}
-            initial={focusIn.exit}
-            key="finding"
-            transition={focusIn.transition}
-          >
-            <CircularProgress
-              aria-label={t("editor-island-finding-face")}
-              isIndeterminate
-              size="small"
-            />
-          </motion.span>
-        ) : null}
-      </AnimatePresence>
+    <IslandParts className="flex items-center gap-inline" direction="row">
+      {isFollowing && isFindingFace ? (
+        <CircularProgress
+          aria-label={t("editor-island-finding-face")}
+          isIndeterminate
+          key="finding"
+          size="small"
+        />
+      ) : null}
       <OptionToggle
         glyph={(isOn) => <FollowFaceGlyph isFollowing={isOn} />}
         isOn={isFollowing}
+        key="toggle"
         label={t("editor-island-follow-face")}
         onChange={onChange}
       />
-    </span>
+    </IslandParts>
   );
 }

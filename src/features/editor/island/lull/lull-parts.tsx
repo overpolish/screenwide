@@ -6,7 +6,7 @@ import { useNumberFormatter } from "react-aria";
 import { t } from "../../../../i18n/i18n";
 import { cn } from "../../../../lib/styling";
 import { Button } from "../../../../primitives/button/button";
-import { IslandFlow } from "../../../../primitives/island/island-flow";
+import { IslandParts } from "../../../../primitives/island/island-parts";
 import { ListBox } from "../../../../primitives/listbox/listbox";
 import { ListBoxItem } from "../../../../primitives/listbox-item/listbox-item";
 
@@ -45,8 +45,8 @@ export function LullChoices({
   return (
     // Inset as the row's content is, with room beneath before the hint, at
     // the island's width. A retime coming or going moves the trim with the
-    // black (`IslandFlow`).
-    <IslandFlow
+    // black (`IslandParts`).
+    <IslandParts
       className={cn(
         "flex flex-col gap-separate px-1 pb-inset-sm",
         LULL_LINE_WIDTH,
@@ -76,6 +76,6 @@ export function LullChoices({
           {t("editor-island-lull-trim-to-breath")}
         </Button>
       </div>
-    </IslandFlow>
+    </IslandParts>
   );
 }

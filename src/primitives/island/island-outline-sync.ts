@@ -7,11 +7,12 @@ import {
   frame,
   type MotionValue,
   motionValue,
+  type Transition,
 } from "motion/react";
 import { type RefObject, useLayoutEffect, useRef, useState } from "react";
 
+import { useTravelRef } from "./island-follow";
 import { ISLAND } from "./island-geometry";
-import { glide } from "./island-motion";
 import { islandOutline } from "./island-outline";
 
 // The values the island's parts are animated by, and the drawing of its
@@ -46,24 +47,28 @@ const createShapeValues = (corners: {
 });
 
 /** The island's shape values, made once, starting from its first corners,
- * and its corners glided to `corners` as they change. */
-export function useIslandShapeValues(corners: {
-  flare: number;
-  radius: number;
-  top: number;
-}) {
+ * and its corners moved to `corners` by `travel` as they change. */
+export function useIslandShapeValues(
+  corners: {
+    flare: number;
+    radius: number;
+    top: number;
+  },
+  travel: Transition,
+) {
   const [values] = useState(() => createShapeValues(corners));
   const { flare, radius, top } = corners;
+  const travelRef = useTravelRef(travel);
   useLayoutEffect(() => {
     const gliding = [
-      animate(values.flare, flare, glide),
-      animate(values.radius, radius, glide),
-      animate(values.top, top, glide),
+      animate(values.flare, flare, travelRef.current),
+      animate(values.radius, radius, travelRef.current),
+      animate(values.top, top, travelRef.current),
     ];
     return () => {
       for (const corner of gliding) corner.stop();
     };
-  }, [flare, radius, top, values]);
+  }, [flare, radius, top, travelRef, values]);
   return values;
 }
 
@@ -114,7 +119,12 @@ export function useIslandOutline({
   /** How far the whole island has moved sideways, to keep the gap in its
    * row under the notch: its parts move with it. */
   x: MotionValue<number>;
-  onShapeChange?: (parts: IslandPart[]) => void;
+  /** Where the row and section are on the page, and where they are from
+   * the island's own middle and top (`fromMiddle`), worked out from the
+   * shape's values alone: what places the island by its parts places it
+   * from those, as a page measurement can lag the values by a frame and
+   * set it chasing its own move. */
+  onShapeChange?: (parts: IslandPart[], fromMiddle: IslandPart[]) => void;
 }) {
   const onShapeChangeRef = useRef(onShapeChange);
   useLayoutEffect(() => {
@@ -122,6 +132,7 @@ export function useIslandOutline({
   });
   useLayoutEffect(() => {
     let reported: IslandPart[] = [];
+    let reportedFromMiddle: IslandPart[] = [];
     const report = ({
       extent,
       row,
@@ -147,28 +158,51 @@ export function useIslandOutline({
         ? outer.left + room + extent.end - row.width
         : outer.left + room - extent.start;
       const top = outer.top + room;
-      const parts: IslandPart[] = [];
-      if (rowOpacity > 0.01) {
-        parts.push({
-          height: row.height,
-          width: row.width,
-          x: rowLeft,
-          y: top,
-        });
-      }
-      if (section) {
-        parts.push({
-          height: section.height,
-          width: section.width,
-          x:
-            rowLeft +
-            (isRtl ? row.width - section.start - section.width : section.start),
-          y: top + row.height,
-        });
-      }
-      if (sameParts(parts, reported)) return;
+      // The island is centred on its middle and moved sideways by `x`.
+      const rowFromMiddle = x.get() - row.width / 2;
+      const sectionX = section
+        ? isRtl
+          ? row.width - section.start - section.width
+          : section.start
+        : 0;
+      const at = (
+        left: number,
+        offsetTop: number,
+        withHiddenRow: boolean,
+      ): IslandPart[] => {
+        const placed: IslandPart[] = [];
+        if (withHiddenRow || rowOpacity > 0.01) {
+          placed.push({
+            height: row.height,
+            width: row.width,
+            x: left,
+            y: offsetTop,
+          });
+        }
+        if (section) {
+          placed.push({
+            height: section.height,
+            width: section.width,
+            x: left + sectionX,
+            y: offsetTop + row.height,
+          });
+        }
+        return placed;
+      };
+      // On the page only what is seen can be pressed; from its middle the
+      // row is there however faint, so an island fading in as it first
+      // comes out is placed from its first frame, not left where the last
+      // one stood until it shows.
+      const parts = at(rowLeft, top, false);
+      const fromMiddle = at(rowFromMiddle, 0, true);
+      if (
+        sameParts(parts, reported) &&
+        sameParts(fromMiddle, reportedFromMiddle)
+      )
+        return;
       reported = parts;
-      onShape(parts);
+      reportedFromMiddle = fromMiddle;
+      onShape(parts, fromMiddle);
     };
     const draw = () => {
       const shape = shapePathRef.current;

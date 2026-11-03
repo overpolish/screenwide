@@ -3,7 +3,7 @@
 
 import { type ReactNode, useId, useState } from "react";
 
-import { IslandFlow } from "../../../../../primitives/island/island-flow";
+import { IslandParts } from "../../../../../primitives/island/island-parts";
 import { useFontChoices } from "../../../tools/text-style/text-fonts";
 import { useTemplatePreviews } from "../../../tools/text-style/use-template-previews";
 import { IslandPickerColumn } from "../../island-picker-column";
@@ -99,8 +99,8 @@ export function TextLookPickers({
        * its parent, as the colour grid's does, would be cut short. The
        * column is what stretches, to the controls' height. Lines that come
        * and go with the template do so in place, and the lines under them
-       * glide to their places (`IslandFlow`). */}
-      <IslandFlow className="flex shrink-0 flex-col gap-separate self-start">
+       * glide to their places (`IslandParts`). */}
+      <IslandParts className="flex shrink-0 flex-col gap-separate self-start">
         <TextTemplateLine
           clip={clips[styles.findIndex((s) => s.template === look.template)]}
           controls={columnId}
@@ -110,7 +110,7 @@ export function TextLookPickers({
           selected={look.template}
         />
         {placement}
-        <IslandFlow className="flex flex-col gap-inline">
+        <IslandParts className="flex flex-col gap-inline">
           <TextFontLine
             choices={choices}
             controls={columnId}
@@ -128,9 +128,9 @@ export function TextLookPickers({
               onPress={pressed("accent")}
             />
           ) : null}
-        </IslandFlow>
+        </IslandParts>
         {children}
-      </IslandFlow>
+      </IslandParts>
       <IslandPickerColumn
         content={content}
         contentKey={shown ?? ""}
