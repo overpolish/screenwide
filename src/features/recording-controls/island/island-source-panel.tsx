@@ -142,7 +142,7 @@ export function SourcePanel({
           <PromptRow prompt={t("recording-controls-island-pick-region")} />
         )
       ) : (
-        <Text className="rounded-control bg-fill px-inset py-separate">
+        <Text className="rounded-control rounded-b-(--island-list-radius) bg-fill px-inset py-separate">
           {t("recording-controls-island-no-screen", {
             inputs: inputsOn(camera.isOn, microphone.isOn, systemAudio.isOn),
           })}

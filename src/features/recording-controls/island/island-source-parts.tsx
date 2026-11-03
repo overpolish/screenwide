@@ -190,7 +190,7 @@ export function ChosenRow({
   onAction?: () => void;
 }) {
   return (
-    <div className="flex items-center gap-separate rounded-control bg-fill px-inset py-separate">
+    <div className="flex items-center gap-separate rounded-control rounded-b-(--island-list-radius) bg-fill px-inset py-separate">
       {picture}
       <div className="flex min-w-0 grow flex-col">
         <Text
@@ -224,7 +224,7 @@ export function PromptRow({
   onAction?: () => void;
 }) {
   return (
-    <div className="flex items-center justify-between gap-separate rounded-control bg-fill px-inset py-separate">
+    <div className="flex items-center justify-between gap-separate rounded-control rounded-b-(--island-list-radius) bg-fill px-inset py-separate">
       <Text>{prompt}</Text>
       {action ? (
         <Button className="shrink-0" onPress={onAction}>
