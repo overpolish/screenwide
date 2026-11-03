@@ -41,7 +41,18 @@ pub async fn save_export(
     sanitize_file_stem(&file_stem).ok_or_else(|| "That file name cannot be used".to_owned())?;
   let directory =
     current_directory(&app, kind).ok_or_else(|| "There is nowhere to save this".to_owned())?;
-  let artifact = take_artifact(&app, kind).ok_or_else(|| "There is nothing to save".to_owned())?;
+  // Out of the slot while it exports, so a recording opened meanwhile takes
+  // the window without settling this project's name under the export. Its
+  // pictures are not tidied: the editor gets it back once the export is
+  // done, undo history and all.
+  let artifact = app
+    .state::<EditorState>()
+    .slot(kind)
+    .artifact
+    .lock()
+    .unwrap_or_else(|poisoned| poisoned.into_inner())
+    .take()
+    .ok_or_else(|| "There is nothing to save".to_owned())?;
   let artifact_id = match &artifact {
     EditorArtifact::Screenshot { id, .. } | EditorArtifact::Recording { id, .. } => *id,
   };
@@ -82,9 +93,8 @@ pub async fn save_export(
   let writing = directory.clone();
   let progress_app = app.clone();
   let job_cancellation = Arc::clone(&cancelled);
-  // The artifact travels back with an error. Saving used to take it before the
-  // write and lose its source on a disk or mux failure, making Retry impossible
-  // even though the recording remained on disk.
+  // The artifact travels back with the result, to go back in the editor
+  // whether or not the export finished.
   let (result, artifact) = tauri::async_runtime::spawn_blocking(move || {
     // An export runs for minutes, often while its window is covered or the
     // app is out of sight, where it would otherwise be napped.
@@ -129,30 +139,31 @@ pub async fn save_export(
   let path = match result {
     Ok(Some(path)) => path,
     unfinished => {
-      restore(&app, kind, artifact);
+      put_back(&app, kind, artifact);
       emit_snapshot(&app, kind);
       return unfinished.map(|_| None);
     }
   };
 
-  store_export_directory(&app, kind, directory)?;
+  // The file is written by now; a folder gone since only loses the
+  // remembered destination.
+  if let Err(error) = store_export_directory(&app, kind, directory) {
+    eprintln!("Could not remember the export folder: {error}");
+  }
   remember_completed_export(
     &app,
     cursor_effects,
     recording_preference,
     screenshot_preference.map(|output| output.canvas),
   );
-  // The editor stays as it is, showing the finished file on its Export
-  // island, until the island is put away (`close_exported_editor`): only then
-  // is the native player retired and the window hidden. A recording opened
-  // while this one exported owns the window by then, and stays in it.
+  // The finished Export island reveals, copies and drags out this file
+  // until it is put away (`put_away_export`).
   *app
     .state::<EditorState>()
     .slot(kind)
     .exported
     .lock()
     .unwrap_or_else(|poisoned| poisoned.into_inner()) = Some(path.clone());
-  // Only once the files are published and the editor has let go of it.
   if kind == EditorKind::Screenshot {
     if let Err(error) =
       remember_screenshot_delete_project_after_export(&app, delete_project_after_export)
@@ -160,16 +171,23 @@ pub async fn save_export(
       eprintln!("Could not remember the screenshot export choice: {error}");
     }
   }
+  let project = artifact.project().map(Path::to_path_buf);
   if delete_project_after_export {
-    if let Some(project) = artifact.project() {
-      if let Err(error) = screenwide_project::delete(&app, project) {
+    // The window keeps showing the project under the finished island and is
+    // only told it has gone once the island is put away, which then hides
+    // the editor: told now, it would go blank under the island.
+    if let Some(project) = project {
+      if let Err(error) = screenwide_project::delete(&app, &project) {
         eprintln!("Could not delete the exported project: {error}");
       }
     }
-  } else if let Some(project) = artifact.project() {
-    // Unless the project was opened again while it exported, its folder
-    // takes any name it was given in the editor.
-    super::super::project_name::settle_name(&app, project);
+  } else if put_back(&app, kind, artifact) {
+    emit_snapshot(&app, kind);
+  } else if let Some(project) = project {
+    // A recording opened while this one exported has the window, so this
+    // project is let go of as one closed is.
+    super::super::project_look::clean_pictures(&project);
+    super::super::project_name::settle_name(&app, &project);
   }
   if crate::settings::current(&app).open_location_after_export {
     if let Err(error) = crate::file_browser::reveal(&path) {
@@ -183,17 +201,20 @@ pub async fn save_export(
   }))
 }
 
-/// Puts back an artifact whose export did not finish, so it can be tried
-/// again. A recording opened in its place meanwhile wins: the one that was
-/// exporting is safe in its project.
-fn restore(app: &AppHandle, kind: EditorKind, artifact: EditorArtifact) {
+/// Puts the exported artifact back in its editor, finished or not, so it
+/// can be worked on or tried again. A recording opened in its place
+/// meanwhile wins: the one that was exporting is safe in its project.
+/// Whether it went back.
+fn put_back(app: &AppHandle, kind: EditorKind, artifact: EditorArtifact) -> bool {
   let state = app.state::<EditorState>();
   let mut slot = state
     .slot(kind)
     .artifact
     .lock()
     .unwrap_or_else(|poisoned| poisoned.into_inner());
-  if slot.is_none() {
-    *slot = Some(artifact);
+  if slot.is_some() {
+    return false;
   }
+  *slot = Some(artifact);
+  true
 }

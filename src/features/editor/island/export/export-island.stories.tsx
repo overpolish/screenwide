@@ -15,6 +15,7 @@ import {
 import { exportIsland } from "./export-island";
 import {
   AUDIO,
+  COMPARE,
   COMPARE_LOADING,
   MEASURING_QUALITY,
   PARTLY_MEASURED_QUALITY,
@@ -192,7 +193,19 @@ export const ScreenshotJpeg: Story = {
   args: {
     export: {
       ...SCREENSHOT,
-      compare: VIDEO.compare,
+      compare: COMPARE,
+      extension: "jpg",
+      screenshotFormat: "jpeg",
+    },
+  },
+};
+
+// A JPEG of a screenshot with see-through parts, which it saves as white.
+export const ScreenshotJpegSeeThrough: Story = {
+  args: {
+    export: {
+      ...SCREENSHOT,
+      compare: { ...COMPARE, seeThrough: true },
       extension: "jpg",
       screenshotFormat: "jpeg",
     },

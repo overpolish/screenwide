@@ -49,11 +49,12 @@ const frame = (blur: number) => ({
   width: 1440,
 });
 
-const COMPARE: ToolPanelExportCompare = {
+export const COMPARE: ToolPanelExportCompare = {
   exported: frame(1.2),
   failed: false,
   isUpdating: false,
   original: frame(0),
+  seeThrough: false,
 };
 
 export const COMPARE_LOADING: ToolPanelExportCompare = {
@@ -61,6 +62,7 @@ export const COMPARE_LOADING: ToolPanelExportCompare = {
   failed: false,
   isUpdating: true,
   original: null,
+  seeThrough: false,
 };
 
 export const VIDEO: ToolPanelExport = {

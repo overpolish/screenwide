@@ -7,7 +7,7 @@ import { useExportIslandKeys } from "../shortcuts/export-island-keys";
 
 import { CameraOutput } from "./camera-output";
 import { applyExportPatch, exportIslandSnapshot } from "./editor-export";
-import { closeExportedEditor } from "./export-file-api";
+import { putAwayExport } from "./export-file-api";
 import {
   resetExportIsland,
   setExportIslandOpen,
@@ -28,8 +28,9 @@ const noop = () => undefined;
  * The editor's side of the Export island: whether it stands over the editor,
  * what it shows, and what its asks do, through the editor window's own
  * handlers. The title bar's button and Escape bring it out and put it
- * away; while it exports they tuck it away, and once done they let it go
- * with the editor, as the finish does on its own after a while.
+ * away; while it exports they tuck it away, and once done they put the
+ * finish away, as it goes on its own after a while, leaving the editor on
+ * the project.
  */
 export function useEditorExportIsland(
   props: EditorPanelProps,
@@ -55,8 +56,8 @@ export function useEditorExportIsland(
   const isExportOpen = isOpen || isSaving || exported !== null;
   const dismiss = () => {
     resetExportIsland();
-    closeExportedEditor().catch((cause: unknown) => {
-      console.error("Could not put the exported editor away", cause);
+    putAwayExport().catch((cause: unknown) => {
+      console.error("Could not put the finished export away", cause);
     });
   };
   const toggle = () => {

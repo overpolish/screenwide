@@ -228,11 +228,15 @@ pub fn set_export_directory(
   window: tauri::WebviewWindow,
   directory: PathBuf,
 ) -> Result<(), String> {
-  store_export_directory(&app, kind_of_window(&window)?, directory)
+  let kind = kind_of_window(&window)?;
+  store_export_directory(&app, kind, directory)?;
+  emit_snapshot(&app, kind);
+  Ok(())
 }
 
 /// Remembers where one workspace saves. Split out of the command so a finished
-/// save can record its own destination without a window to derive it from.
+/// save can record its own destination without a window to derive it from,
+/// and tell the window once it has put its artifact back.
 pub(super) fn store_export_directory(
   app: &AppHandle,
   kind: EditorKind,
@@ -248,7 +252,6 @@ pub(super) fn store_export_directory(
     .directory
     .lock()
     .unwrap_or_else(|poisoned| poisoned.into_inner()) = Some(directory);
-  emit_snapshot(app, kind);
 
   Ok(())
 }

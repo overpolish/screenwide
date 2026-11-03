@@ -215,6 +215,8 @@ pub async fn preview_recording_export_frame(
 pub struct ScreenshotExportPreview {
   pub exported: ExportPreviewFrame,
   pub original: ExportPreviewFrame,
+  /// The picture has see-through pixels, which the JPEG fills with white.
+  pub see_through: bool,
 }
 
 /// The open screenshot composed with `screenshot_output`, written as drawn
@@ -274,6 +276,7 @@ pub async fn preview_screenshot_export(
     Ok(Some(ScreenshotExportPreview {
       exported: frame(&exported),
       original: frame(&original),
+      see_through: !screenwide_output::is_opaque(&composed.rgba),
     }))
   })
   .await

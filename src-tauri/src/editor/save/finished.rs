@@ -2,9 +2,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 //! The Export island's finish: the file an export wrote, revealed, copied
-//! or dragged out to another app, and the editor put away once the
-//! island is. Each acts on the file Rust kept from the export
-//! (`EditorWorkspaceSlot::exported`), never a path the webview names.
+//! or dragged out to another app, and the island put away. Each acts on the
+//! file Rust kept from the export (`EditorWorkspaceSlot::exported`), never a
+//! path the webview names.
 
 use super::*;
 
@@ -33,12 +33,12 @@ fn is_occupied(app: &AppHandle, kind: EditorKind) -> bool {
     .is_some()
 }
 
-/// The finished Export island put away: the export's editor goes, its
-/// native player retired, as the export used to do the moment it was done.
-/// A recording opened while the island showed owns the window by then, and
-/// stays in it.
+/// The finished Export island put away. The editor stays open on the
+/// project it exported, or on a recording opened while it exported; only a
+/// project moved to Recently Deleted with the export takes the editor with
+/// it, its native player retired.
 #[tauri::command]
-pub fn close_exported_editor(app: AppHandle, window: tauri::WebviewWindow) -> Result<(), String> {
+pub fn put_away_export(app: AppHandle, window: tauri::WebviewWindow) -> Result<(), String> {
   let kind = kind_of_window(&window)?;
   app
     .state::<EditorState>()

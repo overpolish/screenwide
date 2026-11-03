@@ -63,7 +63,8 @@ pub fn rounded_corners(image: &CapturedImage, radius_percent: f64) -> CapturedIm
   }
 }
 
-fn is_opaque(rgba: &[u8]) -> bool {
+/// Whether every pixel is fully opaque, so nothing shows through it.
+pub fn is_opaque(rgba: &[u8]) -> bool {
   rgba
     .as_chunks::<4>()
     .0

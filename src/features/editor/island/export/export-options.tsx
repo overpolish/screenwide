@@ -103,6 +103,16 @@ export function ExportOptions({
             {shown.compare ? (
               <ExportCompare compare={shown.compare} key="compare" />
             ) : null}
+            {shown.compare?.seeThrough ? (
+              <Alert
+                className="w-0 min-w-full px-inset-sm"
+                color="warning"
+                key="see-through"
+                role="status"
+              >
+                {t("editor-export-jpeg-see-through")}
+              </Alert>
+            ) : null}
             {shown.quality ? (
               <ExportLookChoice
                 key="looks"

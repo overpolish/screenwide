@@ -52,6 +52,9 @@ export type ToolPanelExportCompare = {
   isUpdating: boolean;
   /** As drawn, before any encoder; null until made. */
   original: ToolPanelComparedFrame | null;
+  /** The screenshot has see-through areas, which its JPEG fills with
+   * white. Always false for a recording. */
+  seeThrough: boolean;
 };
 
 /** The save under way. */

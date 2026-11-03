@@ -57,6 +57,8 @@ editor-export-compare-export = Export
 editor-export-compare-divider = Divider between original and export
 editor-export-compare-making = Making the comparison
 editor-export-compare-failed = The comparison could not be made.
+# Under the compared picture when a screenshot saved as JPEG has see-through parts, such as rounded corners with no background behind them.
+editor-export-jpeg-see-through = JPEG has no transparency, so see-through parts are saved as white.
 
 ## While the export runs.
 

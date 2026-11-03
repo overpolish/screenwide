@@ -202,6 +202,7 @@ export type Messages = {
   "editor-export-format": null;
   "editor-export-format-jpeg": null;
   "editor-export-format-png": null;
+  "editor-export-jpeg-see-through": null;
   "editor-export-look-balanced": null;
   "editor-export-look-original": null;
   "editor-export-look-smaller": null;

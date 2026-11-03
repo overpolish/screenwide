@@ -5,4 +5,8 @@ import type { ExportPreviewFrame } from "./ExportPreviewFrame";
  * A screenshot compared before it is saved as a JPEG: as drawn, and as the
  * JPEG the export writes.
  */
-export type ScreenshotExportPreview = { exported: ExportPreviewFrame, original: ExportPreviewFrame, };
+export type ScreenshotExportPreview = { exported: ExportPreviewFrame, original: ExportPreviewFrame, 
+/**
+ * The picture has see-through pixels, which the JPEG fills with white.
+ */
+seeThrough: boolean, };

@@ -33,9 +33,15 @@ type Pictures = {
   exported: Made | null;
   failed: boolean;
   original: Made | null;
+  seeThrough: boolean;
 };
 
-const NOTHING: Pictures = { exported: null, failed: false, original: null };
+const NOTHING: Pictures = {
+  exported: null,
+  failed: false,
+  original: null,
+  seeThrough: false,
+};
 
 const shown = (frame: ExportPreviewFrame): ToolPanelComparedFrame => ({
   canvas: frame.canvas,
@@ -143,6 +149,7 @@ export function useExportCompare(
               exported: { frame: shown(pair.exported), key: exportKey },
               failed: false,
               original: { frame: shown(pair.original), key: originalKey },
+              seeThrough: pair.seeThrough,
             });
           })
           .catch(failed);
@@ -200,5 +207,6 @@ export function useExportCompare(
     failed: made.failed,
     isUpdating,
     original: made.original?.frame ?? null,
+    seeThrough: made.seeThrough,
   };
 }
