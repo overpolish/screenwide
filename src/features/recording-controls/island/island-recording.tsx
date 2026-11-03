@@ -2,14 +2,13 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { Mic, MicOff } from "lucide-react";
-import { AnimatePresence, motion } from "motion/react";
 import { type CSSProperties, type ReactNode, useState } from "react";
 import { useFocusWithin, useMeter } from "react-aria";
 
 import { t } from "../../../i18n/i18n";
-import { motionDurations, motionEasings } from "../../../lib/motion";
 import { cn } from "../../../lib/styling";
 import { CircularProgress } from "../../../primitives/circular-progress/circular-progress";
+import { IslandParts } from "../../../primitives/island/island-parts";
 import { IslandRow } from "../../../primitives/island/island-row";
 import { formatBytes } from "../../editor/duration";
 
@@ -26,11 +25,6 @@ import type { IslandMoment, RecordingIslandProps } from "./island-types";
 // keyboard focus, and the controls show while focus is on it or them, so
 // they can be reached without a pointer. A moment placed by its shortcut
 // shows in the time's place for as long as it is shown.
-
-const swap = {
-  duration: motionDurations.travel,
-  ease: motionEasings.out,
-} as const;
 
 /** A moment in the time's place: its kind's dot and name; held long enough,
  * the voice note it is taking, by the kind's colour and the note's time; or
@@ -178,21 +172,25 @@ export function RecordingRow({
     <IslandRow
       end={
         <span className="contents" {...focusWithinProps}>
-          {hasNotch ? null : size}
-          {/* The time, or a moment in its place, crossfading as one gives
-              way to the other. */}
-          <AnimatePresence initial={false} mode="popLayout">
-            <motion.span
-              animate={{ filter: "blur(0px)", opacity: 1 }}
+          {/* The size, the time or a moment in its place, and the controls
+              while the pointer or focus is on the row, each a part of its
+              own that comes, goes and gives way as the island's parts do. */}
+          <IslandParts
+            className="flex items-center gap-separate"
+            direction="row"
+          >
+            {hasNotch || !size ? null : (
+              <span className="flex" key="size">
+                {size}
+              </span>
+            )}
+            <span
               className="flex"
-              exit={{ filter: "blur(4px)", opacity: 0 }}
-              initial={{ filter: "blur(4px)", opacity: 0 }}
               key={
                 props.moment
                   ? `moment ${String(props.moment.key)} ${props.moment.noteMs !== null ? "note" : props.moment.noMicrophone ? "none" : "kind"}`
                   : "time"
               }
-              transition={swap}
             >
               {props.moment ? (
                 <MomentShown moment={props.moment} />
@@ -214,25 +212,13 @@ export function RecordingRow({
                   {clock(props.elapsed ?? 0)}
                 </span>
               )}
-            </motion.span>
-          </AnimatePresence>
-          {/* Its own presence, so the controls come into focus as the row
-              grows for them, and are lifted out to fade as it shrinks,
-              rather than appearing and going at once. */}
-          <AnimatePresence initial={false} mode="popLayout">
+            </span>
             {isShowingControls ? (
-              <motion.span
-                animate={{ filter: "blur(0px)", opacity: 1, scale: 1 }}
-                className="flex"
-                exit={{ filter: "blur(4px)", opacity: 0, scale: 0.96 }}
-                initial={{ filter: "blur(4px)", opacity: 0, scale: 0.96 }}
-                key="controls"
-                transition={swap}
-              >
+              <span className="flex" key="controls">
                 <LiveControls {...props} isPaused={isPaused} />
-              </motion.span>
+              </span>
             ) : null}
-          </AnimatePresence>
+          </IslandParts>
         </span>
       }
       start={

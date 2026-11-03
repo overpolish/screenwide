@@ -1,14 +1,15 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { AnimatePresence, motion } from "motion/react";
+import { useReducedMotion } from "motion/react";
 import { type ReactNode, useEffect, useState } from "react";
 
 import { t } from "../../../i18n/i18n";
-import { motionDurations, motionEasings } from "../../../lib/motion";
 import { Alert } from "../../../primitives/alert/alert";
 import { Button } from "../../../primitives/button/button";
 import { Island } from "../../../primitives/island/island";
+import { leave } from "../../../primitives/island/island-motion";
+import { IslandParts } from "../../../primitives/island/island-parts";
 import { IslandRow } from "../../../primitives/island/island-row";
 
 import { Countdown, Finishing, Starting } from "./island-live";
@@ -62,11 +63,15 @@ function NoticeLine({ notice }: { notice: IslandWarning }) {
 export function RecordingIsland(props: RecordingIslandProps) {
   const { initialPanel = "source", isShown = true, notch, phase } = props;
   const [panel, setPanel] = useState<IslandPanel>(initialPanel);
+  const [anchoredPanel, setAnchoredPanel] = useState(panel);
   // Each time it comes out, it opens on what it will record again.
   const [wasShown, setWasShown] = useState(isShown);
   if (isShown !== wasShown) {
     setWasShown(isShown);
-    if (isShown) setPanel(initialPanel);
+    if (isShown) {
+      setPanel(initialPanel);
+      setAnchoredPanel(initialPanel);
+    }
   }
   const { onPanelChange } = props;
   useEffect(() => {
@@ -89,6 +94,23 @@ export function RecordingIsland(props: RecordingIslandProps) {
       window.removeEventListener("keydown", onKey);
     };
   }, []);
+
+  // The section hangs under what opened it, and moves there once what was
+  // open has faded where it stood, so the black reshapes in one move after
+  // rather than carrying the part going away across with it.
+  const reduce = useReducedMotion() ?? false;
+  useEffect(() => {
+    if (anchoredPanel === panel) return;
+    const moved = window.setTimeout(
+      () => {
+        setAnchoredPanel(panel);
+      },
+      reduce ? 0 : leave.duration * 1000,
+    );
+    return () => {
+      window.clearTimeout(moved);
+    };
+  }, [anchoredPanel, panel, reduce]);
 
   // An input's glyph only switches it, so several can be flicked on and off
   // without the island changing shape; its chevron alone opens its devices.
@@ -123,47 +145,27 @@ export function RecordingIsland(props: RecordingIslandProps) {
         toggle={toggle}
       />
     );
-    anchor = ANCHORS[panel];
+    anchor = ANCHORS[anchoredPanel];
     section = (
-      <>
-        {/* What stops recording, or what just failed, is said above the
-            source. The parts below slide to make room for it, on the
-            island's own curve, rather than jumping while the black around
-            them grows. It takes the source's width rather than setting its
-            own, so a long message wraps instead of widening the island. */}
-        <AnimatePresence initial={false} mode="popLayout">
-          {notice && panel === "source" ? (
-            <motion.div
-              animate={{ opacity: 1 }}
-              className="w-0 min-w-full"
-              exit={{ opacity: 0 }}
-              initial={{ opacity: 0 }}
-              key={noticeKey}
-              role={failure ? "alert" : "status"}
-              transition={{
-                duration: motionDurations.state,
-                ease: motionEasings.out,
-              }}
-            >
-              <NoticeLine notice={notice} />
-            </motion.div>
-          ) : null}
-        </AnimatePresence>
-        <motion.div
-          className="relative"
-          layout="position"
-          transition={{
-            layout: {
-              duration: motionDurations.travel,
-              ease: motionEasings.out,
-            },
-          }}
-        >
-          <AnimatePresence initial={false} mode="popLayout">
-            <PanelBody key={panel} panel={panel} props={props} />
-          </AnimatePresence>
-        </motion.div>
-      </>
+      // What stops recording, or what just failed, is said above the
+      // source. It takes the source's width rather than setting its own, so
+      // a long message wraps instead of widening the island. Either comes
+      // and goes, and one part gives way to another, as the island's parts
+      // do (`IslandParts`).
+      <IslandParts className="flex flex-col gap-inline">
+        {notice && panel === "source" ? (
+          <div
+            className="w-0 min-w-full"
+            key={noticeKey}
+            role={failure ? "alert" : "status"}
+          >
+            <NoticeLine notice={notice} />
+          </div>
+        ) : null}
+        <div key={panel}>
+          <PanelBody panel={panel} props={props} />
+        </div>
+      </IslandParts>
     );
   } else if (phase === "countdown") {
     row = (
