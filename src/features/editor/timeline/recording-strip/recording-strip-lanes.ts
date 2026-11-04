@@ -53,6 +53,9 @@ export type RecordingStripLaneSource = {
   /** What plays on without a jump, in played seconds (`RecordingStripTime`). */
   runs: Span[];
   scenes: {
+    /** Whether a scene can place the camera: a drawn scene starts as a
+     * picture in picture only where it can, else as the screen alone. */
+    canPlaceCamera: boolean;
     clips: RecordingSceneClip[];
     /** How a scene's layout is drawn, as the Scene island draws it. */
     drawingOf: (clip: RecordingSceneClip) => SceneDrawing;
@@ -195,7 +198,7 @@ export function recordingStripLanes(source: RecordingStripLaneSource) {
       const clip: RecordingSceneClip = {
         endMs: Math.round(span.end),
         id: crypto.randomUUID(),
-        preset: "picture-in-picture",
+        preset: scenes.canPlaceCamera ? "picture-in-picture" : "screen-only",
         startMs: Math.round(span.start),
       };
       if (clip.endMs - clip.startMs < LEAST_SCENE_MS) return;

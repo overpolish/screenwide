@@ -21,10 +21,16 @@ const RECORDED = 10;
 function lanesAt(
   atSeconds: number,
   clips: RecordingSceneClip[] = [],
-  time: { map: TimeMap; runs: { end: number; start: number }[] } = {
-    map: recordedTime(RECORDED),
-    runs: [{ end: RECORDED, start: 0 }],
-  },
+  {
+    canPlaceCamera = true,
+    time = {
+      map: recordedTime(RECORDED),
+      runs: [{ end: RECORDED, start: 0 }],
+    },
+  }: {
+    canPlaceCamera?: boolean;
+    time?: { map: TimeMap; runs: { end: number; start: number }[] };
+  } = {},
 ) {
   const playhead = createPlayhead();
   playhead.publish(atSeconds, atSeconds / RECORDED);
@@ -44,6 +50,7 @@ function lanesAt(
     playhead,
     runs: time.runs,
     scenes: {
+      canPlaceCamera,
       clips,
       drawingOf: () => ({ aspect: 16 / 9 }),
       isAvailable: true,
@@ -105,6 +112,18 @@ describe("a scene drawn on the rail", () => {
       [{ id: "before" }, { endMs: 5000, startMs: 4000 }],
     ]);
   });
+
+  it("starts as a picture in picture where the camera can be placed", () => {
+    const { changed, lanes } = lanesAt(0);
+    lanes.onSceneDraw(4, 6);
+    expect(changed).toMatchObject([[{ preset: "picture-in-picture" }]]);
+  });
+
+  it("starts as the screen alone where there is no camera to place", () => {
+    const { changed, lanes } = lanesAt(0, [], { canPlaceCamera: false });
+    lanes.onSceneDraw(4, 6);
+    expect(changed).toMatchObject([[{ preset: "screen-only" }]]);
+  });
 });
 
 // Ten recorded seconds played with 4 to 6 moved to the end: 0 to 4, then
@@ -125,8 +144,7 @@ const MOVED_RUNS = [
 describe("a scene played across a jump", () => {
   const across = () =>
     lanesAt(0, [{ endMs: 5000, id: "across", preset: "full", startMs: 3000 }], {
-      map: MOVED,
-      runs: MOVED_RUNS,
+      time: { map: MOVED, runs: MOVED_RUNS },
     });
 
   it("is drawn where it plays, each side of the jump", () => {
@@ -177,7 +195,7 @@ describe("a scene played across a jump", () => {
     const { lanes } = lanesAt(
       0,
       [{ endMs: 7500, id: "late", preset: "full", startMs: 6000 }],
-      time,
+      { time },
     );
     expect(
       lanes.scenes.map(({ end, start }) => [
