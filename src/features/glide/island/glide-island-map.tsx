@@ -14,11 +14,16 @@ import { follow } from "./glide-island-motion";
 
 import type { GlideIslandState } from "./glide-island-types";
 
-const boxStyle = (box: GlideMapBox) => ({
-  height: box.height,
-  width: box.width,
-  x: box.x,
-  y: box.y,
+// The map's root is left to right, so start is left and end right.
+const boxStyle = ({ height, radius, width, x, y }: GlideMapBox) => ({
+  borderEndEndRadius: `${String(radius.bottomEnd)}px`,
+  borderEndStartRadius: `${String(radius.bottomStart)}px`,
+  borderStartEndRadius: `${String(radius.topEnd)}px`,
+  borderStartStartRadius: `${String(radius.topStart)}px`,
+  height,
+  width,
+  x,
+  y,
 });
 
 // A small screen in the black: the screen a light well, and the destination
@@ -50,28 +55,16 @@ export function GlideIslandMap({
       />
       <AnimatePresence>
         {layout?.requested ? (
-          <Neutral
-            box={layout.requested}
-            key="requested"
-            radius={layout.tileRadius}
-          />
+          <Neutral box={layout.requested} key="requested" />
         ) : null}
         {layout?.reached ? (
-          <Neutral
-            box={layout.reached}
-            key="reached"
-            radius={layout.tileRadius}
-          />
+          <Neutral box={layout.reached} key="reached" />
         ) : null}
       </AnimatePresence>
       <motion.div
         animate={
           layout?.tile
-            ? {
-                ...boxStyle(layout.tile),
-                borderRadius: layout.tileRadius,
-                opacity: 1,
-              }
+            ? { ...boxStyle(layout.tile), opacity: 1 }
             : { opacity: 0 }
         }
         className="absolute start-0 top-0 bg-primary"
@@ -90,14 +83,13 @@ export function GlideIslandMap({
   );
 }
 
-function Neutral({ box, radius }: { box: GlideMapBox; radius: number }) {
+function Neutral({ box }: { box: GlideMapBox }) {
   return (
     <motion.div
       animate={{ ...boxStyle(box), opacity: 1 }}
       className="absolute start-0 top-0 bg-fill-strong"
       exit={{ opacity: 0 }}
       initial={{ ...boxStyle(box), opacity: 0 }}
-      style={{ borderRadius: radius }}
       transition={follow}
     />
   );
@@ -107,7 +99,7 @@ function Neutral({ box, radius }: { box: GlideMapBox; radius: number }) {
  * The glided app's icon, centred on the point it names; perched, it stands on
  * that point instead, as an app in the Dock stands on it, a size down.
  */
-export function GlideIslandIcon({
+function GlideIslandIcon({
   at,
   perches,
   size,

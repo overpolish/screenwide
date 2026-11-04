@@ -24,36 +24,30 @@ export const follow = {
   visualDuration: 0.16,
 } as const;
 
-/** Coming out where the gesture began, out of a blur from a smaller size, and
- * leaving the same way, a shorter distance. */
+/** Coming out where the gesture began: a short fade, holding what it has to
+ * show already, so it is there while the hand is still moving. Leaving, it
+ * goes out of focus, a little smaller. */
 export const emerge = {
-  animate: { filter: "blur(0px)", opacity: 1, scale: 1 },
+  animate: { opacity: 1 },
   exit: {
     filter: "blur(4px)",
     opacity: 0,
     scale: 0.92,
     transition: { duration: motionDurations.travel, ease: motionEasings.out },
   },
-  initial: { filter: "blur(6px)", opacity: 0, scale: 0.6 },
-  transition: { ...morph, filter: fade, opacity: fade },
+  initial: { opacity: 0 },
+  transition: fade,
 } as const;
 
-/** One look in the black giving way to another: the new one clears into
- * focus a beat after the shape starts to change, so the shape leads. */
+/** One look in the black giving way to another as the gesture goes: at
+ * once, a short crossfade while the black changes shape round it. Glide
+ * follows a hand, so unlike the other islands it never waits for the old
+ * look to go before showing the new one. */
 export const swap = {
-  animate: { filter: "blur(0px)", opacity: 1, scale: 1 },
-  exit: {
-    filter: "blur(4px)",
-    opacity: 0,
-    scale: 0.96,
-    transition: fade,
-  },
-  initial: { filter: "blur(6px)", opacity: 0, scale: 0.92 },
-  transition: {
-    delay: motionDurations.feedback,
-    duration: motionDurations.travel,
-    ease: motionEasings.out,
-  },
+  animate: { opacity: 1 },
+  exit: { opacity: 0, transition: fade },
+  initial: { opacity: 0 },
+  transition: fade,
 } as const;
 
 /** A window that will not move: a short shake, the way a refused password

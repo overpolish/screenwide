@@ -1,49 +1,40 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { Check, Lock, Move } from "lucide-react";
+import { Lock, Move } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 
 import { t } from "../../../i18n/i18n";
+import { GlideAppIcon } from "../glide-app-icon";
 import { describeDestination } from "../glide-region-label";
 
 import { GlideIslandBody } from "./glide-island-body";
-import { GlideIslandIcon, GlideIslandMap } from "./glide-island-map";
-import { layOutMap } from "./glide-island-map-layout";
+import { GlideIslandMap } from "./glide-island-map";
 import { swap } from "./glide-island-motion";
-import {
-  GLYPH_SHAPE,
-  MAP,
-  MAP_ICON,
-  MAP_INSET,
-  MAP_SHAPE,
-} from "./glide-island-shapes";
+import { GLYPH_SHAPE, MAP, MAP_ICON, MAP_SHAPE } from "./glide-island-shapes";
 import { type GlideIslandProps, hasDestination } from "./glide-island-types";
 
 // The Glide island: only as big as what it has to say. It comes out round,
-// holding the app it has caught; it opens into a small screen once there is
-// a destination, the icon riding across onto it; and as the window is sent
-// it closes round a check before it goes. A window that will not move gets
-// the lock, and a shake.
+// holding the app it has caught, and opens into a small screen, the app on
+// its destination, once there is one. It follows a hand, so it fades in
+// quickly with what it has to show and changes look at once
+// (`glide-island-motion.ts`). A window that will not move gets the lock, and
+// a shake. Sent, it goes at once.
 
 export function GlideIsland(props: GlideIslandProps) {
   const { fit, iconSrc, pending, phase, pulse, region } = props;
+  const isShown = phase === "gliding" || phase === "locked";
   const isOpen = phase === "gliding" && hasDestination(props);
-  const shape = isOpen ? MAP_SHAPE : GLYPH_SHAPE;
-  const layout = isOpen ? layOutMap(MAP, { fit, pending, region }) : null;
-
-  const glyph =
-    phase === "locked"
+  const look = isOpen
+    ? "map"
+    : phase === "locked"
       ? "lock"
-      : phase === "committed"
-        ? "check"
-        : iconSrc
-          ? null
-          : "move";
-
+      : iconSrc
+        ? "app"
+        : "move";
   return (
     <GlideIslandBody
-      isShown={phase !== "idle"}
+      isShown={isShown}
       label={
         phase === "locked"
           ? t("glide-locked")
@@ -51,66 +42,59 @@ export function GlideIsland(props: GlideIslandProps) {
       }
       pulse={pulse}
       refuses={phase === "locked"}
-      shape={shape}
+      shape={look === "map" ? MAP_SHAPE : GLYPH_SHAPE}
     >
       <AnimatePresence initial={false}>
-        {isOpen ? (
-          <motion.div
-            key="map"
-            {...swap}
-            className="absolute inset-0 flex items-center justify-center"
-          >
-            <GlideIslandMap
-              fit={fit}
-              pending={pending}
-              region={region}
-              size={MAP}
-            />
-          </motion.div>
-        ) : null}
+        <motion.div
+          key={look}
+          {...swap}
+          className="absolute inset-0 flex items-center justify-center"
+        >
+          <Look
+            fit={fit}
+            iconSrc={iconSrc}
+            look={look}
+            pending={pending}
+            region={region}
+          />
+        </motion.div>
       </AnimatePresence>
-      <AnimatePresence initial={false} mode="popLayout">
-        {glyph && !isOpen ? (
-          <motion.div
-            key={glyph}
-            {...swap}
-            className="absolute inset-0 flex items-center justify-center"
-          >
-            <Glyph glyph={glyph} />
-          </motion.div>
-        ) : null}
-      </AnimatePresence>
-      {/* Drawn over the black rather than in the screen, so the one icon
-          travels from the middle onto its destination as the island opens.
-          The screen's geometry stays left to right, as the map's does. */}
-      <div className="absolute inset-0" dir="ltr">
-        <AnimatePresence initial={false}>
-          {iconSrc && phase === "gliding" ? (
-            <motion.div exit={swap.exit} key="icon">
-              <GlideIslandIcon
-                at={
-                  layout
-                    ? {
-                        x: MAP_INSET + layout.focus.x,
-                        y: MAP_INSET + layout.focus.y,
-                      }
-                    : { x: shape.width / 2, y: shape.height / 2 }
-                }
-                perches={layout?.isMinimizing ?? false}
-                size={MAP_ICON}
-                src={iconSrc}
-              />
-            </motion.div>
-          ) : null}
-        </AnimatePresence>
-      </div>
     </GlideIslandBody>
   );
 }
 
-function Glyph({ glyph }: { glyph: "check" | "lock" | "move" }) {
-  if (glyph === "check") return <Check aria-hidden className="size-icon" />;
-  if (glyph === "lock") {
+function Look({
+  fit,
+  iconSrc,
+  look,
+  pending,
+  region,
+}: Pick<GlideIslandProps, "fit" | "iconSrc" | "pending" | "region"> & {
+  look: "app" | "lock" | "map" | "move";
+}) {
+  if (look === "map") {
+    return (
+      <GlideIslandMap
+        fit={fit}
+        iconSize={MAP_ICON}
+        iconSrc={iconSrc}
+        pending={pending}
+        region={region}
+        size={MAP}
+      />
+    );
+  }
+  if (look === "app" && iconSrc) {
+    return (
+      <div className="relative" style={{ height: MAP_ICON, width: MAP_ICON }}>
+        <GlideAppIcon
+          className="absolute inset-0 size-full object-contain"
+          src={iconSrc}
+        />
+      </div>
+    );
+  }
+  if (look === "lock") {
     return <Lock aria-hidden className="size-icon text-fg-secondary" />;
   }
   return <Move aria-hidden className="size-icon text-fg-secondary" />;

@@ -15,9 +15,9 @@ import { focusIn } from "./island-motion";
 // span is left out when its width is read (`useSize`'s `isNatural`). Once
 // the island is out, a filling row is also held to the black's width
 // (`--island-row-hold`, set on the layer so a row on its way out reads the
-// current value): a part arriving in it then makes room by squeezing what
-// gives way (`IslandRowPresence`) as the black opens, rather than pushing
-// both ends past the black in one frame.
+// current value): a part arriving in it (`IslandParts`) then makes room as
+// the black opens, its ends keeping to the black's, rather than pushing both
+// ends past the black in one frame.
 
 export function IslandRowBox({
   children,

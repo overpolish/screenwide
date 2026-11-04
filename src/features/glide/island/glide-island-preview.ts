@@ -59,6 +59,3 @@ export const MINIMIZE: GlideIslandState = {
 
 /** The island before the gesture has a destination. */
 export const WAITING: GlideIslandState = { ...IDLE, phase: "gliding" };
-
-/** The island as the window is sent. */
-export const SENT: GlideIslandState = { ...IDLE, phase: "committed" };

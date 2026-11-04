@@ -5,25 +5,40 @@ import { type GlideRect, regionRect, shortfall } from "../glide-geometry";
 
 import type { GlideIslandState } from "./glide-island-types";
 
-/** A small screen's size in px: the gap keeps a destination clear of the
- * screen's edge and its corner concentric with the screen's. */
+/** A small screen's size in px, its corner radius included. */
 export type GlideMapSize = {
-  gap: number;
   height: number;
   radius: number;
   width: number;
 };
 
-/** A rectangle on the small screen, in px from its top start corner. */
+/** A rectangle on the small screen, in px from its top start corner, with
+ * the radius of each of its corners. */
 export type GlideMapBox = {
   height: number;
+  radius: {
+    bottomEnd: number;
+    bottomStart: number;
+    topEnd: number;
+    topStart: number;
+  };
   width: number;
   x: number;
   y: number;
 };
 
-/** The Dock a minimize sends the window to: a bar along the screen's foot. */
-const DOCK = { height: 5, width: 1 / 3 };
+/** The Dock a minimize sends the window to: a bar along the screen's foot,
+ * lifted clear of it. */
+const DOCK = { height: 5, lift: 3, width: 1 / 3 };
+
+/** A window's own corner on the small screen, in px: a real window's, scaled
+ * down, reads as next to none. */
+const WINDOW_RADIUS = 3;
+
+/** How near a screen's edge a box counts as on it, in px. */
+const EDGE = 0.5;
+
+type Box = Omit<GlideMapBox, "radius">;
 
 const centre = (box: GlideMapBox) => ({
   x: box.x + box.width / 2,
@@ -43,21 +58,50 @@ export function layOutMap(
     region,
   }: Pick<GlideIslandState, "fit" | "pending" | "region">,
 ) {
-  const { gap, height, width } = size;
-  const place = (rect: GlideRect): GlideMapBox => ({
-    height: rect.height * height - gap * 2,
-    width: rect.width * width - gap * 2,
-    x: rect.x * width + gap,
-    y: rect.y * height + gap,
-  });
+  const { height, radius, width } = size;
+  // Round as the screen's corner where a box stands in one, so the two are
+  // concentric; a window's own small corner wherever else.
+  const corner = (isAtStart: boolean, isAtTop: boolean, box: Box) => {
+    const atStart = isAtStart
+      ? box.x <= EDGE
+      : box.x + box.width >= width - EDGE;
+    const atTop = isAtTop ? box.y <= EDGE : box.y + box.height >= height - EDGE;
+    return atStart && atTop ? radius : WINDOW_RADIUS;
+  };
+  // Edge to edge, as the window will stand: a gap round the destination
+  // made it read smaller than the share of the screen it takes.
+  const place = (rect: GlideRect): GlideMapBox => {
+    const box = {
+      height: rect.height * height,
+      width: rect.width * width,
+      x: rect.x * width,
+      y: rect.y * height,
+    };
+    return {
+      ...box,
+      radius: {
+        bottomEnd: corner(false, false, box),
+        bottomStart: corner(true, false, box),
+        topEnd: corner(false, true, box),
+        topStart: corner(true, true, box),
+      },
+    };
+  };
 
   if (pending === "minimize") {
     const dockWidth = width * DOCK.width;
+    const round = DOCK.height / 2;
     const tile = {
       height: DOCK.height,
+      radius: {
+        bottomEnd: round,
+        bottomStart: round,
+        topEnd: round,
+        topStart: round,
+      },
       width: dockWidth,
       x: (width - dockWidth) / 2,
-      y: height - gap - DOCK.height,
+      y: height - DOCK.lift - DOCK.height,
     };
     return {
       focus: centre(tile),
@@ -65,12 +109,10 @@ export function layOutMap(
       reached: null,
       requested: null,
       tile,
-      tileRadius: DOCK.height / 2,
     };
   }
   if (!region) return null;
 
-  const tileRadius = size.radius - gap;
   const short = shortfall(fit, region, pending);
   if (!short) {
     const tile = place(regionRect(region));
@@ -80,7 +122,6 @@ export function layOutMap(
       reached: null,
       requested: null,
       tile,
-      tileRadius,
     };
   }
   // Only the part of the frame inside the region is primary, so a window
@@ -93,6 +134,5 @@ export function layOutMap(
     reached,
     requested: place(regionRect(region)),
     tile,
-    tileRadius,
   };
 }
