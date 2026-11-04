@@ -35,7 +35,7 @@ mod replay;
 mod session;
 mod startup;
 mod stream_recovery;
-mod window_track;
+pub(crate) mod window_track;
 mod writer;
 
 use std::path::PathBuf;

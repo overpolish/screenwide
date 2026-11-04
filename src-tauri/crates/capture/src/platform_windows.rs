@@ -21,6 +21,7 @@ mod startup;
 mod startup_support;
 #[cfg(test)]
 mod tests;
+mod window_corner;
 pub use replay::{begin_replay_blocking, ReplayCapture, ReplaySession};
 use source_plan::{resolve_source, ResolvedSource};
 pub use startup::begin_blocking;
@@ -68,6 +69,9 @@ pub struct CaptureSession {
   camera: Option<CameraRecording>,
   captures: Vec<CaptureObjects>,
   commands: Option<mpsc::SyncSender<Command>>,
+  /// How round a recorded window's corners are, once its first frame has
+  /// been read; never set for anything else.
+  corner_radius: Arc<OnceLock<Option<f32>>>,
   primary_camera: Option<camera::CameraStream>,
   stopped_at: Arc<OnceLock<Instant>>,
   worker: Option<JoinHandle<()>>,

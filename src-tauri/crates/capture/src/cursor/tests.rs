@@ -284,3 +284,46 @@ fn visibility_records_exact_landings_and_keeps_hidden_button_releases() {
     }
   ));
 }
+
+fn rect(x: f64, y: f64, width: f64, height: f64) -> crate::desktop_capture::DesktopRect {
+  crate::desktop_capture::DesktopRect {
+    x,
+    y,
+    width,
+    height,
+  }
+}
+
+#[test]
+fn a_dragged_windows_pointer_stays_where_it_is_on_the_window() {
+  let start = rect(600.0, 200.0, 1000.0, 600.0);
+  // At rest, the pointer is left where it is.
+  assert_eq!(
+    follow_window::carried(start, start, 900.0, 350.0),
+    (900.0, 350.0)
+  );
+  // Dragged 300 left and 20 down, a point on the window keeps its place in
+  // the picture.
+  let moved = rect(300.0, 220.0, 1000.0, 600.0);
+  assert_eq!(
+    follow_window::carried(start, moved, 600.0, 370.0),
+    (900.0, 350.0)
+  );
+}
+
+#[test]
+fn a_resized_windows_pointer_is_fitted_and_centred_as_its_picture_is() {
+  let start = rect(0.0, 0.0, 1000.0, 600.0);
+  // Half as wide: fitted by height, so drawn at full scale and centred.
+  let narrower = rect(100.0, 100.0, 500.0, 600.0);
+  assert_eq!(
+    follow_window::carried(start, narrower, 100.0, 100.0),
+    (250.0, 0.0)
+  );
+  // Twice the size: drawn at half scale, its far corner at the picture's.
+  let larger = rect(0.0, 0.0, 2000.0, 1200.0);
+  assert_eq!(
+    follow_window::carried(start, larger, 2000.0, 1200.0),
+    (1000.0, 600.0)
+  );
+}

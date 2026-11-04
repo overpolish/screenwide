@@ -218,7 +218,8 @@ pub(super) fn finalize_capture(
     info.keyboard_path = stopped_sidecars.keyboard?;
     info.annotation_clips = stopped_sidecars.annotation_clips;
     info.source_scale_factor = source_scale_factor;
-    info.corner_radius = corner_radius;
+    // Known as the capture opened on macOS, from its first frame on Windows.
+    info.corner_radius = corner_radius.or(info.corner_radius);
     Ok(info)
   });
   let info = finished.inspect_err(|_| project.remove())?;

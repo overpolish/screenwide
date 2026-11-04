@@ -102,6 +102,7 @@ pub(super) fn begin(
     camera: None,
     captures: Vec::new(),
     commands: Some(commands.clone()),
+    corner_radius: Arc::default(),
     primary_camera: None,
     stopped_at,
     worker: Some(worker),
@@ -190,6 +191,8 @@ pub(super) fn begin(
     let fitter = Mutex::new(WindowFitter::new(&device, width, height));
     let failed = AtomicBool::new(false);
     let report = Arc::clone(&on_failure);
+    let corner_radius = Arc::clone(&session.corner_radius);
+    let measuring = device.clone();
     session.captures.push(CaptureObjects::start_with_handler(
       device,
       CaptureTarget::Window(id),
@@ -197,6 +200,7 @@ pub(super) fn begin(
       capture_height,
       show_cursor,
       move |frame, filled| {
+        corner_radius.get_or_init(|| window_corner::measure(&measuring, &frame.texture, filled));
         let result = fitter
           .lock()
           .map_err(|_| "The window fitter lock was poisoned".to_owned())

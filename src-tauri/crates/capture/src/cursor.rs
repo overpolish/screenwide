@@ -29,6 +29,7 @@ pub use visibility::set_cursor_visibility;
 mod tests;
 
 mod event_writer;
+mod follow_window;
 mod front_app;
 mod own_presses;
 mod rolling;
@@ -43,7 +44,8 @@ pub(crate) use self::rolling::CursorBaseline;
 use crate::clock::SidecarClock;
 use crate::sidecar_output::{self, RollingRecords, SidecarOutput};
 use screenwide_records::cursor::{
-  ButtonState, CursorButton, CursorRecord, CursorSource, CursorStyle, FORMAT_VERSION,
+  ButtonState, CursorButton, CursorRecord, CursorSource, CursorSourceKind, CursorStyle,
+  FORMAT_VERSION,
 };
 const MOVEMENT_INTERVAL: Duration = Duration::from_micros(7_500);
 const FLUSH_INTERVAL: Duration = Duration::from_secs(1);
@@ -118,10 +120,13 @@ struct Tap {
 
 impl Tap {
   /// `include_own_windows` says whether the recording shows Screenwide's own
-  /// windows; where it does not, presses on them are left out.
+  /// windows; where it does not, presses on them are left out. A window
+  /// recording's pointer is kept where it is on the window
+  /// (`follow_window`).
   fn start(
     output: SidecarOutput<CursorRecord, CursorBaseline>,
     origin: Arc<OnceLock<Instant>>,
+    source: &CursorSource,
     include_own_windows: bool,
   ) -> Result<Self, String> {
     let state = Arc::new(Mutex::new(StreamWriter {
@@ -135,6 +140,10 @@ impl Tap {
       output,
     }));
     let mut sink = visibility::sink(&state);
+    if source.kind == CursorSourceKind::Window {
+      sink = follow_window::sink(sink, &source.platform_id);
+    }
+    // Outermost, so it is asked where on the screen a press really landed.
     if !include_own_windows {
       sink = own_presses::without_own_presses(sink, platform::on_own_window);
     }
@@ -187,8 +196,8 @@ impl CursorRecorder {
     source: CursorSource,
     include_own_windows: bool,
   ) -> Result<Self, String> {
-    let output = SidecarOutput::file(&path, &header(source))?;
-    let tap = Tap::start(output, origin, include_own_windows).inspect_err(|_| {
+    let output = SidecarOutput::file(&path, &header(source.clone()))?;
+    let tap = Tap::start(output, origin, &source, include_own_windows).inspect_err(|_| {
       let _ = std::fs::remove_file(&path);
     })?;
     Ok(Self { path, tap })
@@ -235,8 +244,8 @@ impl RollingCursorRecorder {
     let horizon_us = u64::try_from(horizon.as_micros()).unwrap_or(u64::MAX);
     let output = SidecarOutput::Rolling(RollingRecords::new(horizon_us));
     Ok(Self {
+      tap: Tap::start(output, origin, &source, include_own_windows)?,
       header: header(source),
-      tap: Tap::start(output, origin, include_own_windows)?,
     })
   }
 

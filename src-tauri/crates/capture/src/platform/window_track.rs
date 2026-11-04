@@ -111,7 +111,7 @@ fn host_now_ns() -> Option<i64> {
 
 /// The window's frame in global points, from the top start of the main
 /// display, as the displays' own bounds are given; none once it has closed.
-fn bounds(window_id: u32) -> Option<DesktopRect> {
+pub(crate) fn bounds(window_id: u32) -> Option<DesktopRect> {
   let list = cg::WindowList::info(cg::WindowListOpt::INCLUDING_WINDOW, window_id)?;
   let info = list.iter().next()?;
   let value = info.get(cg::window_keys::bounds())?;

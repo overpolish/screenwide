@@ -103,6 +103,7 @@ pub(super) fn begin_audio_only(
       camera: None,
       captures: Vec::new(),
       commands: None,
+      corner_radius: Arc::default(),
       primary_camera: None,
       stopped_at: Arc::new(OnceLock::new()),
       worker: None,

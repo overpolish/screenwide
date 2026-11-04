@@ -128,6 +128,9 @@ impl CaptureSession {
       info.has_system_audio = has_system_audio;
       info.has_microphone = has_microphone;
     }
+    if let Ok(info) = &mut result {
+      info.corner_radius = self.corner_radius.get().copied().flatten();
+    }
     result
   }
 
