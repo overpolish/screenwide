@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { t } from "../../../i18n/i18n";
-import { Island, type IslandProps } from "../../../primitives/island/island";
+import { Island } from "../../../primitives/island/island";
+import { type IslandProps } from "../../../primitives/island/island-props";
 import { IslandRow } from "../../../primitives/island/island-row";
 
 import {

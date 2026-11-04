@@ -131,7 +131,8 @@ function ItalicGlyph({ italic }: { italic: boolean }) {
 }
 
 /** Whether a text is set in its family's italic, offered only where the
- * family has one. */
+ * family has one. It sits at the end of a font's row in the picker, where
+ * the family's name is the row's words. */
 export function ItalicToggle({
   italic,
   onChange,
@@ -142,6 +143,7 @@ export function ItalicToggle({
   return (
     <OptionToggle
       glyph={(isOn) => <ItalicGlyph italic={isOn} />}
+      isLabelHidden
       isOn={italic}
       label={t("editor-island-text-italic")}
       onChange={onChange}
@@ -150,7 +152,7 @@ export function ItalicToggle({
 }
 
 /** Whether a moving text's words come on one after another rather than
- * together. */
+ * together. It sits among the glyphs at the end of the island's row. */
 export function WordByWordToggle({
   onChange,
   revealWords,
@@ -161,6 +163,7 @@ export function WordByWordToggle({
   return (
     <OptionToggle
       glyph={(isOn) => <WordsGlyph oneByOne={isOn} />}
+      isLabelHidden
       isOn={revealWords}
       label={t("editor-island-text-word-by-word")}
       onChange={onChange}

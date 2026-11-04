@@ -11,15 +11,18 @@ import { OptionToggle } from "./option-toggle";
  * spotlight, blurred a focus. */
 export function DimToggle({
   dims,
+  isLabelHidden,
   onChange,
 }: {
   /** Dimmed rather than blurred. */
   dims: boolean;
   onChange: (dims: boolean) => void;
+  isLabelHidden?: boolean;
 }) {
   return (
     <OptionToggle
       glyph={(isOn) => <FocusLookGlyph dims={isOn} />}
+      isLabelHidden={isLabelHidden}
       isOn={dims}
       label={t("annotate-island-focus-dim")}
       onChange={onChange}

@@ -27,6 +27,14 @@ const squareOf = (skin: Skin) =>
     skin === "island" ? "group size-island-control" : "w-control-height",
   );
 
+// A toggle that names itself beside its glyph is a pill as wide as both,
+// with the gap between an icon and its label. On the island the pill draws
+// no fill until it is hovered or on, so its glyph and words, what is seen of
+// it, sit the small inset in from the pill's edge, on the island's text
+// column, while the pill's edge keeps to the section's as the fills do.
+const pillOf = (skin: Skin) =>
+  cn("aria-disabled:opacity-40", skin === "island" && "group px-inset-sm");
+
 type IconButtonProps = AriaButtonProps &
   ButtonLook &
   MotionProps & {
@@ -42,6 +50,8 @@ type IconToggleButtonProps = Omit<AriaToggleButtonProps, "children"> &
     /** The glyph, or a function of whether it is on. */
     children: ReactNode | ((state: { isSelected: boolean }) => ReactNode);
     className?: string;
+    /** Words shown after the glyph, which then name the toggle. */
+    label?: ReactNode;
     /** The glyph shown while off. Without one, being on fills the button. */
     off?: ReactNode;
     ref?: Ref<HTMLButtonElement>;
@@ -92,13 +102,16 @@ export const IconButton = ({
 // toggles sit in toolbars and beside other controls, where a raised square
 // each would crowd the row. A toggle with one glyph is on when it is filled
 // in the primary colour, as anything on is; one with a glyph for each state
-// says which by the glyph alone and keeps its look. The two set the same
-// background, so the look is picked per state rather than layered as
-// variants. On the island, on is the island's stronger fill instead, as
-// every island control shows what it has on or open.
+// says which by the glyph alone and keeps its look. A toggle with a label
+// fills while on whatever its glyph does: beside its words a glyph's change
+// is too small to read the state by. The two looks set the same background,
+// so the look is picked per state rather than layered as variants. On the
+// island, on is the island's stronger fill instead, as every island control
+// shows what it has on or open.
 export const IconToggleButton = ({
   children,
   className,
+  label,
   off,
   variant = "ghost",
   ...props
@@ -106,17 +119,18 @@ export const IconToggleButton = ({
   const skin = useSkin();
   const isIsland = skin === "island";
   const drawsState = typeof children === "function";
+  const fillsWhenOn = label != null || (off == null && !drawsState);
   return (
     <MotionAriaToggleButton
       {...props}
       className={({ isSelected }) =>
         cn(
           buttonVariants(
-            off == null && !drawsState && isSelected && !isIsland
+            fillsWhenOn && isSelected && !isIsland
               ? { color: "primary", isDisabled: props.isDisabled, skin }
               : { isDisabled: props.isDisabled, skin, variant },
           ),
-          squareOf(skin),
+          label == null ? squareOf(skin) : pillOf(skin),
           className,
         )
       }
@@ -124,7 +138,7 @@ export const IconToggleButton = ({
       {({ isSelected }) => (
         <>
           {isIsland && variant === "ghost" ? (
-            <IslandFill isChosen={off == null && !drawsState && isSelected} />
+            <IslandFill isChosen={fillsWhenOn && isSelected} />
           ) : null}
           {typeof children === "function" ? (
             children({ isSelected })
@@ -140,6 +154,7 @@ export const IconToggleButton = ({
               </IconSwap>
             </>
           )}
+          {label == null ? null : <span>{label}</span>}
         </>
       )}
     </MotionAriaToggleButton>

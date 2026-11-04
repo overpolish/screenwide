@@ -4,7 +4,7 @@
 import { t } from "../../../../i18n/i18n";
 import { Button } from "../../../../primitives/button/button";
 import { PillGroup } from "../../../../primitives/pill-group/pill-group";
-import { AnnotationLine } from "../annotation/annotation-island-parts";
+import { AnnotationChoiceRow } from "../annotation/annotation-island-parts";
 
 import { BackgroundGlyph } from "./camera-glyphs";
 
@@ -22,10 +22,11 @@ const backgroundName = (background: (typeof BACKGROUNDS)[number]) =>
       : t("editor-island-camera-background-picture");
 
 /** What is behind the person once the room is taken away, a choice between
- * looks drawn as each looks: nothing, the room blurred, or a picture. With
- * a picture behind, choosing another is a one-shot action at the line's
- * end, acting on the line it sits in. Choosing a picture before one was
- * ever chosen asks for one rather than showing an empty one. */
+ * looks drawn as each looks, named at the row's start: nothing, the room
+ * blurred, or a picture. With a picture behind, choosing another is a
+ * one-shot action at the row's end, acting on the row it sits in. Choosing
+ * a picture before one was ever chosen asks for one rather than showing an
+ * empty one. */
 export function CameraBackgroundLine({
   background,
   hasImage,
@@ -38,7 +39,7 @@ export function CameraBackgroundLine({
   onChoosePicture: () => void;
 }) {
   return (
-    <AnnotationLine>
+    <AnnotationChoiceRow title={t("editor-island-camera-background")}>
       <PillGroup
         aria-label={t("editor-island-camera-background")}
         items={BACKGROUNDS.map((id) => ({
@@ -65,6 +66,6 @@ export function CameraBackgroundLine({
           {t("editor-island-replace")}
         </Button>
       ) : null}
-    </AnnotationLine>
+    </AnnotationChoiceRow>
   );
 }

@@ -9,7 +9,10 @@ import { IslandParts } from "../../../../primitives/island/island-parts";
 import { IslandRowTitle } from "../../../../primitives/island/row-title/island-row-title";
 import { CornerChoice } from "../../../annotations/options/corner-choice";
 import { ShadowToggle } from "../../../annotations/options/shadow-toggle";
-import { AnnotationLine } from "../annotation/annotation-island-parts";
+import {
+  AnnotationChoiceRow,
+  AnnotationRows,
+} from "../annotation/annotation-island-parts";
 import { IslandRotation } from "../island-rotation";
 import { PICTURE_CORNERS } from "../picture-corners";
 import { SceneOnlyNote } from "../scene-only-note";
@@ -21,15 +24,16 @@ import type { EditorIslandContent } from "../editor-island";
 
 // What was captured, the screen of a recording or a screenshot, as it sits
 // on the canvas, as the Camera island is the camera's. Its crop is the Crop
-// tool's. Here, the opposite of a crop, the edges extended and filled with
-// the colour found behind what was captured, then the screen's corners and
-// its shadow, and how it is turned. All of these hold for the whole
-// recording but the inset, the corners and the turn, which over a scene
-// are that scene's, as a note under the lines says: a scene may pad, round
-// and turn the screen its own way over its stretch. Then putting what was
-// captured back in the middle of its box, the scene's box over a scene, and
-// the screen back where a fresh project places it, the scene's pane back in
-// its layout's box over a scene.
+// tool's. Here, its named rows first: the opposite of a crop, the edges
+// extended and filled with the colour found behind what was captured; the
+// screen's corners; how it is turned. Then its shadow, a toggle on a line
+// of its own at the start. All of these hold for the whole recording but
+// the inset, the corners and the turn, which over a scene are that scene's,
+// as a note under the lines says: a scene may pad, round and turn the
+// screen its own way over its stretch. Then putting what was captured back
+// in the middle of its box, the scene's box over a scene, and the screen
+// back where a fresh project places it, the scene's pane back in its
+// layout's box over a scene.
 
 export type ScreenIslandProps = {
   /** What was captured, which names the island. */
@@ -73,28 +77,37 @@ export function screenIsland(props: ScreenIslandProps): EditorIslandContent {
     key: "screen",
     section: (
       <IslandParts className="flex flex-col gap-separate">
-        <AnnotationLine key="looks">
-          <ScreenInsetChoice
-            inset={props.inset}
-            onChange={props.onInsetChange}
-          />
-          <CornerChoice
-            corners={PICTURE_CORNERS}
-            onChange={props.onRadiusChange}
-            value={props.radius}
-          />
+        <AnnotationRows key="rows">
+          <AnnotationChoiceRow
+            key="inset"
+            title={t("editor-island-screen-inset")}
+          >
+            <ScreenInsetChoice
+              inset={props.inset}
+              onChange={props.onInsetChange}
+            />
+          </AnnotationChoiceRow>
+          <AnnotationChoiceRow key="corners" title={t("annotation-radius")}>
+            <CornerChoice
+              corners={PICTURE_CORNERS}
+              onChange={props.onRadiusChange}
+              value={props.radius}
+            />
+          </AnnotationChoiceRow>
+          {props.rotation && props.onRotationChange ? (
+            <IslandRotation
+              key="rotation"
+              onChange={props.onRotationChange}
+              rotation={props.rotation}
+            />
+          ) : null}
+        </AnnotationRows>
+        <div className="flex" key="shadow">
           <ShadowToggle
             hasShadow={props.hasShadow}
             onChange={props.onShadowChange}
           />
-        </AnnotationLine>
-        {props.rotation && props.onRotationChange ? (
-          <IslandRotation
-            key="rotation"
-            onChange={props.onRotationChange}
-            rotation={props.rotation}
-          />
-        ) : null}
+        </div>
         {props.isInScene ? (
           <SceneOnlyNote key="scene-note" layer="screen" />
         ) : null}

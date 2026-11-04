@@ -11,7 +11,11 @@ import { IslandRowTitle } from "../../../../primitives/island/row-title/island-r
 import { CornerChoice } from "../../../annotations/options/corner-choice";
 import { OptionToggle } from "../../../annotations/options/option-toggle";
 import { ShadowToggle } from "../../../annotations/options/shadow-toggle";
-import { AnnotationLine } from "../annotation/annotation-island-parts";
+import {
+  AnnotationChoiceRow,
+  AnnotationLine,
+  AnnotationRows,
+} from "../annotation/annotation-island-parts";
 import { FollowFaceToggle } from "../follow-face-toggle";
 import { IslandModelLine } from "../island-model-line";
 import { IslandRotation } from "../island-rotation";
@@ -28,23 +32,22 @@ import type { EditorIslandContent } from "../editor-island";
 import type { ScreenIslandProps } from "../screen/screen-island";
 
 // The camera, for the whole recording, as the Screen island is the
-// screen's; its crop is the Crop tool's. One line of animated toggles and
-// presets, in the order the camera's settings are read: what changes the
-// camera's picture (Enhance, then taking the room away), its corners, its
-// shadow, then whether it follows the face, which holds the face in the
-// middle of the crop. Then what taking the room away brings: what goes
-// behind the person, drawn as each looks, with choosing another picture at
-// that line's end, and objects put right where the cutout has them wrong.
-// A tool whose model is not on this computer yet offers the download in
-// its place, and a tool at work shows how far it has got, each on a line
-// that comes and goes as the others glide (`IslandParts`). Over a scene,
-// which may round the camera and have it follow the face its own way, the
-// corners and the following are that scene's, and a note at the island's
-// foot says so. Reset placement, at the foot, puts the camera back where a
-// fresh project places it. A recording of the camera alone has the camera
-// as its own picture, which this island works on too, with what the Screen
-// island offers a picture that still applies: its inset beside the
-// corners, its turn, and Recenter beside Reset placement.
+// screen's; its crop is the Crop tool's. Its named rows first: its corners,
+// and on a recording of the camera alone its inset above them and its turn
+// below. Then a line of what it is drawn with: Enhance, its shadow, and
+// whether it follows the face, which holds the face in the middle of the
+// crop. Removing the room comes last, on a line of its own, since what it
+// brings follows it: what goes behind the person, drawn as each looks, with
+// choosing another picture at that row's end, and objects put right where
+// the cutout has them wrong. A tool whose model is not on this computer yet
+// offers the download in its place, and a tool at work shows how far it
+// has got, each on a line that comes and goes as the others glide
+// (`IslandParts`). Over a scene, which may round the camera and have it
+// follow the face its own way, the corners and the following are that
+// scene's, and a note at the island's foot says so. Reset placement, at the
+// foot, puts the camera back where a fresh project places it; a recording
+// of the camera alone, whose camera is its own picture, has Recenter beside
+// it, as the Screen island does.
 
 export type CameraIslandProps = {
   effects: ToolPanelCameraEffects;
@@ -105,44 +108,63 @@ export function cameraIsland(props: CameraIslandProps): EditorIslandContent {
   const isRemoved = effects.background !== "kept";
   const hasBackgroundModel = effects.model?.status === "downloaded";
   const { objects } = effects;
+  // What taking the room away brings, under its toggle; held as one group
+  // only while there is something in it, so an empty one leaves no gap.
+  const hasBackgroundRows =
+    effects.working.background ||
+    (isRemoved && (hasBackgroundModel || objects?.model != null)) ||
+    objects?.isPicking === true ||
+    objects?.working === true;
   return {
     key: "camera",
     section: (
       <IslandParts className="flex flex-col gap-separate">
-        <AnnotationLine key="looks">
-          <OptionToggle
-            glyph={(isOn) => <EnhanceGlyph isEnhanced={isOn} />}
-            isOn={effects.enhance}
-            label={t("editor-island-enhance")}
-            onChange={props.onEnhanceChange}
-          />
-          {hasBackgroundModel ? (
-            <OptionToggle
-              glyph={(isOn) => <RemoveBackgroundGlyph isRemoved={isOn} />}
-              isOn={isRemoved}
-              label={t("editor-island-remove-background")}
-              onChange={(remove) => {
-                props.onBackgroundChange(remove ? "transparent" : "kept");
-              }}
-            />
-          ) : null}
+        <AnnotationRows key="rows">
           {picture ? (
-            <ScreenInsetChoice
-              inset={picture.inset}
-              onChange={picture.onInsetChange}
-            />
+            <AnnotationChoiceRow
+              key="inset"
+              title={t("editor-island-screen-inset")}
+            >
+              <ScreenInsetChoice
+                inset={picture.inset}
+                onChange={picture.onInsetChange}
+              />
+            </AnnotationChoiceRow>
           ) : null}
           {/* Square, rounded and round: a camera is often drawn as a
               circle, so its corners run all the way to one. */}
-          <CornerChoice onChange={props.onRadiusChange} value={props.radius} />
+          <AnnotationChoiceRow key="corners" title={t("annotation-radius")}>
+            <CornerChoice
+              onChange={props.onRadiusChange}
+              value={props.radius}
+            />
+          </AnnotationChoiceRow>
+          {picture?.rotation && picture.onRotationChange ? (
+            <IslandRotation
+              key="rotation"
+              onChange={picture.onRotationChange}
+              rotation={picture.rotation}
+            />
+          ) : null}
+        </AnnotationRows>
+        <AnnotationLine key="options">
+          <OptionToggle
+            glyph={(isOn) => <EnhanceGlyph isEnhanced={isOn} />}
+            isOn={effects.enhance}
+            key="enhance"
+            label={t("editor-island-enhance")}
+            onChange={props.onEnhanceChange}
+          />
           <ShadowToggle
             hasShadow={props.hasShadow}
+            key="shadow"
             onChange={props.onShadowChange}
           />
           {picture ? null : (
             <FollowFaceToggle
               isFindingFace={props.isFindingFace}
               isFollowing={props.followFace}
+              key="follow-face"
               onChange={props.onFollowFaceChange}
             />
           )}
@@ -154,6 +176,20 @@ export function cameraIsland(props: CameraIslandProps): EditorIslandContent {
             value={effects.progress.colour}
           />
         ) : null}
+        {/* On a line of its own at the start, under the options, since the
+            rows it brings follow it. */}
+        {hasBackgroundModel ? (
+          <div className="flex" key="remove-background">
+            <OptionToggle
+              glyph={(isOn) => <RemoveBackgroundGlyph isRemoved={isOn} />}
+              isOn={isRemoved}
+              label={t("editor-island-remove-background")}
+              onChange={(remove) => {
+                props.onBackgroundChange(remove ? "transparent" : "kept");
+              }}
+            />
+          </div>
+        ) : null}
         {effects.model && !hasBackgroundModel ? (
           <IslandModelLine
             key="background-model"
@@ -162,60 +198,59 @@ export function cameraIsland(props: CameraIslandProps): EditorIslandContent {
             title={t("editor-island-remove-background")}
           />
         ) : null}
-        {effects.working.background ? (
-          <IslandWorkLine
-            key="background-work"
-            label={t("editor-island-remove-background-working")}
-            value={effects.progress.background}
-          />
-        ) : null}
-        {isRemoved && hasBackgroundModel ? (
-          <CameraBackgroundLine
-            background={effects.background}
-            hasImage={effects.hasImage}
-            key="background"
-            onChange={props.onBackgroundChange}
-            onChoosePicture={props.onChoosePicture}
-          />
-        ) : null}
-        {isRemoved && objects?.model ? (
-          objects.model.status === "downloaded" ? (
-            <CameraObjectsLine
-              key="objects"
-              objects={objects}
-              onPick={props.onPickObjects}
-              onRemove={props.onRemoveObject}
-              onShow={props.onShowObject}
-            />
-          ) : (
-            <IslandModelLine
-              key="objects-model"
-              model={objects.model}
-              onDownload={props.onDownloadObjectsModel}
-              title={t("editor-island-camera-objects")}
-            />
-          )
-        ) : null}
-        {objects?.isPicking ? (
-          <IslandKeyHint
-            binding="Alt"
-            key="objects-hint"
-            message={(key) => t("editor-island-camera-objects-hint", { key })}
-          />
-        ) : null}
-        {objects?.working ? (
-          <IslandWorkLine
-            key="objects-work"
-            label={t("editor-island-camera-objects-working")}
-            value={objects.progress}
-          />
-        ) : null}
-        {picture?.rotation && picture.onRotationChange ? (
-          <IslandRotation
-            key="rotation"
-            onChange={picture.onRotationChange}
-            rotation={picture.rotation}
-          />
+        {hasBackgroundRows ? (
+          <AnnotationRows key="background-rows">
+            {effects.working.background ? (
+              <IslandWorkLine
+                key="background-work"
+                label={t("editor-island-remove-background-working")}
+                value={effects.progress.background}
+              />
+            ) : null}
+            {isRemoved && hasBackgroundModel ? (
+              <CameraBackgroundLine
+                background={effects.background}
+                hasImage={effects.hasImage}
+                key="background"
+                onChange={props.onBackgroundChange}
+                onChoosePicture={props.onChoosePicture}
+              />
+            ) : null}
+            {isRemoved && objects?.model ? (
+              objects.model.status === "downloaded" ? (
+                <CameraObjectsLine
+                  key="objects"
+                  objects={objects}
+                  onPick={props.onPickObjects}
+                  onRemove={props.onRemoveObject}
+                  onShow={props.onShowObject}
+                />
+              ) : (
+                <IslandModelLine
+                  key="objects-model"
+                  model={objects.model}
+                  onDownload={props.onDownloadObjectsModel}
+                  title={t("editor-island-camera-objects")}
+                />
+              )
+            ) : null}
+            {objects?.isPicking ? (
+              <IslandKeyHint
+                binding="Alt"
+                key="objects-hint"
+                message={(key) =>
+                  t("editor-island-camera-objects-hint", { key })
+                }
+              />
+            ) : null}
+            {objects?.working ? (
+              <IslandWorkLine
+                key="objects-work"
+                label={t("editor-island-camera-objects-working")}
+                value={objects.progress}
+              />
+            ) : null}
+          </AnnotationRows>
         ) : null}
         {props.isInScene ? (
           // Over a scene the own picture is the scene's screen pane, padded,

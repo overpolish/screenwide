@@ -91,6 +91,24 @@ editor-island-script-remove-profanity =
         [one] Remove 1 profane word
        *[other] Remove { $count } profane words
     }
+# Shown on the chip that removes the pauses, after its icon. $count is how many there are.
+editor-island-script-pause-count =
+    { $count ->
+        [one] 1 pause
+       *[other] { $count } pauses
+    }
+# Shown on the chip that removes the filler words, after its icon. $count is how many there are.
+editor-island-script-filler-count =
+    { $count ->
+        [one] 1 filler
+       *[other] { $count } fillers
+    }
+# Shown on the chip that removes the words marked as profanity, after its icon. $count is how many there are.
+editor-island-script-profanity-count =
+    { $count ->
+        [one] 1 profane word
+       *[other] { $count } profane words
+    }
 # While the recording is listened through for the pauses to cut.
 editor-island-script-finding-pauses = Finding pauses
 # After Remove pauses found none long enough to cut.
@@ -106,9 +124,9 @@ editor-island-script-restore-all = Restore all
 editor-island-captions = Captions
 # A toggle in the island's row: whether the captions are drawn over the recording.
 editor-island-captions-show = Show captions
-# Names the type size choice for assistive technology: a step from the template's own size.
+# Names the row choosing the type size: a step from the template's own size.
 editor-island-captions-size = Size
-# Names the key word's size choice, shown where the template sets one word apart.
+# Names the row choosing the key word's size, shown where the template sets one word apart.
 editor-island-captions-accent-size = Key word size
 editor-island-captions-size-small = Small
 editor-island-captions-size-medium = Medium
@@ -349,6 +367,8 @@ editor-island-magnifier = Magnifier
 editor-island-redaction = Redaction
 # Under a redaction whose settings leave what it covers recoverable or briefly visible: a blur, classic pixelation, or drawing in, which shows what it covers until it arrives.
 editor-island-redaction-not-secure = These settings aren't secure.
+# Names the row choosing how a redaction hides what is under it: erasing, filling, pixelating or blurring.
+editor-island-redaction-style = Style
 editor-island-shape = Shape
 # A text placed on the picture.
 editor-island-text = Text
@@ -453,7 +473,8 @@ editor-island-replace = Replace
 
 editor-island-cursor = Cursor
 editor-island-cursor-size = Cursor size
-editor-island-cursor-clip = Keep cursor inside the recording
+# A toggle: whether the cursor is cut off at the recording's edge rather than drawn past it. Short, since the Cursor island already says what is kept.
+editor-island-cursor-clip = Keep inside
 editor-island-cursor-smooth = Smooth movement
 editor-island-cursor-motion-blur = Motion blur
 editor-island-cursor-click-animation = Click animation

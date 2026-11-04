@@ -11,22 +11,21 @@ import { IslandFill } from "../../../../primitives/island/island-fill";
 
 /**
  * A Remove drawn small: what it takes as a glyph, struck through while it
- * is about to take it, and how many, in a quiet pill whose fill grows in
- * under the pointer as the island's controls' does. Islands show no
- * tooltips, so its full name ("Remove 6 pauses") is its accessible name
- * alone. While hovered or focused it previews what it would cut, so those
- * words show red before it is pressed; it goes once there is nothing left
- * to take, and its preview with it.
+ * is about to take it, and how many by name ("6 pauses"), in a quiet pill
+ * whose fill grows in under the pointer as the island's controls' does. Its
+ * full name ("Remove 6 pauses") is its accessible name. While hovered or
+ * focused it previews what it would cut, so those words show red before it
+ * is pressed; it goes once there is nothing left to take, and its preview
+ * with it.
  */
 export function ScriptRemoveChip({
-  count,
   glyph,
   isDisabled,
   label,
   onPreview,
   onRemove,
+  text,
 }: {
-  count: number;
   /** The glyph for what it takes, struck through while previewing. */
   glyph: (isPreviewing: boolean) => ReactNode;
   isDisabled: boolean;
@@ -34,6 +33,8 @@ export function ScriptRemoveChip({
   /** Told whether it is hovered or focused. */
   onPreview: (isPreviewing: boolean) => void;
   onRemove: () => void;
+  /** How many it takes, by name. */
+  text: string;
 }) {
   const [isHovered, setIsHovered] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
@@ -60,7 +61,7 @@ export function ScriptRemoveChip({
       <IslandFill isChosen={false} />
       {glyph(isPreviewing)}
       <span aria-hidden className="tabular-nums">
-        {count}
+        {text}
       </span>
     </Button>
   );

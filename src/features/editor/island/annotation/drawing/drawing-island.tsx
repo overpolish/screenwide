@@ -3,14 +3,15 @@
 
 import { t } from "../../../../../i18n/i18n";
 import { IslandRowTitle } from "../../../../../primitives/island/row-title/island-row-title";
+import { annotationSizeLabel } from "../../../../annotations/annotation-text";
 import { DrawToolIcon } from "../../../../annotations/annotation-tool-icons";
 import { PenWeights } from "../../../../annotations/options/pen-weights";
 import {
   AnnotationAnimateToggle,
+  AnnotationChoiceRow,
   AnnotationColorChoice,
   type AnnotationColorProps,
   AnnotationDelete,
-  AnnotationLine,
 } from "../annotation-island-parts";
 import {
   AnnotationPinNote,
@@ -22,11 +23,11 @@ import type { EditorIslandContent } from "../../editor-island";
 
 // A freehand drawing on the picture, in hand. Its row ends with whether it
 // draws itself in along its line, which only a recording has a clip for,
-// and deleting it. Under the row, the live overlay's own pen, its weight
-// alone, and its colour, a colour of the user's own among them. It has no
-// clean or hand-drawn choice, being a stroke by hand already; clearing every
-// drawing at once belongs to the pen rather than to the one in hand, so it
-// is not offered here.
+// and deleting it. Under the row, the live overlay's own pen: its weight
+// alone, a row named as the rows round it are, and its colour, a colour of
+// the user's own among them. It has no clean or hand-drawn choice, being a
+// stroke by hand already; clearing every drawing at once belongs to the pen
+// rather than to the one in hand, so it is not offered here.
 
 type DrawingStyle = {
   color: string;
@@ -68,14 +69,15 @@ export function drawingIsland(props: DrawingIslandProps): EditorIslandContent {
     key: `drawing-${id}`,
     section: (
       <div className="flex flex-col gap-separate">
-        <AnnotationLine>
+        <AnnotationPinNote onPinAction={props.onPinAction} pin={props.pin} />
+        <AnnotationChoiceRow title={annotationSizeLabel("width")}>
           <PenWeights
             onChange={(width) => {
               onStyleChange({ width });
             }}
             value={style.width}
           />
-        </AnnotationLine>
+        </AnnotationChoiceRow>
         <AnnotationColorChoice
           color={style.color}
           onChange={(color) => {
@@ -85,7 +87,6 @@ export function drawingIsland(props: DrawingIslandProps): EditorIslandContent {
           onSaveColor={props.onSaveColor}
           savedColors={props.savedColors}
         />
-        <AnnotationPinNote onPinAction={props.onPinAction} pin={props.pin} />
       </div>
     ),
     title: (

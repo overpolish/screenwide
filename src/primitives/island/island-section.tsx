@@ -1,21 +1,18 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import {
-  AnimatePresence,
-  motion,
-  type MotionValue,
-  type Transition,
-} from "motion/react";
+import { AnimatePresence, motion, type MotionValue } from "motion/react";
 import { type ReactNode } from "react";
 
 import { motionDurations } from "../../lib/motion";
+import { cn } from "../../lib/styling";
 
 import { px } from "./island-geometry";
 import { focusIn } from "./island-motion";
 import { useSectionPlace } from "./island-section-place";
 import { useSectionSettle } from "./island-section-settle";
 
+import type { IslandTravel } from "./island-follow";
 import type { islandLayout } from "./island-layout";
 import type { IslandShapeValues } from "./island-outline-sync";
 
@@ -27,6 +24,7 @@ export function IslandSection({
   isFromMiddle,
   isOpening,
   isShown,
+  joinsRow,
   layout,
   movesSideways,
   onElement,
@@ -43,6 +41,9 @@ export function IslandSection({
   /** Opening from closed, until `onOpened`. */
   isOpening: boolean;
   isShown: boolean;
+  /** Whether what it holds starts straight under the row, with no room of
+   * its own above it, as one block's rows follow one another. */
+  joinsRow: boolean;
   layout: ReturnType<typeof islandLayout>;
   // Then what hangs is held against the move (`sectionX`) and put where it
   // will rest at once (`island-section-settle.ts`); otherwise it rides with
@@ -58,8 +59,9 @@ export function IslandSection({
   /** Holds what hangs still while the island moves sideways under the
    * notch. */
   sectionX: MotionValue<number>;
-  /** How the box moves to a new size (`useIslandFollow`). */
-  travel: Transition;
+  /** How the box moves to a new size along each axis
+   * (`useIslandFollow`). */
+  travel: IslandTravel;
   values: IslandShapeValues["section"];
 }) {
   const {
@@ -101,7 +103,7 @@ export function IslandSection({
     layout,
     rowWidth,
     stretch,
-    travel,
+    travel: travel.across,
     values,
   });
 
@@ -130,7 +132,7 @@ export function IslandSection({
           top: values.top,
           width: values.width,
         }}
-        transition={travel}
+        transition={travel.down}
       >
         <motion.div
           animate={{
@@ -145,7 +147,7 @@ export function IslandSection({
           initial={false}
           onAnimationComplete={onOpened}
           style={{ height: values.height, opacity: values.opacity }}
-          transition={{ ...travel, opacity: opacityTransition }}
+          transition={{ ...travel.down, opacity: opacityTransition }}
         >
           <motion.div
             animate={
@@ -198,14 +200,22 @@ export function IslandSection({
               // share of this box rather than a width of its own.
               ...(!isOpen && heldStretch > 0 ? { width: lastPlace.width } : {}),
             }}
-            transition={isHolding ? { duration: 0 } : travel}
+            transition={isHolding ? { duration: 0 } : travel.across}
           >
             <AnimatePresence initial={false}>
               {isShown && children ? (
                 <motion.div
                   key="section"
                   {...focusIn}
-                  className="relative flex w-max shrink-0 flex-col gap-inline px-(--island-section-inset) pt-inset-sm pb-(--island-section-inset)"
+                  // The room above what it holds is a variable, so a part
+                  // placed against the black's outer edge beside the
+                  // section, such as a picker's column, can take it off.
+                  className={cn(
+                    "relative flex w-max shrink-0 flex-col gap-inline px-(--island-section-inset) pt-(--island-section-top) pb-(--island-section-inset)",
+                    joinsRow
+                      ? "[--island-section-top:0px]"
+                      : "[--island-section-top:var(--spacing-inset-sm)]",
+                  )}
                   initial={false}
                   ref={onElement}
                   style={

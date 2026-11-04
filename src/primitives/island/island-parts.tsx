@@ -75,6 +75,7 @@ export function IslandParts({
   className,
   direction = "column",
   initial = false,
+  partClassName,
 }: {
   children: ReactNode;
   className?: string;
@@ -83,6 +84,9 @@ export function IslandParts({
   /** Reveals what it first holds as it mounts, as a part arriving later is;
    * off, what it first holds is revealed with the island. */
   initial?: boolean;
+  /** Lays out the box each part is held in, such as a grid's span, where
+   * the layout reaches past the parts' own boxes. */
+  partClassName?: string;
 }) {
   const reduce = useReducedMotion() ?? false;
   // eslint-disable-next-line @eslint-react/no-children-to-array
@@ -135,10 +139,15 @@ export function IslandParts({
   useEffect(() => {
     if (!leavingKeys) return;
     // The black follows the room folding away rather than trailing it, for
-    // a frame or two past the fold so it takes the last of it.
+    // a frame or two past the fold so it takes the last of it, along the
+    // way the parts are laid: a row's parts fold their width, a column's
+    // their height.
     const folding = folds
       ? window.setTimeout(() => {
-          follow(glide.duration + 0.03);
+          follow(
+            glide.duration + 0.03,
+            direction === "row" ? "across" : "down",
+          );
         }, leave.duration * 1000)
       : 0;
     const gone = window.setTimeout(() => {
@@ -148,7 +157,7 @@ export function IslandParts({
       window.clearTimeout(folding);
       window.clearTimeout(gone);
     };
-  }, [folds, follow, goneAfter, leavingKeys]);
+  }, [direction, folds, follow, goneAfter, leavingKeys]);
 
   // The gap the layout sets between parts (`className`), read once and laid
   // as each part's margin instead, so a part folding away takes the gap
@@ -219,7 +228,11 @@ export function IslandParts({
                     }
                   : { ...reveal.animate, ...gapBefore, ...unfolded }
               }
-              className={cn("flex flex-col", isFolding && "overflow-clip")}
+              className={cn(
+                "flex flex-col",
+                partClassName,
+                isFolding && "overflow-clip",
+              )}
               // Out of reach of the pointer and assistive technology as it goes.
               inert={Boolean(entry.leaving)}
               initial={

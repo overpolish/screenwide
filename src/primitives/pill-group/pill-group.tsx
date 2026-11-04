@@ -71,7 +71,9 @@ const knobClassName =
 // island's fill, which is its hover and its choice, so a circle chosen under
 // the pointer keeps the fill it already showed, one chosen from the keyboard
 // grows its own, and the one left behind shrinks away. A segment with a
-// label is a pill the circle's height, as wide as its label.
+// label is a pill the circle's height, as wide as its label and padded the
+// small inset: unchosen it draws no fill, so its words, what is seen of it,
+// sit on the island's text column while its edge keeps to the section's.
 const islandSegmentClassName = [
   "group relative isolate flex h-island-control min-w-island-control shrink-0 cursor-default items-center justify-center rounded-full text-label outline-none select-none",
   "data-[disabled]:opacity-40",
@@ -198,7 +200,7 @@ export function PillGroup({
                       islandSegmentClassName,
                       item.label === undefined
                         ? "w-island-control"
-                        : "px-inset",
+                        : "px-inset-sm",
                     ]
                   : [
                       segmentClassName,

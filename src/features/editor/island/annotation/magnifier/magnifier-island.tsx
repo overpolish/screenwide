@@ -3,12 +3,14 @@
 
 import { t } from "../../../../../i18n/i18n";
 import { IslandRowTitle } from "../../../../../primitives/island/row-title/island-row-title";
+import { annotationSizeLabel } from "../../../../annotations/annotation-text";
 import { MagnifyToolIcon } from "../../../../annotations/annotation-tool-icons";
 import { CornerChoice } from "../../../../annotations/options/corner-choice";
 import {
   AnnotationAnimateToggle,
+  AnnotationChoiceRow,
   AnnotationDelete,
-  AnnotationLine,
+  AnnotationRows,
 } from "../annotation-island-parts";
 import {
   AnnotationPinNote,
@@ -22,11 +24,12 @@ import type { EditorIslandContent } from "../../editor-island";
 
 // A lens on the picture, in hand: glass that shows what lies under its
 // middle larger. Its row ends with whether it grows in as it arrives, which
-// only a recording has a clip for, and deleting it. Under the row, how many
-// times it enlarges and then how round its corners are, as looks. The lens
-// is glass: its depth and its edge come from the material, refraction,
-// highlight and its own soft shadow, so neither a shadow nor a rim colour is
-// offered; how much it shows is how big the lens is dragged.
+// only a recording has a clip for, and deleting it. Under the row, each a
+// row named as the rows round it are, how many times it enlarges and then
+// how round its corners are. The lens is glass: its depth and its edge come
+// from the material, refraction, highlight and its own soft shadow, so
+// neither a shadow nor a rim colour is offered; how much it shows is how
+// big the lens is dragged.
 
 type MagnifierStyle = {
   isAnimated: boolean;
@@ -70,21 +73,25 @@ export function magnifierIsland(
     key: `magnifier-${id}`,
     section: (
       <div className="flex flex-col gap-separate">
-        <AnnotationLine>
-          <LensZoomChoice
-            onChange={(zoom) => {
-              onStyleChange({ zoom });
-            }}
-            value={style.zoom}
-          />
-          <CornerChoice
-            onChange={(radius) => {
-              onStyleChange({ radius });
-            }}
-            value={style.radius}
-          />
-        </AnnotationLine>
         <AnnotationPinNote onPinAction={props.onPinAction} pin={props.pin} />
+        <AnnotationRows>
+          <AnnotationChoiceRow key="zoom" title={annotationSizeLabel("zoom")}>
+            <LensZoomChoice
+              onChange={(zoom) => {
+                onStyleChange({ zoom });
+              }}
+              value={style.zoom}
+            />
+          </AnnotationChoiceRow>
+          <AnnotationChoiceRow key="radius" title={t("annotation-radius")}>
+            <CornerChoice
+              onChange={(radius) => {
+                onStyleChange({ radius });
+              }}
+              value={style.radius}
+            />
+          </AnnotationChoiceRow>
+        </AnnotationRows>
       </div>
     ),
     title: (

@@ -18,6 +18,7 @@ export function HighlightPen({ onChange, settings }: SectionProps) {
     <div className="flex items-center gap-separate">
       <HandDrawnToggle
         isHandDrawn={settings.highlightHandDrawn}
+        isLabelHidden
         kind="highlight"
         onChange={(highlightHandDrawn) => {
           onChange({ highlightHandDrawn });

@@ -14,12 +14,14 @@ import { Text } from "../text/text";
 // colours the icon alone; the box and the text are never tinted. On the
 // island it is a line of the island's black, the box being the island, and
 // speaks as the island's hints do: a caption, set back, centred under the
-// parts it is about. One with an action keeps to the start, so the message
-// and its answer read across the line.
+// parts it is about. Its lines start at the icon rather than centring each
+// under the last, so a message that wraps reads as one paragraph. One with
+// an action keeps to the start, so the message and its answer read across
+// the line.
 const alertVariants = tv({
   compoundVariants: [
     {
-      class: { base: "justify-center text-center", lead: "grow-0" },
+      class: { base: "justify-center", lead: "grow-0" },
       hasAction: false,
       skin: "island",
     },

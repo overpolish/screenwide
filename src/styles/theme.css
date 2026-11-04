@@ -42,10 +42,10 @@
   --spacing-part-height: 1.125rem;
   /* A small selection mark's size: a checkbox, a radio. */
   --spacing-mark: 1rem;
-  /* An island control's size: the island stands at the top of the screen
-     beside the hardware, so its round controls are a size up from a
-     window's. */
-  --spacing-island-control: 2rem;
+  /* An island control's size: a window's control height, round, so the
+     islands' inspector rows stay compact while every control on them,
+     circles, pills and fields alike, keeps one size. */
+  --spacing-island-control: 1.75rem;
   /* The shortest row on an island: a switch and a little either side. A row
      with a taller control (pills, a figure) takes that control's height. */
   --spacing-island-row: 1.5rem;

@@ -392,6 +392,7 @@ export type Messages = {
   "editor-island-range-deselect": null;
   "editor-island-redaction": null;
   "editor-island-redaction-not-secure": null;
+  "editor-island-redaction-style": null;
   "editor-island-reduce-noise": null;
   "editor-island-remove-background": null;
   "editor-island-remove-background-working": null;
@@ -462,8 +463,11 @@ export type Messages = {
   "editor-island-screenshot": null;
   "editor-island-script": null;
   "editor-island-script-captions-hint": { key: string | number };
+  "editor-island-script-filler-count": { count: number };
   "editor-island-script-finding-pauses": null;
   "editor-island-script-no-pauses": null;
+  "editor-island-script-pause-count": { count: number };
+  "editor-island-script-profanity-count": { count: number };
   "editor-island-script-remove-fillers": { count: number };
   "editor-island-script-remove-pauses": { count: number };
   "editor-island-script-remove-profanity": { count: number };

@@ -8,8 +8,8 @@ import { CornerChoice } from "../../../../annotations/options/corner-choice";
 import { DimToggle } from "../../../../annotations/options/dim-toggle";
 import {
   AnnotationAnimateToggle,
+  AnnotationChoiceRow,
   AnnotationDelete,
-  AnnotationLine,
 } from "../annotation-island-parts";
 import {
   AnnotationPinNote,
@@ -25,10 +25,12 @@ import type { EditorIslandContent } from "../../editor-island";
 // changing the look turns one into the other. Its row ends with whether the
 // look deepens in round it, which only a recording has a clip for, and
 // deleting it. Under the row, the live overlay's own pen and nothing more:
-// its corners and its look. Nothing is drawn for it, so it has no colour. A
-// focus's blur keeps its strength, the middle step for a new one, and a
-// spotlight its soft edge and outside blur, as the live pen leaves them: a
-// good standard draws the eye as well as a scale would, without asking.
+// its corners, a row named as the rows round it are, then its look, a toggle
+// on a line of its own at the start. Nothing is drawn for it, so it has no
+// colour. A focus's blur keeps its strength, the middle step for a new one,
+// and a spotlight its soft edge and outside blur, as the live pen leaves
+// them: a good standard draws the eye as well as a scale would, without
+// asking.
 
 type FocusStyle = {
   /** Dimmed, a spotlight, rather than blurred, a focus. */
@@ -70,21 +72,23 @@ export function focusIsland(props: FocusIslandProps): EditorIslandContent {
     key: `focus-${id}`,
     section: (
       <div className="flex flex-col gap-separate">
-        <AnnotationLine>
+        <AnnotationPinNote onPinAction={props.onPinAction} pin={props.pin} />
+        <AnnotationChoiceRow title={t("annotation-radius")}>
           <CornerChoice
             onChange={(radius) => {
               onStyleChange({ radius });
             }}
             value={style.radius}
           />
+        </AnnotationChoiceRow>
+        <div className="flex">
           <DimToggle
             dims={style.dims}
             onChange={(dims) => {
               onStyleChange({ dims });
             }}
           />
-        </AnnotationLine>
-        <AnnotationPinNote onPinAction={props.onPinAction} pin={props.pin} />
+        </div>
       </div>
     ),
     title: (

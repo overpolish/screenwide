@@ -44,8 +44,11 @@ export function TextPickerLine({
       aria-controls={isOpen ? controls : undefined}
       aria-expanded={isOpen}
       aria-label={label}
+      // Padded the small inset, so what it shows starts on the island's
+      // text column with the rows' names, while its fill keeps to the
+      // section's edge.
       className={cn(
-        "group relative isolate flex h-island-control w-full cursor-default items-center justify-between gap-inline rounded-full ps-inset pe-inset-sm text-label text-fg outline-none",
+        "group relative isolate flex h-island-control w-full cursor-default items-center justify-between gap-inline rounded-full px-inset-sm text-label text-fg outline-none",
         focusStyles,
         elementFocusVisible,
       )}

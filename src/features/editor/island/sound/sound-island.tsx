@@ -8,7 +8,7 @@ import { t } from "../../../../i18n/i18n";
 import { IslandParts } from "../../../../primitives/island/island-parts";
 import { IslandRowTitle } from "../../../../primitives/island/row-title/island-row-title";
 import { OptionToggle } from "../../../annotations/options/option-toggle";
-import { AnnotationLine } from "../annotation/annotation-island-parts";
+import { AnnotationOptions } from "../annotation/annotation-island-parts";
 import { IslandModelLine } from "../island-model-line";
 import { IslandWorkLine } from "../island-work-line";
 
@@ -141,7 +141,7 @@ function microphoneParts(
     <IslandWorkLine key={`${trackId}-${key}`} label={label} value={value} />
   );
   return [
-    <AnnotationLine key={`${trackId}-tools`}>
+    <AnnotationOptions key={`${trackId}-tools`}>
       {hasStudio
         ? toggle("studioSound", microphone.studio, (isOn) => (
             <StudioSoundGlyph isOn={isOn} />
@@ -165,7 +165,7 @@ function microphoneParts(
             <StudioDuckingGlyph isOn={isOn} />
           ))
         : null}
-    </AnnotationLine>,
+    </AnnotationOptions>,
     microphone.studioModel && !hasStudio ? (
       <IslandModelLine
         key={`${trackId}-studio-model`}

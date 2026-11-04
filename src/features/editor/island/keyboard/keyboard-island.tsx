@@ -13,6 +13,7 @@ import { OptionToggle } from "../../../annotations/options/option-toggle";
 import { placementOptions } from "../../tools/placement-options";
 import {
   AnnotationAnimateToggle,
+  AnnotationChoiceRow,
   AnnotationLine,
 } from "../annotation/annotation-island-parts";
 import { OverlaySizeChoice } from "../overlay-size-choice";
@@ -27,10 +28,11 @@ import type { EditorIslandContent } from "../editor-island";
 // one alone. Its row ends with whether they pop in, as every island's
 // Animate does, and whether they show at all; then, with shortcuts chosen
 // on the strip, deleting them, which asks twice. Hidden, there is nothing
-// else to set, so the section folds away. Under the row: their size and
-// whether the keys are dark or light; then where they sit; then, once some
-// have been deleted, bringing them all back. The editor offers the Keyboard
-// tool only for a recording with shortcuts in it. A recording that fades
+// else to set, so the section folds away. Under the row: their size, a row
+// named as the rows round it are; then where they sit, with whether the
+// keys are dark or light at that line's end; then, once some have been
+// deleted, bringing them all back. The editor offers the Keyboard tool
+// only for a recording with shortcuts in it. A recording that fades
 // its shortcuts in shows as animated and keeps its fade until Animate is
 // turned off and on.
 
@@ -64,6 +66,7 @@ export function keyboardIsland(
         ) : null}
         <OptionToggle
           glyph={(isOn) => <ShowGlyph isShown={isOn} />}
+          isLabelHidden
           isOn={settings.bake}
           key="show"
           label={t("editor-island-keyboard-show")}
@@ -86,7 +89,7 @@ export function keyboardIsland(
     key: "keyboard",
     section: settings.bake ? (
       <IslandParts className="flex flex-col gap-separate">
-        <AnnotationLine>
+        <AnnotationChoiceRow key="size" title={t("editor-island-size")}>
           <OverlaySizeChoice
             aria-label={t("editor-island-size")}
             glyph={(side) => <KeycapSizeGlyph side={side} />}
@@ -94,6 +97,16 @@ export function keyboardIsland(
               onChange({ size });
             }}
             value={settings.size}
+          />
+        </AnnotationChoiceRow>
+        <AnnotationLine key="place">
+          <PositionGrid
+            aria-label={t("editor-island-position")}
+            items={placementOptions()}
+            onChange={(position) => {
+              onChange({ position });
+            }}
+            value={settings.position}
           />
           <OptionToggle
             glyph={(isOn) => <AppearanceGlyph isLight={isOn} />}
@@ -104,18 +117,8 @@ export function keyboardIsland(
             }}
           />
         </AnnotationLine>
-        <AnnotationLine>
-          <PositionGrid
-            aria-label={t("editor-island-position")}
-            items={placementOptions()}
-            onChange={(position) => {
-              onChange({ position });
-            }}
-            value={settings.position}
-          />
-        </AnnotationLine>
         {props.canRestoreShortcuts ? (
-          <div className="flex justify-end">
+          <div className="flex justify-end" key="restore">
             <Button onPress={props.onRestoreShortcuts}>
               {t("editor-island-keyboard-restore")}
             </Button>

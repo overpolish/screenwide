@@ -4,15 +4,18 @@
 import { t } from "../../../../../i18n/i18n";
 import { Button } from "../../../../../primitives/button/button";
 import { IslandRowTitle } from "../../../../../primitives/island/row-title/island-row-title";
+import { headChoice } from "../../../../annotations/annotation-choices";
+import { annotationSizeLabel } from "../../../../annotations/annotation-text";
 import { ArrowToolIcon } from "../../../../annotations/annotation-tool-icons";
 import { ArrowHeadChoice } from "../../../../annotations/options/arrow-head-choice";
 import { PenWeights } from "../../../../annotations/options/pen-weights";
 import {
   AnnotationAnimateToggle,
+  AnnotationChoiceRow,
   AnnotationColorChoice,
   type AnnotationColorProps,
   AnnotationDelete,
-  AnnotationLine,
+  AnnotationRows,
 } from "../annotation-island-parts";
 import {
   AnnotationPinNote,
@@ -25,9 +28,10 @@ import type { EditorIslandContent } from "../../editor-island";
 
 // An arrow drawn on the picture, in hand. Its row ends with whether it draws
 // itself in, which only a recording has a clip for, and deleting it. Under
-// the row, the live overlay's own pen as it draws one, its weight and its
-// heads; its colour, a colour of the user's own among them; and turning it
-// round, a one-shot action at the end of its own row.
+// the row, the live overlay's own pen as it draws one, each a row named as
+// the rows round it are: its weight, then its heads; its colour, a colour of
+// the user's own among them; and turning it round, a one-shot action at the
+// end of its own row.
 
 type ArrowStyle = {
   color: string;
@@ -72,20 +76,25 @@ export function arrowIsland(props: ArrowIslandProps): EditorIslandContent {
     key: `arrow-${id}`,
     section: (
       <div className="flex flex-col gap-separate">
-        <AnnotationLine>
-          <PenWeights
-            onChange={(width) => {
-              onStyleChange({ width });
-            }}
-            value={style.width}
-          />
-          <ArrowHeadChoice
-            onChange={(head) => {
-              onStyleChange({ head });
-            }}
-            value={style.head}
-          />
-        </AnnotationLine>
+        <AnnotationPinNote onPinAction={props.onPinAction} pin={props.pin} />
+        <AnnotationRows>
+          <AnnotationChoiceRow key="width" title={annotationSizeLabel("width")}>
+            <PenWeights
+              onChange={(width) => {
+                onStyleChange({ width });
+              }}
+              value={style.width}
+            />
+          </AnnotationChoiceRow>
+          <AnnotationChoiceRow key="head" title={headChoice.label()}>
+            <ArrowHeadChoice
+              onChange={(head) => {
+                onStyleChange({ head });
+              }}
+              value={style.head}
+            />
+          </AnnotationChoiceRow>
+        </AnnotationRows>
         <AnnotationColorChoice
           color={style.color}
           onChange={(color) => {
@@ -95,7 +104,6 @@ export function arrowIsland(props: ArrowIslandProps): EditorIslandContent {
           onSaveColor={props.onSaveColor}
           savedColors={props.savedColors}
         />
-        <AnnotationPinNote onPinAction={props.onPinAction} pin={props.pin} />
         <div className="flex justify-end">
           <Button onPress={onReverse}>
             {t("editor-island-arrow-reverse")}

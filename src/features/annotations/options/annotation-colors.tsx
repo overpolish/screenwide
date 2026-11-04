@@ -7,13 +7,14 @@ import { ScrollArea } from "../../../primitives/scroll-area/scroll-area";
 /** The colours an annotation is drawn in: the same grid of swatches, ten to
  * a row, wherever it is offered. Past five rows they scroll, so a long list
  * of colours of your own never pushes an island far down the screen. The
- * scrolled box holds the grid in the small inset, so a chosen swatch's
- * outline at its edge is not cut off; above and below it reaches past the
- * grid by as much, so the rows keep the section's own inset. Not at the
- * sides: an island takes the box's width as the section's, and a box
- * narrower than its grid is cut off. Where `custom` is given, a colour of
- * the user's own can be picked and kept; the live overlay's island leaves
- * it out, as its panel closes on every pick. */
+ * scrolled box holds the grid in the small inset on every side, so a chosen
+ * swatch's ring at its edge is not cut off and the swatches sit as far from
+ * the island's foot as from its sides; were it held in at the sides alone,
+ * the ring would all but meet the island's edge below. An island takes the
+ * box's width as the section's, and a box narrower than its grid is cut
+ * off, so the box is never pulled in at the sides. Where `custom` is given,
+ * a colour of the user's own can be picked and kept; the live overlay's
+ * island leaves it out, as its panel closes on every pick. */
 export function AnnotationColors({
   custom,
   onChange,
@@ -30,11 +31,7 @@ export function AnnotationColors({
   savedColors?: string[];
 }) {
   return (
-    <ScrollArea
-      className="p-inset-sm"
-      constrainHeight
-      rootClassName="-my-inset-sm max-h-34"
-    >
+    <ScrollArea className="p-inset-sm" constrainHeight rootClassName="max-h-34">
       <ColorGrid
         columns={10}
         offersCustom={custom !== undefined}

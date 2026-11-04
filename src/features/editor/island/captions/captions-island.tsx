@@ -91,6 +91,7 @@ export function captionsIsland(
         ) : null}
         <OptionToggle
           glyph={(isOn) => <ShowGlyph isShown={isOn} />}
+          isLabelHidden
           isOn={props.enabled}
           key="show"
           label={t("editor-island-captions-show")}

@@ -22,17 +22,19 @@ type Picker = "accent" | "font" | "template";
  * time opens its choices in a column beside the section, at its end: the
  * island grows sideways and keeps its height. Opening another line swaps
  * the column's choices. Choosing leaves them open, so one choice after
- * another can be tried; the line folds them away. The template comes
- * first, since it decides which of the lines under it there are; then how
- * the text is placed (`placement`); then its faces, the accent's offered
- * only where the template sets words apart in an accent; then the rest of
- * the section (`children`). `templates` are the ones offered, each as
- * choosing it would set the look: a text placed by hand is offered fewer
- * than the captions are. */
+ * another can be tried; the line folds them away. A note that answers the
+ * island's row, such as a pin's, comes first (`note`); then the template,
+ * since it decides which of the lines under it there are; then how the
+ * text is placed (`placement`); then its faces, the accent's offered only
+ * where the template sets words apart in an accent; then the rest of the
+ * section (`children`). `templates` are the ones offered, each as choosing
+ * it would set the look: a text placed by hand is offered fewer than the
+ * captions are. */
 export function TextLookPickers({
   children,
   families,
   look,
+  note,
   onLookChange,
   placement,
   still,
@@ -50,6 +52,8 @@ export function TextLookPickers({
   templates: TextTemplates;
   /** Families beyond the system's, for a story. */
   families?: FontFamily[];
+  /** A note above the template, answering the island's row. */
+  note?: ReactNode;
 }) {
   const columnId = useId();
   const [open, setOpen] = useState<Picker | null>(null);
@@ -101,6 +105,7 @@ export function TextLookPickers({
        * and go with the template do so in place, and the lines under them
        * glide to their places (`IslandParts`). */}
       <IslandParts className="flex shrink-0 flex-col gap-separate self-start">
+        {note}
         <TextTemplateLine
           clip={clips[styles.findIndex((s) => s.template === look.template)]}
           controls={columnId}

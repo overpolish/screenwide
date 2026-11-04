@@ -72,7 +72,7 @@ const meta = {
   component: IconToggleButton,
   parameters: {
     controls: {
-      include: ["aria-label", "isDisabled", "isSelected", "variant"],
+      include: ["aria-label", "isDisabled", "isSelected", "label", "variant"],
     },
     layout: "centered",
   },
@@ -106,6 +106,12 @@ export const Variants: Story = {
 // button.
 export const WithOffIcon: Story = {
   args: { "aria-label": "Play", children: <Pause />, off: <Play /> },
+};
+
+// Named beside its glyph, it is a pill as wide as both.
+export const WithLabel: Story = {
+  args: { "aria-label": undefined, label: "Crop" },
+  decorators: [onIsland()],
 };
 
 export const Disabled: Story = {

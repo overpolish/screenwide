@@ -8,7 +8,12 @@ import { IslandParts } from "../../../../primitives/island/island-parts";
 import { PositionGrid } from "../../../../primitives/position-grid/position-grid";
 import { CAPTION_WORDS } from "../../recording/captions/recording-captions";
 import { placementOptions } from "../../tools/placement-options";
-import { AnnotationLine } from "../annotation/annotation-island-parts";
+import {
+  AnnotationChoiceRow,
+  AnnotationLine,
+  AnnotationOptions,
+  AnnotationRows,
+} from "../annotation/annotation-island-parts";
 import { TextColors } from "../annotation/text/text-colors";
 import { TextLookPickers } from "../annotation/text/text-look-pickers";
 
@@ -36,25 +41,33 @@ export function CaptionsSection(props: CaptionsIslandProps) {
         // the line count of captions set in lines) do so in place, the rest
         // gliding to make room.
         <IslandParts className="flex flex-col gap-separate">
-          <AnnotationLine key="size">
-            <CaptionSizeChoice
+          <AnnotationRows key="sizes">
+            <AnnotationChoiceRow
               key="size"
-              onChange={(size) => {
-                onLayoutChange({ size });
-              }}
-              value={look.size}
-            />
-            {look.accent === "word" ? (
+              title={t("editor-island-captions-size")}
+            >
               <CaptionSizeChoice
-                isAccent
-                key="accent-size"
-                onChange={(accentSize) => {
-                  onLayoutChange({ accentSize });
+                onChange={(size) => {
+                  onLayoutChange({ size });
                 }}
-                value={look.accentSize}
+                value={look.size}
               />
+            </AnnotationChoiceRow>
+            {look.accent === "word" ? (
+              <AnnotationChoiceRow
+                key="accent-size"
+                title={t("editor-island-captions-accent-size")}
+              >
+                <CaptionSizeChoice
+                  isAccent
+                  onChange={(accentSize) => {
+                    onLayoutChange({ accentSize });
+                  }}
+                  value={look.accentSize}
+                />
+              </AnnotationChoiceRow>
             ) : null}
-          </AnnotationLine>
+          </AnnotationRows>
           <AnnotationLine key="place">
             <PositionGrid
               aria-label={t("editor-island-captions-position")}
@@ -103,7 +116,7 @@ export function CaptionsSection(props: CaptionsIslandProps) {
       still={false}
       templates={props.templates}
     >
-      <AnnotationLine key="words">
+      <AnnotationOptions key="words">
         {(["hold", "punctuation", "fillers", "profanity"] as const).map(
           (rule) => (
             <CaptionWordToggle
@@ -121,7 +134,7 @@ export function CaptionsSection(props: CaptionsIslandProps) {
             onLayoutChange({ allCaps });
           }}
         />
-      </AnnotationLine>
+      </AnnotationOptions>
       <TextColors
         key="colors"
         look={look}

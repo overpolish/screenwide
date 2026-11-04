@@ -66,13 +66,13 @@ annotation-blur-strength = Strength
 # One of a blur's steps, named by its place from the lightest and how many there are.
 annotation-blur-strength-step = Strength { $strength } of { $count }
 # A toggle: whether an image casts a shadow onto the picture under it.
-annotation-shadow-drop = Drop shadow
+annotation-shadow-drop = Shadow
 # A toggle: whether a recording gives a placed image a slight, slow turn and drift. Each time it is turned on the sway is new.
 annotation-sway-on = Sway
 # A toggle: whether a recording loops a moving image for its whole clip rather than playing it through once.
 annotation-playback-loop = Loop
-# A toggle: whether a highlight covers the box dragged rather than fitting the text under it.
-annotation-fit-box = Cover the box
+# A toggle: on, a highlight is one box over the area dragged; off, it fits the lines of text under it. Named for the look it turns on, as the live island's "highlight a box" hint words it.
+annotation-fit-box = Box
 # Which ends of an arrow carry a head.
 annotation-head = Head
 annotation-head-none = None

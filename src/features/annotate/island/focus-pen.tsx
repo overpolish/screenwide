@@ -21,6 +21,7 @@ export function FocusPen({ onChange, settings }: SectionProps) {
       />
       <DimToggle
         dims={settings.focusDims}
+        isLabelHidden
         onChange={(focusDims) => {
           onChange({ focusDims });
         }}

@@ -8,6 +8,7 @@ import { Alert } from "../../../../../primitives/alert/alert";
 import { IslandParts } from "../../../../../primitives/island/island-parts";
 import { IslandRowTitle } from "../../../../../primitives/island/row-title/island-row-title";
 import { AnnotationRedactionGroup } from "../../../../annotations/annotation-redaction-group";
+import { annotationSizeLabel } from "../../../../annotations/annotation-text";
 import { RedactToolIcon } from "../../../../annotations/annotation-tool-icons";
 import { BlockSizeChoice } from "../../../../annotations/options/block-size-choice";
 import { BlurStrengthChoice } from "../../../../annotations/options/blur-strength-choice";
@@ -21,10 +22,11 @@ import {
 } from "../../../../annotations/widths";
 import {
   AnnotationAnimateToggle,
+  AnnotationChoiceRow,
   AnnotationColorChoice,
   type AnnotationColorProps,
   AnnotationDelete,
-  AnnotationLine,
+  AnnotationRows,
 } from "../annotation-island-parts";
 import {
   AnnotationPinNote,
@@ -37,13 +39,15 @@ import type { EditorIslandContent } from "../../editor-island";
 
 // A redaction on the picture, in hand: a box hiding what is under it. Its
 // row ends with whether it ramps in, which only a recording has a clip for,
-// and deleting it. Under the row, how it hides, with its corners: those
-// two are always there, so the line that follows, which the mode decides,
-// never moves them. Pixelated it offers its style and its block size;
-// blurred, its strength; filled, its colour; erased, nothing more. Last, an
-// alert while its settings are not secure: a blur or classic pixelation
-// leaves what it covers recoverable, and drawing in shows it until the box
-// arrives. It ends the section, so its coming and going moves nothing.
+// and deleting it. Under the row, each a row named as the rows round it
+// are: how it hides, its style, then its corners, both always there, then
+// the one row its style brings last, so its coming and going never moves
+// the two: pixelated, its block size; blurred, its strength. A pixelation's
+// classic look follows as a toggle on its own line; filled, its colour;
+// erased, nothing more. Last, an alert while its settings are not secure: a
+// blur or classic pixelation leaves what it covers recoverable, and drawing
+// in shows it until the box arrives. It ends the section, so its coming and
+// going moves nothing.
 
 type RedactionStyle = {
   /** The fill, while it is filled with a colour. */
@@ -107,25 +111,66 @@ export function redactionIsland(
     key: `redaction-${id}`,
     section: (
       <IslandParts className="flex flex-col gap-separate">
-        <AnnotationLine>
-          <AnnotationRedactionGroup
-            onChange={(next) => {
-              onStyleChange({ redaction: next });
-            }}
-            onShuffle={() => {
-              onShuffle();
-            }}
-            value={redaction}
+        {props.pin ? (
+          <AnnotationPinNote
+            key="pin"
+            onPinAction={props.onPinAction}
+            pin={props.pin}
           />
-          <CornerChoice
-            onChange={(radius) => {
-              onStyleChange({ radius });
-            }}
-            value={style.radius}
-          />
-        </AnnotationLine>
+        ) : null}
+        <AnnotationRows key="rows">
+          <AnnotationChoiceRow
+            key="style"
+            title={t("editor-island-redaction-style")}
+          >
+            <AnnotationRedactionGroup
+              onChange={(next) => {
+                onStyleChange({ redaction: next });
+              }}
+              onShuffle={() => {
+                onShuffle();
+              }}
+              value={redaction}
+            />
+          </AnnotationChoiceRow>
+          <AnnotationChoiceRow key="radius" title={t("annotation-radius")}>
+            <CornerChoice
+              onChange={(radius) => {
+                onStyleChange({ radius });
+              }}
+              value={style.radius}
+            />
+          </AnnotationChoiceRow>
+          {isPixelated(redaction) ? (
+            <AnnotationChoiceRow
+              key="block-size"
+              title={annotationSizeLabel("blockSize")}
+            >
+              <BlockSizeChoice
+                onChange={(width) => {
+                  onStyleChange({ width });
+                }}
+                sizes={blockSizes}
+                value={style.width}
+              />
+            </AnnotationChoiceRow>
+          ) : null}
+          {redaction === "blur" ? (
+            <AnnotationChoiceRow
+              key="strength"
+              title={t("annotation-blur-strength")}
+            >
+              <BlurStrengthChoice
+                onChange={(strength) => {
+                  onStyleChange({ strength });
+                }}
+                value={style.strength}
+              />
+            </AnnotationChoiceRow>
+          ) : null}
+        </AnnotationRows>
         {isPixelated(redaction) ? (
-          <AnnotationLine>
+          <div className="flex" key="classic">
             <ClassicToggle
               isClassic={redaction === "pixelateClassic"}
               onChange={(isClassic) => {
@@ -145,28 +190,12 @@ export function redactionIsland(
                 });
               }}
             />
-            <BlockSizeChoice
-              onChange={(width) => {
-                onStyleChange({ width });
-              }}
-              sizes={blockSizes}
-              value={style.width}
-            />
-          </AnnotationLine>
-        ) : null}
-        {redaction === "blur" ? (
-          <AnnotationLine>
-            <BlurStrengthChoice
-              onChange={(strength) => {
-                onStyleChange({ strength });
-              }}
-              value={style.strength}
-            />
-          </AnnotationLine>
+          </div>
         ) : null}
         {redaction === "color" ? (
           <AnnotationColorChoice
             color={style.color}
+            key="colors"
             onChange={(color) => {
               onStyleChange({ color });
             }}
@@ -180,12 +209,12 @@ export function redactionIsland(
             className="px-inset-sm"
             color="error"
             icon={<ShieldAlert aria-hidden />}
+            key="not-secure"
             role="status"
           >
             {t("editor-island-redaction-not-secure")}
           </Alert>
         ) : null}
-        <AnnotationPinNote onPinAction={props.onPinAction} pin={props.pin} />
       </IslandParts>
     ),
     title: (

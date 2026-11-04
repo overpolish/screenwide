@@ -53,8 +53,9 @@ export function IslandPickerColumn({
                 animate={focusIn.animate}
                 // Under the step past the row the black's top is its outer
                 // edge, so the column keeps the section's outer inset from
-                // it, not the short one the section keeps under the row.
-                className="absolute inset-x-0 top-[calc(var(--island-section-inset)-var(--spacing-inset-sm))] bottom-0"
+                // it, less the room the section already keeps above what it
+                // holds (`--island-section-top`).
+                className="absolute inset-x-0 top-[calc(var(--island-section-inset)-var(--island-section-top))] bottom-0"
                 exit={focusIn.exit}
                 initial={focusIn.exit}
                 key={contentKey}

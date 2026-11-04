@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { LayoutGroup, motion } from "motion/react";
-import { type ReactNode, useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useLocale } from "react-aria";
 
 import { SkinContext } from "../skin/skin";
@@ -13,25 +13,19 @@ import { IslandBelow } from "./island-below";
 import { IslandAsideContext, IslandContext } from "./island-context";
 import { IslandDrawing } from "./island-drawing";
 import { IslandFollowContext, useIslandFollow } from "./island-follow";
-import {
-  type IslandAnchor,
-  islandCssVariables,
-  type IslandNotch,
-} from "./island-geometry";
+import { islandCssVariables } from "./island-geometry";
 import { useIslandHover } from "./island-hover";
 import { useIslandMeasures } from "./island-measures";
 import { fade } from "./island-motion";
 import { useOpening } from "./island-opening";
-import {
-  type IslandPart,
-  useIslandOutline,
-  useIslandShapeValues,
-} from "./island-outline-sync";
+import { useIslandOutline, useIslandShapeValues } from "./island-outline-sync";
 import { useIslandPresence } from "./island-presence";
 import { IslandRowBox } from "./island-row-box";
 import { useRowOffset } from "./island-row-offset";
 import { IslandSection } from "./island-section";
 import { layOutIsland } from "./island-stack-layout";
+
+import type { IslandProps } from "./island-props";
 
 // A shape at the top of the screen in the notch's black: a row of controls,
 // and beneath it a section only as wide as what it holds, hung under the
@@ -51,46 +45,6 @@ import { layOutIsland } from "./island-stack-layout";
 // outside it, so a list in the section keeps its own arrow keys. Nothing on
 // it has a tooltip (`island-controls.tsx`).
 
-export type IslandProps = {
-  "aria-label": string;
-  /** The controls along the top, usually an `IslandRow`. */
-  row: ReactNode;
-  /** Where under the row the section hangs. */
-  anchor?: IslandAnchor;
-  /** A row control to centre the section under, in place of `anchor`. */
-  anchorControl?: HTMLElement | null;
-  // Centred under the notch whatever the row does beside it, so a row growing
-  // on one side widens the island on that side alone and nothing under it
-  // moves (`island-stack-layout.ts`).
-  /** A second line under the row, in its black; the section hangs below. */
-  below?: ReactNode;
-  /** Whether it is out; hidden, it is tucked into the notch, or gone. */
-  isShown?: boolean;
-  /** The screen's measured notch; left out on a screen without one. */
-  notch?: IslandNotch | null;
-  /** The island has tucked itself away after `isShown` turned false. */
-  onHidden?: () => void;
-  // Leaving is reported a moment after the pointer goes, so a slip does not
-  // close what hovering opened.
-  /** The pointer coming onto the row or section, or leaving them. */
-  onHoverChange?: (isHovered: boolean) => void;
-  /** The row's and section's places in the page, for click-through, and
-   * from the island's own middle and top, for placing it. */
-  onShapeChange?: (parts: IslandPart[], fromMiddle: IslandPart[]) => void;
-  // So its parts keep to the island's ends rather than centring over the
-  // black. Not under a notch, where the row keeps its gap under the notch.
-  /** Stretches the row to a wider section's width. */
-  rowFillsWidth?: boolean;
-  /** What hangs beneath the row, if anything. */
-  section?: ReactNode;
-  /** Makes each section at least the row's width, as one block. */
-  sectionSpansRow?: boolean;
-  // For an island on a picture, where a speck would read as something left
-  // behind.
-  /** Without a notch, shrinks past a speck to nothing. */
-  shrinksToNothing?: boolean;
-};
-
 export function Island({
   anchor = "center",
   anchorControl,
@@ -104,6 +58,7 @@ export function Island({
   row,
   rowFillsWidth = false,
   section,
+  sectionJoinsRow = false,
   sectionSpansRow = false,
   shrinksToNothing = false,
 }: IslandProps) {
@@ -153,13 +108,13 @@ export function Island({
     rowElement,
     rowTarget: rowShift,
     shiftTarget: layout.islandShift,
-    travel,
+    travel: travel.across,
     width,
   });
 
   // The parts are laid out and animated as boxes that paint nothing; the
   // black is their outline, drawn from the same animated values.
-  const values = useIslandShapeValues({ flare, radius, top }, travel);
+  const values = useIslandShapeValues({ flare, radius, top }, travel.down);
   const rowPathRef = useRef<SVGPathElement>(null);
   const shapePathRef = useRef<SVGPathElement>(null);
   const clipRef = useRef<HTMLDivElement>(null);
@@ -227,7 +182,7 @@ export function Island({
                         width: shapeWidth,
                       }}
                       transition={{
-                        ...travel,
+                        ...travel.down,
                         opacity: fade(isShown, notch !== null),
                       }}
                     >
@@ -264,7 +219,7 @@ export function Island({
                         isShown={isStacked}
                         onElement={measured.setBelowElement}
                         top={measured.rowSize?.height ?? 0}
-                        travel={travel}
+                        travel={travel.across}
                         width={measured.belowSize?.width}
                       >
                         {below}
@@ -275,6 +230,7 @@ export function Island({
                         isFromMiddle={isFromMiddle}
                         isOpening={isOpening}
                         isShown={isShown}
+                        joinsRow={sectionJoinsRow}
                         layout={layout}
                         movesSideways={notch !== null && !isStacked}
                         onElement={measured.setSectionElement}

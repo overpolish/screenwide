@@ -3,16 +3,18 @@
 
 import { t } from "../../../../../i18n/i18n";
 import { IslandRowTitle } from "../../../../../primitives/island/row-title/island-row-title";
+import { annotationSizeLabel } from "../../../../annotations/annotation-text";
 import { ShapeToolIcon } from "../../../../annotations/annotation-tool-icons";
 import { CornerChoice } from "../../../../annotations/options/corner-choice";
 import { HandDrawnToggle } from "../../../../annotations/options/hand-drawn-toggle";
 import { PenWeights } from "../../../../annotations/options/pen-weights";
 import {
   AnnotationAnimateToggle,
+  AnnotationChoiceRow,
   AnnotationColorChoice,
   type AnnotationColorProps,
   AnnotationDelete,
-  AnnotationLine,
+  AnnotationRows,
 } from "../annotation-island-parts";
 import {
   AnnotationPinNote,
@@ -24,9 +26,10 @@ import type { EditorIslandContent } from "../../editor-island";
 
 // A shape drawn on the picture, in hand. Its row ends with whether it draws
 // itself in, which only a recording has a clip for, and deleting it. Under
-// the row, the live overlay's own pen on one line as live, weight, then
-// corners, then whether it is drawn by hand, a fresh wobble each time that
-// is turned on; then its colour, a colour of the user's own among them.
+// the row, the live overlay's own pen, each a row named as the rows round
+// it are: its weight, then its corners; then whether it is drawn by hand, a
+// fresh wobble each time that is turned on, a toggle on its own line; then
+// its colour, a colour of the user's own among them.
 
 type ShapeStyle = {
   color: string;
@@ -71,19 +74,26 @@ export function shapeIsland(props: ShapeIslandProps): EditorIslandContent {
     key: `shape-${id}`,
     section: (
       <div className="flex flex-col gap-separate">
-        <AnnotationLine>
-          <PenWeights
-            onChange={(width) => {
-              onStyleChange({ width });
-            }}
-            value={style.width}
-          />
-          <CornerChoice
-            onChange={(radius) => {
-              onStyleChange({ radius });
-            }}
-            value={style.radius}
-          />
+        <AnnotationPinNote onPinAction={props.onPinAction} pin={props.pin} />
+        <AnnotationRows>
+          <AnnotationChoiceRow key="width" title={annotationSizeLabel("width")}>
+            <PenWeights
+              onChange={(width) => {
+                onStyleChange({ width });
+              }}
+              value={style.width}
+            />
+          </AnnotationChoiceRow>
+          <AnnotationChoiceRow key="radius" title={t("annotation-radius")}>
+            <CornerChoice
+              onChange={(radius) => {
+                onStyleChange({ radius });
+              }}
+              value={style.radius}
+            />
+          </AnnotationChoiceRow>
+        </AnnotationRows>
+        <div className="flex">
           <HandDrawnToggle
             isHandDrawn={style.isHandDrawn}
             kind="shape"
@@ -91,7 +101,7 @@ export function shapeIsland(props: ShapeIslandProps): EditorIslandContent {
               onStyleChange({ isHandDrawn });
             }}
           />
-        </AnnotationLine>
+        </div>
         <AnnotationColorChoice
           color={style.color}
           onChange={(color) => {
@@ -101,7 +111,6 @@ export function shapeIsland(props: ShapeIslandProps): EditorIslandContent {
           onSaveColor={props.onSaveColor}
           savedColors={props.savedColors}
         />
-        <AnnotationPinNote onPinAction={props.onPinAction} pin={props.pin} />
       </div>
     ),
     title: (

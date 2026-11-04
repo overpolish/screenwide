@@ -3,6 +3,7 @@
 
 import { t } from "../../../../../i18n/i18n";
 import { IslandRowTitle } from "../../../../../primitives/island/row-title/island-row-title";
+import { annotationSizeLabel } from "../../../../annotations/annotation-text";
 import { CounterToolIcon } from "../../../../annotations/annotation-tool-icons";
 import {
   CounterAngleDial,
@@ -10,10 +11,11 @@ import {
 } from "../../../../annotations/options/counter-choices";
 import {
   AnnotationAnimateToggle,
+  AnnotationChoiceRow,
   AnnotationColorChoice,
   type AnnotationColorProps,
   AnnotationDelete,
-  AnnotationLine,
+  AnnotationRows,
 } from "../annotation-island-parts";
 import {
   AnnotationPinNote,
@@ -25,10 +27,11 @@ import type { EditorIslandContent } from "../../editor-island";
 
 // A counter placed on the picture, in hand. Its row ends with whether it
 // pops in, which only a recording has a clip for, and deleting it. Under the
-// row, the live overlay's own pen as it places one, its size and where its
-// tail points; then its colour, a colour of the user's own among them. Its
-// number is not offered: counters are numbered in the order they come, and
-// close up when one is deleted.
+// row, the live overlay's own pen as it places one, each a row named as the
+// rows round it are: its size, then where its tail points; then its colour,
+// a colour of the user's own among them. Its number is not offered:
+// counters are numbered in the order they come, and close up when one is
+// deleted.
 
 type CounterStyle = {
   /** Where its tail points, in radians clockwise from east. */
@@ -72,20 +75,25 @@ export function counterIsland(props: CounterIslandProps): EditorIslandContent {
     key: `counter-${id}`,
     section: (
       <div className="flex flex-col gap-separate">
-        <AnnotationLine>
-          <CounterSizeChoice
-            onChange={(size) => {
-              onStyleChange({ size });
-            }}
-            value={style.size}
-          />
-          <CounterAngleDial
-            onChange={(angle) => {
-              onStyleChange({ angle });
-            }}
-            value={style.angle}
-          />
-        </AnnotationLine>
+        <AnnotationPinNote onPinAction={props.onPinAction} pin={props.pin} />
+        <AnnotationRows>
+          <AnnotationChoiceRow key="size" title={annotationSizeLabel("size")}>
+            <CounterSizeChoice
+              onChange={(size) => {
+                onStyleChange({ size });
+              }}
+              value={style.size}
+            />
+          </AnnotationChoiceRow>
+          <AnnotationChoiceRow key="angle" title={t("annotation-angle")}>
+            <CounterAngleDial
+              onChange={(angle) => {
+                onStyleChange({ angle });
+              }}
+              value={style.angle}
+            />
+          </AnnotationChoiceRow>
+        </AnnotationRows>
         <AnnotationColorChoice
           color={style.color}
           onChange={(color) => {
@@ -95,7 +103,6 @@ export function counterIsland(props: CounterIslandProps): EditorIslandContent {
           onSaveColor={props.onSaveColor}
           savedColors={props.savedColors}
         />
-        <AnnotationPinNote onPinAction={props.onPinAction} pin={props.pin} />
       </div>
     ),
     title: (

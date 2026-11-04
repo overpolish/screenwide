@@ -99,12 +99,14 @@ function OutlineGlyph({ isHandDrawn }: { isHandDrawn: boolean }) {
  * stroke gets a wobble of its own. */
 export function HandDrawnToggle({
   isHandDrawn,
+  isLabelHidden,
   kind,
   onChange,
 }: {
   isHandDrawn: boolean;
   kind: "highlight" | "shape";
   onChange: (isHandDrawn: boolean) => void;
+  isLabelHidden?: boolean;
 }) {
   return (
     <OptionToggle
@@ -115,6 +117,7 @@ export function HandDrawnToggle({
           <OutlineGlyph isHandDrawn={isOn} />
         )
       }
+      isLabelHidden={isLabelHidden}
       isOn={isHandDrawn}
       label={t("annotation-stroke-hand-drawn")}
       onChange={onChange}

@@ -138,7 +138,6 @@ export function ScriptTranscript({
           >
             {silences && pauses > 0 ? (
               <ScriptRemoveChip
-                count={pauses}
                 glyph={() => <AudioLinesOff aria-hidden />}
                 isDisabled={isLocked || isFinding}
                 key="pauses"
@@ -147,11 +146,11 @@ export function ScriptTranscript({
                 })}
                 onPreview={cleanup.previewers.silences}
                 onRemove={onRemoveSilences}
+                text={t("editor-island-script-pause-count", { count: pauses })}
               />
             ) : null}
             {cleanup.fillers.length > 0 ? (
               <ScriptRemoveChip
-                count={cleanup.fillers.length}
                 glyph={(isPreviewing) => <FillerGlyph isOn={isPreviewing} />}
                 isDisabled={isLocked}
                 key="fillers"
@@ -160,11 +159,13 @@ export function ScriptTranscript({
                 })}
                 onPreview={cleanup.previewers.fillers}
                 onRemove={cleanup.removeFillers}
+                text={t("editor-island-script-filler-count", {
+                  count: cleanup.fillers.length,
+                })}
               />
             ) : null}
             {cleanup.profanity.length > 0 ? (
               <ScriptRemoveChip
-                count={cleanup.profanity.length}
                 glyph={(isPreviewing) => <ProfanityGlyph isOn={isPreviewing} />}
                 isDisabled={isLocked}
                 key="profanity"
@@ -173,6 +174,9 @@ export function ScriptTranscript({
                 })}
                 onPreview={cleanup.previewers.profanity}
                 onRemove={cleanup.removeProfanity}
+                text={t("editor-island-script-profanity-count", {
+                  count: cleanup.profanity.length,
+                })}
               />
             ) : null}
           </IslandParts>

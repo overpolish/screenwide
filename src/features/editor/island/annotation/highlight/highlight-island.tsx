@@ -11,7 +11,7 @@ import {
   AnnotationColorChoice,
   type AnnotationColorProps,
   AnnotationDelete,
-  AnnotationLine,
+  AnnotationOptions,
 } from "../annotation-island-parts";
 import {
   AnnotationPinNote,
@@ -73,7 +73,8 @@ export function highlightIsland(
     key: `highlight-${id}`,
     section: (
       <div className="flex flex-col gap-separate">
-        <AnnotationLine>
+        <AnnotationPinNote onPinAction={props.onPinAction} pin={props.pin} />
+        <AnnotationOptions>
           <HandDrawnToggle
             isHandDrawn={style.isHandDrawn}
             kind="highlight"
@@ -87,7 +88,7 @@ export function highlightIsland(
               onStyleChange({ isManual });
             }}
           />
-        </AnnotationLine>
+        </AnnotationOptions>
         <AnnotationColorChoice
           color={style.color}
           onChange={(color) => {
@@ -97,7 +98,6 @@ export function highlightIsland(
           onSaveColor={props.onSaveColor}
           savedColors={props.savedColors}
         />
-        <AnnotationPinNote onPinAction={props.onPinAction} pin={props.pin} />
       </div>
     ),
     title: (

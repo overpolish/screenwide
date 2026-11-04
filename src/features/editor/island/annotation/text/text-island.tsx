@@ -2,9 +2,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { t } from "../../../../../i18n/i18n";
+import { IslandParts } from "../../../../../primitives/island/island-parts";
 import { IslandRowTitle } from "../../../../../primitives/island/row-title/island-row-title";
 import { PillGroup } from "../../../../../primitives/pill-group/pill-group";
 import { alignChoice } from "../../../../annotations/annotation-choices";
+import { annotationSizeLabel } from "../../../../annotations/annotation-text";
 import { TextToolIcon } from "../../../../annotations/annotation-tool-icons";
 import { titleTemplates } from "../../../tools/annotation/text/text-look";
 import {
@@ -14,9 +16,10 @@ import {
 import { offersOutline } from "../../../tools/text-style/text-templates";
 import {
   AnnotationAnimateToggle,
+  AnnotationChoiceRow,
   type AnnotationColorProps,
   AnnotationDelete,
-  AnnotationLine,
+  AnnotationRows,
 } from "../annotation-island-parts";
 import {
   AnnotationPinNote,
@@ -40,13 +43,14 @@ import type { EditorIslandContent } from "../../editor-island";
 // A text placed on the picture, in hand. Its row ends with how it moves,
 // which only a recording has a clip for: whether its words come on one after
 // another, and whether it grows in; then deleting it. Under the row: its
-// template, which decides which lines follow; its size and alignment, with
-// its outline where it can have one; its faces, each folded to a line that
-// opens a column of choices beside the section, and with the accent's face
-// the words its template sets apart; then its colours, the one the grid sets
-// picked by name where the template uses more than one. Lines that come and
-// go with the template sit under the ones that stay, so nothing above them
-// moves as templates are tried.
+// template, which decides which lines follow; its size and alignment, each a
+// row named as the rows round it are, with its outline after them, a toggle
+// on its own line, where it can have one; its faces, each folded to a line
+// that opens a column of choices beside the section, and with the accent's
+// face the words its template sets apart; then its colours, the one the
+// grid sets picked by name where the template uses more than one. Lines
+// that come and go with the template sit under the ones that stay, so
+// nothing above them moves as templates are tried.
 
 type TextPlacement = {
   align: AnnotationAlign;
@@ -118,32 +122,54 @@ export function textIsland(props: TextIslandProps): EditorIslandContent {
       <TextLookPickers
         families={props.families}
         look={look}
+        note={
+          props.pin ? (
+            <AnnotationPinNote
+              key="pin"
+              onPinAction={props.onPinAction}
+              pin={props.pin}
+            />
+          ) : null
+        }
         onLookChange={onLookChange}
         placement={
-          <AnnotationLine>
-            <TextSizeChoice
-              onChange={(size) => {
-                onStyleChange({ size });
-              }}
-              value={style.size}
-            />
-            <PillGroup
-              aria-label={alignChoice.label()}
-              items={alignChoice.items()}
-              onSelectionChange={(align) => {
-                onStyleChange({ align: alignChoice.pick(align) });
-              }}
-              selected={alignChoice.select(style.align)}
-            />
+          // Outline comes and goes with the template, in place, the rows
+          // above it staying where they are.
+          <IslandParts className="flex flex-col gap-separate">
+            <AnnotationRows key="rows">
+              <AnnotationChoiceRow
+                key="size"
+                title={annotationSizeLabel("size")}
+              >
+                <TextSizeChoice
+                  onChange={(size) => {
+                    onStyleChange({ size });
+                  }}
+                  value={style.size}
+                />
+              </AnnotationChoiceRow>
+              <AnnotationChoiceRow key="align" title={alignChoice.label()}>
+                <PillGroup
+                  aria-label={alignChoice.label()}
+                  items={alignChoice.items()}
+                  onSelectionChange={(align) => {
+                    onStyleChange({ align: alignChoice.pick(align) });
+                  }}
+                  selected={alignChoice.select(style.align)}
+                />
+              </AnnotationChoiceRow>
+            </AnnotationRows>
             {hasOutline ? (
-              <OutlineToggle
-                onChange={(outline) => {
-                  onLookChange({ outline });
-                }}
-                outline={look.outline}
-              />
+              <div className="flex" key="outline">
+                <OutlineToggle
+                  onChange={(outline) => {
+                    onLookChange({ outline });
+                  }}
+                  outline={look.outline}
+                />
+              </div>
             ) : null}
-          </AnnotationLine>
+          </IslandParts>
         }
         still={!canAnimate}
         templates={titleTemplates(props.templates)}
@@ -164,7 +190,6 @@ export function textIsland(props: TextIslandProps): EditorIslandContent {
           onSaveColor={props.onSaveColor}
           savedColors={props.savedColors}
         />
-        <AnnotationPinNote onPinAction={props.onPinAction} pin={props.pin} />
       </TextLookPickers>
     ),
     title: (

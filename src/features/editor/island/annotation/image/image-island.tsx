@@ -12,8 +12,10 @@ import { SwayToggle } from "../../../../annotations/options/sway-toggle";
 import { IslandRotation } from "../../island-rotation";
 import {
   AnnotationAnimateToggle,
+  AnnotationChoiceRow,
   AnnotationDelete,
-  AnnotationLine,
+  AnnotationOptions,
+  AnnotationRows,
 } from "../annotation-island-parts";
 import {
   AnnotationPinNote,
@@ -26,13 +28,13 @@ import type { EditorIslandContent } from "../../editor-island";
 
 // A picture placed on the picture, in hand. Its row ends with whether it
 // pops in, which only a recording has a clip for, and deleting it. Under
-// the row, one line with its corners at the start and its toggles at the
-// end: whether it casts a shadow, and in a recording only whether it sways,
-// a sway of its own each time that is turned on, and, for a moving
-// picture, whether it loops, after the shadow so their coming and going
-// moves nothing else. Then how it is turned, in depth and flat, as the
-// screen in a scene is: its shape before its placement, as every island
-// orders them. Giving it another picture and mirroring it are one-shot
+// the row, its named rows first: its corners, then how it is turned, in
+// depth and flat, as the screen in a scene is, its shape before its
+// placement as every island orders them. Then its toggles, two to a line:
+// whether it casts a shadow, and in a recording only whether it sways, a
+// sway of its own each time that is turned on, and, for a moving picture,
+// whether it loops, after the others so their coming and going moves
+// nothing else. Giving it another picture and mirroring it are one-shot
 // actions, at the end in their own row. The frame a moving picture starts
 // on is not offered: it starts on its first.
 
@@ -85,45 +87,51 @@ export function imageIsland(props: ImageIslandProps): EditorIslandContent {
     key: `image-${id}`,
     section: (
       <div className="flex flex-col gap-separate">
-        <AnnotationLine>
-          <CornerChoice
-            onChange={(radius) => {
-              onStyleChange({ radius });
+        <AnnotationPinNote onPinAction={props.onPinAction} pin={props.pin} />
+        <AnnotationRows>
+          <AnnotationChoiceRow key="radius" title={t("annotation-radius")}>
+            <CornerChoice
+              onChange={(radius) => {
+                onStyleChange({ radius });
+              }}
+              value={style.radius}
+            />
+          </AnnotationChoiceRow>
+          <IslandRotation
+            key="rotation"
+            onChange={(rotation) => {
+              onStyleChange({ rotation });
             }}
-            value={style.radius}
+            rotation={style.rotation}
           />
-          <div className="flex items-center gap-separate">
-            <ShadowToggle
-              hasShadow={style.hasShadow}
-              onChange={(hasShadow) => {
-                onStyleChange({ hasShadow });
+        </AnnotationRows>
+        <AnnotationOptions>
+          <ShadowToggle
+            hasShadow={style.hasShadow}
+            key="shadow"
+            onChange={(hasShadow) => {
+              onStyleChange({ hasShadow });
+            }}
+          />
+          {canAnimate ? (
+            <SwayToggle
+              key="sway"
+              onChange={(sways) => {
+                onStyleChange({ sways });
+              }}
+              sways={style.sways}
+            />
+          ) : null}
+          {canAnimate && isMoving ? (
+            <LoopToggle
+              key="loop"
+              loops={style.loops}
+              onChange={(loops) => {
+                onStyleChange({ loops });
               }}
             />
-            {canAnimate ? (
-              <SwayToggle
-                onChange={(sways) => {
-                  onStyleChange({ sways });
-                }}
-                sways={style.sways}
-              />
-            ) : null}
-            {canAnimate && isMoving ? (
-              <LoopToggle
-                loops={style.loops}
-                onChange={(loops) => {
-                  onStyleChange({ loops });
-                }}
-              />
-            ) : null}
-          </div>
-        </AnnotationLine>
-        <IslandRotation
-          onChange={(rotation) => {
-            onStyleChange({ rotation });
-          }}
-          rotation={style.rotation}
-        />
-        <AnnotationPinNote onPinAction={props.onPinAction} pin={props.pin} />
+          ) : null}
+        </AnnotationOptions>
         <div className="flex justify-end gap-separate">
           <Button onPress={props.onReplace}>
             {t("editor-island-image-replace")}

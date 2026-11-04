@@ -32,13 +32,16 @@ export type ControlRowProps = {
 // The note is set back, in the caption type and a quieter colour, so it reads
 // as a note rather than a second name. The parent owns the space between
 // rows; the row itself is not pressable. On the island, where a section holds
-// a few short rows under the row that names them, the name is a caption set
-// back the small inset, as the island's notes are from its edges, on one
-// line, so a row squeezed for a moment as the island's black glides runs its
-// name into the space before the control rather than wrapping it; a note
-// stands under it on the same text column; the row is at least a switch's
-// height and a little (`island-row`) and otherwise as tall as its control,
-// so a list of switches sits close while a row of pills keeps their size.
+// a few short rows under the row that names them, the name is a caption on
+// the island's text column, the small inset in from the section's edge,
+// where every word and glyph that is read sits, while the control at the
+// row's end, a thing filled, keeps to the section's edge as the island's
+// fills do. It stays on one line, so a row squeezed for a moment as the
+// island's black glides runs its name into the space before the control
+// rather than wrapping it; a note stands under it on the same column; the
+// row is at least a switch's height and a little (`island-row`) and
+// otherwise as tall as its control, so a list of switches sits close while
+// a row of pills keeps their size.
 export function ControlRow({
   children,
   className,

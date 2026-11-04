@@ -1,23 +1,27 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { EyeOff, Pin } from "lucide-react";
+import { EyeOff, Pin, RotateCcw } from "lucide-react";
+import { type ReactNode } from "react";
 
 import { t } from "../../../../i18n/i18n";
 import { cn } from "../../../../lib/styling";
 import { Alert } from "../../../../primitives/alert/alert";
 import { Button } from "../../../../primitives/button/button";
-import { IconToggleButton } from "../../../../primitives/button/icon-button";
+import {
+  IconButton,
+  IconToggleButton,
+} from "../../../../primitives/button/icon-button";
 import { IslandWorkLine } from "../island-work-line";
 
 // Pinning an annotation to the content under it, which only a recording's
 // screen annotations can do: a toggle at the row's end beside Animate, and
 // while pinned, how tracking stands at the playhead at the island's foot,
-// with the one answer that applies there and taking corrections away. Where
-// the tracker is unsure of the content at the playhead, the note says why as
-// a warning, so the place is checked and, if need be, put right with the
-// same answers. The right-click menu's Tracking section does the same; this
-// is the island's way to it.
+// with the one answer that applies there and taking corrections away at the
+// note's end. Where the tracker is unsure of the content at the playhead,
+// the note says why as a warning, so the place is checked and, if need be,
+// put right with the same answers. The right-click menu's Tracking section
+// does the same; this is the island's way to it.
 
 /** What can be done to a pin from the island, as the menu's Tracking
  * section does. */
@@ -82,64 +86,162 @@ export function AnnotationPinToggle({ onPinAction, pin }: AnnotationPinProps) {
   );
 }
 
-/** How a pinned annotation's tracking stands at the playhead, at the
- * island's foot: worked out so far, following, or its content out of view,
- * or, where the tracker is unsure, why, as a warning; a note which takes the
- * section's width and adds none of its own, so its words wrap to the lines
- * above. Under it, the answers the playhead allows, one-shot actions at the
- * end of their own row, which wrap rather than widen the island where they
- * are long. */
+/** How a pinned annotation's tracking stands at the playhead, first under
+ * the island's row, beneath the pin toggle it answers: worked out so far,
+ * following, or its content out of view, or, where the tracker is unsure,
+ * why, as a warning. The answers the playhead allows sit at the note's end,
+ * so the island's own actions keep the only row of buttons: saying the
+ * content went out of view or came back, and taking the corrections away, a
+ * quiet reset glyph as a figure's is. While the path is still being worked
+ * out its bar has the line, and the answers wait for it.
+ *
+ * The note stays on one line and the island makes room for it. As the
+ * playhead moves the note changes, so it keeps the room of its widest form
+ * the whole time the annotation is pinned: every form is laid in one cell,
+ * unseen, under the one shown, and the island widens once as the pin is
+ * set rather than at each change. */
 export function AnnotationPinNote({ onPinAction, pin }: AnnotationPinProps) {
   if (!pin) return null;
-  const answer = (action: AnnotationPinAction, label: string) => (
-    <Button
-      key={action}
-      onPress={() => {
-        onPinAction?.(action);
-      }}
-    >
-      {label}
-    </Button>
-  );
+  const shown =
+    pin.state === "tracking" ? (
+      <IslandWorkLine
+        label={t("editor-island-annotation-pin-tracking")}
+        value={pin.progress ?? 0}
+      />
+    ) : (
+      <PinStatus
+        answers={pinAnswers(pin, onPinAction)}
+        state={pin.state}
+        unsure={pin.unsure}
+      />
+    );
   return (
-    <div className="flex flex-col gap-separate">
-      {pin.state === "tracking" ? (
-        <IslandWorkLine
-          label={t("editor-island-annotation-pin-tracking")}
-          value={pin.progress ?? 0}
-        />
-      ) : pin.unsure ? (
-        <Alert
-          className="w-0 min-w-full px-inset-sm"
-          color="warning"
-          role="status"
+    // The form shown is centred in the room the widest takes, so a shorter
+    // one, such as tracking's bar without answers, keeps even space above
+    // and below rather than leaving it all underneath.
+    <div className="grid">
+      <div className="col-start-1 row-start-1 self-center">{shown}</div>
+      <div aria-hidden className="invisible col-start-1 row-start-1 grid" inert>
+        {PIN_FORMS.map(({ state, unsure }) => (
+          <div
+            className="col-start-1 row-start-1"
+            key={`${state}-${unsure ?? "sure"}`}
+          >
+            <PinStatus
+              answers={<WidestAnswers />}
+              state={state}
+              unsure={unsure}
+            />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/** Every status a pinned annotation's note can show besides tracking. */
+const PIN_FORMS: {
+  state: "following" | "out-of-view";
+  unsure: AnnotationPinUnsure | null;
+}[] = [
+  { state: "following", unsure: null },
+  { state: "out-of-view", unsure: null },
+  { state: "following", unsure: "lost" },
+  { state: "following", unsure: "off-frame" },
+  { state: "following", unsure: "under-cover" },
+];
+
+/** The status line, its answers at its end. With answers it starts on the
+ * text column and they end flush with the section, as the controls above
+ * do. */
+function PinStatus({
+  answers,
+  state,
+  unsure,
+}: {
+  answers: ReactNode;
+  state: "following" | "out-of-view";
+  unsure: AnnotationPinUnsure | null;
+}) {
+  const className = cn(
+    "whitespace-nowrap",
+    answers ? "ps-inset-sm" : "px-inset-sm",
+  );
+  return unsure ? (
+    <Alert action={answers} className={className} color="warning" role="status">
+      {t(UNSURE_NOTES[unsure])}
+    </Alert>
+  ) : (
+    <Alert
+      action={answers}
+      className={className}
+      icon={state === "out-of-view" ? <EyeOff /> : <Pin />}
+      role="status"
+    >
+      {state === "out-of-view"
+        ? t("editor-island-annotation-pin-out-of-view")
+        : t("editor-island-annotation-pin-following")}
+    </Alert>
+  );
+}
+
+/** The answers the playhead allows, or none. */
+function pinAnswers(
+  pin: AnnotationPinView,
+  onPinAction: AnnotationPinProps["onPinAction"],
+) {
+  const { action } = pin;
+  if (action === null && !pin.hasCorrections) return null;
+  return (
+    <div className="flex items-center gap-inline">
+      {action === null ? null : (
+        <Button
+          onPress={() => {
+            onPinAction?.(action);
+          }}
         >
-          {t(UNSURE_NOTES[pin.unsure])}
-        </Alert>
-      ) : (
-        <Alert
-          className="w-0 min-w-full px-inset-sm"
-          icon={pin.state === "out-of-view" ? <EyeOff /> : <Pin />}
-          role="status"
-        >
-          {pin.state === "out-of-view"
-            ? t("editor-island-annotation-pin-out-of-view")
-            : t("editor-island-annotation-pin-following")}
-        </Alert>
+          {action === "hide"
+            ? t("editor-island-annotation-pin-hide")
+            : t("editor-island-annotation-pin-show")}
+        </Button>
       )}
-      {pin.action !== null || pin.hasCorrections ? (
-        <div className="flex w-0 min-w-full flex-wrap justify-end gap-separate">
-          {pin.action === "hide"
-            ? answer("hide", t("editor-island-annotation-pin-hide"))
-            : null}
-          {pin.action === "show"
-            ? answer("show", t("editor-island-annotation-pin-show"))
-            : null}
-          {pin.hasCorrections
-            ? answer("clear", t("editor-island-annotation-pin-clear"))
-            : null}
-        </div>
+      {pin.hasCorrections ? (
+        <ClearCorrections
+          onPress={() => {
+            onPinAction?.("clear");
+          }}
+        />
       ) : null}
     </div>
+  );
+}
+
+/** Room for the widest answers any status can carry: the longer of Out of
+ * view and Back in view, then the reset glyph. */
+function WidestAnswers() {
+  return (
+    <div className="flex items-center gap-inline">
+      <span className="grid">
+        <Button className="col-start-1 row-start-1">
+          {t("editor-island-annotation-pin-hide")}
+        </Button>
+        <Button className="col-start-1 row-start-1">
+          {t("editor-island-annotation-pin-show")}
+        </Button>
+      </span>
+      <ClearCorrections />
+    </div>
+  );
+}
+
+function ClearCorrections({ onPress }: { onPress?: () => void }) {
+  return (
+    <IconButton
+      aria-label={t("editor-island-annotation-pin-clear")}
+      className="text-fg-secondary enabled:hover:text-fg"
+      onPress={onPress}
+    >
+      <RotateCcw aria-hidden className="size-icon" />
+    </IconButton>
   );
 }

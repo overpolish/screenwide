@@ -9,7 +9,10 @@ import { Button } from "../../../../primitives/button/button";
 import { IslandRowTitle } from "../../../../primitives/island/row-title/island-row-title";
 import { OptionToggle } from "../../../annotations/options/option-toggle";
 import { DEFAULT_CURSOR_EFFECTS } from "../../export/recording-export-settings";
-import { AnnotationLine } from "../annotation/annotation-island-parts";
+import {
+  AnnotationChoiceRow,
+  AnnotationOptions,
+} from "../annotation/annotation-island-parts";
 import { OverlaySizeChoice } from "../overlay-size-choice";
 
 import {
@@ -24,11 +27,12 @@ import type { CursorEffectSettings } from "../../../../bindings/CursorEffectSett
 import type { EditorIslandContent } from "../editor-island";
 
 // How the recording's cursor is drawn, the whole recording's at once. Under
-// the row: its size; then whether it moves smoothly, blurs as it moves,
-// ripples where it clicks and is kept inside the recording, each an
-// animated toggle; then putting it all back as it was. The editor offers
-// the Cursor tool only for a recording with cursor movement, so there is
-// always a cursor to dress.
+// the row: its size, a row named as the rows round it are; then whether it
+// moves smoothly, blurs as it moves, ripples where it clicks and is kept
+// inside the recording, each an animated toggle, two to a line from the
+// section's start to its end; then putting it all back as it was. The
+// editor offers the Cursor tool only for a recording with cursor movement,
+// so there is always a cursor to dress.
 
 type CursorToggle = Exclude<
   {
@@ -64,7 +68,7 @@ export function cursorIsland(props: CursorIslandProps): EditorIslandContent {
     key: "cursor",
     section: (
       <div className="flex flex-col gap-separate">
-        <AnnotationLine>
+        <AnnotationChoiceRow title={t("editor-island-size")}>
           <OverlaySizeChoice
             aria-label={t("editor-island-cursor-size")}
             glyph={(side) => <PointerSizeGlyph side={side} />}
@@ -73,8 +77,8 @@ export function cursorIsland(props: CursorIslandProps): EditorIslandContent {
             }}
             value={settings.size}
           />
-        </AnnotationLine>
-        <AnnotationLine>
+        </AnnotationChoiceRow>
+        <AnnotationOptions>
           {toggle(
             "smoothMovement",
             t("editor-island-cursor-smooth"),
@@ -99,7 +103,7 @@ export function cursorIsland(props: CursorIslandProps): EditorIslandContent {
           {toggle("clipAtVideoEdge", t("editor-island-cursor-clip"), (isOn) => (
             <KeepInsideGlyph isInside={isOn} />
           ))}
-        </AnnotationLine>
+        </AnnotationOptions>
         <div className="flex justify-end">
           <Button
             onPress={() => {

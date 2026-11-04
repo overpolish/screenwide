@@ -17,18 +17,30 @@ import { glide } from "./island-motion";
 // folding its room away (`IslandParts`) changes that size every frame on the
 // black's own curve, and a glide started afresh at every frame would trail
 // it, the black closing well after what it holds. While a part folds, the
-// black follows what it holds exactly instead, so the two close as one.
+// black follows what it holds exactly instead, so the two close as one, but
+// only along the way the part folds: a column's part folds its height, and
+// the black's height follows it, while its width keeps gliding. A part
+// folding down also narrows what it held to the width of whatever is left,
+// and that is only the first sliver of the part's own fold: followed
+// exactly, the black's side would jump there in a frame or two.
 
-/** Has the island follow what it holds exactly for `seconds`. */
-export const IslandFollowContext = createContext<(seconds: number) => void>(
-  () => undefined,
-);
+/** Which way the black follows what it holds: along a row, `across`; down a
+ * column, `down`. */
+export type IslandFollowAxis = "across" | "down";
+
+/** How the black moves along each axis: gliding, or following. */
+export type IslandTravel = Record<IslandFollowAxis, Transition>;
+
+/** Has the island follow what it holds exactly along `axis` for
+ * `seconds`. */
+export const IslandFollowContext = createContext<
+  (seconds: number, axis: IslandFollowAxis) => void
+>(() => undefined);
 
 const still: Transition = { duration: 0 };
 
-/** How the island's black moves to a new size: gliding, or following what
- * it holds while asked to (`follow`). */
-export function useIslandFollow() {
+/** One axis's following: on while asked to, off once its time is up. */
+function useAxisFollow() {
   const [isFollowing, setIsFollowing] = useState(false);
   const untilRef = useRef(0);
   const timerRef = useRef(0);
@@ -48,7 +60,27 @@ export function useIslandFollow() {
     },
     [],
   );
-  const travel: Transition = isFollowing ? still : glide;
+  return { follow, isFollowing };
+}
+
+/** How the island's black moves to a new size along each axis: gliding, or
+ * following what it holds while asked to (`follow`). */
+export function useIslandFollow() {
+  const across = useAxisFollow();
+  const down = useAxisFollow();
+  const { follow: followAcross } = across;
+  const { follow: followDown } = down;
+  const follow = useCallback(
+    (seconds: number, axis: IslandFollowAxis) => {
+      if (axis === "across") followAcross(seconds);
+      else followDown(seconds);
+    },
+    [followAcross, followDown],
+  );
+  const travel: IslandTravel = {
+    across: across.isFollowing ? still : glide,
+    down: down.isFollowing ? still : glide,
+  };
   return { follow, travel };
 }
 

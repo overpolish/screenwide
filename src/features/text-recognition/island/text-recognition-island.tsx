@@ -14,8 +14,9 @@ import { t } from "../../../i18n/i18n";
 import { Button } from "../../../primitives/button/button";
 import { IconButton } from "../../../primitives/button/icon-button";
 import { CircularProgress } from "../../../primitives/circular-progress/circular-progress";
-import { Island, type IslandProps } from "../../../primitives/island/island";
+import { Island } from "../../../primitives/island/island";
 import { IslandParts } from "../../../primitives/island/island-parts";
+import { type IslandProps } from "../../../primitives/island/island-props";
 import { IslandRow } from "../../../primitives/island/island-row";
 import { IslandRowTitle } from "../../../primitives/island/row-title/island-row-title";
 

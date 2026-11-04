@@ -4,9 +4,10 @@
 import { type ReactNode, useMemo, useState } from "react";
 
 import { t } from "../../../i18n/i18n";
-import { Island, type IslandProps } from "../../../primitives/island/island";
+import { Island } from "../../../primitives/island/island";
 import { type IslandAnchor } from "../../../primitives/island/island-geometry";
 import { IslandParts } from "../../../primitives/island/island-parts";
+import { type IslandProps } from "../../../primitives/island/island-props";
 import { useSize } from "../../../primitives/island/island-size";
 
 import { useHeldSection } from "./use-held-section";
@@ -89,8 +90,11 @@ export function EditorIsland({ content, ...island }: EditorIslandProps) {
       }
       row={
         <IslandParts className="min-w-0 grow">
+          {/* A control's height and the room round it that the island's
+              edge keeps at the row's ends, so its controls sit as far from
+              the top as from the sides. */}
           <div
-            className="flex h-10 w-max max-w-full items-center justify-between gap-separate px-1"
+            className="flex h-9 w-max max-w-full items-center justify-between gap-separate px-1"
             key={content.key}
             ref={rowRef}
             // Across the island where it is wider, and at least the line
@@ -121,6 +125,9 @@ export function EditorIsland({ content, ...island }: EditorIslandProps) {
           </IslandParts>
         ) : undefined
       }
+      // One block, the section's rows following the row's straight on, as
+      // they follow one another, rather than set apart under it.
+      sectionJoinsRow
       sectionSpansRow
       // It stands on the picture, so it shrinks away to nothing rather
       // than to a speck left there a moment.

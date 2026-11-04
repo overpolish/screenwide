@@ -2,9 +2,15 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { Trash2 } from "lucide-react";
-import { type ReactNode } from "react";
+import {
+  Children,
+  isValidElement,
+  type ReactElement,
+  type ReactNode,
+} from "react";
 
 import { ConfirmActionButton } from "../../../../composites/confirm-action-button/confirm-action-button";
+import { ControlRow } from "../../../../composites/control-row/control-row";
 import { t } from "../../../../i18n/i18n";
 import { IconToggleButton } from "../../../../primitives/button/icon-button";
 import { IslandParts } from "../../../../primitives/island/island-parts";
@@ -32,6 +38,76 @@ export function AnnotationLine({ children }: { children: ReactNode }) {
       direction="row"
     >
       {children}
+    </IslandParts>
+  );
+}
+
+/** A choice between looks named at the start of its row, its glyphs at the
+ * end, as the rows round it name themselves: where a lone line of glyphs
+ * would float between options that each show their name. A part that comes
+ * and goes beside the choice, such as an action for the look chosen, comes
+ * into focus or blurs away as the island's parts do (`IslandParts`). */
+export function AnnotationChoiceRow({
+  children,
+  title,
+}: {
+  children: ReactNode;
+  title: string;
+}) {
+  return (
+    <ControlRow title={title}>
+      {(controlProps) => (
+        <div {...controlProps} role="group">
+          <IslandParts
+            className="flex items-center gap-separate"
+            direction="row"
+          >
+            {children}
+          </IslandParts>
+        </div>
+      )}
+    </ControlRow>
+  );
+}
+
+/** Named rows that follow one another, set closer than the section's other
+ * parts, as rows in a list are (`gap-inline`): their names are small type
+ * in rows a control tall, so at the section's spacing they read as far
+ * apart. A row that comes and goes does so as the island's parts do
+ * (`IslandParts`). */
+export function AnnotationRows({ children }: { children: ReactNode }) {
+  return (
+    <IslandParts className="flex flex-col gap-inline">{children}</IslandParts>
+  );
+}
+
+/** Options that each name themselves, two to a line, so their words fit
+ * the island where a line of them would run it wide. The lines share one
+ * grid's columns (a subgrid each): the first as wide as its widest option
+ * at the section's start, the second as wide as its widest at the end, and
+ * between them the room left over, never less than the space between
+ * neighbours. So the options sit flush with both edges and each column's
+ * glyphs line up down the block. An option that comes and goes reflows the
+ * lines after it, which swap as the island's parts do (`IslandParts`). */
+export function AnnotationOptions({ children }: { children: ReactNode }) {
+  // eslint-disable-next-line @eslint-react/no-children-to-array
+  const options = Children.toArray(children).filter(isValidElement);
+  const lines: ReactElement[][] = [];
+  for (let index = 0; index < options.length; index += 2)
+    lines.push(options.slice(index, index + 2));
+  return (
+    <IslandParts
+      className="grid grid-cols-[auto_minmax(var(--spacing-separate),1fr)_auto] gap-y-inline"
+      partClassName="col-span-3 grid grid-cols-subgrid"
+    >
+      {lines.map((line) => (
+        <div
+          className="col-span-3 grid grid-cols-subgrid justify-items-start [&>:nth-child(2)]:col-start-3"
+          key={line.map((option) => String(option.key)).join("+")}
+        >
+          {line}
+        </div>
+      ))}
     </IslandParts>
   );
 }

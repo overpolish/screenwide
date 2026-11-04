@@ -13,7 +13,10 @@ import type { EditorIslandContent } from "../editor-island";
 // The tracks the recording holds, each with a switch that keeps it in the
 // export and the preview or leaves it out. Something has to be left to
 // export, so the last track still in cannot be switched off. The island
-// stands at the picture's top end corner, as every editor island does.
+// stands at the picture's top end corner, as every editor island does. The
+// section is a list of switches and nothing else, so no fill holds the
+// section's edge: the switches come in to the text column the names start
+// on, and the list sits evenly between the island's sides.
 
 type TracksIslandTrack = {
   id: string;
@@ -36,7 +39,7 @@ export function tracksIsland({
   return {
     key: "tracks",
     section: (
-      <div className="flex flex-col gap-inline">
+      <div className="flex flex-col gap-inline pe-inset-sm">
         {tracks.map((track) => (
           <ControlRow key={track.id} title={track.label}>
             {(controlProps) => (

@@ -26,6 +26,7 @@ export function ShapePen({ onChange, settings }: SectionProps) {
       />
       <HandDrawnToggle
         isHandDrawn={settings.shapeHandDrawn}
+        isLabelHidden
         kind="shape"
         onChange={(shapeHandDrawn) => {
           onChange({ shapeHandDrawn });
