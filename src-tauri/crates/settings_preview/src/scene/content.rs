@@ -11,10 +11,11 @@ use screenwide_output::mesh_generator::default_generator;
 use screenwide_output::{NormalizedSourceRect, ScreenshotOutputSettings};
 
 /// The page's pictures, every one the same size: the screen, then where a
-/// scene has one, the same screen with Screenwide's windows on it.
+/// scene has one, the same screen with what the setting leaves out of a
+/// recording on it, such as Screenwide's windows or the desktop's icons.
 pub(super) struct Pictures {
   pub screen: CapturedImage,
-  pub with_screenwide: Option<CapturedImage>,
+  pub layered: Option<CapturedImage>,
 }
 
 impl Pictures {
@@ -22,18 +23,15 @@ impl Pictures {
     if pictures.is_empty() || pictures.len() > 2 {
       return Err("A recording preview takes a screen and at most one more picture".to_owned());
     }
-    let with_screenwide = (pictures.len() == 2).then(|| pictures.remove(1));
+    let layered = (pictures.len() == 2).then(|| pictures.remove(1));
     let screen = pictures.remove(0);
-    if with_screenwide
+    if layered
       .as_ref()
       .is_some_and(|other| (other.width, other.height) != (screen.width, screen.height))
     {
       return Err("A recording preview's pictures are not the same size".to_owned());
     }
-    Ok(Self {
-      screen,
-      with_screenwide,
-    })
+    Ok(Self { screen, layered })
   }
 }
 

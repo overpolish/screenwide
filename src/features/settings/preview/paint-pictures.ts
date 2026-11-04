@@ -5,7 +5,7 @@ import {
   pictureSize,
   sceneOf,
   type SettingsPreviewScene,
-  showsScreenwide,
+  showsLayer,
 } from "./scenes/preview-scenes";
 import {
   type Painter,
@@ -16,8 +16,8 @@ import {
 import type { PaintedPictures } from "./settings-preview-api";
 
 // The pictures a scene is drawn on, painted by the page in device pixels:
-// the desktop, and for a scene that shows Screenwide's windows, the same
-// desktop with them on it.
+// the desktop, and for a scene that shows its layer with and without it,
+// such as Screenwide's windows, the same desktop with it on.
 
 function paintOn(
   canvas: HTMLCanvasElement,
@@ -43,8 +43,8 @@ export async function paintPictures(
   await sceneFonts();
   const definition = sceneOf(scene);
   const layers =
-    definition.kind === "recording" && definition.paintScreenwide
-      ? [[definition.paint], [definition.paint, definition.paintScreenwide]]
+    definition.kind === "recording" && definition.paintLayer
+      ? [[definition.paint], [definition.paint, definition.paintLayer]]
       : [[definition.paint]];
   const canvas = document.createElement("canvas");
   const rgba: Uint8Array[] = [];
@@ -66,12 +66,12 @@ export async function paintStill(
 ) {
   await sceneFonts();
   const definition = sceneOf(scene);
-  const screenwide =
-    definition.kind === "recording" && showsScreenwide(scene)
-      ? definition.paintScreenwide
+  const layer =
+    definition.kind === "recording" && showsLayer(scene)
+      ? definition.paintLayer
       : undefined;
   paintOn(canvas, scene, {
     desktop,
-    painters: screenwide ? [definition.paint, screenwide] : [definition.paint],
+    painters: layer ? [definition.paint, layer] : [definition.paint],
   });
 }

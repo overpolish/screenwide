@@ -203,6 +203,8 @@ export type Messages = {
   "editor-export-format-jpeg": null;
   "editor-export-format-png": null;
   "editor-export-format-webp": null;
+  "editor-export-gif-range": { seconds: string | number };
+  "editor-export-gif-too-long": { seconds: string | number };
   "editor-export-jpeg-see-through": null;
   "editor-export-look-balanced": null;
   "editor-export-look-original": null;
@@ -387,6 +389,7 @@ export type Messages = {
   "editor-island-range": null;
   "editor-island-range-confirm-cut": null;
   "editor-island-range-cut": null;
+  "editor-island-range-deselect": null;
   "editor-island-redaction": null;
   "editor-island-redaction-not-secure": null;
   "editor-island-reduce-noise": null;
@@ -609,6 +612,8 @@ export type Messages = {
   "editor-timeline-pause-preview": null;
   "editor-timeline-play-preview": null;
   "editor-timeline-put-back": null;
+  "editor-timeline-range": null;
+  "editor-timeline-range-name": null;
   "editor-timeline-rate": { rate: string | number };
   "editor-timeline-remove-split": null;
   "editor-timeline-restore-cut": { duration: string | number };
@@ -998,6 +1003,12 @@ export type Messages = {
   "settings-glide-thirds-modifier": null;
   "settings-glide-thirds-modifier-description": null;
   "settings-glide-window-gap": null;
+  "settings-hidden-apps": null;
+  "settings-hidden-apps-description": { platform: string | number };
+  "settings-hidden-apps-empty": null;
+  "settings-hidden-apps-not-running": { app: string | number };
+  "settings-hide-desktop-icons": null;
+  "settings-hide-desktop-icons-description": { platform: string | number };
   "settings-include-app": null;
   "settings-include-app-description": null;
   "settings-launch-at-login": null;
@@ -1018,6 +1029,9 @@ export type Messages = {
   "settings-ocr-select-all": null;
   "settings-ocr-select-all-description": null;
   "settings-preview-dashboard-title": null;
+  "settings-preview-desktop-notes": null;
+  "settings-preview-desktop-projects": null;
+  "settings-preview-desktop-screenshots": null;
   "settings-preview-note-first": null;
   "settings-preview-note-second": null;
   "settings-preview-note-title": null;

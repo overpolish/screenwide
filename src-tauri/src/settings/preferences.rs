@@ -8,6 +8,7 @@ use tauri::{AppHandle, Emitter, Manager};
 use tauri_plugin_autostart::ManagerExt;
 
 use crate::settings::background_preset::BackgroundPreset;
+use crate::settings::capture_exclusions::{self, HiddenApp};
 use screenwide_i18n::t;
 use screenwide_scenes::SceneTemplate;
 use screenwide_text::captions::CaptionSettings;
@@ -35,6 +36,12 @@ pub struct GeneralSettings {
   pub recording_directory: Option<PathBuf>,
   pub screenshot_directory: Option<PathBuf>,
   pub open_location_after_export: bool,
+  /// Apps kept out of recordings and screenshots, where the platform can
+  /// leave another app out: macOS.
+  pub hidden_apps: Vec<HiddenApp>,
+  /// Whether the desktop's icons, and on macOS its widgets, are kept out of
+  /// recordings and screenshots of the screen.
+  pub hide_desktop_icons: bool,
   pub record_screenwide_windows: bool,
   pub show_recording_confidence_checks: bool,
   /// Whether the island shows how much of the recording is on disk.
@@ -83,6 +90,8 @@ impl Default for GeneralSettings {
       screenshot_directory: None,
       open_location_after_export: true,
       record_screenwide_windows: false,
+      hidden_apps: Vec::new(),
+      hide_desktop_icons: true,
       show_recording_confidence_checks: true,
       show_recording_size: false,
       auto_zoom: true,
@@ -169,6 +178,7 @@ fn validate(settings: &GeneralSettings) -> Result<(), String> {
 pub fn initialize(app: &AppHandle) {
   let mut settings = read(app);
   settings.launch_at_login = app.autolaunch().is_enabled().unwrap_or(false);
+  capture_exclusions::apply(&settings);
   *app
     .state::<GeneralSettingsState>()
     .0
@@ -229,6 +239,7 @@ pub fn set_general_settings(
     .0
     .write()
     .unwrap_or_else(|poisoned| poisoned.into_inner()) = settings.clone();
+  capture_exclusions::apply(&settings);
   let _ = app.emit(SETTINGS_CHANGED_EVENT, &settings);
   Ok(settings)
 }

@@ -48,6 +48,10 @@ pub(in crate::recording) fn begin_capture(
   });
 
   crate::camera_preview::stop_all(app);
+  // Before the capture opens, so the chosen apps are never in its first
+  // frames.
+  #[cfg(target_os = "windows")]
+  crate::hidden_apps_windows::hide_for_recording(app);
   let monitor = Arc::clone(&state(app).monitor);
   monitor.configure(
     options.system_audio,

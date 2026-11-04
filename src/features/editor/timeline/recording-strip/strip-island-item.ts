@@ -5,14 +5,17 @@ import { type ToolPanelStripItem } from "../../tools/tool-panel-strip";
 import { type RecordingMoment } from "../moments/recording-moments";
 import { baseOf } from "../strip/strip-part";
 import { type StripSelection } from "../strip/strip-selection";
+import { type TimeMap } from "../timeline-scale";
 
 import { type RecordingBeat } from "./recording-beats";
 import { type RecordingStripLulls } from "./recording-strip-lulls";
+import { playedMs } from "./recording-strip-time";
 
 // What the island of what is chosen on the strip shows, read from the
 // strip's choice: a beat as it was found, a moment with its voice note, a
-// lull with how it plays, the drawn range, or how many beats and lulls are
-// gathered with Shift. A lane's own choice has none here.
+// lull with how it plays, the drawn range with where it plays, which a GIF
+// is made of, or how many beats and lulls are gathered with Shift. A lane's
+// own choice has none here.
 
 /** How long a lull trimmed to a breath keeps, in seconds. */
 export const BREATH_S = 0.3;
@@ -25,12 +28,15 @@ export function stripIslandItem({
   artifactId,
   beats,
   lulls,
+  map,
   moments,
   selection,
 }: {
   artifactId: number;
   beats: RecordingBeat[];
   lulls: RecordingStripLulls;
+  /** From recorded to played seconds. */
+  map: TimeMap;
   moments: RecordingMoment[];
   selection: StripSelection | null;
 }): ToolPanelStripItem | null {
@@ -39,6 +45,10 @@ export function stripIslandItem({
       return {
         id: `${String(selection.start)}-${String(selection.end)}`,
         kind: "range",
+        played: {
+          endMs: playedMs(map, selection.end, true),
+          startMs: playedMs(map, selection.start),
+        },
       };
     case "items":
       return {

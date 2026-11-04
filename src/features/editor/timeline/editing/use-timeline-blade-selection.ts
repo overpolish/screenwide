@@ -11,10 +11,9 @@ import {
 import { TimelineRangeSelection } from "./timeline-blade";
 
 /**
- * Which blade tool is armed and what it has picked out. The blade and the
- * range tool are mutually exclusive, and arming either one drops whatever the
- * other had selected, so every transition lives here rather than spread
- * across the callers that trigger it.
+ * What the timeline's edits have picked out: a stretch of the edited video,
+ * a segment, where a split would land, and whether drags snap. The strip's
+ * tools in hand are its own (`use-strip-tools.ts`).
  */
 export function useTimelineBladeSelection({
   edit,
@@ -25,8 +24,6 @@ export function useTimelineBladeSelection({
   snap: (sourcePosition: number) => number;
   snapOutput: (outputPosition: number) => number;
 }) {
-  const [isActive, setIsActive] = useState(false);
-  const [isRangeActive, setIsRangeActive] = useState(false);
   const [previewPosition, setPreviewPosition] = useState<number | null>(null);
   const [selectedSegmentId, setSelectedSegmentId] = useState<number | null>(
     null,
@@ -45,44 +42,6 @@ export function useTimelineBladeSelection({
       ? selectedSegmentId
       : null;
 
-  const setActive = useCallback((active: boolean) => {
-    setIsActive(active);
-    if (active) {
-      setIsRangeActive(false);
-      setRangeSelection(null);
-      setSelectedSegmentId(null);
-    } else setPreviewPosition(null);
-  }, []);
-  const toggle = useCallback(() => {
-    setIsActive((active) => {
-      if (active) setPreviewPosition(null);
-      else {
-        setIsRangeActive(false);
-        setRangeSelection(null);
-        setSelectedSegmentId(null);
-      }
-      return !active;
-    });
-  }, []);
-  const changeRangeActive = useCallback((active: boolean) => {
-    setIsRangeActive(active);
-    if (active) {
-      setIsActive(false);
-      setPreviewPosition(null);
-      setSelectedSegmentId(null);
-    } else setRangeSelection(null);
-  }, []);
-  const toggleRange = useCallback(() => {
-    setIsRangeActive((active) => {
-      if (active) setRangeSelection(null);
-      else {
-        setIsActive(false);
-        setPreviewPosition(null);
-        setSelectedSegmentId(null);
-      }
-      return !active;
-    });
-  }, []);
   const toggleSnap = useCallback(() => {
     setIsSnapActive((active) => !active);
   }, []);
@@ -127,22 +86,16 @@ export function useTimelineBladeSelection({
     clearPreview,
     clearRangeSelection,
     clearSelection,
-    isActive,
-    isRangeActive,
     isSnapActive,
     previewAt,
     previewPosition,
     rangeSelection,
     selectSegment: setSelectedSegmentId,
     selectedSegmentId: effectiveSelectedSegmentId,
-    setActive,
-    setRangeActive: changeRangeActive,
     setRangeSelection: changeRangeSelection,
     setSnapActive: setIsSnapActive,
     setSnapGuidePosition,
     snapGuidePosition,
-    toggle,
-    toggleRange,
     toggleSnap,
   };
 }

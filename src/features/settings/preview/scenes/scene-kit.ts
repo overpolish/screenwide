@@ -59,9 +59,10 @@ export type RecordingScene = {
   kind: "recording";
   paint: Painter;
   size: PictureSize;
-  /** Screenwide's windows, painted over the desktop for the scenes that
-   * show it with and without them. */
-  paintScreenwide?: Painter;
+  /** What the setting leaves out of the recording, such as Screenwide's
+   * windows or the desktop's icons, painted over the desktop for the scenes
+   * that show it with and without it. */
+  paintLayer?: Painter;
   script?: PointerScript;
 };
 

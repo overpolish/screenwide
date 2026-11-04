@@ -3,8 +3,8 @@
 
 import { useEffect, useState } from "react";
 
-/** Whether ⌥ (Alt) is held. On the strip ⌥ is the scissors: held, a drag
- * cuts rather than scrubs or retimes, and the strip shows it before
+/** Whether ⌥ (Alt) is held. On the strip ⌥ is the blade: held, a press
+ * splits rather than scrubs or chooses, and the strip shows where before
  * anything is pressed. */
 export function useAltKey() {
   const [isAlt, setIsAlt] = useState(false);

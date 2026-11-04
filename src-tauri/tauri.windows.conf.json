@@ -2,10 +2,11 @@
   "bundle": {
     "resources": {
       "assets/DirectML-LICENSE.txt": "licenses/DirectML-LICENSE.txt",
+      "binaries/DXC-LICENSE-LLVM.txt": "licenses/DXC-LLVM.txt",
+      "binaries/DXC-LICENSE-MIT.txt": "licenses/DXC-MIT.txt",
       "binaries/DirectML.dll": "DirectML.dll",
       "binaries/dxcompiler.dll": "dxcompiler.dll",
-      "binaries/DXC-LICENSE-LLVM.txt": "licenses/DXC-LLVM.txt",
-      "binaries/DXC-LICENSE-MIT.txt": "licenses/DXC-MIT.txt"
+      "binaries/screenwide-window-hider.dll": "screenwide-window-hider.dll"
     }
   }
 }

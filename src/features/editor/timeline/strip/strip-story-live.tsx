@@ -57,9 +57,11 @@ export type LiveStripProps = Pick<
   /** Whether the annotations are left out, as with the screen's track off. */
   isAnnotationsHidden: boolean;
   isCaptionsHidden: boolean;
-  /** Whether the Cut tool is on. */
+  /** Whether the blade is in hand. */
   isCutting: boolean;
   isPlaying: boolean;
+  /** Whether the range tool is in hand. */
+  isRanging: boolean;
   /** Whether the screen's track is in the export. */
   isScreenShown: boolean;
   /** Whether the shortcuts are left out. */
@@ -181,6 +183,7 @@ export function LiveStrip(props: LiveStripProps) {
       isCaptionsHidden={props.isCaptionsHidden}
       isCutting={props.isCutting}
       isPlaying={props.isPlaying}
+      isRanging={props.isRanging}
       isScreenShown={props.isScreenShown}
       jumps={jumpsOf(content.order)}
       lulls={lulls}

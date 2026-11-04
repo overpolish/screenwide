@@ -19,6 +19,7 @@ pub(in crate::editor::save) fn save_recording_artifact(
   mut options: RecordingExportOptions,
 ) -> Result<Option<PathBuf>, String> {
   let mut subtitles = None;
+  let is_gif = options.recording_format == crate::editor::recording_model::RecordingFormat::Gif;
   if let EditorArtifact::Recording {
     audio_tracks,
     duration_ms,
@@ -33,12 +34,23 @@ pub(in crate::editor::save) fn save_recording_artifact(
       let recording = (project.as_path(), audio_tracks.as_slice(), *duration_ms);
       let output = &options.recording_output.primary;
       let frame = captions::frame_for(output.width, output.height);
-      if let Some(kind) = options.subtitles.file() {
+      // A GIF has its captions in the picture, and no file beside it.
+      if let Some(kind) = options.subtitles.file().filter(|_| !is_gif) {
         let default = || crate::editor::text_templates::default_captions(progress_app);
         subtitles = captions::subtitles_for(recording, &edit, frame, kind, default);
       }
       options.captions = captions::track_for(recording, &edit, frame);
     }
+  }
+  if is_gif {
+    return super::gif::save_gif(
+      artifact,
+      writing,
+      stem,
+      progress_app,
+      job_cancellation,
+      options,
+    );
   }
   let saved = save_recording_media(
     artifact,

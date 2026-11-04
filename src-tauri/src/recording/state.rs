@@ -184,6 +184,14 @@ pub(super) fn transition(
     if is_under_way(previous.status) != is_under_way(snapshot.status) {
       crate::moments::shortcuts::sync(app);
     }
+
+    #[cfg(target_os = "windows")]
+    {
+      crate::desktop_icons::follow_recording(&snapshot);
+      if snapshot.status == RecordingStatus::Idle {
+        crate::hidden_apps_windows::restore_after_recording(app);
+      }
+    }
   }
 
   Ok(snapshot)

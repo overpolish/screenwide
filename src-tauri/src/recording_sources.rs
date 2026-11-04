@@ -73,6 +73,13 @@ pub struct ApplicationDetails {
   process_ids: Vec<u32>,
 }
 
+impl ApplicationDetails {
+  #[cfg(target_os = "windows")]
+  pub(crate) fn process_ids(&self) -> &[u32] {
+    &self.process_ids
+  }
+}
+
 /// Whether a remembered window can still be recorded, with its app's icon
 /// resolved afresh. The remembered icon path points into the temp directory,
 /// which macOS purges of files nobody has read for a few days.

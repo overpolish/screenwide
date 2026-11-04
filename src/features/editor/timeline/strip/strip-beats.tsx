@@ -69,7 +69,6 @@ export function StripBeats({
             beats={leaving.beats}
             captions={null}
             cuts={[]}
-            draft={null}
             isAltHeld={false}
             lifted={null}
             lulls={leaving.lulls}

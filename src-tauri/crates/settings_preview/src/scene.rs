@@ -59,6 +59,9 @@ pub enum PreviewScene {
   /// The screen, the first picture, recorded with Screenwide's windows, the
   /// second, in it where `included`.
   IncludeScreenwide { included: bool },
+  /// The screen, the first picture, recorded with the desktop's icons, the
+  /// second, on it unless `hidden`.
+  DesktopIcons { hidden: bool },
 }
 
 impl PreviewScene {

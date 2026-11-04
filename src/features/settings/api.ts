@@ -120,3 +120,16 @@ export {
 export const browseDefaultLocation = (
   kind: "project" | "recording" | "screenshot",
 ) => invoke<string | null>("browse_default_location", { kind });
+
+/** An app running now, as the hidden apps pop-up offers it. */
+export type RunningApp = {
+  iconPath: string | null;
+  /** Its bundle identifier. */
+  id: string;
+  label: string;
+};
+
+/** The running apps Screenwide can hide: on Windows, those it may load its
+ * hider into. */
+export const listRunningApps = () =>
+  invoke<RunningApp[]>("list_hideable_applications");

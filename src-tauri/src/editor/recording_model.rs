@@ -89,7 +89,8 @@ impl ScreenshotFormat {
   }
 }
 
-/// What a recording is exported as: its video, or its sound alone.
+/// What a recording is exported as: its video, a stretch of it as a GIF, or
+/// its sound alone.
 #[derive(Clone, Copy, Debug, Default, Deserialize, Eq, PartialEq, Serialize, TS)]
 #[serde(rename_all = "kebab-case")]
 #[ts(export)]
@@ -97,24 +98,36 @@ pub enum RecordingFormat {
   /// The video, or for a recording of sound alone, its M4A.
   #[default]
   Mp4,
+  /// The stretch drawn on the timeline, as a looping GIF with no sound.
+  Gif,
   M4a,
   Wav,
 }
 
 impl RecordingFormat {
   /// The file the sound alone is saved as: what M4A and WAV ask for, and
-  /// what MP4 means for a recording with no picture to export.
+  /// what MP4 means for a recording with no picture to export. A GIF has no
+  /// sound, and is refused before this is asked of it.
   pub const fn sound_file(self) -> screenwide_export::media_preview::AudioFile {
     match self {
-      Self::Mp4 | Self::M4a => screenwide_export::media_preview::AudioFile::M4a,
+      Self::Mp4 | Self::Gif | Self::M4a => screenwide_export::media_preview::AudioFile::M4a,
       Self::Wav => screenwide_export::media_preview::AudioFile::Wav,
     }
   }
 
   /// Whether only the sound is asked for, whatever pictures are in.
   pub const fn is_sound_only(self) -> bool {
-    !matches!(self, Self::Mp4)
+    matches!(self, Self::M4a | Self::Wav)
   }
+}
+
+/// The stretch of the edited video a GIF is made of, in milliseconds.
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct GifRange {
+  pub start_ms: u64,
+  pub end_ms: u64,
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq)]
@@ -138,9 +151,12 @@ pub struct RecordingExportOptions {
   pub enabled_stream_indices: Vec<usize>,
   pub include_camera: bool,
   pub include_primary_video: bool,
-  /// The video, or the sound alone as M4A or WAV.
+  /// The video, a GIF of `gif_range`, or the sound alone as M4A or WAV.
   #[serde(default)]
   pub recording_format: RecordingFormat,
+  /// What a GIF is made of; asked for with the GIF format alone.
+  #[serde(default)]
+  pub gif_range: Option<GifRange>,
   pub resolution_scale_percent: u16,
   pub recording_output: RecordingOutputSettings,
   pub screenshot_output: ScreenshotWorkspaceOutputSettings,

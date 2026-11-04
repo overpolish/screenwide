@@ -5,6 +5,7 @@ import { type ContextType, useState } from "react";
 
 import { featureStage } from "../../storybook/feature-story-stage";
 
+import { SAMPLE_RUNNING_APPS } from "./capture/hidden-apps-fixtures";
 import { SettingsApiContext } from "./settings-api-context";
 import { momentsPreviewApi } from "./settings-moments-fixtures";
 import {
@@ -48,6 +49,8 @@ export function createPreviewApi(
     },
     captionStyles: [],
     captionTemplate: "box",
+    hiddenApps: [],
+    hideDesktopIcons: true,
     launchAtLogin: true,
     openLocationAfterExport: true,
     projectDirectory: null,
@@ -168,6 +171,7 @@ export function createPreviewApi(
     getShortcutDefaults: () => Promise.resolve(defaults),
     getShortcutSettings: () => Promise.resolve(shortcuts),
     hideSettings: () => Promise.resolve(null),
+    listRunningApps: () => Promise.resolve(SAMPLE_RUNNING_APPS),
     listenToAnnotateSettings: () => Promise.resolve(() => undefined),
     listenToGeneralSettings: () => Promise.resolve(() => undefined),
     minimize: () => Promise.resolve(),

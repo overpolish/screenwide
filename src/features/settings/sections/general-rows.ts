@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { t } from "../../../i18n/i18n";
+import { platformArg, t } from "../../../i18n/i18n";
 
 import type { GeneralSettings } from "../../../bindings/GeneralSettings";
 
@@ -23,6 +23,23 @@ export const captureToggle = (): ToggleItem => ({
   description: t("settings-include-app-description"),
   key: "recordScreenwideWindows",
   title: t("settings-include-app"),
+});
+
+export const desktopIconsToggle = (): ToggleItem => ({
+  description: t("settings-hide-desktop-icons-description", {
+    platform: platformArg(),
+  }),
+  key: "hideDesktopIcons",
+  title: t("settings-hide-desktop-icons"),
+});
+
+/** Apps kept out of captures: left out of each capture on macOS, hidden
+ * from every capture while recording on Windows. */
+export const hiddenAppsRow = () => ({
+  description: t("settings-hidden-apps-description", {
+    platform: platformArg(),
+  }),
+  title: t("settings-hidden-apps"),
 });
 
 export const launchToggle = (): ToggleItem => ({

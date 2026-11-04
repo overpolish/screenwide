@@ -8,8 +8,39 @@ mod monitor_thumbnail;
 pub(crate) use monitor_thumbnail::capture_monitor_thumbnail;
 
 use crate::screenshots::{CapturedImage, ScreenshotTarget};
+use cidre::arc;
 use screenwide_capture::capture_geometry::physical_capture_rect;
-use screenwide_capture::capture_kit::{display_scale, monitor_geometry, windows_to_exclude};
+use screenwide_capture::capture_kit::{
+  capture_exclusion, display_scale, monitor_geometry, windows_to_exclude,
+};
+
+/// What a still leaves out of the displays it takes.
+#[derive(Clone, Copy)]
+pub struct LeftOut {
+  pub include_own_windows: bool,
+  /// Whether what the person keeps out of recordings and screenshots in
+  /// Settings is left out too: a screenshot does, a picture the app takes
+  /// for its own tools, such as Text Recognition's frozen screen, shows the
+  /// screen as it is.
+  pub chosen: bool,
+}
+
+impl LeftOut {
+  fn filter(
+    self,
+    content: &sc::ShareableContent,
+    display: &sc::Display,
+  ) -> arc::R<sc::ContentFilter> {
+    if self.chosen {
+      capture_exclusion(content, self.include_own_windows).filter(display)
+    } else {
+      sc::ContentFilter::with_display_excluding_windows(
+        display,
+        &windows_to_exclude(content, self.include_own_windows),
+      )
+    }
+  }
+}
 
 async fn capture_filtered(
   filter: &sc::ContentFilter,
@@ -73,19 +104,19 @@ async fn capture_filtered(
 /// pixels travel back out.
 pub fn capture_blocking(
   target: ScreenshotTarget,
-  include_own_windows: bool,
+  left_out: LeftOut,
   show_cursor: bool,
 ) -> Result<CapturedImage, String> {
   tokio::runtime::Builder::new_current_thread()
     .enable_all()
     .build()
     .map_err(|error| error.to_string())?
-    .block_on(capture(target, include_own_windows, show_cursor))
+    .block_on(capture(target, left_out, show_cursor))
 }
 
 async fn capture(
   target: ScreenshotTarget,
-  include_own_windows: bool,
+  left_out: LeftOut,
   show_cursor: bool,
 ) -> Result<CapturedImage, String> {
   let content = sc::ShareableContent::current()
@@ -111,10 +142,7 @@ async fn capture(
       cfg.set_width(width as usize);
       cfg.set_height(height as usize);
 
-      let filter = sc::ContentFilter::with_display_excluding_windows(
-        display,
-        &windows_to_exclude(&content, include_own_windows),
-      );
+      let filter = left_out.filter(&content, display);
       capture_filtered(&filter, &cfg).await
     }
     ScreenshotTarget::Region { monitor_id, region } => {
@@ -138,21 +166,11 @@ async fn capture(
       cfg.set_width(rect.width as usize);
       cfg.set_height(rect.height as usize);
 
-      let filter = sc::ContentFilter::with_display_excluding_windows(
-        display,
-        &windows_to_exclude(&content, include_own_windows),
-      );
+      let filter = left_out.filter(&content, display);
       capture_filtered(&filter, &cfg).await
     }
     ScreenshotTarget::DesktopRegion { monitor_id, region } => {
-      desktop_capture::capture(
-        &content,
-        monitor_id,
-        region,
-        include_own_windows,
-        show_cursor,
-      )
-      .await
+      desktop_capture::capture(&content, monitor_id, region, left_out, show_cursor).await
     }
     ScreenshotTarget::Window { window_id } => {
       let windows = content.windows();

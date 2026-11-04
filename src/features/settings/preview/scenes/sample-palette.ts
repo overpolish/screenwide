@@ -15,8 +15,14 @@ export const SAMPLE = {
   caption: "#1d1d1f",
   caret: "#2f6fed",
   chart: ["#2f6fed", "#8fb2ff", "#f2994a", "#36b37e"],
+  /** The desktop's icon labels, and the shadow under them and the icons. */
+  desktopInk: "#ffffff",
+  desktopShadow: "rgb(0 0 0 / 45%)",
   field: "#ffffff",
   fieldEdge: "#cfccc6",
+  /** A folder on the desktop, and its tab. */
+  folder: "#6cb6f5",
+  folderTab: "#4f9ee6",
   hairline: "rgb(0 0 0 / 10%)",
   heading: "#1d1d1f",
   /** Stand-in app icons on the taskbar. */

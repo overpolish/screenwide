@@ -19,20 +19,24 @@ const meta = {
     durationMs: { control: { min: 0, step: 1000, type: "number" } },
     isCutting: { table: { defaultValue: { summary: "false" } } },
     isPlaying: { table: { defaultValue: { summary: "false" } } },
+    isRanging: { table: { defaultValue: { summary: "false" } } },
   },
   args: {
     durationMs: 750_000,
     isCutting: false,
+    isGifRange: false,
     isPlaying: false,
+    isRanging: false,
     onCuttingChange: fn(),
     onPlayingChange: fn(),
+    onRangingChange: fn(),
     playhead: createPlayhead(),
   },
   component: EditorTransport,
   decorators: [featureStage({ height: 320, width: 120 })],
   parameters: {
     controls: {
-      include: ["durationMs", "isCutting", "isPlaying"],
+      include: ["durationMs", "isCutting", "isPlaying", "isRanging"],
     },
   },
   // Playing runs a clock that moves the playhead, as the preview would, and
@@ -61,11 +65,15 @@ const meta = {
         {...args}
         onCuttingChange={(isCutting) => {
           args.onCuttingChange(isCutting);
-          updateArgs({ isCutting });
+          updateArgs({ isCutting, isRanging: false });
         }}
         onPlayingChange={(isPlaying) => {
           args.onPlayingChange(isPlaying);
           updateArgs({ isPlaying });
+        }}
+        onRangingChange={(isRanging) => {
+          args.onRangingChange(isRanging);
+          updateArgs({ isCutting: false, isRanging });
         }}
       />
     );
@@ -77,3 +85,9 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {};
+
+// The Export island making a GIF: the range tool stays in hand over the
+// locked transport.
+export const MakingGif: Story = {
+  args: { isGifRange: true, isLocked: true, isRanging: true },
+};

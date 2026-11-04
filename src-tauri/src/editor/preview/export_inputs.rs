@@ -74,8 +74,10 @@ impl ExportInputs {
       enabled_stream_indices,
       include_camera,
       include_primary_video,
-      // The looks measure the video; a sound-only export offers none.
+      // The looks measure the video; a sound-only export offers none, and a
+      // GIF's look is fixed.
       recording_format: _,
+      gif_range: _,
       resolution_scale_percent,
       mut recording_output,
       screenshot_format: _,

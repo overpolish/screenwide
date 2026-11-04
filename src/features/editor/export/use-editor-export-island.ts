@@ -4,6 +4,7 @@
 import { useEffect, useState } from "react";
 
 import { useExportIslandKeys } from "../shortcuts/export-island-keys";
+import { useStripIslandChoice } from "../timeline/recording-strip/strip-island-channel";
 
 import { CameraOutput } from "./camera-output";
 import { exportIslandSnapshot } from "./editor-export";
@@ -11,9 +12,11 @@ import { putAwayExport } from "./export-file-api";
 import {
   resetExportIsland,
   setExportIslandOpen,
+  setGifRange,
   useExportIslandStore,
 } from "./export-island-store";
 import { applyExportPatch } from "./export-patch";
+import { gifReadiness, gifRangeOf } from "./recording-format";
 import { useExportLightDismiss } from "./use-export-light-dismiss";
 import { useExportProgressStore } from "./use-export-progress";
 
@@ -47,6 +50,8 @@ export function useEditorExportIsland(
   },
 ) {
   const { artifact, fileStem, isSaving = false } = props;
+  // A GIF is made of the range drawn on the recording's strip.
+  const strip = useStripIslandChoice("recording");
   // Subtitles are offered once there is a transcript, which the tool panels
   // learn of: the island reads it a render later.
   const [hasTranscript, setHasTranscript] = useState(false);
@@ -75,7 +80,6 @@ export function useEditorExportIsland(
         else setExportIslandOpen(false);
       };
   useExportIslandKeys(isExportOpen ? toggle : null);
-  useExportLightDismiss(isOpen || exported !== null ? putAway : null);
   const artifactId = artifact?.id;
   useEffect(() => {
     resetExportIsland();
@@ -97,6 +101,7 @@ export function useEditorExportIsland(
       enabledAudioTrackCount: props.enabledAudioTrackCount ?? 0,
       exported,
       failure,
+      gif: gifReadiness(gifRangeOf(strip.item)),
       hasTranscript,
       isAudioOnly,
       lookSizeBytes: props.lookSizeBytes ?? [],
@@ -119,6 +124,15 @@ export function useEditorExportIsland(
         subtitles: props.subtitles ?? "none",
       },
     });
+  // Out with GIF chosen, the strip stays in reach for the GIF's range.
+  const isGifRange = isOpen && !isSaving && (shown?.gif ?? null) !== null;
+  useEffect(() => {
+    setGifRange(isGifRange);
+  }, [isGifRange]);
+  useExportLightDismiss(
+    isOpen || exported !== null ? putAway : null,
+    isGifRange,
+  );
   const onPatch = (patch: ToolPanelExportPatch) => {
     if (patch.dismiss) putAway?.();
     applyExportPatch(

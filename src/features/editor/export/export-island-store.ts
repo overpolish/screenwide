@@ -16,6 +16,9 @@ type ExportIslandState = {
   exported: ExportedFile | null;
   /** Why the last save failed, until it is tried again or changed. */
   failure: string | null;
+  /** Out with GIF chosen: the strip stays in reach for the range a GIF is
+   * made of, while the rest of the editor is locked. */
+  isGifRange: boolean;
   /** Out over the picture; false while it is tucked away exporting. */
   isOpen: boolean;
 };
@@ -23,10 +26,16 @@ type ExportIslandState = {
 const AWAY: ExportIslandState = {
   exported: null,
   failure: null,
+  isGifRange: false,
   isOpen: false,
 };
 
 export const useExportIslandStore = create<ExportIslandState>()(() => AWAY);
+
+export const setGifRange = (isGifRange: boolean) => {
+  if (useExportIslandStore.getState().isGifRange !== isGifRange)
+    useExportIslandStore.setState({ isGifRange });
+};
 
 /** Brings the island out, or tucks it away while it exports. */
 export const setExportIslandOpen = (isOpen: boolean) => {

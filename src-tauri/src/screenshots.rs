@@ -78,7 +78,14 @@ pub enum ScreenshotDestination {
 pub(crate) fn capture_monitor_without_own_windows_blocking(
   monitor_id: u32,
 ) -> Result<CapturedImage, String> {
-  platform::capture_blocking(ScreenshotTarget::Screen { monitor_id }, false, false)
+  platform::capture_blocking(
+    ScreenshotTarget::Screen { monitor_id },
+    platform::LeftOut {
+      chosen: false,
+      include_own_windows: false,
+    },
+    false,
+  )
 }
 
 pub(crate) async fn capture(
@@ -95,7 +102,7 @@ pub(crate) async fn capture(
     include_ruler || crate::settings::current(app).record_screenwide_windows;
   quick_island::before_shutter(app, include_own_windows);
 
-  capture_content(target, include_own_windows, show_cursor).await
+  capture_content(target, include_own_windows, true, show_cursor).await
 }
 
 /// A still with Screenwide's own windows always left out, whatever the "Record
@@ -105,7 +112,7 @@ pub(crate) async fn capture(
 pub(crate) async fn capture_excluding_own_windows(
   target: ScreenshotTarget,
 ) -> Result<CapturedImage, String> {
-  capture_content(target, false, false).await
+  capture_content(target, false, true, false).await
 }
 
 /// The display scale `target` is captured at: how many of the still's pixels
@@ -139,15 +146,22 @@ pub(crate) fn capture_scale(target: ScreenshotTarget) -> f64 {
     .unwrap_or(1.0)
 }
 
+/// `chosen` leaves out what the person keeps out of recordings and
+/// screenshots in Settings, which only macOS can leave out of a still.
 async fn capture_content(
   target: ScreenshotTarget,
   include_own_windows: bool,
+  chosen: bool,
   show_cursor: bool,
 ) -> Result<CapturedImage, String> {
   #[cfg(target_os = "macos")]
   {
+    let left_out = platform::LeftOut {
+      chosen,
+      include_own_windows,
+    };
     tauri::async_runtime::spawn_blocking(move || {
-      platform::capture_blocking(target, include_own_windows, show_cursor)
+      platform::capture_blocking(target, left_out, show_cursor)
     })
     .await
     .map_err(|error| error.to_string())?
@@ -155,7 +169,7 @@ async fn capture_content(
 
   #[cfg(target_os = "windows")]
   {
-    let _ = include_own_windows;
+    let _ = (include_own_windows, chosen);
     tauri::async_runtime::spawn_blocking(move || platform_windows::capture(target, show_cursor))
       .await
       .map_err(|error| error.to_string())?
@@ -163,7 +177,7 @@ async fn capture_content(
 
   #[cfg(not(any(target_os = "macos", target_os = "windows")))]
   {
-    let _ = (include_own_windows, target, show_cursor);
+    let _ = (include_own_windows, chosen, target, show_cursor);
     Err("Screenshots are not available on this platform".to_owned())
   }
 }
@@ -174,7 +188,14 @@ pub(crate) async fn capture_overlay_snapshot(monitor_id: u32) -> Result<Captured
   #[cfg(target_os = "macos")]
   {
     tauri::async_runtime::spawn_blocking(move || {
-      platform::capture_blocking(ScreenshotTarget::Screen { monitor_id }, true, false)
+      platform::capture_blocking(
+        ScreenshotTarget::Screen { monitor_id },
+        platform::LeftOut {
+          chosen: false,
+          include_own_windows: true,
+        },
+        false,
+      )
     })
     .await
     .map_err(|error| error.to_string())?
@@ -200,7 +221,7 @@ pub(crate) async fn capture_overlay_snapshot(monitor_id: u32) -> Result<Captured
 /// own windows stay out, where the platform allows, so the island is not
 /// blurred in under itself, and so does the pointer.
 pub(crate) async fn capture_desktop_backdrop(monitor_id: u32) -> Result<CapturedImage, String> {
-  capture_content(ScreenshotTarget::Screen { monitor_id }, false, false).await
+  capture_content(ScreenshotTarget::Screen { monitor_id }, false, false, false).await
 }
 
 pub(crate) async fn capture_text_recognition_snapshot(

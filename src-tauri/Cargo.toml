@@ -13,9 +13,10 @@ edition.workspace = true
 # from, each a layer the ones above it depend on and never the reverse.
 [workspace]
 members = ["crates/*"]
-# The transcriber builds into its own program with its own profile, and the
-# vendored crates are only patches.
-exclude = ["transcriber", "vendor"]
+# The transcriber builds into its own program and the window hider into its
+# own library, each with its own profile, and the vendored crates are only
+# patches.
+exclude = ["transcriber", "vendor", "window-hider"]
 
 [workspace.package]
 version = "0.1.0"
@@ -55,6 +56,7 @@ screenwide-timeline-edit = { path = "crates/timeline_edit" }
 # The transcriber's protocol only; the engine builds into its own program.
 screenwide-transcriber = { path = "transcriber" }
 screenwide-wgsl = { path = "crates/wgsl" }
+screenwide-window-hiding = { path = "crates/window_hiding" }
 screenwide-workspace = { path = "crates/workspace" }
 block2 = "0.6.2"
 bytemuck = { version = "1.25.2", features = ["derive"] }
@@ -207,6 +209,7 @@ screenwide-text.workspace = true
 screenwide-transcriber.workspace = true
 screenwide-timeline.workspace = true
 screenwide-timeline-edit.workspace = true
+screenwide-window-hiding.workspace = true
 
 [target.'cfg(target_os = "windows")'.dependencies]
 winvd = "0.0.49"

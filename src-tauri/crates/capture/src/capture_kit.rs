@@ -89,6 +89,109 @@ pub fn windows_to_exclude(
   }
 }
 
+/// The apps whose windows below every app window are the desktop: Finder's
+/// icons and the widgets placed on the desktop.
+const DESKTOP_OWNERS: [&str; 2] = ["com.apple.finder", "com.apple.notificationcenterui"];
+
+fn bundle_of(window: &sc::Window) -> Option<String> {
+  window.owning_app().map(|app| app.bundle_id().to_string())
+}
+
+/// Finder's desktop icons and the desktop's widgets: windows of those apps
+/// that sit below every app window. The wallpaper is not theirs, so it
+/// stays.
+fn is_desktop_window(window: &sc::Window) -> bool {
+  window.window_layer() < 0
+    && bundle_of(window).is_some_and(|bundle| DESKTOP_OWNERS.contains(&bundle.as_str()))
+}
+
+/// What a recording or a screenshot leaves out of a display: Screenwide's
+/// own windows unless they are asked for, and what the person chose in
+/// Settings ([`crate::chosen_exclusions`]).
+pub enum CaptureExclusion {
+  Windows(arc::R<ns::Array<sc::Window>>),
+  /// Apps left out whole, so a window one opens during a recording is left
+  /// out too, except the windows listed: Finder's own windows, when Finder
+  /// is left out only for its desktop icons.
+  Apps {
+    apps: arc::R<ns::Array<sc::RunningApp>>,
+    excepting: arc::R<ns::Array<sc::Window>>,
+  },
+}
+
+impl CaptureExclusion {
+  pub fn filter(&self, display: &sc::Display) -> arc::R<sc::ContentFilter> {
+    match self {
+      Self::Windows(windows) => sc::ContentFilter::with_display_excluding_windows(display, windows),
+      Self::Apps { apps, excepting } => {
+        sc::ContentFilter::with_display_excluding_apps_excepting_windows(display, apps, excepting)
+      }
+    }
+  }
+}
+
+/// What a recording or a screenshot starting now leaves out. With no app
+/// chosen, windows are listed: Screenwide's own, which exclude themselves
+/// once opened later, and the desktop's, which last. With apps chosen, they
+/// are left out whole, Screenwide too unless asked for, and with them
+/// Finder and the widgets' app for the desktop, keeping the windows those
+/// two have open now. An app chosen but not running when the capture starts
+/// cannot be left out of it.
+pub fn capture_exclusion(
+  content: &sc::ShareableContent,
+  include_own_windows: bool,
+) -> CaptureExclusion {
+  let chosen = crate::chosen_exclusions::current();
+  if chosen.app_ids.is_empty() {
+    let mut windows: Vec<_> = if include_own_windows {
+      Vec::new()
+    } else {
+      our_windows(content)
+        .iter()
+        .map(|window| window.retained())
+        .collect()
+    };
+    if chosen.desktop {
+      windows.extend(
+        content
+          .windows()
+          .iter()
+          .filter(|window| is_desktop_window(window))
+          .map(|window| window.retained()),
+      );
+    }
+    return CaptureExclusion::Windows(ns::Array::from_slice_retained(&windows));
+  }
+
+  let our_pid = std::process::id();
+  let is_desktop_owner = |bundle: &str| chosen.desktop && DESKTOP_OWNERS.contains(&bundle);
+  let apps: Vec<_> = content
+    .apps()
+    .iter()
+    .filter(|app| {
+      let bundle = app.bundle_id().to_string();
+      chosen.app_ids.contains(&bundle)
+        || is_desktop_owner(&bundle)
+        || (!include_own_windows && u32::try_from(app.process_id()).ok() == Some(our_pid))
+    })
+    .map(|app| app.retained())
+    .collect();
+  let excepting: Vec<_> = content
+    .windows()
+    .iter()
+    .filter(|window| {
+      !is_desktop_window(window)
+        && bundle_of(window)
+          .is_some_and(|bundle| is_desktop_owner(&bundle) && !chosen.app_ids.contains(&bundle))
+    })
+    .map(|window| window.retained())
+    .collect();
+  CaptureExclusion::Apps {
+    apps: ns::Array::from_slice_retained(&apps),
+    excepting: ns::Array::from_slice_retained(&excepting),
+  }
+}
+
 /// Resolves the stable bundle identifiers stored by the UI against a fresh
 /// ScreenCaptureKit snapshot. One application can own several processes, so
 /// every matching entry is retained rather than stopping at the first.

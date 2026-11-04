@@ -77,6 +77,10 @@ export type ToolPanelRecordingFormat = {
   selected: RecordingFormat;
 };
 
+/** Whether a GIF can be made: of a range drawn on the strip, up to 15
+ * seconds long. */
+export type ToolPanelGif = "noRange" | "ready" | "tooLong";
+
 /**
  * What the Export island shows, published by the editor while it is out. Its
  * options exist only where the export holds what they act on: null where
@@ -104,13 +108,16 @@ export type ToolPanelExport = {
   /** Why the last save failed, in the system's words. */
   failure: string | null;
   fileStem: string;
+  /** Whether a GIF can be made of what is drawn on the strip; null unless
+   * GIF is the format chosen. */
+  gif: ToolPanelGif | null;
   kind: "audio" | "screenshot" | "video";
   /** The save under way, or null while there is none. */
   progress: ToolPanelExportProgress | null;
   /** Null for a screenshot, audio, or where compression is not available. */
   quality: ToolPanelExportQuality | null;
-  /** A recording's formats: its video, and its sound alone as M4A or WAV
-   * where it has any; null for a screenshot. */
+  /** A recording's formats: its video, a stretch of it as a GIF, and its
+   * sound alone as M4A or WAV where it has any; null for a screenshot. */
   recordingFormat: ToolPanelRecordingFormat | null;
   /** Whether the file manager shows the file once it is written: a general
    * setting, which every export shares. */

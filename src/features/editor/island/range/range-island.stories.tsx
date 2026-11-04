@@ -23,7 +23,13 @@ function RangeIsland({
 
 const meta = {
   ...editorIslandStoryMeta,
-  args: { id: "range", isShown: true, onCut: fn() },
+  args: {
+    id: "range",
+    isShown: true,
+    length: 6.4,
+    onCut: fn(),
+    onDeselect: fn(),
+  },
   component: RangeIsland,
   decorators: [featureStage({ height: 160, width: 480 })],
   title: "Features/Editor/Island/Range",

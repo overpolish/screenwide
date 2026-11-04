@@ -26,6 +26,7 @@ import {
   useRecordingStripEdits,
 } from "./use-recording-strip-edits";
 import { useRecordingStripReadings } from "./use-recording-strip-readings";
+import { useStripTools } from "./use-strip-tools";
 
 import type { RecordingTimelineThumbnail } from "../../types";
 
@@ -101,7 +102,12 @@ export function useRecordingStrip(source: RecordingStripSource) {
   const select = (next: StripSelection | null) => {
     setChosen({ artifactId, selection: next });
   };
-  const [isCutting, setIsCutting] = useState(false);
+  const tools = useStripTools({
+    map: time.map,
+    playhead: source.playhead,
+    select,
+    selection,
+  });
   const isAltHeld = useAltKey();
   const edits = useRecordingStripEdits({
     beats: found.beats,
@@ -202,7 +208,7 @@ export function useRecordingStrip(source: RecordingStripSource) {
     cuts: time.cuts,
     isAltHeld,
     isCaptionsHidden: edit.captions?.enabled !== true,
-    isCutting,
+    ...tools.strip,
     isPlaying: source.isPlaying,
     isScreenShown,
     jumps: time.jumps,
@@ -242,20 +248,15 @@ export function useRecordingStrip(source: RecordingStripSource) {
     splits: time.splits,
     squeeze: lulls.squeeze,
   });
-  // The strip's half of the transport: its play and its scissors.
+  // The strip's half of the transport: its play, its blade and its range.
   const transport: Pick<
     EditorTransportProps,
-    | "durationMs"
-    | "isCutting"
-    | "isPlaying"
-    | "onCuttingChange"
-    | "onPlayingChange"
-    | "playhead"
-  > = {
+    "durationMs" | "isPlaying" | "onPlayingChange" | "playhead"
+  > &
+    typeof tools.transport = {
+    ...tools.transport,
     durationMs: time.map.duration * 1000,
-    isCutting,
     isPlaying: source.isPlaying,
-    onCuttingChange: setIsCutting,
     onPlayingChange: source.onPlayingChange,
     playhead: source.playhead,
   };

@@ -15,6 +15,7 @@ export const stripPanelHandlers = (
   | "onLullPlayChange"
   | "onLullTrimToBreath"
   | "onStripItemCut"
+  | "onStripItemDeselect"
 > => ({
   onChosenShortcutsDelete: () => {
     stripIslandControls(workspace)?.deleteShortcuts();
@@ -27,5 +28,8 @@ export const stripPanelHandlers = (
   },
   onStripItemCut: () => {
     stripIslandControls(workspace)?.cut();
+  },
+  onStripItemDeselect: () => {
+    stripIslandControls(workspace)?.deselect();
   },
 });

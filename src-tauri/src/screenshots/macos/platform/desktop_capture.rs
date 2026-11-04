@@ -4,14 +4,14 @@
 use cidre::{cg, cv, sc};
 
 use crate::screenshots::{desktop as still_composition, CapturedImage};
-use screenwide_capture::capture_kit::{desktop_layout, windows_to_exclude};
+use screenwide_capture::capture_kit::desktop_layout;
 use screenwide_capture::desktop_capture::{self, OutputLimits};
 
 pub(super) async fn capture(
   content: &sc::ShareableContent,
   anchor_id: u32,
   region: screenwide_capture::Region,
-  include_own_windows: bool,
+  left_out: super::LeftOut,
   show_cursor: bool,
 ) -> Result<CapturedImage, String> {
   let displays = desktop_layout()?;
@@ -40,10 +40,7 @@ pub(super) async fn capture(
     ));
     config.set_width(rect.width as usize);
     config.set_height(rect.height as usize);
-    let filter = sc::ContentFilter::with_display_excluding_windows(
-      display,
-      &windows_to_exclude(content, include_own_windows),
-    );
+    let filter = left_out.filter(content, display);
     captured.push((piece, super::capture_filtered(&filter, &config).await?));
   }
   still_composition::compose(&plan, captured)

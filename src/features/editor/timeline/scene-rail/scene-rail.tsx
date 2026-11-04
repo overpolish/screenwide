@@ -202,7 +202,10 @@ export function SceneRail({
 
   return (
     <div
-      className="relative h-5 cursor-crosshair touch-none"
+      // Faintly filled along its length, a hint that the empty rail is a
+      // lane to draw in rather than a control of its own; the scenes on it
+      // take the stronger fill the beats have.
+      className="relative h-5 cursor-crosshair touch-none rounded-part bg-fill/50"
       dir="ltr"
       onPointerDown={(event) => {
         event.stopPropagation();

@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 pub(crate) mod background_preset;
+pub(crate) mod capture_exclusions;
 pub(crate) mod preferences;
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 pub(crate) mod shortcut_defaults;

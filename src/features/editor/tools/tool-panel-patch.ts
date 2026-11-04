@@ -107,6 +107,8 @@ export type ToolPanelPatch = Partial<
   deleteChosenShortcuts?: true;
   /** Delete the scene under the playhead. */
   deleteScene?: true;
+  /** Let go of what is chosen on the strip. */
+  deselectStripItem?: true;
   /** Download the model taking the camera's background away needs. */
   downloadCameraBackground?: true;
   /** Download the model following the camera's objects needs. */

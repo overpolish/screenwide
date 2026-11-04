@@ -1,0 +1,31 @@
+# SPDX-FileCopyrightText: 2026 overpolish
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+# The library Screenwide loads into an app the person chose to hide on
+# Windows, where a window can be kept out of captures only by its own
+# process. A library of its own, outside the workspace, so it carries
+# nothing of the app and builds with its own small profile.
+
+[package]
+name = "screenwide-window-hider"
+version = "0.1.0"
+description = "Keeps an app's windows out of captures while Screenwide records"
+authors = ["overpolish"]
+license = "GPL-3.0-or-later"
+edition = "2021"
+publish = false
+
+[lib]
+crate-type = ["cdylib"]
+
+[target.'cfg(windows)'.dependencies]
+windows = { version = "0.62.2", features = [
+  "Win32_Foundation",
+  "Win32_System_Threading",
+  "Win32_UI_WindowsAndMessaging",
+] }
+
+[profile.release]
+lto = true
+opt-level = "s"
+panic = "abort"

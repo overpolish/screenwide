@@ -77,12 +77,14 @@ export const VIDEO: ToolPanelExport = {
   extension: "mp4",
   failure: null,
   fileStem: "Onboarding walkthrough",
+  gif: null,
   kind: "video",
   progress: null,
   quality: QUALITY,
   recordingFormat: {
     offered: [
       { extension: "mp4", format: "mp4" },
+      { extension: "gif", format: "gif" },
       { extension: "m4a", format: "m4a" },
       { extension: "wav", format: "wav" },
     ],

@@ -5,6 +5,7 @@ use super::*;
 use crate::editor::export_picture::{ExportPicture, Screen};
 use screenwide_export::track_selection;
 
+mod gif;
 mod publish;
 mod subtitled;
 pub(super) use subtitled::save_recording_artifact;

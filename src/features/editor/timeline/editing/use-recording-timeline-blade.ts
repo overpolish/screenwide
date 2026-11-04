@@ -249,8 +249,6 @@ export function useRecordingTimelineBlade({
             selection.clearSelection();
           }
         : undefined,
-    onToggleBladeTool: shortcutsEnabled ? selection.toggle : undefined,
-    onToggleRangeTool: shortcutsEnabled ? selection.toggleRange : undefined,
     onToggleSnap: shortcutsEnabled ? selection.toggleSnap : undefined,
   });
 
@@ -263,8 +261,6 @@ export function useRecordingTimelineBlade({
       cutAt: commands.cutAt,
       edit: effectiveEdit,
       endTrim: trim.end,
-      isActive: selection.isActive,
-      isRangeActive: selection.isRangeActive,
       isSnapActive: selection.isSnapActive,
       movingSegmentId: segmentMove.movingSegmentId,
       previewAt: selection.previewAt,
@@ -274,8 +270,6 @@ export function useRecordingTimelineBlade({
       restoreOrder: commands.restoreOrder,
       selectSegment: selection.selectSegment,
       selectedSegmentId: selection.selectedSegmentId,
-      setActive: selection.setActive,
-      setRangeActive: selection.setRangeActive,
       setRangePlaybackRate: commands.changeRangePlaybackRate,
       setRangeSelection: selection.setRangeSelection,
       setSegmentPlaybackRate: commands.changeSegmentPlaybackRate,

@@ -1,7 +1,9 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+mod gif;
 mod process;
+pub use gif::{encode_gif, GIF_LONGEST_MS};
 #[cfg(test)]
 pub(super) use process::progress_milliseconds;
 pub(crate) use process::run_export;

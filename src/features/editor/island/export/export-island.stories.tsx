@@ -60,7 +60,9 @@ function ExportIsland({
 
 // What a setting asked for does to the story's export, as the editor would.
 // A recording's sound alone leaves out what is about the picture, and a WAV
-// mixes its tracks; choosing the video again brings back what the story
+// mixes its tracks; a GIF keeps the picture but has a fixed look, no sound
+// and no subtitles, and waits for a range drawn on the timeline, which the
+// story has none of; choosing the video again brings back what the story
 // started with (`original`).
 const patched = (
   shown: ToolPanelExport,
@@ -69,6 +71,7 @@ const patched = (
 ): ToolPanelExport => {
   const format = patch.recordingFormat;
   const isVideo = (format ?? shown.recordingFormat?.selected) === "mp4";
+  const isGif = format === "gif";
   const base = shown.quality ?? original.quality;
   const quality =
     (format && !isVideo) || !base
@@ -78,12 +81,13 @@ const patched = (
     ...shown,
     cameraKey: patch.cameraKey ?? shown.cameraKey,
     cameraOutput: format
-      ? isVideo
+      ? isVideo || isGif
         ? original.cameraOutput
         : null
       : (patch.cameraOutput ?? shown.cameraOutput),
+    canExport: format ? !isGif && original.canExport : shown.canExport,
     collapseAudio: format
-      ? format === "wav"
+      ? format === "wav" || isGif
         ? null
         : original.collapseAudio
       : (patch.collapseAudio ?? shown.collapseAudio),
@@ -92,7 +96,8 @@ const patched = (
       patch.deleteProjectAfterExport ?? shown.deleteProjectAfterExport,
     extension: format ?? shown.extension,
     fileStem: patch.fileStem ?? shown.fileStem,
-    kind: format ? (isVideo ? "video" : "audio") : shown.kind,
+    gif: format ? (isGif ? "noRange" : null) : shown.gif,
+    kind: format ? (isVideo || isGif ? "video" : "audio") : shown.kind,
     quality,
     recordingFormat:
       format && shown.recordingFormat
@@ -100,7 +105,11 @@ const patched = (
         : shown.recordingFormat,
     revealWhenDone: patch.revealWhenDone ?? shown.revealWhenDone,
     screenshotFormat: patch.screenshotFormat ?? shown.screenshotFormat,
-    subtitles: patch.subtitles ?? shown.subtitles,
+    subtitles: format
+      ? isGif
+        ? null
+        : original.subtitles
+      : (patch.subtitles ?? shown.subtitles),
   };
 };
 
@@ -205,6 +214,31 @@ export const Untranscribed: Story = {
 
 export const ManyAudioTracks: Story = {
   args: { export: { ...VIDEO, collapseAudio: true } },
+};
+
+const GIF: ToolPanelExport = {
+  ...VIDEO,
+  canExport: false,
+  collapseAudio: null,
+  compare: null,
+  extension: "gif",
+  gif: "noRange",
+  quality: null,
+  recordingFormat: VIDEO.recordingFormat && {
+    ...VIDEO.recordingFormat,
+    selected: "gif",
+  },
+  subtitles: null,
+};
+
+export const GifWithoutRange: Story = { args: { export: GIF } };
+
+export const GifRangeTooLong: Story = {
+  args: { export: { ...GIF, gif: "tooLong" } },
+};
+
+export const Gif: Story = {
+  args: { export: { ...GIF, canExport: true, gif: "ready" } },
 };
 
 export const AudioOnly: Story = { args: { export: AUDIO } };

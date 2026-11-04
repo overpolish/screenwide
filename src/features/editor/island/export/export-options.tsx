@@ -11,6 +11,7 @@ import { IslandParts } from "../../../../primitives/island/island-parts";
 import { PillGroup } from "../../../../primitives/pill-group/pill-group";
 import { ScrollArea } from "../../../../primitives/scroll-area/scroll-area";
 import { Switch } from "../../../../primitives/switch/switch";
+import { GIF_LONGEST_MS } from "../../export/recording-format";
 
 import { ExportCompare } from "./export-compare";
 import { ExportLookChoice } from "./export-look-choice";
@@ -110,6 +111,23 @@ export function ExportOptions({
                 role="status"
               >
                 {t("editor-export-jpeg-see-through")}
+              </Alert>
+            ) : null}
+            {/* Says where the GIF's range comes from, as the strip shows it. */}
+            {shown.gif ? (
+              <Alert
+                className="w-0 min-w-full px-inset-sm"
+                color={shown.gif === "tooLong" ? "warning" : "neutral"}
+                key="gif"
+                role="status"
+              >
+                {shown.gif === "tooLong"
+                  ? t("editor-export-gif-too-long", {
+                      seconds: GIF_LONGEST_MS / 1_000,
+                    })
+                  : t("editor-export-gif-range", {
+                      seconds: GIF_LONGEST_MS / 1_000,
+                    })}
               </Alert>
             ) : null}
             {shown.quality ? (

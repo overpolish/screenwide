@@ -3,6 +3,7 @@
 
 import { t } from "../../../../i18n/i18n";
 
+import { paintDesktopIcons } from "./sample-desktop-icons";
 import { paintIsland } from "./sample-island";
 import { paintSystemBars } from "./sample-system-bars";
 import { paintAppWindow } from "./sample-window";
@@ -112,6 +113,14 @@ export const FRAME_RATE_SCENE: RecordingScene = {
 export const INCLUDE_SCREENWIDE_SCENE: RecordingScene = {
   kind: "recording",
   paint: paintDesktop,
-  paintScreenwide: paintIsland,
+  paintLayer: paintIsland,
+  size: DESKTOP,
+};
+
+/** The desktop recorded with its icons on it, or hidden. */
+export const DESKTOP_ICONS_SCENE: RecordingScene = {
+  kind: "recording",
+  paint: paintDesktop,
+  paintLayer: paintDesktopIcons,
   size: DESKTOP,
 };

@@ -9,11 +9,15 @@ mod camera_preview;
 mod capture_overlays;
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 mod cursor_scrub;
+#[cfg(target_os = "windows")]
+mod desktop_icons;
 mod editor;
 mod fault;
 mod file_browser;
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 mod glide;
+#[cfg(target_os = "windows")]
+mod hidden_apps_windows;
 mod image_analysis;
 mod invoke_handler;
 mod moments;

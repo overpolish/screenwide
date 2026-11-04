@@ -5,4 +5,4 @@ import type { PointerScript } from "./PointerScript";
  * What a preview shows: one of the tools at work on the page's picture, or a
  * recording of the page's pictures composed by the editor's compositor.
  */
-export type PreviewScene = { "kind": "ruler" } | { "kind": "textRecognition" } | { "kind": "annotate", color: string, keep: boolean, counterSize: number, counterAngle: number, } | { "kind": "autoZoom", on: boolean, script: PointerScript, } | { "kind": "frameRate", fps: number, script: PointerScript, } | { "kind": "includeScreenwide", included: boolean, };
+export type PreviewScene = { "kind": "ruler" } | { "kind": "textRecognition" } | { "kind": "annotate", color: string, keep: boolean, counterSize: number, counterAngle: number, } | { "kind": "autoZoom", on: boolean, script: PointerScript, } | { "kind": "frameRate", fps: number, script: PointerScript, } | { "kind": "includeScreenwide", included: boolean, } | { "kind": "desktopIcons", hidden: boolean, };

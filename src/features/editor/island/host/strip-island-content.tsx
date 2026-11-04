@@ -15,9 +15,9 @@ import type { MomentNoteState } from "./use-moment-note";
 
 // The islands of what is chosen on the strip, each from what the editor
 // publishes of the choice (`ToolPanelStripItem`): a beat and its cut, a
-// lull and how it plays, a moment with its voice note, a drawn range and
-// its cut, and several beats and lulls gathered with Shift and their cut.
-// Every cut is the strip's own, as Delete makes it.
+// lull and how it plays, a moment with its voice note, a drawn range, its
+// GIF and its cut, and several beats and lulls gathered with Shift and
+// their cut. Every cut is the strip's own, as Delete makes it.
 
 type Inputs = {
   change: (values: ToolPanelPatch) => void;
@@ -63,7 +63,14 @@ export function stripIslandContent({
         onTogglePlay: moment.onTogglePlay,
       });
     case "range":
-      return rangeIsland({ id: item.id, onCut });
+      return rangeIsland({
+        id: item.id,
+        length: (item.played.endMs - item.played.startMs) / 1000,
+        onCut,
+        onDeselect: () => {
+          change({ deselectStripItem: true });
+        },
+      });
     case "stripGroup":
       return stripGroupIsland({ count: item.count, id: item.id, onCut });
   }

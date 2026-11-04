@@ -34,11 +34,14 @@ export type TimelineStripProps = Pick<
   captions: TimelineCaption[] | null;
   /** Whether the captions are hidden from the picture. */
   isCaptionsHidden: boolean;
-  /** Whether the scissors are in hand, from the Cut tool: a drag across
-   * the strip draws a stretch to cut, as with ⌥ held, and a press splits. */
+  /** Whether the blade is in hand, from its tool: a press splits, as with
+   * ⌥ held. */
   isCutting: boolean;
   /** Whether the recording plays, which the view follows. */
   isPlaying: boolean;
+  /** Whether the range tool is in hand: a drag across the strip draws a
+   * range, for its island to make a GIF of or cut. */
+  isRanging: boolean;
   /** Whether the screen's track is in the export. Out, the strip holds
    * only what is left without it; switching it reshapes the strip as one
    * rearrangement. */
@@ -72,8 +75,8 @@ export type TimelineStripProps = Pick<
   onSeek: (seconds: number, phase?: ScrubPhase) => void;
   /** Told what is chosen, or null when the choice is let go. */
   onSelect: (selection: StripSelection | null) => void;
-  /** Told the scissors pressed without drawing, to split the recording at
-   * a recorded moment, where something moved can then land. */
+  /** Told the blade pressed, to split the recording at a recorded moment,
+   * where something moved can then land. */
   onSplit: (at: number) => void;
   onSqueezeChange: (squeeze: number) => void;
   /** Where the playhead is, in the edited recording. */
@@ -87,6 +90,10 @@ export type TimelineStripProps = Pick<
   splits: number[];
   /** How many seconds the lulls are squeezed by now. */
   squeeze: number;
+  /** Locked but for the range tool, which stays in hand: the Export island
+   * is making a GIF of the range, which is at most this many seconds of
+   * the edited recording. */
+  gifRangeS?: number;
   /** Nothing on the strip is edited or chosen, while the Export island
    * stands over the editor: only the playhead still scrubs. */
   isLocked?: boolean;

@@ -3,7 +3,7 @@
 
 use super::super::*;
 use crate::capture_geometry::{physical_capture_rect, video_capture_rect};
-use crate::capture_kit::{desktop_layout, windows_to_exclude};
+use crate::capture_kit::{capture_exclusion, desktop_layout};
 use crate::desktop_capture::{self, CapturePlan, DesktopDisplay, OutputLimits};
 use crate::Region;
 use screenwide_records::cursor::{CursorSource, CursorSourceKind};
@@ -138,7 +138,7 @@ fn display_video(
       f64::from(height) / scale,
     )
   });
-  let excluded = windows_to_exclude(content, include_own_windows);
+  let excluded = capture_exclusion(content, include_own_windows);
 
   Ok(PrimaryVideo {
     cursor_source: CursorSource {
@@ -155,7 +155,7 @@ fn display_video(
       x: monitor_x + logical_rect.origin.x,
       y: monitor_y + logical_rect.origin.y,
     },
-    filter: sc::ContentFilter::with_display_excluding_windows(display, &excluded),
+    filter: excluded.filter(display),
     fps,
     height,
     is_window: false,

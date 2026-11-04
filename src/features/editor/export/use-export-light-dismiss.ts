@@ -14,10 +14,14 @@ const CLICK_WITHIN_MS = 1_000;
  * the picture (`editor-island-panel.tsx`). The press that puts it away
  * reaches nothing else, its click included, so it never also acts on what
  * is under it; the title bar's Export button is left to toggle the island
- * itself. Null while a press off the island must do nothing, as while it
- * exports.
+ * itself, and while a GIF is made (`isGifRange`) the strip and the range
+ * tool (`data-gif-range`) are left to draw its range. Null while a press
+ * off the island must do nothing, as while it exports.
  */
-export function useExportLightDismiss(putAway: (() => void) | null) {
+export function useExportLightDismiss(
+  putAway: (() => void) | null,
+  isGifRange: boolean,
+) {
   const putAwayRef = useRef(putAway);
   putAwayRef.current = putAway;
   const isActive = putAway !== null;
@@ -27,10 +31,12 @@ export function useExportLightDismiss(putAway: (() => void) | null) {
       event.preventDefault();
       event.stopPropagation();
     };
+    const spared = isGifRange
+      ? "[data-export-toggle], [data-gif-range]"
+      : "[data-export-toggle]";
     const onPointerDown = (event: PointerEvent) => {
       const target = event.target;
-      if (target instanceof Element && target.closest("[data-export-toggle]"))
-        return;
+      if (target instanceof Element && target.closest(spared)) return;
       swallow(event);
       // Kept past this effect, which putting the island away ends: it goes
       // with the click it holds back, or by itself a moment later.
@@ -48,5 +54,5 @@ export function useExportLightDismiss(putAway: (() => void) | null) {
         capture: true,
       });
     };
-  }, [isActive]);
+  }, [isActive, isGifRange]);
 }

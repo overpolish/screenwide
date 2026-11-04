@@ -8,7 +8,9 @@ import {
   captureToggle,
   confidenceChecksToggle,
   controlsOnLaunchToggle,
+  desktopIconsToggle,
   folders,
+  hiddenAppsRow,
   launchToggle,
   recordingSizeToggle,
 } from "../sections/general-rows";
@@ -100,7 +102,7 @@ export function settingsSearchEntries({
     t("settings-search-keywords-folders"),
   );
   const capture = at("general", t("settings-capture"));
-  capture([captureToggle()]);
+  capture([captureToggle(), desktopIconsToggle(), hiddenAppsRow()]);
   capture(
     [row(t("settings-screenshot-delay"))],
     t("settings-search-keywords-countdown"),

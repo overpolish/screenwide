@@ -185,7 +185,7 @@ export function EditorWindow() {
   // the previous capture's pixels.
   const artifactId = artifact?.id;
   const saveProgress = useExportProgress(artifactId);
-  const [recordingFormat, chooseRecordingFormat] =
+  const [recordingFormat, chooseRecordingFormat, recordingFormatPayload] =
     useRecordingFormat(artifactId);
   const originalResolutionScale =
     artifact?.kind === "recording" ? sourceScalePercent(artifact) : 100;
@@ -656,7 +656,7 @@ export function EditorWindow() {
             cameraKey,
             deleteProjectAfterExport,
             fileStem,
-            recordingFormat,
+            ...recordingFormatPayload(),
             screenshotFormat,
             screenshotOutput,
             subtitles,

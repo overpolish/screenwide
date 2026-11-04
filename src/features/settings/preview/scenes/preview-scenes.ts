@@ -5,6 +5,7 @@ import { ANNOTATE_SCENE } from "./annotate-scene";
 import { OCR_SCENE } from "./ocr-scene";
 import {
   AUTO_ZOOM_SCENE,
+  DESKTOP_ICONS_SCENE,
   FRAME_RATE_SCENE,
   INCLUDE_SCREENWIDE_SCENE,
 } from "./recording-scenes";
@@ -28,6 +29,7 @@ export type SettingsPreviewScene = PreviewScene extends infer Scene
 const SCENES: Record<PreviewScene["kind"], ToolScene | RecordingScene> = {
   annotate: ANNOTATE_SCENE,
   autoZoom: AUTO_ZOOM_SCENE,
+  desktopIcons: DESKTOP_ICONS_SCENE,
   frameRate: FRAME_RATE_SCENE,
   includeScreenwide: INCLUDE_SCREENWIDE_SCENE,
   ruler: RULER_SCENE,
@@ -54,7 +56,9 @@ export function nativeScene(scene: SettingsPreviewScene): PreviewScene {
   return scene;
 }
 
-/** Whether the picture shown outside the app, the scene's last state,
- * has Screenwide's windows on it. */
-export const showsScreenwide = (scene: SettingsPreviewScene) =>
-  scene.kind === "includeScreenwide" && scene.included;
+/** Whether the picture shown outside the app, the scene's last state, has
+ * the scene's layer on it: Screenwide's windows, or the desktop's icons. */
+export const showsLayer = (scene: SettingsPreviewScene) =>
+  scene.kind === "includeScreenwide"
+    ? scene.included
+    : scene.kind === "desktopIcons" && !scene.hidden;

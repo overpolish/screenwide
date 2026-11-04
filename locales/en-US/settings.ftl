@@ -44,6 +44,22 @@ settings-export-folder-description = You can choose a different folder when savi
 settings-capture = Capture
 settings-include-app = Include { -app-name } in captures
 settings-include-app-description = Show { -app-name }'s own windows in recordings and screenshots.
+settings-hide-desktop-icons = Hide desktop icons
+# On macOS the icons and widgets are left out of the capture and stay on screen; on Windows the icons are hidden on screen while recording.
+settings-hide-desktop-icons-description = { $platform ->
+    [windows] Hidden from the screen while you record it.
+   *[other] Left out of recordings and screenshots, with widgets.
+}
+settings-hidden-apps = Hidden apps
+# On Windows the apps' windows are hidden from every capture, screen sharing included, while a recording runs.
+settings-hidden-apps-description = { $platform ->
+    [windows] Hidden from recordings and screen sharing while recording.
+   *[other] Left out of recordings and screenshots.
+}
+# Shown in place of the apps' icons when none is running that can be hidden.
+settings-hidden-apps-empty = No apps are running that can be hidden.
+# Names a hidden app's icon when the app is not running now.
+settings-hidden-apps-not-running = { $app }, not running
 settings-screenshot-delay = Delayed Screenshot
 settings-startup = Startup
 settings-launch-at-login = Start when you sign in
@@ -338,3 +354,7 @@ settings-preview-window-title = Publish changes
 settings-preview-window-button = Publish
 # The heading of a sample dashboard with a chart.
 settings-preview-dashboard-title = Weekly views
+# Folders and a file on the sample desktop, shown while Hide desktop icons is off.
+settings-preview-desktop-projects = Projects
+settings-preview-desktop-screenshots = Screenshots
+settings-preview-desktop-notes = notes.txt

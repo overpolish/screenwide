@@ -148,6 +148,7 @@ export function useRecordingStripBand(
           artifactId,
           beats: strip.beats,
           lulls: strip.lulls,
+          map: strip.time.map,
           moments: services.moments,
           selection: strip.selection,
         })
@@ -158,6 +159,9 @@ export function useRecordingStripBand(
     deleteShortcuts: () => {
       if (chosenShortcuts.length === 0) return;
       stripProps.onDeleteShortcuts(chosenShortcuts);
+      strip.select(null);
+    },
+    deselect: () => {
       strip.select(null);
     },
     playLull: (play) => {

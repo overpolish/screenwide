@@ -71,7 +71,7 @@ export function SceneClip({
           px >= GLYPH_PX && "px-1",
           isSelected
             ? "bg-primary text-on-primary"
-            : "bg-fill text-fg-secondary group-hover:bg-fill-strong",
+            : "bg-fill-strong text-fg-secondary group-hover:bg-fg-tertiary group-hover:text-fg",
         )}
         style={{ insetInlineEnd: pad, insetInlineStart: pad }}
       >

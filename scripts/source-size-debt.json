@@ -1,5 +1,5 @@
 {
-  "src/features/editor/api.ts": 408,
+  "src/features/editor/api.ts": 406,
   "src/features/editor/preview/preview-viewport.tsx": 448,
   "src/features/editor/editor-window.tsx": 714,
   "src/features/editor/timeline/editing/recording-timeline-edit.test.ts": 363,

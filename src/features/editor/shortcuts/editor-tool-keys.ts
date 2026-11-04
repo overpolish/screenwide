@@ -33,6 +33,7 @@ export type EditorToolKeys = {
   /** L: the scene tool, on or off. */
   onSceneTool?: () => void;
   onSelectTool?: () => void;
+  /** B: the strip's blade, in hand or put down. */
   onToggleBladeTool?: () => void;
   /** U: the Captions panel, on or away. */
   onToggleCaptionsPanel?: () => void;
@@ -42,7 +43,7 @@ export type EditorToolKeys = {
   /** K: the keyboard panel, on or away. */
   onToggleKeyboardPanel?: () => void;
   onTogglePlayback?: () => void;
-  /** Shift+R: the range tool, on or off. */
+  /** Shift+R: the strip's range tool, in hand or put down. */
   onToggleRangeTool?: () => void;
   /** Shift+S: timeline snapping, on or off. */
   onToggleSnap?: () => void;

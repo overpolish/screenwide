@@ -7,9 +7,11 @@ import { useNumberFormatter } from "react-aria";
 import { ControlRow } from "../../../composites/control-row/control-row";
 import { PathField } from "../../../composites/path-field/path-field";
 import { t } from "../../../i18n/i18n";
+import { HiddenAppsRow } from "../capture/hidden-apps-row";
 import {
   captureToggle,
   controlsOnLaunchToggle,
+  desktopIconsToggle,
   folders,
   launchToggle,
 } from "../sections/general-rows";
@@ -28,13 +30,14 @@ import type { GeneralSettings } from "../../../bindings/GeneralSettings";
 
 // General: where things are saved, what a capture takes in, and how the app
 // starts. The picture shows a recording with Screenwide in it or left out,
-// or the desktop just after signing in, where the real island comes out at
+// one with the desktop's icons in it or hidden, or the desktop just after
+// signing in, where the real island comes out at
 // the top of the screen if the controls are shown on startup. The two rows
 // of Startup share that one picture with their own values, so moving between
 // them carries on with it, or changes only what differs, rather than
 // replaying it.
 
-type Subject = "capture" | "controls" | "signIn";
+type Subject = "capture" | "controls" | "desktopIcons" | "signIn";
 
 export function GeneralPane({
   isSaving,
@@ -71,6 +74,10 @@ export function GeneralPane({
   const picture =
     subject === "capture" ? (
       <RecordingPicture scene={{ included, kind: "includeScreenwide" }} />
+    ) : subject === "desktopIcons" ? (
+      <RecordingPicture
+        scene={{ hidden: settings.hideDesktopIcons, kind: "desktopIcons" }}
+      />
     ) : (
       <LiveIsland
         isOn={appStarts}
@@ -86,7 +93,11 @@ export function GeneralPane({
       label={t("settings-section-general")}
       paneRef={paneRef}
       stage={
-        <PreviewStage subject={subject === "capture" ? "capture" : "startup"}>
+        <PreviewStage
+          subject={
+            subject === "controls" || subject === "signIn" ? "startup" : subject
+          }
+        >
           {picture}
         </PreviewStage>
       }
@@ -131,6 +142,23 @@ export function GeneralPane({
             }}
           />
         </PreviewArea>
+        <PreviewArea follow={follow("desktopIcons")}>
+          <ToggleRow
+            isDisabled={isSaving}
+            isSelected={settings.hideDesktopIcons}
+            item={desktopIconsToggle()}
+            onChange={(hideDesktopIcons) => {
+              update({ hideDesktopIcons });
+            }}
+          />
+        </PreviewArea>
+        <HiddenAppsRow
+          apps={settings.hiddenApps}
+          isDisabled={isSaving}
+          onChange={(hiddenApps) => {
+            update({ hiddenApps });
+          }}
+        />
         <ChoiceRow
           isDisabled={isSaving}
           items={[3, 5, 10].map((value) => ({

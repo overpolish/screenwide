@@ -60,6 +60,10 @@ editor-export-compare-making = Making the comparison
 editor-export-compare-failed = The comparison could not be made.
 # Under the compared picture when a screenshot saved as JPEG has see-through parts, such as rounded corners with no background behind them.
 editor-export-jpeg-see-through = JPEG has no transparency, so see-through parts are saved as white.
+# With GIF chosen: the GIF is made of the range on the timeline, which the Range tool redraws. $seconds is the longest a GIF can be.
+editor-export-gif-range = Drag across the timeline to choose the range, up to { $seconds } seconds.
+# With GIF chosen and the range drawn on the timeline longer than a GIF can be. $seconds is the longest a GIF can be.
+editor-export-gif-too-long = A GIF is up to { $seconds } seconds long. Drag across the timeline for a shorter range.
 
 ## While the export runs.
 

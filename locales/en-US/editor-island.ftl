@@ -168,6 +168,9 @@ editor-island-range = Range
 # Cuts the range and the time it takes.
 editor-island-range-cut = Cut the range
 editor-island-range-confirm-cut = Confirm cutting
+# Lets go of the range drawn on the timeline, as Command-D or Ctrl-D does.
+editor-island-range-deselect = Deselect range
+# Opens the Export island set to make a GIF of the range.
 
 ## Several beats and lulls gathered on the strip with Shift
 

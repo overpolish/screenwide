@@ -28,7 +28,12 @@ export type ToolPanelStripItem =
         transcript: NoteTranscript | null;
       } | null;
     }
-  | { id: string; kind: "range" }
+  | {
+      id: string;
+      kind: "range";
+      /** Where the range plays in the edited video, in milliseconds. */
+      played: { endMs: number; startMs: number };
+    }
   | {
       /** How many beats and lulls are chosen, two or more. */
       count: number;

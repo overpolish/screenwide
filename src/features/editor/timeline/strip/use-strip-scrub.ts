@@ -47,7 +47,10 @@ export function useStripScrub({
         event.currentTarget.setPointerCapture(event.pointerId);
         isScrubbingRef.current = true;
         onSeek(secondsAt(event), "start");
-        onDeselect();
+        // The band along the top scrubs as the knob does, keeping what is
+        // chosen, such as a GIF's range; the empty strip lets it go.
+        if (!(event.target as Element).closest("[data-scrub-band]"))
+          onDeselect();
       },
       onPointerMove: (event: React.PointerEvent) => {
         if (isScrubbingRef.current) onSeek(secondsAt(event), "move");

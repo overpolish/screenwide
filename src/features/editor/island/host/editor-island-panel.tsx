@@ -47,10 +47,17 @@ export function EditorIslandPanel({
   );
   const label = getCurrentWindow().label;
   // While it exports, a press off it never stops the export: only Cancel
-  // export does.
+  // export does. Making a GIF it lets presses through, for the strip, where
+  // the GIF's range is drawn; the editor window puts it away on a press
+  // anywhere else (`use-export-light-dismiss.ts`).
   const dismissesOnPress = useToolPanelStore((state) => {
     const shown = state.snapshots[content.workspace]?.export;
-    return content.island === "export" && shown != null && !shown.progress;
+    return (
+      content.island === "export" &&
+      shown != null &&
+      !shown.progress &&
+      shown.gif === null
+    );
   });
   const partsRef = useRef<Record<"corner" | "script", PopupPanelPart[]>>({
     corner: [],

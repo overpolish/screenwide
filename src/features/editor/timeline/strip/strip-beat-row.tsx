@@ -57,8 +57,6 @@ export type StripBeatRowProps = {
   /** The voice's lines, which a spoken beat's trim settles between. */
   captions: TimelineCaption[] | null;
   cuts: TimelineCut[];
-  /** The stretch the scissors are drawing, while they draw it. */
-  draft: Span | null;
   isAltHeld: boolean;
   /** What is lifted to be moved, while it is, in recorded seconds. */
   lifted: Span[] | null;
@@ -93,7 +91,6 @@ export function StripBeatRow({
   captions,
   className,
   cuts,
-  draft,
   isAltHeld,
   lifted,
   lulls,
@@ -188,10 +185,11 @@ export function StripBeatRow({
         />
       ))}
       <CutSeams cuts={cuts} onRestore={onRestore} scale={scale} />
-      {draft ? (
-        <RangeBand scale={scale} span={draft} />
-      ) : chosenRange ? (
+      {/* Drawn across every lane by the strip; here it is taken hold of,
+        and drawn only while carried. */}
+      {chosenRange ? (
         <RangeBand
+          isDrawn={isLifted(chosenRange)}
           isLifted={isLifted(chosenRange)}
           onGrab={(event) => {
             onGrab(event, [chosenRange]);

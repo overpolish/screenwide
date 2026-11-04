@@ -151,6 +151,7 @@ const applyPatch = (values: ToolPanelPatch, on: ToolPanelHandlers) => {
   if (values.captionDefaults)
     on.onCaptionDefaultsChange?.(values.captionDefaults);
   if (values.cutStripItem) on.onStripItemCut?.();
+  if (values.deselectStripItem) on.onStripItemDeselect?.();
   if (values.lullPlay !== undefined) on.onLullPlayChange?.(values.lullPlay);
   if (values.trimLullToBreath) on.onLullTrimToBreath?.();
   if (values.trackEnabled !== undefined)

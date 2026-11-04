@@ -63,7 +63,7 @@ pub struct SceneRenderer {
   /// The screen's size in points, which the script is written in.
   points: (f64, f64),
   screen: SourceTexture,
-  with_screenwide: Option<SourceTexture>,
+  layered: Option<SourceTexture>,
   track: Option<Track>,
 }
 
@@ -82,8 +82,8 @@ impl SceneRenderer {
     }
     let pictures = Pictures::new(pictures)?;
     let screen = compositor.screenshot_source(&pictures.screen)?;
-    let with_screenwide = pictures
-      .with_screenwide
+    let layered = pictures
+      .layered
       .as_ref()
       .map(|picture| compositor.screenshot_source(picture))
       .transpose()?;
@@ -92,7 +92,7 @@ impl SceneRenderer {
       scene: PreviewScene::Ruler,
       points,
       screen,
-      with_screenwide,
+      layered,
       track: None,
     };
     renderer.set_scene(scene)?;
@@ -101,9 +101,12 @@ impl SceneRenderer {
 
   /// Plays `scene` from now on, the same kind with other values.
   pub fn set_scene(&mut self, scene: PreviewScene) -> Result<(), String> {
-    let needs_second = matches!(scene, PreviewScene::IncludeScreenwide { .. });
-    if needs_second && self.with_screenwide.is_none() {
-      return Err("This preview needs the screen with Screenwide's windows on it".to_owned());
+    let needs_second = matches!(
+      scene,
+      PreviewScene::IncludeScreenwide { .. } | PreviewScene::DesktopIcons { .. }
+    );
+    if needs_second && self.layered.is_none() {
+      return Err("This preview needs a second picture of the screen".to_owned());
     }
     let script = match &scene {
       PreviewScene::AutoZoom { script, .. } | PreviewScene::FrameRate { script, .. } => {
@@ -169,17 +172,30 @@ impl SceneRenderer {
       PreviewScene::AutoZoom { on, .. } => self.draw_recording(target, base, moment, *on),
       PreviewScene::FrameRate { .. } => self.draw_recording(target, base, moment, false),
       PreviewScene::IncludeScreenwide { included } => {
-        let source = if *included {
-          self.with_screenwide.as_ref().unwrap_or(&self.screen)
-        } else {
-          &self.screen
-        };
-        self.compose(target, source, &base, moment, None)
+        self.draw_screen(target, base, moment, *included)
       }
+      PreviewScene::DesktopIcons { hidden } => self.draw_screen(target, base, moment, !*hidden),
       PreviewScene::Ruler | PreviewScene::TextRecognition | PreviewScene::Annotate { .. } => {
         Err("A tool's preview is drawn by the tool".to_owned())
       }
     }
+  }
+
+  /// The screen at `moment`, with the second picture's layer on it where
+  /// `layered`.
+  fn draw_screen(
+    &self,
+    target: &wgpu::TextureView,
+    base: ScreenshotOutputSettings,
+    moment: Moment,
+    layered: bool,
+  ) -> Result<(), String> {
+    let source = if layered {
+      self.layered.as_ref().unwrap_or(&self.screen)
+    } else {
+      &self.screen
+    };
+    self.compose(target, source, &base, moment, None)
   }
 
   /// `moment` drawn offscreen, as RGBA.

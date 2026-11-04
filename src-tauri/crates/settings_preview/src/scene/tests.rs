@@ -120,7 +120,24 @@ fn every_scene() -> Vec<PreviewScene> {
       script: script(),
     },
     PreviewScene::IncludeScreenwide { included: true },
+    PreviewScene::DesktopIcons { hidden: false },
   ]
+}
+
+#[test]
+fn hiding_desktop_icons_records_the_bare_screen() {
+  let frame = |scene: PreviewScene| {
+    let renderer = renderer(scene);
+    renderer
+      .render(CANVAS, renderer.moment(Duration::ZERO))
+      .unwrap()
+      .rgba
+  };
+  let bare = frame(PreviewScene::IncludeScreenwide { included: false });
+  let layered = frame(PreviewScene::IncludeScreenwide { included: true });
+  assert_ne!(bare, layered);
+  assert_eq!(frame(PreviewScene::DesktopIcons { hidden: true }), bare);
+  assert_eq!(frame(PreviewScene::DesktopIcons { hidden: false }), layered);
 }
 
 #[test]
@@ -299,6 +316,7 @@ fn kind(scene: &PreviewScene) -> String {
     PreviewScene::AutoZoom { on, .. } => format!("auto-zoom-{}", if *on { "on" } else { "off" }),
     PreviewScene::FrameRate { fps, .. } => format!("frame-rate-{fps}"),
     PreviewScene::IncludeScreenwide { included } => format!("include-screenwide-{included}"),
+    PreviewScene::DesktopIcons { hidden } => format!("desktop-icons-hidden-{hidden}"),
     _ => "tool".to_owned(),
   }
 }

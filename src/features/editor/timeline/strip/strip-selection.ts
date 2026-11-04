@@ -7,8 +7,8 @@ import { type Span } from "../timeline-scale";
 export type StripItem = { id: string; kind: "beat" | "lull" };
 
 /** What is chosen on the strip: one of its parts, several beats and lulls
- * gathered with Shift, shortcuts, one or gathered, or a stretch the
- * scissors drew, in recorded seconds. */
+ * gathered with Shift, shortcuts, one or gathered, or a range the range
+ * tool drew, in recorded seconds. */
 export type StripSelection =
   | { id: string; kind: "annotation" | "beat" | "lull" | "scene" }
   | { ids: string[]; kind: "shortcuts" }

@@ -16,6 +16,7 @@ pub mod camera_power_line;
 pub mod capture_geometry;
 #[cfg(target_os = "macos")]
 pub mod capture_kit;
+pub mod chosen_exclusions;
 pub mod clock;
 pub mod cursor;
 #[cfg(any(target_os = "macos", target_os = "windows"))]

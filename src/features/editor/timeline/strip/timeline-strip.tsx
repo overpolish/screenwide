@@ -9,8 +9,8 @@ import { ScrollArea } from "../../../../primitives/scroll-area/scroll-area";
 import { AnnotationLane } from "../annotation-lane/annotation-lane";
 import { CaptionLane } from "../caption-lane/caption-lane";
 import { Minimap } from "../minimap/minimap";
-import { TimelinePlayhead } from "../playhead/timeline-playhead";
 import { CutBlade } from "../range-cut/cut-blade";
+import { RangeBand } from "../range-cut/range-band";
 import { SceneRail } from "../scene-rail/scene-rail";
 import { ShortcutLane } from "../shortcut-lane/shortcut-lane";
 import { at, timelineScale } from "../timeline-scale";
@@ -20,6 +20,7 @@ import { StripBeats } from "./strip-beats";
 import { GLIDE, GlideCue } from "./strip-glide";
 import { StripLane } from "./strip-lane";
 import { baseOf } from "./strip-part";
+import { StripScrubBand } from "./strip-scrub-band";
 import {
   isPlayheadOutside,
   selectionSpan,
@@ -48,9 +49,9 @@ import { useWidth } from "./use-width";
 // where the playhead is outside it, so the picture shows what was chosen;
 // pressing the empty strip moves the playhead there; dragging the playhead's
 // knob scrubs.
-// With the scissors in hand, from the Cut tool or ⌥ held, a drag across the
-// strip draws a stretch to cut and a press splits it there. A beat, a lull,
-// what is chosen or the scissors' stretch, dragged along the strip, moves
+// With the blade in hand, from its tool or ⌥ held, a press splits the
+// recording there; with the range tool, a drag draws a range. A beat, a
+// lull, what is chosen or the range, dragged along the strip, moves
 // to play elsewhere, the rest making room for it as it goes.
 
 export function TimelineStrip(props: TimelineStripProps) {
@@ -69,10 +70,12 @@ export function TimelineStrip(props: TimelineStripProps) {
   const chosen = selectionSpan(selection, parts);
   const taken = takenOut(props.cuts, map.duration, props.recorded);
   /** Chooses `next`, bringing the playhead to where it lands where it
-   * stands outside it; what Shift gathers leaves the playhead alone. */
+   * stands outside it; what Shift gathers leaves the playhead alone, as
+   * does a drawn range, whose drag brought the playhead along its edge. */
   const choose = (next: StripSelection | null, isGathered = false) => {
     props.onSelect(next);
-    if (isGathered || next === null || next.kind === "shortcuts") return;
+    if (isGathered || next === null) return;
+    if (next.kind === "shortcuts" || next.kind === "range") return;
     const span = selectionSpan(next, parts);
     if (!span) return;
     const at = map.toRecorded(props.playhead.ratio() * map.duration);
@@ -103,15 +106,14 @@ export function TimelineStrip(props: TimelineStripProps) {
     scale,
   });
   const range = useRangeCut({
-    fractionOf: scrub.fractionOf,
-    // The scissors are in hand with the Cut tool on, or while ⌥ is held.
-    isCutting: !props.isLocked && (props.isCutting || props.isAltHeld),
     onChoose: (span) => {
       choose({ kind: "range", ...span });
     },
-    onSplit: props.onSplit,
-    secondsAt: scrub.secondsAt,
+    scrub,
+    strip: props,
   });
+  const shownRange =
+    range.draft ?? (selection?.kind === "range" ? selection : null);
   const reorder = useStripReorder({
     beats: props.beats.map((beat) => beat.span),
     cuts: props.cuts,
@@ -162,10 +164,8 @@ export function TimelineStrip(props: TimelineStripProps) {
         >
           <div style={{ width: width + view.bandWidth }}>
             <div
-              // The playhead's knob has a band of its own along the top,
-              // above the scenes, so it is never taken for part of one.
               className={cn(
-                "relative flex touch-none flex-col pt-3 pb-1",
+                "relative flex touch-none flex-col pt-8 pb-1",
                 range.bladeX !== null && "cursor-col-resize",
               )}
               onClickCapture={range.handlers.onClickCapture}
@@ -177,6 +177,7 @@ export function TimelineStrip(props: TimelineStripProps) {
               style={{ width }}
               {...scrub.handlers}
             >
+              <StripScrubBand onScrub={scrub.scrub} playhead={props.playhead} />
               {/* Locked, a press falls through the lanes and scrubs. */}
               <div className="contents" inert={props.isLocked}>
                 <SceneRail
@@ -230,7 +231,6 @@ export function TimelineStrip(props: TimelineStripProps) {
                 </StripLane>
                 <StripBeats
                   {...drawn}
-                  draft={range.draft}
                   lifted={reorder.lifted}
                   onGrab={reorder.grab}
                   onPutBack={props.onPutBack}
@@ -259,17 +259,17 @@ export function TimelineStrip(props: TimelineStripProps) {
                   ) : null}
                 </StripLane>
               </div>
-              {/* Over the scenes, which its line crosses, but pressed only by
-                its knob. */}
-              <span className="pointer-events-none absolute inset-x-0 top-1.5 bottom-0 z-20">
-                <TimelinePlayhead
-                  onScrub={scrub.scrub}
-                  playhead={props.playhead}
+              {/* Over every lane; carried, its row draws it (`RangeBand`). */}
+              {shownRange && reorder.lifted === null ? (
+                <RangeBand
+                  className="top-3.5 bottom-1"
+                  scale={shown}
+                  span={shownRange}
                 />
-              </span>
+              ) : null}
               {sceneGuide === null ? null : (
                 <SnapGuide
-                  className="top-3 bottom-0"
+                  className="top-8 bottom-0"
                   style={at(shown, sceneGuide)}
                 />
               )}

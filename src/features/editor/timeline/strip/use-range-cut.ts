@@ -5,47 +5,78 @@ import { useRef, useState } from "react";
 
 import { type Span } from "../timeline-scale";
 
-// The scissors work anywhere on the strip while ⌥ is held. A blade follows
-// the pointer, so what a press will do shows before it is made; dragged, it
-// draws a stretch over lulls and beats alike, which is chosen when let go,
-// to be cut from its island. A chosen lull's end keeps ⌥ for its own trim,
-// so a press there is left to it.
+import { type TimelineStripProps } from "./timeline-strip-props";
+
+// The strip's two editing tools, as a video editor has them. The blade, in
+// hand from its tool (B), splits the recording where it is pressed; a blade
+// follows the pointer, so where it will split shows before it is pressed.
+// The range tool, in hand from its tool (⇧R) or while ⌥ is held, which
+// outranks the blade, draws a stretch over lulls and beats alike, chosen
+// when let go, for its island to cut. The playhead follows the edge being
+// drawn, so the picture shows the last frame the range takes in, and stays
+// there once let go. A chosen lull's end keeps ⌥ for its own trim, so a
+// press there is left to it. With the Export island making a GIF the strip
+// is locked but for the range tool, which stays in hand and stops at the
+// GIF's longest.
 
 /** The shortest stretch, in seconds, a drag chooses; less is a slip. */
 const LEAST_S = 0.1;
-/** How far, in px, a press travels before it draws rather than splits, as
- * the strip's other drags do. */
+/** How far, in px, a press travels before it is a drag, as the strip's
+ * other drags do. */
 const PRESS_PX = 4;
 
 export function useRangeCut({
-  fractionOf,
-  isCutting,
   onChoose,
-  onSplit,
-  secondsAt,
+  scrub: { fractionOf, secondsAt },
+  strip,
 }: {
-  /** Where the pointer is, as a share of the track's width. */
-  fractionOf: (event: React.PointerEvent) => number;
-  /** Whether the scissors are in hand. */
-  isCutting: boolean;
   /** Told the stretch a drag drew, once let go. */
   onChoose: (span: Span) => void;
-  /** Told a press that drew nothing, to split at the recorded moment. */
-  onSplit: (at: number) => void;
-  /** The recorded moment under the pointer. */
-  secondsAt: (event: React.PointerEvent) => number;
+  scrub: {
+    /** Where the pointer is, as a share of the track's width. */
+    fractionOf: (event: React.PointerEvent) => number;
+    /** The recorded moment under the pointer. */
+    secondsAt: (event: React.PointerEvent) => number;
+  };
+  strip: Pick<
+    TimelineStripProps,
+    | "gifRangeS"
+    | "isAltHeld"
+    | "isCutting"
+    | "isLocked"
+    | "isRanging"
+    | "map"
+    | "onSeek"
+    | "onSplit"
+  >;
 }) {
+  const { gifRangeS, isAltHeld, isLocked, map, onSeek, onSplit } = strip;
+  const isRanging =
+    gifRangeS !== undefined || (!isLocked && (strip.isRanging || isAltHeld));
+  const isCutting = !isLocked && strip.isCutting && !isRanging;
   const fromRef = useRef<number | null>(null);
   const pressXRef = useRef(0);
-  // Set by a drag, so the click that ends it does not choose what is under
-  // the pointer as well.
-  const wasDrawnRef = useRef(false);
+  // Set by a press the tool took, so the click that ends it does not
+  // choose what is under the pointer as well.
+  const wasTakenRef = useRef(false);
   const [draft, setDraft] = useState<Span | null>(null);
   const [bladeX, setBladeX] = useState<number | null>(null);
+  const isActive = isCutting || isRanging;
 
-  const spanTo = (event: React.PointerEvent): Span => {
+  /** Where a range drawn from `from` toward `to` may reach: a GIF's stops
+   * at its longest in the edited recording. */
+  const limit = (from: number, to: number) => {
+    if (gifRangeS === undefined) return to;
+    const at = map.toPlayed(from);
+    const played = map.toPlayed(to);
+    if (Math.abs(played - at) <= gifRangeS) return to;
+    return map.toRecorded(at + Math.sign(played - at) * gifRangeS);
+  };
+  /** The edge `event` draws a range from `from` to, kept to `limit`. */
+  const edgeAt = (event: React.PointerEvent) =>
+    limit(fromRef.current ?? 0, secondsAt(event));
+  const spanTo = (to: number): Span => {
     const from = fromRef.current ?? 0;
-    const to = secondsAt(event);
     return { end: Math.max(from, to), start: Math.min(from, to) };
   };
 
@@ -54,19 +85,25 @@ export function useRangeCut({
     draft,
     handlers: {
       onClickCapture: (event: React.MouseEvent) => {
-        if (!wasDrawnRef.current) return;
-        wasDrawnRef.current = false;
+        if (!wasTakenRef.current) return;
+        wasTakenRef.current = false;
         event.stopPropagation();
       },
       onPointerDownCapture: (event: React.PointerEvent<HTMLElement>) => {
         const target = event.target as Element;
-        if (!isCutting || target.closest("[data-lull-end]")) return;
+        if (!isActive || target.closest("[data-lull-end]")) return;
+        // The band above the scenes scrubs, but for the range tool, which
+        // draws from there too.
+        if (!isRanging && target.closest("[data-scrub-band]")) return;
         event.stopPropagation();
         event.currentTarget.setPointerCapture(event.pointerId);
         fromRef.current = secondsAt(event);
         pressXRef.current = event.clientX;
-        wasDrawnRef.current = true;
-        setDraft(spanTo(event));
+        wasTakenRef.current = true;
+        if (isRanging) {
+          setDraft(spanTo(fromRef.current));
+          onSeek(fromRef.current, "start");
+        }
       },
       onPointerLeave: () => {
         setBladeX(null);
@@ -75,18 +112,25 @@ export function useRangeCut({
         setBladeX(fractionOf(event));
         if (fromRef.current === null) return;
         event.stopPropagation();
-        setDraft(spanTo(event));
+        if (isRanging) {
+          const edge = edgeAt(event);
+          setDraft(spanTo(edge));
+          onSeek(edge, "move");
+        }
       },
       onPointerUpCapture: (event: React.PointerEvent) => {
         const from = fromRef.current;
         if (from === null) return;
         event.stopPropagation();
-        const span = spanTo(event);
+        const edge = edgeAt(event);
+        const span = spanTo(edge);
         fromRef.current = null;
         setDraft(null);
-        if (Math.abs(event.clientX - pressXRef.current) < PRESS_PX)
-          onSplit(from);
-        else if (span.end - span.start >= LEAST_S) onChoose(span);
+        const isPress = Math.abs(event.clientX - pressXRef.current) < PRESS_PX;
+        if (isRanging) {
+          onSeek(edge, "end");
+          if (!isPress && span.end - span.start >= LEAST_S) onChoose(span);
+        } else if (isPress) onSplit(from);
       },
     },
   };

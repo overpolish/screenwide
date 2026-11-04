@@ -6,7 +6,7 @@ use std::sync::Arc;
 use std::time::Instant;
 
 use super::*;
-use crate::capture_kit::windows_to_exclude;
+use crate::capture_kit::{capture_exclusion, CaptureExclusion};
 use crate::desktop_capture::{CapturePiece, CapturePlan, DesktopDisplay};
 
 mod worker;
@@ -127,7 +127,7 @@ pub(super) fn create(request: DesktopStreamRequest<'_>) -> Result<DesktopStreams
     request.commands.clone(),
     Arc::clone(&request.stats),
   )?;
-  let excluded = windows_to_exclude(request.content, request.include_own_windows);
+  let excluded = capture_exclusion(request.content, request.include_own_windows);
   let available_displays = request.content.displays();
   let anchor_display = request.plan.pieces.first().map(|piece| piece.display_id);
   let mut outputs = Vec::with_capacity(request.plan.pieces.len());
@@ -182,12 +182,12 @@ fn piece_stream(
   display: &sc::Display,
   scale: f64,
   piece: &CapturePiece,
-  excluded: &ns::Array<sc::Window>,
+  excluded: &CaptureExclusion,
   fps: u32,
   captures_audio: bool,
   show_cursor: bool,
 ) -> (arc::R<sc::ContentFilter>, arc::R<sc::StreamCfg>) {
-  let filter = sc::ContentFilter::with_display_excluding_windows(display, excluded);
+  let filter = excluded.filter(display);
   let mut cfg = sc::StreamCfg::new();
   cfg.set_width(piece.source_pixels.width as usize);
   cfg.set_height(piece.source_pixels.height as usize);

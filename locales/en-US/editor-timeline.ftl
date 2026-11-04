@@ -8,9 +8,12 @@ editor-timeline-label = Recording timeline
 editor-timeline-rate = { $rate }×
 editor-timeline-play-preview = Play preview
 editor-timeline-pause-preview = Pause preview
-# The transport's toggle that turns a drag across the strip into a stretch to cut; holding Option (Alt on Windows) does the same for one drag.
-editor-timeline-cut = Cut
-editor-timeline-cut-name = Cut a stretch of the recording
+# The transport's blade: a press on the strip splits the recording there; holding Option (Alt on Windows) does the same for one press.
+editor-timeline-cut = Blade
+editor-timeline-cut-name = Split the recording where you press
+# The transport's range tool: a drag across the strip draws a range, to make a GIF of or cut.
+editor-timeline-range = Range
+editor-timeline-range-name = Choose a range of the recording
 # The transport's toggle that brings out the Tracks island, where each recorded track is held in the export and the preview or left out.
 editor-timeline-tracks = Tracks
 editor-timeline-tracks-name = Choose the tracks to play and export

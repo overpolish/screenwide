@@ -20,6 +20,8 @@ export type StripIslandControls = {
   cut: () => void;
   /** Deletes the shortcuts chosen in their lane. */
   deleteShortcuts: () => void;
+  /** Lets go of what is chosen, as ⌘D does. */
+  deselect: () => void;
   /** Squeezes the chosen lull with the rest, or keeps it as recorded. */
   playLull: (play: "keep" | "squeeze") => void;
   /** Trims the chosen lull to a breath. */
@@ -78,6 +80,9 @@ export function usePublishStripIsland(
         deleteShortcuts: () => {
           controlsRef.current.deleteShortcuts();
         },
+        deselect: () => {
+          controlsRef.current.deselect();
+        },
         playLull: (play) => {
           controlsRef.current.playLull(play);
         },
@@ -96,13 +101,15 @@ export function usePublishStripIsland(
   }, [serialized, workspace]);
 }
 
+/** What is chosen on `workspace`'s strip now, for code that runs once
+ * rather than renders, such as the save reading the GIF's stretch. */
+export const stripIslandChoice = (workspace: EditorKind): StripIslandChoice =>
+  workspaces.get(workspace) ?? NOTHING_CHOSEN;
+
 /** What is chosen on `workspace`'s strip, kept as one object until it
  * changes, so a store reading it settles. */
 export const useStripIslandChoice = (workspace: EditorKind) =>
-  useSyncExternalStore(
-    subscribe,
-    (): StripIslandChoice => workspaces.get(workspace) ?? NOTHING_CHOSEN,
-  );
+  useSyncExternalStore(subscribe, () => stripIslandChoice(workspace));
 
 /** What the strip islands' asks reach in `workspace`'s preview, while it
  * is mounted. */

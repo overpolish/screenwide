@@ -79,6 +79,7 @@ export function resolveToolPanelSnapshot(
     deleteAnnotations: _deleteAnnotations,
     deleteChosenShortcuts: _deleteChosenShortcuts,
     deleteScene: _deleteScene,
+    deselectStripItem: _deselectStripItem,
     downloadCameraBackground: _downloadCameraBackground,
     downloadCameraObjects: _downloadCameraObjects,
     downloadStudioDucking: _downloadStudioDucking,

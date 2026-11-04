@@ -45,7 +45,7 @@ pub(crate) fn run_export(
 
 /// Collects FFmpeg's error output on a thread of its own, so a full pipe
 /// never stalls it.
-fn read_stderr(child: &mut Child) -> Result<std::thread::JoinHandle<Vec<u8>>, String> {
+pub(super) fn read_stderr(child: &mut Child) -> Result<std::thread::JoinHandle<Vec<u8>>, String> {
   let stderr = child
     .stderr
     .take()

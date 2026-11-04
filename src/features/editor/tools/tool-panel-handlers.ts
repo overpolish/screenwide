@@ -184,6 +184,8 @@ export type ToolPanelHandlers = {
   onSelectionRotationChange?: (rotation: Partial<SceneRotation>) => void;
   /** Cut what is chosen on the strip, and its time with it. */
   onStripItemCut?: () => void;
+  /** Let go of what is chosen on the strip. */
+  onStripItemDeselect?: () => void;
   /** Move the singing in the system audio out of the selected microphone's
    * way while it speaks, or let the system audio make way as a whole. */
   onStudioDuckingChange?: (enabled: boolean) => void;

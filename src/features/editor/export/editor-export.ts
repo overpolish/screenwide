@@ -28,6 +28,7 @@ import type { ScreenshotFormat } from "../../../bindings/ScreenshotFormat";
 import type {
   ToolPanelExport,
   ToolPanelExportCompare,
+  ToolPanelGif,
 } from "../tools/tool-panel-export";
 
 /** The export's settings as the editor window holds them. */
@@ -110,6 +111,7 @@ export function exportIslandSnapshot({
   enabledAudioTrackCount,
   exported,
   failure,
+  gif,
   hasTranscript,
   isAudioOnly,
   lookSizeBytes,
@@ -124,6 +126,8 @@ export function exportIslandSnapshot({
   enabledAudioTrackCount: number;
   exported: ExportedFile | null;
   failure: string | null;
+  /** Whether a GIF can be made of what is drawn on the strip. */
+  gif: ToolPanelGif;
   hasTranscript: boolean;
   isAudioOnly: boolean;
   /** Each look's measured size, in look order. */
@@ -139,8 +143,9 @@ export function exportIslandSnapshot({
       chosen: settings.recordingFormat,
       isAudioOnly,
     });
+  const isGif = recordingFormat?.selected === "gif";
   const kind = recordingFormat
-    ? recordingFormat.selected === "mp4"
+    ? recordingFormat.selected === "mp4" || isGif
       ? "video"
       : "audio"
     : "screenshot";
@@ -154,27 +159,32 @@ export function exportIslandSnapshot({
   const shownCameraOutput = kind === "video" ? cameraOutput : null;
   const name = exported?.path.split(/[\\/]/).pop() ?? "";
   return {
+    // A GIF holds the camera only in the picture, never as a file of its own.
     cameraKey:
+      !isGif &&
       shownCameraOutput === "separate" &&
       removesCameraBackground(recordingTimelineEdit)
         ? settings.cameraKey
         : null,
     cameraOutput: shownCameraOutput,
-    canExport,
-    // A WAV holds one stream, so its tracks are always mixed.
+    canExport: canExport && (!isGif || gif === "ready"),
+    // A WAV holds one stream, so its tracks are always mixed; a GIF none.
     collapseAudio:
       recording &&
       enabledAudioTrackCount > 1 &&
-      recordingFormat?.selected !== "wav"
+      recordingFormat?.selected !== "wav" &&
+      !isGif
         ? settings.collapseAudio
         : null,
-    compare: kind === "audio" ? null : compare,
+    // A GIF's look is fixed: there is nothing to compare or choose.
+    compare: kind === "audio" || isGif ? null : compare,
     deleteProjectAfterExport: settings.deleteProjectAfterExport,
     directory: settings.directory,
     exported: exported && { bytes: exported.bytes, name },
     extension,
     failure,
     fileStem: settings.fileStem,
+    gif: isGif ? gif : null,
     kind,
     progress: settings.isSaving
       ? {
@@ -187,7 +197,7 @@ export function exportIslandSnapshot({
         }
       : null,
     quality:
-      recording && kind === "video" && hasQuality(recording)
+      recording && kind === "video" && !isGif && hasQuality(recording)
         ? exportQuality({
             cameraOutput,
             lookSizeBytes,
@@ -198,7 +208,7 @@ export function exportIslandSnapshot({
         : null,
     recordingFormat,
     screenshotFormat: recording ? null : settings.screenshotFormat,
-    subtitles: recording && hasTranscript ? settings.subtitles : null,
+    subtitles: recording && hasTranscript && !isGif ? settings.subtitles : null,
   };
 }
 

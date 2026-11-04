@@ -30,11 +30,11 @@ import {
   KeyboardEffectSettings,
 } from "./types";
 
+import type { RecordingFormatPayload } from "./export/recording-format";
 import type { CameraKey } from "../../bindings/CameraKey";
 import type { ExportedFile } from "../../bindings/ExportedFile";
 import type { ExportLookQuality } from "../../bindings/ExportLookQuality";
 import type { ExportSubtitles } from "../../bindings/ExportSubtitles";
-import type { RecordingFormat } from "../../bindings/RecordingFormat";
 import type { ScreenshotFormat } from "../../bindings/ScreenshotFormat";
 import type { TextStyle } from "../../bindings/TextStyle";
 
@@ -346,24 +346,23 @@ export const estimateRecordingExport = ({
     looks,
     options: recordingProcessingPayload(options),
   });
-type SaveExportOptions = RecordingProcessingOptions & {
-  /** What fills a separate camera file where its background is taken away. */
-  cameraKey: CameraKey;
-  /** Moves the recording's project to the Trash once the export is saved. */
-  deleteProjectAfterExport: boolean;
-  fileStem: string;
-  /** The video, or the sound alone as M4A or WAV. */
-  recordingFormat: RecordingFormat;
-  screenshotFormat: ScreenshotFormat;
-  /** The subtitle file written beside a recording's video. */
-  subtitles: ExportSubtitles;
-};
+// The format, with a GIF's stretch, travels in `processing`.
+type SaveExportOptions = RecordingProcessingOptions &
+  RecordingFormatPayload & {
+    /** What fills a separate camera file where its background is taken away. */
+    cameraKey: CameraKey;
+    /** Moves the recording's project to the Trash once the export is saved. */
+    deleteProjectAfterExport: boolean;
+    fileStem: string;
+    screenshotFormat: ScreenshotFormat;
+    /** The subtitle file written beside a recording's video. */
+    subtitles: ExportSubtitles;
+  };
 
 export const saveExport = ({
   cameraKey,
   deleteProjectAfterExport,
   fileStem,
-  recordingFormat,
   screenshotFormat,
   subtitles,
   ...processing
@@ -374,7 +373,6 @@ export const saveExport = ({
       ...recordingProcessingPayload(processing),
       cameraKey,
       deleteProjectAfterExport,
-      recordingFormat,
       screenshotFormat,
       subtitles,
     },

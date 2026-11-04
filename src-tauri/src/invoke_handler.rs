@@ -213,6 +213,7 @@ pub(crate) fn invoke_handler() -> impl Fn(tauri::ipc::Invoke) -> bool + Send + S
     updates::withdraw_update_island,
     settings::hide_settings,
     settings::preferences::browse_default_location,
+    settings::capture_exclusions::list_hideable_applications,
     settings::preferences::get_general_settings,
     settings::preferences::set_general_settings,
     settings::system_cursor::render_system_cursor,
