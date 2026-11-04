@@ -35,7 +35,16 @@ hiddenApps: Array<HiddenApp>,
  * Whether the desktop's icons, and on macOS its widgets, are kept out of
  * recordings and screenshots of the screen.
  */
-hideDesktopIcons: boolean, recordScreenwideWindows: boolean, showRecordingConfidenceChecks: boolean, 
+hideDesktopIcons: boolean, 
+/**
+ * Whether screen recordings leave out the menu bar on macOS, or the
+ * taskbar on Windows, by recording the rest of the display.
+ */
+hideMenuBar: boolean, 
+/**
+ * Whether screen recordings leave out the Dock, on macOS.
+ */
+hideDock: boolean, recordScreenwideWindows: boolean, showRecordingConfidenceChecks: boolean, 
 /**
  * Whether the island shows how much of the recording is on disk.
  */

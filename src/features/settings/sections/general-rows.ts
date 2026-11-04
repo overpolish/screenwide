@@ -76,6 +76,22 @@ export const antiFlickerToggle = (): ToggleItem => ({
   title: t("settings-anti-flicker"),
 });
 
+/** The menu bar on macOS, the taskbar on Windows. */
+export const menuBarToggle = (): ToggleItem => ({
+  description: t("settings-hide-menu-bar-description", {
+    platform: platformArg(),
+  }),
+  key: "hideMenuBar",
+  title: t("settings-hide-menu-bar", { platform: platformArg() }),
+});
+
+/** macOS only: Windows has no Dock. */
+export const dockToggle = (): ToggleItem => ({
+  description: t("settings-hide-dock-description"),
+  key: "hideDock",
+  title: t("settings-hide-dock"),
+});
+
 /** The folders Settings names: where projects live, and where exports go. */
 export const folders = () =>
   [

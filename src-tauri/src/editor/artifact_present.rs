@@ -185,6 +185,7 @@ pub(super) fn present_recording_from(
   let FinalizeInfo {
     annotation_clips,
     camera,
+    corner_radius,
     cursor_path,
     keyboard_path,
     has_microphone,
@@ -237,6 +238,7 @@ pub(super) fn present_recording_from(
           width: camera.width,
         }
       }),
+      corner_radius,
       cursor: cursor_path.map(RecordingCursor::new),
       keyboard: keyboard_path.map(RecordingKeyboard::new),
       duration_ms,
@@ -252,4 +254,26 @@ pub(super) fn present_recording_from(
   )?;
   screenwide_project::library::remember(app, &remembered);
   Ok(())
+}
+
+pub(super) fn recording_audio_tracks(
+  has_system_audio: bool,
+  has_microphone: bool,
+) -> Vec<RecordingAudioTrack> {
+  let mut tracks = Vec::with_capacity(usize::from(has_system_audio) + usize::from(has_microphone));
+  if has_system_audio {
+    tracks.push(RecordingAudioTrack {
+      kind: AudioTrackKind::SystemAudio,
+      label: AudioTrackKind::SystemAudio.label(tracks.len()),
+      stream_index: tracks.len(),
+    });
+  }
+  if has_microphone {
+    tracks.push(RecordingAudioTrack {
+      kind: AudioTrackKind::Microphone,
+      label: AudioTrackKind::Microphone.label(tracks.len()),
+      stream_index: tracks.len(),
+    });
+  }
+  tracks
 }

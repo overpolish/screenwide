@@ -168,6 +168,7 @@ impl ExportAnnotations {
           ScreenshotOutputSettings {
             annotations: split.within,
             capture_scale: 1.0,
+            capture_corner_radius: 0.0,
             capture_width_points: f64::from(camera.camera_width),
             ..screen.clone()
           },

@@ -177,10 +177,12 @@ impl EditorArtifact {
   /// What a recording's panes were captured at, primary then camera, which
   /// redactions and annotation sizes are measured against: the screen at the
   /// scale it was recorded at, and a camera at one point to its pixel. Zero
-  /// where there is no pane.
+  /// where there is no pane. A window recorded on its own carries how round
+  /// its corners are, which its picture is rounded to.
   pub(crate) fn captures(&self) -> [Capture; 2] {
     let EditorArtifact::Recording {
       camera,
+      corner_radius,
       source_scale_percent,
       width,
       ..
@@ -193,12 +195,14 @@ impl EditorArtifact {
       Capture {
         width_points: f64::from(*width) / scale,
         scale,
+        corner_radius: corner_radius.map_or(0.0, f64::from),
       },
       camera
         .as_ref()
         .map_or_else(Capture::default, |camera| Capture {
           width_points: f64::from(camera.width),
           scale: 1.0,
+          corner_radius: 0.0,
         }),
     ]
   }

@@ -9,9 +9,8 @@ use std::time::Instant;
 use cidre::{arc, cv};
 
 use super::super::*;
-use crate::desktop_capture::CapturePlan;
 
-use crate::platform::desktop_compositor::DesktopFrameCoordinator;
+use crate::platform::desktop_compositor::{Composition, DesktopFrameCoordinator};
 use crate::platform::output::FrameClock;
 
 pub(super) struct DesktopSourceFrame {
@@ -37,7 +36,7 @@ pub(super) struct DesktopCompositionWorker {
 
 impl DesktopCompositionWorker {
   pub fn spawn(
-    plan: CapturePlan,
+    composition: Composition,
     commands: SyncSender<Command>,
     stats: Arc<CaptureStats>,
   ) -> Result<Self, String> {
@@ -47,7 +46,7 @@ impl DesktopCompositionWorker {
     let thread = std::thread::Builder::new()
       .name("screenwide-desktop-compositor".to_owned())
       .spawn(move || {
-        let mut coordinator = match DesktopFrameCoordinator::new(&plan) {
+        let mut coordinator = match DesktopFrameCoordinator::new(composition) {
           Ok(coordinator) => {
             let _ = ready.send(Ok(()));
             coordinator

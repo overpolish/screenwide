@@ -138,6 +138,23 @@ struct Shared {
   streams: Mutex<Vec<WatchedStream>>,
 }
 
+#[derive(Clone)]
+pub(super) struct StreamsHandle(Arc<Shared>);
+
+impl StreamsHandle {
+  /// The streams as they are now, in the order they were built.
+  pub(super) fn current(&self) -> Vec<arc::R<sc::Stream>> {
+    self
+      .0
+      .streams
+      .lock()
+      .unwrap_or_else(|poisoned| poisoned.into_inner())
+      .iter()
+      .map(|watched| watched.stream.clone())
+      .collect()
+  }
+}
+
 /// A capture's streams, kept running through sleep and lock.
 pub(super) struct RecoveringStreams {
   shared: Arc<Shared>,
@@ -168,14 +185,13 @@ impl RecoveringStreams {
 
   /// The streams as they are now, for stopping them.
   pub(super) fn current(&self) -> Vec<arc::R<sc::Stream>> {
-    self
-      .shared
-      .streams
-      .lock()
-      .unwrap_or_else(|poisoned| poisoned.into_inner())
-      .iter()
-      .map(|watched| watched.stream.clone())
-      .collect()
+    self.handle().current()
+  }
+
+  /// The streams as they will be, for another thread to act on: a stream
+  /// rebuilt after a stop takes its old one's place.
+  pub(super) fn handle(&self) -> StreamsHandle {
+    StreamsHandle(Arc::clone(&self.shared))
   }
 
   /// Stops restarting streams, so the capture's own stop is final.

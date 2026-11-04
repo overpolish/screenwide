@@ -17,7 +17,10 @@ pub(in crate::recording) fn begin_capture(
     camera,
     primary,
     system_audio,
-  } = capture_sources(options);
+  } = capture_sources(
+    options,
+    crate::recording::screen_bars::recorded_area(app, options),
+  );
   let started_at = Local::now().naive_local();
   let project =
     crate::projects_folder::create(app, &crate::screenshots::capture_file_stem(started_at))?;
@@ -63,6 +66,7 @@ pub(in crate::recording) fn begin_capture(
     options.camera_id.is_some(),
   );
   let capture::CaptureStart {
+    corner_radius,
     cursor_source,
     first_frame,
     session,
@@ -125,6 +129,7 @@ pub(in crate::recording) fn begin_capture(
         media,
         primary_kind: primary_kind(options.mode),
         source_scale_factor,
+        corner_radius,
         origin: screenwide_project::RecordingOrigin::Capture,
       }),
     )
@@ -138,6 +143,7 @@ pub(in crate::recording) fn begin_capture(
 
   Ok((
     CaptureHandles {
+      corner_radius,
       sidecars,
       project,
       session,
@@ -164,8 +170,13 @@ pub(in crate::recording) struct CaptureSources {
 }
 
 /// `options` as the platform's capture sources. Validated options only:
-/// every source the mode needs is present.
-pub(in crate::recording) fn capture_sources(options: &StartRecordingOptions) -> CaptureSources {
+/// every source the mode needs is present. A screen recording keeps
+/// `screen_area` of its display where the system's bars are left out
+/// (`screen_bars`).
+pub(in crate::recording) fn capture_sources(
+  options: &StartRecordingOptions,
+  screen_area: Option<Region>,
+) -> CaptureSources {
   let camera = options
     .camera_id
     .as_ref()
@@ -178,10 +189,18 @@ pub(in crate::recording) fn capture_sources(options: &StartRecordingOptions) -> 
       width: options.camera_width.expect("validated above"),
     });
   let primary = match options.mode {
-    RecordingMode::Screen => PrimaryCaptureSource::Screen {
-      fps: options.fps,
-      monitor_id: options.monitor_id.expect("validated above"),
-      show_cursor: options.show_cursor,
+    RecordingMode::Screen => match screen_area {
+      Some(region) => PrimaryCaptureSource::Region {
+        fps: options.fps,
+        monitor_id: options.monitor_id.expect("validated above"),
+        region,
+        show_cursor: options.show_cursor,
+      },
+      None => PrimaryCaptureSource::Screen {
+        fps: options.fps,
+        monitor_id: options.monitor_id.expect("validated above"),
+        show_cursor: options.show_cursor,
+      },
     },
     RecordingMode::Region => PrimaryCaptureSource::Region {
       fps: options.fps,

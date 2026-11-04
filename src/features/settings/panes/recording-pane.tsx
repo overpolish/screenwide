@@ -5,14 +5,19 @@ import { type ReactNode, type Ref } from "react";
 import { useNumberFormatter } from "react-aria";
 
 import { t } from "../../../i18n/i18n";
+import { isMacHost } from "../../../lib/platform";
 import {
   type RecordingFps,
   recordingFpsOptions,
 } from "../../recording-inputs/types";
+import { systemBarsScene } from "../preview/scenes/recording-scenes";
+import { useDisplayNotches } from "../preview/use-display-notches";
 import {
   antiFlickerToggle,
   autoZoomToggle,
   confidenceChecksToggle,
+  dockToggle,
+  menuBarToggle,
   recordingSizeToggle,
 } from "../sections/general-rows";
 import { SettingsGroup } from "../settings-group";
@@ -20,6 +25,7 @@ import { CameraPicture } from "../stage/camera-picture";
 import { LiveIsland } from "../stage/live-island";
 import { PreviewArea, PreviewStage } from "../stage/preview-stage";
 import { RecordingPicture } from "../stage/recording-picture";
+import { useEasedBox } from "../stage/use-eased-box";
 import { usePreviewCamera } from "../stage/use-preview-camera";
 import { usePreviewSubject } from "../stage/use-preview-subject";
 
@@ -31,11 +37,17 @@ import type { GeneralSettings } from "../../../bindings/GeneralSettings";
 // Recording: how the controls look while a recording is made, and how the
 // recording itself is made. The picture is the island itself for the rows
 // that change it, so turning the camera and sound off shows the island
-// without them; a recording of the sample desktop for the frame rate and
-// auto zoom; and your own camera for anti-flicker, where there is one.
+// without them; a recording of the sample desktop for the frame rate, the
+// system's bars and auto zoom; and your own camera for anti-flicker, where
+// there is one.
 
 type Subject =
-  "antiFlicker" | "autoZoom" | "countdown" | "frameRate" | "island";
+  | "antiFlicker"
+  | "autoZoom"
+  | "countdown"
+  | "frameRate"
+  | "island"
+  | "systemBars";
 
 /** A frame rate the stored settings hold, as one Settings offers. */
 const fpsOf = (value: number): RecordingFps =>
@@ -68,6 +80,13 @@ export function RecordingPane({
   const antiFlicker = settings.cameraAntiFlicker;
   const autoZoom = settings.autoZoom;
   const camera = usePreviewCamera(fps, antiFlicker);
+  const { island: notch } = useDisplayNotches();
+  const bars = systemBarsScene(
+    { dock: settings.hideDock, menuBar: settings.hideMenuBar },
+    notch,
+  );
+  // Eased, so turning a bar on or off reshapes the recording in place.
+  const kept = useEasedBox(bars.kept);
   // Without a camera to show, anti-flicker has no picture and leaves the
   // one there is.
   const shown = subject === "antiFlicker" && !camera ? "island" : subject;
@@ -92,6 +111,7 @@ export function RecordingPane({
         showsSize={size}
       />
     ),
+    systemBars: <RecordingPicture scene={{ ...bars, kept }} />,
   };
 
   return (
@@ -152,6 +172,26 @@ export function RecordingPane({
             selected={String(fps)}
             title={t("settings-frame-rate")}
           />
+        </PreviewArea>
+        <PreviewArea follow={follow("systemBars")}>
+          <ToggleRow
+            isDisabled={isSaving}
+            isSelected={settings.hideMenuBar}
+            item={menuBarToggle()}
+            onChange={(hideMenuBar) => {
+              update({ hideMenuBar });
+            }}
+          />
+          {isMacHost && (
+            <ToggleRow
+              isDisabled={isSaving}
+              isSelected={settings.hideDock}
+              item={dockToggle()}
+              onChange={(hideDock) => {
+                update({ hideDock });
+              }}
+            />
+          )}
         </PreviewArea>
         <PreviewArea follow={follow("autoZoom")}>
           <ToggleRow

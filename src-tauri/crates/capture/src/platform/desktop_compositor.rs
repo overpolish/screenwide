@@ -1,14 +1,19 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! GPU composition for macOS regions that cross display boundaries. Each
-//! display's IOSurface-backed frame is sampled in place, and the pieces are
-//! drawn straight into the IOSurface of a new buffer for the encoder.
+//! GPU composition for macOS recordings drawn from several displays: a
+//! region that crosses display boundaries, or a window followed wherever it
+//! goes. Each display's IOSurface-backed frame is sampled in place, and the
+//! pieces are drawn straight into the IOSurface of a new buffer for the
+//! encoder.
 
 use cidre::{arc, cf, cv};
 
+use super::window_track::WindowTrack;
 use crate::desktop_canvas::{DesktopCanvas, PieceSource};
-use crate::desktop_capture::{CapturePiece, CapturePlan, FrameSynchronizer, PixelRect};
+use crate::desktop_capture::{
+  window_pieces, CapturePiece, CapturePlan, DesktopDisplay, FrameSynchronizer, PixelRect,
+};
 use screenwide_gpu::Gpu;
 
 pub(super) struct ComposedFrame {
@@ -16,21 +21,61 @@ pub(super) struct ComposedFrame {
   pub timestamp_ns: i64,
 }
 
+/// What a desktop composition draws from its displays' streams.
+pub(super) enum Composition {
+  /// A region across displays: each display's stream already cropped to its
+  /// piece, drawn once every display has a frame.
+  Region(CapturePlan),
+  /// A window followed across its displays: each display's whole frame, the
+  /// window cut out of it where it stood when the frame was drawn.
+  Window(WindowComposition),
+}
+
+pub(super) struct WindowComposition {
+  /// In the order of the streams, one per display.
+  pub displays: Vec<DesktopDisplay>,
+  pub height: u32,
+  pub track: WindowTrack,
+  pub width: u32,
+}
+
+enum Layout {
+  Region {
+    pieces: Vec<CapturePiece>,
+    synchronizer: FrameSynchronizer,
+  },
+  Window {
+    composition: WindowComposition,
+    last_output_ns: Option<i64>,
+  },
+}
+
 pub(super) struct DesktopFrameCoordinator {
   compositor: DesktopCompositor,
-  pieces: Vec<CapturePiece>,
   latest: Vec<Option<(i64, arc::R<cv::PixelBuf>)>>,
-  synchronizer: FrameSynchronizer,
+  layout: Layout,
 }
 
 impl DesktopFrameCoordinator {
-  pub fn new(plan: &CapturePlan) -> Result<Self, String> {
-    Ok(Self {
-      compositor: DesktopCompositor::new(plan.width, plan.height, plan.pieces.len())?,
-      pieces: plan.pieces.clone(),
-      latest: vec![None; plan.pieces.len()],
-      synchronizer: FrameSynchronizer::new(plan.pieces.len())?,
-    })
+  pub fn new(composition: Composition) -> Result<Self, String> {
+    match composition {
+      Composition::Region(plan) => Ok(Self {
+        compositor: DesktopCompositor::new(plan.width, plan.height, plan.pieces.len())?,
+        latest: vec![None; plan.pieces.len()],
+        layout: Layout::Region {
+          synchronizer: FrameSynchronizer::new(plan.pieces.len())?,
+          pieces: plan.pieces,
+        },
+      }),
+      Composition::Window(window) => Ok(Self {
+        compositor: DesktopCompositor::new(window.width, window.height, window.displays.len())?,
+        latest: vec![None; window.displays.len()],
+        layout: Layout::Window {
+          composition: window,
+          last_output_ns: None,
+        },
+      }),
+    }
   }
 
   pub fn update(
@@ -55,34 +100,72 @@ impl DesktopFrameCoordinator {
     {
       return Ok(None);
     }
-    let piece = self
-      .pieces
-      .get(source_index)
-      .expect("latest frames and pieces have the same length");
-    if pixels.width() < piece.source_pixels.width as usize
-      || pixels.height() < piece.source_pixels.height as usize
-    {
-      return Err("A desktop capture source returned an undersized surface".to_owned());
+    if let Layout::Region { pieces, .. } = &self.layout {
+      let piece = pieces
+        .get(source_index)
+        .expect("latest frames and pieces have the same length");
+      if pixels.width() < piece.source_pixels.width as usize
+        || pixels.height() < piece.source_pixels.height as usize
+      {
+        return Err("A desktop capture source returned an undersized surface".to_owned());
+      }
     }
     *slot = Some((timestamp_ns, pixels.retained()));
-    let Some(tick) = self.synchronizer.update(source_index, timestamp_ns)? else {
-      return Ok(None);
+    let latest = &self.latest;
+    let (frames, output_ns) = match &mut self.layout {
+      Layout::Region {
+        pieces,
+        synchronizer,
+      } => {
+        let Some(tick) = synchronizer.update(source_index, timestamp_ns)? else {
+          return Ok(None);
+        };
+        let frames = latest
+          .iter()
+          .zip(pieces.iter())
+          .map(|(frame, piece)| {
+            let pixels = &frame
+              .as_ref()
+              .expect("the synchronizer waits for every source")
+              .1;
+            (cropped_source(*piece), &**pixels)
+          })
+          .collect::<Vec<_>>();
+        (frames, tick.output_ns)
+      }
+      Layout::Window {
+        composition,
+        last_output_ns,
+      } => {
+        if last_output_ns.is_some_and(|last| timestamp_ns <= last) {
+          return Ok(None);
+        }
+        *last_output_ns = Some(timestamp_ns);
+        // A display with no frame yet has nothing of the window to give, so
+        // its piece waits for it rather than holding the others back.
+        let bounds = composition.track.at(timestamp_ns);
+        let frames = window_pieces(
+          &composition.displays,
+          bounds,
+          composition.width,
+          composition.height,
+        )
+        .into_iter()
+        .filter_map(|piece| {
+          let index = composition
+            .displays
+            .iter()
+            .position(|display| display.id == piece.display_id)?;
+          let (_, pixels) = latest.get(index)?.as_ref()?;
+          Some((piece, &**pixels))
+        })
+        .collect::<Vec<_>>();
+        (frames, timestamp_ns)
+      }
     };
-    let frames = self
-      .latest
-      .iter()
-      .zip(&self.pieces)
-      .map(|(frame, piece)| {
-        let pixels = &frame
-          .as_ref()
-          .expect("the synchronizer waits for every source")
-          .1;
-        (cropped_source(*piece), &**pixels)
-      })
-      .collect::<Vec<_>>();
     Ok(Some(ComposedFrame {
       buffer: self.compositor.compose(&frames)?,
-      timestamp_ns: tick.output_ns,
+      timestamp_ns: output_ns,
     }))
   }
 }

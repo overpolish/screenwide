@@ -33,6 +33,7 @@ impl ScreenshotItem {
     Capture {
       width_points: f64::from(self.image.width) / scale,
       scale,
+      corner_radius: 0.0,
     }
   }
 }

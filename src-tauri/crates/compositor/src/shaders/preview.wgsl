@@ -107,6 +107,9 @@ struct Canvas {
   // starts, which a lens reads the layers under it at: the focus chain's
   // shift, else none.
   overflow: vec4<f32>,
+  // `x`: how round the source's own corners are, in canvas pixels, which its
+  // picture is cut to (`screen_layer`).
+  source_shape: vec4<f32>,
 }
 
 fn focus_mode() -> u32 {
@@ -414,7 +417,7 @@ fn visible_shadow(box_pixel: vec2<f32>, image_pixel: vec2<f32>, sigma: f32) -> f
   // The foreground is the intersection of the crop window and placed source.
   // A tall crop around a wide source must not cast a tall rectangular shadow.
   let crop_distance = rounded_distance(box_pixel - offset, canvas.crop_rect, canvas.effects.x);
-  let image_distance = rounded_distance(image_pixel - offset, canvas.image_rect, 0.0);
+  let image_distance = rounded_distance(image_pixel - offset, canvas.image_rect, canvas.source_shape.x);
   let distance = max(select(max(crop_distance, image_distance), crop_distance,
                             canvas.recenter_inset_color.a > 0.0), 0.0);
   return drop_shadow(distance, sigma);
@@ -897,7 +900,9 @@ fn screen_layer(result_in: vec4<f32>, box_pixel: vec2<f32>, image_pixel: vec2<f3
   let crop_alpha = rounded_coverage(box_pixel, canvas.crop_rect, canvas.effects.x);
   // Axis-aligned zero-radius source edges are already pixel-exact. Smoothing
   // them leaks a fractional row of canvas colour around a default crop.
-  let image_rect_alpha = rounded_coverage(image_pixel, canvas.image_rect, 0.0);
+  // A window recorded on its own is rounded as it was on screen; anything
+  // else is square.
+  let image_rect_alpha = rounded_coverage(image_pixel, canvas.image_rect, canvas.source_shape.x);
   let image_alpha = crop_alpha * image_rect_alpha *
       rounded_coverage(image_pixel, canvas.source_crop_rect, 0.0);
   let inset = canvas.recenter_inset_color;

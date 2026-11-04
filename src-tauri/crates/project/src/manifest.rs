@@ -148,6 +148,9 @@ pub struct RecordingManifest {
   /// The captured pixels per logical display point, which decides the export
   /// sizes offered.
   pub source_scale_factor: f32,
+  /// A window's own corner radius, in the movie's pixels, which has it black.
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  pub corner_radius: Option<f32>,
   /// How the recording was made, which the browser marks.
   #[serde(default)]
   pub origin: RecordingOrigin,

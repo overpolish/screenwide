@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use super::{
+  artifact_present::recording_audio_tracks,
   save::{save_recording_copy, save_selected_recording_copy},
   *,
 };

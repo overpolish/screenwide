@@ -35,6 +35,7 @@ mod replay;
 mod session;
 mod startup;
 mod stream_recovery;
+mod window_track;
 mod writer;
 
 use std::path::PathBuf;
@@ -69,6 +70,9 @@ use stream_recovery::{RecipeOutput, RecoveringStreams, StreamRecipe, StreamWatch
 use writer::{Container, Writer, WriterConfig};
 
 pub struct CaptureStart {
+  /// How round a window recorded on its own has its corners, in the movie's
+  /// pixels, where the movie has them black; none for any other source.
+  pub corner_radius: Option<f32>,
   pub cursor_source: Option<screenwide_records::cursor::CursorSource>,
   pub first_frame: Receiver<Result<(), String>>,
   pub session: CaptureSession,

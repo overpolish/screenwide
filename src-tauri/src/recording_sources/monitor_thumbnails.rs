@@ -29,7 +29,21 @@ fn capture(monitor: &xcap::Monitor) -> Option<RgbaImage> {
   RgbaImage::from_raw(image.width, image.height, image.rgba)
 }
 
+/// The part of `image` a share of its width and height (left, top, width,
+/// height) covers.
+fn kept_part(image: &RgbaImage, [left, top, width, height]: [f64; 4]) -> RgbaImage {
+  let (image_width, image_height) = (f64::from(image.width()), f64::from(image.height()));
+  let x = (left * image_width).round() as u32;
+  let y = (top * image_height).round() as u32;
+  let width =
+    ((width * image_width).round() as u32).clamp(1, image.width() - x.min(image.width() - 1));
+  let height =
+    ((height * image_height).round() as u32).clamp(1, image.height() - y.min(image.height() - 1));
+  image::imageops::crop_imm(image, x, y, width, height).to_image()
+}
+
 pub(super) fn capture_monitor_thumbnails(
+  app: &tauri::AppHandle,
   cache_dir: &Path,
 ) -> Result<Vec<MonitorThumbnail>, String> {
   std::fs::create_dir_all(cache_dir).map_err(|error| error.to_string())?;
@@ -52,6 +66,12 @@ pub(super) fn capture_monitor_thumbnails(
         let image = windows::capture(&monitor).ok()?;
         #[cfg(not(any(target_os = "macos", target_os = "windows")))]
         let image = monitor.capture_image().ok()?;
+        // What a screen recording of it keeps, where Settings leaves its
+        // bars out, so the still shows what will be recorded.
+        let image = match crate::recording::screen_bars::kept_share(app, id) {
+          Some(share) => kept_part(&image, share),
+          None => image,
+        };
         // A square box lets the longer edge set the scale, so the still keeps
         // the display's aspect ratio whichever way it is oriented.
         let path = write_thumbnail(image, 320, 320, cache_dir, &format!("monitor-{id}.png"))?;

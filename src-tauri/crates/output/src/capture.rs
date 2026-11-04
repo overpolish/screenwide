@@ -12,6 +12,10 @@ pub struct Capture {
   pub width_points: f64,
   /// Source pixels per logical point.
   pub scale: f64,
+  /// How round the source's own corners are, in its pixels: a window
+  /// recorded on its own, whose movie has them black. Zero for a square
+  /// source.
+  pub corner_radius: f64,
 }
 
 impl Capture {
@@ -23,10 +27,11 @@ impl Capture {
 
 impl ScreenshotOutputSettings {
   /// Records the capture this layer draws, which its annotations are sized
-  /// against.
+  /// against and its picture is rounded to.
   pub fn stamp_capture(&mut self, capture: Capture) {
     self.capture_width_points = capture.width_points;
     self.capture_scale = capture.scale;
+    self.capture_corner_radius = capture.corner_radius;
   }
 
   /// Output pixels per point of annotation size.

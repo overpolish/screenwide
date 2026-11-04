@@ -29,6 +29,7 @@ fn identity_settings(
     // The live overlay draws no redaction, so there is nothing to size.
     capture_width_points: 0.0,
     capture_scale: scale,
+    capture_corner_radius: 0.0,
     crop_height: height,
     crop_width: width,
     crop_preview: None,

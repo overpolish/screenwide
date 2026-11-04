@@ -19,7 +19,7 @@ use screenwide_output::ScreenshotOutputSettings;
 use screenwide_scenes::RecordingSceneClip;
 
 use super::clock::frame_index;
-use super::content::{canvas_settings, canvas_texture, Pictures};
+use super::content::{canvas_settings, canvas_texture, kept_settings, Pictures};
 use super::script::{cursor_records, keyboard_records};
 use super::{PointerScript, PreviewScene};
 
@@ -175,6 +175,10 @@ impl SceneRenderer {
         self.draw_screen(target, base, moment, *included)
       }
       PreviewScene::DesktopIcons { hidden } => self.draw_screen(target, base, moment, !*hidden),
+      PreviewScene::SystemBars { kept } => {
+        let kept = kept_settings(self.screen.size, self.points, canvas, kept);
+        self.draw_screen(target, kept, moment, false)
+      }
       PreviewScene::Ruler | PreviewScene::TextRecognition | PreviewScene::Annotate { .. } => {
         Err("A tool's preview is drawn by the tool".to_owned())
       }

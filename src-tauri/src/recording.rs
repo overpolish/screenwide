@@ -4,6 +4,7 @@
 pub(crate) mod commands;
 pub(crate) mod failures;
 pub(crate) mod replay;
+pub(crate) mod screen_bars;
 mod session;
 pub(crate) mod sleep;
 mod state;

@@ -56,6 +56,24 @@ pub fn display_scale(display_id: u32) -> f64 {
   monitor_geometry(display_id).map_or(1.0, |(scale, _, _)| scale)
 }
 
+/// What ScreenCaptureKit offers now, waited for on a thread that may block;
+/// none if it does not answer within two seconds.
+pub fn current_content_blocking() -> Option<arc::R<sc::ShareableContent>> {
+  struct Sent(arc::R<sc::ShareableContent>);
+  // SAFETY: the snapshot is not changed after ScreenCaptureKit hands it
+  // over, and only the thread waiting for it reads it.
+  unsafe impl Send for Sent {}
+  let (sent, received) = std::sync::mpsc::channel();
+  sc::ShareableContent::current_with_ch(move |content, _| {
+    let _ = sent.send(content.map(|content| Sent(content.retained())));
+  });
+  received
+    .recv_timeout(std::time::Duration::from_secs(2))
+    .ok()
+    .flatten()
+    .map(|content| content.0)
+}
+
 /// Excludes every window this process owns rather than a list of labels.
 /// Matching on the owning process cannot drift: a window added later is
 /// excluded the day it is added, with nothing to remember to update.
@@ -190,6 +208,34 @@ pub fn capture_exclusion(
     apps: ns::Array::from_slice_retained(&apps),
     excepting: ns::Array::from_slice_retained(&excepting),
   }
+}
+
+/// A display with every app but `pid` left out, so only that app's windows
+/// are drawn on it: what a window recording crops its window from. It names
+/// what to leave out rather than the window to keep, since naming the window
+/// (or its app) makes macOS mark the window as being shared, with a badge on
+/// it the person sees. The app's own other windows, menus and sheets stay.
+pub fn app_only_filter(
+  content: &sc::ShareableContent,
+  display: &sc::Display,
+  pid: i32,
+) -> arc::R<sc::ContentFilter> {
+  sc::ContentFilter::with_display_excluding_apps_excepting_windows(
+    display,
+    &others_than(content, pid),
+    &ns::Array::new(),
+  )
+}
+
+/// Every running app but `pid`, by process.
+fn others_than(content: &sc::ShareableContent, pid: i32) -> arc::R<ns::Array<sc::RunningApp>> {
+  let others: Vec<_> = content
+    .apps()
+    .iter()
+    .filter(|app| app.process_id() != pid)
+    .map(|app| app.retained())
+    .collect();
+  ns::Array::from_slice_retained(&others)
 }
 
 /// Resolves the stable bundle identifiers stored by the UI against a fresh

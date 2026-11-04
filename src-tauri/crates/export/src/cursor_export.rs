@@ -162,6 +162,7 @@ pub fn needs_composition(
     || settings.height != source_height
     || settings.background_radius_percent > 0.0
     || settings.radius_percent > 0.0
+    || settings.capture_corner_radius > 0.0
     || (settings.crop_height - f64::from(settings.height)).abs() > 0.000_001
     || (settings.crop_width - f64::from(settings.width)).abs() > 0.000_001
     || settings.crop_x.abs() > 0.000_001
@@ -190,6 +191,7 @@ mod tests {
       background_radius_percent: 0.0,
       capture_width_points: 0.0,
       capture_scale: 0.0,
+      capture_corner_radius: 0.0,
       crop_height: f64::from(height),
       crop_width: f64::from(width),
       crop_preview: None,

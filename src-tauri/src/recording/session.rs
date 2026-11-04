@@ -19,7 +19,7 @@ use tauri::{AppHandle, Emitter};
 use super::{capture, snapshot, state};
 use screenwide_capture::{
   encoding, CameraCaptureMode, CaptureStartupConfig, FinalizeInfo, PrimaryCaptureSource,
-  RecordingMode, RecordingStatus, StartRecordingOptions, SystemAudioSelection,
+  RecordingMode, RecordingStatus, Region, StartRecordingOptions, SystemAudioSelection,
 };
 use screenwide_project::PrimaryRecordingKind;
 
@@ -39,6 +39,7 @@ pub(super) const FIRST_FRAME_TIMEOUT: Duration = Duration::from_secs(5);
 /// Everything a running recording is, from the state machine's side: a live
 /// capture session and the project it is filling.
 pub(super) struct CaptureHandles {
+  corner_radius: Option<f32>,
   sidecars: RecordingSidecars,
   project: screenwide_project::NewProject,
   session: capture::CaptureSession,
@@ -203,6 +204,7 @@ pub(super) fn finalize_capture(
   stopped_at: Instant,
 ) -> Result<(FinalizeInfo, PathBuf), String> {
   let CaptureHandles {
+    corner_radius,
     sidecars,
     project,
     session,
@@ -216,6 +218,7 @@ pub(super) fn finalize_capture(
     info.keyboard_path = stopped_sidecars.keyboard?;
     info.annotation_clips = stopped_sidecars.annotation_clips;
     info.source_scale_factor = source_scale_factor;
+    info.corner_radius = corner_radius;
     Ok(info)
   });
   let info = finished.inspect_err(|_| project.remove())?;
@@ -257,6 +260,7 @@ pub(super) fn write_manifest(
       media,
       primary_kind: info.primary_kind,
       source_scale_factor: info.source_scale_factor,
+      corner_radius: info.corner_radius,
       origin,
     }),
   )

@@ -7,6 +7,7 @@ use super::{camera::CameraSpec, writer::VideoSource};
 mod audio_only;
 mod audio_stream;
 mod camera_writer;
+mod desktop_video;
 mod microphone_stream;
 mod screen_stream;
 mod video_source;
@@ -72,6 +73,12 @@ pub(super) async fn begin(
   let source_scale_factor = primary_video
     .as_ref()
     .map_or(1.0, ResolvedVideo::source_scale_factor);
+  let corner_radius = match (content.as_deref(), primary_video.as_ref()) {
+    (Some(content), Some(ResolvedVideo::Window(video))) => {
+      video_source::corner_radius_of(content, video).await
+    }
+    _ => None,
+  };
   let (width, height, primary_fps) = if camera_primary {
     let camera = camera_spec.as_ref().expect("checked above");
     (camera.width, camera.height, camera.fps)
@@ -199,28 +206,22 @@ pub(super) async fn begin(
     })?),
     _ => None,
   };
-  let desktop_streams = match primary_video.as_ref() {
-    Some(ResolvedVideo::Desktop(video)) => Some(desktop_stream::create(
-      desktop_stream::DesktopStreamRequest {
-        audio_output: video_captures_all_audio.then_some(
-          output
-            .as_ref()
-            .expect("desktop audio has a ScreenCaptureKit output"),
-        ),
-        commands: commands.clone(),
-        content: content.as_ref().expect("desktop video has content"),
-        displays: &video.displays,
-        fps: video.fps,
-        include_own_windows,
-        plan: &video.plan,
-        queue: &queue,
-        show_cursor: video.show_cursor,
-        stats: Arc::clone(&stats),
-        watch: &watch,
-      },
-    )?),
-    _ => None,
-  };
+  let desktop_streams = desktop_video::create(
+    primary_video.as_ref(),
+    desktop_video::DesktopVideoRequest {
+      audio_output: video_captures_all_audio.then_some(
+        output
+          .as_ref()
+          .expect("desktop audio has a ScreenCaptureKit output"),
+      ),
+      commands: &commands,
+      content: content.as_deref(),
+      include_own_windows,
+      queue: &queue,
+      stats: &stats,
+      watch: &watch,
+    },
+  )?;
 
   let microphone =
     microphone_stream::start(microphone_source, holds_notes, &commands, &monitor, &stats)?;
@@ -256,17 +257,20 @@ pub(super) async fn begin(
   if let Some(stream) = video_stream {
     streams.push(stream);
   }
-  let desktop = desktop_streams.map(|desktop| {
+  let mut desktop = desktop_streams.map(|desktop| {
     let (desktop_streams, keepalive) = desktop.into_parts();
     streams.extend(desktop_streams);
     keepalive
   });
   system_audio_streams.append_to(&mut streams);
+  let streams = RecoveringStreams::new(watch, stream_reports, streams);
+  desktop_video::follow_new_apps(primary_video.as_ref(), desktop.as_mut(), streams.handle())?;
   let first_frame = match camera_first_frame {
     Some(camera) => both_first_frames(first_frame, camera),
     None => first_frame,
   };
   Ok(CaptureStart {
+    corner_radius,
     cursor_source,
     session: CaptureSession {
       camera: secondary_camera,
@@ -276,7 +280,7 @@ pub(super) async fn begin(
         _output: output,
         desktop,
         queue,
-        streams: RecoveringStreams::new(watch, stream_reports, streams),
+        streams,
       },
       primary_camera,
       worker: Some(worker),

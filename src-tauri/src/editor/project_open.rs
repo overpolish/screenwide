@@ -103,6 +103,7 @@ fn open(app: &AppHandle, file: &Path) -> Result<(), OpenFailure> {
     media,
     primary_kind,
     source_scale_factor,
+    corner_radius,
     origin: _,
   } = manifest.recorded().map_err(OpenFailure::damaged)?.clone();
   let primary = screenwide_project::resolve(file, &media.primary).map_err(OpenFailure::damaged)?;
@@ -187,6 +188,7 @@ fn open(app: &AppHandle, file: &Path) -> Result<(), OpenFailure> {
         1.0
       },
       width,
+      corner_radius: corner_radius.filter(|radius| radius.is_finite() && *radius > 0.0),
     },
     Origin::Project,
   )

@@ -65,6 +65,7 @@ impl CameraComposition {
       background_radius_percent: 0.0,
       background_type: "solid".to_owned(),
       capture_scale: size_scale,
+      capture_corner_radius: 0.0,
       capture_width_points: width / size_scale,
       crop_height: height,
       crop_preview: None,

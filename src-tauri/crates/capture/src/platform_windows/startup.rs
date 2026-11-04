@@ -212,6 +212,7 @@ pub(super) fn begin(
   };
 
   Ok(CaptureStart {
+    corner_radius: None,
     cursor_source,
     first_frame,
     session,

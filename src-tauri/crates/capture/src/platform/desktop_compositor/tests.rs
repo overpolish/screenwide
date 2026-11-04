@@ -105,7 +105,7 @@ fn pieces_sample_from_the_already_cropped_stream_origin() {
 
 #[test]
 fn waits_for_every_source_then_composes_the_shared_canvas() {
-  let mut coordinator = DesktopFrameCoordinator::new(&plan()).unwrap();
+  let mut coordinator = DesktopFrameCoordinator::new(Composition::Region(plan())).unwrap();
   let blue = buffer(2, 2, [255, 0, 0, 255]);
   let red = buffer(2, 2, [0, 0, 255, 255]);
   assert!(coordinator.update(0, 10, &blue).unwrap().is_none());
@@ -139,7 +139,7 @@ fn canvas_outside_every_piece_is_opaque_black() {
   plan.width = 6;
   plan.desktop_region.width = 6.0;
   plan.pieces[1].destination.x = 4;
-  let mut coordinator = DesktopFrameCoordinator::new(&plan).unwrap();
+  let mut coordinator = DesktopFrameCoordinator::new(Composition::Region(plan)).unwrap();
   let white = buffer(2, 2, [255, 255, 255, 255]);
   coordinator.update(0, 10, &white).unwrap();
   let mut composed = coordinator.update(1, 10, &white).unwrap().unwrap();
@@ -179,7 +179,7 @@ fn canvas_outside_every_piece_is_opaque_black() {
 
 #[test]
 fn a_stale_surface_cannot_replace_the_latest_source_pixels() {
-  let mut coordinator = DesktopFrameCoordinator::new(&plan()).unwrap();
+  let mut coordinator = DesktopFrameCoordinator::new(Composition::Region(plan())).unwrap();
   let blue = buffer(2, 2, [255, 0, 0, 255]);
   let green = buffer(2, 2, [0, 255, 0, 255]);
   let red = buffer(2, 2, [0, 0, 255, 255]);

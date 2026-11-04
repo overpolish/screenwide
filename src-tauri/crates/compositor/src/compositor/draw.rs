@@ -238,6 +238,15 @@ impl Compositor {
         0.0,
         0.0,
       ],
+      // The source's own round corners, in canvas pixels: a window recorded
+      // on its own, black outside them in its movie.
+      source_shape: [
+        (settings.capture_corner_radius * placement.image_width / f64::from(source.size.0.max(1)))
+          as f32,
+        0.0,
+        0.0,
+        0.0,
+      ],
     };
     self.submit(
       target,

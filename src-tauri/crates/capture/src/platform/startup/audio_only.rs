@@ -109,6 +109,7 @@ pub(super) async fn begin(
   let mut streams = Vec::new();
   system_audio_streams.append_to(&mut streams);
   Ok(CaptureStart {
+    corner_radius: None,
     cursor_source: None,
     first_frame: first_framed,
     session: CaptureSession {

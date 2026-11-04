@@ -42,6 +42,11 @@ pub struct GeneralSettings {
   /// Whether the desktop's icons, and on macOS its widgets, are kept out of
   /// recordings and screenshots of the screen.
   pub hide_desktop_icons: bool,
+  /// Whether screen recordings leave out the menu bar on macOS, or the
+  /// taskbar on Windows, by recording the rest of the display.
+  pub hide_menu_bar: bool,
+  /// Whether screen recordings leave out the Dock, on macOS.
+  pub hide_dock: bool,
   pub record_screenwide_windows: bool,
   pub show_recording_confidence_checks: bool,
   /// Whether the island shows how much of the recording is on disk.
@@ -92,6 +97,8 @@ impl Default for GeneralSettings {
       record_screenwide_windows: false,
       hidden_apps: Vec::new(),
       hide_desktop_icons: true,
+      hide_menu_bar: false,
+      hide_dock: false,
       show_recording_confidence_checks: true,
       show_recording_size: false,
       auto_zoom: true,

@@ -42,6 +42,7 @@ impl AudioWriter {
     Ok(FinalizeInfo {
       annotation_clips: Vec::new(),
       camera: None,
+      corner_radius: None,
       cursor_path: None,
       keyboard_path: None,
       has_microphone: self.microphone_input.is_some(),

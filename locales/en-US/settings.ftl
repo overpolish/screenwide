@@ -85,6 +85,17 @@ settings-frame-rate-description = More frames look smoother and make a larger fi
 settings-fps = { $fps } fps
 settings-anti-flicker = Camera anti-flicker
 settings-anti-flicker-description = Stops camera flicker under 50 Hz lights.
+# $platform is macos or windows: the bar along the top on macOS, the taskbar on Windows.
+settings-hide-menu-bar = { $platform ->
+    [windows] Hide taskbar
+   *[other] Hide menu bar
+}
+settings-hide-menu-bar-description = { $platform ->
+    [windows] Crops it out of screen recordings, unless set to hide.
+   *[other] Crops it and its recording icons out of screen recordings.
+}
+settings-hide-dock = Hide Dock
+settings-hide-dock-description = Crops it out of screen recordings, unless set to hide.
 
 ## Glide
 
@@ -340,6 +351,7 @@ settings-search-keywords-microphone = mic audio input
 settings-search-keywords-moments = marker bookmark flag
 settings-search-keywords-auto-zoom = zoom focus follow pointer cursor
 settings-search-keywords-anti-flicker = flicker banding lights 50hz pal webcam
+settings-search-keywords-bars = crop menubar taskbar dock bar top bottom edge
 
 ## The pictures a setting's preview is drawn on: a sample desktop the tools
 ## work on. OCR reads the note back, so it is set in the app's language.

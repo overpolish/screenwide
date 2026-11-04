@@ -51,6 +51,9 @@ use screenwide_records::cursor::{CursorSource, CursorSourceKind};
 const FINALIZE_TIMEOUT: Duration = Duration::from_secs(30);
 
 pub struct CaptureStart {
+  /// How round a window recorded on its own has its corners, in the movie's
+  /// pixels; never measured here.
+  pub corner_radius: Option<f32>,
   pub cursor_source: Option<screenwide_records::cursor::CursorSource>,
   pub first_frame: mpsc::Receiver<Result<(), String>>,
   pub session: CaptureSession,

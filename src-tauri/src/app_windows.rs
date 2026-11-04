@@ -28,6 +28,8 @@ pub(crate) mod display_notch;
 pub(crate) mod island;
 #[cfg(target_os = "macos")]
 mod island_macos;
+#[cfg(target_os = "macos")]
+pub(crate) use island_macos::display_id as screen_display_id;
 pub(crate) mod island_overlay;
 pub(crate) mod island_placement;
 #[cfg(target_os = "windows")]

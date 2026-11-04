@@ -3,6 +3,7 @@
 
 import { featureStage } from "../../../storybook/feature-story-stage";
 
+import { systemBarsScene } from "./scenes/recording-scenes";
 import { SettingsPreview } from "./settings-preview";
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
@@ -49,6 +50,12 @@ export const FrameRate: Story = {
 
 export const IncludeScreenwide: Story = {
   args: { scene: { included: true, kind: "includeScreenwide" } },
+};
+
+export const SystemBars: Story = {
+  args: {
+    scene: systemBarsScene({ dock: true, menuBar: true }, null),
+  },
 };
 
 export const Off: Story = {

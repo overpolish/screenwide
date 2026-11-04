@@ -64,6 +64,7 @@ impl CaptureSession {
       return Ok(FinalizeInfo {
         annotation_clips: Vec::new(),
         camera: None,
+        corner_radius: None,
         cursor_path: None,
         keyboard_path: None,
         duration_ms,

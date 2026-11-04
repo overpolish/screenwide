@@ -57,7 +57,10 @@ pub(super) fn start(
     camera,
     primary,
     system_audio,
-  } = capture_sources(options);
+  } = capture_sources(
+    options,
+    crate::recording::screen_bars::recorded_area(app, options),
+  );
   let include_own_windows = crate::settings::current(app).record_screenwide_windows;
   let reporter = app.clone();
   let capture::ReplayCapture {
@@ -211,6 +214,8 @@ fn write_media(
       path: camera_path,
       width: camera.width,
     }),
+    // The replay buffer records screens and regions, never a window.
+    corner_radius: None,
     cursor_path: cursor,
     keyboard_path: keyboard,
     has_microphone: clip.has_microphone,

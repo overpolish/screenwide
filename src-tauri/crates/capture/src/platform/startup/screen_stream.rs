@@ -24,11 +24,6 @@ pub(super) fn create_video(request: VideoStreamRequest<'_>) -> Result<WatchedStr
   cfg.set_width(video.width as usize);
   cfg.set_height(video.height as usize);
   cfg.set_scales_to_fit(true);
-  if video.is_window {
-    // A desktop-independent filter follows the window between displays. This
-    // keeps pixels outside the current display edge instead of clipping them.
-    cfg.set_ignore_global_clip_single_window(true);
-  }
   if let Some(rect) = video.source_rect {
     cfg.set_src_rect(rect);
   }

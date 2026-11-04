@@ -3,6 +3,7 @@
 
 import {
   pictureSize,
+  recordedBox,
   sceneOf,
   type SettingsPreviewScene,
   showsLayer,
@@ -19,18 +20,31 @@ import type { PaintedPictures } from "./settings-preview-api";
 // the desktop, and for a scene that shows its layer with and without it,
 // such as Screenwide's windows, the same desktop with it on.
 
+/** Paints the scene's desktop with `painters`, keeping the part `kept`
+ * covers, in points; all of it where none is given, as the app takes it,
+ * which leaves out what a recording leaves out itself. */
 function paintOn(
   canvas: HTMLCanvasElement,
   scene: SettingsPreviewScene,
-  { desktop, painters }: { desktop: SceneDesktop; painters: Painter[] },
+  {
+    desktop,
+    kept,
+    painters,
+  }: {
+    desktop: SceneDesktop;
+    painters: Painter[];
+    kept?: { height: number; width: number; x: number; y: number };
+  },
 ) {
   const size = pictureSize(scene);
+  const area = kept ?? { ...size, x: 0, y: 0 };
   const scale = window.devicePixelRatio;
-  canvas.width = Math.round(size.width * scale);
-  canvas.height = Math.round(size.height * scale);
+  canvas.width = Math.round(area.width * scale);
+  canvas.height = Math.round(area.height * scale);
   const context = canvas.getContext("2d");
   if (!context) return null;
   context.scale(scale, scale);
+  context.translate(-area.x, -area.y);
   for (const paint of painters) paint(context, size, desktop);
   return context;
 }
@@ -58,7 +72,8 @@ export async function paintPictures(
 }
 
 /** The picture shown where the app draws nothing, such as in Storybook:
- * the desktop as the scene leaves it, without the app's drawing. */
+ * the desktop as the scene leaves it, without the app's drawing, cut to
+ * what its recording keeps. */
 export async function paintStill(
   canvas: HTMLCanvasElement,
   scene: SettingsPreviewScene,
@@ -70,8 +85,6 @@ export async function paintStill(
     definition.kind === "recording" && showsLayer(scene)
       ? definition.paintLayer
       : undefined;
-  paintOn(canvas, scene, {
-    desktop,
-    painters: layer ? [definition.paint, layer] : [definition.paint],
-  });
+  const painters = layer ? [definition.paint, layer] : [definition.paint];
+  paintOn(canvas, scene, { desktop, kept: recordedBox(scene), painters });
 }

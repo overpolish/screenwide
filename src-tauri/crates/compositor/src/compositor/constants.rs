@@ -94,4 +94,9 @@ pub(super) struct Constants {
   /// unclipped and faded, so what will not be exported can still be found.
   /// None of it is drawn at zero. The rest are spare.
   pub(super) overflow: [f32; 4],
+  /// The source's own shape: how round its corners are, in canvas pixels
+  /// (`x`), which its picture is cut to before anything else rounds it. A
+  /// window recorded on its own has them black in its movie. The rest are
+  /// spare.
+  pub(super) source_shape: [f32; 4],
 }

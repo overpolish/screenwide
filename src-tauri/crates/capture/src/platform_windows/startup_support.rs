@@ -93,6 +93,7 @@ pub(super) fn begin_audio_only(
   let (ready, first_frame) = mpsc::channel();
   let _ = ready.send(Ok(()));
   Ok(CaptureStart {
+    corner_radius: None,
     cursor_source: None,
     first_frame,
     session: CaptureSession {

@@ -159,7 +159,7 @@ pub async fn list_monitor_thumbnails(app: AppHandle) -> Result<Vec<MonitorThumbn
     .map_err(|error| error.to_string())?
     .join("Screenwide")
     .join("monitor-selector");
-  tauri::async_runtime::spawn_blocking(move || capture_monitor_thumbnails(&cache_dir))
+  tauri::async_runtime::spawn_blocking(move || capture_monitor_thumbnails(&app, &cache_dir))
     .await
     .map_err(|error| error.to_string())?
 }

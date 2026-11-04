@@ -62,6 +62,10 @@ pub enum PreviewScene {
   /// The screen, the first picture, recorded with the desktop's icons, the
   /// second, on it unless `hidden`.
   DesktopIcons { hidden: bool },
+  /// The screen, the first picture, recorded as a screen recording that
+  /// leaves the system's bars out keeps it: only `kept`, the whole picture
+  /// where no bar is left out.
+  SystemBars { kept: PictureBox },
 }
 
 impl PreviewScene {
@@ -115,6 +119,16 @@ pub struct PointerKey {
   pub x: f64,
   pub y: f64,
   pub pressed: bool,
+}
+
+/// A rectangle of the first picture, in its points.
+#[derive(Clone, Copy, Debug, Deserialize, PartialEq, TS)]
+#[ts(export)]
+pub struct PictureBox {
+  pub x: f64,
+  pub y: f64,
+  pub width: f64,
+  pub height: f64,
 }
 
 /// The page's pointer for a tool's scene.

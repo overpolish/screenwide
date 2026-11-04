@@ -8,6 +8,7 @@ import {
   DESKTOP_ICONS_SCENE,
   FRAME_RATE_SCENE,
   INCLUDE_SCREENWIDE_SCENE,
+  SYSTEM_BARS_SCENE,
 } from "./recording-scenes";
 import { RULER_SCENE } from "./ruler-scene";
 import { type RecordingScene, TOOL_PICTURE, type ToolScene } from "./scene-kit";
@@ -33,6 +34,7 @@ const SCENES: Record<PreviewScene["kind"], ToolScene | RecordingScene> = {
   frameRate: FRAME_RATE_SCENE,
   includeScreenwide: INCLUDE_SCREENWIDE_SCENE,
   ruler: RULER_SCENE,
+  systemBars: SYSTEM_BARS_SCENE,
   textRecognition: OCR_SCENE,
 };
 
@@ -42,6 +44,15 @@ export const sceneOf = (scene: SettingsPreviewScene) => SCENES[scene.kind];
 export function pictureSize(scene: SettingsPreviewScene) {
   const definition = sceneOf(scene);
   return definition.kind === "tool" ? TOOL_PICTURE : definition.size;
+}
+
+/** The part of the scene's picture its recording keeps, in points: all of
+ * it but where the system's bars are left out. */
+export function recordedBox(scene: SettingsPreviewScene) {
+  const size = pictureSize(scene);
+  return scene.kind === "systemBars"
+    ? scene.kept
+    : { height: size.height, width: size.width, x: 0, y: 0 };
 }
 
 /** The scene as the app takes it, with its scripted pointer. */

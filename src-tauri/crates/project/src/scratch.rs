@@ -32,6 +32,7 @@ pub fn recording(primary: &str) -> RecordingManifest {
     },
     primary_kind: PrimaryRecordingKind::Screen,
     source_scale_factor: 2.0,
+    corner_radius: None,
     origin: crate::RecordingOrigin::Capture,
   }
 }

@@ -75,7 +75,7 @@ pub fn plan(
   })
 }
 
-fn intersections(
+pub(super) fn intersections(
   displays: &[DesktopDisplay],
   region: DesktopRect,
 ) -> Vec<(DesktopDisplay, DesktopRect)> {
@@ -93,7 +93,7 @@ fn intersections(
     .collect()
 }
 
-fn piece(
+pub(super) fn piece(
   display: DesktopDisplay,
   intersection: DesktopRect,
   region: DesktopRect,
@@ -150,7 +150,7 @@ impl DesktopRect {
     }
   }
 
-  fn valid(self) -> bool {
+  pub(super) fn valid(self) -> bool {
     self.width > 0.0 && self.height > 0.0
   }
 
@@ -180,7 +180,7 @@ impl OutputLimits {
   }
 }
 
-fn constrained_scale(region: DesktopRect, natural: f64, limits: OutputLimits) -> f64 {
+pub(super) fn constrained_scale(region: DesktopRect, natural: f64, limits: OutputLimits) -> f64 {
   let width_scale = f64::from(limits.max_width) / region.width;
   let height_scale = f64::from(limits.max_height) / region.height;
   let area_scale = (limits.max_pixels as f64 / (region.width * region.height)).sqrt();
@@ -205,6 +205,6 @@ fn valid_region(region: Region) -> bool {
     && region.size.height > 0.0
 }
 
-fn pixel_edge(value: f64, scale: f64) -> u32 {
+pub(super) fn pixel_edge(value: f64, scale: f64) -> u32 {
   (value * scale).round().max(0.0) as u32
 }

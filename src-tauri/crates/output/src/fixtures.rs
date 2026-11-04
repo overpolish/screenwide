@@ -38,6 +38,7 @@ pub fn test_output_settings(width: u32, height: u32) -> ScreenshotOutputSettings
     background_radius_percent: 0.0,
     capture_width_points: 0.0,
     capture_scale: 0.0,
+    capture_corner_radius: 0.0,
     crop_height: placed_height,
     crop_width: placed_width,
     crop_preview: None,

@@ -35,6 +35,7 @@ fn project(directory: &Path) -> PathBuf {
       },
       primary_kind: PrimaryRecordingKind::Screen,
       source_scale_factor: 2.0,
+      corner_radius: None,
       origin: RecordingOrigin::Capture,
     }),
   )

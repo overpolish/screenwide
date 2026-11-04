@@ -89,7 +89,7 @@ pub(super) fn island_screen(
 
 /// A screen's CoreGraphics display id, the id displays are known by
 /// elsewhere.
-fn display_id(screen: &NSScreen) -> Option<u32> {
+pub(crate) fn display_id(screen: &NSScreen) -> Option<u32> {
   let number = screen
     .deviceDescription()
     .objectForKey(ns_string!("NSScreenNumber"))?;

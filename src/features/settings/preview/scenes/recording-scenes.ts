@@ -2,10 +2,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { t } from "../../../../i18n/i18n";
+import { type IslandNotch } from "../../../../primitives/island/island-geometry";
 
 import { paintDesktopIcons } from "./sample-desktop-icons";
 import { paintIsland } from "./sample-island";
-import { paintSystemBars } from "./sample-system-bars";
+import { keptOfScreen, paintDock, paintSystemBars } from "./sample-system-bars";
 import { paintAppWindow } from "./sample-window";
 import { type AppWindow, windowParts } from "./sample-window-layout";
 import {
@@ -124,3 +125,24 @@ export const DESKTOP_ICONS_SCENE: RecordingScene = {
   paintLayer: paintDesktopIcons,
   size: DESKTOP,
 };
+
+/** The desktop with its Dock, recorded whole or less the bars left out. */
+export const SYSTEM_BARS_SCENE: RecordingScene = {
+  kind: "recording",
+  paint: (context, size, desktop) => {
+    paintDesktop(context, size, desktop);
+    paintDock(context, size);
+  },
+  size: DESKTOP,
+};
+
+/** The system bars scene for the bars Settings leaves out, on a display
+ * with `notch`, which sets the menu bar's height. */
+export const systemBarsScene = (
+  bars: { dock: boolean; menuBar: boolean },
+  notch: IslandNotch | null,
+) =>
+  ({
+    kept: keptOfScreen(DESKTOP, notch, bars),
+    kind: "systemBars",
+  }) as const;

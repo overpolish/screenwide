@@ -23,6 +23,7 @@ fn project_in(directory: &std::path::Path, title: &str) -> std::path::PathBuf {
       },
       primary_kind: crate::PrimaryRecordingKind::Screen,
       source_scale_factor: 2.0,
+      corner_radius: None,
       origin: RecordingOrigin::Capture,
     }),
   )

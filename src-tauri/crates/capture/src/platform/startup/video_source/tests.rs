@@ -16,27 +16,8 @@ fn display(id: u32, x: f64) -> DesktopDisplay {
 }
 
 #[test]
-fn trims_window_dimensions_to_encoder_safe_pixels() {
-  assert_eq!(pixel_dimension(801.4, 2.0), Some(1_602));
-  assert_eq!(pixel_dimension(800.6, 1.0), Some(800));
-}
-
-#[test]
-fn rejects_empty_or_invalid_window_dimensions() {
-  assert_eq!(pixel_dimension(0.0, 2.0), None);
-  assert_eq!(pixel_dimension(f64::NAN, 2.0), None);
-  assert_eq!(pixel_dimension(100.0, 0.0), None);
-}
-
-#[test]
 fn window_cursor_coordinates_keep_the_global_window_origin() {
-  let source = window_cursor_source(
-    42,
-    cg::Rect::new(0.0, 0.0, 900.0, 600.0),
-    cg::Rect::new(125.0, 80.0, 900.0, 600.0),
-    1_800,
-    1_200,
-  );
+  let source = window_cursor_source(42, cg::Rect::new(125.0, 80.0, 900.0, 600.0), 1_800, 1_200);
   assert_eq!((source.x, source.y), (125.0, 80.0));
   assert_eq!((source.width, source.height), (900.0, 600.0));
 }

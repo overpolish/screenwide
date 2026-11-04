@@ -8,6 +8,7 @@ import { cn } from "../../../lib/styling";
 import { paintStill } from "./paint-pictures";
 import {
   pictureSize,
+  recordedBox,
   sceneOf,
   type SettingsPreviewScene,
 } from "./scenes/preview-scenes";
@@ -46,6 +47,7 @@ export function SettingsPreview({
   const cursor = useSystemCursor();
   const definition = sceneOf(scene);
   const size = pictureSize(scene);
+  const recorded = recordedBox(scene);
   const isTool = definition.kind === "tool";
   const values = JSON.stringify(scene);
 
@@ -91,7 +93,9 @@ export function SettingsPreview({
       style={
         isTool
           ? { height: size.height }
-          : { aspectRatio: `${String(size.width)} / ${String(size.height)}` }
+          : {
+              aspectRatio: `${String(recorded.width)} / ${String(recorded.height)}`,
+            }
       }
     >
       <canvas

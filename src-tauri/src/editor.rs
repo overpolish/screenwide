@@ -161,6 +161,8 @@ pub enum EditorArtifact {
   Recording {
     audio_tracks: Vec<RecordingAudioTrack>,
     camera: Option<RecordingCamera>,
+    /// A window's own corner radius, in the movie's pixels (`Capture`).
+    corner_radius: Option<f32>,
     cursor: Option<RecordingCursor>,
     keyboard: Option<RecordingKeyboard>,
     id: u64,
@@ -176,28 +178,6 @@ pub enum EditorArtifact {
     suggested_file_stem: String,
     width: u32,
   },
-}
-
-fn recording_audio_tracks(
-  has_system_audio: bool,
-  has_microphone: bool,
-) -> Vec<RecordingAudioTrack> {
-  let mut tracks = Vec::with_capacity(usize::from(has_system_audio) + usize::from(has_microphone));
-  if has_system_audio {
-    tracks.push(RecordingAudioTrack {
-      kind: AudioTrackKind::SystemAudio,
-      label: AudioTrackKind::SystemAudio.label(tracks.len()),
-      stream_index: tracks.len(),
-    });
-  }
-  if has_microphone {
-    tracks.push(RecordingAudioTrack {
-      kind: AudioTrackKind::Microphone,
-      label: AudioTrackKind::Microphone.label(tracks.len()),
-      stream_index: tracks.len(),
-    });
-  }
-  tracks
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, TS)]

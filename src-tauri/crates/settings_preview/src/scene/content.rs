@@ -10,6 +10,8 @@ use screenwide_imaging::CapturedImage;
 use screenwide_output::mesh_generator::default_generator;
 use screenwide_output::{NormalizedSourceRect, ScreenshotOutputSettings};
 
+use super::PictureBox;
+
 /// The page's pictures, every one the same size: the screen, then where a
 /// scene has one, the same screen with what the setting leaves out of a
 /// recording on it, such as Screenwide's windows or the desktop's icons.
@@ -55,6 +57,7 @@ pub(super) fn canvas_settings(
     background_radius_percent: 0.0,
     capture_width_points: points.0,
     capture_scale: source_width / points.0.max(1.0),
+    capture_corner_radius: 0.0,
     crop_height: height,
     crop_preview: None,
     crop_width: width,
@@ -90,6 +93,33 @@ pub(super) fn canvas_settings(
     },
     width: canvas.0,
   }
+}
+
+/// The settings that lay the `kept` part of a `source`-pixel picture,
+/// `points` in size, over a `canvas`-pixel canvas as `canvas_settings` lays
+/// the whole one: the rest falls outside the canvas, as it falls outside a
+/// recording that keeps only that part.
+pub(super) fn kept_settings(
+  source: (u32, u32),
+  points: (f64, f64),
+  canvas: (u32, u32),
+  kept: &PictureBox,
+) -> ScreenshotOutputSettings {
+  let mut settings = canvas_settings(source, points, canvas);
+  let pixels_per_point = f64::from(source.0) / points.0.max(1.0);
+  let (kept_width, kept_height) = (
+    kept.width * pixels_per_point,
+    kept.height * pixels_per_point,
+  );
+  if kept_width <= 0.0 || kept_height <= 0.0 {
+    return settings;
+  }
+  let (width, height) = (f64::from(canvas.0), f64::from(canvas.1));
+  let scale = (width / kept_width).max(height / kept_height);
+  settings.image_width = f64::from(source.0) * scale;
+  settings.image_x = (width - kept_width * scale) / 2.0 - kept.x * pixels_per_point * scale;
+  settings.image_y = (height - kept_height * scale) / 2.0 - kept.y * pixels_per_point * scale;
+  settings
 }
 
 /// A canvas the compositor draws into and the frame is copied or read from.

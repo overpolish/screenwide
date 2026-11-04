@@ -51,6 +51,8 @@ export function createPreviewApi(
     captionTemplate: "box",
     hiddenApps: [],
     hideDesktopIcons: true,
+    hideDock: false,
+    hideMenuBar: false,
     launchAtLogin: true,
     openLocationAfterExport: true,
     projectDirectory: null,

@@ -16,7 +16,7 @@ use screenwide_imaging::CapturedImage;
 
 use super::content::canvas_settings;
 use super::script::cursor_records;
-use super::{PointerKey, PointerScript, PreviewScene, SceneRenderer};
+use super::{PictureBox, PointerKey, PointerScript, PreviewScene, SceneRenderer};
 
 /// The screen's size in points, painted at twice that.
 const POINTS: (f64, f64) = (320.0, 200.0);
@@ -121,6 +121,14 @@ fn every_scene() -> Vec<PreviewScene> {
     },
     PreviewScene::IncludeScreenwide { included: true },
     PreviewScene::DesktopIcons { hidden: false },
+    PreviewScene::SystemBars {
+      kept: PictureBox {
+        x: 0.0,
+        y: 12.0,
+        width: POINTS.0,
+        height: POINTS.1 - 12.0,
+      },
+    },
   ]
 }
 
@@ -138,6 +146,46 @@ fn hiding_desktop_icons_records_the_bare_screen() {
   assert_ne!(bare, layered);
   assert_eq!(frame(PreviewScene::DesktopIcons { hidden: true }), bare);
   assert_eq!(frame(PreviewScene::DesktopIcons { hidden: false }), layered);
+}
+
+#[test]
+fn leaving_bars_out_records_only_the_kept_part_of_the_screen() {
+  let frame = |scene: PreviewScene| {
+    let renderer = renderer(scene);
+    renderer
+      .render(CANVAS, renderer.moment(Duration::ZERO))
+      .unwrap()
+  };
+  let whole = PictureBox {
+    x: 0.0,
+    y: 0.0,
+    width: POINTS.0,
+    height: POINTS.1,
+  };
+  assert_eq!(
+    frame(PreviewScene::SystemBars { kept: whole }).rgba,
+    frame(PreviewScene::IncludeScreenwide { included: false }).rgba
+  );
+  // From the first window's corner, at the canvas's shape: the window fills
+  // the canvas's start, and the gradient past its edge the rest.
+  let kept = frame(PreviewScene::SystemBars {
+    kept: PictureBox {
+      x: 20.0,
+      y: 20.0,
+      width: 120.0,
+      height: 75.0,
+    },
+  });
+  // The window's colour, give or take the compositor's rounding.
+  let is_window = |x: u32, y: u32| {
+    let at = ((y * kept.width + x) * 4) as usize;
+    [240_u8, 240, 236]
+      .iter()
+      .zip(&kept.rgba[at..at + 3])
+      .all(|(want, got)| want.abs_diff(*got) <= 2)
+  };
+  assert!(is_window(2, 2));
+  assert!(!is_window(CANVAS.0 - 4, 2));
 }
 
 #[test]
@@ -317,6 +365,7 @@ fn kind(scene: &PreviewScene) -> String {
     PreviewScene::FrameRate { fps, .. } => format!("frame-rate-{fps}"),
     PreviewScene::IncludeScreenwide { included } => format!("include-screenwide-{included}"),
     PreviewScene::DesktopIcons { hidden } => format!("desktop-icons-hidden-{hidden}"),
+    PreviewScene::SystemBars { kept } => format!("system-bars-kept-{}", kept.height),
     _ => "tool".to_owned(),
   }
 }

@@ -8,12 +8,18 @@ use crate::desktop_capture::{self, CapturePlan, DesktopDisplay, OutputLimits};
 use crate::Region;
 use screenwide_records::cursor::{CursorSource, CursorSourceKind};
 
+mod window;
+
+#[cfg(test)]
+use window::window_cursor_source;
+use window::window_video;
+pub(super) use window::{corner_radius_of, WindowVideo};
+
 pub(super) struct PrimaryVideo {
   pub cursor_source: CursorSource,
   pub filter: arc::R<sc::ContentFilter>,
   pub fps: u32,
   pub height: u32,
-  pub is_window: bool,
   pub show_cursor: bool,
   pub source_rect: Option<cg::Rect>,
   pub source_scale_factor: f32,
@@ -31,6 +37,7 @@ pub(super) struct DesktopVideo {
 pub(super) enum ResolvedVideo {
   Direct(PrimaryVideo),
   Desktop(DesktopVideo),
+  Window(WindowVideo),
 }
 
 impl ResolvedVideo {
@@ -38,6 +45,7 @@ impl ResolvedVideo {
     match self {
       Self::Direct(video) => &video.cursor_source,
       Self::Desktop(video) => &video.cursor_source,
+      Self::Window(video) => &video.cursor_source,
     }
   }
 
@@ -45,6 +53,7 @@ impl ResolvedVideo {
     match self {
       Self::Direct(video) => (video.width, video.height, video.fps),
       Self::Desktop(video) => (video.plan.width, video.plan.height, video.fps),
+      Self::Window(video) => (video.width, video.height, video.fps),
     }
   }
 
@@ -52,42 +61,14 @@ impl ResolvedVideo {
     match self {
       Self::Direct(video) => video.source_scale_factor,
       Self::Desktop(video) => video.plan.output_scale as f32,
+      Self::Window(video) => video.scale,
     }
   }
 
+  /// A window recording keeps to the sound it always had: the whole Mac's,
+  /// from a stream of its own, since its displays draw only the window's app.
   pub fn can_capture_all_audio(&self) -> bool {
-    !matches!(self, Self::Direct(video) if video.is_window)
-  }
-}
-
-fn pixel_dimension(points: f64, scale: f32) -> Option<u32> {
-  let pixels = points * f64::from(scale);
-  if !pixels.is_finite() || pixels < 2.0 || pixels > f64::from(u32::MAX) {
-    return None;
-  }
-  let pixels = pixels.round() as u32;
-  let pixels = even(pixels);
-  (pixels > 0).then_some(pixels)
-}
-
-fn window_cursor_source(
-  window_id: u32,
-  content_rect: cg::Rect,
-  window_frame: cg::Rect,
-  video_width: u32,
-  video_height: u32,
-) -> CursorSource {
-  CursorSource {
-    height: content_rect.size.height,
-    kind: CursorSourceKind::Window,
-    platform_id: window_id.to_string(),
-    video_height,
-    video_width,
-    width: content_rect.size.width,
-    // A desktop-independent filter reports a window-local content rect,
-    // while CGEvent reports the pointer in global desktop coordinates.
-    x: window_frame.origin.x,
-    y: window_frame.origin.y,
+    !matches!(self, Self::Window(_))
   }
 }
 
@@ -158,7 +139,6 @@ fn display_video(
     filter: excluded.filter(display),
     fps,
     height,
-    is_window: false,
     show_cursor,
     source_rect,
     source_scale_factor: scale as f32,
@@ -217,39 +197,6 @@ fn composed_region_plan(
   desktop_capture::plan(displays, monitor_id, region, OutputLimits::VIDEO).map(Some)
 }
 
-fn window_video(
-  content: &sc::ShareableContent,
-  fps: u32,
-  show_cursor: bool,
-  window_id: u32,
-) -> Result<PrimaryVideo, String> {
-  let windows = content.windows();
-  let window = windows
-    .iter()
-    .find(|window| window.id() == window_id)
-    .ok_or_else(|| "The selected window is no longer available".to_owned())?;
-  let filter = sc::ContentFilter::with_desktop_independent_window(window);
-  let rect = filter.content_rect();
-  let frame = window.frame();
-  let scale = filter.point_pixel_scale();
-  let width = pixel_dimension(rect.size.width, scale)
-    .ok_or_else(|| "The selected window has no usable width".to_owned())?;
-  let height = pixel_dimension(rect.size.height, scale)
-    .ok_or_else(|| "The selected window has no usable height".to_owned())?;
-
-  Ok(PrimaryVideo {
-    cursor_source: window_cursor_source(window_id, rect, frame, width, height),
-    filter,
-    fps,
-    height,
-    is_window: true,
-    show_cursor,
-    source_rect: None,
-    source_scale_factor: scale,
-    width,
-  })
-}
-
 pub(super) fn resolve(
   content: &sc::ShareableContent,
   include_own_windows: bool,
@@ -289,7 +236,7 @@ pub(super) fn resolve(
       show_cursor,
       window_id,
     } => window_video(content, *fps, *show_cursor, *window_id)
-      .map(ResolvedVideo::Direct)
+      .map(ResolvedVideo::Window)
       .map(Some),
     PrimaryCaptureSource::Camera | PrimaryCaptureSource::Audio => Ok(None),
   }

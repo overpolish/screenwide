@@ -178,6 +178,7 @@ impl Writer {
     Ok(FinalizeInfo {
       annotation_clips: Vec::new(),
       camera: None,
+      corner_radius: None,
       cursor_path: None,
       keyboard_path: None,
       duration_ms: u64::try_from(end_ns / 1_000_000).unwrap_or_default(),

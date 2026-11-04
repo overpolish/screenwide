@@ -12,6 +12,12 @@ import { SAMPLE } from "./sample-palette";
 /** The menu bar's height without a notch; with one, the bar is as tall as
  * the notch, as macOS draws it. Windows has no bar at the top. */
 const MENU_BAR = 24;
+/** How far the Dock's room reaches up from the screen's bottom, and the
+ * Dock's own height inside it. */
+const DOCK_ROOM = 62;
+const DOCK = 52;
+/** Windows' taskbar along the bottom. */
+const TASKBAR = 40;
 
 export const menuBarHeight = (notch: IslandNotch | null) =>
   isWindows() ? 0 : notch ? notch.height : MENU_BAR;
@@ -73,7 +79,7 @@ export function paintSystemBars(
     paintMenuBar(context, width, notch);
     return;
   }
-  const bar = 40;
+  const bar = TASKBAR;
   context.fillStyle = SAMPLE.taskbar;
   context.fillRect(0, height - bar, width, bar);
   const icon = 22;
@@ -91,4 +97,51 @@ export function paintSystemBars(
     );
     context.fill();
   });
+}
+
+/** macOS's Dock along the bottom of a screen `size` big, its apps in a row
+ * on glass. Windows has no Dock. */
+export function paintDock(
+  context: CanvasRenderingContext2D,
+  { height, width }: { height: number; width: number },
+) {
+  if (isWindows()) return;
+  const icon = 38;
+  const gap = 10;
+  const span = SAMPLE.icons.length * (icon + gap) - gap + 2 * gap;
+  const top = height - DOCK_ROOM + (DOCK_ROOM - DOCK) / 2;
+  context.fillStyle = SAMPLE.menuBar;
+  context.beginPath();
+  context.roundRect((width - span) / 2, top, span, DOCK, 16);
+  context.fill();
+  SAMPLE.icons.forEach((colour, index) => {
+    context.fillStyle = colour;
+    context.beginPath();
+    context.roundRect(
+      (width - span) / 2 + gap + index * (icon + gap),
+      top + (DOCK - icon) / 2,
+      icon,
+      icon,
+      9,
+    );
+    context.fill();
+  });
+}
+
+/** What a screen recording keeps of a screen `size` big with the system's
+ * bars painted on it as above, with the menu bar (the taskbar on Windows)
+ * and the Dock left out where chosen, in its points. */
+export function keptOfScreen(
+  size: { height: number; width: number },
+  notch: IslandNotch | null,
+  { dock, menuBar }: { dock: boolean; menuBar: boolean },
+) {
+  const top = menuBar ? menuBarHeight(notch) : 0;
+  const bottom = isWindows() ? (menuBar ? TASKBAR : 0) : dock ? DOCK_ROOM : 0;
+  return {
+    height: size.height - top - bottom,
+    width: size.width,
+    x: 0,
+    y: top,
+  };
 }

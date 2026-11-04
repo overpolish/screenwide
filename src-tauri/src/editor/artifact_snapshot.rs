@@ -122,6 +122,8 @@ pub(super) fn snapshot(app: &AppHandle, kind: EditorKind) -> EditorSnapshot {
         source_scale_percent,
         suggested_file_stem,
         width,
+        // The picture's own shape, which the compositor alone draws.
+        corner_radius: _,
       } => {
         // Before the edit is read, so a background kept as one choice
         // arrives in it as a range.

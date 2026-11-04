@@ -1009,6 +1009,10 @@ export type Messages = {
   "settings-hidden-apps-not-running": { app: string | number };
   "settings-hide-desktop-icons": null;
   "settings-hide-desktop-icons-description": { platform: string | number };
+  "settings-hide-dock": null;
+  "settings-hide-dock-description": null;
+  "settings-hide-menu-bar": { platform: string | number };
+  "settings-hide-menu-bar-description": { platform: string | number };
   "settings-include-app": null;
   "settings-include-app-description": null;
   "settings-launch-at-login": null;
@@ -1118,6 +1122,7 @@ export type Messages = {
   "settings-search-keywords-annotate": null;
   "settings-search-keywords-anti-flicker": null;
   "settings-search-keywords-auto-zoom": null;
+  "settings-search-keywords-bars": null;
   "settings-search-keywords-countdown": null;
   "settings-search-keywords-folders": null;
   "settings-search-keywords-frame-rate": null;

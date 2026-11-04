@@ -23,6 +23,10 @@ pub struct FinalizeInfo {
   /// open the editor as ordinary annotation clips.
   pub annotation_clips: Vec<screenwide_annotations::timing::RecordingAnnotationClip>,
   pub camera: Option<CameraFinalizeInfo>,
+  /// How round a window recorded on its own has its corners, in the movie's
+  /// pixels, where the movie has them black; the editor rounds the picture
+  /// to them. None for any other source.
+  pub corner_radius: Option<f32>,
   pub cursor_path: Option<PathBuf>,
   pub keyboard_path: Option<PathBuf>,
   pub has_microphone: bool,

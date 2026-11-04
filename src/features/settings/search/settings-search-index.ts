@@ -9,9 +9,11 @@ import {
   confidenceChecksToggle,
   controlsOnLaunchToggle,
   desktopIconsToggle,
+  dockToggle,
   folders,
   hiddenAppsRow,
   launchToggle,
+  menuBarToggle,
   recordingSizeToggle,
 } from "../sections/general-rows";
 import {
@@ -128,6 +130,10 @@ export function settingsSearchEntries({
   video(
     [row(t("settings-frame-rate"), t("settings-frame-rate-description"))],
     t("settings-search-keywords-frame-rate"),
+  );
+  video(
+    [menuBarToggle(), ...(isMac ? [dockToggle()] : [])],
+    t("settings-search-keywords-bars"),
   );
   video([autoZoomToggle()], t("settings-search-keywords-auto-zoom"));
   video([antiFlickerToggle()], t("settings-search-keywords-anti-flicker"));

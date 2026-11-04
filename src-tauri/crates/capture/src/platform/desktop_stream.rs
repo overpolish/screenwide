@@ -8,9 +8,12 @@ use std::time::Instant;
 use super::*;
 use crate::capture_kit::{capture_exclusion, CaptureExclusion};
 use crate::desktop_capture::{CapturePiece, CapturePlan, DesktopDisplay};
+use crate::platform::desktop_compositor::Composition;
 
+mod window;
 mod worker;
 
+pub(super) use window::{create_window, WindowFilterRefresh, WindowStreamRequest};
 use worker::{DesktopCompositionMessage, DesktopCompositionWorker, DesktopSourceFrame};
 
 #[repr(C)]
@@ -90,6 +93,7 @@ impl DesktopStreams {
       self.streams,
       DesktopKeepalive {
         _outputs: self.outputs,
+        refresh: None,
         worker: self.worker,
       },
     )
@@ -98,11 +102,20 @@ impl DesktopStreams {
 
 pub(super) struct DesktopKeepalive {
   _outputs: Vec<arc::R<DesktopOutput>>,
+  /// Keeps a window's displays leaving out apps opened since it started.
+  refresh: Option<WindowFilterRefresh>,
   worker: DesktopCompositionWorker,
 }
 
 impl DesktopKeepalive {
+  pub fn follow_new_apps(&mut self, refresh: WindowFilterRefresh) {
+    self.refresh = Some(refresh);
+  }
+
   pub fn stop(&mut self) {
+    if let Some(refresh) = self.refresh.as_mut() {
+      refresh.stop();
+    }
     self.worker.stop();
   }
 }
@@ -123,7 +136,7 @@ pub(super) struct DesktopStreamRequest<'a> {
 
 pub(super) fn create(request: DesktopStreamRequest<'_>) -> Result<DesktopStreams, String> {
   let worker = DesktopCompositionWorker::spawn(
-    request.plan.clone(),
+    Composition::Region(request.plan.clone()),
     request.commands.clone(),
     Arc::clone(&request.stats),
   )?;

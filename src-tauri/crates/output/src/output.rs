@@ -56,6 +56,11 @@ pub struct ScreenshotOutputSettings {
   /// many output pixels to the point. Stamped with `capture_width_points`.
   #[serde(skip)]
   pub capture_scale: f64,
+  /// How round the captured source's own corners are, in its pixels, which
+  /// the picture is rounded to underneath the look's corners. Stamped with
+  /// `capture_width_points`; zero for a square source.
+  #[serde(skip)]
+  pub capture_corner_radius: f64,
   /// The visible rectangle, in output pixels. Zero width or height marks a
   /// settings blob written before placement moved into pixels.
   #[serde(default)]
