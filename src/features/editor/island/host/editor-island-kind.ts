@@ -62,6 +62,10 @@ export type PictureInset = {
  * window covers the editor's whole content area under its title bar and
  * lets clicks through everywhere but the island. */
 export type PopupPanelIslandContent = {
+  /** The strip item `x` was measured over (`ToolPanelStripItem.id`), null
+   * for any other island. It and the item's island reach the panel in
+   * separate messages, so the island holds its place until they agree. */
+  anchor: string | null;
   /** Where the picture lies in the window. */
   inset: PictureInset;
   island: EditorIslandKind | null;

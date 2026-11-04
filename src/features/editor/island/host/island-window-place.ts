@@ -65,10 +65,14 @@ const stripPlace = (bounds: DOMRect) => {
 };
 
 export const islandContent = (
-  island: EditorIslandKind | null,
+  {
+    anchor,
+    island,
+  }: { anchor: string | null; island: EditorIslandKind | null },
   { bounds, inset }: IslandWindowPlace,
   workspace: EditorKind,
 ): PopupPanelIslandContent => ({
+  anchor: isStripIsland(island) ? anchor : null,
   inset,
   island,
   kind: "island",

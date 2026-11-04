@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import {
   type PopupPanelPart,
@@ -45,6 +45,20 @@ export function EditorIslandPanel({
     content.island,
     content.workspace,
   );
+  // A strip item's place and its island reach this window in separate
+  // messages, the place first. Until the island shown is the item the place
+  // was measured over, the island keeps the place it had, or the old item's
+  // island would jump to the new item before giving way to its island.
+  const stripId = useToolPanelStore(
+    (state) => state.snapshots[content.workspace]?.stripItem?.id ?? null,
+  );
+  const [placedAt, setPlacedAt] = useState<number | null>(null);
+  const at = !isStripIsland(content.island)
+    ? null
+    : content.anchor === stripId
+      ? content.x
+      : placedAt;
+  if (at !== placedAt) setPlacedAt(at);
   const label = getCurrentWindow().label;
   // While it exports, a press off it never stops the export: only Cancel
   // export does. Making a GIF it lets presses through, for the strip, where
@@ -104,7 +118,7 @@ export function EditorIslandPanel({
         />
       ) : null}
       <PlacedIsland
-        at={isStripIsland(content.island) ? content.x : null}
+        at={at}
         inset={content.inset}
         onParts={reportOf("corner")}
         shown={corner}

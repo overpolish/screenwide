@@ -1,9 +1,14 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import { useReducedMotion } from "motion/react";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useLocale } from "react-aria-components";
 
+import {
+  closesAfter,
+  glide,
+} from "../../../../primitives/island/island-motion";
 import { type PopupPanelPart } from "../../../popup-panel/api";
 import { EditorIsland, type EditorIslandContent } from "../editor-island";
 import { ISLAND_ROOM } from "../island-room";
@@ -59,15 +64,56 @@ export function PlacedIsland({
   // The island's distance from the window's end edge runs from its right
   // in a left-to-right window and from its left in a right-to-left one.
   const fromRight = direction !== "rtl";
-  // What the island showed last, and where, kept while it tucks away so it
-  // leaves as it was, where it was, rather than emptying first or moving.
-  // Kept by key: what is shown is made afresh on every render.
+  // What the island holds and where it stands. It changes what it holds
+  // where it stands, as any island does; and an item moving, as the strip
+  // scrolls, it follows at once. Another item somewhere else, or a corner's
+  // island giving way to a strip item's or back, it shrinks away where it
+  // stood and comes out again where it is going, rather than flying across
+  // the window with what it held. Kept by key: what is shown is made afresh
+  // on every render.
+  const [standing, setStanding] = useState<{
+    at: number | null;
+    key: string;
+  } | null>(shown ? { at, key: shown.key } : null);
   const [held, setHeld] = useState<EditorIslandContent | null>(shown);
-  if (shown && shown.key !== held?.key) setHeld(shown);
-  const displayed = shown ?? held;
-  const [heldAt, setHeldAt] = useState(at);
-  if (shown && heldAt !== at) setHeldAt(at);
-  const placeAt = shown ? at : heldAt;
+  // A corner and the strip are never the same place, even for one item
+  // whose place and island reach the window a message apart.
+  const isMoving =
+    shown !== null &&
+    standing !== null &&
+    standing.at !== at &&
+    (standing.key !== shown.key || (standing.at === null) !== (at === null));
+  if (shown && !isMoving && (standing?.at !== at || standing.key !== shown.key))
+    setStanding({ at, key: shown.key });
+  if (shown && !isMoving && shown.key !== held?.key) setHeld(shown);
+  const isOut = shown !== null && !isMoving;
+  const displayed = isOut ? shown : held;
+  const placeAt = standing ? standing.at : at;
+  // Out again where it is going once the black has closed where it stood,
+  // rather than when it is done with the fade that follows (`onHidden`),
+  // which has nothing left to show; and out afresh (`trip`), as an island
+  // comes out, rather than growing round what it held and then changing.
+  const reduce = useReducedMotion() ?? false;
+  const [trip, setTrip] = useState(0);
+  const goingRef = useRef({ at, shown });
+  goingRef.current = { at, shown };
+  const arrive = () => {
+    const going = goingRef.current;
+    if (!going.shown) return;
+    setStanding({ at: going.at, key: going.shown.key });
+    setHeld(going.shown);
+    setTrip((count) => count + 1);
+  };
+  useEffect(() => {
+    if (!isMoving) return;
+    const arrives = window.setTimeout(
+      arrive,
+      reduce ? 0 : (closesAfter + glide.duration) * 1000,
+    );
+    return () => {
+      window.clearTimeout(arrives);
+    };
+  }, [isMoving, reduce]);
   const holderRef = useRef<HTMLDivElement>(null);
   /** How far the middle of an island `width` wide over `point` stands from
    * the holder's edge, the window's left running left to right, kept over
@@ -170,8 +216,14 @@ export function PlacedIsland({
       {displayed ? (
         <EditorIsland
           content={displayed}
-          isShown={shown !== null}
+          isShown={isOut}
+          key={trip}
           onHidden={() => {
+            if (shown) {
+              arrive();
+              return;
+            }
+            setStanding(null);
             setHeld(null);
             report([]);
           }}

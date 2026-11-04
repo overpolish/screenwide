@@ -80,9 +80,9 @@ export function useEditorIslandWindow({
   );
   const island = isExportOut ? "export" : asked;
   const panel = toolPanelLabel(workspace);
-  const islandRef = useRef(island);
+  const shownRef = useRef({ anchor: anchorKey, island });
   useEffect(() => {
-    islandRef.current = island;
+    shownRef.current = { anchor: anchorKey, island };
   });
 
   // What the island holds, and the strip item it stands over, as they
@@ -99,7 +99,10 @@ export function useEditorIslandWindow({
         });
         return;
       }
-      publish(panel, islandContent(island, place, workspace));
+      publish(
+        panel,
+        islandContent({ anchor: anchorKey, island }, place, workspace),
+      );
       if (island === null) return;
       const isShowing = (
         await openPopupPanels().catch((): string[] => [])
@@ -133,7 +136,7 @@ export function useEditorIslandWindow({
     const follow = () => {
       const place = islandWindowPlace();
       if (place) {
-        publish(panel, islandContent(islandRef.current, place, workspace));
+        publish(panel, islandContent(shownRef.current, place, workspace));
       }
     };
     const onScroll = () => {
@@ -180,7 +183,7 @@ export function useEditorIslandWindow({
         schedule();
         return;
       }
-      publish(panel, islandContent(islandRef.current, place, workspace));
+      publish(panel, islandContent(shownRef.current, place, workspace));
       const { height, left, top, width } = place.bounds;
       const bounds = [left, top, width, height].join();
       if (bounds !== fitted) {

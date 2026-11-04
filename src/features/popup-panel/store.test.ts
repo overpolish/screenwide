@@ -39,7 +39,14 @@ const islandPanel = (
   island: "cursor" | "frame",
   workspace: "recording" | "screenshot",
 ): OpenPopupPanel => ({
-  content: { inset: INSET, island, kind: "island", workspace, x: 0 },
+  content: {
+    anchor: null,
+    inset: INSET,
+    island,
+    kind: "island",
+    workspace,
+    x: 0,
+  },
   focusContents: false,
   id: `island:${island}`,
 });
@@ -99,6 +106,7 @@ describe("usePopupPanelStore", () => {
       activePopupPanel(usePopupPanelStore.getState(), SCREENSHOT_PANEL)
         ?.content,
     ).toEqual({
+      anchor: null,
       inset: INSET,
       island: "cursor",
       kind: "island",
