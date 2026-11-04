@@ -198,6 +198,29 @@ fn a_window_resized_since_is_fitted_and_centred() {
 }
 
 #[test]
+fn a_window_captured_on_its_own_is_fitted_from_all_of_its_pixels() {
+  let piece = fitted_window((800, 1000), 1600, 1000).unwrap();
+  assert_eq!(
+    piece.source_pixels,
+    PixelRect {
+      x: 0,
+      y: 0,
+      width: 800,
+      height: 1000,
+    }
+  );
+  assert_eq!(
+    piece.destination,
+    PixelRect {
+      x: 400,
+      y: 0,
+      width: 800,
+      height: 1000,
+    }
+  );
+}
+
+#[test]
 fn a_window_off_every_display_has_nothing_to_draw() {
   let away = DesktopRect {
     x: -5000.0,

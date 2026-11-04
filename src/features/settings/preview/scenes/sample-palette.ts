@@ -20,9 +20,13 @@ export const SAMPLE = {
   desktopShadow: "rgb(0 0 0 / 45%)",
   field: "#ffffff",
   fieldEdge: "#cfccc6",
-  /** A folder on the desktop, and its tab. */
+  /** A folder on the desktop, and its tab, as macOS draws it. */
   folder: "#6cb6f5",
   folderTab: "#4f9ee6",
+  /** A folder on the desktop as Windows draws it: the manila front, and the
+   * back with its tab. */
+  folderWindows: "#ffd56b",
+  folderWindowsBack: "#e9a83a",
   hairline: "rgb(0 0 0 / 10%)",
   heading: "#1d1d1f",
   /** Stand-in app icons on the taskbar. */

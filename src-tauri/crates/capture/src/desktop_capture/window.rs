@@ -54,6 +54,30 @@ pub fn window_pieces(
     .collect()
 }
 
+/// Where a window captured on its own, `content` pixels in size, goes in a
+/// `width` by `height` output: as `window_pieces` places a window that has
+/// been resized, its own pixels standing in for the display it is on.
+pub fn fitted_window(content: (u32, u32), width: u32, height: u32) -> Option<CapturePiece> {
+  let (content_width, content_height) = (f64::from(content.0), f64::from(content.1));
+  let display = DesktopDisplay {
+    id: 0,
+    x: 0.0,
+    y: 0.0,
+    width: content_width,
+    height: content_height,
+    scale: 1.0,
+  };
+  let window = DesktopRect {
+    x: 0.0,
+    y: 0.0,
+    width: content_width,
+    height: content_height,
+  };
+  window_pieces(&[display], window, width, height)
+    .into_iter()
+    .next()
+}
+
 /// The radius, in pixels, of the smallest round corner that leaves out every
 /// clear pixel in a window's top start corner, `clear(x, y)` telling them
 /// apart, looked at up to `span` pixels in. A window's corner is a little

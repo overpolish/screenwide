@@ -114,15 +114,21 @@ pub fn snapshot(app: &AppHandle) -> ReplaySnapshot {
 /// that very shortcut's native callback, only flips `saving` and so never
 /// touches the shortcut registry, which cannot be re-entered from there.
 fn update<T>(app: &AppHandle, change: impl FnOnce(&mut Inner) -> T) -> T {
-  let (result, before, snapshot) = {
+  let (result, before, snapshot, keeping) = {
     let mut inner = inner(app);
     let before = inner.status;
     let result = change(&mut inner);
-    (result, before, inner.snapshot())
+    // What the buffer keeps while it is starting or on.
+    let keeping = inner.options.as_ref().map(|options| options.mode);
+    (result, before, inner.snapshot(), keeping)
   };
   let _ = app.emit(REPLAY_STATE_EVENT, snapshot);
   #[cfg(desktop)]
   crate::tray::refresh(app);
+  #[cfg(target_os = "windows")]
+  crate::desktop_icons::follow_replay(keeping);
+  #[cfg(not(target_os = "windows"))]
+  let _ = keeping;
   if before != snapshot.status {
     if let Err(error) = crate::shortcuts::sync_replay_enabled(app) {
       eprintln!("Could not update the Save Replay shortcut: {error}");

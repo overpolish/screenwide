@@ -44,8 +44,10 @@ export function SettingsPreview({
   const cursorRef = useRef<HTMLImageElement>(null);
   const wallpaper = useDesktopWallpaper();
   const { island: notch } = useDisplayNotches();
-  const cursor = useSystemCursor();
   const definition = sceneOf(scene);
+  const cursor = useSystemCursor(
+    definition.kind === "tool" ? definition.cursor : "arrow",
+  );
   const size = pictureSize(scene);
   const recorded = recordedBox(scene);
   const isTool = definition.kind === "tool";

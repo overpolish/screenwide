@@ -13,6 +13,8 @@ mod content;
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 pub(crate) mod driver;
 #[cfg(any(target_os = "macos", target_os = "windows"))]
+mod edge_fill;
+#[cfg(any(target_os = "macos", target_os = "windows"))]
 mod render;
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 mod script;

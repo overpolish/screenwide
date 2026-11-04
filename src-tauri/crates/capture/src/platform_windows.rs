@@ -36,7 +36,7 @@ use std::thread::JoinHandle;
 use std::time::{Duration, Instant};
 
 use capture::{CaptureObjects, CaptureTarget};
-use desktop_compositor::DesktopFrameCoordinator;
+use desktop_compositor::{DesktopFrameCoordinator, WindowFitter};
 use writer::{Command, WriterConfig};
 
 use crate::{

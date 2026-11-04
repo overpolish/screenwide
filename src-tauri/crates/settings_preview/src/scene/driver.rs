@@ -2,11 +2,14 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 //! A recording scene played on a window's surface: composed into a canvas
-//! of the picture's size on screen, then copied onto the surface, once
-//! every display refresh while it moves and the preview is shown. The
-//! surface paces it: it is set to wait for the display, so taking a frame
-//! from it waits for the refresh that frees one, and the scene's time is
-//! counted in those refreshes (`FrameClock`).
+//! of the picture's size on screen, then drawn onto the surface, once every
+//! display refresh while it moves and the preview is shown. The surface is
+//! set to wait for the display, and each frame waits for the last to be done
+//! on the GPU before it is drawn: Windows hands out a swap chain's frames
+//! without waiting, and a frame drawn for every change the page sent queued
+//! behind the display, the picture trailing the page further each frame.
+//! Changes that arrive meanwhile are taken together. The scene's time is
+//! counted in refreshes (`FrameClock`).
 
 use std::time::{Duration, Instant};
 
@@ -14,6 +17,7 @@ use screenwide_gpu::surface::{Frame, Surface};
 
 use super::clock::FrameClock;
 use super::content::canvas_texture;
+use super::edge_fill::EdgeFill;
 use super::render::Moment;
 use super::{PreviewScene, SceneRenderer};
 use crate::worker::Renderer;
@@ -22,10 +26,47 @@ use crate::worker::Renderer;
 /// for, as while the window is hidden.
 const RETRY: Duration = Duration::from_millis(16);
 
+/// The steps a swap chain on Windows grows and shrinks in, in pixels, and how
+/// far past the picture it reaches at least.
+#[cfg(target_os = "windows")]
+const SWAP_CHAIN_STEP: u32 = 128;
+#[cfg(target_os = "windows")]
+const SWAP_CHAIN_MARGIN: u32 = 32;
+
+/// The swap chain to show a picture `picture` in, given the one there is.
+/// Windows reallocates a swap chain only once every frame queued on the
+/// shared device has finished, and shows nothing of it until a frame is
+/// presented into the new one. DirectComposition shows the swap chain
+/// unscaled and clipped to the picture, so there it is kept larger than the
+/// picture, in steps, the frame drawn over all of it (`EdgeFill`). macOS
+/// stretches a drawable over its layer, so there the two match.
+fn swap_chain_size(current: (u32, u32), picture: (u32, u32)) -> (u32, u32) {
+  #[cfg(target_os = "windows")]
+  {
+    let edge = |current: u32, needed: u32| {
+      let stepped = (needed + SWAP_CHAIN_MARGIN).div_ceil(SWAP_CHAIN_STEP) * SWAP_CHAIN_STEP;
+      // Kept while it reaches past the picture and is at most a step too
+      // big, so a picture easing back and forth does not reallocate.
+      if current >= needed + SWAP_CHAIN_MARGIN && current <= stepped + SWAP_CHAIN_STEP {
+        current
+      } else {
+        stepped
+      }
+    };
+    (edge(current.0, picture.0), edge(current.1, picture.1))
+  }
+  #[cfg(not(target_os = "windows"))]
+  {
+    let _ = current;
+    picture
+  }
+}
+
 pub(crate) struct SceneDriver {
   renderer: SceneRenderer,
   surface: Surface,
   gpu: &'static screenwide_gpu::Gpu,
+  fill: EdgeFill,
   canvas: Option<wgpu::Texture>,
   size: (u32, u32),
   visible: bool,
@@ -35,23 +76,26 @@ pub(crate) struct SceneDriver {
   /// Whether the surface shows the canvas as it is, which is all a still
   /// needs.
   shown: bool,
+  /// The last frame's work, which the next frame waits for.
+  in_flight: Option<wgpu::SubmissionIndex>,
 }
 
 impl SceneDriver {
   pub(crate) fn new(renderer: SceneRenderer, mut surface: Surface) -> Result<Self, String> {
     let gpu = screenwide_gpu::shared()?;
-    surface.accept_copies(gpu);
     surface.wait_for_display(gpu);
     Ok(Self {
       renderer,
       surface,
       gpu,
+      fill: EdgeFill::new(&gpu.device),
       canvas: None,
       size: (0, 0),
       visible: false,
       clock: FrameClock::default(),
       composed: None,
       shown: false,
+      in_flight: None,
     })
   }
 
@@ -81,10 +125,20 @@ impl SceneDriver {
     Ok(())
   }
 
-  /// Takes a frame from the surface, waiting for the display to free one,
-  /// and shows the moment of the scene it stands for on it. `false` when
-  /// the surface had no frame to give.
+  /// Takes a frame from the surface once the last one is done, and shows
+  /// the moment of the scene it stands for on it. `false` when the surface
+  /// had no frame to give.
   fn present(&mut self) -> Result<bool, String> {
+    if let Some(last) = self.in_flight.take() {
+      self
+        .gpu
+        .device
+        .poll(wgpu::PollType::Wait {
+          submission_index: Some(last),
+          timeout: None,
+        })
+        .map_err(|error| error.to_string())?;
+    }
     let Frame::Ready(frame) = self.surface.acquire(self.gpu)? else {
       return Ok(false);
     };
@@ -99,17 +153,12 @@ impl SceneDriver {
       .create_command_encoder(&wgpu::CommandEncoderDescriptor {
         label: Some("Screenwide settings preview frame"),
       });
-    encoder.copy_texture_to_texture(
-      canvas.as_image_copy(),
-      frame.texture.as_image_copy(),
-      wgpu::Extent3d {
-        width: self.size.0,
-        height: self.size.1,
-        depth_or_array_layers: 1,
-      },
-    );
-    self.gpu.queue.submit([encoder.finish()]);
+    self
+      .fill
+      .draw(&self.gpu.device, &mut encoder, canvas, &frame.texture);
+    let submission = self.gpu.queue.submit([encoder.finish()]);
     self.gpu.queue.present(frame);
+    self.in_flight = Some(submission);
     Ok(true)
   }
 }
@@ -124,7 +173,8 @@ impl Renderer for SceneDriver {
 
   fn resize(&mut self, size: (u32, u32)) -> Option<Duration> {
     self.size = size;
-    self.surface.resize(self.gpu, size);
+    let swap_chain = swap_chain_size(self.surface.size(), size);
+    self.surface.resize(self.gpu, swap_chain);
     self.shown = false;
     Some(Duration::ZERO)
   }

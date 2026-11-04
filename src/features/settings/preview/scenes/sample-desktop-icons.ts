@@ -10,8 +10,9 @@ import { FONT, type Painter } from "./scene-kit";
 
 // A few icons on the sample desktop, lined up where the system puts them:
 // down the screen's end under the menu bar on macOS, down its start on
-// Windows, in the room the sample windows leave at either side. Labels are
-// white with a soft shadow, as both systems draw them over a picture.
+// Windows, in the room the sample windows leave at either side. Folders are
+// each system's own: macOS's blue, Windows's manila. Labels are white with a
+// soft shadow, as both systems draw them over a picture.
 
 const ICON = 32;
 /** From one icon's top to the next. */
@@ -28,7 +29,11 @@ const icons = (): DesktopIcon[] => [
   { kind: "file", label: t("settings-preview-desktop-notes") },
 ];
 
-function paintFolder(context: CanvasRenderingContext2D, x: number, y: number) {
+function paintMacFolder(
+  context: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+) {
   context.fillStyle = SAMPLE.folderTab;
   context.beginPath();
   context.roundRect(x + 2, y + 4, ICON * 0.42, 8, 2);
@@ -37,6 +42,29 @@ function paintFolder(context: CanvasRenderingContext2D, x: number, y: number) {
   context.beginPath();
   context.roundRect(x, y + 8, ICON, ICON - 10, 3);
   context.fill();
+}
+
+/** The back with its tab at the top start, and the front over it, lower,
+ * leaving the back's top showing as Windows 11 draws a folder. */
+function paintWindowsFolder(
+  context: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+) {
+  context.fillStyle = SAMPLE.folderWindowsBack;
+  context.beginPath();
+  context.roundRect(x, y + 3, ICON * 0.45, 8, 2);
+  context.roundRect(x, y + 6, ICON, ICON - 9, 2);
+  context.fill();
+  context.fillStyle = SAMPLE.folderWindows;
+  context.beginPath();
+  context.roundRect(x, y + 11, ICON, ICON - 14, 2);
+  context.fill();
+}
+
+function paintFolder(context: CanvasRenderingContext2D, x: number, y: number) {
+  if (isWindows()) paintWindowsFolder(context, x, y);
+  else paintMacFolder(context, x, y);
 }
 
 function paintFile(context: CanvasRenderingContext2D, x: number, y: number) {

@@ -16,7 +16,7 @@ pub use plan::plan;
 #[cfg(test)]
 use timing::CompositionTick;
 pub use timing::FrameSynchronizer;
-pub use window::{corner_radius, window_output, window_pieces};
+pub use window::{corner_radius, fitted_window, window_output, window_pieces};
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct DesktopDisplay {

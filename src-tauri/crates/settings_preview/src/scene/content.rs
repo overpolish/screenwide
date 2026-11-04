@@ -122,7 +122,8 @@ pub(super) fn kept_settings(
   settings
 }
 
-/// A canvas the compositor draws into and the frame is copied or read from.
+/// A canvas the compositor draws into and the frame is drawn, copied or read
+/// from.
 pub(crate) fn canvas_texture(
   gpu: &screenwide_gpu::Gpu,
   (width, height): (u32, u32),
@@ -138,7 +139,9 @@ pub(crate) fn canvas_texture(
     sample_count: 1,
     dimension: wgpu::TextureDimension::D2,
     format: FORMAT,
-    usage: wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::COPY_SRC,
+    usage: wgpu::TextureUsages::RENDER_ATTACHMENT
+      | wgpu::TextureUsages::COPY_SRC
+      | wgpu::TextureUsages::TEXTURE_BINDING,
     view_formats: &[],
   })
 }

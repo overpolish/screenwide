@@ -32,6 +32,7 @@ function rulerLayout(width: number) {
 }
 
 export const RULER_SCENE: ToolScene = {
+  cursor: "crosshair",
   duration: 8,
   kind: "tool",
   paint(context, size, { wallpaper }) {

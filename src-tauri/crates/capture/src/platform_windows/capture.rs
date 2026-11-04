@@ -5,7 +5,7 @@ use std::ffi::c_void;
 use std::sync::mpsc::{SyncSender, TrySendError};
 use std::time::Instant;
 
-use windows::core::{factory, IInspectable, Interface};
+use windows::core::{factory, AgileReference, IInspectable, Interface};
 use windows::Foundation::TypedEventHandler;
 use windows::Graphics::Capture::{
   Direct3D11CaptureFramePool, GraphicsCaptureItem, GraphicsCaptureSession,
@@ -83,19 +83,22 @@ impl CaptureObjects {
       width,
       height,
       show_cursor,
-      move |frame| match commands.try_send(Command::Frame(frame)) {
+      move |frame, _| match commands.try_send(Command::Frame(frame)) {
         Ok(()) | Err(TrySendError::Full(_)) | Err(TrySendError::Disconnected(_)) => {}
       },
     )
   }
 
+  /// Starts capturing `target`, handing each frame to `handle_frame` with
+  /// the part of it, from its top start corner, the target fills: a window
+  /// resized since the capture started fills more or less of its frame.
   pub(super) fn start_with_handler(
     device: ID3D11Device,
     target: CaptureTarget,
     width: u32,
     height: u32,
     show_cursor: bool,
-    handle_frame: impl Fn(Frame) + Send + Sync + 'static,
+    handle_frame: impl Fn(Frame, (u32, u32)) + Send + Sync + 'static,
   ) -> Result<Self, String> {
     let item = target.item()?;
     let size = SizeInt32 {
@@ -117,7 +120,12 @@ impl CaptureObjects {
       size,
     )
     .map_err(|error| error.to_string())?;
-
+    // The pool's frames match the target's size, an even one as the encoder
+    // takes, and are remade when it changes: a frame larger than the target
+    // keeps whatever an earlier, larger one left around it, and a smaller
+    // one cuts it off.
+    let pool_size = std::sync::Mutex::new(size);
+    let pool_device = AgileReference::new(&winrt_device).map_err(|error| error.to_string())?;
     let frame_token = frame_pool
       .FrameArrived(
         &TypedEventHandler::<Direct3D11CaptureFramePool, IInspectable>::new(move |pool, _| {
@@ -126,14 +134,47 @@ impl CaptureObjects {
           };
           let frame = pool.TryGetNextFrame()?;
           let source_100ns = frame.SystemRelativeTime()?.Duration;
+          let content = frame.ContentSize()?;
           let surface = frame.Surface()?;
           let access = surface.cast::<IDirect3DDxgiInterfaceAccess>()?;
           let texture = unsafe { access.GetInterface::<ID3D11Texture2D>()? };
-          handle_frame(Frame {
-            source_100ns,
-            texture,
-            wall: Instant::now(),
-          });
+          let mut description = Default::default();
+          unsafe { texture.GetDesc(&mut description) };
+          let filled = (
+            u32::try_from(content.Width)
+              .unwrap_or_default()
+              .min(description.Width),
+            u32::try_from(content.Height)
+              .unwrap_or_default()
+              .min(description.Height),
+          );
+          // A minimised window has nothing to show.
+          if filled.0 >= 2 && filled.1 >= 2 {
+            handle_frame(
+              Frame {
+                source_100ns,
+                texture,
+                wall: Instant::now(),
+              },
+              filled,
+            );
+          }
+          let wanted = SizeInt32 {
+            Width: content.Width & !1,
+            Height: content.Height & !1,
+          };
+          let mut current = pool_size
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
+          if wanted.Width >= 2 && wanted.Height >= 2 && wanted != *current {
+            pool.Recreate(
+              &pool_device.resolve()?,
+              DirectXPixelFormat::B8G8R8A8UIntNormalized,
+              3,
+              wanted,
+            )?;
+            *current = wanted;
+          }
           Ok(())
         }),
       )

@@ -49,6 +49,9 @@ export type ToolScene = {
    * the setting's values in `scene`. */
   pointer: (at: number, size: PictureSize, scene: PreviewScene) => Pointer;
   cues?: readonly Cue[];
+  /** The pointer the tool shows over the screen: the crosshair for a tool
+   * that measures or selects it, else the arrow. */
+  cursor?: "arrow" | "crosshair";
   /** The tool draws on glass over the painted desktop rather than drawing
    * the desktop itself. */
   glass?: boolean;

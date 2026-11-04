@@ -4,10 +4,10 @@
 //! The desktop's icons kept out of a recording on Windows. A capture there
 //! cannot leave out another program's window, so Explorer's icon view is
 //! hidden on screen while a recording of the screen or a region is under
-//! way, and shown again when it ends. Only a view this hid is shown again,
-//! so a desktop whose icons are turned off stays as it was. macOS leaves the
-//! icons out of the capture instead (`capture_kit::capture_exclusion`), with
-//! nothing hidden on screen.
+//! way, or the replay buffer is keeping one, and shown again once neither
+//! is. Only a view this hid is shown again, so a desktop whose icons are
+//! turned off stays as it was. macOS leaves the icons out of the capture
+//! instead (`capture_kit::capture_exclusion`), with nothing hidden on screen.
 
 use std::sync::{Mutex, PoisonError};
 
@@ -19,19 +19,46 @@ use windows::Win32::UI::WindowsAndMessaging::{
   SW_SHOWNA,
 };
 
-/// The icon view this hid, by handle, while it is hidden.
-static HIDDEN: Mutex<Option<isize>> = Mutex::new(None);
+/// What wants the icons hidden, and the view this hid, by handle, while it
+/// is hidden.
+struct Icons {
+  recording: bool,
+  replay: bool,
+  hidden: Option<isize>,
+}
+
+static ICONS: Mutex<Icons> = Mutex::new(Icons {
+  recording: false,
+  replay: false,
+  hidden: None,
+});
+
+/// Whether a capture made in `mode` takes in the desktop, with the icons
+/// left out of it in Settings.
+fn leaves_out_icons(mode: Option<RecordingMode>) -> bool {
+  matches!(mode, Some(RecordingMode::Screen | RecordingMode::Region))
+    && screenwide_capture::chosen_exclusions::current().desktop
+}
 
 /// Hides the icons as a recording of the screen or a region starts, the
 /// countdown included, and shows them again once it has stopped.
 pub(crate) fn follow_recording(snapshot: &RecordingSnapshot) {
-  let wanted = snapshot.status != RecordingStatus::Idle
-    && matches!(
-      snapshot.mode,
-      Some(RecordingMode::Screen | RecordingMode::Region)
-    )
-    && screenwide_capture::chosen_exclusions::current().desktop;
-  let mut hidden = HIDDEN.lock().unwrap_or_else(PoisonError::into_inner);
+  let mut icons = ICONS.lock().unwrap_or_else(PoisonError::into_inner);
+  icons.recording = snapshot.status != RecordingStatus::Idle && leaves_out_icons(snapshot.mode);
+  apply(&mut icons);
+}
+
+/// Hides the icons while the replay buffer keeps the screen or a region,
+/// `mode` while it is starting or on, none once it is off.
+pub(crate) fn follow_replay(mode: Option<RecordingMode>) {
+  let mut icons = ICONS.lock().unwrap_or_else(PoisonError::into_inner);
+  icons.replay = leaves_out_icons(mode);
+  apply(&mut icons);
+}
+
+fn apply(icons: &mut Icons) {
+  let wanted = icons.recording || icons.replay;
+  let hidden = &mut icons.hidden;
   match (wanted, *hidden) {
     (true, None) => {
       let Some(view) = icon_view() else {

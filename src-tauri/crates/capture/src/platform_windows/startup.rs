@@ -166,7 +166,7 @@ pub(super) fn begin(
         capture_width,
         capture_height,
         show_cursor,
-        move |frame| {
+        move |frame, _| {
           let result = coordinator
             .lock()
             .map_err(|_| "The desktop compositor lock was poisoned".to_owned())
@@ -184,6 +184,34 @@ pub(super) fn begin(
         },
       )?);
     }
+  } else if let Some((CaptureTarget::Window(id), capture_width, capture_height, show_cursor)) =
+    graphics_source
+  {
+    let fitter = Mutex::new(WindowFitter::new(&device, width, height));
+    let failed = AtomicBool::new(false);
+    let report = Arc::clone(&on_failure);
+    session.captures.push(CaptureObjects::start_with_handler(
+      device,
+      CaptureTarget::Window(id),
+      capture_width,
+      capture_height,
+      show_cursor,
+      move |frame, filled| {
+        let result = fitter
+          .lock()
+          .map_err(|_| "The window fitter lock was poisoned".to_owned())
+          .and_then(|mut fitter| fitter.fit(frame, filled));
+        match result {
+          Ok(frame) => match commands.try_send(Command::Frame(frame)) {
+            Ok(())
+            | Err(mpsc::TrySendError::Full(_))
+            | Err(mpsc::TrySendError::Disconnected(_)) => {}
+          },
+          Err(error) if !failed.swap(true, Ordering::AcqRel) => report(error),
+          Err(_) => {}
+        }
+      },
+    )?);
   } else if let Some((target, capture_width, capture_height, show_cursor)) = graphics_source {
     // Match the user's capture choice exactly. Cursor metadata remains a
     // separate editable layer even when native pixels include the pointer.

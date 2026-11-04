@@ -257,10 +257,10 @@ pub fn gpu_artworks() -> &'static [GpuArtwork] {
   raster::gpu_artworks()
 }
 
-pub use raster::system_arrow::SystemArrow;
+pub use raster::system_cursor::SystemCursorArtwork;
 
-/// The system's arrow as it draws it, for pictures drawn outside the
-/// compositor; `None` until the artwork is loaded, or where it is not.
-pub fn system_arrow() -> Option<SystemArrow> {
-  raster::system_arrow::system_arrow()
+/// One of the system's pointers as it draws it, for pictures drawn outside
+/// the compositor; `None` until the artwork is loaded, or where it is not.
+pub fn system_cursor(style: CursorStyle) -> Option<SystemCursorArtwork> {
+  raster::system_cursor::system_cursor(style)
 }

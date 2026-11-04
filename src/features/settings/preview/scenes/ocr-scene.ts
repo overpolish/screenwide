@@ -108,6 +108,7 @@ function paintCode(context: CanvasRenderingContext2D, code: Box) {
 }
 
 export const OCR_SCENE: ToolScene = {
+  cursor: "crosshair",
   duration: 9,
   kind: "tool",
   paint(context, size, { wallpaper }) {

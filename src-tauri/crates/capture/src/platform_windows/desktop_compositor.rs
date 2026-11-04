@@ -1,7 +1,8 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! GPU composition for Windows regions that cross display boundaries.
+//! GPU composition for Windows regions that cross display boundaries, and
+//! for a recorded window resized since its recording started.
 //!
 //! Each display is captured on the recording's own Direct3D 11 device; its
 //! latest frame is copied into a texture wgpu samples, the pieces are drawn
@@ -23,7 +24,7 @@ use windows::{
 };
 
 use crate::desktop_canvas::{DesktopCanvas, PieceSource, FORMAT};
-use crate::desktop_capture::{CapturePiece, CapturePlan, FrameSynchronizer};
+use crate::desktop_capture::{fitted_window, CapturePiece, CapturePlan, FrameSynchronizer};
 use screenwide_gpu::{BridgedTexture, D3d11Bridge, Gpu};
 
 use super::writer::Frame;
@@ -70,6 +71,57 @@ impl DesktopFrameCoordinator {
       texture: self.compositor.compose(&self.pieces)?,
       wall,
     }))
+  }
+}
+
+/// A window recorded on its own keeps the size it started at, as on macOS:
+/// one resized since is scaled to fit it, centred, the rest black
+/// (`fitted_window`).
+pub(super) struct WindowFitter {
+  device: ID3D11Device,
+  width: u32,
+  height: u32,
+  /// Made the first time the window is not at its starting size.
+  compositor: Option<DesktopCompositor>,
+}
+
+impl WindowFitter {
+  pub fn new(device: &ID3D11Device, width: u32, height: u32) -> Self {
+    Self {
+      device: device.clone(),
+      width,
+      height,
+      compositor: None,
+    }
+  }
+
+  /// `frame` at the recording's size, `filled` the part of it, from its top
+  /// start corner, the window fills.
+  pub fn fit(&mut self, frame: Frame, filled: (u32, u32)) -> Result<Frame, String> {
+    let output = (self.width, self.height);
+    let mut description = D3D11_TEXTURE2D_DESC::default();
+    unsafe { frame.texture.GetDesc(&mut description) };
+    if (description.Width, description.Height) == output && (filled.0 & !1, filled.1 & !1) == output
+    {
+      return Ok(frame);
+    }
+    let piece = fitted_window(filled, self.width, self.height)
+      .ok_or_else(|| "The recorded window has no area to draw".to_owned())?;
+    let compositor = match &mut self.compositor {
+      Some(compositor) => compositor,
+      empty => empty.insert(DesktopCompositor::new(
+        &self.device,
+        self.width,
+        self.height,
+        1,
+      )?),
+    };
+    // Taken now: the capture recycles its surface once this callback returns.
+    compositor.take(0, &frame.texture)?;
+    Ok(Frame {
+      texture: compositor.compose(&[piece])?,
+      ..frame
+    })
   }
 }
 
