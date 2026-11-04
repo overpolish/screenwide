@@ -21,7 +21,7 @@ use objc2_app_kit::{
 };
 use objc2_foundation::{NSNotification, NSNotificationCenter};
 
-use super::super::region_osc::host::WindowId;
+use super::super::region_osc::host::{KeyboardOwner, WindowId};
 use super::super::region_osc::input as engine;
 use super::{geometry, windows};
 
@@ -32,8 +32,9 @@ thread_local! {
   static OBSERVERS: RefCell<Vec<Observer>> = const { RefCell::new(Vec::new()) };
   /// The overlay a press is held by until its release.
   static CAPTURED: Cell<Option<WindowId>> = const { Cell::new(None) };
-  /// The overlay the keyboard is captured for.
-  pub(super) static KEYBOARD: Cell<Option<WindowId>> = const { Cell::new(None) };
+  /// The overlay the keyboard is captured for, and the session that
+  /// captured it, so only that session's release frees it.
+  pub(super) static KEYBOARD: Cell<Option<(WindowId, KeyboardOwner)>> = const { Cell::new(None) };
 }
 
 /// Starts watching events, once, while any overlay is up.
@@ -162,7 +163,7 @@ fn handle(event: &NSEvent) -> bool {
 }
 
 fn keyboard(event: &NSEvent, kind: NSEventType) -> bool {
-  let Some(target) = KEYBOARD.with(Cell::get) else {
+  let Some((target, _)) = KEYBOARD.with(Cell::get) else {
     return false;
   };
   match kind {

@@ -182,13 +182,7 @@ fn raise_recording_controls(app: &AppHandle) -> tauri::Result<()> {
     return Ok(());
   }
 
-  // Raised only while out: raising orders a hidden panel on screen.
-  if super::island::is_shown() {
-    if let Some(island) = app.get_webview_window(WindowLabel::Island.as_str()) {
-      platform::raise_without_activation(&island)?;
-    }
-  }
-  Ok(())
+  super::island::raise(app)
 }
 
 /// Cross-window persistence may ask the overlay to show while a region gesture

@@ -125,6 +125,21 @@ pub fn set_above_overlays(app: &AppHandle, above: bool) -> tauri::Result<()> {
   Ok(())
 }
 
+/// Raises the island over the other recording panels at its own level. A
+/// plain raise puts it at the recording panels' level, under the Ruler or
+/// Text Recognition it stands over (`set_above_overlays`).
+pub(crate) fn raise(app: &AppHandle) -> tauri::Result<()> {
+  // Raised only while out: raising orders a hidden panel on screen.
+  if !is_shown() {
+    return Ok(());
+  }
+  let Some(island) = window(app) else {
+    return Ok(());
+  };
+  super::platform::raise_without_activation(&island)?;
+  native::apply_level(app)
+}
+
 #[cfg(target_os = "macos")]
 pub(super) fn is_above_overlays() -> bool {
   ABOVE_OVERLAYS.load(Ordering::Relaxed)

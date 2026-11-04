@@ -275,13 +275,22 @@ impl RegionHost for MacRegionHost {
     text::CoreTextRaster::new(font_size, raster_scale, mono).map(|text| Box::new(text) as _)
   }
 
-  fn capture_keyboard(&self, target: WindowId, _owner: KeyboardOwner) -> Result<(), String> {
-    on_main(move |_| events::KEYBOARD.with(|keyboard| keyboard.set(Some(target))));
+  fn capture_keyboard(&self, target: WindowId, owner: KeyboardOwner) -> Result<(), String> {
+    on_main(move |_| events::KEYBOARD.with(|keyboard| keyboard.set(Some((target, owner)))));
     Ok(())
   }
 
-  fn release_keyboard(&self, _owner: KeyboardOwner) {
-    on_main(|_| events::KEYBOARD.with(|keyboard| keyboard.set(None)));
+  // Only the owner's own capture is freed: a session ending unopened, as
+  // Text Recognition's does when a screenshot starts over the Ruler, must
+  // not take the Ruler's keys with it.
+  fn release_keyboard(&self, owner: KeyboardOwner) {
+    on_main(move |_| {
+      events::KEYBOARD.with(|keyboard| {
+        if keyboard.get().is_some_and(|(_, held_by)| held_by == owner) {
+          keyboard.set(None);
+        }
+      });
+    });
   }
 
   fn on_owning_thread(&self, _window: &WebviewWindow) -> bool {

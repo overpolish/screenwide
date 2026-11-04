@@ -93,7 +93,7 @@ pub(super) fn present(window: &tauri::WebviewWindow) -> Result<(), String> {
 /// While a screenshot is taken through the frozen desktop the overlay stops
 /// taking input and hides its transient chrome, then resumes only once the
 /// window is hit-testable again - claiming earlier leaves the readout dormant
-/// until the first click.
+/// until the first click - and takes keyboard focus back.
 pub(super) fn set_screenshot_mode(
   window: &tauri::WebviewWindow,
   active: bool,
@@ -126,6 +126,10 @@ pub(super) fn set_screenshot_mode(
         let _ = crate::app_windows::show(&target, true);
         let _ = native_region::claim_pointer_surface(&target);
         let _ = native_region::refresh_ruler_pointer(&target);
+        // Key again, as when the Ruler first appears: the screenshot's own
+        // overlay was key, and pointer moves only reach the key window, so
+        // the readout would wait for a click to follow the pointer.
+        let _ = native_region::focus_ruler_input(&target);
       }
       let _ = sender.send(());
     })
