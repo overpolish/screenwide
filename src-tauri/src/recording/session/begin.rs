@@ -49,9 +49,13 @@ pub(in crate::recording) fn begin_capture(
 
   crate::camera_preview::stop_all(app);
   // Before the capture opens, so the chosen apps are never in its first
-  // frames.
+  // frames. A window chosen to record is the only one captured, so nothing
+  // is hidden then: excluding a hidden app's window chosen on purpose would
+  // record it blank.
   #[cfg(target_os = "windows")]
-  crate::hidden_apps_windows::hide_for_recording(app);
+  if options.mode != RecordingMode::Window {
+    crate::hidden_apps_windows::hide_for_recording(app);
+  }
   let monitor = Arc::clone(&state(app).monitor);
   monitor.configure(
     options.system_audio,
