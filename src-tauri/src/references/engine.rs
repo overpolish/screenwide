@@ -11,6 +11,7 @@
 
 mod actions;
 mod glide;
+mod hold;
 mod host;
 mod input;
 mod place;
@@ -51,6 +52,14 @@ struct Native {
   /// The latest glide back to a place and size (`glide`), which any older
   /// one gives way to.
   glide: u64,
+  /// The size of the view the picture is drawn in.
+  view: Size,
+  /// The window held through a resize or a glide (`hold`).
+  held: Option<hold::Hold>,
+  /// The view's size, the picture's place in it and the scale the layers
+  /// were last drawn at, which a placing that changes none of them leaves
+  /// as they are.
+  drawn: Option<(Size, Rect, f64)>,
 }
 
 thread_local! {
@@ -91,6 +100,9 @@ pub(super) fn attach(
     stage: Stage::new(size),
     fit: Fit::default(),
     glide: 0,
+    view: Size::default(),
+    held: None,
+    drawn: None,
   };
   place::place(&mut native, Rect { origin, size });
   NATIVES.with(|natives| natives.borrow_mut().insert(label.to_owned(), native));

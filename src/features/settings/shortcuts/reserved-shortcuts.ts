@@ -85,6 +85,9 @@ const WINDOWS: Listed[] = [
   system("Control+Escape", () => t("settings-reserved-start")),
   system("Control+Shift+Escape", () => t("settings-reserved-task-manager")),
   system("Control+Alt+Delete", () => t("settings-reserved-security")),
+  // Windows' default hot key for switching to the Japanese input method,
+  // taken before any app sees it.
+  system("Control+Shift+Digit0", () => t("settings-reserved-input-source")),
   apps("Control+KeyC", () => t("settings-reserved-copy")),
   apps("Control+KeyV", () => t("settings-reserved-paste")),
   apps("Control+KeyX", () => t("settings-reserved-cut")),

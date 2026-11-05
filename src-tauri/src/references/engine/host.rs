@@ -25,14 +25,28 @@ pub(crate) enum Cursor {
 }
 
 pub(crate) trait ReferenceHost {
+  /// Whether the window moves apart from what is drawn in it, as on
+  /// Windows, where moving the window and drawing reach the screen in
+  /// separate steps and would show the picture out of place between them.
+  /// The view then spans the whole window, and never shrinks, so the
+  /// picture changing size or place in it is one drawing; and the window is
+  /// held through a resize or a glide, growing as the picture needs but
+  /// never moving or shrinking until it ends.
+  const VIEW_SPANS_WINDOW: bool;
   /// Pixels to the point the picture is drawn at.
   fn scale(&self) -> f64;
   fn light_appearance(&self) -> bool;
   fn window_frame(&self) -> Rect;
   fn set_window_frame(&self, frame: Rect);
   /// Places the view the picture and its chrome are drawn in at `frame`, in
-  /// the window's points, its layers at the host's scale.
-  fn set_view_frame(&self, frame: Rect);
+  /// the window's points, its layers at the host's scale, with the picture
+  /// at `picture` in the window.
+  fn set_view_frame(&self, frame: Rect, picture: Rect);
+  /// Shows the window and the view where they were last placed, once the
+  /// view's layers are drawn at their new size: a host that moves them
+  /// apart from drawing does it here, so the picture's place and drawing
+  /// change together.
+  fn commit_placement(&self) {}
   fn pointer(&self) -> Point;
   /// The whole of the display `point` is on, else the main one.
   fn screen_at(&self, point: Point) -> Rect;

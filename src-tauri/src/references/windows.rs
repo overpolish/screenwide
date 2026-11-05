@@ -1,11 +1,14 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! A reference on Windows: a child window over its webview whose pixels
-//! DirectComposition owns, carrying the picture's and the chrome's visuals,
-//! which the engine draws through the shared OSC renderer, and taking the
-//! pointer over the picture. Desktop lengths are in points at the scale of
-//! the display the reference stands on (`desktop`).
+//! A reference on Windows: the picture's and the chrome's visuals in a
+//! topmost DirectComposition target on its window, over the webview, which
+//! the engine draws through the shared OSC renderer, and a child window with
+//! no content of its own over the picture and its handles' reach, taking the
+//! pointer there. The pad keeps clear of the island, whose clicks must reach
+//! the webview: a child window cannot pass them on to it, since WebView2
+//! takes input in another process. Desktop lengths are in points at the
+//! scale of the display the reference stands on (`desktop`).
 
 mod compose;
 pub(super) mod desktop;
@@ -15,10 +18,10 @@ mod window_proc;
 use std::cell::Cell;
 use std::rc::Rc;
 
-use screenwide_osc::geometry::Size;
+use screenwide_osc::geometry::{Point, Size};
 use tauri::{Manager, Position, WebviewWindow};
 use windows::Win32::{
-  Foundation::{HWND, POINT},
+  Foundation::{HWND, POINT, RECT},
   UI::WindowsAndMessaging::DestroyWindow,
 };
 
@@ -26,7 +29,7 @@ use super::engine::Cursor;
 use crate::app_windows::overlay_surface;
 use compose::Composition;
 
-/// What the reference's host and its child window's procedure both keep.
+/// What the reference's host and its input pad's procedure both keep.
 struct Shared {
   label: String,
   /// Pixels to the point the reference measures and draws at: its display's,
@@ -35,18 +38,36 @@ struct Shared {
   cursor: Cell<Cursor>,
   /// A press under way, which holds the pointer until it ends.
   pressed: Cell<bool>,
-  /// Whether the view is watching for the pointer to leave it.
+  /// Whether the pad is watching for the pointer to leave it.
   tracking: Cell<bool>,
+  /// The pad's corner in the view the engine measures in, in pixels.
+  pad: Cell<POINT>,
   /// The window came onto a display of another scale during a press, which
   /// is taken up as the press ends.
   rescale_pending: Cell<bool>,
 }
 
+/// Where the engine last placed the window, its view and the input pad,
+/// shown together once the view is drawn (`commit_placement`).
+#[derive(Clone, Copy, Default)]
+struct Placed {
+  /// The window's corner on the desktop, in points, before it is rounded
+  /// to a pixel.
+  origin: Point,
+  /// The window on the desktop, in pixels.
+  window: RECT,
+  /// The view's corner in the window, in pixels.
+  view: POINT,
+  /// The input pad in the window, in pixels.
+  pad: RECT,
+}
+
 pub(crate) struct WindowsHost {
   /// The reference's own window.
   top: HWND,
-  /// The view over its webview.
-  child: HWND,
+  /// The input pad over the picture.
+  pad: HWND,
+  placed: Cell<Placed>,
   composition: Composition,
   shared: Rc<Shared>,
 }
@@ -70,7 +91,7 @@ pub(super) fn attach(
   let gpu = screenwide_gpu::shared()?;
   let top = HWND(window.hwnd().map_err(|error| error.to_string())?.0);
   window_proc::register();
-  let child = overlay_surface::create_child(top, window_proc::CLASS)?;
+  let pad = overlay_surface::create_child(top, window_proc::CLASS)?;
   // The window is still where Windows first put it; the reference measures
   // at the scale of the display it opens on.
   let scale = match origin {
@@ -84,20 +105,22 @@ pub(super) fn attach(
     cursor: Cell::new(Cursor::Arrow),
     pressed: Cell::new(false),
     tracking: Cell::new(false),
+    pad: Cell::new(POINT::default()),
     rescale_pending: Cell::new(false),
   });
-  window_proc::remember(child, Rc::clone(&shared));
-  let (composition, surfaces) = match Composition::new(gpu, child) {
+  window_proc::remember(pad, Rc::clone(&shared));
+  let (composition, surfaces) = match Composition::new(gpu, top) {
     Ok(made) => made,
     Err(error) => {
-      window_proc::forget(child);
-      let _ = unsafe { DestroyWindow(child) };
+      window_proc::forget(pad);
+      let _ = unsafe { DestroyWindow(pad) };
       return Err(error);
     }
   };
   let host = WindowsHost {
     top,
-    child,
+    pad,
+    placed: Cell::new(Placed::default()),
     composition,
     shared,
   };

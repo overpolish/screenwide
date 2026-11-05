@@ -9,8 +9,8 @@
 //! picture of an interface laid over that interface still shows where it
 //! ends; under the pointer it adds the selection's frame and point handles,
 //! which resize it. Every length is in points, at `scale` pixels to the
-//! point, in a view that reaches `SHADOW_ROOM` past the picture on every
-//! side.
+//! point, in a view that reaches at least `SHADOW_ROOM` past the picture on
+//! every side.
 
 use screenwide_osc::geometry::{Rect, Size};
 use screenwide_osc::gpu::vertices::{self as osc_gpu, RenderConstants, Vertex};
@@ -22,50 +22,49 @@ const PICTURE_KIND: u32 = 71;
 /// The shadow round the picture.
 const SHADOW_KIND: u32 = 70;
 
-/// The view the reference draws in, for a picture `picture` in size.
-pub(crate) fn view_size(picture: Size) -> Size {
-  Size {
-    width: picture.width + SHADOW_ROOM * 2.0,
-    height: picture.height + SHADOW_ROOM * 2.0,
-  }
+/// The view round a picture at `picture`, just holding its shadow.
+pub(crate) fn view_round(picture: Rect) -> Rect {
+  Rect::from_xywh(
+    picture.origin.x - SHADOW_ROOM,
+    picture.origin.y - SHADOW_ROOM,
+    picture.size.width + SHADOW_ROOM * 2.0,
+    picture.size.height + SHADOW_ROOM * 2.0,
+  )
 }
 
-/// The picture in its view.
-pub(crate) fn picture_in_view(picture: Size) -> Rect {
-  Rect::from_xywh(SHADOW_ROOM, SHADOW_ROOM, picture.width, picture.height)
-}
-
-pub(crate) fn picture_vertices(picture: Size) -> Vec<Vertex> {
+/// The picture at `picture` in a view `view` in size.
+pub(crate) fn picture_vertices(view: Size, picture: Rect) -> Vec<Vertex> {
   let mut vertices = Vec::with_capacity(6);
   osc_gpu::add_texture_quad(
     &mut vertices,
-    view_size(picture),
-    picture_in_view(picture),
+    view,
+    picture,
     Rect::from_xywh(0.0, 0.0, 1.0, 1.0),
     PICTURE_KIND,
   );
   vertices
 }
 
-/// The chrome: the shadow round the picture, and the selection's frame and
-/// handles while `handles`.
-pub(crate) fn chrome_vertices(picture: Size, scale: f64, handles: bool) -> Vec<Vertex> {
-  let view = view_size(picture);
+/// The chrome round the picture at `picture` in a view `view` in size: the
+/// shadow, and the selection's frame and handles while `handles`.
+pub(crate) fn chrome_vertices(view: Size, picture: Rect, scale: f64, handles: bool) -> Vec<Vertex> {
   let mut vertices = Vec::new();
   // The whole view, its uv running 0 to 1 across the picture and on past it.
-  let (room_u, room_v) = (
-    SHADOW_ROOM / picture.width.max(1.0),
-    SHADOW_ROOM / picture.height.max(1.0),
-  );
+  let (width, height) = (picture.size.width.max(1.0), picture.size.height.max(1.0));
   osc_gpu::add_texture_quad(
     &mut vertices,
     view,
     Rect::from_xywh(0.0, 0.0, view.width, view.height),
-    Rect::from_xywh(-room_u, -room_v, 1.0 + room_u * 2.0, 1.0 + room_v * 2.0),
+    Rect::from_xywh(
+      -picture.origin.x / width,
+      -picture.origin.y / height,
+      view.width / width,
+      view.height / height,
+    ),
     SHADOW_KIND,
   );
   if handles {
-    osc_gpu::add_selection(&mut vertices, view, picture_in_view(picture), scale);
+    osc_gpu::add_selection(&mut vertices, view, picture, scale);
   }
   vertices
 }

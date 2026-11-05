@@ -110,12 +110,8 @@ export function ReferenceWindow() {
       )}
       dir="ltr"
     >
-      {/* A layout root, so the island's parts measure their places from it:
-          the window moves the island as the picture resizes, and the parts
-          would otherwise glide after it from where they were. */}
       <motion.div
         className="absolute w-fit"
-        layoutRoot
         ref={islandRef}
         style={{
           insetInlineStart: layout?.islandX ?? 0,

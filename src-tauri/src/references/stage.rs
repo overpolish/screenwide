@@ -10,7 +10,7 @@
 use screenwide_osc::geometry::{Handle, Monitor, Point, Rect, Size};
 use screenwide_osc::gesture::{hit_test, Gesture, GestureKind};
 
-use super::drawing::picture_in_view;
+use super::drawing::view_round;
 
 /// How near a handle the pointer takes it, in points.
 const HANDLE_REACH: f64 = 6.0;
@@ -26,6 +26,8 @@ pub(crate) struct Stage {
   pub island: Size,
   /// Whether the pointer is over the picture or its handles.
   pub hovered: bool,
+  /// Where the picture stands in the view it is drawn in, in points.
+  pub in_view: Rect,
   resize: Option<Resize>,
   /// A move under way: where the pointer and the picture's corner were as
   /// it began, on the desktop. The picture is moved here rather than by the
@@ -36,17 +38,31 @@ pub(crate) struct Stage {
 
 struct Resize {
   gesture: Gesture,
-  /// The screen the resize started on, which bounds it.
-  screen: Rect,
+  /// What bounds the resize: the screen it started on, and as much of the
+  /// picture as already stood past it, so a picture partly off the screen
+  /// keeps its shape rather than being pressed into it.
+  bounds: Rect,
 }
 
 impl Stage {
   pub(crate) fn new(size: Size) -> Self {
+    let picture = Rect {
+      origin: Point::default(),
+      size,
+    };
+    let view = view_round(picture);
     Self {
       size,
       true_size: size,
       island: Size::default(),
       hovered: false,
+      in_view: Rect {
+        origin: Point {
+          x: -view.origin.x,
+          y: -view.origin.y,
+        },
+        size,
+      },
       resize: None,
       moving: None,
     }
@@ -55,7 +71,12 @@ impl Stage {
   /// What is under `point` in the view: a handle, the picture (`Body`), or
   /// nothing.
   pub(crate) fn handle_at(&self, point: Point) -> Option<Handle> {
-    hit_test(picture_in_view(self.size), point, HANDLE_REACH)
+    hit_test(self.in_view, point, HANDLE_REACH)
+  }
+
+  /// What bounds a resize under way, on the desktop.
+  pub(crate) fn resize_bounds(&self) -> Option<Rect> {
+    self.resize.as_ref().map(|resize| resize.bounds)
   }
 
   pub(crate) fn resizing(&self) -> bool {
@@ -98,14 +119,15 @@ impl Stage {
     screen: Rect,
   ) {
     let aspect = picture.size.width / picture.size.height;
+    let bounds = screen.union(picture);
     self.resize = Some(Resize {
       gesture: Gesture::begin(
         GestureKind::Resizing(handle),
-        local(pointer, screen),
-        local_rect(picture, screen),
+        local(pointer, bounds),
+        local_rect(picture, bounds),
         (aspect.is_finite() && aspect > 0.0).then_some(aspect),
       ),
-      screen,
+      bounds,
     });
   }
 
@@ -114,18 +136,18 @@ impl Stage {
   /// than a reference is shown.
   pub(crate) fn resize_to(&mut self, pointer: Point) -> Option<Rect> {
     let resize = self.resize.as_mut()?;
-    let screen = resize.screen;
+    let bounds = resize.bounds;
     let rect = resize
       .gesture
-      .update(local(pointer, screen), Monitor { size: screen.size }, false);
+      .update(local(pointer, bounds), Monitor { size: bounds.size }, false);
     if rect.size.width < SMALLEST_SIDE || rect.size.height < SMALLEST_SIDE {
       return None;
     }
     self.size = rect.size;
     Some(Rect {
       origin: Point {
-        x: rect.origin.x + screen.origin.x,
-        y: rect.origin.y + screen.origin.y,
+        x: rect.origin.x + bounds.origin.x,
+        y: rect.origin.y + bounds.origin.y,
       },
       size: rect.size,
     })
@@ -209,6 +231,33 @@ mod tests {
   }
 
   #[test]
+  fn a_picture_partly_off_the_screen_keeps_its_shape_as_it_is_resized() {
+    let mut stage = Stage::new(Size {
+      width: 400.0,
+      height: 200.0,
+    });
+    // Its right half stands past the screen's right edge, at 2000.
+    let picture = Rect::from_xywh(1800.0, 100.0, 400.0, 200.0);
+    stage.begin_resize(
+      Handle::SouthWest,
+      Point {
+        x: 1800.0,
+        y: 300.0,
+      },
+      picture,
+      SCREEN,
+    );
+    let rect = stage
+      .resize_to(Point {
+        x: 1840.0,
+        y: 280.0,
+      })
+      .unwrap();
+    assert_eq!(rect.size.width / rect.size.height, 2.0);
+    assert_eq!(rect.right(), picture.right());
+  }
+
+  #[test]
   fn a_resize_stops_short_of_too_small_a_picture() {
     let (mut stage, picture) = stage();
     stage.begin_resize(
@@ -232,7 +281,7 @@ mod tests {
   #[test]
   fn handles_are_found_round_the_picture_in_its_view() {
     let (stage, _) = stage();
-    let frame = picture_in_view(stage.size);
+    let frame = stage.in_view;
     assert_eq!(stage.handle_at(frame.origin), Some(Handle::NorthWest));
     let middle = Point {
       x: frame.origin.x + 100.0,

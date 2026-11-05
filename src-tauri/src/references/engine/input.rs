@@ -9,7 +9,8 @@
 use screenwide_osc::geometry::{Handle, Point, Rect};
 
 use super::super::stage::resize_edges;
-use super::place::{draw, picture_on_desktop, place};
+use super::hold::hold;
+use super::place::{draw, picture_on_desktop, place, release_hold};
 use super::{with, Cursor, ReferenceHost};
 
 fn cursor_for(handle: Option<Handle>) -> Cursor {
@@ -63,6 +64,7 @@ pub(crate) fn down(label: &str, point: Point) {
         };
         let screen = native.host.screen_at(middle);
         native.stage.begin_resize(handle, pointer, picture, screen);
+        hold(native);
       }
     }
   });
@@ -81,7 +83,8 @@ pub(crate) fn dragged(label: &str) {
 }
 
 /// The press is let go with the pointer at `point` in the view, or taken
-/// away for `None`.
+/// away for `None`. A window held through a resize is fitted round the
+/// picture again.
 pub(crate) fn up(label: &str, point: Option<Point>) {
   with(label, |native| {
     native.stage.end_resize();
@@ -92,5 +95,6 @@ pub(crate) fn up(label: &str, point: Option<Point>) {
       None => Cursor::Arrow,
     });
     draw(native);
+    release_hold(native);
   });
 }

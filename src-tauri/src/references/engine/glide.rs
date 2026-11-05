@@ -11,18 +11,27 @@ use std::time::{Duration, Instant};
 
 use screenwide_osc::geometry::{Point, Rect, Size};
 
-use super::place::{picture_on_desktop, place};
-use super::with;
+use super::super::fit::fit;
+use super::hold::{hold_round, middle};
+use super::place::{picture_on_desktop, place, release_hold};
+use super::{with, ReferenceHost};
 
 /// `reshape`: how long the glide takes.
 const GLIDE: Duration = Duration::from_millis(280);
 /// How often the glide is drawn.
 const FRAME: Duration = Duration::from_millis(16);
 
-/// Glides the reference `label`'s picture to `target` on the desktop.
+/// Glides the reference `label`'s picture to `target` on the desktop, its
+/// window held round both ends of the glide (`hold`).
 pub(super) fn glide_to(label: &str, target: Rect) {
   let started = with(label, |native| {
     native.glide += 1;
+    let ending = fit(
+      target,
+      native.stage.island,
+      native.host.room_at(middle(target)),
+    );
+    hold_round(native, ending.window);
     (native.glide, picture_on_desktop(native), native.app.clone())
   });
   let Some((glide, from, app)) = started else {
@@ -63,6 +72,11 @@ fn step(label: &str, glide: u64, from: Rect, target: Rect, progress: f64) {
       y: mix(from.origin.y, target.origin.y),
     };
     place(native, Rect { origin, size });
+    // Once there, the window is fitted round the picture again, unless a
+    // resize holding it began meanwhile.
+    if progress >= 1.0 && !native.stage.resizing() {
+      release_hold(native);
+    }
   });
 }
 

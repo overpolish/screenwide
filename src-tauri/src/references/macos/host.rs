@@ -45,6 +45,8 @@ impl MacHost {
 }
 
 impl ReferenceHost for MacHost {
+  const VIEW_SPANS_WINDOW: bool = false;
+
   fn scale(&self) -> f64 {
     self.window.backingScaleFactor()
   }
@@ -63,7 +65,7 @@ impl ReferenceHost for MacHost {
       .setFrame_display(appkit_rect(self.mtm, frame), true);
   }
 
-  fn set_view_frame(&self, frame: Rect) {
+  fn set_view_frame(&self, frame: Rect, _picture: Rect) {
     let frame = self.in_content(frame);
     self.view.setFrame(frame);
     let bounds = NSRect::new(NSPoint::new(0.0, 0.0), frame.size);

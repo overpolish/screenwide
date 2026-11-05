@@ -8,9 +8,10 @@ use screenwide_osc::geometry::{Point, Rect};
 use tauri::Emitter;
 
 use super::super::commands::ReferenceLayout;
-use super::super::drawing::{chrome_vertices, constants, picture_vertices, view_size};
-use super::super::fit::{fit, SHADOW_ROOM};
-use super::{Native, ReferenceHost, LAYOUT_EVENT};
+use super::super::drawing::{chrome_vertices, constants, picture_vertices, view_round};
+use super::super::fit::{fit, Fit};
+use super::hold::{frame, middle, release};
+use super::{Native, PlatformHost, ReferenceHost, LAYOUT_EVENT};
 
 pub(super) fn layout(native: &Native) -> ReferenceLayout {
   ReferenceLayout {
@@ -32,26 +33,76 @@ pub(super) fn picture_on_desktop(native: &Native) -> Rect {
   }
 }
 
-/// Places the window round the picture at `picture` on the desktop, the view
-/// over the picture and its shadow's room, and draws. Tells the page where
-/// its island stands once that moves, and the window where its parts are.
+/// Places the window round the picture at `picture` on the desktop
+/// (`hold` says how it keeps still where the view spans it), and draws.
 pub(super) fn place(native: &mut Native, picture: Rect) {
-  let middle = Point {
-    x: picture.origin.x + picture.size.width / 2.0,
-    y: picture.origin.y + picture.size.height / 2.0,
-  };
+  let fitted = fit_round(native, picture);
+  let fitted = frame(native, fitted, picture);
+  show(native, picture, fitted);
+}
+
+/// Lets go of a window held through a resize or a glide, fitting it round
+/// the picture where it now stands.
+pub(super) fn release_hold(native: &mut Native) {
+  if native.held.is_none() {
+    return;
+  }
+  let picture = picture_on_desktop(native);
+  let fitted = fit_round(native, picture);
+  let fitted = release(native, fitted);
+  show(native, picture, fitted);
+}
+
+fn fit_round(native: &Native, picture: Rect) -> Fit {
+  fit(
+    picture,
+    native.stage.island,
+    native.host.room_at(middle(picture)),
+  )
+}
+
+/// Puts the window at `fitted`, the view over the picture and its shadow's
+/// room, or over the whole window where the view spans it, and draws. Tells
+/// the page where its island stands once that moves, and the window where
+/// its parts are.
+fn show(native: &mut Native, picture: Rect, fitted: Fit) {
   let island = native.fit.island.origin;
-  native.fit = fit(picture, native.stage.island, native.host.room_at(middle));
-  native.host.set_window_frame(native.fit.window);
-  let view = view_size(picture.size);
-  native.host.set_view_frame(Rect::from_xywh(
-    native.fit.picture.origin.x - SHADOW_ROOM,
-    native.fit.picture.origin.y - SHADOW_ROOM,
-    view.width,
-    view.height,
-  ));
-  draw(native);
-  if native.fit.island.origin != island {
+  native.fit = fitted;
+  let window = fitted.window;
+  let view = if PlatformHost::VIEW_SPANS_WINDOW {
+    // Only ever grows, and at once to all a resize on this screen could
+    // need: a layer resized while it shows is blank until it is drawn
+    // again, so it is resized while nothing moves rather than mid-drag.
+    let screen = native.host.screen_at(middle(picture));
+    let reach = fit_round(native, screen.union(picture)).window.size;
+    Rect::from_xywh(
+      0.0,
+      0.0,
+      window.size.width.max(reach.width).max(native.view.width),
+      window.size.height.max(reach.height).max(native.view.height),
+    )
+  } else {
+    view_round(fitted.picture)
+  };
+  // The picture lands on whole pixels where it stands on the desktop,
+  // however the window's and the view's corners round.
+  let scale = native.host.scale();
+  let pixel = |points: f64| (points * scale).round();
+  native.stage.in_view = Rect {
+    origin: Point {
+      x: (pixel(picture.origin.x) - pixel(window.origin.x + view.origin.x)) / scale,
+      y: (pixel(picture.origin.y) - pixel(window.origin.y + view.origin.y)) / scale,
+    },
+    size: picture.size,
+  };
+  native.view = view.size;
+  native.host.set_window_frame(window);
+  native.host.set_view_frame(view, fitted.picture);
+  if native.drawn != Some((native.view, native.stage.in_view, scale)) {
+    draw(native);
+  }
+  native.host.commit_placement();
+  if fitted.island.origin != island {
     let _ = native
       .app
       .emit_to(native.label.as_str(), LAYOUT_EVENT, layout(native));
@@ -59,28 +110,30 @@ pub(super) fn place(native: &mut Native, picture: Rect) {
   crate::app_windows::options::hit_area::set_hit_area(
     native.app.clone(),
     native.label.clone(),
-    Some(native.fit.hit_rects()),
+    Some(fitted.hit_rects()),
   );
 }
 
-/// Draws the picture and its chrome at their present size.
+/// Draws the picture and its chrome where they stand in the view.
 pub(super) fn draw(native: &mut Native) {
   let scale = native.host.scale();
-  let size = native.stage.size;
-  let view = view_size(size);
+  let (view, picture) = (native.view, native.stage.in_view);
   let pixels = (
     (view.width * scale).ceil().max(1.0) as u32,
     (view.height * scale).ceil().max(1.0) as u32,
   );
   let constants = constants(native.host.light_appearance(), scale);
   let handles = native.stage.hovered || native.stage.resizing();
+  native.drawn = Some((view, picture, scale));
   let drawn = native
     .picture
-    .present(pixels, &picture_vertices(size), &constants)
+    .present(pixels, &picture_vertices(view, picture), &constants)
     .and_then(|()| {
-      native
-        .chrome
-        .present(pixels, &chrome_vertices(size, scale, handles), &constants)
+      native.chrome.present(
+        pixels,
+        &chrome_vertices(view, picture, scale, handles),
+        &constants,
+      )
     });
   if let Err(error) = drawn {
     eprintln!("Could not draw a reference: {error}");

@@ -2,10 +2,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 //! A reference's DirectComposition tree on Windows: the picture's visual and
-//! the chrome's over it, each drawn by wgpu, in the child window over the
-//! webview. The picture's visual takes the reference's opacity through an
-//! effect group of its own; the whole tree fades through another as the
-//! reference closes, which DirectComposition animates by itself.
+//! the chrome's over it, each drawn by wgpu, in a topmost target on the
+//! reference's window, so they draw over the webview without being a window
+//! that takes the pointer. The picture's visual takes the reference's
+//! opacity through an effect group of its own; the whole tree fades through
+//! another as the reference closes, which DirectComposition animates by
+//! itself.
 
 use screenwide_gpu::surface::Surface;
 use screenwide_gpu::Gpu;
@@ -24,7 +26,8 @@ pub(super) struct Composition {
   device: IDCompositionDevice,
   /// Held only to keep the tree alive.
   _target: IDCompositionTarget,
-  _root: IDCompositionVisual,
+  /// Placed where the view stands in the window.
+  root: IDCompositionVisual,
   _picture: IDCompositionVisual,
   _chrome: IDCompositionVisual,
   /// The picture's opacity.
@@ -38,14 +41,14 @@ fn failed(what: &str) -> impl FnOnce(windows::core::Error) -> String + '_ {
 }
 
 impl Composition {
-  /// The tree over `child`, and the surfaces the picture and the chrome are
-  /// drawn on.
-  pub(super) fn new(gpu: &Gpu, child: HWND) -> Result<(Self, (Surface, Surface)), String> {
+  /// The tree over `window`'s content and its webview, and the surfaces the
+  /// picture and the chrome are drawn on.
+  pub(super) fn new(gpu: &Gpu, window: HWND) -> Result<(Self, (Surface, Surface)), String> {
     // The swap chains are the visuals' only content, so the device needs no
     // Direct3D device of its own.
     let device: IDCompositionDevice = unsafe { DCompositionCreateDevice(None::<&IDXGIDevice>) }
       .map_err(failed("DirectComposition could not open"))?;
-    let target = unsafe { device.CreateTargetForHwnd(child, true) }
+    let target = unsafe { device.CreateTargetForHwnd(window, true) }
       .map_err(failed("A reference's view could not attach"))?;
     let visual = || {
       let visual =
@@ -70,11 +73,11 @@ impl Composition {
       target
         .SetRoot(&root)
         .map_err(failed("A reference's view could not attach"))?;
-      // Each is added over every visual before it: the chrome over the
-      // picture.
+      // With no visual to add it next to, `false` puts each in front of
+      // every visual before it: the chrome over the picture.
       for visual in [&picture, &chrome] {
         root
-          .AddVisual(visual, true, None::<&IDCompositionVisual>)
+          .AddVisual(visual, false, None::<&IDCompositionVisual>)
           .map_err(failed("A visual could not be added"))?;
       }
     }
@@ -87,7 +90,7 @@ impl Composition {
       Self {
         device,
         _target: target,
-        _root: root,
+        root,
         _picture: picture,
         _chrome: chrome,
         picture_opacity,
@@ -95,6 +98,16 @@ impl Composition {
       },
       surfaces,
     ))
+  }
+
+  /// Puts the view's corner at `x`, `y` in the window's pixels.
+  pub(super) fn set_origin(&self, x: f32, y: f32) {
+    let set = unsafe { self.root.SetOffsetX2(x) }
+      .and_then(|()| unsafe { self.root.SetOffsetY2(y) })
+      .and_then(|()| unsafe { self.device.Commit() });
+    if let Err(error) = set {
+      eprintln!("A reference's view could not be placed: {error}");
+    }
   }
 
   pub(super) fn set_picture_opacity(&self, opacity: f32) {

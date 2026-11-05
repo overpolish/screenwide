@@ -70,6 +70,19 @@ impl Rect {
   pub fn bottom(self) -> f64 {
     self.origin.y + self.size.height
   }
+  /// The smallest rectangle holding both.
+  pub fn union(self, other: Self) -> Self {
+    let (left, top) = (
+      self.origin.x.min(other.origin.x),
+      self.origin.y.min(other.origin.y),
+    );
+    Self::from_xywh(
+      left,
+      top,
+      self.right().max(other.right()) - left,
+      self.bottom().max(other.bottom()) - top,
+    )
+  }
   pub fn clamp(self, monitor: Monitor) -> Self {
     let w = self.size.width.max(0.0).min(monitor.size.width.max(0.0));
     let h = self.size.height.max(0.0).min(monitor.size.height.max(0.0));

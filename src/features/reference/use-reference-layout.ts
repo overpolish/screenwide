@@ -3,6 +3,7 @@
 
 import { invoke } from "@tauri-apps/api/core";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
+import { useInstantLayoutTransition } from "motion/react";
 import { useEffect, useRef, useState } from "react";
 
 import type { ReferenceLayout } from "../../bindings/ReferenceLayout";
@@ -37,19 +38,24 @@ export function useReferenceLayout() {
   });
   /** The island at its own size. */
   const islandRef = useRef<HTMLDivElement>(null);
+  const instantly = useInstantLayoutTransition();
 
   useEffect(() => {
     const island = islandRef.current;
     if (!island) return;
     const host = getCurrentWebviewWindow();
+    // The island moving as a whole is no change to its parts, which would
+    // otherwise glide after it from where they were drawn (`IslandParts`).
     const take = (layout: ReferenceLayout) => {
-      setPlaced(({ layout: before }) => ({
-        flippedFrom:
-          before !== null && before.islandAbove !== layout.islandAbove
-            ? before.islandY
-            : null,
-        layout,
-      }));
+      instantly(() => {
+        setPlaced(({ layout: before }) => ({
+          flippedFrom:
+            before !== null && before.islandAbove !== layout.islandAbove
+              ? before.islandY
+              : null,
+          layout,
+        }));
+      });
     };
     const fit = () => {
       invoke<ReferenceLayout>("fit_reference", {
@@ -80,7 +86,7 @@ export function useReferenceLayout() {
         });
       }
     };
-  }, []);
+  }, [instantly]);
 
   return { islandRef, ...placed };
 }

@@ -1,12 +1,10 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! The reference view's window procedure on Windows. The view reaches into
-//! the shadow's room and over the island's top; only the picture and its
-//! handles' reach are its own, and everywhere else it answers
-//! `HTTRANSPARENT`, so the press falls to the webview under it, as the region
-//! overlay's does. It never takes activation or the keyboard, which stay
-//! with the page for the island and the arrow keys' nudges.
+//! The reference's input pad's window procedure on Windows. The pad covers
+//! the picture and its handles' reach; where the pointer is on neither, it
+//! answers `HTTRANSPARENT`. It never takes activation or the keyboard, which
+//! stay with the page for the island and the arrow keys' nudges.
 
 use std::cell::RefCell;
 use std::collections::HashMap;
@@ -74,12 +72,14 @@ fn pixels(lparam: LPARAM) -> POINT {
   }
 }
 
-/// A point in the view's pixels, in its points.
+/// A point in the pad's pixels, in the view's points, which the engine
+/// measures in.
 fn in_view(shared: &Shared, at: POINT) -> Point {
   let scale = shared.scale.get();
+  let pad = shared.pad.get();
   Point {
-    x: f64::from(at.x) / scale,
-    y: f64::from(at.y) / scale,
+    x: f64::from(at.x + pad.x) / scale,
+    y: f64::from(at.y + pad.y) / scale,
   }
 }
 
