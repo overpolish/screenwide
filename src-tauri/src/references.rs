@@ -35,7 +35,7 @@ mod windows;
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicU64, Ordering};
-use std::sync::{Mutex, MutexGuard, PoisonError};
+use std::sync::{Mutex, MutexGuard, OnceLock, PoisonError};
 
 use screenwide_annotations::Annotation;
 use screenwide_imaging::CapturedImage;
@@ -192,11 +192,55 @@ fn forget(label: &str) {
 }
 
 /// The still the reference shows, on the GPU, which draws it from there on.
+/// A picture with see-through pixels keeps mip levels as well, which the
+/// shadow it casts from what it shows is blurred from (`reference.wgsl`).
 fn upload(image: &CapturedImage) -> Result<wgpu::Texture, String> {
-  Ok(screenwide_gpu::shared()?.texture_with_pixels(
-    "Screenwide reference",
-    (image.width, image.height, 1),
-    wgpu::TextureFormat::Rgba8Unorm,
+  const FORMAT: wgpu::TextureFormat = wgpu::TextureFormat::Rgba8Unorm;
+  let gpu = screenwide_gpu::shared()?;
+  let see_through = image
+    .rgba
+    .as_chunks::<4>()
+    .0
+    .iter()
+    .any(|pixel| pixel[3] < u8::MAX);
+  if !see_through {
+    return Ok(gpu.texture_with_pixels(
+      "Screenwide reference",
+      (image.width, image.height, 1),
+      FORMAT,
+      &image.rgba,
+    ));
+  }
+  let size = wgpu::Extent3d {
+    width: image.width,
+    height: image.height,
+    depth_or_array_layers: 1,
+  };
+  let texture = gpu.device.create_texture(&wgpu::TextureDescriptor {
+    label: Some("Screenwide see-through reference"),
+    size,
+    mip_level_count: screenwide_gpu::mips::levels((image.width, image.height)),
+    sample_count: 1,
+    dimension: wgpu::TextureDimension::D2,
+    format: FORMAT,
+    usage: wgpu::TextureUsages::TEXTURE_BINDING
+      | wgpu::TextureUsages::RENDER_ATTACHMENT
+      | wgpu::TextureUsages::COPY_DST,
+    view_formats: &[],
+  });
+  gpu.queue.write_texture(
+    texture.as_image_copy(),
     &image.rgba,
-  ))
+    wgpu::TexelCopyBufferLayout {
+      offset: 0,
+      bytes_per_row: Some(image.width * 4),
+      rows_per_image: Some(image.height),
+    },
+    size,
+  );
+  static MIPS: OnceLock<screenwide_gpu::mips::Mips> = OnceLock::new();
+  MIPS
+    .get_or_init(|| screenwide_gpu::mips::Mips::new(&gpu.device, FORMAT))
+    .fill(gpu, &texture);
+  Ok(texture)
 }

@@ -77,7 +77,8 @@ pub struct RenderConstants {
   /// the target's pixels.
   pub window_shape: [f32; 4],
   /// A reference's picture and shadow: `.x` how many of the target's pixels
-  /// a point spans, which their lengths are given in.
+  /// a point spans, which their lengths are given in, and `.y` 1 where the
+  /// picture has see-through pixels and casts its shadow from them.
   pub reference: [f32; 4],
 }
 

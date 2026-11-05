@@ -46,7 +46,7 @@ struct OscGpu {
   turn_rings: array<vec4<f32>, 8>,
   window_cutout: vec4<f32>, // the window being picked, px: x, y, width, height
   window_shape: vec4<f32>, // .x corner radius px, .y fade, .z blur px (0: none), .w feather px
-  reference: vec4<f32>, // .x pixels per point
+  reference: vec4<f32>, // .x pixels per point, .y 1 where the picture has see-through pixels
 }
 
 @group(0) @binding(0) var<uniform> osc: OscGpu;
@@ -78,19 +78,19 @@ const WINDOW_BACKDROP_KIND: u32 = 64u;
 const REFERENCE_SHADOW_KIND: u32 = 70u;
 const REFERENCE_PICTURE_KIND: u32 = 71u;
 
-/// The snapshot at `uv`. Zoomed in, its pixels are magnified as pixels, the
-/// way a zoomed screenshot shows them, rather than smeared by bilinear
-/// filtering. Magnification is read off the uv derivatives: fewer than one
-/// texel per drawn pixel. At one-to-one the linear sample resolves the same
-/// texels.
-fn frozen_picture(uv: vec2<f32>) -> vec3<f32> {
+/// The snapshot at `uv`, straight colour and its alpha. Zoomed in, its
+/// pixels are magnified as pixels, the way a zoomed screenshot shows them,
+/// rather than smeared by bilinear filtering. Magnification is read off the
+/// uv derivatives: fewer than one texel per drawn pixel. At one-to-one the
+/// linear sample resolves the same texels.
+fn frozen_picture(uv: vec2<f32>) -> vec4<f32> {
   let texels_per_pixel = fwidth(uv) * vec2<f32>(textureDimensions(snapshot));
   let magnified = max(texels_per_pixel.x, texels_per_pixel.y) < 0.999;
   var sampled = textureSampleLevel(snapshot, linear_sampler, uv, 0.0);
   if (magnified) {
     sampled = textureSampleLevel(snapshot, point_sampler, uv, 0.0);
   }
-  return sampled.rgb;
+  return sampled;
 }
 
 // The Ruler's label shadow, the dark edge under its hairlines, the second
@@ -734,7 +734,7 @@ fn fs_main(input: VertexOut) -> @location(0) vec4<f32> {
     // A frozen desktop is an opaque backing plane. Capture APIs may leave
     // alpha unspecified, and exposing it through a premultiplied composition
     // would reveal the live desktop beneath the snapshot.
-    return vec4<f32>(frozen_picture(uv), 1.0);
+    return vec4<f32>(frozen_picture(uv).rgb, 1.0);
   }
   if (kind == WINDOW_BACKDROP_KIND) {
     return window_backdrop(input.position.xy);

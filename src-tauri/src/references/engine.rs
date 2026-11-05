@@ -48,6 +48,9 @@ struct Native {
   picture: ChromeRenderer,
   chrome: ChromeRenderer,
   stage: Stage,
+  /// Whether the picture has see-through pixels, and casts its shadow from
+  /// what it shows rather than from its box.
+  see_through: bool,
   fit: Fit,
   /// The latest glide back to a place and size (`glide`), which any older
   /// one gives way to.
@@ -98,6 +101,9 @@ pub(super) fn attach(
     picture: ChromeRenderer::with_snapshot(gpu, picture, &snapshot),
     chrome: ChromeRenderer::with_snapshot(gpu, chrome, &snapshot),
     stage: Stage::new(size),
+    // The upload keeps mip levels only for a picture with see-through
+    // pixels, which its shadow is blurred from (`references::upload`).
+    see_through: texture.mip_level_count() > 1,
     fit: Fit::default(),
     glide: 0,
     view: Size::default(),

@@ -122,7 +122,7 @@ pub(super) fn draw(native: &mut Native) {
     (view.width * scale).ceil().max(1.0) as u32,
     (view.height * scale).ceil().max(1.0) as u32,
   );
-  let constants = constants(native.host.light_appearance(), scale);
+  let constants = constants(native.host.light_appearance(), scale, native.see_through);
   let handles = native.stage.hovered || native.stage.resizing();
   native.drawn = Some((view, picture, scale));
   let drawn = native

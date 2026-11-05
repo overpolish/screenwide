@@ -69,9 +69,11 @@ pub(crate) fn chrome_vertices(view: Size, picture: Rect, scale: f64, handles: bo
   vertices
 }
 
-/// The constants both layers draw with, at `scale` pixels to the point.
-pub(crate) fn constants(light_appearance: bool, scale: f64) -> RenderConstants {
+/// The constants both layers draw with, at `scale` pixels to the point, for
+/// a picture that is `see_through` in places or not.
+pub(crate) fn constants(light_appearance: bool, scale: f64, see_through: bool) -> RenderConstants {
   let mut constants = RenderConstants::new(light_appearance);
   constants.reference[0] = scale as f32;
+  constants.reference[1] = if see_through { 1.0 } else { 0.0 };
   constants
 }
