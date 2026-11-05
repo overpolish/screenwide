@@ -16,17 +16,21 @@
 
 pub(crate) mod commands;
 mod drawing;
-#[cfg(target_os = "macos")]
 mod drop;
-#[cfg(target_os = "macos")]
 pub(crate) mod drop_island;
 #[cfg(target_os = "macos")]
 mod drop_macos;
+mod drop_watch;
+#[cfg(target_os = "windows")]
+mod drop_windows;
+mod engine;
 mod fit;
 #[cfg(target_os = "macos")]
 mod macos;
 mod stage;
 mod window;
+#[cfg(target_os = "windows")]
+mod windows;
 
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -37,8 +41,7 @@ use screenwide_annotations::Annotation;
 use screenwide_imaging::CapturedImage;
 use tauri::{AppHandle, Manager};
 
-#[cfg(target_os = "macos")]
-pub(crate) use drop_macos::start as start_drop_watch;
+pub(crate) use drop_watch::start as start_drop_watch;
 pub(crate) use window::{placement, Placement};
 
 /// Every reference window's label starts so.
@@ -175,8 +178,7 @@ pub(crate) async fn open(
 /// Lets go of the reference `label`, its view and layers, and deletes its
 /// pictures. Runs as its window is destroyed, on the main thread.
 fn forget(label: &str) {
-  #[cfg(target_os = "macos")]
-  macos::detach(label);
+  engine::detach(label);
   let Some(reference) = references()
     .as_mut()
     .and_then(|references| references.remove(label))

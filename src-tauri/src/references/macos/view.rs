@@ -22,7 +22,7 @@ use objc2_quartz_core::CAMetalLayer;
 use screenwide_gpu::surface::Surface;
 use screenwide_osc::geometry::Point;
 
-use super::input;
+use super::super::engine as input;
 
 pub(super) struct ReferenceIvars {
   /// The reference's window label, which names it to its state.
@@ -114,7 +114,7 @@ define_class!(
 
     #[unsafe(method(mouseUp:))]
     fn mouse_up(&self, event: &NSEvent) {
-      input::up(self.label(), self.point(event));
+      input::up(self.label(), Some(self.point(event)));
     }
   }
 );

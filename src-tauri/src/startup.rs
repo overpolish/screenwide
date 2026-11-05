@@ -38,7 +38,6 @@ pub(crate) fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Erro
 
   editor::initialize_cursor_artwork();
   crate::references::clear_leftovers(app.handle());
-  #[cfg(target_os = "macos")]
   crate::references::start_drop_watch(app.handle());
   #[cfg(desktop)]
   crate::tray::initialize(app)?;

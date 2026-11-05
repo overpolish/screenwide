@@ -26,7 +26,7 @@ const ISLAND_GAP: f64 = 12.0;
 
 /// A reference's window, and where its picture and island stand in it, in
 /// points.
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub(crate) struct Fit {
   /// The window on the desktop, top-left origin.
   pub window: Rect,

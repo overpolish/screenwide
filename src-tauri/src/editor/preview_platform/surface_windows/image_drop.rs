@@ -7,7 +7,7 @@
 //! which tao has initialised for OLE. Everything a drop needs is read during
 //! the call, since the dragged data is only there for its length.
 
-mod formats;
+use crate::editor::images::dragged_windows as formats;
 
 use std::cell::Cell;
 

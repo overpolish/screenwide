@@ -14,7 +14,7 @@ use objc2_app_kit::{
 };
 use objc2_foundation::{NSArray, NSObject, NSRect, NSURL};
 
-use super::super::drop::Dropped;
+use super::super::drop::{is_picture_address, is_picture_path, Dropped};
 
 define_class!(
   // Safety: NSView has no subclassing requirements this class breaks, and
@@ -86,18 +86,6 @@ fn operation(info: &ProtocolObject<dyn NSDraggingInfo>) -> NSDragOperation {
   }
 }
 
-/// The file extensions a dragged file or address is taken as a picture by.
-const PICTURE_EXTENSIONS: [&str; 9] = [
-  "png", "jpg", "jpeg", "gif", "webp", "tif", "tiff", "bmp", "heic",
-];
-
-fn is_picture_path(path: &str) -> bool {
-  let path = path.split(['?', '#']).next().unwrap_or(path);
-  path.rsplit_once('.').is_some_and(|(_, extension)| {
-    PICTURE_EXTENSIONS.contains(&extension.to_ascii_lowercase().as_str())
-  })
-}
-
 /// A picture file on `pasteboard`.
 fn picture_file(pasteboard: &NSPasteboard) -> Option<String> {
   // Safety: the type is AppKit's own constant.
@@ -115,7 +103,7 @@ fn picture_address(pasteboard: &NSPasteboard) -> Option<String> {
   pasteboard
     .stringForType(unsafe { NSPasteboardTypeURL })
     .map(|address| address.to_string())
-    .filter(|address| address.starts_with("http") && is_picture_path(address))
+    .filter(|address| is_picture_address(address))
 }
 
 /// Whether `pasteboard` holds a picture in a form a reference can open,

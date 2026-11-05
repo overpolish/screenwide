@@ -152,7 +152,7 @@ fn virtual_picture(data: &IDataObject) -> Option<i32> {
 const EITHER: TYMED = TYMED(TYMED_HGLOBAL.0 | TYMED_ISTREAM.0);
 
 /// Whether the drag holds a picture in a form one can be read from.
-pub(super) fn holds_picture(data: &IDataObject) -> bool {
+pub(crate) fn holds_picture(data: &IDataObject) -> bool {
   !files(data).is_empty()
     || [
       registered(w!("PNG")),
@@ -165,7 +165,7 @@ pub(super) fn holds_picture(data: &IDataObject) -> bool {
 }
 
 /// The dragged picture, in the form that keeps the most of it.
-pub(super) fn picture(data: &IDataObject) -> Option<DroppedPicture> {
+pub(crate) fn picture(data: &IDataObject) -> Option<DroppedPicture> {
   if let Some(path) = files(data).into_iter().next() {
     return Some(DroppedPicture::File(path));
   }
@@ -184,4 +184,19 @@ pub(super) fn picture(data: &IDataObject) -> Option<DroppedPicture> {
     .find_map(|kind| read(data, &format(kind, TYMED_HGLOBAL, -1)))
     .and_then(|dib| bmp_from_dib(&dib))
     .map(DroppedPicture::Data)
+}
+
+/// The address the drag offers, as a browser does for a link or a picture
+/// on the web.
+pub(crate) fn address(data: &IDataObject) -> Option<String> {
+  let kind = registered(w!("UniformResourceLocatorW"));
+  let bytes = read(data, &format(kind, EITHER, -1))?;
+  let units: Vec<u16> = bytes
+    .as_chunks::<2>()
+    .0
+    .iter()
+    .map(|pair| u16::from_le_bytes(*pair))
+    .take_while(|unit| *unit != 0)
+    .collect();
+  (!units.is_empty()).then(|| String::from_utf16_lossy(&units))
 }

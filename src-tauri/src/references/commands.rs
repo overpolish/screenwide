@@ -6,14 +6,12 @@
 
 use chrono::Local;
 use serde::Serialize;
-use tauri::{image::Image, AppHandle, Position, WebviewWindow};
+use tauri::{image::Image, AppHandle, WebviewWindow};
 use tauri_plugin_clipboard_manager::ClipboardExt;
 use ts_rs::TS;
 
-use super::{read_png, references, Reference};
-
-#[cfg(target_os = "macos")]
-use screenwide_osc::geometry::{Point, Size};
+use super::{engine, read_png, references, Reference};
+use screenwide_osc::geometry::Size;
 
 fn with_reference<T>(
   window: &WebviewWindow,
@@ -46,11 +44,8 @@ pub fn close_reference(window: WebviewWindow) -> Result<(), String> {
 /// Fades the picture out as the island tucks away, before it closes.
 #[tauri::command]
 pub fn fade_reference(app: AppHandle, window: WebviewWindow) -> Result<(), String> {
-  #[cfg(target_os = "macos")]
-  {
-    let label = window.label().to_owned();
-    super::macos::on_main(&app, move |_| super::macos::fade_out(&label))
-  }
+  let label = window.label().to_owned();
+  engine::on_main(&app, move || engine::fade_out(&label))
 }
 
 /// Whether Back to origin has somewhere to put the reference back: an area
@@ -72,31 +67,20 @@ pub fn reference_to_origin(app: AppHandle, window: WebviewWindow) -> Result<(), 
   let Some(origin) = origin else {
     return Ok(());
   };
-  #[cfg(target_os = "macos")]
-  {
-    let Position::Logical(at) = origin else {
-      return Err("A macOS reference's origin is in points".to_owned());
-    };
-    let label = window.label().to_owned();
-    super::macos::on_main(&app, move |mtm| {
-      super::macos::to_origin(mtm, &label, Point { x: at.x, y: at.y });
-    })
-  }
+  let label = window.label().to_owned();
+  engine::on_main(&app, move || engine::to_origin(&label, origin))
 }
 
 /// Puts the reference back to its true size, its middle where it is: what a
 /// reference with nowhere to return to has in place of Back to origin.
 #[tauri::command]
 pub fn reset_reference_size(app: AppHandle, window: WebviewWindow) -> Result<(), String> {
-  #[cfg(target_os = "macos")]
-  {
-    let label = window.label().to_owned();
-    super::macos::on_main(&app, move |mtm| super::macos::reset_size(mtm, &label))
-  }
+  let label = window.label().to_owned();
+  engine::on_main(&app, move || engine::reset_size(&label))
 }
 
 /// Fits the window round the picture and an island of `width` by `height`
-/// points under it, gap included. Answers where the island starts.
+/// points by it, gap included. Answers where the island stands.
 #[tauri::command]
 pub fn fit_reference(
   app: AppHandle,
@@ -104,14 +88,11 @@ pub fn fit_reference(
   width: f64,
   height: f64,
 ) -> Result<ReferenceLayout, String> {
-  #[cfg(target_os = "macos")]
-  {
-    let label = window.label().to_owned();
-    super::macos::on_main(&app, move |mtm| {
-      super::macos::fit_island(mtm, &label, Size { width, height })
-    })?
-    .ok_or_else(|| "This reference is no longer open".to_owned())
-  }
+  let label = window.label().to_owned();
+  engine::on_main(&app, move || {
+    engine::fit_island(&label, Size { width, height })
+  })?
+  .ok_or_else(|| "This reference is no longer open".to_owned())
 }
 
 /// Shows the picture at `opacity`, from 0 to 1. Its chrome stays as it is.
@@ -121,13 +102,10 @@ pub fn set_reference_opacity(
   window: WebviewWindow,
   opacity: f64,
 ) -> Result<(), String> {
-  #[cfg(target_os = "macos")]
-  {
-    let label = window.label().to_owned();
-    super::macos::on_main(&app, move |_| {
-      super::macos::set_opacity(&label, opacity.clamp(0.0, 1.0));
-    })
-  }
+  let label = window.label().to_owned();
+  engine::on_main(&app, move || {
+    engine::set_opacity(&label, opacity.clamp(0.0, 1.0));
+  })
 }
 
 /// Copies the picture as the window shows it.

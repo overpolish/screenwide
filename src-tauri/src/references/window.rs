@@ -4,9 +4,13 @@
 //! Where a reference stands and the window it stands in.
 
 use screenwide_capture::Region;
-#[cfg(target_os = "macos")]
-use screenwide_osc::geometry::{Point, Size};
+use screenwide_osc::geometry::Size;
 use tauri::{AppHandle, LogicalSize, Position, WebviewUrl, WindowEvent};
+
+#[cfg(target_os = "macos")]
+use super::macos::attach;
+#[cfg(target_os = "windows")]
+use super::windows::attach;
 
 use crate::screenshots::ScreenshotTarget;
 
@@ -82,8 +86,8 @@ fn origin_on(display: &crate::monitor_topology::Display, region: Region) -> Posi
 
 /// Opens the window for the reference `label` showing `texture` at
 /// `placement`, focused so its keys answer at once. The window is placed
-/// round the picture as its native view attaches (`references::macos`). Its
-/// picture is let go of as the window goes.
+/// round the picture as its native view attaches (`references::engine`).
+/// Its picture is let go of as the window goes.
 pub(super) fn build(
   app: &AppHandle,
   label: &str,
@@ -109,24 +113,14 @@ pub(super) fn build(
       super::forget(&forgotten);
     }
   });
-  #[cfg(target_os = "macos")]
-  {
-    let origin = placement.origin.map(|origin| match origin {
-      Position::Logical(at) => Point { x: at.x, y: at.y },
-      Position::Physical(at) => Point {
-        x: f64::from(at.x),
-        y: f64::from(at.y),
-      },
-    });
-    let size = Size {
-      width: placement.size.width,
-      height: placement.size.height,
-    };
-    let attaching = window.clone();
-    super::macos::on_main(app, move |mtm| {
-      super::macos::attach(mtm, &attaching, &texture, size, origin)
-    })??;
-  }
+  let size = Size {
+    width: placement.size.width,
+    height: placement.size.height,
+  };
+  let attaching = window.clone();
+  super::engine::on_main(app, move || {
+    attach(&attaching, &texture, size, placement.origin)
+  })??;
   #[cfg(target_os = "windows")]
   crate::app_windows::apply_capture_policy(app).map_err(|error| error.to_string())?;
   window.show().map_err(|error| error.to_string())?;

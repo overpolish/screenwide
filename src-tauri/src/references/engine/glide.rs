@@ -9,10 +9,10 @@
 
 use std::time::{Duration, Instant};
 
-use objc2::MainThreadMarker;
 use screenwide_osc::geometry::{Point, Rect, Size};
 
-use super::{picture_on_desktop, place, with};
+use super::place::{picture_on_desktop, place};
+use super::with;
 
 /// `reshape`: how long the glide takes.
 const GLIDE: Duration = Duration::from_millis(280);
@@ -20,14 +20,10 @@ const GLIDE: Duration = Duration::from_millis(280);
 const FRAME: Duration = Duration::from_millis(16);
 
 /// Glides the reference `label`'s picture to `target` on the desktop.
-pub(super) fn glide_to(mtm: MainThreadMarker, label: &str, target: Rect) {
+pub(super) fn glide_to(label: &str, target: Rect) {
   let started = with(label, |native| {
     native.glide += 1;
-    (
-      native.glide,
-      picture_on_desktop(mtm, native),
-      native.app.clone(),
-    )
+    (native.glide, picture_on_desktop(native), native.app.clone())
   });
   let Some((glide, from, app)) = started else {
     return;
@@ -47,9 +43,6 @@ pub(super) fn glide_to(mtm: MainThreadMarker, label: &str, target: Rect) {
 
 /// Draws the glide `glide` at `progress`, unless a newer one took over.
 fn step(label: &str, glide: u64, from: Rect, target: Rect, progress: f64) {
-  let Some(mtm) = MainThreadMarker::new() else {
-    return;
-  };
   with(label, |native| {
     if native.glide != glide {
       return;
@@ -69,7 +62,7 @@ fn step(label: &str, glide: u64, from: Rect, target: Rect, progress: f64) {
       x: mix(from.origin.x, target.origin.x),
       y: mix(from.origin.y, target.origin.y),
     };
-    place(mtm, native, Rect { origin, size });
+    place(native, Rect { origin, size });
   });
 }
 

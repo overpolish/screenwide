@@ -182,7 +182,6 @@ pub(crate) fn invoke_handler() -> impl Fn(tauri::ipc::Invoke) -> bool + Send + S
     references::commands::copy_reference,
     references::commands::fade_reference,
     references::commands::fit_reference,
-    #[cfg(target_os = "macos")]
     references::drop_island::reference_drop_island_state,
     references::commands::open_reference_in_editor,
     references::commands::reference_returns_to_origin,

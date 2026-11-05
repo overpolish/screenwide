@@ -13,14 +13,14 @@ use std::path::PathBuf;
 use std::time::Duration;
 
 use screenwide_imaging::CapturedImage;
-use tauri::{AppHandle, LogicalPosition, LogicalSize, Position};
+use tauri::{AppHandle, LogicalPosition, LogicalSize, PhysicalPosition, Position};
 
 use super::{Placement, ReferencePicture};
 
 /// One form a dragged picture came in. A drag carries several; they are
 /// tried in the order given, the first that opens wins.
 pub(crate) enum Dropped {
-  /// The picture's own bytes, PNG or TIFF.
+  /// The picture's own bytes, in any format the `image` crate reads.
   Data(Vec<u8>),
   /// A picture file.
   File(PathBuf),
@@ -28,9 +28,26 @@ pub(crate) enum Dropped {
   Address(String),
 }
 
-/// Keeps the first of `forms` that opens as a reference centred on `at`, in
-/// desktop points, at `scale` pixels to the point.
-pub(crate) fn keep(app: &AppHandle, forms: Vec<Dropped>, at: (f64, f64), scale: f64) {
+/// The file extensions a dragged file or address is taken as a picture by.
+const PICTURE_EXTENSIONS: [&str; 9] = [
+  "png", "jpg", "jpeg", "gif", "webp", "tif", "tiff", "bmp", "heic",
+];
+
+pub(super) fn is_picture_path(path: &str) -> bool {
+  let path = path.split(['?', '#']).next().unwrap_or(path);
+  path.rsplit_once('.').is_some_and(|(_, extension)| {
+    PICTURE_EXTENSIONS.contains(&extension.to_ascii_lowercase().as_str())
+  })
+}
+
+/// Whether `address` is a picture's on the web.
+pub(super) fn is_picture_address(address: &str) -> bool {
+  address.starts_with("http") && is_picture_path(address)
+}
+
+/// Keeps the first of `forms` that opens as a reference centred on `at`, on
+/// a display of `scale` pixels to the point.
+pub(crate) fn keep(app: &AppHandle, forms: Vec<Dropped>, at: Position, scale: f64) {
   let app = app.clone();
   tauri::async_runtime::spawn(async move {
     let mut failures = Vec::new();
@@ -55,7 +72,7 @@ pub(crate) fn keep(app: &AppHandle, forms: Vec<Dropped>, at: (f64, f64), scale: 
 async fn open(
   app: &AppHandle,
   image: CapturedImage,
-  at: (f64, f64),
+  at: Position,
   scale: f64,
 ) -> Result<(), String> {
   let scale = scale.max(1.0);
@@ -63,11 +80,19 @@ async fn open(
     f64::from(image.width) / scale,
     f64::from(image.height) / scale,
   );
+  let origin = match at {
+    Position::Logical(at) => Position::Logical(LogicalPosition::new(
+      (at.x - size.width / 2.0).round(),
+      (at.y - size.height / 2.0).round(),
+    )),
+    // The picture's pixels are the display's own.
+    Position::Physical(at) => Position::Physical(PhysicalPosition::new(
+      at.x - (image.width / 2) as i32,
+      at.y - (image.height / 2) as i32,
+    )),
+  };
   let placement = Placement {
-    origin: Some(Position::Logical(LogicalPosition::new(
-      (at.0 - size.width / 2.0).round(),
-      (at.1 - size.height / 2.0).round(),
-    ))),
+    origin: Some(origin),
     returns: false,
     size,
   };
