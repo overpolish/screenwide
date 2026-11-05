@@ -11,10 +11,17 @@ mod desktop;
 mod host;
 mod view;
 
+use std::ptr::NonNull;
+
+use block2::RcBlock;
 use objc2::rc::Retained;
+use objc2::runtime::{NSObjectProtocol, ProtocolObject};
 use objc2::MainThreadMarker;
-use objc2_app_kit::{NSMainMenuWindowLevel, NSView, NSWindow, NSWindowOrderingMode};
-use objc2_foundation::NSRect;
+use objc2_app_kit::{
+  NSMainMenuWindowLevel, NSView, NSWindow, NSWindowDidChangeOcclusionStateNotification,
+  NSWindowOrderingMode,
+};
+use objc2_foundation::{NSNotification, NSNotificationCenter, NSRect};
 use objc2_quartz_core::CAMetalLayer;
 use screenwide_osc::geometry::Size;
 use tauri::{Manager, Position, WebviewWindow};
@@ -29,6 +36,8 @@ pub(crate) struct MacHost {
   view: Retained<ReferenceView>,
   picture_layer: Retained<CAMetalLayer>,
   chrome_layer: Retained<CAMetalLayer>,
+  /// Watches for the window coming on screen.
+  on_screen: Retained<ProtocolObject<dyn NSObjectProtocol>>,
 }
 
 /// Gives the reference's `window` its view and layers, showing `texture`
@@ -77,6 +86,22 @@ pub(super) fn attach(
       surface_on(gpu, &chrome_layer)?,
     )
   };
+  // wgpu hands out no frame while the window is not on screen, and it is
+  // not yet: the window shows after this, and macOS says so a moment later.
+  // The reference is drawn again then, or it stays empty until something
+  // else draws it.
+  let label = window.label().to_owned();
+  let shown = RcBlock::new(move |_: NonNull<NSNotification>| super::engine::redraw(&label));
+  // Safety: the name is AppKit's own constant, and the block lives as long
+  // as the observer, which is removed as the reference detaches.
+  let on_screen = unsafe {
+    NSNotificationCenter::defaultCenter().addObserverForName_object_queue_usingBlock(
+      Some(NSWindowDidChangeOcclusionStateNotification),
+      Some(&ns_window),
+      None,
+      &shown,
+    )
+  };
   let host = MacHost {
     mtm,
     window: ns_window,
@@ -84,6 +109,7 @@ pub(super) fn attach(
     view,
     picture_layer,
     chrome_layer,
+    on_screen,
   };
   super::engine::attach(
     window.app_handle(),

@@ -63,13 +63,20 @@ fn reference_erf(x: f32) -> f32 {
   return sign(x) * sqrt(1.0 - exp(-inner));
 }
 
-/// How dark one of the shadows is at the probe: the picture's shape, fallen
-/// `shadow.x` and softened by `shadow.y`, at `shadow.z`.
-fn reference_shadow_at(probe: ReferenceProbe, shadow: vec3<f32>) -> f32 {
+/// How much of the picture's box, its corners rounded, falls on the probe
+/// once fallen `shadow.x` and softened by `shadow.y`: from 1 well inside
+/// it to 0 well outside.
+fn reference_box_cast(probe: ReferenceProbe, shadow: vec3<f32>) -> f32 {
   let fallen = probe.offset - vec2<f32>(0.0, shadow.x * probe.scale);
   let deviation = max(shadow.y * 0.5 * probe.scale, 1.0);
   let outside = reference_box(fallen, probe.half, reference_radius(probe));
-  return shadow.z * 0.5 * (1.0 - reference_erf(outside / (deviation * 1.4142135)));
+  return 0.5 * (1.0 - reference_erf(outside / (deviation * 1.4142135)));
+}
+
+/// How dark one of the shadows is at the probe: the picture's shape, fallen
+/// `shadow.x` and softened by `shadow.y`, at `shadow.z`.
+fn reference_shadow_at(probe: ReferenceProbe, shadow: vec3<f32>) -> f32 {
+  return shadow.z * reference_box_cast(probe, shadow);
 }
 
 /// How much of the picture shows at `offset` from its middle, in drawn
@@ -84,11 +91,23 @@ fn reference_cover_at(probe: ReferenceProbe, offset: vec2<f32>, level: f32) -> f
   return textureSampleLevel(snapshot, linear_sampler, uv, level).a * corners;
 }
 
+/// The picture's alpha at `offset` from its middle, in drawn pixels, read
+/// from mip level `level`, its edge carried on past it: a blur reaching
+/// over the edge reads what stands at the edge, and the box's own softened
+/// edge (`reference_box_cast`) takes it away from there.
+fn reference_alpha_near(probe: ReferenceProbe, offset: vec2<f32>, level: f32) -> f32 {
+  let uv = clamp(offset / (probe.half * 2.0) + 0.5, vec2<f32>(0.0), vec2<f32>(1.0));
+  return textureSampleLevel(snapshot, linear_sampler, uv, level).a;
+}
+
 /// One of the shadows cast by what the picture shows rather than by its
 /// box, for a picture with see-through pixels: its alpha, fallen and
-/// blurred. The blur reads the mip level whose texels are about as wide as
-/// it, with a few samples a deviation apart, weighted as a gaussian is,
-/// so it costs the same at any size the picture is drawn.
+/// blurred, within the shadow its box casts. The blur reads the mip level
+/// whose texels are about as wide as it, with a few samples a deviation
+/// apart, weighted as a gaussian is, so it costs the same at any size the
+/// picture is drawn. The box's shadow fades it out past the picture's edge
+/// as an opaque picture's fades, where the samples alone would stop short
+/// at the edge.
 fn reference_cast_at(probe: ReferenceProbe, shadow: vec3<f32>) -> f32 {
   let fallen = probe.offset - vec2<f32>(0.0, shadow.x * probe.scale);
   let deviation = max(shadow.y * 0.5 * probe.scale, 1.0);
@@ -101,11 +120,11 @@ fn reference_cast_at(probe: ReferenceProbe, shadow: vec3<f32>) -> f32 {
     for (var x = -1; x <= 1; x++) {
       let step = vec2<f32>(f32(x), f32(y));
       let weight = exp(-0.5 * dot(step, step));
-      sum += weight * reference_cover_at(probe, fallen + step * deviation, level);
+      sum += weight * reference_alpha_near(probe, fallen + step * deviation, level);
       weights += weight;
     }
   }
-  return shadow.z * sum / weights;
+  return shadow.z * sum / weights * reference_box_cast(probe, shadow);
 }
 
 /// The shadow round the picture, outside it only: outside its box, or for

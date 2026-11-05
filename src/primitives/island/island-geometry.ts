@@ -48,6 +48,10 @@ export const ISLAND = {
   /** The hanging section's bottom corners, a little under the row's: the
    * narrower box reads as round as the row with them. */
   sectionRadius: 22,
+  /** How far in from the shadow room's edge the shadow fades to nothing, so
+   * its soft tail, which reaches a little past the room, ends at the edge
+   * rather than being cut there. */
+  shadowFade: 16,
   /** Room round the outline for its shadow. The drawing's box has to hold
    * the shadow: native WebKit draws nothing of a filter outside the box. */
   shadowRoom: 48,

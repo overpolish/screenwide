@@ -133,5 +133,10 @@ impl ReferenceHost for MacHost {
 
   fn detach(&self) {
     self.view.removeFromSuperview();
+    // Safety: the observer was returned by `addObserverForName`.
+    unsafe {
+      objc2_foundation::NSNotificationCenter::defaultCenter()
+        .removeObserver(self.on_screen.as_ref());
+    }
   }
 }

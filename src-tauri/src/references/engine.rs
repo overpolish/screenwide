@@ -124,6 +124,14 @@ pub(super) fn detach(label: &str) {
   }
 }
 
+/// Draws the reference `label` again as it stands, once the platform can
+/// show what is drawn: a frame drawn before its window is on screen is
+/// skipped.
+#[cfg(target_os = "macos")]
+pub(super) fn redraw(label: &str) {
+  with(label, place::draw);
+}
+
 /// Runs `work` on the main thread, where the windows are, and waits for it.
 pub(super) fn on_main<R: Send + 'static>(
   app: &AppHandle,

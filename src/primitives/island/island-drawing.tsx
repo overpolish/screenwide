@@ -7,10 +7,19 @@ import { cn } from "../../lib/styling";
 
 import { ISLAND, px } from "./island-geometry";
 
+/** Opaque but for the last `ISLAND.shadowFade` towards each end along
+ * `direction`. The black stands a whole room in from the box's edges, so
+ * only the shadow's tail falls in the fade. */
+const fadeTowards = (direction: "bottom" | "right") => {
+  const fade = px(ISLAND.shadowFade);
+  return `linear-gradient(to ${direction}, transparent, black ${fade}, black calc(100% - ${fade}), transparent)`;
+};
+
 // The island's outline, under everything it holds (`useIslandOutline` draws
 // it and sizes its box). It carries the shadow itself, so content changing,
 // as the recording's time does each second, does not redraw it. Mirrored
-// right to left; its box leaves room for the shadow, drawn only inside it.
+// right to left; its box leaves room for the shadow, drawn only inside it,
+// which fades out towards the box's edge rather than stopping at it.
 export function IslandDrawing({
   isShown,
   rowPathRef,
@@ -31,6 +40,8 @@ export function IslandDrawing({
       style={{
         height: px(room * 2),
         insetInlineStart: -room,
+        maskComposite: "intersect",
+        maskImage: `${fadeTowards("right")}, ${fadeTowards("bottom")}`,
         top: -room,
         width: `calc(100% + ${px(room * 2)})`,
       }}

@@ -59,6 +59,13 @@ export function ReferenceWindow() {
   const [isCopied, setIsCopied] = useState(false);
   const copiedRef = useRef<number | undefined>(undefined);
   const [isShown, setIsShown] = useState(true);
+  /** The island's box as it began to tuck away, which it keeps so the
+   * island shrinks into its own middle. It changes no size the window is
+   * fitted round meanwhile, so the window holds still as it goes. */
+  const [tucking, setTucking] = useState<null | {
+    height: number;
+    width: number;
+  }>(null);
   const { flippedFrom, islandRef, layout } = useReferenceLayout();
   /** How far the island stands from its place as it glides there. */
   const flipOffset = useMotionValue(0);
@@ -111,11 +118,16 @@ export function ReferenceWindow() {
       dir="ltr"
     >
       <motion.div
-        className="absolute w-fit"
+        className={cn(
+          "absolute w-fit",
+          tucking && "flex items-center justify-center",
+        )}
         ref={islandRef}
         style={{
+          height: tucking?.height,
           insetInlineStart: layout?.islandX ?? 0,
           top: layout?.islandY ?? 0,
+          width: tucking?.width,
           y: flipOffset,
         }}
       >
@@ -123,6 +135,13 @@ export function ReferenceWindow() {
           isCopied={isCopied}
           isShown={isShown}
           onClose={() => {
+            const island = islandRef.current;
+            if (island) {
+              setTucking({
+                height: island.offsetHeight,
+                width: island.offsetWidth,
+              });
+            }
             setIsShown(false);
             invoke("fade_reference").catch(report("Could not close"));
           }}
