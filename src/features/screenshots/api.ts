@@ -9,7 +9,8 @@ import { Region } from "../recording-sources/types";
 import type { QuickScreenshotDestination } from "../../bindings/QuickScreenshotDestination";
 import type { ScrollingCaptureIslandState } from "../../bindings/ScrollingCaptureIslandState";
 
-export type ScreenshotDestination = "editor" | "clipboard" | "both";
+export type ScreenshotDestination =
+  "editor" | "clipboard" | "both" | "reference";
 
 export type ScreenshotTarget =
   | { kind: "desktopRegion"; monitorId: number; region: Region }

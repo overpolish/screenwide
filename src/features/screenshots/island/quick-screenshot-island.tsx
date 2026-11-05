@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { Clipboard, ImageDown, X } from "lucide-react";
+import { Clipboard, ImageDown, PictureInPicture2, X } from "lucide-react";
 
 import { t } from "../../../i18n/i18n";
 import { IconButton } from "../../../primitives/button/icon-button";
@@ -32,11 +32,14 @@ export type QuickScreenshotIslandProps = Pick<
 const TITLES: Record<QuickScreenshotDestination, () => string> = {
   clipboard: () => t("screenshots-quick-clipboard"),
   editor: () => t("screenshots-quick-editor"),
+  reference: () => t("screenshots-quick-reference"),
 };
 
 const GLYPHS: Record<QuickScreenshotDestination, typeof ImageDown> = {
   clipboard: Clipboard,
   editor: ImageDown,
+  // A picture standing over the screen, as a reference does.
+  reference: PictureInPicture2,
 };
 
 export function QuickScreenshotIsland({

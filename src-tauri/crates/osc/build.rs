@@ -8,6 +8,7 @@ fn main() {
       // First: it carries the module's directive.
       "src/gpu/shaders/osc.wgsl",
       "src/gpu/shaders/lens.wgsl",
+      "src/gpu/shaders/reference.wgsl",
       "../gpu/src/shaders/disc_blur.wgsl",
     ],
   )]);

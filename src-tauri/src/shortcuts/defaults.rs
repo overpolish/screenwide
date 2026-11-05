@@ -34,6 +34,10 @@ impl Default for ShortcutSettings {
           shortcut: None,
         },
         ShortcutBinding {
+          action: ShortcutAction::TakeReferenceScreenshot,
+          shortcut: Some("CommandOrControl+Shift+Digit7".to_owned()),
+        },
+        ShortcutBinding {
           action: ShortcutAction::RecognizeText,
           shortcut: Some("CommandOrControl+Shift+KeyT".to_owned()),
         },

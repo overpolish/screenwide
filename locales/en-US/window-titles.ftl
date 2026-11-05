@@ -13,4 +13,6 @@ window-titles-island = Island
 window-titles-projects = Projects
 window-titles-settings = Settings
 window-titles-region-selector = Region Selector
+# A screenshot kept on screen at its true size, to compare against what is there now.
+window-titles-reference = Reference
 window-titles-listbox = Listbox

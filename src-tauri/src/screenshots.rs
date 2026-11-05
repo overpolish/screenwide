@@ -69,6 +69,8 @@ pub enum ScreenshotDestination {
   #[default]
   Clipboard,
   Both,
+  /// Kept on screen at its true size where it was taken (`references`).
+  Reference,
 }
 
 /// A whole-monitor still with Screenwide's own windows left out, whatever the

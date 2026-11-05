@@ -10,7 +10,6 @@ use chrono::Local;
 use tauri::{image::Image, AppHandle};
 use tauri_plugin_clipboard_manager::ClipboardExt;
 
-#[cfg(not(any(target_os = "macos", target_os = "windows")))]
 use super::CapturedImage;
 use super::{capture, capture_file_stem, ScreenshotDestination, ScreenshotTarget};
 
@@ -52,6 +51,9 @@ pub(crate) async fn take_still(
       &[crate::capture_overlays::CaptureOverlay::Annotate]
     },
   );
+  // A reference is laid over the interface it shows, where a pointer drawn
+  // into it would only stand in the way.
+  let show_cursor = show_cursor && !matches!(destination, ScreenshotDestination::Reference);
   let image = match capture(&app, target, show_cursor, include_ruler).await {
     Ok(image) => image,
     Err(error) => {
@@ -61,6 +63,13 @@ pub(crate) async fn take_still(
     }
   };
   let annotations = crate::annotate::screenshot_annotations(target, &image);
+
+  if matches!(destination, ScreenshotDestination::Reference) {
+    let opened = keep_as_reference(&app, target, image, annotations).await;
+    crate::editor::release_screenshot_workspace(&app);
+    let _ = crate::app_windows::hide_recording_ui(app.clone());
+    return opened.map(|()| None);
+  }
 
   if matches!(
     destination,
@@ -106,4 +115,40 @@ pub(crate) async fn take_still(
   }
 
   Ok(None)
+}
+
+/// Keeps the still on screen as a reference where it was taken. The window
+/// shows it with the live annotations drawn in, as a copied still has them;
+/// the editor still gets them as a layer of their own.
+async fn keep_as_reference(
+  app: &AppHandle,
+  target: ScreenshotTarget,
+  image: CapturedImage,
+  annotations: Vec<screenwide_annotations::Annotation>,
+) -> Result<(), String> {
+  let scale = super::capture_scale(target);
+  #[cfg(any(target_os = "macos", target_os = "windows"))]
+  let shown = if annotations.is_empty() {
+    None
+  } else {
+    Some(super::annotation_bake::bake_annotations(
+      &image,
+      annotations.clone(),
+      scale,
+    )?)
+  };
+  #[cfg(not(any(target_os = "macos", target_os = "windows")))]
+  let shown = None;
+  let placement = crate::references::placement(app, target, (image.width, image.height), scale);
+  crate::references::open(
+    app,
+    crate::references::ReferencePicture {
+      original: image,
+      shown,
+      annotations,
+      scale,
+    },
+    placement,
+  )
+  .await
 }

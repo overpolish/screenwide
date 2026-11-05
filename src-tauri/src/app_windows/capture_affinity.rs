@@ -66,17 +66,25 @@ pub(crate) fn apply_capture_policy(app: &AppHandle) -> Result<()> {
 /// a recording receives their arrows as editable clips and a still receives
 /// them as a layer, so baked pixels would draw every arrow twice. Excluding
 /// them only while we capture is what keeps them visible in a screen share.
+///
+/// References are visible outside our captures too, so the Ruler's and Text
+/// Recognition's snapshots, which are not our captures, read them; during
+/// one they follow the preference as any of our windows does.
 #[cfg(target_os = "windows")]
-const fn window_capturable(
-  record_screenwide_windows: bool,
-  preserve_ruler: bool,
-  annotate_host: bool,
-  capturing: bool,
-) -> bool {
-  if annotate_host {
-    return !capturing;
+#[derive(Clone, Copy)]
+enum Kind {
+  Ordinary { preserve_ruler: bool },
+  AnnotateHost,
+  Reference,
+}
+
+#[cfg(target_os = "windows")]
+const fn window_capturable(record_screenwide_windows: bool, kind: Kind, capturing: bool) -> bool {
+  match kind {
+    Kind::AnnotateHost => !capturing,
+    Kind::Reference => record_screenwide_windows || !capturing,
+    Kind::Ordinary { preserve_ruler } => record_screenwide_windows || preserve_ruler,
   }
-  record_screenwide_windows || preserve_ruler
 }
 
 #[cfg(target_os = "windows")]
@@ -84,20 +92,25 @@ pub fn sync_capture_affinity(app: &AppHandle, record_screenwide_windows: bool) -
   let capturing = is_capturing();
   for window in app.webview_windows().values() {
     if platform::is_visible(window)? {
-      // Quick Screenshot temporarily preserves Ruler in the captured pixels.
-      // Region's pre-shutter exclusion pass must not overwrite the anchor
-      // host's affinity: its additional-display peers are native windows and
-      // would otherwise remain capturable while only the anchor vanished.
-      let preserve_ruler =
-        window.label() == WindowLabel::Ruler.as_str() && crate::ruler::is_screenshot_mode();
+      let label = window.label();
+      let kind = if crate::annotate::is_host_label(label) {
+        Kind::AnnotateHost
+      } else if crate::references::is_reference_label(label) {
+        Kind::Reference
+      } else {
+        // Quick Screenshot temporarily preserves Ruler in the captured
+        // pixels. Region's pre-shutter exclusion pass must not overwrite the
+        // anchor host's affinity: its additional-display peers are native
+        // windows and would otherwise remain capturable while only the
+        // anchor vanished.
+        Kind::Ordinary {
+          preserve_ruler: label == WindowLabel::Ruler.as_str()
+            && crate::ruler::is_screenshot_mode(),
+        }
+      };
       platform::set_capture_affinity(
         window,
-        window_capturable(
-          record_screenwide_windows,
-          preserve_ruler,
-          crate::annotate::is_host_label(window.label()),
-          capturing,
-        ),
+        window_capturable(record_screenwide_windows, kind, capturing),
       )?;
     }
   }
@@ -139,22 +152,36 @@ pub(crate) fn set_window_capture_affinity(
 
 #[cfg(all(test, target_os = "windows"))]
 mod tests {
-  use super::{is_capturing, mark_capturing, window_capturable, Capture};
+  use super::{is_capturing, mark_capturing, window_capturable, Capture, Kind};
 
   #[test]
   fn quick_screenshot_preserves_the_ruler_anchor_during_global_exclusion() {
-    assert!(window_capturable(false, true, false, false));
-    assert!(!window_capturable(false, false, false, false));
-    assert!(window_capturable(true, false, false, false));
+    let ruler = Kind::Ordinary {
+      preserve_ruler: true,
+    };
+    let other = Kind::Ordinary {
+      preserve_ruler: false,
+    };
+    assert!(window_capturable(false, ruler, false));
+    assert!(!window_capturable(false, other, false));
+    assert!(window_capturable(true, other, false));
   }
 
   #[test]
   fn an_annotate_host_is_hidden_from_our_captures_and_from_nothing_else() {
     // Visible to a screen share while the overlay is only drawing, whatever
     // the preference says, because the recording gets the arrows as clips.
-    assert!(window_capturable(false, false, true, false));
-    assert!(!window_capturable(true, false, true, true));
-    assert!(!window_capturable(false, false, true, true));
+    assert!(window_capturable(false, Kind::AnnotateHost, false));
+    assert!(!window_capturable(true, Kind::AnnotateHost, true));
+    assert!(!window_capturable(false, Kind::AnnotateHost, true));
+  }
+
+  #[test]
+  fn a_reference_is_seen_by_the_ruler_and_left_out_of_our_captures() {
+    assert!(window_capturable(false, Kind::Reference, false));
+    assert!(!window_capturable(false, Kind::Reference, true));
+    // Recording Screenwide's windows takes it too.
+    assert!(window_capturable(true, Kind::Reference, true));
   }
 
   #[test]

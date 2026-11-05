@@ -933,6 +933,17 @@ export type Messages = {
   "recording-controls-system-audio-level": null;
   "recording-inputs-all-audio": null;
   "recording-inputs-camera-starting": null;
+  "reference-close": null;
+  "reference-close-confirm": null;
+  "reference-copied": null;
+  "reference-copy": null;
+  "reference-drop-hint": null;
+  "reference-drop-island": null;
+  "reference-island": null;
+  "reference-opacity": null;
+  "reference-open-in-editor": null;
+  "reference-reset-size": null;
+  "reference-to-origin": null;
   "ruler-island-centerlines": null;
   "ruler-island-close": null;
   "ruler-island-copy": null;
@@ -954,6 +965,7 @@ export type Messages = {
   "screenshots-quick-clipboard": null;
   "screenshots-quick-editor": null;
   "screenshots-quick-island": null;
+  "screenshots-quick-reference": null;
   "screenshots-scrolling-cancel": null;
   "screenshots-scrolling-cancel-hint": { key: string | number };
   "screenshots-scrolling-capturing": null;
@@ -1163,6 +1175,8 @@ export type Messages = {
   "settings-shortcut-copy-screenshot-description": null;
   "settings-shortcut-pause-resume": null;
   "settings-shortcut-place-moment": { moment: string | number };
+  "settings-shortcut-reference-screenshot": null;
+  "settings-shortcut-reference-screenshot-description": null;
   "settings-shortcut-save-replay": null;
   "settings-shortcut-save-replay-description": null;
   "settings-shortcut-screenshot": null;
@@ -1338,6 +1352,7 @@ export type Messages = {
   "window-titles-listbox": null;
   "window-titles-permissions": null;
   "window-titles-projects": null;
+  "window-titles-reference": null;
   "window-titles-region-selector": null;
   "window-titles-settings": null;
   "window-titles-tool-panel-recording": null;

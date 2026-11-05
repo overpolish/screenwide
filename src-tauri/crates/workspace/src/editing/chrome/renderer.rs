@@ -14,7 +14,7 @@ pub struct ChromeRenderer {
   surface: Surface,
   pipeline: wgpu::RenderPipeline,
   /// The constants block, and transparent texels for every texture the
-  /// shader declares, which the chrome's own quads never sample.
+  /// shader declares that the chrome's own quads never sample.
   bindings: wgpu::BindGroup,
   constants: wgpu::Buffer,
   vertex_buffer: wgpu::Buffer,
@@ -23,6 +23,24 @@ pub struct ChromeRenderer {
 
 impl ChromeRenderer {
   pub fn new(shared: &'static screenwide_gpu::Gpu, surface: Surface) -> Self {
+    Self::bound(shared, surface, None)
+  }
+
+  /// A renderer whose snapshot texture is `snapshot`, which the shader's
+  /// frozen-picture quads (kind 33) draw.
+  pub fn with_snapshot(
+    shared: &'static screenwide_gpu::Gpu,
+    surface: Surface,
+    snapshot: &wgpu::TextureView,
+  ) -> Self {
+    Self::bound(shared, surface, Some(snapshot))
+  }
+
+  fn bound(
+    shared: &'static screenwide_gpu::Gpu,
+    surface: Surface,
+    snapshot: Option<&wgpu::TextureView>,
+  ) -> Self {
     let device = &shared.device;
     let module = osc_gpu::shader_module(device);
     let layout = osc_gpu::bind_group_layout(device);
@@ -41,9 +59,9 @@ impl ChromeRenderer {
         &[0; 4],
       )
       .create_view(&Default::default());
-    let texture = |binding| wgpu::BindGroupEntry {
+    let texture = |binding, view| wgpu::BindGroupEntry {
       binding,
-      resource: wgpu::BindingResource::TextureView(&placeholder),
+      resource: wgpu::BindingResource::TextureView(view),
     };
     let linear_sampler = osc_gpu::sampler(device, wgpu::FilterMode::Linear);
     let point_sampler = osc_gpu::sampler(device, wgpu::FilterMode::Nearest);
@@ -59,10 +77,10 @@ impl ChromeRenderer {
             size: wgpu::BufferSize::new(size_of::<RenderConstants>() as u64),
           }),
         },
-        texture(1),
-        texture(2),
-        texture(4),
-        texture(5),
+        texture(1, &placeholder),
+        texture(2, &placeholder),
+        texture(4, snapshot.unwrap_or(&placeholder)),
+        texture(5, &placeholder),
         wgpu::BindGroupEntry {
           binding: 6,
           resource: wgpu::BindingResource::Sampler(&linear_sampler),

@@ -34,6 +34,10 @@ const WINDOW_ROUTES: Record<string, WindowLoader | null> = {
     import("./project-browser-entry").then(
       (module) => module.ProjectBrowserEntry,
     ),
+  "/reference": () =>
+    import("../features/reference/reference-window").then(
+      (module) => module.ReferenceWindow,
+    ),
   "/region-selector": () =>
     import("./region-selector-entry").then(
       (module) => module.RegionSelectorEntry,

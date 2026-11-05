@@ -76,6 +76,9 @@ pub struct RenderConstants {
   /// with no backdrop, and `.w` how wide its edge feathers, every length in
   /// the target's pixels.
   pub window_shape: [f32; 4],
+  /// A reference's picture and shadow: `.x` how many of the target's pixels
+  /// a point spans, which their lengths are given in.
+  pub reference: [f32; 4],
 }
 
 /// The rows of `RenderConstants::turn_rings`.
@@ -127,6 +130,7 @@ impl RenderConstants {
       turn_rings: [[0.0; 4]; TURN_RING_ROWS],
       window_cutout: [0.0; 4],
       window_shape: [0.0; 4],
+      reference: [0.0; 4],
     }
   }
 }

@@ -230,6 +230,8 @@ settings-shortcut-screenshot = Take a screenshot
 settings-shortcut-screenshot-description = Choose an area of your screen to capture.
 settings-shortcut-copy-screenshot = Copy a screenshot
 settings-shortcut-copy-screenshot-description = Choose an area to copy, ready to paste elsewhere.
+settings-shortcut-reference-screenshot = Keep a reference
+settings-shortcut-reference-screenshot-description = Choose an area to keep on screen at its true size.
 # The row of a moment's shortcut in the Shortcuts pane. $moment is the moment's name, which the user chooses.
 settings-shortcut-place-moment = Place { $moment }
 

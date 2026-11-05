@@ -30,6 +30,7 @@ mod projects_folder;
 mod recording;
 mod recording_inputs;
 mod recording_sources;
+mod references;
 mod ruler;
 mod screenshots;
 mod settings;

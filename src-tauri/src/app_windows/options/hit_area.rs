@@ -1,14 +1,16 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! A panel window larger than what it shows, as the editor's island is: its
-//! page reports where its parts are, and clicks pass through the window
-//! everywhere else. The editor's island window covers the editor's content
-//! area and never resizes as the island changes shape inside it, so clicks,
-//! hovers and scrolls on the picture, strip and columns around the island
-//! must reach the editor underneath.
+//! A window larger than what it shows, as the editor's island is: its page,
+//! or the window's owner, reports where its parts are, and clicks pass
+//! through the window everywhere else. The editor's island window covers the
+//! editor's content area and never resizes as the island changes shape
+//! inside it, so clicks, hovers and scrolls on the picture, strip and columns
+//! around the island must reach the editor underneath; a reference's window
+//! keeps room round its picture and island for their shadows, which clicks
+//! must pass through.
 //!
-//! The pointer's position is read on a timer while any such panel is up, as
+//! The pointer's position is read on a timer while any such window is up, as
 //! the island's window does: a window that lets clicks through hears nothing
 //! of the pointer, so it cannot tell for itself when the pointer arrives.
 
@@ -20,7 +22,8 @@ use std::time::Duration;
 
 use tauri::{AppHandle, Manager};
 
-use super::super::island::{is_on_island, IslandRect};
+use super::super::island::is_on_island;
+pub(crate) use super::super::island::IslandRect;
 
 /// How often the pointer is looked for while it is on a panel's parts,
 /// quickly enough to let clicks through as soon as it leaves them.
@@ -56,15 +59,22 @@ pub fn set_standalone_listbox_hit_area(
   panel: String,
   rects: Option<Vec<IslandRect>>,
 ) {
+  set_hit_area(app, panel, rects);
+}
+
+/// Where the parts of the window `label` are, so clicks on them reach it and
+/// clicks anywhere else in it pass through; `None` makes it take every click
+/// again. References use it for their pictures and islands.
+pub(crate) fn set_hit_area(app: AppHandle, label: String, rects: Option<Vec<IslandRect>>) {
   let Some(rects) = rects else {
-    if areas().remove(&panel).is_some() {
-      if let Some(window) = app.get_webview_window(&panel) {
+    if areas().remove(&label).is_some() {
+      if let Some(window) = app.get_webview_window(&label) {
         let _ = set_takes_clicks(&window, true);
       }
     }
     return;
   };
-  match areas().entry(panel) {
+  match areas().entry(label) {
     Entry::Occupied(mut area) => area.get_mut().rects = rects,
     Entry::Vacant(slot) => {
       slot.insert(Area {

@@ -18,6 +18,7 @@
     "text-recognition",
     "ruler",
     "screenshot-region-*",
+    "reference-*",
     "permissions"
   ],
   "permissions": [

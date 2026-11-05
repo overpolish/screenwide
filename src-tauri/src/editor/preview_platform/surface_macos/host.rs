@@ -10,11 +10,8 @@ use std::sync::{Arc, Mutex};
 
 use objc2::rc::Retained;
 use objc2::MainThreadMarker;
-use objc2_app_kit::{
-  NSAppearanceNameAqua, NSAppearanceNameDarkAqua, NSApplication, NSEvent, NSEventModifierFlags,
-  NSResponder, NSView,
-};
-use objc2_foundation::{NSArray, NSPoint};
+use objc2_app_kit::{NSEvent, NSEventModifierFlags, NSResponder, NSView};
+use objc2_foundation::NSPoint;
 use objc2_quartz_core::CATransaction;
 
 use screenwide_compositor::{PreviewSurfaceCorners, PreviewSurfaceRect};
@@ -70,15 +67,7 @@ pub(super) fn mac(inner: &SurfaceInner) -> &MacHost {
     .expect("every macOS editor surface is hosted by MacHost")
 }
 
-/// Whether the application draws in the light appearance.
-pub(super) fn light_appearance(mtm: MainThreadMarker) -> bool {
-  let appearance = NSApplication::sharedApplication(mtm).effectiveAppearance();
-  // Safety: the names are AppKit's own constants.
-  let names = unsafe { NSArray::from_slice(&[NSAppearanceNameAqua, NSAppearanceNameDarkAqua]) };
-  appearance
-    .bestMatchFromAppearancesWithNames(&names)
-    .is_some_and(|name| &*name == unsafe { NSAppearanceNameAqua })
-}
+pub(super) use crate::app_windows::platform::light_appearance;
 
 impl MacHost {
   pub(super) fn new(

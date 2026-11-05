@@ -31,6 +31,8 @@ use tauri::{LogicalPosition, LogicalSize};
 pub use self::windows::band_guard::initialize as initialize_band_guard;
 mod glide_island;
 #[cfg(target_os = "macos")]
+pub(crate) use self::macos::appearance::light_appearance;
+#[cfg(target_os = "macos")]
 pub use self::macos::capture_exclusion::{exclude_from_capture, set_window_capture_affinity};
 #[cfg(target_os = "macos")]
 pub use self::macos::presentation::{

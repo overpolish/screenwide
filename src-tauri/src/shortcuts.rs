@@ -83,6 +83,8 @@ pub enum ShortcutAction {
   SaveReplay,
   TakeScreenshot,
   TakeScreenshotToClipboard,
+  /// A screenshot kept on screen as a reference, at its true size.
+  TakeReferenceScreenshot,
   RecognizeText,
   AnnotateOverlay,
   AnnotateClear,

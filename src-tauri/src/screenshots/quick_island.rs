@@ -28,6 +28,7 @@ const EVENT: &str = "quick-screenshot://island";
 pub enum QuickScreenshotDestination {
   Editor,
   Clipboard,
+  Reference,
 }
 
 /// What the island was last told; none while no session is on it.

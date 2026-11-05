@@ -3,4 +3,4 @@
 /**
  * Where the area drawn goes, as the island says it.
  */
-export type QuickScreenshotDestination = "editor" | "clipboard";
+export type QuickScreenshotDestination = "editor" | "clipboard" | "reference";

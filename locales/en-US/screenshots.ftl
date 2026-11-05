@@ -29,5 +29,6 @@ screenshots-quick-island = Quick screenshot
 # The island's title: where the area drawn goes, set by the shortcut pressed.
 screenshots-quick-editor = Draw an area to open in the editor
 screenshots-quick-clipboard = Draw an area to copy
+screenshots-quick-reference = Draw an area to keep as a reference
 # Names the close button, which ends the screenshot without taking one.
 screenshots-quick-cancel = Cancel screenshot

@@ -24,7 +24,7 @@ import type { ShortcutAction } from "../../bindings/ShortcutAction";
 
 type ScreenshotShortcutAction = Extract<
   ShortcutAction,
-  "takeScreenshot" | "takeScreenshotToClipboard"
+  "takeReferenceScreenshot" | "takeScreenshot" | "takeScreenshotToClipboard"
 >;
 type CleanupStep = () => Promise<unknown>;
 let sessionDestination: ScreenshotDestination = "editor";
@@ -33,16 +33,21 @@ let shortcutTransition: Promise<void> = Promise.resolve();
 
 export const screenshotCaptureDestination = () => sessionDestination;
 
+const DESTINATIONS: Record<ScreenshotShortcutAction, ScreenshotDestination> = {
+  takeReferenceScreenshot: "reference",
+  takeScreenshot: "editor",
+  takeScreenshotToClipboard: "clipboard",
+};
+
 const selectScreenshotAction = (action: ScreenshotShortcutAction) => {
-  sessionDestination =
-    action === "takeScreenshotToClipboard" ? "clipboard" : "editor";
+  sessionDestination = DESTINATIONS[action];
   sessionAction = action;
 };
 
 // The island is advisory: a session goes on without it.
 const showIsland = () =>
   showQuickScreenshotIsland(
-    sessionDestination === "clipboard" ? "clipboard" : "editor",
+    sessionDestination === "both" ? "editor" : sessionDestination,
   ).catch((error: unknown) => {
     console.error("Could not show the screenshot island", error);
   });
@@ -71,7 +76,9 @@ async function runCleanupSteps(steps: CleanupStep[]) {
 export const isScreenshotShortcut = (
   action: ShortcutAction,
 ): action is ScreenshotShortcutAction =>
-  action === "takeScreenshot" || action === "takeScreenshotToClipboard";
+  action === "takeScreenshot" ||
+  action === "takeScreenshotToClipboard" ||
+  action === "takeReferenceScreenshot";
 
 /**
  * The screenshot shortcut's borrowing of the region overlay, from opening it

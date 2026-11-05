@@ -24,10 +24,11 @@ use super::island_placement::{self, IslandBoxAnchor, IslandPlacement, IslandShow
 use super::WindowLabel;
 
 mod hit_area;
+pub(crate) use hit_area::IslandRect;
 pub use hit_area::{
   __cmd__set_island_hit_area, __tauri_command_name_set_island_hit_area, set_island_hit_area,
 };
-pub(super) use hit_area::{is_on_island, rects, IslandRect};
+pub(super) use hit_area::{is_on_island, rects};
 mod level;
 #[cfg(target_os = "macos")]
 pub(super) use level::is_above_overlays;

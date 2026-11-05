@@ -14,11 +14,13 @@ import { motionDurations, motionEasings } from "../../lib/motion";
 import { cn } from "../../lib/styling";
 import { Button } from "../../primitives/button/button";
 import { IconButton } from "../../primitives/button/icon-button";
+import { IconSwap } from "../../primitives/icon-swap/icon-swap";
 
 import { useConfirmAction } from "./use-confirm-action";
 
-// A state change crossfades; native controls do not scale their content.
-const SWAP_ANIMATION: MotionProps = {
+// A label that changes crossfades; native controls do not scale their
+// content.
+const LABEL_SWAP: MotionProps = {
   animate: { opacity: 1 },
   exit: { opacity: 0 },
   initial: { opacity: 0 },
@@ -47,9 +49,10 @@ type ConfirmActionButtonProps = {
 
 // An action that asks twice: the first press arms it, the second within a
 // moment does it. Leaving the button, Escape, or the moment passing disarms
-// it. With an icon it is an icon button whose glyph gives way to a check;
-// without one, a text button whose label gives way to its confirm label,
-// reserving the wider of the two words so arming never moves the layout.
+// it. With an icon it is an icon button whose glyph gives way to a check as
+// the app's other glyphs change (`IconSwap`); without one, a text button
+// whose label gives way to its confirm label, reserving the wider of the two
+// words so arming never moves the layout.
 export function ConfirmActionButton({
   className,
   confirmLabel,
@@ -75,13 +78,13 @@ export function ConfirmActionButton({
   };
   const buttonClassName = cn(className, focusClassName);
   const look = isArmed ? ARMED : { variant };
-  const swap = (key: string, content: ReactNode) => (
+  const swapLabel = (key: string, content: string) => (
     <AnimatePresence initial={false}>
       <motion.span
         aria-hidden
         className="col-start-1 row-start-1 flex items-center justify-center"
         key={key}
-        {...SWAP_ANIMATION}
+        {...LABEL_SWAP}
         transition={transition}
       >
         {content}
@@ -107,7 +110,10 @@ export function ConfirmActionButton({
           <span aria-hidden className="invisible col-start-1 row-start-1">
             {confirmLabel}
           </span>
-          {swap(isArmed ? "armed" : "idle", isArmed ? confirmLabel : label)}
+          {swapLabel(
+            isArmed ? "armed" : "idle",
+            isArmed ? confirmLabel : label,
+          )}
         </span>
       </Button>
     );
@@ -121,8 +127,10 @@ export function ConfirmActionButton({
       isDisabled={isDisabled}
       {...look}
     >
-      <span className="grid">
-        {swap(isArmed ? "armed" : "idle", isArmed ? <Check /> : icon)}
+      <span className="relative size-icon">
+        <IconSwap swapKey={isArmed ? "armed" : "idle"}>
+          {isArmed ? <Check aria-hidden /> : icon}
+        </IconSwap>
       </span>
     </IconButton>
   );
