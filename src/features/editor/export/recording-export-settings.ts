@@ -13,9 +13,9 @@ import {
 
 export const DEFAULT_COMPRESSION = 2;
 export const DEFAULT_CURSOR_EFFECTS: CursorEffectSettings = {
-  // Always drawn: the recording is captured without the system cursor, so
-  // Screenwide's cursor is the only one there is. The flag stays for the
-  // export contract and is never turned off from the editor.
+  // Drawn by default: the recording is captured without the system cursor,
+  // so Screenwide's cursor is the only one there is. The Cursor island's
+  // Show cursor turns it off, for the recording or for one scene.
   bake: true,
   clickAnimation: true,
   clipAtVideoEdge: false,

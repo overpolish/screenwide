@@ -11,18 +11,22 @@ use screenwide_annotations::timing::{
 /// How much source time one drawn frame covers, which is what the reveal's
 /// motion blur is measured over. A paused composition passes zero: nothing
 /// is moving, so nothing is blurred. `ranges` is the timeline the reveals are
-/// timed on, and `pictures` the primary's and the camera's source sizes.
-/// `held` hands each pane's redactions the fills read from their clips'
-/// first frames, the screen's then the camera's.
+/// timed on. `sources` gives the primary's and the camera's source sizes,
+/// the scenes that move annotations to their places in each, and the fills
+/// each pane's redactions read from their clips' first frames.
 pub(super) fn apply_clips(
   composition: &mut PreviewCompositionSettings,
+  sources: &PlayerSources,
   clips: &[RecordingAnnotationClip],
   ranges: &[TimelineRange],
-  source_ms: u64,
-  frame_ms: f32,
-  pictures: [(u32, u32); 2],
-  held: &[Option<HeldFillsHandle>; 2],
+  (source_ms, frame_ms): (u64, f32),
 ) {
+  let pictures = sources.annotation_pictures();
+  let scenes = sources
+    .scenes
+    .clips
+    .read()
+    .unwrap_or_else(|poisoned| poisoned.into_inner());
   let output = &mut composition.recording_output;
   for (pane, (settings, track)) in [
     (&mut output.primary, AnnotationTrack::Primary),
@@ -31,10 +35,17 @@ pub(super) fn apply_clips(
   .into_iter()
   .enumerate()
   {
-    settings.annotations =
-      revealed_annotations(clips, track, ranges, source_ms, frame_ms, pictures[pane]);
+    settings.annotations = revealed_annotations(
+      clips,
+      &scenes,
+      track,
+      ranges,
+      source_ms,
+      frame_ms,
+      pictures[pane],
+    );
     #[cfg(any(target_os = "macos", target_os = "windows"))]
-    if let Some(held) = &held[pane] {
+    if let Some(held) = &sources.held_fills[pane] {
       held.attach(
         &mut settings.annotations,
         clips,
@@ -43,8 +54,6 @@ pub(super) fn apply_clips(
       );
     }
   }
-  #[cfg(not(any(target_os = "macos", target_os = "windows")))]
-  let _ = held;
 }
 
 /// One video draws the camera inside the screen's composition, so the
@@ -150,15 +159,7 @@ impl PlayerSources {
       .annotation_ranges
       .read()
       .unwrap_or_else(|poisoned| poisoned.into_inner());
-    apply_clips(
-      &mut composition,
-      clips,
-      &ranges,
-      source_ms,
-      0.0,
-      self.annotation_pictures(),
-      &self.held_fills,
-    );
+    apply_clips(&mut composition, self, clips, &ranges, (source_ms, 0.0));
     drop(ranges);
     let placed = self.arrange_scene(&mut composition, source_ms, 0.0);
     carry_camera_annotations(&mut composition, self.annotation_pictures());

@@ -28,6 +28,11 @@ pub use hit_area::{
   __cmd__set_island_hit_area, __tauri_command_name_set_island_hit_area, set_island_hit_area,
 };
 pub(super) use hit_area::{is_on_island, rects, IslandRect};
+mod level;
+#[cfg(target_os = "macos")]
+pub(super) use level::is_above_overlays;
+pub(crate) use level::raise;
+pub use level::set_above_overlays;
 mod moving;
 pub use moving::{
   __cmd__island_ready_to_move, __tauri_command_name_island_ready_to_move, island_ready_to_move,
@@ -107,42 +112,9 @@ static DISPLAY: Mutex<Option<u32>> = Mutex::new(None);
 /// The island is tucking away to come out again where it now belongs
 /// (`hand_over`).
 static RESHOW: AtomicBool = AtomicBool::new(false);
-/// The island stands above the capture overlays, for as long as Annotate
-/// draws: its tools must never be covered by a stroke.
-static ABOVE_OVERLAYS: AtomicBool = AtomicBool::new(false);
 
 pub(crate) fn window(app: &AppHandle) -> Option<WebviewWindow> {
   app.get_webview_window(WindowLabel::Island.as_str())
-}
-
-/// Raises the island above the capture overlays, or puts it back at its own
-/// level. It keeps the choice while hidden and is placed by it when shown.
-pub fn set_above_overlays(app: &AppHandle, above: bool) -> tauri::Result<()> {
-  ABOVE_OVERLAYS.store(above, Ordering::Relaxed);
-  if SHOWN.load(Ordering::Relaxed) {
-    native::apply_level(app)?;
-  }
-  Ok(())
-}
-
-/// Raises the island over the other recording panels at its own level. A
-/// plain raise puts it at the recording panels' level, under the Ruler or
-/// Text Recognition it stands over (`set_above_overlays`).
-pub(crate) fn raise(app: &AppHandle) -> tauri::Result<()> {
-  // Raised only while out: raising orders a hidden panel on screen.
-  if !is_shown() {
-    return Ok(());
-  }
-  let Some(island) = window(app) else {
-    return Ok(());
-  };
-  super::platform::raise_without_activation(&island)?;
-  native::apply_level(app)
-}
-
-#[cfg(target_os = "macos")]
-pub(super) fn is_above_overlays() -> bool {
-  ABOVE_OVERLAYS.load(Ordering::Relaxed)
 }
 
 /// Whether the island is out or coming out: up, and not tucking away.

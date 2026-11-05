@@ -53,16 +53,16 @@ type ActiveGesture =
  * Takes the gestures on the screen and the camera while the playhead is
  * inside a scene. A custom scene's own boxes move and resize with the select
  * tool, and the crop tool crops them in place, freely, the picture staying
- * where it sits. A full scene stands for the recording's own composition and
- * is offered as Custom, so its screen moves and resizes too, which makes the
- * scene custom as the panel's Custom does. The screen's crop is each scene's
- * own, so the crop tool crops any scene's screen in place too, a preset's
- * made custom by the crop's first travel. Any other pane is fixed where the
- * scene puts it: with the select tool the screen's moves and resizes are
- * swallowed and the camera's pan its picture inside its box or zoom it, and
- * with the crop tool a window of the camera's box's shape laid over its
- * unzoomed picture picks the part the box shows. Each edits the clip under
- * the playhead. The canvas's frame is left to the ordinary selection
+ * where it sits. A preset's screen moves and resizes too, which first makes
+ * the scene custom where it stands, as the panel's Custom does; only camera
+ * only, which hides the screen, has none to move. The screen's crop is each
+ * scene's own, so the crop tool crops any scene's screen in place too, a
+ * preset's made custom by the crop's first travel. A preset's camera is
+ * fixed where the scene puts it: with the select tool it pans its picture
+ * inside its box or zooms it, and with the crop tool a window of the
+ * camera's box's shape laid over its unzoomed picture picks the part the box
+ * shows. Each edits the clip under the playhead; `scene_pane_gesture.rs` is
+ * the native twin. The canvas's frame is left to the ordinary selection
  * gesture, as is a camera a custom scene has no box for and anything else
  * `applyGesture` answers it did not take.
  */
@@ -117,7 +117,7 @@ export function useRecordingSceneGesture({
       !found.boxes &&
       paneName === "screen" &&
       (crops ||
-        (found.preset === "full" &&
+        (found.preset !== "camera-only" &&
           (operation === "move" || operation === "resize")))
         ? customRecordingSceneClip({
             camera,
@@ -192,8 +192,8 @@ export function useRecordingSceneGesture({
       return {
         clipId,
         clips,
-        // A press that selects a full scene's screen without moving it
-        // leaves the scene as it was rather than making it custom.
+        // A press that selects a preset's screen without moving it leaves
+        // the scene as it was rather than making it custom.
         edit: (_clip, next) =>
           owned !== found &&
           next.deltaX === 0 &&

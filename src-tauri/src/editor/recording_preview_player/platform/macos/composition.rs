@@ -10,25 +10,26 @@ use screenwide_scenes::CameraOverlaySettings;
 use screenwide_workspace::scene::baked_camera_overlay;
 
 /// The cursor `cursor` evaluates at its moment, placed on the canvas `output`
-/// lays the decoded `screen` on, and the baked camera's place there where
-/// `camera_overlay` asks for one.
+/// lays the decoded `screen` on and faded to the share of it the scenes show,
+/// and the baked camera's place there where `camera_overlay` asks for one.
 pub(super) fn gpu_still_overlay(
   screen: &CapturedImage,
   output: &ScreenshotOutputSettings,
-  cursor: Option<(&CursorCompositor, u64, CursorEffectSettings)>,
+  cursor: Option<(&CursorCompositor, u64, CursorEffectSettings, f32)>,
   camera: Option<&CapturedImage>,
   camera_overlay: Option<CameraOverlaySettings>,
   camera_drop_shadow: bool,
   camera_on_top: bool,
 ) -> Result<(Option<GpuCursor>, Option<StillOverlay>), String> {
-  let cursor = match cursor.filter(|(_, _, settings)| settings.bake) {
-    Some((cursor, position_ms, settings)) => placed_cursor(
+  let cursor = match cursor.filter(|(_, _, _, shown)| *shown > 0.0) {
+    Some((cursor, position_ms, settings, shown)) => placed_cursor(
       cursor,
       position_ms,
       settings,
       (screen.width, screen.height),
       output,
-    )?,
+    )?
+    .map(|cursor| cursor.faded(shown)),
     None => None,
   };
   let overlay = camera_overlay

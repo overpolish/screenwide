@@ -90,6 +90,13 @@ export const applyAnnotationPin = (
   chosenAnnotation(workspace)?.applyPin(action);
 };
 
+/** Take away the chosen annotation's own place in the scene at the
+ * playhead, so it stands there where it does outside every scene. A no-op
+ * with none chosen, or outside every scene. */
+export const applyAnnotationSceneReset = (workspace: EditorKind) => {
+  chosenAnnotation(workspace)?.resetScene();
+};
+
 /** Turn the chosen image, a field at a time. A no-op with none chosen: a
  * fresh image always lands upright. */
 export const applyAnnotationRotation = (

@@ -22,8 +22,9 @@ import {
 } from "./recording-scenes";
 
 /** How long a scene takes to arrive or leave, in output milliseconds. A clip
- * too short for two of them gives each half of its length. */
-const TRANSITION_MS = 600;
+ * too short for two of them gives each half of its length. The twin of
+ * `SCENE_TRANSITION_MS` in `scene_clock.rs`. */
+export const TRANSITION_MS = 600;
 
 /** Where choosing `clip` brings the playhead, in output ms: once the scene
  * has arrived, so the picture shows it settled rather than on its way. A

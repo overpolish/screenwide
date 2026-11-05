@@ -20,6 +20,14 @@ export type AnnotationPins = {
   viewOf: (id: string) => AnnotationPinView | null | undefined;
 };
 
+/** What a workspace whose annotations can have their own place in a scene
+ * tells of them, with the playhead in a scene: whether the one named has a
+ * place of its own there, and taking it away. Absent outside every scene. */
+export type AnnotationScenes = {
+  isPlaced: (id: string) => boolean;
+  reset: (id: string) => void;
+};
+
 /** The chosen annotation as its island shows it: its dress, and what only
  * some kinds have, each left out where it has none. */
 export const publishedAnnotation = (
@@ -28,12 +36,14 @@ export const publishedAnnotation = (
     angle,
     art,
     pin,
+    placedInScene,
     rotation,
     zoom,
   }: {
     angle: number | null;
     art: ImageArt | null;
     pin: AnnotationPinView | null | undefined;
+    placedInScene: boolean | undefined;
     rotation: SceneRotation | undefined;
     zoom: number | null;
   },
@@ -50,4 +60,5 @@ export const publishedAnnotation = (
     : {}),
   ...(zoom === null ? {} : { zoom }),
   ...(pin === undefined ? {} : { pin }),
+  ...(placedInScene ? { placedInScene } : {}),
 });

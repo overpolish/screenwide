@@ -6,7 +6,7 @@
 
 use screenwide_output::ScreenshotOutputSettings;
 use screenwide_scenes::framing::{drawn_frame, SceneFraming};
-use screenwide_scenes::geometry::{preset_panes, Rect};
+use screenwide_scenes::geometry::{preset_panes, PresetPanes, Rect};
 use screenwide_scenes::model::{RecordingSceneClip, RecordingScenePreset};
 use screenwide_scenes::placement::Placement;
 use screenwide_scenes::CameraOverlaySettings;
@@ -108,14 +108,12 @@ impl Base {
     }
   }
 
-  /// Where `clip` settles the panes, or `None` for an arrangement that needs
-  /// a camera where none is drawn into the picture: that scene stands idle.
-  /// A pane the preset hides keeps the recording's own place, unseen.
-  pub(super) fn target(&self, clip: &RecordingSceneClip) -> Option<Placement> {
-    let base = self.placement;
-    let crop = base.screen;
+  /// Where `clip`'s preset puts the panes on this canvas; `None` for the
+  /// presets that keep the composition's own (full and screen only).
+  pub(super) fn preset_panes(&self, clip: &RecordingSceneClip) -> Option<PresetPanes> {
+    let crop = self.placement.screen;
     // Without a camera no preset that places one plays, so any shape will do.
-    let preset = preset_panes(
+    preset_panes(
       clip.preset,
       self.canvas,
       (
@@ -123,7 +121,16 @@ impl Base {
         self.camera_aspect.unwrap_or(16.0 / 9.0),
       ),
       clip.variant.unwrap_or_default(),
-    );
+    )
+  }
+
+  /// Where `clip` settles the panes, or `None` for an arrangement that needs
+  /// a camera where none is drawn into the picture: that scene stands idle.
+  /// A pane the preset hides keeps the recording's own place, unseen.
+  pub(super) fn target(&self, clip: &RecordingSceneClip) -> Option<Placement> {
+    let base = self.placement;
+    let crop = base.screen;
+    let preset = self.preset_panes(clip);
     let (screen, frame, shown) = match (clip.boxes, preset) {
       (Some(boxes), _) => (
         boxes.screen.on(self.canvas),

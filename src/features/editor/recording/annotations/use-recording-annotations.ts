@@ -1,13 +1,11 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { listen } from "@tauri-apps/api/event";
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 
 import { AnnotationTool } from "../../annotations/annotation-defaults";
 import { Arrangement } from "../../annotations/annotation-order";
 import { AnnotationFrame, pacedClip } from "../../annotations/annotation-pace";
-import { Annotation, AnnotationTextEdit } from "../../annotations/annotations";
 import { useAnnotations } from "../../annotations/use-annotations";
 import { ScreenshotOutputSettings } from "../../screenshot/screenshot-output";
 import { RecordingTimelineEdit } from "../../timeline/editing/recording-timeline-edit";
@@ -23,6 +21,12 @@ import {
 } from "./recording-annotation-layers";
 import { recordingAnnotationPinning } from "./recording-annotation-pinning";
 import {
+  annotationInScene,
+  isPlacedInScene,
+  withEditInScene,
+  withoutSceneShape,
+} from "./recording-annotation-scenes";
+import {
   laneAnnotationClips,
   useHiddenAnnotationsLetGo,
   withShownAnnotations,
@@ -30,28 +34,14 @@ import {
 import {
   mergeRecordingAnnotationClips,
   RecordingAnnotationClip,
-  RecordingAnnotationPinCommit,
   renumberedAnnotationClips,
 } from "./recording-annotations";
 import { withRecordingSpotlightBlurShared } from "./recording-spotlight-blur";
+import { useRecordingAnnotationEvents } from "./use-recording-annotation-events";
 import { useRecordingAnnotationPins } from "./use-recording-annotation-pins";
 import { useRecordingAnnotationSync } from "./use-recording-annotation-sync";
 import { useRecordingPinStatus } from "./use-recording-pin-status";
 
-type AnnotationEvent = {
-  annotations: Annotation[];
-  paneIndex: number;
-  /** The pins of the pinned annotations among `annotations`. */
-  pins: RecordingAnnotationPinCommit[];
-  /** Every annotation chosen once the commit lands. */
-  selectedAnnotationIds: string[];
-  sessionId: number;
-  sourcePositionMs: number;
-  /** Where in a text box's typing this commit falls; the typing's commits
-   * are grouped into one edit. */
-  textEdit: AnnotationTextEdit | null;
-};
-type AnnotationHoverEvent = { annotationId: string | null; sessionId: number };
 const EMPTY_CLIPS: RecordingAnnotationClip[] = [];
 
 export function useRecordingAnnotations({
@@ -62,6 +52,7 @@ export function useRecordingAnnotations({
   onEdit,
   onSelectTrack,
   playhead,
+  sceneId = null,
   screenCaptureScale,
   sessionId,
   shownTracks,
@@ -96,6 +87,9 @@ export function useRecordingAnnotations({
   tool: AnnotationTool | null;
   trackId: RecordingVideoTrackId | null;
   onSelectTrack?: (track: RecordingVideoTrackId) => void;
+  /** The scene the playhead is in, if any: where an annotation is chosen
+   * as it stands there, and an edit that moves it is that scene's. */
+  sceneId?: string | null;
 }) {
   const clips = edit.annotationClips ?? EMPTY_CLIPS;
   const cameraPlacement =
@@ -170,22 +164,47 @@ export function useRecordingAnnotations({
     pinning,
     playhead,
   });
+  // At the playhead in a scene, each annotation is chosen and dressed as it
+  // stands there, and an edit that moves it is that scene's.
+  const scenes = sceneId
+    ? {
+        isPlaced: (id: string) =>
+          clips.some(
+            (clip) =>
+              clip.annotation.id === id &&
+              !clip.pin &&
+              isPlacedInScene(clip, sceneId),
+          ),
+        reset: (id: string) => {
+          withClip(id, (clip) => withoutSceneShape(clip, sceneId));
+        },
+      }
+    : undefined;
   const selection = useAnnotations({
-    annotations: lane.clips.map((clip) => clip.annotation),
+    annotations: lane.clips.map((clip) => annotationInScene(clip, sceneId)),
     groupable: (id) => !pinned.has(id),
     onCommit: (annotations) => {
-      commitClips(withShownAnnotations(clips, annotations, shownTracks));
+      const shown = withShownAnnotations(clips, annotations, shownTracks);
+      commitClips(
+        sceneId
+          ? shown.map((clip) => {
+              const before = clips.find(
+                (each) => each.annotation.id === clip.annotation.id,
+              );
+              return before && !before.pin
+                ? withEditInScene(before, clip.annotation, sceneId)
+                : clip;
+            })
+          : shown,
+      );
     },
     pins,
+    scenes,
     workspace: "recording",
   });
   useHiddenAnnotationsLetGo(shownTracks, selection);
-  const eventRef = useRef({
-    commit: (_: AnnotationEvent) => {},
-    hover: selection.onHoverChange,
-  });
-  eventRef.current = {
-    commit: (payload) => {
+  useRecordingAnnotationEvents(sessionId, {
+    onCommit: (payload) => {
       if (payload.textEdit === "begin") editGesture.beginGesture();
       const track = payload.paneIndex === 1 ? "camera" : "primary";
       commitClips(
@@ -196,6 +215,7 @@ export function useRecordingAnnotations({
           frame: frames[track],
           pins: payload.pins,
           positionMs: payload.sourcePositionMs,
+          sceneShapes: payload.sceneShapes,
           sourceDurationMs,
           trackId: track,
         }),
@@ -205,43 +225,8 @@ export function useRecordingAnnotations({
       if (payload.textEdit === "end")
         requestAnimationFrame(editGesture.endGesture);
     },
-    hover: selection.onHoverChange,
-  };
-  useEffect(() => {
-    if (sessionId === null) return;
-    let disposed = false;
-    const stops: (() => void)[] = [];
-    const retain = (stop: () => void) => {
-      if (disposed) stop();
-      else stops.push(stop);
-    };
-    void listen<AnnotationEvent>(
-      "editor://recording-annotations",
-      ({ payload }) => {
-        if (!disposed && payload.sessionId === sessionId)
-          eventRef.current.commit(payload);
-      },
-    )
-      .then(retain)
-      .catch((cause: unknown) => {
-        console.error("Could not listen for recording annotations", cause);
-      });
-    void listen<AnnotationHoverEvent>(
-      "editor://recording-annotation-hover",
-      ({ payload }) => {
-        if (!disposed && payload.sessionId === sessionId)
-          eventRef.current.hover(payload.annotationId);
-      },
-    )
-      .then(retain)
-      .catch((cause: unknown) => {
-        console.error("Could not listen for annotation hover", cause);
-      });
-    return () => {
-      disposed = true;
-      for (const stop of stops) stop();
-    };
-  }, [sessionId]);
+    onHover: selection.onHoverChange,
+  });
   useRecordingAnnotationSync({
     clips: nativeClips,
     edit,

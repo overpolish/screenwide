@@ -138,6 +138,7 @@ fn clips(signals: &Signals, duration_ms: u64) -> Vec<RecordingSceneClip> {
       rotation: None,
       variant: None,
       follow_face: None,
+      cursor: None,
       auto: true,
     })
     .collect()

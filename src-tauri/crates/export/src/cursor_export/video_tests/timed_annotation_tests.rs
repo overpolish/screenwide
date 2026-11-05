@@ -105,6 +105,7 @@ fn exports_timed_arrows_across_a_cut_and_speed_change() {
         path_ms: None,
         pin: None,
         recording_span: None,
+        scene_shapes: Vec::new(),
         annotation: arrow,
         track_id: AnnotationTrack::Primary,
         // On the timeline: the recording's 550 ms to 2.5 s, with 1-1.5 s cut

@@ -3,8 +3,10 @@
 
 import { RefObject, useEffect } from "react";
 
+import { withAnnotationGlides } from "../../timeline/recording-strip/recording-strip-glides";
 import { recordingStripLanes } from "../../timeline/recording-strip/recording-strip-lanes";
 import { withAnnotationPins } from "../../timeline/recording-strip/recording-strip-pins";
+import { recordedParts } from "../../timeline/recording-strip/recording-strip-time";
 import { usePublishStripIsland } from "../../timeline/recording-strip/strip-island-channel";
 import {
   BREATH_S,
@@ -124,10 +126,20 @@ export function useRecordingStripBand(
   const stripProps: TimelineStripProps = {
     ...strip.strip({
       ...lanes.lanes,
-      annotations: withAnnotationPins(
-        lanes.lanes.annotations,
-        annotations.clips,
-        annotations.pinStatus,
+      annotations: withAnnotationGlides(
+        withAnnotationPins(
+          lanes.lanes.annotations,
+          annotations.clips,
+          annotations.pinStatus,
+        ),
+        {
+          clips: annotations.clips,
+          partsOf: (span) =>
+            recordedParts(strip.time.map, strip.time.runs, span),
+          pictures: props.previewSourceDimensions,
+          scenes: scenes.clips,
+          videoMs: timelineBlade.timelineDurationMs,
+        },
       ),
     }),
     onSelect: (next) => {

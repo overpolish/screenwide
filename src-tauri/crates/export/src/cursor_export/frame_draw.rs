@@ -176,14 +176,18 @@ impl<'a> FrameDraw<'a> {
         (self.output.width, self.output.height),
       ));
     }
-    let cursor = match self.cursor.as_ref() {
+    let cursor_shown = self
+      .scenes
+      .cursor_shown(source_ms, self.cursor_effects.bake);
+    let cursor = match self.cursor.as_ref().filter(|_| cursor_shown > 0.0) {
       Some(cursor) => placed_cursor(
         cursor,
         source_ms,
         self.cursor_effects,
         screen.size,
         settings,
-      )?,
+      )?
+      .map(|cursor| cursor.faded(cursor_shown)),
       None => None,
     };
     let keyboard = self.keyboard.as_ref().and_then(|keyboard| {

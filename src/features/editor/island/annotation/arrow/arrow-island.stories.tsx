@@ -41,6 +41,7 @@ const meta = {
     onRemoveColor: fn(),
     onReverse: fn(),
     onSaveColor: fn(),
+    onSceneReset: fn(),
     onStyleChange: fn(),
     pin: null,
     savedColors: [],
@@ -68,6 +69,10 @@ const meta = {
           args.onSaveColor(color);
           if (!args.savedColors.includes(color))
             updateArgs({ savedColors: [...args.savedColors, color] });
+        }}
+        onSceneReset={() => {
+          args.onSceneReset?.();
+          updateArgs({ placedInScene: false });
         }}
         onStyleChange={(style) => {
           args.onStyleChange(style);
@@ -105,3 +110,7 @@ export const PinnedUnsure: Story = { args: { pin: PIN_UNSURE } };
 
 // The path is still being worked out.
 export const PinnedTracking: Story = { args: { pin: PIN_TRACKING } };
+
+// Moved while the playhead is in a scene: it has a place of its own there,
+// which its reset takes away.
+export const PlacedInScene: Story = { args: { placedInScene: true } };

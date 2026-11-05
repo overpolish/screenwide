@@ -70,6 +70,7 @@ fn live_annotation_clips_become_the_recordings_first_edit() {
     path_ms: None,
     pin: None,
     recording_span: None,
+    scene_shapes: Vec::new(),
     annotation: new_arrow(
       "annotation".to_owned(),
       AnnotationPoint { x: 10.0, y: 20.0 },

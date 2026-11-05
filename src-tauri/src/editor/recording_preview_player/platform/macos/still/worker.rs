@@ -103,10 +103,13 @@ pub(super) fn show(
     .read()
     .map(|settings| *settings)
     .unwrap_or_default();
+  let cursor_shown = sources
+    .scenes
+    .cursor_shown(screen_position_ms, cursor_settings.bake);
   let cursor = sources
     .cursor
     .as_deref()
-    .map(|cursor| (cursor, screen_position_ms, cursor_settings));
+    .map(|cursor| (cursor, screen_position_ms, cursor_settings, cursor_shown));
   let keyboard_settings = sources
     .keyboard_settings
     .read()

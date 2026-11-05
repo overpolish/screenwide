@@ -69,7 +69,12 @@ export function drawingIsland(props: DrawingIslandProps): EditorIslandContent {
     key: `drawing-${id}`,
     section: (
       <div className="flex flex-col gap-separate">
-        <AnnotationPinNote onPinAction={props.onPinAction} pin={props.pin} />
+        <AnnotationPinNote
+          onPinAction={props.onPinAction}
+          onSceneReset={props.onSceneReset}
+          pin={props.pin}
+          placedInScene={props.placedInScene}
+        />
         <AnnotationChoiceRow title={annotationSizeLabel("width")}>
           <PenWeights
             onChange={(width) => {

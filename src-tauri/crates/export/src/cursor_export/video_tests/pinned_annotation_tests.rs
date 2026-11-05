@@ -105,6 +105,7 @@ fn exports_a_pinned_counter_where_the_scrolling_content_carried_it() {
       annotation_clips: vec![RecordingAnnotationClip {
         path_ms: None,
         recording_span: None,
+        scene_shapes: Vec::new(),
         annotation: counter,
         track_id: AnnotationTrack::Primary,
         start_ms: 0,

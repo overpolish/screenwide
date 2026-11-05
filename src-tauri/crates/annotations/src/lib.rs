@@ -34,6 +34,10 @@ pub use model::{
 pub(crate) mod shape;
 pub use shape::AnnotationShape;
 
+/// An annotation's own shape in particular scenes.
+pub mod scene_shape;
+pub use scene_shape::SceneShape;
+
 /// The arrow tool's own half of the model.
 #[cfg(any(target_os = "macos", target_os = "windows", test))]
 pub mod arrow;

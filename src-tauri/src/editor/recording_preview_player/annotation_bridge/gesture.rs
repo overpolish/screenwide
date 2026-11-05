@@ -5,7 +5,6 @@
 //! showing, and the provisional clips a drag writes through until it commits.
 
 use super::*;
-use screenwide_annotations::pin::fold;
 use screenwide_annotations::{AnnotationKind, AnnotationShape};
 
 pub(super) struct Gesture {
@@ -35,6 +34,9 @@ pub(super) struct Commit {
   /// The pins of the pinned annotations among `annotations`, which an edit
   /// on the picture may have given a keyframe.
   pub(super) pins: Vec<super::commit::CommitPin>,
+  /// The scene shapes of the annotations among `annotations` an edit inside
+  /// a scene reached, which it may have given that scene a place.
+  pub(super) scene_shapes: Vec<super::commit::CommitSceneShapes>,
 }
 
 pub(super) fn track(pane: u32) -> AnnotationTrack {
@@ -211,6 +213,7 @@ impl PreviewPlayerManager {
       &gesture.working,
       gesture.pane,
       (gesture.position, timeline_ms),
+      &self.scene_edit(gesture.position),
     );
     let ended = matches!(phase, SelectionGesturePhase::End);
     if ended {
@@ -260,13 +263,15 @@ pub(super) fn provisional_clips(
   working: &[Annotation],
   pane: u32,
   (position, timeline_ms): (u64, u64),
+  scenes: &screenwide_annotations::scene_shape::SceneEdit,
 ) -> Vec<RecordingAnnotationClip> {
   let reach_back = screenwide_annotations::reveal::REVEAL_DRAW_IN_MS as u64;
   let mut next = before.to_vec();
   for annotation in working {
     if let Some(clip) = next.iter_mut().find(|c| c.annotation.id == annotation.id) {
-      // A pinned annotation was shown where its pin put it at `position`.
-      fold(clip, annotation, position);
+      // A pinned annotation was shown where its pin put it at `position`, and
+      // one in a scene where the scene puts it.
+      scenes.fold(clip, annotation, position);
     } else {
       next.push(RecordingAnnotationClip {
         path_ms: None,
@@ -279,6 +284,7 @@ pub(super) fn provisional_clips(
           position.saturating_sub(reach_back),
           position.saturating_add(3000),
         ]),
+        scene_shapes: Vec::new(),
       });
     }
   }

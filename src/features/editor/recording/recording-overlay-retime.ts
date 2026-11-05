@@ -8,6 +8,7 @@ import {
 } from "../timeline/editing/recording-timeline-time";
 import { TimedSpanClip } from "../timeline/tracks/timed-span-clips";
 
+import { withSceneShapesFollowing } from "./annotations/recording-annotation-scenes";
 import {
   RecordingAnnotationClip,
   renumberedAnnotationClips,
@@ -54,20 +55,26 @@ const retimedAnnotationClips = (
 };
 
 /** `clips`, scenes or camera background ranges, carried across `change`,
- * kept in timeline order. A part after the first takes an id of its own. */
+ * kept in timeline order. A part after the first takes an id of its own,
+ * which `onPart` hears with the clip it was cut from. */
 export const retimedSpanClips = <Clip extends TimedSpanClip>(
   clips: Clip[],
   change: RecordingTimelineChange,
+  onPart?: (from: Clip, part: Clip) => void,
 ): Clip[] => {
   const retimed = retimeRecordingTimelineClips(
     clips,
     change,
-    (clip, { endMs, startMs }, index) => ({
-      ...clip,
-      endMs,
-      id: index === 0 ? clip.id : crypto.randomUUID(),
-      startMs,
-    }),
+    (clip, { endMs, startMs }, index) => {
+      const part = {
+        ...clip,
+        endMs,
+        id: index === 0 ? clip.id : crypto.randomUUID(),
+        startMs,
+      };
+      if (index > 0) onPart?.(clip, part);
+      return part;
+    },
   );
   return retimed === clips
     ? clips
@@ -128,14 +135,27 @@ export function retimeRecordingOverlays(
   const rangeChange = changeFrom(
     timedOn(next.cameraBackgroundRanges, previous.cameraBackgroundRanges),
   );
-  const annotationClips =
+  // A scene cut in two hands each new part the places annotations had in
+  // it, and one cut away entirely takes them with it.
+  const sceneParts = new Map<string, string>();
+  const sceneClips =
+    next.sceneClips && sceneChange
+      ? retimedSpanClips(next.sceneClips, sceneChange, (from, part) => {
+          sceneParts.set(part.id, from.id);
+        })
+      : next.sceneClips;
+  const retimedAnnotations =
     next.annotationClips && annotationChange
       ? retimedAnnotationClips(next.annotationClips, annotationChange)
       : next.annotationClips;
-  const sceneClips =
-    next.sceneClips && sceneChange
-      ? retimedSpanClips(next.sceneClips, sceneChange)
-      : next.sceneClips;
+  const annotationClips =
+    retimedAnnotations && sceneClips !== next.sceneClips
+      ? withSceneShapesFollowing(
+          retimedAnnotations,
+          (sceneClips ?? []).map((clip) => clip.id),
+          sceneParts,
+        )
+      : retimedAnnotations;
   const cameraBackgroundRanges =
     next.cameraBackgroundRanges && rangeChange
       ? retimedSpanClips(next.cameraBackgroundRanges, rangeChange)

@@ -52,6 +52,8 @@ export type TimelineAnnotation = Span & {
   kind: AnnotationKind;
   /** Its lane, 0 at the top, which is drawn in front. */
   lane: number;
+  /** Where its annotation travels between its places in the scenes. */
+  glides?: Span[];
   /** Its pin, where it follows the content under it. */
   pin?: TimelineAnnotationPin;
 };
@@ -207,6 +209,7 @@ export function AnnotationLane({
               annotation.id === held?.id ? held.liftedTop : null;
             return (
               <AnnotationBar
+                glides={annotation.glides}
                 isLifted={liftedTop !== null}
                 isSelected={baseOf(annotation.id) === selected}
                 key={annotation.id}

@@ -47,6 +47,7 @@ fn clip(
     rotation: None,
     variant: None,
     follow_face,
+    cursor: None,
     auto: false,
   }
 }

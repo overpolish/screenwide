@@ -42,6 +42,7 @@ mod face_preview;
 pub(crate) mod pin_tracks;
 mod platform;
 pub(crate) mod recenter;
+mod scene_cursor;
 mod scene_pane_gesture;
 pub(crate) mod scene_preview;
 pub(crate) mod scene_reframe;

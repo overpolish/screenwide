@@ -18,6 +18,8 @@ import {
   AnnotationBarUnsure,
   type TimelineAnnotationPin,
 } from "./annotation-bar-pin";
+import { placesAlong } from "./annotation-bar-waves";
+import { AnnotationBarWavyLine } from "./annotation-bar-wavy-line";
 import {
   type AnnotationBarPart,
   type BarHold,
@@ -59,6 +61,9 @@ export type AnnotationBarProps = {
   span: Span;
   /** The strip's width, in px. */
   width: number;
+  /** Where its annotation travels between its places in the scenes, which
+   * its line makes a wave over (`annotation-bar-wavy-line.tsx`). */
+  glides?: Span[];
   /** Being dragged across lanes, following the pointer. */
   isLifted?: boolean;
   /** Each move of a drag, then null; without it, it only moves in time. */
@@ -72,6 +77,7 @@ export type AnnotationBarProps = {
 };
 
 export function AnnotationBar({
+  glides,
   isLifted = false,
   isSelected,
   kind,
@@ -99,6 +105,7 @@ export function AnnotationBar({
   const { pad, px, style } = reach(scale, span, width);
   const badgeHalf = pin ? PINNED_BADGE_HALF_PX : BADGE_HALF_PX;
   const lineMask = gapUnderBadge(badgeHalf);
+  const waves = glides ? placesAlong(glides, { scale, span, width }) : [];
   // Each handle at its end, or clear of the badge where the bar is shorter.
   const handleReach = Math.max(px / 2, badgeHalf + HANDLE_CLEAR_PX);
   const take = (
@@ -154,19 +161,30 @@ export function AnnotationBar({
           width={width}
         />
       ) : null}
-      <span
-        className={cn(
-          "absolute top-1/2 -translate-y-1/2 rounded-full transition-[height,background-color]",
-          isSelected
-            ? "h-1.5 bg-primary"
-            : "h-0.5 bg-fg-tertiary group-hover:h-1 group-hover:bg-fg-secondary",
-        )}
-        style={{
-          insetInlineEnd: pad,
-          insetInlineStart: pad,
-          maskImage: lineMask,
-        }}
-      />
+      {waves.length > 0 ? (
+        <AnnotationBarWavyLine
+          height={ANNOTATION_BAR_PX}
+          isSelected={isSelected}
+          length={px}
+          mask={lineMask}
+          pad={pad}
+          waves={waves}
+        />
+      ) : (
+        <span
+          className={cn(
+            "absolute top-1/2 -translate-y-1/2 rounded-full transition-[height,background-color]",
+            isSelected
+              ? "h-1.5 bg-primary"
+              : "h-0.5 bg-fg-tertiary group-hover:h-1 group-hover:bg-fg-secondary",
+          )}
+          style={{
+            insetInlineEnd: pad,
+            insetInlineStart: pad,
+            maskImage: lineMask,
+          }}
+        />
+      )}
       {pin ? (
         <AnnotationBarUnsure
           isSelected={isSelected}

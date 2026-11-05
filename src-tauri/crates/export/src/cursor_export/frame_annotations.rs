@@ -13,12 +13,15 @@ use screenwide_annotations::timing::{
 };
 use screenwide_annotations::{Annotation, AnnotationKind};
 use screenwide_output::ScreenshotOutputSettings;
+use screenwide_scenes::RecordingSceneClip;
 use screenwide_timeline::TimelineRange;
 
 /// The export's annotation clips, ready to be revealed frame by frame, and
 /// what their reveal is measured against.
 pub(super) struct ExportAnnotations {
   clips: Vec<RecordingAnnotationClip>,
+  /// The scene clips, which move an annotation to its place in each.
+  scenes: Vec<RecordingSceneClip>,
   track: AnnotationTrack,
   ranges: Vec<TimelineRange>,
   picture: (u32, u32),
@@ -84,6 +87,9 @@ impl ExportAnnotations {
     }
     Self {
       clips,
+      scenes: request
+        .timeline
+        .map_or_else(Vec::new, |timeline| timeline.scene_clips.clone()),
       track: request.annotation_track,
       ranges: request
         .timeline
@@ -106,6 +112,7 @@ impl ExportAnnotations {
   pub(super) fn at(&self, position_ms: u64, window_ms: f32) -> Vec<Annotation> {
     let mut annotations = revealed_annotations(
       &self.clips,
+      &self.scenes,
       self.track,
       &self.ranges,
       position_ms,
@@ -144,6 +151,7 @@ impl ExportAnnotations {
     let picture = (camera.camera_width, camera.camera_height);
     let mut on_camera = revealed_annotations(
       &self.clips,
+      &self.scenes,
       AnnotationTrack::Camera,
       &self.ranges,
       position_ms,

@@ -27,6 +27,7 @@ fn rounded_split() -> RecordingSceneClip {
     rotation: None,
     variant: None,
     follow_face: None,
+    cursor: None,
     auto: false,
   }
 }

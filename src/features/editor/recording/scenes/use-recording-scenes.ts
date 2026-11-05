@@ -21,6 +21,7 @@ import {
   useTimedSpanSelection,
 } from "../../timeline/tracks/use-timed-span-selection";
 import { CameraOverlaySettings, RecordingVideoTrackId } from "../../types";
+import { withSceneClips } from "../annotations/recording-annotation-scenes";
 import { retimedSpanClips } from "../recording-overlay-retime";
 
 import {
@@ -139,13 +140,13 @@ export function useRecordingScenes({
   const editRef = useRef(edit);
   editRef.current = edit;
   // A press that changes nothing, a drag let go where it began, must leave
-  // nothing to undo.
+  // nothing to undo. A scene taken away takes annotations' places in it.
   const commitClips = (next: RecordingSceneClip[]) => {
     const latest = editRef.current;
     if (
       JSON.stringify(next) !== JSON.stringify(latest.sceneClips ?? EMPTY_CLIPS)
     )
-      onEdit({ ...latest, sceneClips: next });
+      onEdit(withSceneClips(latest, next));
   };
   const commit = (next: RecordingSceneClip[]) => {
     commitClips(ownEditedAutoZooms(clips, next));

@@ -53,6 +53,9 @@ type PublishedAnnotation = {
   applyZoom: (zoom: number) => void;
   /** How many annotations are chosen; only one on its own is `selection`. */
   count: number;
+  /** Take away the chosen annotation's own place in the scene at the
+   * playhead. */
+  resetScene: () => void;
   selection: ToolPanelAnnotation | null;
 };
 
@@ -136,6 +139,9 @@ export function usePublishAnnotationSelection(
         applyRef.current.applyZoom(zoom);
       },
       count,
+      resetScene: () => {
+        applyRef.current.resetScene();
+      },
       selection:
         serialized === null
           ? null

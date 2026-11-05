@@ -64,6 +64,7 @@ export function resolveToolPanelSnapshot(
     annotationLook: _annotationLook,
     annotationPin: _annotationPin,
     annotationRotation,
+    annotationSceneReset: _annotationSceneReset,
     annotationStyle,
     annotationZoom,
     autoVolume,
@@ -103,6 +104,7 @@ export function resolveToolPanelSnapshot(
     saveAnnotationColor: _saveAnnotationColor,
     savePreset: _savePreset,
     saveSceneTemplate: _saveSceneTemplate,
+    sceneCursor,
     sceneFollowFace,
     sceneFraming,
     sceneFramingPane: _sceneFramingPane,
@@ -237,6 +239,7 @@ export function resolveToolPanelSnapshot(
     ...(resolved.scene &&
     (scenePreset ||
       sceneFraming ||
+      sceneCursor !== undefined ||
       sceneFollowFace !== undefined ||
       sceneInset !== undefined ||
       sceneRadius !== undefined ||
@@ -245,6 +248,8 @@ export function resolveToolPanelSnapshot(
       ? {
           scene: {
             ...resolved.scene,
+            cursor:
+              sceneCursor === undefined ? resolved.scene.cursor : sceneCursor,
             followsFace: sceneFollowFace ?? resolved.scene.followsFace,
             framing:
               resolved.scene.framing && sceneFraming

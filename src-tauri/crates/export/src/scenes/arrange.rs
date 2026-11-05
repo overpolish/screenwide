@@ -8,7 +8,7 @@
 //! outside them; a clip that starts the video is in place from its first
 //! frame, and one that runs on to the end never leaves.
 
-use screenwide_annotations::timing::{covers, progress, reaches_video_ends, video_ms, FrameTime};
+use screenwide_annotations::timing::{covers, scene_blend, video_ms, FrameTime};
 use screenwide_output::ScreenshotOutputSettings;
 use screenwide_scenes::framing::SceneFraming;
 use screenwide_scenes::geometry::Rect;
@@ -16,58 +16,31 @@ use screenwide_scenes::model::RecordingSceneClip;
 use screenwide_scenes::motion::SceneMotion;
 use screenwide_scenes::placement::Placement;
 use screenwide_scenes::CameraOverlaySettings;
-use screenwide_timeline::easing::ease_in_out_cubic;
 use screenwide_timeline::{rate_at, TimelineRange};
 
 use super::target::Base;
 
-/// How long a scene takes to arrive or leave, in output milliseconds. A clip
-/// too short for two of them gives each half of its length.
-const TRANSITION_MS: f32 = 600.0;
-
 /// The placement the scenes give the frame `timeline_ms` into a video
 /// `video_ms` long; `None` outside every clip and in a scene that stands idle.
+/// Timed by the clock annotations move to their scene places by.
 fn placement_at(
   clips: &[RecordingSceneClip],
   (timeline_ms, video_ms): (u64, Option<u64>),
   base: &Base,
 ) -> Option<Placement> {
-  let index = clips
-    .iter()
-    .position(|clip| covers(video_ms, [clip.start_ms, clip.end_ms], timeline_ms))?;
-  let clip = &clips[index];
-  let target = base.target(clip)?;
-  let (elapsed, length) = progress([clip.start_ms, clip.end_ms], timeline_ms)?;
-  // A scene at either end of the video holds there: there is nothing before
-  // it to arrive from, or after it to leave for. Its other transition may then
-  // take the whole clip.
-  let (starts_video, ends_video) = reaches_video_ends(video_ms, [clip.start_ms, clip.end_ms]);
-  let window = TRANSITION_MS.min(if starts_video || ends_video {
-    length
-  } else {
-    length / 2.0
-  });
-  let ease = |share: f32| f64::from(ease_in_out_cubic(share.clamp(0.0, 1.0)));
-  if !starts_video && elapsed < window {
-    let from = index
-      .checked_sub(1)
-      .map(|previous| &clips[previous])
-      .filter(|previous| previous.end_ms == clip.start_ms)
-      .and_then(|previous| base.target(previous))
-      .unwrap_or(base.placement);
-    return Some(from.toward(target, ease(elapsed / window)));
+  let blend = scene_blend(clips, (timeline_ms, video_ms), |clip| {
+    base.target(clip).is_some()
+  })?;
+  let placed = |index: Option<usize>| {
+    index
+      .and_then(|index| base.target(&clips[index]))
+      .unwrap_or(base.placement)
+  };
+  let to = placed(blend.to);
+  if blend.from == blend.to {
+    return Some(to);
   }
-  let handed_on = clips
-    .get(index + 1)
-    .is_some_and(|next| next.start_ms == clip.end_ms && base.target(next).is_some());
-  if !handed_on && !ends_video && length - elapsed < window {
-    return Some(
-      base
-        .placement
-        .toward(target, ease((length - elapsed) / window)),
-    );
-  }
-  Some(target)
+  Some(placed(blend.from).toward(to, blend.share))
 }
 
 /// Arranges the screen's `output`, in the canvas's output pixels, and the

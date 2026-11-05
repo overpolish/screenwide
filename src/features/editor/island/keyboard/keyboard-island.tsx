@@ -17,8 +17,9 @@ import {
   AnnotationLine,
 } from "../annotation/annotation-island-parts";
 import { OverlaySizeChoice } from "../overlay-size-choice";
+import { ShowGlyph } from "../show-glyph";
 
-import { AppearanceGlyph, KeycapSizeGlyph, ShowGlyph } from "./keyboard-glyphs";
+import { AppearanceGlyph, KeycapSizeGlyph } from "./keyboard-glyphs";
 
 import type { KeyboardEffectSettings } from "../../../../bindings/KeyboardEffectSettings";
 import type { EditorIslandContent } from "../editor-island";

@@ -10,9 +10,9 @@ import type { SceneDrawing } from "../../glyphs/scene-layout-drawing";
 
 // One scene over the stretch it frames. What it shows grows with its width,
 // as a beat's does: bare, then its layout, then its layout and name, cut
-// short where it runs out of room. Chosen, it fills and grows a handle at
-// each end. A scene a few pixels wide is pressed across more than it is
-// drawn.
+// short where it runs out of room. Pressed, it is chosen and its body can be
+// dragged at once; chosen, it fills and grows a handle at each end. A scene
+// a few pixels wide is pressed across more than it is drawn.
 
 /** The narrowest a scene shows its layout at, in px: the glyph's widest
  * and the padding either side. */
@@ -32,7 +32,9 @@ export type TimelineScene = Span & {
 
 export type SceneClipProps = {
   isSelected: boolean;
-  // The moves and release that follow bubble up from the grabbed end.
+  // The moves and release that follow bubble up from what was grabbed.
+  /** A press on a scene's body, which chooses it and can move it. */
+  onGrabBody: (event: React.PointerEvent) => void;
   /** A press on one of a chosen scene's ends. */
   onGrabEdge: (event: React.PointerEvent, edge: "end" | "start") => void;
   onPress: () => void;
@@ -44,6 +46,7 @@ export type SceneClipProps = {
 
 export function SceneClip({
   isSelected,
+  onGrabBody,
   onGrabEdge,
   onPress,
   scale,
@@ -55,11 +58,14 @@ export function SceneClip({
     <button
       aria-label={t("editor-timeline-scene", { layout: scene.name })}
       aria-pressed={isSelected}
-      className="group absolute inset-y-0 cursor-default outline-none"
+      className="group absolute inset-y-0 cursor-grab touch-none outline-none active:cursor-grabbing"
       dir="ltr"
+      // A keyboard press; a pointer's is taken at the press, below.
       onClick={onPress}
       onPointerDown={(event) => {
         event.stopPropagation();
+        event.currentTarget.setPointerCapture(event.pointerId);
+        onGrabBody(event);
       }}
       style={style}
       type="button"

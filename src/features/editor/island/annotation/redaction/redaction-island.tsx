@@ -111,11 +111,13 @@ export function redactionIsland(
     key: `redaction-${id}`,
     section: (
       <IslandParts className="flex flex-col gap-separate">
-        {props.pin ? (
+        {props.pin || props.placedInScene ? (
           <AnnotationPinNote
             key="pin"
             onPinAction={props.onPinAction}
+            onSceneReset={props.onSceneReset}
             pin={props.pin}
+            placedInScene={props.placedInScene}
           />
         ) : null}
         <AnnotationRows key="rows">

@@ -73,7 +73,12 @@ export function magnifierIsland(
     key: `magnifier-${id}`,
     section: (
       <div className="flex flex-col gap-separate">
-        <AnnotationPinNote onPinAction={props.onPinAction} pin={props.pin} />
+        <AnnotationPinNote
+          onPinAction={props.onPinAction}
+          onSceneReset={props.onSceneReset}
+          pin={props.pin}
+          placedInScene={props.placedInScene}
+        />
         <AnnotationRows>
           <AnnotationChoiceRow key="zoom" title={annotationSizeLabel("zoom")}>
             <LensZoomChoice

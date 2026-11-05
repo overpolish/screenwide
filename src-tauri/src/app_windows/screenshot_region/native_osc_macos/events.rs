@@ -34,7 +34,23 @@ thread_local! {
   static CAPTURED: Cell<Option<WindowId>> = const { Cell::new(None) };
   /// The overlay the keyboard is captured for, and the session that
   /// captured it, so only that session's release frees it.
-  pub(super) static KEYBOARD: Cell<Option<(WindowId, KeyboardOwner)>> = const { Cell::new(None) };
+  static KEYBOARD: Cell<Option<(WindowId, KeyboardOwner)>> = const { Cell::new(None) };
+}
+
+/// Routes the keyboard to `target` for `owner` until `owner` releases it.
+pub(super) fn capture_keyboard(target: WindowId, owner: KeyboardOwner) {
+  KEYBOARD.with(|keyboard| keyboard.set(Some((target, owner))));
+}
+
+/// Frees the keyboard if `owner` holds it. Only the owner's own capture is
+/// freed: a session ending unopened, as Text Recognition's does when a
+/// screenshot starts over the Ruler, must not take the Ruler's keys with it.
+pub(super) fn release_keyboard(owner: KeyboardOwner) {
+  KEYBOARD.with(|keyboard| {
+    if keyboard.get().is_some_and(|(_, held_by)| held_by == owner) {
+      keyboard.set(None);
+    }
+  });
 }
 
 /// Starts watching events, once, while any overlay is up.

@@ -2,13 +2,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 //! The select gestures that edit the scene under the playhead pane by pane:
-//! a custom scene's boxes moved and resized, and the screen turned with the
-//! rotation gizmo.
+//! a scene's boxes moved and resized, a preset made custom by the first
+//! move, and the screen turned with the rotation gizmo.
 
 use super::{PreviewCompositionSettings, PreviewPlayerManager};
-use screenwide_export::scenes::camera_target;
-use screenwide_scenes::model::{SceneBox, SceneBoxes};
-use screenwide_scenes::{RecordingSceneClip, RecordingScenePreset, SceneRotation};
+use screenwide_export::scenes::{camera_target, made_custom};
+use screenwide_scenes::{RecordingSceneClip, SceneRotation};
 use screenwide_workspace::editing::SelectionGestureOperation;
 
 /// The index of the clip `timeline_ms` falls in.
@@ -19,41 +18,39 @@ fn clip_at(clips: &[RecordingSceneClip], timeline_ms: u64) -> Option<usize> {
 }
 
 /// A select gesture on a pane of a custom scene `timeline_ms` into the
-/// edited video: the clips with that pane's box moved or resized. A full
-/// scene stands for the recording's own composition and is offered as
-/// Custom, so its screen moves too, from `composition`, the box the
-/// composition puts it in, which makes the scene custom as the panel's Custom
-/// does. `None` where the clip there is neither; `Some(None)` for a pane its
-/// boxes do not place, whose gestures stay the recording's own. `delta` is in
-/// shares of the `canvas`, as the boxes are; the screen's is measured on its
-/// box padded by the scene's inset, where its handles are drawn.
+/// edited video: the clips with that pane's box moved or resized. A preset
+/// scene's screen moves too: the gesture first makes the scene custom where
+/// it stands (`custom`, as the panel's Custom does), so nothing jumps as it
+/// starts. A preset's camera is left to pan and zoom inside its box. `None`
+/// where the clip there is neither; `Some(None)` for a pane its boxes do not
+/// place, whose gestures stay the recording's own. `delta` is in shares of
+/// the `canvas`, as the boxes are; the screen's is measured on its box padded
+/// by the scene's inset, where its handles are drawn.
 pub(super) fn custom_box_gesture(
   clips: &[RecordingSceneClip],
   timeline_ms: u64,
-  (bake_camera, composition): (bool, Option<SceneBox>),
+  (bake_camera, custom): (
+    bool,
+    impl FnOnce(&RecordingSceneClip) -> Option<RecordingSceneClip>,
+  ),
   layer_id: u32,
   (delta, scale, canvas): ((f64, f64), f64, (f64, f64)),
 ) -> Option<Option<Vec<RecordingSceneClip>>> {
   let index = clip_at(clips, timeline_ms)?;
-  let clip = &clips[index];
-  let boxes = match (clip.boxes, composition) {
-    (Some(boxes), _) => boxes,
-    (None, Some(screen)) if clip.preset == RecordingScenePreset::Full && layer_id == 0 => {
-      SceneBoxes {
-        screen,
-        camera: None,
-        camera_behind: false,
-      }
-    }
-    _ => return None,
-  };
   let mut next = clips.to_vec();
-  let target = next[index].boxes.insert(boxes);
-  match (layer_id, boxes.camera) {
+  if next[index].boxes.is_none() {
+    if layer_id != 0 {
+      return None;
+    }
+    next[index] = custom(&clips[index])?;
+  }
+  let clip = &next[index];
+  let inset = clip.inset.unwrap_or(0.0);
+  let target = next[index].boxes.as_mut()?;
+  match (layer_id, target.camera) {
     (0, _) => {
-      let screen = boxes.screen;
-      let inset =
-        clip.inset.unwrap_or(0.0) * (screen.width * canvas.0).min(screen.height * canvas.1);
+      let screen = target.screen;
+      let inset = inset * (screen.width * canvas.0).min(screen.height * canvas.1);
       target.screen = screen.moved_padded(delta, scale, (inset / canvas.0, inset / canvas.1));
     }
     (1, Some(camera)) if bake_camera => target.camera = Some(camera.moved(delta, scale)),
@@ -83,13 +80,13 @@ pub(super) fn rotation_gesture(
 
 impl PreviewPlayerManager {
   /// What a gesture does while the paused frame is inside a scene. A custom
-  /// scene's boxes move and resize with the panes in them, and a full
-  /// scene's screen moves and resizes as a custom scene's would. Any other
-  /// scene owns where the panes sit, so a move or a resize only reaches the
-  /// camera's picture: dragged, it pans inside its box, and resized, it
-  /// zooms, which reframes the camera of the clip under the playhead. A turn
-  /// of the rotation gizmo turns the screen in any scene. `clips` are the
-  /// clips as the gesture found them, which its deltas are measured from.
+  /// scene's boxes move and resize with the panes in them, and a preset
+  /// scene's screen moves and resizes as a custom scene's would, making the
+  /// scene custom. A preset's camera stays where the preset puts it: dragged,
+  /// its picture pans inside its box, and resized, it zooms, which reframes
+  /// the camera of the clip under the playhead. A turn of the rotation gizmo
+  /// turns the screen in any scene. `clips` are the clips as the gesture
+  /// found them, which its deltas are measured from.
   /// `None` outside every scene and for the canvas's frame, which a scene
   /// leaves as it is; `Some(None)` for a gesture a scene leaves with nothing
   /// to do; else the clips the gesture leaves.
@@ -125,16 +122,21 @@ impl PreviewPlayerManager {
     let output = &snapshot.recording_output.primary;
     // The gesture's deltas are shares of the canvas it was made on.
     let canvas = crate::editor::preview_workspace_model::output_canvas(output);
-    let composition = (output.crop_width > 0.0 && output.crop_height > 0.0).then(|| SceneBox {
-      x: output.crop_x / canvas.0,
-      y: output.crop_y / canvas.1,
-      width: output.crop_width / canvas.0,
-      height: output.crop_height / canvas.1,
-    });
+    // The camera drawn into the picture, where it is, with its source size.
+    let camera = sources
+      .camera_source_size()
+      .filter(|_| snapshot.bake_camera);
+    let custom = |clip: &RecordingSceneClip| {
+      made_custom(
+        clip,
+        output,
+        camera.map(|size| (&snapshot.camera_overlay, size)),
+      )
+    };
     if let Some(next) = custom_box_gesture(
       clips,
       timeline_ms,
-      (snapshot.bake_camera, composition),
+      (snapshot.bake_camera, custom),
       layer_id,
       (delta, scale, canvas),
     ) {
@@ -142,9 +144,6 @@ impl PreviewPlayerManager {
     }
     // With the camera a pane of its own, no scene places it, so its gestures
     // stay its own; the screen's are swallowed.
-    let camera = sources
-      .camera_source_size()
-      .filter(|_| snapshot.bake_camera);
     let camera = match (camera, layer_id) {
       (Some(camera), 1) => camera,
       (None, 1) => return None,

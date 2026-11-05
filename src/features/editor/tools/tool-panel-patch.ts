@@ -66,6 +66,9 @@ export type ToolPanelPatch = Partial<
   /** Turn the chosen image, in degrees about each axis, a field at a time:
    * in depth about X and Y, flat about Z. */
   annotationRotation?: Partial<SceneRotation>;
+  /** Take away the chosen annotation's own place in the scene at the
+   * playhead, back where it is outside every scene. */
+  annotationSceneReset?: true;
   /** Dress the chosen annotation, a field at a time so a panel never has to
    * send the whole style back. Each one also becomes the next arrow's default.
    */
@@ -162,6 +165,9 @@ export type ToolPanelPatch = Partial<
   savePreset?: BackgroundPreset;
   /** Keep the custom scene under the playhead as a template. */
   saveSceneTemplate?: true;
+  /** Show or hide the cursor in the scene under the playhead over the
+   * recording's own choice, or with null have it do as the recording does. */
+  sceneCursor?: boolean | null;
   /** Have the camera in the scene under the playhead follow the face, or
    * stop following it. */
   sceneFollowFace?: boolean;

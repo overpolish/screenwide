@@ -2,6 +2,7 @@
 import type { Annotation } from "./Annotation";
 import type { AnnotationPin } from "./AnnotationPin";
 import type { AnnotationTrack } from "./AnnotationTrack";
+import type { SceneShape } from "./SceneShape";
 
 export type RecordingAnnotationClip = { annotation: Annotation, trackId: AnnotationTrack, 
 /**
@@ -22,4 +23,10 @@ pin?: AnnotationPin,
  * that. Absent from a clip the editor has not paced, which takes its kind's
  * own time, and from every counter and redaction, which grow into place.
  */
-pathMs?: number, };
+pathMs?: number, 
+/**
+ * Its own shape in the scenes it was moved in, which it glides to as each
+ * arrives and back from as it leaves. Only the geometry is the scene's
+ * (`scene_shape`); a pinned annotation follows its content instead.
+ */
+sceneShapes?: Array<SceneShape>, };

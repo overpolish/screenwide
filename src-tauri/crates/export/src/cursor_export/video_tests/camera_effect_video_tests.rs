@@ -87,6 +87,7 @@ fn exported(name: &str, camera: Vec<Annotation>) -> impl Fn(u32, u32) -> [u8; 3]
         .map(|annotation| RecordingAnnotationClip {
           path_ms: None,
           recording_span: None,
+          scene_shapes: Vec::new(),
           pin: None,
           annotation,
           track_id: AnnotationTrack::Camera,

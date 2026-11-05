@@ -20,6 +20,7 @@ fn spotlight(
     pin: None,
     path_ms: None,
     recording_span: None,
+    scene_shapes: Vec::new(),
   }
 }
 
@@ -28,7 +29,7 @@ fn spotlight(
 const PICTURE: (u32, u32) = (1_600, 1_200);
 
 fn drawn(clips: &[RecordingAnnotationClip], at: u64) -> Vec<Annotation> {
-  revealed_annotations(clips, AnnotationTrack::Primary, &[], at, 0.0, PICTURE)
+  revealed_annotations(clips, &[], AnnotationTrack::Primary, &[], at, 0.0, PICTURE)
 }
 
 fn left(annotation: &Annotation) -> f64 {

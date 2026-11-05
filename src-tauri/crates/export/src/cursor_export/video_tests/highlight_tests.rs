@@ -393,6 +393,7 @@ fn an_exported_video_carries_the_highlight_on_both_planes() {
   let clip = RecordingAnnotationClip {
     path_ms: None,
     recording_span: None,
+    scene_shapes: Vec::new(),
     pin: None,
     annotation: Annotation {
       animated: false,

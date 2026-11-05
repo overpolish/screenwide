@@ -45,6 +45,7 @@ function Fitted({
 const meta = {
   args: {
     isSelected: false,
+    onGrabBody: fn(),
     onGrabEdge: fn(),
     onPress: fn(),
     scale,

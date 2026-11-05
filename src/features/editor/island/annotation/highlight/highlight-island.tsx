@@ -73,7 +73,12 @@ export function highlightIsland(
     key: `highlight-${id}`,
     section: (
       <div className="flex flex-col gap-separate">
-        <AnnotationPinNote onPinAction={props.onPinAction} pin={props.pin} />
+        <AnnotationPinNote
+          onPinAction={props.onPinAction}
+          onSceneReset={props.onSceneReset}
+          pin={props.pin}
+          placedInScene={props.placedInScene}
+        />
         <AnnotationOptions>
           <HandDrawnToggle
             isHandDrawn={style.isHandDrawn}

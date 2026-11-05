@@ -347,6 +347,10 @@ editor-island-annotation-pin-hide = Out of view
 editor-island-annotation-pin-show = Back in view
 # Takes away every place the pinned annotation was put by hand, leaving it to follow its content alone.
 editor-island-annotation-pin-clear = Clear corrections
+# Under an annotation's island while the playhead is in a scene where the annotation was moved: it stands somewhere of its own in this scene, and glides there as the scene arrives and back as it leaves.
+editor-island-annotation-scene-placed = Placed for this scene
+# Takes away the annotation's own place in the scene at the playhead, so it stands there where it does outside every scene.
+editor-island-annotation-scene-reset = Reset place in this scene
 editor-island-arrow = Arrow
 # Turns the arrow round, so its head points the other way.
 editor-island-arrow-reverse = Reverse
@@ -438,6 +442,13 @@ editor-island-screen-in-scene = Inset, corners, rotation, Recenter and Reset pla
 editor-island-crop-in-scene = This crop applies to this scene only.
 # At the foot of the Camera island while the playhead is in a scene, which can round the camera, have it follow the face and place it its own way.
 editor-island-camera-in-scene = Corners, Follow face and Reset placement apply to this scene only.
+# At the foot of the Cursor island while the playhead is in a scene, about the eye on its row, which there shows or hides the cursor for that scene alone; the cursor's other options hold for the whole recording. Kept short, under the island's Cursor title. $state is "hidden" or "shown" where the scene hides or shows the cursor its own way (a game with no cursor, say), and "other" where it does as the rest of the recording does, so the eye would make it the scene's own.
+editor-island-cursor-in-scene =
+    { $state ->
+        [hidden] Hidden in this scene only.
+        [shown] Shown in this scene only.
+       *[other] Applies to this scene only.
+    }
 # A dice that makes a frame's background again: a new colour, or new colours for a mesh's unlocked ones, in a mood picked at random.
 editor-island-frame-randomise = Randomise
 # Puts the frame's size back to the size of what was captured, leaving its background and corners as they are.
@@ -478,6 +489,8 @@ editor-island-cursor-clip = Keep inside
 editor-island-cursor-smooth = Smooth movement
 editor-island-cursor-motion-blur = Motion blur
 editor-island-cursor-click-animation = Click animation
+# A toggle drawn as an eye: whether Screenwide draws the cursor over the recording. Inside a scene it shows or hides the cursor in that scene alone.
+editor-island-cursor-show = Show cursor
 
 ## Keyboard shortcuts drawn over a recording
 

@@ -66,12 +66,10 @@ pub(in crate::editor::recording_preview_player) fn present<F: PaneFrame>(
       .unwrap_or_else(|poisoned| poisoned.into_inner());
     annotation_preview::apply_clips(
       &mut settings,
+      sources,
       &clips,
       &ranges,
-      timestamp_ms,
-      frame_ms,
-      sources.annotation_pictures(),
-      &sources.held_fills,
+      (timestamp_ms, frame_ms),
     );
   }
   let placed = sources.arrange_scene(&mut settings, timestamp_ms, frame_ms);
@@ -112,8 +110,11 @@ pub(in crate::editor::recording_preview_player) fn present<F: PaneFrame>(
     .read()
     .map(|settings| *settings)
     .unwrap_or_default();
+  let cursor_shown = sources
+    .scenes
+    .cursor_shown(timestamp_ms, cursor_settings.bake);
   let cursor = screen.and_then(|frame| {
-    let cursor = sources.cursor.as_deref().filter(|_| cursor_settings.bake)?;
+    let cursor = sources.cursor.as_deref().filter(|_| cursor_shown > 0.0)?;
     placed_cursor(
       cursor,
       timestamp_ms,
@@ -123,6 +124,7 @@ pub(in crate::editor::recording_preview_player) fn present<F: PaneFrame>(
     )
     .ok()
     .flatten()
+    .map(|cursor| cursor.faded(cursor_shown))
   });
   let keyboard_settings = sources
     .keyboard_settings

@@ -140,6 +140,7 @@ export function toolPanelSceneOf({
     cameraAspect,
     canvasAspect: look.canvasAspect,
     composition: look.composition,
+    cursor: current?.cursor ?? null,
     followsFace: current?.followFace ?? cameraOverlay.followFace ?? false,
     framing: currentPane?.framing ?? null,
     framingPane: currentPane?.pane ?? "screen",

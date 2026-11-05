@@ -18,6 +18,8 @@ import {
 } from "../../timeline/editing/recording-timeline-time";
 import { RecordingVideoTrackId } from "../../types";
 
+import type { SceneShape } from "./recording-annotation-scenes";
+
 /** Where a pinned annotation is put at one moment, as a movement in source
  * pixels from where it was drawn. A redaction resized away from the frame it
  * was pinned on also carries how far each edge - left, top, right, bottom -
@@ -45,7 +47,9 @@ export type RecordingAnnotationPin = {
 /** An annotation timed on the edited video, attached to one of the
  * recording's two panes. A pin, like the content it follows, is in recording
  * time. `pathMs` is how long what it draws along a path takes to draw in,
- * paced by the path's length; see `annotation-pace.ts`. */
+ * paced by the path's length; see `annotation-pace.ts`. `sceneShapes` are
+ * its own places in the scenes it was moved in
+ * (`recording-annotation-scenes.ts`). */
 export type RecordingAnnotationClip = {
   annotation: Annotation;
   endMs: number;
@@ -53,6 +57,7 @@ export type RecordingAnnotationClip = {
   trackId: "primary" | "camera";
   pathMs?: number;
   pin?: RecordingAnnotationPin;
+  sceneShapes?: SceneShape[];
 };
 
 /** Whether two clips are drawn one over the other: on the same picture,
@@ -136,11 +141,18 @@ export type RecordingAnnotationPinCommit = {
   pin: RecordingAnnotationPin;
 };
 
+/** An annotation's places in the scenes as a native edit inside a scene left
+ * them. */
+export type RecordingAnnotationSceneShapesCommit = {
+  annotationId: string;
+  sceneShapes: SceneShape[];
+};
+
 /** Merges the annotations an edit on the picture reports into their clips,
- * with the pins the same edit left on them. An annotation already in a clip
- * updates that clip, on whichever pane: a group carried together reports its
- * members from both. A fresh annotation joins `trackId`, paced on `frame`,
- * the pane's picture. */
+ * with the pins and scene places the same edit left on them. An annotation
+ * already in a clip updates that clip, on whichever pane: a group carried
+ * together reports its members from both. A fresh annotation joins
+ * `trackId`, paced on `frame`, the pane's picture. */
 export const mergeRecordingAnnotationClips = ({
   annotations,
   clips,
@@ -148,6 +160,7 @@ export const mergeRecordingAnnotationClips = ({
   frame,
   pins = [],
   positionMs,
+  sceneShapes = [],
   sourceDurationMs,
   trackId,
 }: {
@@ -159,6 +172,7 @@ export const mergeRecordingAnnotationClips = ({
   trackId: RecordingVideoTrackId;
   frame?: AnnotationFrame;
   pins?: RecordingAnnotationPinCommit[];
+  sceneShapes?: RecordingAnnotationSceneShapesCommit[];
 }) => {
   const byId = new Map(
     annotations.map((annotation) => [annotation.id, annotation]),
@@ -166,11 +180,25 @@ export const mergeRecordingAnnotationClips = ({
   const pinById = new Map(
     pins.map(({ annotationId, pin }) => [annotationId, pin]),
   );
+  const placesById = new Map(
+    sceneShapes.map(({ annotationId, sceneShapes: shapes }) => [
+      annotationId,
+      shapes,
+    ]),
+  );
   const next = clips.map((clip) => {
     if (!byId.has(clip.annotation.id)) return clip;
     const pin = pinById.get(clip.annotation.id);
+    const places = placesById.get(clip.annotation.id);
+    const { sceneShapes: _kept, ...rest } = clip;
+    const placed =
+      places === undefined
+        ? clip
+        : places.length > 0
+          ? { ...rest, sceneShapes: places }
+          : rest;
     return {
-      ...clip,
+      ...placed,
       annotation: byId.get(clip.annotation.id) ?? clip.annotation,
       ...(pin && clip.pin ? { pin } : {}),
     };

@@ -15,6 +15,7 @@ fn clip(shape: AnnotationShape, keyframes: &[(u64, f64, f64)]) -> RecordingAnnot
   RecordingAnnotationClip {
     path_ms: None,
     recording_span: None,
+    scene_shapes: Vec::new(),
     annotation: Annotation {
       above_camera: false,
       animated: false,

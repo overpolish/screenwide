@@ -24,11 +24,26 @@ export function cursorIslandContent({
   change,
   snapshot,
 }: Inputs): EditorIslandContent {
+  const { cursorEffects, scene } = snapshot;
+  const isInScene = scene?.hasSceneAtPlayhead ?? false;
+  const sceneCursor = isInScene ? (scene?.cursor ?? null) : null;
   return cursorIsland({
-    onChange: (cursorEffects) => {
-      change({ cursorEffects });
+    isCursorShown: sceneCursor ?? cursorEffects.bake,
+    isInScene,
+    onChange: (next) => {
+      change({ cursorEffects: next });
     },
-    settings: snapshot.cursorEffects,
+    // A scene set back to the recording's own choice does as the recording
+    // does again, so a later change to the recording reaches it too.
+    onShowChange: (shown) => {
+      change(
+        isInScene
+          ? { sceneCursor: shown === cursorEffects.bake ? null : shown }
+          : { cursorEffects: { ...cursorEffects, bake: shown } },
+      );
+    },
+    sceneCursor,
+    settings: cursorEffects,
   });
 }
 

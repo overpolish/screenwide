@@ -156,15 +156,24 @@ impl PreviewPlayerManager {
       .annotation_ranges
       .read()
       .unwrap_or_else(|poisoned| poisoned.into_inner());
+    let scenes = self.scene_clips();
+    let track = super::gesture::track(pane);
+    let pictures = sources.annotation_pictures();
+    let picture = match track {
+      AnnotationTrack::Primary => pictures[0],
+      AnnotationTrack::Camera => pictures[1],
+    };
     sources
       .annotation_clips
       .read()
       .map(|clips| {
         active_annotations(
           &clips,
-          super::gesture::track(pane),
+          &scenes,
+          track,
           &ranges,
           self.position_ms.min(sources.duration_ms.saturating_sub(1)),
+          picture,
         )
       })
       .unwrap_or_default()

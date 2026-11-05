@@ -40,6 +40,7 @@ fn screen(source_ms: u64, frame_ms: f32) -> ScreenshotOutputSettings {
     rotation: None,
     variant: None,
     follow_face: None,
+    cursor: None,
     auto: false,
   }];
   let mut output = test_output_settings(1_600, 900);

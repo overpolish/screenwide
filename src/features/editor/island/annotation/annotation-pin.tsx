@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { EyeOff, Pin, RotateCcw } from "lucide-react";
+import { EyeOff, LayoutDashboard, Pin, RotateCcw } from "lucide-react";
 import { type ReactNode } from "react";
 
 import { t } from "../../../../i18n/i18n";
@@ -56,9 +56,13 @@ const UNSURE_NOTES = {
 
 export type AnnotationPinProps = {
   onPinAction?: (action: AnnotationPinAction) => void;
+  /** Takes away its own place in the scene at the playhead. */
+  onSceneReset?: () => void;
   /** Absent where it cannot be pinned (a screenshot's, the camera's, a pen's
    * next one), null while it is not. */
   pin?: AnnotationPinView | null;
+  /** Whether it has a place of its own in the scene at the playhead. */
+  placedInScene?: boolean;
 };
 
 /** Pinned or not: a pin, filled while it holds. Left out where the
@@ -93,15 +97,23 @@ export function AnnotationPinToggle({ onPinAction, pin }: AnnotationPinProps) {
  * so the island's own actions keep the only row of buttons: saying the
  * content went out of view or came back, and taking the corrections away, a
  * quiet reset glyph as a figure's is. While the path is still being worked
- * out its bar has the line, and the answers wait for it.
+ * out its bar has the line, and the answers wait for it. An annotation that
+ * is not pinned, and so goes where each scene puts it, is said instead to
+ * have a place of its own in the scene at the playhead, where it has one.
  *
  * The note stays on one line and the island makes room for it. As the
  * playhead moves the note changes, so it keeps the room of its widest form
  * the whole time the annotation is pinned: every form is laid in one cell,
  * unseen, under the one shown, and the island widens once as the pin is
  * set rather than at each change. */
-export function AnnotationPinNote({ onPinAction, pin }: AnnotationPinProps) {
-  if (!pin) return null;
+export function AnnotationPinNote({
+  onPinAction,
+  onSceneReset,
+  pin,
+  placedInScene,
+}: AnnotationPinProps) {
+  if (!pin)
+    return placedInScene ? <SceneStatus onReset={onSceneReset} /> : null;
   const shown =
     pin.state === "tracking" ? (
       <IslandWorkLine
@@ -243,5 +255,29 @@ function ClearCorrections({ onPress }: { onPress?: () => void }) {
     >
       <RotateCcw aria-hidden className="size-icon" />
     </IconButton>
+  );
+}
+
+/** Where an annotation that is not pinned has a place of its own in the
+ * scene at the playhead: said on the status line, with taking it away at
+ * its end, as a pinned one's corrections are. */
+function SceneStatus({ onReset }: { onReset?: () => void }) {
+  return (
+    <Alert
+      action={
+        <IconButton
+          aria-label={t("editor-island-annotation-scene-reset")}
+          className="text-fg-secondary enabled:hover:text-fg"
+          onPress={onReset}
+        >
+          <RotateCcw aria-hidden className="size-icon" />
+        </IconButton>
+      }
+      className="ps-inset-sm whitespace-nowrap"
+      icon={<LayoutDashboard />}
+      role="status"
+    >
+      {t("editor-island-annotation-scene-placed")}
+    </Alert>
   );
 }

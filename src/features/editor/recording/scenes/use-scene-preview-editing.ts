@@ -170,16 +170,19 @@ export function useScenePreviewEditing({
       : null;
   return {
     arrangement,
+    /** Whether the scene at the playhead is a preset that shows the screen,
+     * whose screen the select tool moves and resizes as a custom scene's,
+     * making it custom (`scene_pane_gesture.rs`); camera only hides it. */
+    freesScreen:
+      arrangement !== null &&
+      !arrangement.clip.boxes &&
+      arrangement.clip.preset !== "camera-only",
     gesture,
     /** Whether the scene at the playhead is custom, its panes' boxes moved
      * and resized by the select tool rather than fixed. */
     isCustom: Boolean(arrangement?.clip.boxes),
     /** Whether a scene places the panes at the playhead. */
     isFramed: arrangement !== null,
-    /** Whether the scene at the playhead is a full one, standing for the
-     * recording's own composition, whose screen the select tool moves and
-     * resizes as a custom scene's, making it custom. */
-    isFull: arrangement?.clip.preset === "full" && !arrangement.clip.boxes,
     reframeSelections,
   };
 }

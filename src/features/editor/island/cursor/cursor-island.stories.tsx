@@ -26,8 +26,12 @@ function CursorIsland({
 const meta = {
   ...editorIslandStoryMeta,
   args: {
+    isCursorShown: true,
+    isInScene: false,
     isShown: true,
     onChange: fn(),
+    onShowChange: fn(),
+    sceneCursor: null,
     settings: DEFAULT_CURSOR_EFFECTS,
   },
   component: CursorIsland,
@@ -42,6 +46,23 @@ const meta = {
           args.onChange(settings);
           updateArgs({ settings });
         }}
+        // Inside a scene the eye sets the scene's own choice, which goes back
+        // to none once it matches the recording's; outside, the recording's.
+        onShowChange={(isCursorShown) => {
+          args.onShowChange(isCursorShown);
+          updateArgs(
+            args.isInScene
+              ? {
+                  isCursorShown,
+                  sceneCursor:
+                    isCursorShown === args.settings.bake ? null : isCursorShown,
+                }
+              : {
+                  isCursorShown,
+                  settings: { ...args.settings, bake: isCursorShown },
+                },
+          );
+        }}
       />
     );
   },
@@ -52,3 +73,18 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const Recording: Story = {};
+
+export const Hidden: Story = {
+  args: {
+    isCursorShown: false,
+    settings: { ...DEFAULT_CURSOR_EFFECTS, bake: false },
+  },
+};
+
+export const InScene: Story = {
+  args: { isInScene: true },
+};
+
+export const HiddenInScene: Story = {
+  args: { isCursorShown: false, isInScene: true, sceneCursor: false },
+};

@@ -40,6 +40,7 @@ impl PreviewPlayerManager {
     }
     let (pane, position) = (gesture.pane, gesture.position);
     let timeline_ms = self.annotation_timeline_ms(position);
+    let scenes = self.scene_edit(position);
     let Some(gesture) = self.annotation.gesture.as_ref() else {
       return false;
     };
@@ -48,6 +49,7 @@ impl PreviewPlayerManager {
       &gesture.working,
       pane,
       (position, timeline_ms),
+      &scenes,
     );
     if let Some(Ok(mut shown)) = self
       .sources

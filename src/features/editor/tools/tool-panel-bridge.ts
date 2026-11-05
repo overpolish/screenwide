@@ -45,6 +45,7 @@ const applyPatch = (values: ToolPanelPatch, on: ToolPanelHandlers) => {
     on.onAnnotationKindChange?.(values.annotationKind);
   if (values.annotationPin !== undefined)
     on.onAnnotationPin?.(values.annotationPin);
+  if (values.annotationSceneReset) on.onAnnotationSceneReset?.();
   if (values.reverseAnnotation) on.onAnnotationReverse?.();
   if (values.shuffleAnnotation) on.onAnnotationShuffle?.();
   if (values.deleteAnnotations) on.onAnnotationsDelete?.();
@@ -124,6 +125,8 @@ const applyPatch = (values: ToolPanelPatch, on: ToolPanelHandlers) => {
     on.onScenePresetChoose?.(values.scenePreset);
   if (values.sceneFraming !== undefined)
     on.onSceneFramingChange?.(values.sceneFraming, values.sceneFramingPane);
+  if (values.sceneCursor !== undefined)
+    on.onSceneCursorChange?.(values.sceneCursor);
   if (values.sceneFollowFace !== undefined)
     on.onSceneFollowFaceChange?.(values.sceneFollowFace);
   if (values.sceneInset !== undefined)

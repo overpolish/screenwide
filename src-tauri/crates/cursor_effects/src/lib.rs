@@ -121,6 +121,17 @@ pub struct GpuCursor {
   pub clip_at_video_edge: bool,
 }
 
+impl GpuCursor {
+  /// This cursor with `share` of its opacity, as a scene that hides or shows
+  /// it fades it out or in.
+  pub fn faded(self, share: f32) -> Self {
+    Self {
+      opacity: self.opacity * share.clamp(0.0, 1.0),
+      ..self
+    }
+  }
+}
+
 #[derive(Clone)]
 pub struct CursorCompositor {
   visibility: Vec<(u64, bool)>,

@@ -9,7 +9,7 @@ import { IslandRowTitle } from "../../../../primitives/island/row-title/island-r
 import { OptionToggle } from "../../../annotations/options/option-toggle";
 import { type AnnotationColorProps } from "../annotation/annotation-island-parts";
 import { WordByWordToggle } from "../annotation/text/text-toggles";
-import { ShowGlyph } from "../keyboard/keyboard-glyphs";
+import { ShowGlyph } from "../show-glyph";
 
 import { CaptionsSection } from "./captions-section";
 

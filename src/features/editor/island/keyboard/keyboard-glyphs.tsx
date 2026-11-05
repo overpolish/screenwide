@@ -1,11 +1,9 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { Eye, EyeOff } from "lucide-react";
 import { motion } from "motion/react";
 import { type ReactNode, useId } from "react";
 
-import { IconSwap } from "../../../../primitives/icon-swap/icon-swap";
 import { useGlyphMotion } from "../../../annotations/options/glyph-motion";
 
 /** A key's cap, and the label on it, as one shortcut is drawn. */
@@ -44,22 +42,6 @@ export function KeycapSizeGlyph({ side }: { side: number }) {
       <rect {...CAP} strokeWidth={2.5} />
       <path d={LABEL} strokeWidth={2.5} />
     </GlyphBox>
-  );
-}
-
-/** Lucide's eye while the shortcuts show, and its eye struck through once
- * they are hidden, the one blurring into the other where it sits. */
-export function ShowGlyph({ isShown }: { isShown: boolean }) {
-  return (
-    <span className="relative size-icon">
-      <IconSwap swapKey={isShown ? "shown" : "hidden"}>
-        {isShown ? (
-          <Eye aria-hidden className="size-icon" />
-        ) : (
-          <EyeOff aria-hidden className="size-icon" />
-        )}
-      </IconSwap>
-    </span>
   );
 }
 

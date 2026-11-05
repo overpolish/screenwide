@@ -242,6 +242,8 @@ export type Messages = {
   "editor-island-annotation-pin-show": null;
   "editor-island-annotation-pin-tracking": null;
   "editor-island-annotation-pin-under-cover": null;
+  "editor-island-annotation-scene-placed": null;
+  "editor-island-annotation-scene-reset": null;
   "editor-island-arrow": null;
   "editor-island-arrow-reverse": null;
   "editor-island-audio": null;
@@ -325,8 +327,10 @@ export type Messages = {
   "editor-island-cursor": null;
   "editor-island-cursor-click-animation": null;
   "editor-island-cursor-clip": null;
+  "editor-island-cursor-in-scene": { state: string | number };
   "editor-island-cursor-motion-blur": null;
   "editor-island-cursor-reset": null;
+  "editor-island-cursor-show": null;
   "editor-island-cursor-size": null;
   "editor-island-cursor-smooth": null;
   "editor-island-drawing": null;

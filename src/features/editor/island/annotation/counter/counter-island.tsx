@@ -75,7 +75,12 @@ export function counterIsland(props: CounterIslandProps): EditorIslandContent {
     key: `counter-${id}`,
     section: (
       <div className="flex flex-col gap-separate">
-        <AnnotationPinNote onPinAction={props.onPinAction} pin={props.pin} />
+        <AnnotationPinNote
+          onPinAction={props.onPinAction}
+          onSceneReset={props.onSceneReset}
+          pin={props.pin}
+          placedInScene={props.placedInScene}
+        />
         <AnnotationRows>
           <AnnotationChoiceRow key="size" title={annotationSizeLabel("size")}>
             <CounterSizeChoice

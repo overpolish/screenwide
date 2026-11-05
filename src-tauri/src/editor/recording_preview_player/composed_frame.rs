@@ -55,14 +55,18 @@ pub(super) fn composed_frame_image(
     }
   }
   let primary = &recording_output.primary;
-  let cursor = match sources.cursor.as_deref().filter(|_| cursor_effects.bake) {
+  let cursor_shown = sources
+    .scenes
+    .cursor_shown(position_ms, cursor_effects.bake);
+  let cursor = match sources.cursor.as_deref().filter(|_| cursor_shown > 0.0) {
     Some(cursor) => placed_cursor(
       cursor,
       position_ms,
       cursor_effects,
       (screen.width, screen.height),
       primary,
-    )?,
+    )?
+    .map(|cursor| cursor.faded(cursor_shown)),
     None => None,
   };
   let keyboard = sources.keyboard_overlay(

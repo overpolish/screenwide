@@ -188,6 +188,12 @@ pub struct RecordingSceneClip {
   #[serde(default, skip_serializing_if = "Option::is_none")]
   #[ts(optional)]
   pub follow_face: Option<bool>,
+  /// Whether the cursor shows in this scene, over the recording's own choice
+  /// (`CursorEffectSettings::bake`), fading in or out as the scene arrives
+  /// and leaves. Unset, the scene does as the recording does.
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  #[ts(optional)]
+  pub cursor: Option<bool>,
   /// Set, a custom scene: the panes sit in these boxes instead of the
   /// preset's, which a reset returns them to.
   #[serde(default, skip_serializing_if = "Option::is_none")]

@@ -40,6 +40,7 @@ fn custom(preset: RecordingScenePreset, camera: Option<SceneBox>) -> RecordingSc
     rotation: None,
     variant: None,
     follow_face: None,
+    cursor: None,
     auto: false,
   }
 }
@@ -153,6 +154,74 @@ fn a_scene_putting_the_camera_behind_crosses_the_order_over_as_it_arrives() {
     ..boxes
   });
   assert_eq!(order(&[behind], 8_000), Some(1.0));
+}
+
+#[test]
+fn a_preset_made_custom_keeps_every_pane_where_the_preset_put_it() {
+  let arranged = |clip: &RecordingSceneClip, with_camera: bool| {
+    let mut output = test_output_settings(1_600, 900);
+    let mut camera = overlay();
+    arrange(
+      std::slice::from_ref(clip),
+      &[],
+      5_000,
+      0.0,
+      &mut output,
+      with_camera.then_some((&mut camera, (1_280, 720))),
+    );
+    let round = |values: [f64; 4]| values.map(|value| (value * 1_000.0).round());
+    (
+      round([
+        output.crop_x,
+        output.crop_y,
+        output.crop_width,
+        output.crop_height,
+      ]),
+      round([output.image_x, output.image_y, output.image_width, 0.0]),
+      round([
+        camera.frame_x,
+        camera.frame_y,
+        camera.frame_width,
+        camera.frame_height,
+      ]),
+      round([camera.camera_x, camera.camera_y, camera.camera_width, 0.0]),
+    )
+  };
+  let cases = [
+    (RecordingScenePreset::ScreenOnly, false),
+    (RecordingScenePreset::Full, false),
+    (RecordingScenePreset::ScreenOnly, true),
+    (RecordingScenePreset::Full, true),
+    (RecordingScenePreset::PictureInPicture, true),
+    (RecordingScenePreset::SplitTwoThirds, true),
+  ];
+  for (preset, with_camera) in cases {
+    let preset_clip = RecordingSceneClip {
+      boxes: None,
+      ..custom(preset, None)
+    };
+    let output = test_output_settings(1_600, 900);
+    let camera = overlay();
+    let made = made_custom(
+      &preset_clip,
+      &output,
+      with_camera.then_some((&camera, (1_280, 720))),
+    )
+    .unwrap_or_else(|| panic!("{preset:?} was not made custom"));
+    assert!(made.boxes.is_some());
+    assert_eq!(
+      arranged(&made, with_camera),
+      arranged(&preset_clip, with_camera),
+      "{preset:?} moved when made custom"
+    );
+  }
+  // Custom shows both panes, so a preset hiding the screen stays a preset.
+  let camera_only = RecordingSceneClip {
+    boxes: None,
+    ..custom(RecordingScenePreset::CameraOnly, None)
+  };
+  let output = test_output_settings(1_600, 900);
+  assert!(made_custom(&camera_only, &output, Some((&overlay(), (1_280, 720)))).is_none());
 }
 
 #[test]

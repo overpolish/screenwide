@@ -63,6 +63,7 @@ fn spotlight(
   RecordingAnnotationClip {
     path_ms: None,
     recording_span: None,
+    scene_shapes: Vec::new(),
     pin: None,
     annotation,
     track_id: AnnotationTrack::Primary,

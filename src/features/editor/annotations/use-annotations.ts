@@ -7,40 +7,36 @@ import { SceneRotation } from "../layer-rotation";
 import { sweptTimelineItems } from "../timeline/tracks/timeline-item-selection";
 import { EditorKind } from "../types";
 
-import {
-  ImagePlayChange,
-  usePublishAnnotationSelection,
-} from "./annotation-channel";
+import { usePublishAnnotationSelection } from "./annotation-channel";
 import {
   rememberAnnotationAnimated,
-  rememberAnnotationImage,
   rememberAnnotationStyle,
   rememberAnnotationTextLook,
 } from "./annotation-defaults";
+import { imageEdits } from "./annotation-image-edits";
 import {
   annotationDeleteTargets,
   chosenAnnotationIds,
   toggledAnnotationIds,
 } from "./annotation-selection";
 import {
-  freshSeed,
   dressedShape,
+  freshSeed,
   relookedFocus,
   reversedShape,
   shuffledShape,
-  swayedShape,
 } from "./annotation-shape-edits";
 import { withEmphasis } from "./annotation-text-selection";
 import {
   Annotation,
   AnnotationShape,
   AnnotationStyle,
-  ImageArt,
   TextSpan,
 } from "./annotations";
 import { imageRotation, withImageRotation } from "./image-rotation";
 import {
   type AnnotationPins,
+  type AnnotationScenes,
   publishedAnnotation,
 } from "./published-annotation";
 import { useRememberedShape } from "./use-remembered-shape";
@@ -61,6 +57,7 @@ export function useAnnotations({
   groupable = anyGroupable,
   onCommit: commit,
   pins,
+  scenes,
   workspace,
 }: {
   annotations: Annotation[];
@@ -69,6 +66,7 @@ export function useAnnotations({
   /** Whether an annotation may be chosen together with others. */
   groupable?: (id: string) => boolean;
   pins?: AnnotationPins;
+  scenes?: AnnotationScenes;
 }) {
   const [chosen, setChosen] = useState(NOTHING_CHOSEN);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
@@ -125,36 +123,10 @@ export function useAnnotations({
       ),
     );
   };
-  // An image given another picture keeps its place, size and turn, and
-  // takes the new picture's proportions and, where it moves, how it plays;
-  // the next image shows it too.
-  const image = selected?.shape.kind === "image" ? selected.shape : null;
-  const art: ImageArt | null = image
-    ? { aspect: image.aspect, asset: image.asset, play: image.play }
-    : null;
-  const applyImage = (next: ImageArt) => {
-    if (!selected || selected.shape.kind !== "image") return;
-    rememberAnnotationImage(next);
-    const shape = selected.shape;
-    if (shape.asset === next.asset && shape.aspect === next.aspect) return;
-    // A placed image keeps its size: only the picture and its proportions
-    // change, whatever size the new picture is of its own.
-    const { aspect, asset, play } = next;
-    reshape({ ...shape, aspect, asset, play });
-  };
-  // A moving image's frame, which a still shows and playback starts on,
-  // and whether a recording plays it through once.
-  const applyImagePlay = (next: ImagePlayChange) => {
-    if (!selected || selected.shape.kind !== "image" || !selected.shape.play)
-      return;
-    reshape({ ...selected.shape, play: { ...selected.shape.play, ...next } });
-  };
-  // Whether a recording gives the chosen image its slight turn and drift.
-  // Turning it on draws a fresh seed, as the dice does.
-  const applySway = (sway: boolean) => {
-    if (selected)
-      reshape(swayedShape(selected.shape, sway ? freshSeed() : null));
-  };
+  const { applyImage, applyImagePlay, applySway, art } = imageEdits(
+    selected,
+    reshape,
+  );
   const applyStyle = (style: Partial<AnnotationStyle>) => {
     if (!selected) return;
     const dressed = { ...selected.style, ...style };
@@ -236,6 +208,7 @@ export function useAnnotations({
           angle: counterAngle,
           art,
           pin: pins?.viewOf(selected.id),
+          placedInScene: scenes?.isPlaced(selected.id),
           rotation,
           zoom: lensZoom,
         }),
@@ -256,6 +229,7 @@ export function useAnnotations({
       applyStyle,
       applySway,
       applyZoom,
+      resetScene: () => selected && scenes?.reset(selected.id),
     },
   );
 

@@ -74,7 +74,12 @@ export function shapeIsland(props: ShapeIslandProps): EditorIslandContent {
     key: `shape-${id}`,
     section: (
       <div className="flex flex-col gap-separate">
-        <AnnotationPinNote onPinAction={props.onPinAction} pin={props.pin} />
+        <AnnotationPinNote
+          onPinAction={props.onPinAction}
+          onSceneReset={props.onSceneReset}
+          pin={props.pin}
+          placedInScene={props.placedInScene}
+        />
         <AnnotationRows>
           <AnnotationChoiceRow key="width" title={annotationSizeLabel("width")}>
             <PenWeights

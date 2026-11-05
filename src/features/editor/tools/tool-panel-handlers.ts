@@ -61,6 +61,9 @@ export type ToolPanelHandlers = {
   onAnnotationReverse?: () => void;
   /** Turn the chosen image, a field at a time, in degrees about each axis. */
   onAnnotationRotationChange?: (rotation: Partial<SceneRotation>) => void;
+  /** Take away the chosen annotation's own place in the scene at the
+   * playhead. */
+  onAnnotationSceneReset?: () => void;
   /** Lay the chosen redaction's blocks out again, draw the chosen hand-drawn
    * highlight's stroke again, or sway the chosen image another way, from a
    * fresh seed. */
@@ -129,6 +132,9 @@ export type ToolPanelHandlers = {
   /** Take every auto zoom off the timeline, the scenes of your own left as
    * they are. */
   onSceneAutoZoomsClear?: () => void;
+  /** Show or hide the cursor in the scene under the playhead over the
+   * recording's own choice, or with null have it do as the recording does. */
+  onSceneCursorChange?: (shown: boolean | null) => void;
   /** Delete the scene under the playhead. */
   onSceneDelete?: () => void;
   /** Have the camera in the scene under the playhead follow the face, or

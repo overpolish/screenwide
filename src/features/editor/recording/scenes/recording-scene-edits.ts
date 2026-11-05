@@ -1,23 +1,19 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { type CropAspect } from "../../island/crop-aspect-choice";
 import { UPRIGHT_ROTATION } from "../../layer-rotation";
 import { ScreenshotOutputSettings } from "../../screenshot/screenshot-output";
 import { timedSpanClipAt } from "../../timeline/tracks/timed-span-clips";
 
 import { RecordingSceneControls } from "./recording-scene-channel";
-import { customRecordingSceneClip } from "./recording-scene-custom";
 import {
-  shapedCustomPane,
-  uncroppedCustomPane,
-} from "./recording-scene-custom-crop";
+  croppedSceneScreen,
+  uncroppedSceneScreen,
+} from "./recording-scene-crop-edits";
+import { customRecordingSceneClip } from "./recording-scene-custom";
 import { framingWithin } from "./recording-scene-framing";
 import { arrangedScenePane, swappedScenePanes } from "./recording-scene-order";
-import {
-  ScenePaneFraming,
-  scenePaneFraming,
-} from "./recording-scene-pane-framing";
+import { ScenePaneFraming } from "./recording-scene-pane-framing";
 import { scenePaneAtLayout } from "./recording-scene-pane-reset";
 import { SceneCamera } from "./recording-scene-placement";
 import { SceneChoice } from "./recording-scene-span";
@@ -31,7 +27,6 @@ import {
   RECORDING_SCENE_MINIMUM_MS,
   RecordingSceneClip,
   rotatedSceneClip,
-  WHOLE_FRAMING,
 } from "./recording-scenes";
 
 /**
@@ -77,7 +72,6 @@ export function recordingSceneEdits({
       );
   };
   const canvasAspect = output.width / Math.max(1, output.height);
-  const canvas = { height: output.height, width: output.width };
   // A preset chosen for a custom scene puts its panes back in the preset's
   // boxes. The variant stays, so a swapped pair stays swapped. Custom keeps
   // the panes where the scene puts them now.
@@ -119,40 +113,6 @@ export function recordingSceneEdits({
         clip.id === target.id ? arranged(clip, choice) : clip,
       ),
     );
-  };
-  // The crop is each scene's own: its screen's box and framing, cropped in
-  // place as a custom scene's is, a preset's made custom first, where the
-  // change alone moves nothing.
-  const cropScreen = (aspect: CropAspect) => {
-    reframeCurrent((clip) => {
-      const pane = scenePaneFraming({ camera, clip, output, pane: "screen" });
-      const shaped = pane ? shapedCustomPane(pane, { aspect, canvas }) : null;
-      const owned = shaped
-        ? customRecordingSceneClip({ camera, clip, output })
-        : clip;
-      return shaped && owned.boxes
-        ? {
-            ...owned,
-            boxes: { ...owned.boxes, screen: shaped.box },
-            screen: shaped.framing,
-          }
-        : clip;
-    });
-  };
-  // A preset's box is the picture's shape already, so its crop goes with
-  // the zoom; a custom scene's box grows back to the picture's shape.
-  const resetScreenCrop = () => {
-    reframeCurrent((clip) => {
-      if (!clip.boxes) return { ...clip, screen: WHOLE_FRAMING };
-      const pane = scenePaneFraming({ camera, clip, output, pane: "screen" });
-      if (!pane) return clip;
-      const whole = uncroppedCustomPane(pane, { canvas });
-      return {
-        ...clip,
-        boxes: { ...clip.boxes, screen: whole.box },
-        screen: whole.framing,
-      };
-    });
   };
   return {
     arrangePane: (pane, move) => {
@@ -204,7 +164,11 @@ export function recordingSceneEdits({
     chooseTemplate: (template) => {
       chooseAtPlayhead({ template, type: "template" });
     },
-    cropScreen,
+    cropScreen: (aspect) => {
+      reframeCurrent((clip) =>
+        croppedSceneScreen(clip, aspect, { camera, output }),
+      );
+    },
     remove: () => {
       const target = timedSpanClipAt(clips, getTimelineMs());
       if (target) commit(clips.filter((clip) => clip.id !== target.id));
@@ -214,7 +178,16 @@ export function recordingSceneEdits({
         scenePaneAtLayout(clip, pane, { camera, output }),
       );
     },
-    resetScreenCrop,
+    resetScreenCrop: () => {
+      reframeCurrent((clip) => uncroppedSceneScreen(clip, { camera, output }));
+    },
+    // Unset, the scene shows or hides the cursor as the recording does.
+    setCursor: (shown) => {
+      reframeCurrent((clip) => {
+        const { cursor: _cursor, ...rest } = clip;
+        return shown === null ? rest : { ...rest, cursor: shown };
+      });
+    },
     // Following starts with the face in the middle of the camera's box at
     // the zoom the camera has now; a drag or the Position fields then set
     // how far off the middle it sits. Stopping keeps that framing as it is.

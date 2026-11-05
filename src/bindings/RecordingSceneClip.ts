@@ -25,6 +25,12 @@ camera?: SceneFraming,
  */
 followFace?: boolean, 
 /**
+ * Whether the cursor shows in this scene, over the recording's own choice
+ * (`CursorEffectSettings::bake`), fading in or out as the scene arrives
+ * and leaves. Unset, the scene does as the recording does.
+ */
+cursor?: boolean, 
+/**
  * Set, a custom scene: the panes sit in these boxes instead of the
  * preset's, which a reset returns them to.
  */

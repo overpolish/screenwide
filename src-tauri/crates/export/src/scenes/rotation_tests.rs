@@ -26,6 +26,7 @@ fn turned(id: &str, start_ms: u64, end_ms: u64, rotation: SceneRotation) -> Reco
     rotation: Some(rotation),
     variant: None,
     follow_face: None,
+    cursor: None,
     auto: false,
   }
 }

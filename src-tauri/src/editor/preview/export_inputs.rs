@@ -205,7 +205,12 @@ impl ExportInputs {
       captions,
       compression,
       cursor: cursor
-        .filter(|_| cursor_effects.bake)
+        .filter(|_| {
+          screenwide_annotations::timing::cursor_shown_anywhere(
+            edit.as_ref().map_or(&[][..], |edit| &edit.scene_clips),
+            cursor_effects.bake,
+          )
+        })
         .map(|cursor| (cursor, cursor_effects)),
       duration_ms,
       include_camera,

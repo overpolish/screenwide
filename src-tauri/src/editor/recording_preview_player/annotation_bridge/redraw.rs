@@ -42,6 +42,7 @@ impl PreviewPlayerManager {
       .read()
       .unwrap_or_else(|poisoned| poisoned.into_inner())
       .clone();
+    let scenes = self.scene_clips();
     // A redaction that reads the picture is handed the fill read from its
     // clip's first frame, as every other frame hands it; without one it falls
     // back to its style's colour for as long as the drag lasts.
@@ -59,6 +60,7 @@ impl PreviewPlayerManager {
     let resolve = |track, picture, held_pane| {
       let mut annotations = screenwide_annotations::timing::revealed_annotations(
         &clips,
+        &scenes,
         track,
         &ranges,
         position_ms,

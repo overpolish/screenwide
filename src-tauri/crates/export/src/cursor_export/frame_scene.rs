@@ -7,7 +7,7 @@
 use super::CursorExportRequest;
 use crate::media_preview::BakedVideoExportOptions;
 use crate::scenes;
-use screenwide_annotations::timing::{covers, video_ms, FrameTime};
+use screenwide_annotations::timing::{covers, cursor_in_scenes, video_ms, FrameTime};
 use screenwide_output::ScreenshotOutputSettings;
 use screenwide_scenes::{FacePath, RecordingSceneClip};
 use screenwide_timeline::TimelineRange;
@@ -57,6 +57,14 @@ impl ExportScenes {
       && self
         .camera
         .is_some_and(|options| options.overlay.follow_face)
+  }
+
+  /// How much of the cursor shows on the frame `source_ms` into the
+  /// recording, from nothing to whole, `shown` being the recording's own
+  /// choice: as the scene there says, faded as it arrives and leaves.
+  pub(super) fn cursor_shown(&self, source_ms: u64, shown: bool) -> f32 {
+    let timeline_ms = FrameTime::on(&self.ranges, source_ms).timeline_ms;
+    cursor_in_scenes(&self.clips, shown, (timeline_ms, video_ms(&self.ranges)))
   }
 
   /// The frame `source_ms` into the recording as the scenes arrange it: the

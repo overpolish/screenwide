@@ -132,8 +132,12 @@ export function annotationIslandContent({
     onPinAction: (action: AnnotationPinAction) => {
       change({ annotationPin: action });
     },
+    onSceneReset: () => {
+      change({ annotationSceneReset: true });
+    },
     onStyleChange,
     pin: annotation.pin,
+    placedInScene: annotation.placedInScene,
     ...(isDraft
       ? {}
       : {

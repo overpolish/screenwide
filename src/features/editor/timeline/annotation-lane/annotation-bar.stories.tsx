@@ -150,3 +150,18 @@ export const Tools: Story = {
     </StoryGrid>
   ),
 };
+
+// Where its annotation travels to its place in a scene and back, its line
+// makes a short wave.
+export const InAScene: Story = {
+  args: {
+    glides: [
+      { end: 22, start: 21 },
+      { end: 26, start: 25 },
+    ],
+  },
+  decorators: [featureStage({ width: STRIP_S * PX_PER_S + MARGIN_PX * 2 })],
+  render: (args) => (
+    <LiveBar key={JSON.stringify([args.isSelected, args.span])} {...args} />
+  ),
+};

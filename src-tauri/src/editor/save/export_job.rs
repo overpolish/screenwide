@@ -102,9 +102,17 @@ fn save_recording_media(
   } else {
     track_selection::AudioLayout::SeparateTracks
   };
+  let timeline = timeline_edit::export_plan(timeline_model.as_ref(), project, *id, *duration_ms);
+  // A scene can show the cursor where the recording hides it, so it is drawn
+  // wherever any part of the video shows it.
   let baked_cursor = cursor
     .as_ref()
-    .filter(|_| cursor_effects.bake)
+    .filter(|_| {
+      screenwide_annotations::timing::cursor_shown_anywhere(
+        timeline.as_ref().map_or(&[][..], |plan| &plan.scene_clips),
+        cursor_effects.bake,
+      )
+    })
     .map(|cursor| cursor.path.as_path());
   let baked_keyboard = keyboard
     .as_ref()
@@ -112,7 +120,6 @@ fn save_recording_media(
     .map(|keyboard| keyboard.path.as_path());
   let primary_output = &recording_output.primary;
   let camera_output = &recording_output.camera;
-  let timeline = timeline_edit::export_plan(timeline_model.as_ref(), project, *id, *duration_ms);
   let export_duration_ms = timeline.as_ref().map_or(
     *duration_ms,
     screenwide_timeline_edit::TimelinePlan::duration_ms,

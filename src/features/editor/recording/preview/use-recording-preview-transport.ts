@@ -196,31 +196,6 @@ export function useRecordingPreviewTransport(
     () => recordingTimelineEdit ?? createRecordingTimelineEdit(artifactId),
     [recordingTimelineEdit, artifactId],
   );
-  const annotations = useRecordingAnnotations({
-    bakedLayers: selection.bakedLayers,
-    edit: annotationEdit,
-    frames: previewSourceDimensions,
-    getPositionMs: player.getPositionMs,
-    onEdit: (next) => onRecordingTimelineEditChange?.(next),
-    onSelectTrack: (track) => {
-      if (player.isPlaying) player.pause();
-      clearOverlaySelection();
-      timelineBlade.blade.clearRangeSelection();
-      timelineBlade.blade.selectSegment(null);
-      onSelectedTrackChange?.(track);
-    },
-    playhead,
-    screenCaptureScale: props.screenCaptureScale ?? 1,
-    sessionId: player.sessionId,
-    shownTracks: selectedVideoTracks,
-    sourceDurationMs: durationMs,
-    tool: annotationTool,
-    trackId:
-      activeVideoTrack && composedVideoTracks.has(activeVideoTrack)
-        ? activeVideoTrack
-        : null,
-  });
-  clearAnnotationRef.current = annotations.clearSelection;
   const scenes = useRecordingScenes({
     artifactId,
     cameraOverlay,
@@ -237,6 +212,32 @@ export function useRecordingPreviewTransport(
     sessionId: player.sessionId,
     sourceDurationMs: durationMs,
   });
+  const annotations = useRecordingAnnotations({
+    bakedLayers: selection.bakedLayers,
+    edit: annotationEdit,
+    frames: previewSourceDimensions,
+    getPositionMs: player.getPositionMs,
+    onEdit: (next) => onRecordingTimelineEditChange?.(next),
+    onSelectTrack: (track) => {
+      if (player.isPlaying) player.pause();
+      clearOverlaySelection();
+      timelineBlade.blade.clearRangeSelection();
+      timelineBlade.blade.selectSegment(null);
+      onSelectedTrackChange?.(track);
+    },
+    playhead,
+    sceneId: scenes.current?.id ?? null,
+    screenCaptureScale: props.screenCaptureScale ?? 1,
+    sessionId: player.sessionId,
+    shownTracks: selectedVideoTracks,
+    sourceDurationMs: durationMs,
+    tool: annotationTool,
+    trackId:
+      activeVideoTrack && composedVideoTracks.has(activeVideoTrack)
+        ? activeVideoTrack
+        : null,
+  });
+  clearAnnotationRef.current = annotations.clearSelection;
   useSceneReframeDisplay(player.sessionId, selection);
   previewPlayingRef.current = player.isPlaying;
   usePausedPreviewPosition(player, previewPositionMs, setPreviewPositionMs);

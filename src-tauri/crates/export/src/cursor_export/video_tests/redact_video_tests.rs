@@ -171,6 +171,7 @@ fn redaction(mode: AnnotationRedaction) -> RecordingAnnotationClip {
   RecordingAnnotationClip {
     path_ms: None,
     recording_span: None,
+    scene_shapes: Vec::new(),
     pin: None,
     annotation,
     track_id: AnnotationTrack::Primary,

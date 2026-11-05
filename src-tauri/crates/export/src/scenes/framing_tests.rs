@@ -48,6 +48,7 @@ fn clip(preset: RecordingScenePreset, camera: Option<SceneFraming>) -> [Recordin
     rotation: None,
     variant: None,
     follow_face: None,
+    cursor: None,
     auto: false,
   }]
 }

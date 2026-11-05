@@ -230,6 +230,9 @@ export type ToolPanelAnnotation = {
    * Absent where it cannot be pinned: a screenshot's, the camera's, and the
    * pen's next one. */
   pin?: AnnotationPinView | null;
+  /** Whether it has a place of its own in the scene at the playhead, which
+   * its island offers to take away. Absent where it has none. */
+  placedInScene?: boolean;
   /** How a placed image is turned, in degrees about each axis, as the
    * Rotation row's dials show it. Absent on anything else. */
   rotation?: SceneRotation;

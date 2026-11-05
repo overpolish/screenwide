@@ -1,34 +1,41 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { Plus } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
-import { t } from "../../../../i18n/i18n";
 import { baseOf } from "../strip/strip-part";
 import { type SnapFor } from "../strip/strip-snap";
-import { at, placed, type Span, type TimelineScale } from "../timeline-scale";
+import { type Span, type TimelineScale } from "../timeline-scale";
 
 import { SceneClip, type TimelineScene } from "./scene-clip";
 import { drawnSceneSpan, LEAST_DRAWN_S } from "./scene-draw";
+import { movedScene, SCENE_DRAG_PX, sceneRoom } from "./scene-move";
+import { SceneRailDraft } from "./scene-rail-draft";
 
 // The scenes along the top of the strip, each over the stretch it frames,
-// drawn as its layout and named. Press one to choose it, drag a chosen
-// one's ends to retime it, and drag along the empty rail to draw a new one;
-// while ⌘ (Ctrl on Windows) is held, the drawn or dragged ends snap to what
-// is in reach (`snap`), a drawing's as the key goes down or up, and the
-// strip draws its guide where one has (`onGuide`). Outside every scene, the
-// recording keeps the composition it was recorded with. Over the empty rail,
-// a faint scene waits at the pointer, so the rail says what a drag there
-// makes; dragged, it becomes the scene it will be, fitted between its
-// neighbours as the drawn one will be, and never shorter than the shortest
-// scene a drag draws (`scene-draw.ts`).
-
-/** The least room, in px, the waiting scene is shown in: its glyph's. */
-const GHOST_MIN_PX = 20;
+// drawn as its layout and named. Press one to choose it and drag it to move
+// it whole, drag a chosen one's ends to retime it, and drag along the
+// empty rail to draw a new one (`scene-rail-draft.tsx`); while ⌘ (Ctrl on
+// Windows) is held, the drawn or dragged ends snap to what is in reach
+// (`snap`), a drawing's as the key goes down or up, and the strip draws its
+// guide where one has (`onGuide`). Outside every scene, the recording keeps
+// the composition it was recorded with. A drawing is fitted between its
+// neighbours, and never shorter than the shortest scene a drag draws
+// (`scene-draw.ts`).
 
 type Drag =
   | { edge: "end" | "start"; id: string; kind: "edge" }
+  | {
+      /** Where it was pressed, in recorded seconds and on screen. */
+      grab: number;
+      grabX: number;
+      id: string;
+      /** Whether the press has gone far enough to be a drag. */
+      isDragging: boolean;
+      kind: "move";
+      /** The scene as it was pressed. */
+      moving: TimelineScene;
+    }
   | {
       from: number;
       /** Whether ⌘ or Ctrl is held, which snaps the drawn ends. */
@@ -40,23 +47,6 @@ type Drag =
     };
 
 const NO_SNAP: SnapFor = () => (seconds) => ({ isSnapped: false, seconds });
-
-/** The room a scene at a moment can have: from the end of the one before
- * to the start of the one after, within the recording. */
-function sceneRoom(scenes: Span[], duration: number, moment: number) {
-  return {
-    from: Math.max(
-      0,
-      ...scenes.filter(({ end }) => end <= moment).map(({ end }) => end),
-    ),
-    to: Math.min(
-      duration,
-      ...scenes
-        .filter(({ start }) => start >= moment)
-        .map(({ start }) => start),
-    ),
-  };
-}
 
 export type SceneRailProps = {
   /** The recording's length, in recorded seconds. */
@@ -91,6 +81,9 @@ export function SceneRail({
 }: SceneRailProps) {
   const ref = useRef<HTMLDivElement>(null);
   const dragRef = useRef<Drag | null>(null);
+  /** Whether a pointer pressed a scene, so the click that follows its
+   * release does not choose it again. */
+  const pressedRef = useRef(false);
   const [draft, setDraft] = useState<{ from: number; to: number } | null>(null);
   const [hover, setHover] = useState<number | null>(null);
   const secondsAt = (event: React.PointerEvent) => {
@@ -114,11 +107,6 @@ export function SceneRail({
     return { end: map.toRecorded(span.end), start: map.toRecorded(span.start) };
   };
   const drawn = draft && draftSpan(draft);
-  const hoverRoom =
-    hover === null
-      ? null
-      : (scale.toX(sceneRoom(scenes, duration, hover).to) - scale.toX(hover)) *
-        width;
   /** The drawing as the pointer and the snapping keys leave it. */
   const draw = (
     drag: Extract<Drag, { kind: "draw" }>,
@@ -178,6 +166,21 @@ export function SceneRail({
       );
       return;
     }
+    if (drag.kind === "move") {
+      if (
+        !drag.isDragging &&
+        Math.abs(event.clientX - drag.grabX) < SCENE_DRAG_PX
+      )
+        return;
+      drag.isDragging = true;
+      const { guide, span } = movedScene(
+        { by: moment - drag.grab, duration, moving: drag.moving, scenes },
+        event.metaKey || event.ctrlKey ? snap(baseOf(drag.id)) : undefined,
+      );
+      onGuide?.(guide);
+      onRetime(drag.id, span.start, span.end);
+      return;
+    }
     const scene = scenes.find(({ id }) => id === drag.id);
     if (!scene) return;
     const settled =
@@ -198,6 +201,12 @@ export function SceneRail({
     if (drag) onGuide?.(null);
     if (drag?.kind === "draw" && drag.pointer.from !== drag.pointer.to)
       onDraw(drag.from, drag.to);
+    if (drag?.kind === "move") {
+      // The click follows the release in the same task.
+      setTimeout(() => {
+        pressedRef.current = false;
+      });
+    }
   };
 
   return (
@@ -240,38 +249,45 @@ export function SceneRail({
         <SceneClip
           isSelected={baseOf(scene.id) === selected}
           key={scene.id}
+          onGrabBody={(event) => {
+            pressedRef.current = true;
+            dragRef.current = {
+              grab: secondsAt(event),
+              grabX: event.clientX,
+              id: scene.id,
+              isDragging: false,
+              kind: "move",
+              moving: scene,
+            };
+            onSelect(scene.id);
+          }}
           onGrabEdge={(_, edge) => {
             dragRef.current = { edge, id: scene.id, kind: "edge" };
           }}
           onPress={() => {
-            onSelect(scene.id);
+            // A pointer chose it as it was pressed; this is a keyboard's.
+            if (!pressedRef.current) onSelect(scene.id);
           }}
           scale={scale}
           scene={scene}
           width={width}
         />
       ))}
-      {drawn ? (
-        <span
-          aria-hidden
-          className="pointer-events-none absolute inset-y-0.5 flex items-center gap-1 overflow-hidden rounded-part bg-fill-strong px-1 text-caption whitespace-nowrap text-fg"
-          style={placed(scale, drawn.start, drawn.end)}
-        >
-          <Plus aria-hidden className="size-icon-sm shrink-0" />
-          {t("editor-timeline-scene-new")}
-        </span>
-      ) : hover === null ||
-        hoverRoom === null ||
-        hoverRoom < GHOST_MIN_PX ? null : (
-        <span
-          aria-hidden
-          className="pointer-events-none absolute inset-y-0.5 flex items-center gap-1 overflow-hidden rounded-part border border-dashed border-fg-tertiary px-1 text-caption whitespace-nowrap text-fg-tertiary pointer-away:hidden"
-          style={{ ...at(scale, hover), maxWidth: hoverRoom }}
-        >
-          <Plus aria-hidden className="size-icon-sm shrink-0" />
-          {t("editor-timeline-scene-new")}
-        </span>
-      )}
+      <SceneRailDraft
+        drawn={drawn}
+        hover={
+          hover === null
+            ? null
+            : {
+                at: hover,
+                room:
+                  (scale.toX(sceneRoom(scenes, duration, hover).to) -
+                    scale.toX(hover)) *
+                  width,
+              }
+        }
+        scale={scale}
+      />
     </div>
   );
 }

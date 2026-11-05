@@ -10,7 +10,9 @@
 //! recording its clip plays.
 
 use super::pin::AnnotationPin;
+use super::scene_shape::SceneMoment;
 use super::Annotation;
+use screenwide_scenes::RecordingSceneClip;
 use screenwide_timeline::{
   output_at_us, output_end_at_us, output_start_to_source_us, output_to_source_us, rate_at,
   TimelineRange,
@@ -19,7 +21,9 @@ use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
 mod frame_time;
+mod scene_clock;
 pub use frame_time::{covers, progress, reaches_video_ends, video_ms, FrameTime};
+pub use scene_clock::*;
 
 #[derive(Clone, Copy, Debug, Deserialize, PartialEq, Eq, Serialize, TS)]
 #[serde(rename_all = "camelCase")]
@@ -53,6 +57,12 @@ pub struct RecordingAnnotationClip {
   #[serde(default, skip_serializing_if = "Option::is_none")]
   #[ts(optional)]
   pub path_ms: Option<f32>,
+  /// Its own shape in the scenes it was moved in, which it glides to as each
+  /// arrives and back from as it leaves. Only the geometry is the scene's
+  /// (`scene_shape`); a pinned annotation follows its content instead.
+  #[serde(default, skip_serializing_if = "Vec::is_empty")]
+  #[ts(optional, as = "Option<Vec<super::SceneShape>>")]
+  pub scene_shapes: Vec<super::SceneShape>,
   /// The stretch of the recording the clip plays, in milliseconds, for what
   /// follows the picture under it. Laid out by [`lay_on_recording`] from the
   /// timeline whatever draws the clips draws them on; never stored or sent.
@@ -149,11 +159,14 @@ fn shown_on_timeline(
 /// clip is at. A pinned annotation arrives and leaves over each stretch its
 /// content is on the frame rather than over its whole clip, and spotlights
 /// butted up against each other hand their light on rather than fading.
-/// `ranges` is the timeline the clips play on, empty when nothing is cut;
-/// `frame_ms` is how much recording time the frame covers; `picture` is the
-/// track's source size in pixels, which a spotlight's glide is paced against.
+/// `scenes` are the scene clips, which move an annotation to its place in
+/// each as they arrive; `ranges` is the timeline the clips play on, empty
+/// when nothing is cut; `frame_ms` is how much recording time the frame
+/// covers; `picture` is the track's source size in pixels, which a
+/// spotlight's glide is paced against.
 pub fn revealed_annotations(
   clips: &[RecordingAnnotationClip],
+  scenes: &[RecordingSceneClip],
   track: AnnotationTrack,
   ranges: &[TimelineRange],
   source_ms: u64,
@@ -164,6 +177,11 @@ pub fn revealed_annotations(
   let time = FrameTime::on(ranges, source_ms);
   let frame_ms = frame_ms / rate_at(ranges, source_ms as f64 * 1_000.0) as f32;
   let video_ms = video_ms(ranges);
+  let moment = SceneMoment {
+    timeline_ms: time.timeline_ms,
+    video_ms,
+    picture,
+  };
   let links = spotlight_links(clips);
   clips
     .iter()
@@ -187,6 +205,9 @@ pub fn revealed_annotations(
         source_ms
       };
       let (mut annotation, shown) = placed_annotation(clip, source_at)?;
+      if let Some(shape) = clip.shape_in_scenes(scenes, moment) {
+        annotation.shape = shape;
+      }
       let at = time.timeline_ms.min(clip.end_ms.saturating_sub(1));
       // A moving image plays, and a swaying one sways, from the start of its
       // clip, so a scrub lands on what playback showed.
@@ -242,21 +263,35 @@ pub fn revealed_annotations(
 
 /// The annotations the frame `source_ms` into the recording holds whole,
 /// for handles and gestures, where they are drawn; `ranges` is the timeline
-/// the clips play on.
+/// the clips play on, and `scenes` the scene clips timed on it, which move
+/// an annotation to its place in each, at a pace set by `picture`'s size.
 pub fn active_annotations(
   clips: &[RecordingAnnotationClip],
+  scenes: &[RecordingSceneClip],
   track: AnnotationTrack,
   ranges: &[TimelineRange],
   source_ms: u64,
+  picture: (u32, u32),
 ) -> Vec<Annotation> {
   let time = FrameTime::on(ranges, source_ms);
   let video_ms = video_ms(ranges);
+  let moment = SceneMoment {
+    timeline_ms: time.timeline_ms,
+    video_ms,
+    picture,
+  };
   clips
     .iter()
     .filter(|clip| {
       clip.track_id == track && covers(video_ms, [clip.start_ms, clip.end_ms], time.timeline_ms)
     })
-    .filter_map(|clip| placed_annotation(clip, source_ms).map(|(annotation, _)| annotation))
+    .filter_map(|clip| {
+      let (mut annotation, _) = placed_annotation(clip, source_ms)?;
+      if let Some(shape) = clip.shape_in_scenes(scenes, moment) {
+        annotation.shape = shape;
+      }
+      Some(annotation)
+    })
     .collect()
 }
 

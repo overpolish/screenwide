@@ -17,10 +17,11 @@ const layerOf = (selection: RecordingPreviewSelection) =>
  * canvas. The screen carries how it is turned, by the scene or, outside every
  * scene, by its own turn, which its chrome is drawn through and the rotation
  * gizmo turns. `freeScreen` frees the screen of a scene that otherwise fixes
- * its panes, a full scene's, which its first move makes custom. While the
- * crop tool reframes a pane, `reframe` stands in for it. A press over both
- * panes finds the last target, the one drawn in front, so a scene that puts
- * the camera behind lists the screen after it.
+ * its panes, a preset's, which its first move or resize makes custom, so the
+ * select tool's handles resize it as a box rather than zoom it in place.
+ * While the crop tool reframes a pane, `reframe` stands in for it. A press
+ * over both panes finds the last target, the one drawn in front, so a scene
+ * that puts the camera behind lists the screen after it.
  */
 export function scenePanePicks({
   arrangement,

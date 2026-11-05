@@ -7,6 +7,7 @@ import {
 } from "../../glyphs/scene-layout-drawing";
 import { presetName } from "../../island/scene/scene-names";
 import { sceneLandingMs } from "../../recording/scenes/recording-scene-arrangement";
+import { sceneCustomLabel } from "../../recording/scenes/recording-scene-labels";
 import { type TimelineAnnotation } from "../annotation-lane/annotation-lane";
 import { type TimelineScene } from "../scene-rail/scene-clip";
 import { drawnSceneSpan, LEAST_DRAWN_S } from "../scene-rail/scene-draw";
@@ -141,7 +142,7 @@ export function recordingStripLanes(source: RecordingStripLaneSource) {
       drawing: scenes.drawingOf(clip),
       id: partId(clip.id, part),
       landsAt,
-      name: presetName(preset),
+      name: clip.boxes ? sceneCustomLabel() : presetName(preset),
     }));
   });
   const sortedScenes = (clips: RecordingSceneClip[]) =>

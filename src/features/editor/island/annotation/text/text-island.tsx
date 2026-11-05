@@ -123,11 +123,13 @@ export function textIsland(props: TextIslandProps): EditorIslandContent {
         families={props.families}
         look={look}
         note={
-          props.pin ? (
+          props.pin || props.placedInScene ? (
             <AnnotationPinNote
               key="pin"
               onPinAction={props.onPinAction}
+              onSceneReset={props.onSceneReset}
               pin={props.pin}
+              placedInScene={props.placedInScene}
             />
           ) : null
         }

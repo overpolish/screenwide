@@ -110,8 +110,14 @@ pub(crate) async fn compose_preview_frames(
         // A frame standing still shows the reveal this instant holds, with
         // nothing moving for the blur to fade.
         let [primary, camera] = sources.annotation_pictures();
+        let scenes = sources
+          .scenes
+          .clips
+          .read()
+          .unwrap_or_else(|poisoned| poisoned.into_inner());
         output.primary.annotations = revealed_annotations(
           clips,
+          &scenes,
           AnnotationTrack::Primary,
           &ranges,
           position_ms,
@@ -120,6 +126,7 @@ pub(crate) async fn compose_preview_frames(
         );
         output.camera.annotations = revealed_annotations(
           clips,
+          &scenes,
           AnnotationTrack::Camera,
           &ranges,
           position_ms,

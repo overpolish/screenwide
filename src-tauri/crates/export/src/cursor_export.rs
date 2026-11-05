@@ -141,7 +141,15 @@ fn edited_ranges(request: &CursorExportRequest<'_>) -> Vec<screenwide_timeline::
 }
 
 fn check_request(request: &CursorExportRequest<'_>) -> Result<(), String> {
-  if request.cursor.is_some() && !request.cursor_effects.bake {
+  let scene_clips = request
+    .timeline
+    .map_or(&[][..], |timeline| &timeline.scene_clips);
+  if request.cursor.is_some()
+    && !screenwide_annotations::timing::cursor_shown_anywhere(
+      scene_clips,
+      request.cursor_effects.bake,
+    )
+  {
     return Err("Cursor baking was not enabled".to_owned());
   }
   if request.keyboard.is_some() && !request.keyboard_effects.bake {

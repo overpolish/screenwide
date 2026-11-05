@@ -44,5 +44,6 @@ pub(super) fn annotation_clip(
     end_ms: (start_ms + length_ms).max(start_ms + 1),
     // Drawn while recording, before any cut: the timeline is the recording.
     recording_span: None,
+    scene_shapes: Vec::new(),
   })
 }

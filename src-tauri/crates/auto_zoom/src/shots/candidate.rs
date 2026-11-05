@@ -9,8 +9,8 @@ use super::super::signals::Signals;
 use super::super::Area;
 use super::pointer::{away, outside_seconds};
 
-/// How long a scene takes to arrive or leave; the twin of `TRANSITION_MS` in
-/// `scenes/arrange.rs`.
+/// How long a scene takes to arrive or leave; the twin of
+/// `SCENE_TRANSITION_MS` in `annotations/src/timing/scene_clock.rs`.
 const TRANSITION_MS: u64 = 600;
 /// How long before its first click a shot starts arriving, so it has
 /// settled a moment before the click lands.

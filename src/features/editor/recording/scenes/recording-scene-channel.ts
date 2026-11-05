@@ -56,6 +56,9 @@ export type RecordingSceneControls = {
   resetPanePlacement: (pane: ScenePane) => void;
   /** Take the scene's crop of the screen away. */
   resetScreenCrop: () => void;
+  /** Show or hide the cursor in the scene over the recording's own choice,
+   * or with null do as the recording does. */
+  setCursor: (shown: boolean | null) => void;
   /** Have the camera follow the face, which starts it in the middle of the
    * camera's box, or stop following it. */
   setFollowFace: (follow: boolean) => void;
@@ -146,6 +149,9 @@ export function usePublishRecordingScene(
         },
         resetScreenCrop: () => {
           controlsRef.current.resetScreenCrop();
+        },
+        setCursor: (shown) => {
+          controlsRef.current.setCursor(shown);
         },
         setFollowFace: (follow) => {
           controlsRef.current.setFollowFace(follow);

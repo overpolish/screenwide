@@ -220,6 +220,7 @@ fn selects_a_screen_arrow_while_camera_is_the_active_layer() {
       path_ms: None,
       pin: None,
       recording_span: None,
+      scene_shapes: Vec::new(),
       annotation,
       track_id: AnnotationTrack::Primary,
       start_ms: 0,
@@ -344,6 +345,7 @@ fn screen_arrow(id: &str, x: f64, start_ms: u64, end_ms: u64) -> RecordingAnnota
     path_ms: None,
     pin: None,
     recording_span: None,
+    scene_shapes: Vec::new(),
     annotation: screenwide_annotations::arrow::new_arrow(
       id.into(),
       screenwide_annotations::AnnotationPoint { x, y: 100.0 },

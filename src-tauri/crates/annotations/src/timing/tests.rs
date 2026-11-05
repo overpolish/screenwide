@@ -45,6 +45,7 @@ fn clip(
     end_ms,
     pin: None,
     recording_span: None,
+    scene_shapes: Vec::new(),
   }
 }
 
@@ -55,19 +56,19 @@ fn active_annotations_respects_intervals_and_tracks() {
     clip("b", AnnotationTrack::Camera, 1_000, 2_000),
   ];
   assert_eq!(
-    active_annotations(&clips, AnnotationTrack::Primary, &[], 999).len(),
+    active_annotations(&clips, &[], AnnotationTrack::Primary, &[], 999, (0, 0)).len(),
     0
   );
   assert_eq!(
-    active_annotations(&clips, AnnotationTrack::Primary, &[], 1_000)[0].id,
+    active_annotations(&clips, &[], AnnotationTrack::Primary, &[], 1_000, (0, 0))[0].id,
     "a"
   );
   assert_eq!(
-    active_annotations(&clips, AnnotationTrack::Primary, &[], 2_000).len(),
+    active_annotations(&clips, &[], AnnotationTrack::Primary, &[], 2_000, (0, 0)).len(),
     0
   );
   assert_eq!(
-    active_annotations(&clips, AnnotationTrack::Camera, &[], 1_500)[0].id,
+    active_annotations(&clips, &[], AnnotationTrack::Camera, &[], 1_500, (0, 0))[0].id,
     "b"
   );
 }
@@ -78,7 +79,7 @@ fn active_annotations_no_longer_truncates_at_thirty_two() {
     .map(|index| clip(&index.to_string(), AnnotationTrack::Primary, 0, 1_000))
     .collect();
   assert_eq!(
-    active_annotations(&clips, AnnotationTrack::Primary, &[], 500).len(),
+    active_annotations(&clips, &[], AnnotationTrack::Primary, &[], 500, (0, 0)).len(),
     40
   );
 }
@@ -95,7 +96,15 @@ fn a_clip_draws_in_at_its_own_pace() {
   let drawn = |path_ms: Option<f32>, at: u64| {
     let mut paced = clip("a", AnnotationTrack::Primary, 0, 10_000);
     paced.path_ms = path_ms;
-    revealed_annotations(&[paced], AnnotationTrack::Primary, &[], at, 0.0, (0, 0))[0]
+    revealed_annotations(
+      &[paced],
+      &[],
+      AnnotationTrack::Primary,
+      &[],
+      at,
+      0.0,
+      (0, 0),
+    )[0]
       .reveal
       .high
   };
@@ -135,6 +144,7 @@ fn reveal(
   let clip = clip("a", AnnotationTrack::Primary, start_ms, end_ms);
   revealed_annotations(
     &[clip],
+    &[],
     AnnotationTrack::Primary,
     ranges,
     source_ms,
@@ -231,7 +241,15 @@ fn a_moving_or_swaying_image_is_timed_from_the_start_of_its_clip() {
     if let AnnotationShape::Image { sway, .. } = &mut moving.annotation.shape {
       *sway = seed;
     }
-    let drawn = revealed_annotations(&[moving], AnnotationTrack::Primary, &[], 1_750, 0.0, (0, 0));
+    let drawn = revealed_annotations(
+      &[moving],
+      &[],
+      AnnotationTrack::Primary,
+      &[],
+      1_750,
+      0.0,
+      (0, 0),
+    );
     match &drawn[0].shape {
       AnnotationShape::Image { clock_ms, .. } => *clock_ms,
       _ => unreachable!(),

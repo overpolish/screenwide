@@ -88,7 +88,13 @@ impl PreviewPlayerManager {
       request,
     );
     let timeline_ms = self.annotation_timeline_ms(position);
-    *clips.write().ok()? = provisional_clips(&drag.before, &moved, pane, (position, timeline_ms));
+    *clips.write().ok()? = provisional_clips(
+      &drag.before,
+      &moved,
+      pane,
+      (position, timeline_ms),
+      &self.scene_edit(position),
+    );
     if !matches!(phase, SelectionGesturePhase::End) {
       self.publish_annotation_snap(source, &result);
       self.publish_annotation_handles();
