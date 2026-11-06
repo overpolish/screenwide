@@ -23,7 +23,7 @@ site-read-recording = Text Recognition reading a photographed page and pasting i
 site-annotate-title = Annotate
 site-annotate-body = Arrows, counters and highlights, drawn on screen as you present.
 # Names the recording of Annotate at work, for assistive technology.
-site-annotate-recording = An arrow, counters and a highlight drawn over a dashboard
+site-annotate-recording = An arrow, counters aimed at the figures, a highlight and a focus drawn over a dashboard
 # The paid tools, sold one by one or all together.
 site-tools-title = Paid tools
 site-tools-body = Free for 14 days. Buy the ones you use, or all of them together, including any added later.
@@ -36,7 +36,7 @@ site-buy-bundle = Buy all tools
 site-ruler-title = Ruler
 site-ruler-body = Measure sizes, spacing and alignment on screen.
 # Names the recording of the Ruler at work, for assistive technology.
-site-ruler-recording = The Ruler measuring the gaps and sizes in a dialog
+site-ruler-recording = The Ruler checking a dialog's padding, field height and corner radius
 site-references-title = References
 site-references-body = Keep a screenshot on screen and fade it to compare.
 # Names the recording of a reference at work, for assistive technology.
