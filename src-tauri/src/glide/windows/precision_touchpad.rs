@@ -1,5 +1,5 @@
 // SPDX-FileCopyrightText: 2026 overpolish
-// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-License-Identifier: Elastic-2.0
 
 //! Dynamically probes the Windows 11 Precision Touchpad opt-in API. The
 //! function is newer than the SDK used by the current windows crate.

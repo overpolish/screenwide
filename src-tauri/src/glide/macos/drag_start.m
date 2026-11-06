@@ -1,5 +1,5 @@
 // SPDX-FileCopyrightText: 2026 overpolish
-// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-License-Identifier: Elastic-2.0
 
 // Tauri's asynchronous drag request reads NSApp.currentEvent, which may have
 // become an AppKit or pressure event since the click. Preserve the actual grip

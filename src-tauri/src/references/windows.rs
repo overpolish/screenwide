@@ -1,5 +1,5 @@
 // SPDX-FileCopyrightText: 2026 overpolish
-// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-License-Identifier: Elastic-2.0
 
 //! A reference on Windows: the picture's and the chrome's visuals in a
 //! topmost DirectComposition target on its window, over the webview, which

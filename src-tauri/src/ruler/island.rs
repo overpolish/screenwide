@@ -1,5 +1,5 @@
 // SPDX-FileCopyrightText: 2026 overpolish
-// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-License-Identifier: Elastic-2.0
 
 //! The island while the Ruler is up: its tools, which a press picks as a
 //! held key picks them, and what the session can do besides measuring. It

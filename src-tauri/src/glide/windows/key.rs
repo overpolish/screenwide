@@ -1,5 +1,5 @@
 // SPDX-FileCopyrightText: 2026 overpolish
-// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-License-Identifier: Elastic-2.0
 
 use keyboard_types::Code;
 use windows::Win32::UI::Input::KeyboardAndMouse::{GetAsyncKeyState, VIRTUAL_KEY};

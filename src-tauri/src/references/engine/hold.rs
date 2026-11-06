@@ -1,5 +1,5 @@
 // SPDX-FileCopyrightText: 2026 overpolish
-// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-License-Identifier: Elastic-2.0
 
 //! Where the view spans the window (`VIEW_SPANS_WINDOW`), the window keeps
 //! the picture where it stands in it for as long as it can, and its corner

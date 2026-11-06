@@ -1,5 +1,5 @@
 // SPDX-FileCopyrightText: 2026 overpolish
-// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-License-Identifier: Elastic-2.0
 
 //! A live session's detector samples, and what their effects do: reveal the
 //! preview, hand steps to the monitor picker, carry the window to a region.

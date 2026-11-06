@@ -1,5 +1,5 @@
 // SPDX-FileCopyrightText: 2026 overpolish
-// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-License-Identifier: Elastic-2.0
 
 //! Where each card goes: the arrangement centred on the anchor, kept inside
 //! the work area of the monitor the anchor is on, in that monitor's physical

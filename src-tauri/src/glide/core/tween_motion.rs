@@ -1,5 +1,5 @@
 // SPDX-FileCopyrightText: 2026 overpolish
-// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-License-Identifier: Elastic-2.0
 
 //! How a Glide move travels: where it is carried, along which curve, and for
 //! how long. Every platform's tween steps a window through this.

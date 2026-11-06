@@ -1,5 +1,5 @@
 // SPDX-FileCopyrightText: 2026 overpolish
-// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-License-Identifier: Elastic-2.0
 
 //! The macOS halves of the Glide commands. Each one is a thin shim onto the
 //! module that owns the work, kept beside the event tap rather than inside it.

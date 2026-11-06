@@ -1,5 +1,5 @@
 // SPDX-FileCopyrightText: 2026 overpolish
-// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-License-Identifier: Elastic-2.0
 
 //! What happens once a move has settled: the frame the window actually took
 //! is read back, a window its application refused to resize is pulled onto

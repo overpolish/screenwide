@@ -1,5 +1,5 @@
 // SPDX-FileCopyrightText: 2026 overpolish
-// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-License-Identifier: Elastic-2.0
 
 // A reference (`references/drawing.rs` in the app): its picture with its
 // corners rounded, floating as the islands do, on the same shadow they draw

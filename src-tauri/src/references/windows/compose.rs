@@ -1,5 +1,5 @@
 // SPDX-FileCopyrightText: 2026 overpolish
-// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-License-Identifier: Elastic-2.0
 
 //! A reference's DirectComposition tree on Windows: the picture's visual and
 //! the chrome's over it, each drawn by wgpu, in a topmost target on the

@@ -1,5 +1,5 @@
 // SPDX-FileCopyrightText: 2026 overpolish
-// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-License-Identifier: Elastic-2.0
 
 //! Windows' half of keeping typing and shortcuts out of Glide: virtual-key
 //! codes and the cursor read for the shared guard in

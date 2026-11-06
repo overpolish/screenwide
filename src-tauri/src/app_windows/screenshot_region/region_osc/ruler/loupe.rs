@@ -1,5 +1,5 @@
 // SPDX-FileCopyrightText: 2026 overpolish
-// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-License-Identifier: Elastic-2.0
 
 use super::chrome::{add_shadowed_plate, label_chrome, PILL};
 use super::tokens::{CALLOUT_HEIGHT, CAPTION_LINE, CAPTION_SIZE, ICON, INLINE, INSET, SEPARATE};

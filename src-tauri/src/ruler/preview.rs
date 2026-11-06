@@ -1,5 +1,5 @@
 // SPDX-FileCopyrightText: 2026 overpolish
-// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-License-Identifier: Elastic-2.0
 
 //! The Ruler at work on a picture rather than the frozen desktop, for a
 //! window that shows what the Ruler does. It is a document of its own,

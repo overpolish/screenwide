@@ -1,5 +1,5 @@
 // SPDX-FileCopyrightText: 2026 overpolish
-// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-License-Identifier: Elastic-2.0
 
 /** How see-through a reference can be made, in percent: a quarter at a time,
  * so it can be laid over what it shows and compared. */

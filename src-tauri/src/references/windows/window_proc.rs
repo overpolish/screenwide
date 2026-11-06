@@ -1,5 +1,5 @@
 // SPDX-FileCopyrightText: 2026 overpolish
-// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-License-Identifier: Elastic-2.0
 
 //! The reference's input pad's window procedure on Windows. The pad covers
 //! the picture and its handles' reach; where the pointer is on neither, it

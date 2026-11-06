@@ -1,5 +1,5 @@
 // SPDX-FileCopyrightText: 2026 overpolish
-// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-License-Identifier: Elastic-2.0
 
 //! A Glide session as every platform runs it: what opens one, how the
 //! detector's effects reach the preview and the window, and how it ends. A

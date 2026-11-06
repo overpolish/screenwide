@@ -6,7 +6,8 @@ name = "screenwide-osc"
 description = "On-screen controls: their state, geometry and GPU renderer"
 version.workspace = true
 authors.workspace = true
-license.workspace = true
+# The Ruler's and References' drawing is under the Elastic License 2.0.
+license = "GPL-3.0-or-later AND Elastic-2.0"
 edition.workspace = true
 
 [lib]

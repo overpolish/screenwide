@@ -1,5 +1,5 @@
 // SPDX-FileCopyrightText: 2026 overpolish
-// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-License-Identifier: Elastic-2.0
 
 //! Reference screenshots: a still kept on screen at its true size, where it
 //! was taken, to compare what is there now against. Each is a borderless

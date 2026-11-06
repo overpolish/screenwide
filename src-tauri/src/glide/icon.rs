@@ -1,5 +1,5 @@
 // SPDX-FileCopyrightText: 2026 overpolish
-// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-License-Identifier: Elastic-2.0
 
 //! The target application's icon, on its own event and its own thread. Its own
 //! event because a path field would cost `GlideInputEvent` its `Copy` derive;

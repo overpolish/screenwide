@@ -1,5 +1,5 @@
 // SPDX-FileCopyrightText: 2026 overpolish
-// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-License-Identifier: Elastic-2.0
 
 //! Screenwide's own windows, resolved without the Accessibility API. Asking
 //! that API about our own process makes the tap thread interrogate our own busy

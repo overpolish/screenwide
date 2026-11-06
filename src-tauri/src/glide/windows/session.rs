@@ -1,5 +1,5 @@
 // SPDX-FileCopyrightText: 2026 overpolish
-// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-License-Identifier: Elastic-2.0
 
 //! Windows' half of a Glide session: the captured HWND, the hidden system
 //! cursor and the monitor picker, under the shared session flow in

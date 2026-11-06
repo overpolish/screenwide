@@ -1,5 +1,5 @@
 // SPDX-FileCopyrightText: 2026 overpolish
-// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-License-Identifier: Elastic-2.0
 
 //! macOS's half of keeping typing and shortcuts out of Glide: the event tap's
 //! key codes, flags and locations read for the shared guard in

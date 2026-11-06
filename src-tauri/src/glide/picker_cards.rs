@@ -1,5 +1,5 @@
 // SPDX-FileCopyrightText: 2026 overpolish
-// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-License-Identifier: Elastic-2.0
 
 //! The cards the monitor picker and Spaces show: one hidden webview per card,
 //! loaded ahead of the first gesture, arranged round the anchor inside its

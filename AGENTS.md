@@ -87,7 +87,7 @@ Screenwide is a Tauri desktop app for macOS and Windows. The frontend uses React
 - Verify in proportion to the change. Use existing meaningful tests; do not add tests that merely repeat implementation details.
 - For UI changes, inspect the relevant story. Native visual behaviour still needs native verification; lint and type checks do not prove appearance.
 - Report unrelated pre-existing failures separately from failures introduced by the change. Do not quietly fix unrelated code to make checks pass.
-- Respect the source-size checks and SPDX headers. Split responsibilities instead of raising a file's ceiling in `scripts/source-size-debt.json`.
+- Respect the source-size checks and SPDX headers. Split responsibilities instead of raising a file's ceiling in `scripts/source-size-debt.json`. The paid tools (Ruler, References, Glide) are under the Elastic License 2.0 and everything else under the GPL; `ELASTIC_PATHS` in `scripts/check-spdx.mjs` lists the tools' paths, and a file's header names the licence its path takes. A new file that belongs to a tool goes under one of those paths, or the path is added to the list.
 
 Choose commands relevant to the change, run from the repository root; this is not a checklist. Reserve `pnpm check` for broad changes or required full verification:
 

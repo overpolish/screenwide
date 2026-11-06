@@ -1,5 +1,5 @@
 // SPDX-FileCopyrightText: 2026 overpolish
-// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-License-Identifier: Elastic-2.0
 
 // How Glide carries a window, for pictures of it at work: the native tween's
 // length and curve (`src-tauri/src/glide/core/tween_motion.rs`), kept in

@@ -1,5 +1,5 @@
 // SPDX-FileCopyrightText: 2026 overpolish
-// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-License-Identifier: Elastic-2.0
 
 //! The view filling each catcher panel: a dragging destination for
 //! pictures, taking whatever form the drag carries them in and handing them

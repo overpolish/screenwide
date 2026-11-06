@@ -1,5 +1,5 @@
 // SPDX-FileCopyrightText: 2026 overpolish
-// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-License-Identifier: Elastic-2.0
 
 //! The desktop as references measure it on macOS: points from the primary
 //! display's top left, as Tauri gives a window's logical position, where

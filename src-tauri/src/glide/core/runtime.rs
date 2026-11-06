@@ -1,5 +1,5 @@
 // SPDX-FileCopyrightText: 2026 overpolish
-// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-License-Identifier: Elastic-2.0
 
 //! Shared session orchestration around the gesture detector. Platform adapters
 //! apply the returned effects without owning any transition policy.

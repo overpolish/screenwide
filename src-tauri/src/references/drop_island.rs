@@ -1,5 +1,5 @@
 // SPDX-FileCopyrightText: 2026 overpolish
-// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-License-Identifier: Elastic-2.0
 
 //! The island while a picture is dragged with Option held: it comes out at
 //! the top of the screen to say that letting go keeps the picture as a

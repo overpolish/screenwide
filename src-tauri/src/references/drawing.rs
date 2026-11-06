@@ -1,5 +1,5 @@
 // SPDX-FileCopyrightText: 2026 overpolish
-// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-License-Identifier: Elastic-2.0
 
 //! What a reference draws, through the shared OSC shader, on every platform
 //! (`reference.wgsl`): the picture with its corners rounded on a layer of its

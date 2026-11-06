@@ -1,5 +1,5 @@
 // SPDX-FileCopyrightText: 2026 overpolish
-// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-License-Identifier: Elastic-2.0
 
 //! Windows virtual desktop transport. `winvd` uses the Windows 11 24H2
 //! VirtualDesktopAccessor ABI and reports an error on older builds, so Glide

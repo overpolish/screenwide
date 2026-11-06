@@ -1,5 +1,5 @@
 // SPDX-FileCopyrightText: 2026 overpolish
-// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-License-Identifier: Elastic-2.0
 
 //! The design tokens the Ruler's labels and callout are drawn to, in points,
 //! from `src/styles/theme.css`. One look on every platform, as the island it

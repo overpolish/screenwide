@@ -1,5 +1,5 @@
 // SPDX-FileCopyrightText: 2026 overpolish
-// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-License-Identifier: Elastic-2.0
 
 //! Normalizes touchpad wheel motion into the shared Glide detector's physical
 //! finger coordinates, and steps spaces and monitors with any wheel.

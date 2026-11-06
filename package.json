@@ -2,7 +2,7 @@
   "name": "screenwide",
   "private": true,
   "version": "0.1.0",
-  "license": "GPL-3.0-or-later",
+  "license": "GPL-3.0-or-later AND Elastic-2.0",
   "packageManager": "pnpm@11.21.0",
   "type": "module",
   "knip": {

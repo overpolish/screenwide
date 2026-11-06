@@ -1,5 +1,5 @@
 // SPDX-FileCopyrightText: 2026 overpolish
-// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-License-Identifier: Elastic-2.0
 
 //! Contact-driven Precision Touchpad input. HID report descriptors provide
 //! the contact collections, so this works without Apple-specific packet

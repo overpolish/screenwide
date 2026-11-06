@@ -1,5 +1,5 @@
 // SPDX-FileCopyrightText: 2026 overpolish
-// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-License-Identifier: Elastic-2.0
 
 //! A window as the shared Glide tween drives it on macOS, in logical points.
 //! The Accessibility API writes origin and size separately, which is why the

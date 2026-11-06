@@ -1,5 +1,5 @@
 // SPDX-FileCopyrightText: 2026 overpolish
-// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-License-Identifier: Elastic-2.0
 
 //! Keeps typing and shortcuts out of Glide, on every platform. A letter
 //! control types instead when someone is typing, or when Glide could not hold

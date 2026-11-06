@@ -1,5 +1,5 @@
 // SPDX-FileCopyrightText: 2026 overpolish
-// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-License-Identifier: Elastic-2.0
 
 //! A reference's state on screen, the same on every platform: the size its
 //! picture is shown at, the island's size and parts, whether the pointer is

@@ -6,7 +6,8 @@ name = "screenwide"
 description = "Reliable screen and audio recording for macOS and Windows"
 version.workspace = true
 authors.workspace = true
-license.workspace = true
+# Ruler, References and Glide are under the Elastic License 2.0.
+license = "GPL-3.0-or-later AND Elastic-2.0"
 edition.workspace = true
 
 # The app crate sits on top; the crates under `crates/` are what it is built

@@ -1,5 +1,5 @@
 // SPDX-FileCopyrightText: 2026 overpolish
-// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-License-Identifier: Elastic-2.0
 
 //! A reference gliding to a place and size it is put back to, by Back to
 //! origin or Reset size, rather than jumping there: the picture, its window

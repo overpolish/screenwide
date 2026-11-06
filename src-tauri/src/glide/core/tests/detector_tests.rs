@@ -1,5 +1,5 @@
 // SPDX-FileCopyrightText: 2026 overpolish
-// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-License-Identifier: Elastic-2.0
 
 use super::{region, stroke, Gesture, Stroke};
 use crate::glide::core::{GlideAction, GlideDetectorOptions, GlidePhase};

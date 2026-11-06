@@ -1,5 +1,5 @@
 // SPDX-FileCopyrightText: 2026 overpolish
-// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-License-Identifier: Elastic-2.0
 
 //! The fraction-to-rectangle math a committed Glide region resolves to. It is
 //! pure and platform-free on purpose: each platform reads its own work area and

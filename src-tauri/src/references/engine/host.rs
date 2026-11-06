@@ -1,5 +1,5 @@
 // SPDX-FileCopyrightText: 2026 overpolish
-// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-License-Identifier: Elastic-2.0
 
 //! What a reference asks of the platform it runs on: its window's frame, the
 //! native view the picture is drawn in, the pointer and its cursor, the

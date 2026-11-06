@@ -1,5 +1,5 @@
 // SPDX-FileCopyrightText: 2026 overpolish
-// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-License-Identifier: Elastic-2.0
 
 //! Alt-dragging a picture on Windows: what the drop watch asks of the
 //! platform (`references::drop_watch`). A low-level mouse hook tells it of

@@ -10,7 +10,7 @@
 <div align="center">
 	<img alt="Latest GitHub release" src="https://img.shields.io/github/v/release/overpolish/screenwide?display_name=tag&label=release&labelColor=5C5C5C&color=FF2970" />
 	<img alt="Platforms: macOS and Windows" src="https://img.shields.io/badge/platforms-macOS_%7C_Windows-FF2970?logo=tauri&labelColor=5C5C5C&logoColor=white" />
-	<img alt="GPL-3.0-or-later license" src="https://img.shields.io/github/license/overpolish/screenwide?labelColor=5C5C5C&color=FF2970" />
+	<img alt="License: GPL-3.0-or-later and Elastic-2.0" src="https://img.shields.io/badge/license-GPL--3.0_%2B_Elastic--2.0-FF2970?labelColor=5C5C5C" />
 </div>
 
 <br />
@@ -61,3 +61,9 @@
 # Contributing
 
 Setting up, running and checking the app on macOS and Windows: [CONTRIBUTING.md](CONTRIBUTING.md).
+
+<br />
+
+# License
+
+Screenwide is free software under the [GNU General Public License, version 3 or later](LICENSE). The paid tools, Ruler, References and Glide, are under the [Elastic License 2.0](LICENSES/Elastic-2.0.txt): you can read and change their source, but not remove or get round their licence key check, or offer them to others as a service. [`scripts/check-spdx.mjs`](scripts/check-spdx.mjs) lists the paths each licence covers, and every file's SPDX header names its licence. FFmpeg ships beside the app as a separate GPL program ([FFMPEG.md](FFMPEG.md)).

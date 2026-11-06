@@ -1,5 +1,5 @@
 // SPDX-FileCopyrightText: 2026 overpolish
-// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-License-Identifier: Elastic-2.0
 
 use super::{
   handle_mouse_delta, key_hook, keyboard, native_trackpad, trackpad, wheel_hook, wheel_source,

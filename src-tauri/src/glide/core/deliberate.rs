@@ -1,5 +1,5 @@
 // SPDX-FileCopyrightText: 2026 overpolish
-// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-License-Identifier: Elastic-2.0
 
 //! Tells deliberate Glide input from everyday typing and pointing. A Glide
 //! control can be a letter, which also types in the focused application, and

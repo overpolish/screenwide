@@ -1,5 +1,5 @@
 // SPDX-FileCopyrightText: 2026 overpolish
-// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-License-Identifier: Elastic-2.0
 
 //! The pointer over a reference's picture, as its view reports it in the
 //! view's points: over it the handles show, a press on the picture moves it,

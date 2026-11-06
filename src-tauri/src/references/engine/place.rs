@@ -1,5 +1,5 @@
 // SPDX-FileCopyrightText: 2026 overpolish
-// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-License-Identifier: Elastic-2.0
 
 //! Placing a reference's window round its picture, and drawing the picture
 //! and its chrome (`references::drawing` says what they hold).

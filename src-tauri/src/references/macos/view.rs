@@ -1,5 +1,5 @@
 // SPDX-FileCopyrightText: 2026 overpolish
-// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-License-Identifier: Elastic-2.0
 
 //! The view laid over a reference's webview, over the picture and the margin
 //! its handles reach into. It carries the picture's and the chrome's Metal

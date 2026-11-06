@@ -1,5 +1,5 @@
 // SPDX-FileCopyrightText: 2026 overpolish
-// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-License-Identifier: Elastic-2.0
 
 //! The Ruler's native overlay: the region engine attached to the Ruler
 //! window, configured for the frozen desktop, and torn down with it.

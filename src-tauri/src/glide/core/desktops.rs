@@ -1,5 +1,5 @@
 // SPDX-FileCopyrightText: 2026 overpolish
-// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-License-Identifier: Elastic-2.0
 
 //! OS-neutral desktop navigation. IDs are opaque and valid only for a live
 //! topology snapshot. A move completes only when both window and user arrive.

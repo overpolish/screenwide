@@ -1,5 +1,5 @@
 // SPDX-FileCopyrightText: 2026 overpolish
-// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-License-Identifier: Elastic-2.0
 
 use super::assignment::{contains, has_label_anchor};
 use super::tokens::{CONTROL_HEIGHT, INLINE, INSET, SEPARATE};

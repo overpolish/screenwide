@@ -1,5 +1,5 @@
 // SPDX-FileCopyrightText: 2026 overpolish
-// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-License-Identifier: Elastic-2.0
 
 //! Watching for a picture dragged with Option or Alt held (`references::drop`),
 //! the same on every platform. A press anywhere on the desktop starts a

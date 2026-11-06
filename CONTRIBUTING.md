@@ -54,6 +54,10 @@ Windows Defender scans every file a build writes, which can make Rust builds sev
 
 `pnpm check` runs everything the repository's continuous integration runs, on macOS and Windows: licence headers, generated bindings, translations, source sizes, Tailwind classes, unused code, formatting, the TypeScript and Rust tests, both builds and Clippy. While working, run the parts that cover your change; [AGENTS.md](AGENTS.md) lists them.
 
+## Licences
+
+Most of Screenwide is under the GPL; the paid tools (Ruler, References and Glide) are under the Elastic License 2.0. `scripts/check-spdx.mjs` lists the paths each licence covers, and `pnpm license:check` makes sure every file's SPDX header names the right one. A new file in a tool's folder takes `SPDX-License-Identifier: Elastic-2.0`; any other file takes `GPL-3.0-or-later`.
+
 ## Also
 
 - [TRANSLATING.md](TRANSLATING.md): adding a language and translating the interface.

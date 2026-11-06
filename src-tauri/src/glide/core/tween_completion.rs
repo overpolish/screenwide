@@ -1,5 +1,5 @@
 // SPDX-FileCopyrightText: 2026 overpolish
-// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-License-Identifier: Elastic-2.0
 
 //! What waits on a Glide move: completion follows ownership of the tween,
 //! including the frame the platform takes out of its slot for its window

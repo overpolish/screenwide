@@ -1,5 +1,5 @@
 // SPDX-FileCopyrightText: 2026 overpolish
-// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-License-Identifier: Elastic-2.0
 
 //! The two-finger double tap that centers a window: the pairing of one tap with
 //! the one before it, and nothing else. The taps themselves are recognised by

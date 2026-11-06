@@ -1,5 +1,5 @@
 // SPDX-FileCopyrightText: 2026 overpolish
-// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-License-Identifier: Elastic-2.0
 
 //! What the preview is told about the frame a move actually achieved. An
 //! application with its own size limits cannot fill the region it was thrown

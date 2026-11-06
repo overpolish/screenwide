@@ -1,5 +1,5 @@
 // SPDX-FileCopyrightText: 2026 overpolish
-// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-License-Identifier: Elastic-2.0
 
 //! A catcher over each display while a drag is under way with Alt held: a
 //! topmost popup the pointer sees almost nothing of, kept out of captures,

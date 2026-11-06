@@ -1,5 +1,5 @@
 // SPDX-FileCopyrightText: 2026 overpolish
-// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-License-Identifier: Elastic-2.0
 
 //! The desktop as a reference measures it on Windows. Windows lays its
 //! displays out in physical pixels, each at its own scale; a reference

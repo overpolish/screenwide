@@ -1,5 +1,5 @@
 // SPDX-FileCopyrightText: 2026 overpolish
-// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-License-Identifier: Elastic-2.0
 use super::super::regions::{self, GlideRegion};
 fn r(c: u32, s: u32, sp: u32, y: u32, ys: u32) -> GlideRegion {
   GlideRegion {

@@ -1,5 +1,5 @@
 // SPDX-FileCopyrightText: 2026 overpolish
-// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-License-Identifier: Elastic-2.0
 
 //! What the user gets to decide about Glide. The file and the commands are
 //! cross-platform on purpose: each platform reads the same settings out of the

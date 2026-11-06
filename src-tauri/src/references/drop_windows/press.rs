@@ -1,5 +1,5 @@
 // SPDX-FileCopyrightText: 2026 overpolish
-// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-License-Identifier: Elastic-2.0
 
 //! Noticing a press anywhere on the desktop: a low-level mouse hook on a
 //! thread of its own, which only wakes the drop watch on the main thread and
