@@ -13,12 +13,14 @@ impl PreviewScenes {
   /// recording, from nothing to whole, `shown` being the recording's own
   /// choice: as the scene there says, faded as it arrives and leaves.
   pub(super) fn cursor_shown(&self, source_ms: u64, shown: bool) -> f32 {
-    let ranges = self
-      .ranges
-      .read()
-      .unwrap_or_else(|poisoned| poisoned.into_inner());
+    // Clips before ranges, the order `set_recording_preview_scenes` writes
+    // them in: the other order deadlocks a frame drawn while the scenes change.
     let clips = self
       .clips
+      .read()
+      .unwrap_or_else(|poisoned| poisoned.into_inner());
+    let ranges = self
+      .ranges
       .read()
       .unwrap_or_else(|poisoned| poisoned.into_inner());
     let timeline_ms = FrameTime::on(&ranges, source_ms).timeline_ms;
