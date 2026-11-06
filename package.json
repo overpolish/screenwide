@@ -18,7 +18,6 @@
           "scripts/build-ffmpeg-windows.mjs"
         ],
         "ignore": [
-          "docs/assets/site.css",
           "src-tauri/target/**"
         ]
       },
