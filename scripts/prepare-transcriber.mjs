@@ -101,13 +101,27 @@ if (hostPlatform === "win32") {
     buildEnv[pathKey] = `${dirname(ninja)};${buildEnv[pathKey] ?? ""}`;
   }
 }
+// whisper.cpp otherwise tunes itself to the processor that builds it, and a
+// release is built on GitHub's runners, not on the computers that run it: an
+// instruction the runner has and a customer's processor lacks crashes the
+// helper there. With native tuning off, x64 gets ggml's own baseline (AVX2,
+// FMA and F16C, no AVX-512).
+if (requestedPlatform === "win32") {
+  buildEnv.GGML_NATIVE = "OFF";
+}
 // MSVC's compiler cannot build Windows ARM64's native parts: whisper.cpp's CPU
 // backend refuses it on ARM, and tract's kernels are GNU assembly it cannot
 // read. LLVM's clang-cl builds them all instead; it must be on PATH, as it is
-// on GitHub's Windows ARM64 runners.
+// on GitHub's Windows ARM64 runners. The cmake crate's flags replace CMake's
+// default /EHsc, which MSVC only warns about losing and clang-cl needs for
+// whisper.cpp's exceptions. The ARM baseline is the Snapdragon 850's, the
+// oldest processor Windows 11 runs on ARM: dot product and half floats, no
+// SVE or i8mm.
 if (target === "aarch64-pc-windows-msvc") {
   buildEnv.CC_aarch64_pc_windows_msvc = "clang-cl";
   buildEnv.CXX_aarch64_pc_windows_msvc = "clang-cl";
+  buildEnv.CXXFLAGS_aarch64_pc_windows_msvc = "/EHsc";
+  buildEnv.GGML_CPU_ARM_ARCH = "armv8.2-a+dotprod+fp16";
 }
 // Node's own architecture can differ from Rust's host under emulation, so
 // ask rustc.
