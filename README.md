@@ -21,23 +21,17 @@
 
 <br />
 
-<!--
-<div align="center">
-	<img width="18%" alt="Recording with Screenwide" src="./Assets/Marketing/screenwide-recording.png" />
-	<img width="18%" alt="Editing a recording in Screenwide" src="./Assets/Marketing/screenwide-editor.png" />
-	<img width="18%" alt="Taking a screenshot with Screenwide" src="./Assets/Marketing/screenwide-screenshots.png" />
-	<img width="18%" alt="Measuring an interface with Screenwide Ruler" src="./Assets/Marketing/screenwide-ruler.png" />
-	<img width="18%" alt="Recognizing text with Screenwide" src="./Assets/Marketing/screenwide-text-recognition.png" />
-</div>
+# Features
 
-<br />
--->
-
-# Core features
-
-- **Screen recording.** Record all of the screen or just the part you need. Camera and audio are optional.
-- **Screenshots.** Capture a selected area or a scrolling page. Combine several captures if needed.
-- **Glide.** Move and resize windows with a fluid trackpad or mouse gesture. Snap them into halves, quarters, thirds or full screen-or glide down to minimize.
+- **Screen recording.** Record a display, a window or part of the screen, with your camera, microphone and the computer's sound or just one app's. A replay buffer keeps the last 30 seconds, to save when something worth keeping has just happened.
+- **Moments.** Mark the points worth keeping as you record, of kinds you name, and hold the key to add a voice note.
+- **Editing.** Cut a recording on a strip that shows what happened in it: what was said, clicks, typing and changes on screen. Move between scenes of screen and camera, zoom in by hand or let auto zoom follow the action, and set it on a background, your own wallpapers included.
+- **Captions and transcripts.** Transcribe what was said, on your computer, show it as captions, and edit the recording by taking words out of its script.
+- **Studio sound.** Clean up a voice, and lower whatever plays under it.
+- **Screenshots.** Capture an area, a window or a scrolling page, combine captures, and mark them up.
+- **References.** Keep a screenshot on screen at its true size, where it was taken, to compare against. Drag a picture with Option (Alt on Windows) to keep it the same way.
+- **Annotate.** Draw arrows, counters, highlights and a magnifier on the screen as you present or record.
+- **Glide.** Move and resize windows with a fluid trackpad or mouse gesture. Snap them into halves, quarters, thirds or full screen, or glide down to minimize.
 - **Better cursors.** Make the cursor easier to follow, with control over its size and movement.
 - **Keyboard shortcuts.** Show pressed shortcuts on the recording.
 - **Ruler.** Measure anything on screen and copy the result.
@@ -48,33 +42,8 @@
 # Roadmap
 
 <div>
-	<h3>Wallpapers and Custom Backgrounds</h3>
-	Your current desktop wallpaper and custom images.
-</div>
-
-<div>
-	<h3>AI Transcription</h3>
-	Turn recorded speech into a timed, editable transcript.
-</div>
-
-<div>
-	<h3>AI Captions</h3>
-	Generate synchronized captions directly from a recording.
-</div>
-
-<div>
-	<h3>Text-based Editing</h3>
-	Edit a recording by editing its transcript.
-</div>
-
-<div>
 	<h3>Live Transcription</h3>
 	Transcribe live without keeping an audio recording.
-</div>
-
-<div>
-	<h3>AI Auto Zooms</h3>
-	Intelligent zooms to areas of interest.
 </div>
 
 <div>
@@ -89,16 +58,6 @@
 
 <br />
 
-# Building on Windows
+# Contributing
 
-Besides Rust, Node.js, pnpm and the Visual Studio C++ Build Tools, the speech-to-text helper (`pnpm transcriber:prepare`, run by `pnpm dev` and `pnpm build`) compiles whisper.cpp, which needs LLVM for its bindings, CMake 4.2 or later, Ninja, and the Vulkan SDK for its GPU shaders. The Build Tools' C++ CMake tools for Windows component, part of the C++ desktop workload by default, includes Ninja; the step finds it there when `ninja` is not on PATH. The same step downloads the voice activity model the microphone tools use, once, and checks it against a pinned digest. Building the helper also downloads a prebuilt ONNX Runtime with DirectML, which runs the Studio sound and Studio ducking models on the GPU, links it in, and puts `DirectML.dll` beside the helper. Tauri checks that the helper, the model and `DirectML.dll` exist before compiling the app, so even `cargo check` fails until they have been prepared once. Use LLVM 20: with LLVM 23 the bindgen version that whisper-rs uses leaves `whisper_full_params` opaque, and the build fails a layout check.
-
-```powershell
-winget install --id LLVM.LLVM -e --version 20.1.8
-winget install Kitware.CMake KhronosGroup.VulkanSDK
-setx LIBCLANG_PATH "C:\Program Files\LLVM\bin"
-```
-
-Then fully restart the terminal app (Windows Terminal, VS Code, and so on) so `VULKAN_SDK`, `LIBCLANG_PATH` and the CMake path are picked up. A new tab or pane inherits the environment the app started with. Then run `pnpm transcriber:prepare`.
-
-Windows Defender scans every file a build writes, which can make Rust builds several times slower. Build from a [Dev Drive](https://learn.microsoft.com/windows/dev-drive/), whose performance mode defers those scans, or exclude the repository's `src-tauri\target`, `%USERPROFILE%\.cargo` and `%USERPROFILE%\.rustup` folders from real-time protection.
+Setting up, running and checking the app on macOS and Windows: [CONTRIBUTING.md](CONTRIBUTING.md).

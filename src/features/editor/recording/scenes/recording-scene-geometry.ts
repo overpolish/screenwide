@@ -39,7 +39,7 @@ const CAMERA_RATIO = { third: 0.5, "two-thirds": 2 } as const;
  * screen of `screenAspect` and a camera of `cameraAspect`, each width over
  * height, as `variant` has it, in the canvas's own units; null for a pane
  * the preset hides. The twin of `preset_panes` in
- * `src-tauri/src/editor/scenes/geometry.rs`, which places the frames the
+ * `src-tauri/crates/scenes/src/geometry.rs`, which places the frames the
  * preview and the export draw.
  *
  * A margin of a ninth of the canvas's shorter side is kept clear. Side by

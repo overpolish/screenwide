@@ -30,7 +30,7 @@ export const listenToMicrophoneProgress = (
   });
 
 /** The long pauses Remove silences would cut from the recording open, from
- * `src-tauri/src/editor/speech/silences.rs`. */
+ * `src-tauri/crates/speech/src/silences.rs`. */
 export const planRecordingSilences = (artifactId: number) =>
   invoke<SilenceCut[]>("plan_recording_silences", { artifactId });
 

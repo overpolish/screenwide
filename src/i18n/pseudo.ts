@@ -3,7 +3,7 @@
 
 /**
  * The pseudo-locales' spellings. Rust applies the same ones in
- * `src-tauri/src/i18n/pseudo.rs`; keep the two identical.
+ * `src-tauri/crates/i18n/src/pseudo.rs`; keep the two identical.
  */
 
 const PLAIN = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";

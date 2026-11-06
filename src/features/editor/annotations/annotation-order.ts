@@ -18,7 +18,7 @@ type AnnotationKind = AnnotationShape["kind"];
  * and every annotation drawn over the page; a spotlight goes over the
  * highlights and under the rest, so what is drawn next stays lit. Everything
  * else goes on top. The twin of `fresh_annotation_index` in
- * `src-tauri/src/editor/annotations/edit.rs`.
+ * `src-tauri/crates/annotations/src/edit.rs`.
  */
 export const freshAnnotationIndex = (
   kinds: readonly AnnotationKind[],

@@ -16,7 +16,8 @@
 // Assembled ahead of `redact_cells.wgsl`, `redact_rows.wgsl` and
 // `redact_paint.wgsl`, each its own module with its own `fs_main`.
 
-// The twin of `RedactRecord` in `annotations/redact/records.rs`.
+// The twin of `RedactRecord` in
+// `src-tauri/crates/annotations/src/redact/records.rs`.
 struct Redaction {
   bounds: vec4<u32>, // [x0, y0, x1, y1) in whole source pixels
   source_width: u32,

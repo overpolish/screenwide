@@ -39,7 +39,7 @@ fn annotation_counter(prepared: PreviewGeometry) -> PreviewCounter {
 /// Each side circle is tangent to the disc on the line through both centres,
 /// so behind that line the nearest edge is the disc's: there the disc alone is
 /// measured. The per-pixel twin of `counter_silhouette_distance` in
-/// `annotations/counter/silhouette.rs`.
+/// `src-tauri/crates/annotations/src/counter/silhouette.rs`.
 fn annotation_counter_distance(probe: vec2<f32>, counter: PreviewCounter) -> f32 {
   let local = probe - counter.center;
   let reach = counter.tip - counter.center;

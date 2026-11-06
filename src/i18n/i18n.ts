@@ -13,7 +13,8 @@ import type { Messages } from "./messages";
 import type { AppLocale } from "../bindings/AppLocale";
 
 /** The language every message is written in first, and what a message a
- * translation lacks falls back to. Matches `SOURCE` in `src-tauri/src/i18n.rs`. */
+ * translation lacks falls back to. Matches `SOURCE` in
+ * `src-tauri/crates/i18n/src/lib.rs`. */
 const SOURCE = "en-US";
 /** Accented, lengthened English for spotting text that bypasses translation
  * and layouts that break under longer words. */
@@ -33,20 +34,22 @@ const directionOf = (language: string): Direction =>
 const RIGHT_TO_LEFT_STAND_IN = "ar-u-nu-latn";
 
 // The source is in every window's bundle, since every translation falls back
-// to it; the rest load only in a window that uses them.
+// to it; the rest load only in a window that uses them. The globs are relative
+// to this file, so any page built from it finds them whatever its root.
 const sourceFiles = Object.values(
-  import.meta.glob<string>("/locales/en-US/*.ftl", {
+  import.meta.glob<string>("../../locales/en-US/*.ftl", {
     eager: true,
     import: "default",
     query: "?raw",
   }),
 );
 const translationFiles = import.meta.glob<string>(
-  ["/locales/*/*.ftl", "!/locales/en-US/*.ftl"],
+  ["../../locales/*/*.ftl", "!../../locales/en-US/*.ftl"],
   { import: "default", query: "?raw" },
 );
 
-const languageOf = (path: string) => path.split("/")[2];
+const languageOf = (path: string) =>
+  /locales\/([^/]+)\//.exec(path)?.[1] ?? SOURCE;
 
 /** Every translation there is, the source first. */
 export const LANGUAGES = [

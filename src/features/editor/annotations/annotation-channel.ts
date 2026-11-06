@@ -24,7 +24,7 @@ export type ImagePlayChange = Partial<Pick<ImagePlay, "frame" | "once">>;
  * pen's island arrives by another road entirely - the island window, through
  * the editor's bridge - and has to reach the same commit path the drag on the
  * picture uses, so each workspace leaves what it has in hand here for the
- * island to find. This is the twin of `keyboard-shortcut-channel.ts`.
+ * island to find.
  */
 type PublishedAnnotation = {
   applyAngle: (angle: number) => void;

@@ -13,7 +13,8 @@ const annotation_shape_kind: u32 = 5u;
 const annotation_shape_quarter: f32 = 1.5707963268;
 const annotation_shape_turn: f32 = 6.2831853072;
 /// How many points along the pen's line each search for the nearest one
-/// tries before its ends, as `TRIES` in `annotations/outline/geometry.rs`.
+/// tries before its ends, as `TRIES` in
+/// `src-tauri/crates/annotations/src/outline/geometry.rs`.
 const annotation_shape_tries: i32 = 4;
 
 fn annotation_shape_perimeter(half_size: vec2<f32>, rounding: f32) -> f32 {
@@ -25,7 +26,7 @@ fn annotation_shape_perimeter(half_size: vec2<f32>, rounding: f32) -> f32 {
 /// `z`: a bow all the way round, a lead-in easing off from the start and a
 /// trail-off easing in towards the end. Nowhere for a clean stroke, whose
 /// wander is all zero. The twin of `wander`, `slope` and `curl` in
-/// `annotations/outline/wander.rs`.
+/// `src-tauri/crates/annotations/src/outline/wander.rs`.
 fn annotation_shape_wander(shape: PreviewGeometry, along: f32) -> vec3<f32> {
   let ease = max(vec2<f32>(shape.end_head_bx, shape.end_head_by), vec2<f32>(1e-6));
   // The lead-in settles in an S from its start; the trail-off flicks off,
@@ -69,7 +70,7 @@ fn annotation_shape_base(shape: PreviewGeometry, start: f32, lap: f32) -> f32 {
 /// along the line's curl. On a side `local` is its distance along the side
 /// and out from it, and `at` a length; round a corner `local` is its reach
 /// from the corner's centre and its turn, and `at` a turn. The twin of the
-/// probes in `annotations/outline/geometry.rs`.
+/// probes in `src-tauri/crates/annotations/src/outline/geometry.rs`.
 fn annotation_shape_probe(shape: PreviewGeometry, corner: bool, local: vec2<f32>, offset: f32,
                           rounding: f32, at: f32) -> vec4<f32> {
   if (!corner) {
@@ -100,7 +101,7 @@ fn annotation_shape_probe(shape: PreviewGeometry, corner: bool, local: vec2<f32>
 /// following the line alone would take and halved back towards the best
 /// point so far when it lands further away. The span's ends are measured
 /// too, so a tip is never missed. The twin of `nearest` in
-/// `annotations/outline/geometry.rs`.
+/// `src-tauri/crates/annotations/src/outline/geometry.rs`.
 fn annotation_shape_nearest(shape: PreviewGeometry, corner: bool, local: vec2<f32>, offset: f32,
                             rounding: f32, span: vec2<f32>, start_at: f32) -> f32 {
   var at = start_at;

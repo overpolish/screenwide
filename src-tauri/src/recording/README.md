@@ -19,12 +19,12 @@ flowchart TD
   FINISH --> PLATFORM
 
   PLATFORM -->|"macOS"| MAC["ScreenCaptureKit + AVFoundation"]
-  PLATFORM -.->|"Windows TODO"| WINDOWS["Windows Graphics Capture + Media Foundation + WASAPI"]
+  PLATFORM -->|"Windows"| WINDOWS["Windows Graphics Capture + Media Foundation + WASAPI"]
 
   MAC --> FILES["Video and audio tracks"]
-  WINDOWS -.-> FILES
+  WINDOWS --> FILES
   MAC --> CURSOR["Shared cursor sidecar"]
-  WINDOWS -.-> CURSOR
+  WINDOWS --> CURSOR
   FILES --> PREVIEW["Rust preview"]
   FILES --> EXPORT["Export / copy / cleanup"]
   CURSOR --> EXPORT
@@ -148,11 +148,33 @@ The replay buffer keeps the last 30 seconds of whatever the recording controls w
 
 ## Windows
 
-Windows recording is TODO. It will use the same shared flow and implement the platform part with:
+```mermaid
+flowchart LR
+  CONFIG["What to record"] --> WGC["Windows Graphics Capture"]
+  CONFIG --> LOOPBACK["WASAPI loopback"]
+  CONFIG --> CPAL["CPAL"]
+  CONFIG --> NOKHWA["Nokhwa (Media Foundation)"]
+  CONFIG --> POINTER["Win32 cursor events"]
 
-- Windows Graphics Capture for screen, region and window
-- Media Foundation for camera and hardware encoding
-- WASAPI for microphone, system audio and app audio
-- Raw Input plus Win32 cursor inspection for the shared cursor format
+  WGC --> SCREEN["Screen / region / window"]
+  LOOPBACK --> AUDIO["All or one app's audio"]
+  CPAL --> MIC["Microphone"]
+  NOKHWA --> CAMERA["Camera"]
 
-The recording controls, recording state and export UI should not need Windows versions.
+  SCREEN --> WRITER["Media Foundation H.264 writer"]
+  CAMERA --> WRITER
+  AUDIO --> PCM["PCM sidecars"]
+  MIC --> PCM
+  POINTER --> CURSOR["Cursor JSONL"]
+
+  WRITER --> PRIMARY["Main recording"]
+  WRITER --> CAMERA_FILE["Camera file when needed"]
+  PCM --> MUX["AAC tracks, muxed in by FFmpeg on stop"]
+  MUX --> PRIMARY
+```
+
+- Screen, region and window use Windows Graphics Capture (`platform_windows/capture.rs`). Its D3D11 textures go to Media Foundation's hardware H.264 encoder through its DXGI device manager, without a copy to the CPU or an FFmpeg process.
+- The camera comes through Nokhwa as the device's own YUYV or MJPEG buffers. Decoding them is the one step on the CPU; the frame goes up to D3D11 and on to the same writer, in a file of its own as on macOS.
+- The computer's sound, or one app's, uses WASAPI loopback (`platform_windows/audio/system.rs`); the microphone uses the same CPAL capture as macOS (`microphone.rs`).
+- Media Foundation's MP4 sink takes only one audio stream, so the microphone and the computer's sound are written as timestamped PCM sidecars, and muxed in as tracks of their own once the video is finished (`platform_windows/audio/mux.rs`). The video is copied as it is, so this decodes and redraws nothing.
+- Cursor events are read from Win32 and written in the shared cursor format (`cursor/platform_windows.rs`): artwork and geometry, never pixels, as on macOS.

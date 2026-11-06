@@ -4,11 +4,22 @@
 import { extendTailwindMerge } from "tailwind-merge";
 
 /**
- * Semantic font sizes declared as `--text-*` in `styles/theme.css`. tailwind-merge
- * treats unknown `text-*` classes as colours, so without this the size class
- * gets dropped whenever a text colour follows it.
+ * Semantic font sizes declared as `--text-*` in `styles/theme.css`, and the
+ * website's reading sizes in `site/site.css`. tailwind-merge treats unknown
+ * `text-*` classes as colours, so without this the size class gets dropped
+ * whenever a text colour follows it.
  */
-const fontSizes = ["title", "heading", "body", "label", "caption"];
+const fontSizes = [
+  "title",
+  "heading",
+  "body",
+  "label",
+  "caption",
+  "hero",
+  "lede",
+  "tile-title",
+  "tile",
+];
 
 /**
  * Semantic spacing declared as `--spacing-*` in `styles/theme.css`, and

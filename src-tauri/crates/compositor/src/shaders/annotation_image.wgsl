@@ -21,7 +21,8 @@ const annotation_image_halo_color: vec4<f32> = vec4<f32>(0.0, 0.48, 1.0, 1.0);
 const annotation_image_placeholder: vec4<f32> = vec4<f32>(0.5, 0.5, 0.5, 0.35);
 // How far a shadow spreads, as a share of half the picture's shorter side,
 // and how far below the picture it falls, as a share of that spread: the
-// magnifier's own. The twin of `SHADOW_SPREAD` in `images/shadow.rs`.
+// magnifier's own. The twin of `SHADOW_SPREAD` in
+// `src-tauri/crates/images/src/shadow.rs`.
 const annotation_image_spread: f32 = 0.11;
 const annotation_image_lift: f32 = 0.35;
 // How dark a shadow is where its picture is solid: twice the lens's, so it

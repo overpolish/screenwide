@@ -59,7 +59,7 @@ describe("reframeWindow", () => {
 });
 
 describe("drawnCameraFrame", () => {
-  it("holds a box stored past the camera inside it, as `framing/tests.rs` pins", () => {
+  it("holds a box stored past the camera inside it, as `framing_tests.rs` pins", () => {
     const frame = drawnCameraFrame(
       {
         cameraWidth: 480,

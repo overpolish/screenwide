@@ -47,7 +47,7 @@ fn annotation_rounded_box_distance(probe: vec2<f32>, low: vec2<f32>, high: vec2<
 
 /// A stroke tapering from a circle at `base` to a smaller one at `tip`, its
 /// sides tangent to both. The per-pixel twin of `tapered_distance` in
-/// `annotations/text/geometry.rs`.
+/// `src-tauri/crates/annotations/src/text/geometry.rs`.
 fn annotation_tapered_distance(probe: vec2<f32>, base: vec2<f32>, tip: vec2<f32>,
                                base_radius: f32, tip_radius: f32) -> f32 {
   let axis = tip - base;

@@ -15,7 +15,7 @@ use screenwide_annotations::{AnnotationHead, AnnotationKind};
 /// The stroke presets the editor's arrow panel offers, in points, which is
 /// what keeps a live annotation and an editor annotation the same weight. The
 /// twin of `ANNOTATION_WIDTHS` in
-/// `src/composites/annotation-style/widths.ts`.
+/// `src/features/annotations/widths.ts`.
 const MIN_WIDTH: f64 = 8.0;
 const MAX_WIDTH: f64 = 24.0;
 /// The smallest and largest disc diameters the counter control offers, in
@@ -25,7 +25,7 @@ const MAX_WIDTH: f64 = 24.0;
 const MIN_COUNTER_SIZE: f64 = 28.0;
 const MAX_COUNTER_SIZE: f64 = 80.0;
 /// The palette's yellow, as in
-/// `src/composites/annotation-style/palette.ts`.
+/// `src/composites/color-grid/palette.ts`.
 const DEFAULT_COLOR: &str = "#ffcc00";
 
 #[derive(Clone, Debug, Deserialize, Serialize, TS)]

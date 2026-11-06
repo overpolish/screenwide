@@ -6,7 +6,7 @@
 #include <stdint.h>
 
 /// The reveal a timed annotation draws itself in and out through. The maths is
-/// in Rust - `src-tauri/src/editor/annotations/reveal.rs` - so the native
+/// in Rust - `src-tauri/crates/annotations/src/reveal.rs` - so the native
 /// preview, the still export and the video export all animate through one
 /// implementation; this is its twin.
 

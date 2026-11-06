@@ -57,15 +57,22 @@ async function loadStylesheet(id, base) {
   return { base: dirname(path), content: readFileSync(path, "utf8"), path };
 }
 
-const design = await __unstable__loadDesignSystem(readFileSync(entry, "utf8"), {
-  base: dirname(entry),
-  loadStylesheet,
-});
+const loadDesign = (path) =>
+  __unstable__loadDesignSystem(readFileSync(path, "utf8"), {
+    base: dirname(path),
+    loadStylesheet,
+  });
 
-const roots = [
+// The app's windows are styled by `src/index.css`; the website in `src/site`
+// by its own stylesheet, which brings the app's in and adds its own tokens.
+const appDesign = await loadDesign(entry);
+const siteArea = join("src", "site");
+const siteDesign = await loadDesign(join(root, siteArea, "site.css"));
+
+const roots = [appDesign, siteDesign].flatMap((design) => [
   ...design.utilities.keys("static"),
   ...design.utilities.keys("functional"),
-];
+]);
 const ownClasses = new Set(
   [
     ...files(join(root, "src"), /\.css$/),
@@ -78,10 +85,11 @@ const ownClasses = new Set(
 );
 
 const known = new Map();
-function makesCss(candidate) {
-  if (!known.has(candidate))
-    known.set(candidate, design.candidatesToCss([candidate])[0] !== null);
-  return known.get(candidate);
+function makesCss(design, candidate) {
+  const key = `${design === siteDesign ? "site" : "app"} ${candidate}`;
+  if (!known.has(key))
+    known.set(key, design.candidatesToCss([candidate])[0] !== null);
+  return known.get(key);
 }
 
 // The utility a class names, without its variants, `!` or negative sign.
@@ -109,6 +117,10 @@ function isOwnClass(candidate) {
 const problems = [];
 for (const file of files(join(root, "src"), /\.tsx?$/)) {
   const source = readFileSync(file, "utf8");
+  const design = relative(root, file).startsWith(siteArea)
+    ? siteDesign
+    : appDesign;
+  const makes = (candidate) => makesCss(design, candidate);
   for (const match of source.matchAll(/"([^"\n]*)"|'([^'\n]*)'|`([^`]*)`/g)) {
     const text = (match[1] ?? match[2] ?? match[3]).replace(
       /\$\{[^}]*\}/g,
@@ -126,16 +138,15 @@ for (const file of files(join(root, "src"), /\.tsx?$/)) {
         source.slice(Math.max(0, match.index - 40), match.index),
       );
     const isClassList = tokens.every(
-      (token) =>
-        makesCss(token) || isOwnClass(token) || looksLikeUtility(token),
+      (token) => makes(token) || isOwnClass(token) || looksLikeUtility(token),
     );
     if (
       tokens.length === 0 ||
-      !(isClassName || (isClassList && tokens.some(makesCss)))
+      !(isClassName || (isClassList && tokens.some(makes)))
     )
       continue;
     for (const token of tokens) {
-      if (makesCss(token) || isOwnClass(token)) continue;
+      if (makes(token) || isOwnClass(token)) continue;
       const line = source.slice(0, match.index).split("\n").length;
       problems.push(`${relative(root, file)}:${line}: ${token}`);
     }

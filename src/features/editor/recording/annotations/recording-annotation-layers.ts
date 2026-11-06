@@ -18,7 +18,7 @@ import {
 } from "./recording-annotations";
 
 /** How far a camera annotation's weight follows the camera down; the twin of
- * `SMALLEST_WEIGHT` in `src-tauri/src/editor/annotations/camera_baked.rs`. */
+ * `SMALLEST_WEIGHT` in `src-tauri/crates/export/src/camera_baked.rs`. */
 const SMALLEST_WEIGHT = 0.5;
 
 /** Where the screen's and the camera's pixels fall on the canvas, as One

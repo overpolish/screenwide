@@ -5,8 +5,8 @@
 //! the camera's redactions and highlights drawn into a picture the size of
 //! the camera frame, which the canvas then samples where it would have
 //! sampled the raw frame. They change the camera's pixels, so they end at
-//! its edge as its pixels do. See `annotations/camera_baked.rs` for why
-//! nothing else is drawn here.
+//! its edge as its pixels do. See `src-tauri/crates/export/src/camera_baked.rs`
+//! for why nothing else is drawn here.
 
 use super::*;
 use crate::annotation_gpu::SourceAnnotations;

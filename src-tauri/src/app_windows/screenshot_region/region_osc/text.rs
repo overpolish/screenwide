@@ -40,9 +40,9 @@ pub(crate) const ATLAS_CELLS: usize = 22;
 /// never bleed the neighbouring glyph in.
 const GUTTER: i32 = 1;
 /// Rasterisation happens at this multiple of the physical resolution and is
-/// box-downsampled back, the `label.rs` precedent. Four rather than two: a
-/// 2x2 box gives a pixel only five coverage levels, which shows as jagged
-/// edges on 14px text; 4x4 gives seventeen, close to a real rasteriser's.
+/// box-downsampled back. Four rather than two: a 2x2 box gives a pixel only
+/// five coverage levels, which shows as jagged edges on 14px text; 4x4 gives
+/// seventeen, close to a real rasteriser's.
 pub(crate) const SUPERSAMPLE: i32 = 4;
 /// The ink a label is baked in, with the strength its text and its units
 /// take, so the shader can draw it as it is.

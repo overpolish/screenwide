@@ -20,7 +20,7 @@ export const ANNOTATION_WIDTHS = [8, 12, 16, 24];
 
 /**
  * The disc diameters a counter offers, in points. The twin of `COUNTER_SIZES`
- * in `src-tauri/src/editor/annotations/counter/model.rs`.
+ * in `src-tauri/crates/annotations/src/counter/model.rs`.
  */
 export const ANNOTATION_COUNTER_SIZES = [28, 36, 48, 64, 80];
 
@@ -36,7 +36,7 @@ export const DEFAULT_ANNOTATION_COUNTER_SIZE = 28;
  * The type sizes a text box offers, in points: two small steps for labels,
  * then steps that grow by a ratio so the large ones are big enough to title a
  * screen. The twin of `TEXT_SIZES` in
- * `src-tauri/src/editor/annotations/text/model.rs`.
+ * `src-tauri/crates/annotations/src/text/model.rs`.
  */
 const ANNOTATION_TEXT_SIZES = [10, 14, 24, 40, 64];
 
@@ -48,7 +48,7 @@ const DEFAULT_ANNOTATION_TEXT_SIZE = 24;
  * The block sizes a securely pixelated redaction offers, in logical points of
  * the captured content, so a block hides as much on a 2x capture as on a 1x
  * one. The twin of `REDACT_BLOCK_SIZES` in
- * `src-tauri/src/editor/annotations/redact/model.rs`.
+ * `src-tauri/crates/annotations/src/redact/model.rs`.
  */
 const ANNOTATION_REDACT_SIZES = [4, 6, 8, 12, 16];
 
@@ -56,7 +56,7 @@ const ANNOTATION_REDACT_SIZES = [4, 6, 8, 12, 16];
  * The block sizes classic pixelation offers, in logical points: coarser than
  * the secure steps, since fine ordinary blocks read as the picture itself.
  * The first is the twin of `MIN_CLASSIC_BLOCK` in
- * `src-tauri/src/editor/annotations/redact/cells.rs`.
+ * `src-tauri/crates/annotations/src/redact/cells.rs`.
  */
 const ANNOTATION_CLASSIC_SIZES = [8, 12, 16, 24, 32];
 
@@ -70,7 +70,7 @@ export const redactionSizePresets = (
 /** The marker every highlight is drawn with, in points: the stroke a box laid
  * by hand is covered in, and the band drawn where no text is found. The twin
  * of `NEW_HIGHLIGHT_WIDTH` in
- * `src-tauri/src/editor/annotations/highlight/model.rs`. */
+ * `src-tauri/crates/annotations/src/highlight/model.rs`. */
 const DEFAULT_ANNOTATION_HIGHLIGHT_SIZE = 12;
 
 /** The block a fresh redaction pixelates with: the second step. The twin of
@@ -80,7 +80,7 @@ const DEFAULT_ANNOTATION_REDACT_SIZE = 6;
 /**
  * The strengths a blurred redaction offers, weakest first: each step blurs
  * wider, the same width in every box. The twin of `BLUR_DEVIATIONS` in
- * `src-tauri/src/editor/annotations/redact/cells.rs`, which sizes them.
+ * `src-tauri/crates/annotations/src/redact/cells.rs`, which sizes them.
  */
 export const ANNOTATION_BLUR_STRENGTHS = [1, 2, 3, 4, 5];
 

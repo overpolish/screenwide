@@ -33,6 +33,7 @@ const frontendFiles = [
 export default defineConfig([
   globalIgnores([
     "dist/**",
+    "dist-site/**",
     "node_modules/**",
     "src-tauri/**",
     "storybook-static/**",

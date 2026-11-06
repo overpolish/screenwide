@@ -7,7 +7,7 @@
 #include "reveal.h"
 
 /// A kind's draw geometry and the distance that picks it. The maths is in
-/// Rust - `src-tauri/src/editor/annotations/ffi.rs` and each kind's own
+/// Rust - `src-tauri/crates/annotations/src/ffi.rs` and each kind's own
 /// `geometry` module - so the macOS chrome and the compositor draw and pick
 /// one geometry. The shaders carry the only other copies, because a
 /// per-pixel SDF belongs in the shader language.

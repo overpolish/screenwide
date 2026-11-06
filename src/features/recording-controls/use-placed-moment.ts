@@ -12,8 +12,8 @@ const MOMENT_RELEASED_EVENT = "moments://released";
  * so a held key keeps its moment on show. */
 const SHOWN_MS = 1_500;
 
-/** The twin of `NOTE_THRESHOLD` in `recording/note_gate.rs`: held this long,
- * a press is a voice note rather than a moment alone. */
+/** The twin of `NOTE_THRESHOLD` in `src-tauri/crates/capture/src/note_gate.rs`:
+ * held this long, a press is a voice note rather than a moment alone. */
 const NOTE_THRESHOLD_MS = 300;
 
 /** How often a note's timer is redrawn while the key is held. */

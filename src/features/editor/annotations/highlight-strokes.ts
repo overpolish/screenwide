@@ -10,7 +10,7 @@ import type {
 } from "./annotations";
 
 /** How far apart strokes are laid, as a share of their width. The twin of
- * `STRIDE` in `src-tauri/src/editor/annotations/highlight/manual.rs`. */
+ * `STRIDE` in `src-tauri/crates/annotations/src/highlight/manual.rs`. */
 const STRIDE = 0.92;
 
 /**

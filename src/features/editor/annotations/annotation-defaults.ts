@@ -193,7 +193,7 @@ export const useAnnotationDefaults = (kind: AnnotationKind = "arrow") =>
 
 /** A fresh spotlight's corner radius, as a percentage of its shorter side.
  * The twin of `NEW_SPOTLIGHT_RADIUS` in
- * `src-tauri/src/editor/annotations/spotlight`. */
+ * `src-tauri/crates/annotations/src/spotlight`. */
 const SPOTLIGHT_RADIUS = 12;
 
 /**
@@ -204,7 +204,7 @@ const SPOTLIGHT_RADIUS = 12;
  * The twins of `default_arrow_style`, `default_counter_style`,
  * `default_text_style`, `default_redact_style`, `default_highlight_style`,
  * `default_shape_style`, `default_spotlight_style`, `default_magnify_style`
- * and `default_image_style` in `src-tauri/src/editor/annotations`, which
+ * and `default_image_style` in `src-tauri/crates/annotations`, which
  * dress a fresh annotation where the editor sends no dress of its own.
  */
 export const firstAnnotationDress = (

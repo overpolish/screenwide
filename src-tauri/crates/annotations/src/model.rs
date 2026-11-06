@@ -193,7 +193,7 @@ fn default_strength() -> f64 {
 /// the palette's yellow, which reads as an annotation on almost any screenshot
 /// where the accent would sometimes be the very colour being pointed at. The
 /// twin of `ANNOTATION_SWATCHES` in
-/// `src/features/editor/annotation-palette.ts`.
+/// `src/composites/color-grid/palette.ts`.
 #[cfg(any(target_os = "macos", target_os = "windows", test))]
 pub(super) const NEW_ANNOTATION_COLOR: &str = "#ffcc00";
 

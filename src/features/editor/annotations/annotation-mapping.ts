@@ -5,7 +5,7 @@ import { AnnotationPoint, AnnotationShape } from "./annotations";
 
 /**
  * The same shape with every point moved by `map`, the twin of
- * `AnnotationShape::mapped` in `src-tauri/src/editor/annotations/shape.rs`.
+ * `AnnotationShape::mapped` in `src-tauri/crates/annotations/src/shape/space.rs`.
  * What a shape *is* rides through untouched - a counter's angle and number,
  * a text box's words and its pointer, which is held against the box, a
  * image's turn and picture - because every space an annotation travels

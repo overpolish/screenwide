@@ -43,7 +43,7 @@ import type { IslandProps } from "./island-props";
 //
 // The row is a toolbar: arrow keys move between its controls. The section is
 // outside it, so a list in the section keeps its own arrow keys. Nothing on
-// it has a tooltip (`island-controls.tsx`).
+// it has a tooltip.
 
 export function Island({
   anchor = "center",

@@ -18,7 +18,7 @@ import {
 } from "./recording-scenes";
 
 /** The furthest a box may grow and shrink, as shares of the canvas. The twins
- * of the limits in `src-tauri/src/editor/scenes/model.rs`. */
+ * of the limits in `src-tauri/crates/scenes/src/model.rs`. */
 const MAX_BOX_SHARE = 4;
 export const MIN_BOX_SHARE = 0.02;
 

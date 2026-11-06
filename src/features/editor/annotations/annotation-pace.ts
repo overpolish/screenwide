@@ -45,7 +45,7 @@ const PATH_PACE: Pace = { base: ANNOTATION_DRAW_IN_MS, max: 2_000, min: 600 };
 
 /** How long a text box's pointer takes to draw out where it names no pace,
  * and the reach in ems it takes that long over. The twin of `POINTER_IN_MS`
- * in `src-tauri/src/editor/annotations/text/reveal.rs`. */
+ * in `src-tauri/crates/annotations/src/text/reveal.rs`. */
 const POINTER_DRAW_IN_MS = 280;
 const POINTER_REFERENCE_EMS = 3;
 const POINTER_PACE: Pace = { base: POINTER_DRAW_IN_MS, max: 900, min: 200 };

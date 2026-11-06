@@ -1,0 +1,36 @@
+<!-- SPDX-FileCopyrightText: 2026 overpolish -->
+<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
+
+# Reference decisions
+
+A reference is a still kept on screen at its true size, where it was taken, to compare what is there now against: an area taken with the Keep a reference shortcut, or a picture dragged in with Option (Alt on Windows). The picture is drawn natively (`src-tauri/src/references`); the island under it is this folder's page.
+
+## How it looks
+
+- **A plain shadow, the islands' own:** the picture sits on the islands' close contact shadow and soft wide one (`reference.wgsl`, the same values as `--island-shadow`), its corners rounded 6 pt. The shadow lies outside the picture only, since the picture can be made see-through and nothing should darken what shows through it, and it stays at full strength however faint the picture is, so the reference's edge always reads. Rejected: a glass rim, a ring and a bead round the picture, the system's glass (`NSGlassEffectView`) and a glass of its own drawn from a capture of what lies behind. Each read as a line, as old-fashioned or as frosted, and the glass behind could not follow what moves under the reference quickly enough.
+- **A see-through picture casts its shadow from what it shows:** a picture with see-through pixels keeps mip levels (`references::upload`), and its shadow is its alpha fallen and blurred from the level whose texels are about as wide as the blur. The blur reads the picture's edge on past it, and the shadow its box casts takes it away from there, so the shadow fades past the box as an opaque picture's does rather than stopping at it.
+- **Four strengths:** the island offers the picture at 25, 50, 75 and 100 per cent (`REFERENCE_OPACITIES`), a quarter at a time, for laying it over what it shows. The chrome and the island keep full strength.
+
+## The island
+
+- **Under the picture, or over it at the screen's foot:** the island hangs under the picture, and over it where it would not fit under it and there is more room above (`references/fit.rs`), measured against the room for windows, clear of the menu bar, the Dock and the taskbar. It changes sides as the picture is moved, not when the move ends, and glides there over `reshape`, behind the picture. The window keeps the island's room on both sides of the picture, so the picture stands in the same place in the window whichever side the island is on, and the island moves inside a window that does not.
+- **Back to origin or Reset size:** a reference taken of an area has somewhere to return to, and Back to origin puts it back there at its true size. A dropped picture, or a still of a whole screen or window, has nowhere, so the same place on the island holds Reset size, which brings back the true size with its middle where it is. Both glide there over `reshape`, easing out, the window and the island following (`engine/glide.rs`).
+- **Close asks twice, then everything goes together:** the island tucks away into its own middle, its box held at the size it had so it neither shifts nor sets off a refit, while the picture fades out over `travel` (`fade_reference`); then the window closes and the picture's files are deleted. Open in editor hands the still to the screenshot editor and leaves the reference on screen.
+
+## The window and the pointer
+
+- **Click-through but for what is drawn:** the window takes clicks on the picture, with the reach its handles need round it, and on the island (`Fit::hit_rects`); the shadow's room lets them through. The place is worked out where the window is fitted, not reported back by the page, so it is right the moment the island moves.
+- **The picture is moved by hand, not by the system's window drag:** a press on the picture moves it, and each step fits the window round it again, which is what lets the island change sides during the move.
+- **Over the menu bar on macOS:** references sit at the menu bar's own level (`NSMainMenuWindowLevel`). Below it, AppKit keeps a window's top under the menu bar every time its frame is set, so a picture of the top of the screen could not lie over the menu bar, and the shadow's room above the picture would hold it short of it. At this level a reference is above the Dock and other apps' floating panels, and below Screenwide's islands, the region selector, menus and tooltips.
+- **Drawn again once the window is on screen, on macOS:** wgpu hands out no frame while a window is not on screen, and the reference draws its picture before its window shows. The reference draws again when macOS says the window has come on screen (`NSWindowDidChangeOcclusionStateNotification`), or it would stay empty until something else drew it.
+- **On Windows the view spans the window, and the window holds still through a resize:** moving a window and drawing in it reach the screen in separate steps there, and would show the picture out of place between them. The view covers the whole window and never shrinks, and through a resize or a glide the window only grows on the sides the picture needs, fitted round it again when that ends (`engine/hold.rs`). A reference measures in points at the scale of the display it stands on; one dragged onto a display of another scale is fitted to it when the press ends.
+
+## One engine, two hosts
+
+Everything a reference decides is shared Rust (`references/engine`): placing the window, drawing, what a press, drag or release does and the cursor it shows, the glide, and the island's actions. Each platform implements `ReferenceHost` for what only it can do: the window's frame, the view the picture is drawn in, the pointer and its cursor, the displays, and the picture's opacity and fade. macOS draws in a view over the webview carrying two Metal layers; Windows in a DirectComposition child window over WebView2, which passes every press outside the picture and its handles on to the page.
+
+## Dragging a picture in
+
+- **Option or Alt held, on any picture:** a picture dragged from a browser, Finder or Explorer with Option (Alt on Windows) held is kept as a reference where it is let go, at its own pixels at that display's scale, so a picture a page draws at twice its size in points comes out the size the page showed it. Letting the modifier go mid-drag lets the drop land where it would have.
+- **Shared watch, platform catchers:** a press anywhere starts a watch for as long as the button is held (`references/drop_watch.rs`). Once a drag has begun from it with the modifier held, a catcher is laid over each display, and the hint island comes out at the top of the screen. macOS reads what the drag carries from the drag pasteboard before any catcher is up; Windows tells only the window under the drag, so there a catcher brings the hint out when a picture reaches it, and steps aside until the next press for anything else, such as an Alt-drag that selects text. The catchers stay a moment after the button is let go, for the drop to arrive, but only once a picture was seen.
+- **Every form the picture comes in:** a drop is read in the order that keeps the most of it: the picture's own data, a picture file, then its address on the web, downloaded (`references/drop.rs`). Windows reads them with the editor's own reader (`editor/images/dragged_windows.rs`).

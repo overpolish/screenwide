@@ -59,7 +59,7 @@ export const counterShape = (value: unknown): Shape<"counter"> | null => {
 };
 
 /** The most points a stroke keeps. The twin of `MAX_DRAW_POINTS` in
- * `src-tauri/src/editor/annotations/freehand/model.rs`. */
+ * `src-tauri/crates/annotations/src/freehand/model.rs`. */
 const MAX_DRAW_POINTS = 4096;
 
 export const drawShape = (value: unknown): Shape<"draw"> | null => {

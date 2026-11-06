@@ -1,0 +1,41 @@
+/* SPDX-FileCopyrightText: 2026 overpolish */
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+
+/* What only the website needs. The app's tokens, type roles and components
+   do the rest; these are the sizes a page read from a distance takes. */
+
+@import "../index.css";
+
+/* The page is served from its own folder; the components it draws are the
+   app's, so their classes are found across all of `src`. */
+@source "../";
+
+@theme {
+  --text-hero: clamp(2.5rem, 4.4vw, 3.75rem);
+  --text-hero--line-height: 1.02;
+  --text-hero--letter-spacing: -0.035em;
+  --text-hero--font-weight: 650;
+  --text-lede: 1.1875rem;
+  --text-lede--line-height: 1.5;
+  --text-tile-title: 1rem;
+  --text-tile-title--line-height: 1.35;
+  --text-tile-title--font-weight: 600;
+  --text-tile: 0.9375rem;
+  --text-tile--line-height: 1.45;
+  --spacing-page: 2rem;
+  --spacing-site-control: 2.5rem;
+  --container-site: 72rem;
+}
+
+/* The app's windows are fixed in size and hold their own scrolling, so the
+   app stops the document scrolling and its text being selected. A web page
+   is the other way round: the window scrolls it, and its words can be
+   selected and copied. */
+html,
+body {
+  height: auto;
+  overflow: visible;
+  overscroll-behavior: auto;
+  user-select: text;
+  -webkit-user-select: text;
+}

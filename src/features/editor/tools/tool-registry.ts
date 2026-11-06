@@ -160,7 +160,7 @@ export type AnnotationTool = (typeof ANNOTATION_TOOLS)[number];
 
 /** Which shape the tool in hand draws, or null where it draws nothing - the
  * select tool, the crop, or no tool at all. The twin of `drawing_kind` in
- * `src-tauri/src/editor/annotations/gesture.rs`. */
+ * `src-tauri/crates/annotations/src/gesture/mode.rs`. */
 export const drawingToolKind = (tool: string | null | undefined) =>
   ANNOTATION_TOOLS.find((item) => item.id === tool)?.id ?? null;
 

@@ -12,7 +12,7 @@
 // `annotation_spotlight_blur` over its own source.
 
 // Every member is a scalar, so each element is packed exactly like its Rust
-// twin in `compositor/arrows.rs`, which pins the offsets.
+// twin in `annotation_gpu/arrows.rs`, which pins the offsets.
 struct PreviewGeometry {
   ax: f32, ay: f32,
   bx: f32, by: f32,

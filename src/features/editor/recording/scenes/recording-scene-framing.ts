@@ -9,7 +9,7 @@ import { MAX_SCENE_ZOOM, SceneFraming } from "./recording-scenes";
 /**
  * What part of a picture fills its box in a scene. A framing never uncovers
  * its box: at any zoom the picture is held where it still fills it. The twin
- * of `src-tauri/src/editor/scenes/framing.rs`.
+ * of `src-tauri/crates/scenes/src/framing.rs`.
  */
 
 /** The width a picture of `aspect` needs to cover `frame` exactly. */

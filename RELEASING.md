@@ -9,36 +9,39 @@ Screenwide publishes installers and signed Tauri updater bundles through GitHub 
 
 ## User update flow
 
-Screenwide owns the update interface; Tauri does not display a generic native update dialog. On launch, a hidden Screenwide update window asks Tauri to check the latest GitHub Release. The window is brought forward only when a new update is available and the user's reminder or skip preference allows it. **Settings → About** remains available for a manual check.
+Screenwide offers updates on its island; Tauri shows no update dialog of its own. On launch the island's page asks Tauri for the latest GitHub Release, unless the person put an update off less than 12 hours ago, in which case it checks once those hours are up. **Check for Updates**, in the About group at the end of Settings' General pane, checks at any time and opens the release notes with the offer.
 
 ```mermaid
 flowchart TD
-    launch["User opens Screenwide"] --> cooldown{"12-hour reminder cooldown active?"}
-    cooldown -- "Yes" --> silent["Continue startup without checking"]
-    cooldown -- "No" --> check["Hidden update window asks Tauri to check"]
+    launch["Screenwide starts"] --> cooldown{"Put off in the last 12 hours?"}
+    cooldown -- "Yes" --> wait["Check when the 12 hours are up"]
+    cooldown -- "No" --> check["The island's page asks Tauri to check"]
+    wait --> check
     check --> metadata["Fetch latest.json from the latest GitHub Release"]
-    metadata --> available{"Newer signed release available?"}
-    available -- "No or request fails" --> hidden["Remain hidden; continue startup"]
-    available -- "Yes" --> notes["Fetch GitHub-rendered notes for that release tag"]
-    notes --> skipped{"This version was skipped?"}
-    skipped -- "Yes" --> hidden
-    skipped -- "No" --> offer["Show Screenwide update window with release notes"]
-    offer --> choice{"User choice"}
-    choice -- "Not right now or close" --> remind["Hide prompt for 12 hours"]
-    choice -- "Skip this version" --> skip["Hide until a different version exists"]
-    choice -- "Update and restart" --> download["Tauri downloads the platform update bundle"]
-    download --> verify["Verify bundle with Screenwide's updater public key"]
+    metadata --> available{"Newer signed release?"}
+    available -- "No, or the request fails" --> quiet["Nothing shows"]
+    available -- "Yes" --> skipped{"This version skipped?"}
+    skipped -- "Yes" --> quiet
+    skipped -- "No" --> free{"Island free?"}
+    free -- "No: recording, exporting or showing something else" --> retry["Ask again in a minute"]
+    retry --> free
+    free -- "Yes" --> offer["The island offers the version"]
+    offer --> choice{"Person's choice"}
+    choice -- "Later" --> remind["Put away; check again in 12 hours"]
+    choice -- "Skip this version" --> skip["Never offer this version again"]
+    choice -- "Install" --> download["Tauri downloads the platform's update bundle"]
+    download --> verify["Verify the bundle against Screenwide's updater public key"]
     verify --> install["Run the macOS or Windows installer"]
-    install --> restart["Restart or reopen updated Screenwide"]
+    install --> restart["Screenwide restarts, updated"]
 ```
 
-The update is never installed merely because a check found one. The prompt shows the current and new versions, release date, GitHub release notes, and three clear actions: **Skip this version**, **Not right now**, and **Update and restart**. Closing the prompt or pressing Escape has the same 12-hour cooldown as reminding later. After confirmation, the prompt shows download progress. The changelog is GitHub's sanitized, rendered release description rather than a second copy embedded in `latest.json`; links open in the system browser.
+Nothing downloads until Install. The island says which version is out and when it was released; **What's new** opens its release notes under the island, with **Skip this version** beneath them. The notes are GitHub's sanitized, rendered release description for that tag, not a second copy kept in `latest.json`, and their links open in the browser. While the update downloads the island shows its progress, and a failed install offers **Try again**.
 
-- On macOS, Tauri replaces the installed application and Screenwide relaunches it after installation.
-- On Windows, Tauri starts the NSIS installer in `passive` mode. Windows closes Screenwide while the installer replaces it; the installer may show its own small native progress window.
-- Development builds do not contact the update endpoint because `tauri dev` launches through a symlink that is unsuitable for safe in-place updates.
+- On macOS, Tauri replaces the installed application and Screenwide relaunches it.
+- On Windows, Tauri starts the NSIS installer in `passive` mode. Windows closes Screenwide while the installer replaces it; the installer may show its own small progress window.
+- Development builds never contact the update endpoint, because `tauri dev` launches through a symlink, which is unsafe to update in place.
 
-The updater metadata and downloads come from the public GitHub Release, but Tauri accepts an update only when its updater signature matches the public key embedded in Screenwide. Apple code signing/notarization and Windows Authenticode signing are separate operating-system trust layers.
+The updater's metadata and downloads come from the public GitHub Release, but Tauri accepts an update only when its updater signature matches the public key built into Screenwide. Apple's code signing and notarization, and Windows' Authenticode signing, are separate trust layers of the operating systems.
 
 ## One-time repository setup
 
@@ -90,15 +93,7 @@ Run the isolated update prompt in Storybook without contacting GitHub or install
 pnpm update:preview
 ```
 
-The **Features / Update Prompt** stories cover an available update, installation at 62%, and an installation failure. Use Storybook's theme control to inspect both light and dark appearances.
-
-To preview the same interface inside its real native Tauri window, run:
-
-```sh
-pnpm dev:updater
-```
-
-This uses mock update data. Clicking **Update and restart** switches to the 62% installation state; closing, reminding, or skipping hides the native window. Development builds still cannot contact or install from the updater endpoint.
+The **Features / Updates / Island / Update** stories show the offer, its release notes open, the download at 42%, the install, and a failed install. Use Storybook's theme control to see it in both appearances.
 
 ### Exercise a real staged update
 

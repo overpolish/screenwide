@@ -16,7 +16,7 @@ import { RecordingSceneClip, SceneFraming } from "./recording-scenes";
 const ASPECT = 16 / 9;
 const output = { ...defaultScreenshotOutput(1600, 900), cropHeight: 800 };
 /** A square window on the camera in the recording's own composition: the
- * fixture `framing/tests.rs` uses. */
+ * fixture `src-tauri/crates/export/src/scenes/framing_tests.rs` uses. */
 const overlay = {
   cameraWidth: 480,
   cameraX: 1340,
@@ -123,8 +123,8 @@ describe("arrangedRecordingScene", () => {
     expect(scene?.output.cropX).toBeCloseTo(panes.screen?.x ?? NaN);
     expect(scene?.output.cropWidth).toBeCloseTo(panes.screen?.width ?? NaN);
     expect(scene?.cameraOverlay?.frameX).toBeCloseTo(panes.camera?.x ?? NaN);
-    // `framing/tests.rs` pins the same numbers, so the selection lands where
-    // the preview draws.
+    // `framing_tests.rs` in the export crate pins the same numbers, so the
+    // selection lands where the preview draws.
     expect(scene?.cameraOverlay?.cameraX).toBeCloseTo(1190.625);
     expect(scene?.cameraOverlay?.cameraY).toBeCloseTo(450);
     expect(scene?.cameraOverlay?.cameraWidth).toBeCloseTo(675);

@@ -9,8 +9,8 @@ import type { FaceTrackingProgress } from "../../../../bindings/FaceTrackingProg
 /**
  * Whether the face is being found in the camera of the recording open in
  * the editor, which the first scene to follow it starts; told by
- * `src-tauri/src/editor/face_tracking.rs`. One recording is open at a time,
- * so whichever one the editor is told about is this one.
+ * `src-tauri/src/editor/camera_effects/face_tracking.rs`. One recording is
+ * open at a time, so whichever one the editor is told about is this one.
  */
 export function useIsFindingFace() {
   const [isFinding, setIsFinding] = useState(false);

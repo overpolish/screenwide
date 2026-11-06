@@ -8,7 +8,7 @@
  * expressed in, so an annotation stays glued to the picture while the frame is
  * moved, resized or re-cropped. The compositor draws them, which is what
  * keeps the editor's preview and the exported PNG the same image. This is the
- * twin of `src-tauri/src/editor/annotations/model.rs`.
+ * twin of `src-tauri/crates/annotations/src/model.rs`.
  */
 
 import type { Annotation } from "../../../bindings/Annotation";
