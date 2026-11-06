@@ -45,9 +45,9 @@
   /* One of a set chosen in place (a chosen style, a selected range): a grey
      surface with the text unchanged. */
   --color-selected: oklch(18% 0.01 47.6 / 12%);
-  /* The brand orange, the logo's colour, kept for emphasis: where you are
-     (the playhead, the selection on the picture). A mark, never text. The
-     OS accent replaces it while the user follows it
+  /* Orange, the one colour beside the monochrome palette, kept for
+     emphasis: where you are (the playhead, the selection on the picture). A
+     mark, never text. The OS accent replaces it while the user follows it
      (`src/lib/system-accent.ts`); that setting goes with the platform
      unification. */
   --color-emphasis: var(--system-accent, oklch(66% 0.181 47.604));
