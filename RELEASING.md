@@ -87,19 +87,31 @@ Do not publish a partially successful release. Rerun failed jobs or delete the d
 
 The Store installs and updates its own copy of Screenwide from an MSIX package. Tauri makes none, so `pnpm msix:package` (`scripts/package-msix.mjs`) lays out a Windows release build as the NSIS installer does, adds the Store logos and the manifest (`src-tauri/msix/AppxManifest.xml`), and packs it with the Windows SDK's makeappx. The manifest carries the identity Partner Center reserved for Screenwide (`overpolish.Screenwide`, Store ID `9MSN8CRH5W0F`); the Store rejects a package whose identity differs. The Release workflow attaches the x64 and ARM64 packages to the draft release.
 
-A packaged copy knows it is one (`src-tauri/src/microsoft_store.rs`): it does not update itself, and Settings says the Store updates it, and it launches at login through the package's startup task rather than the autostart plugin, whose registry entry Windows redirects for packaged apps.
+The taskbar and Start show the small logo at the sizes in `src-tauri/msix/Assets` (`Square44x44Logo.targetsize-*_altform-unplated.png`), listed in the package's `resources.pri`, which the script builds with the SDK's makepri. Without them Windows draws the 44 px logo shrunk on a tile of the accent colour. `pnpm msix-logos:prepare` scales them from `src-tauri/icons/ScreenwideLogo.png`; run it after the icon changes and commit the PNGs.
+
+A packaged copy knows it is one (`src-tauri/src/microsoft_store.rs`): it does not update itself, and Settings says the Store updates it, and it launches at login through the package's startup task rather than the autostart plugin, whose registry entry Windows redirects for packaged apps. Windows lets only the package's own processes execute the files in its install folder, so the window hider is loaded into the apps being hidden from a copy in the package's cache folder (`src-tauri/src/hidden_apps_windows/shared_library.rs`).
 
 To submit a release, open Screenwide in Partner Center, start a submission and upload both `.msix` files under Packages; the Store signs them. The listing's privacy policy is <https://getscreenwide.com/privacy>, and the `runFullTrust` capability needs a line saying why: Screenwide captures the screen, hides chosen windows from capture and moves other apps' windows, which a sandboxed app cannot.
 
-To try a package before submitting it, on Windows with developer mode turned on, build it and register its folder, which installs it unsigned under its package identity:
+To try a package before submitting it, on Windows with developer mode turned on, build it and register its folder, which installs it unsigned under its package identity. The build skips Tauri's bundles, which need the updater's signing key and which the package does not use:
 
 ```powershell
-pnpm tauri build --target x86_64-pc-windows-msvc --bundles nsis
+pnpm tauri build --target x86_64-pc-windows-msvc --no-bundle
 pnpm msix:package --target x86_64-pc-windows-msvc
 Add-AppxPackage -Register src-tauri\target\x86_64-pc-windows-msvc\msix\Screenwide\AppxManifest.xml
 ```
 
 `Get-AppxPackage overpolish.Screenwide | Remove-AppxPackage` removes it.
+
+A registered folder stays where it was built, without the install folder's restrictions, so hiding apps behaves there as it does in the NSIS build. To test hiding as the Store installs it, sign the package with a test certificate whose subject is the manifest's `Publisher`, trust that certificate (the import needs an administrator), and install the package itself:
+
+```powershell
+$cert = New-SelfSignedCertificate -Type Custom -Subject "CN=20209A30-FD28-4F20-817F-331CCDE1D196" -KeyUsage DigitalSignature -FriendlyName "Screenwide MSIX test" -CertStoreLocation Cert:\CurrentUser\My -TextExtension @("2.5.29.37={text}1.3.6.1.5.5.7.3.3", "2.5.29.19={text}")
+Export-Certificate -Cert $cert -FilePath screenwide-msix-test.cer
+Import-Certificate -FilePath screenwide-msix-test.cer -CertStoreLocation Cert:\LocalMachine\TrustedPeople
+signtool sign /fd SHA256 /sha1 $cert.Thumbprint src-tauri\target\x86_64-pc-windows-msvc\release\bundle\msix\Screenwide_0.1.0_x64.msix
+Add-AppxPackage -Path src-tauri\target\x86_64-pc-windows-msvc\release\bundle\msix\Screenwide_0.1.0_x64.msix
+```
 
 ## Debugging updates
 

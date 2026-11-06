@@ -3,9 +3,9 @@
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 <!--
   The Microsoft Store package's manifest. `scripts/package-msix.mjs` fills in
-  {{VERSION}} and {{ARCHITECTURE}} and packs it with the build. The identity
-  is the one Partner Center reserved for Screenwide; the Store rejects a
-  package whose identity differs.
+  the version and processor architecture and packs it with the build. The
+  identity is the one Partner Center reserved for Screenwide; the Store
+  rejects a package whose identity differs.
 -->
 <Package
   xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10"

@@ -32,6 +32,20 @@ pub fn is_packaged() -> bool {
   false
 }
 
+/// The package's cache folder, as the real path other processes can reach:
+/// a packaged app's writes under the usual AppData paths are redirected into
+/// its package, out of sight of every other process.
+#[cfg(target_os = "windows")]
+pub fn cache_folder() -> Option<std::path::PathBuf> {
+  use windows::Storage::ApplicationData;
+
+  let folder = ApplicationData::Current()
+    .and_then(|data| data.LocalCacheFolder())
+    .and_then(|folder| folder.Path())
+    .ok()?;
+  Some(std::path::PathBuf::from(folder.to_os_string()))
+}
+
 #[cfg(target_os = "windows")]
 pub mod startup_task {
   use windows::core::HSTRING;

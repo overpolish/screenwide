@@ -20,10 +20,20 @@ const JOURNAL: &str = "hidden-windows.txt";
 static HIDDEN: Mutex<Vec<HiddenProcess>> = Mutex::new(Vec::new());
 static JOURNAL_FILE: OnceLock<Option<Journal>> = OnceLock::new();
 
-/// Beside the app, where the bundle puts it and `pnpm dev` copies it.
+mod shared_library;
+
+/// Beside the app, where the bundle puts it and `pnpm dev` copies it. A Store
+/// install's folder lets only Screenwide's own processes run what is in it,
+/// so a packaged Screenwide loads a copy kept outside it into other apps.
 fn library() -> Option<PathBuf> {
-  let path = std::env::current_exe().ok()?.parent()?.join(LIBRARY);
-  path.is_file().then_some(path)
+  let bundled = std::env::current_exe().ok()?.parent()?.join(LIBRARY);
+  if !crate::microsoft_store::is_packaged() {
+    return bundled.is_file().then_some(bundled);
+  }
+  static SHARED: OnceLock<Option<PathBuf>> = OnceLock::new();
+  SHARED
+    .get_or_init(|| shared_library::prepare(&bundled))
+    .clone()
 }
 
 fn journal(app: &AppHandle) -> Option<&'static Journal> {

@@ -69,6 +69,7 @@ pub fn run() {
     .manage(editor::EditorState::default())
     .manage(editor::recording_preview_player::RecordingPreviewPlayerState::default())
     .manage(editor::screenshot_preview::ScreenshotPreviewState::default())
+    .manage(licensing::LicensingState::default())
     .manage(permissions::PermissionState::default())
     .manage(recording::RecordingState::default())
     .manage(recording::ReplayState::default())

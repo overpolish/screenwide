@@ -2,14 +2,14 @@
 // SPDX-License-Identifier: Elastic-2.0
 
 use serde::{Deserialize, Serialize};
-use tauri::{AppHandle, Manager};
+use tauri::AppHandle;
 use tauri_plugin_opener::OpenerExt;
 use ts_rs::TS;
 
 use screenwide_licensing::{ActivationOutcome, Refusal, Tool, BUNDLE_CHECKOUT_URL};
 
 use super::view::{self, Licences, PaidTool};
-use super::{emit_changed, now, save, server, LicensingState};
+use super::{emit_changed, licensing, now, save, server};
 
 /// What came of adding a key.
 #[derive(Clone, Debug, Serialize, TS)]
@@ -48,7 +48,7 @@ pub async fn add_licence_key(app: AppHandle, key: String) -> AddKeyOutcome {
   }
   let installation_id = installation_id(&app);
   let outcome = server::activate(&license_key, &installation_id).await;
-  let licensing = app.state::<LicensingState>();
+  let licensing = licensing(&app);
   let (result, saved) = {
     let Ok(mut state) = licensing.state.write() else {
       return AddKeyOutcome::Unavailable;
@@ -80,7 +80,7 @@ pub async fn add_licence_key(app: AppHandle, key: String) -> AddKeyOutcome {
 
 #[tauri::command]
 pub fn remove_licence_key(app: AppHandle, id: String) -> Licences {
-  let licensing = app.state::<LicensingState>();
+  let licensing = licensing(&app);
   let saved = licensing.state.write().ok().map(|mut state| {
     state.activations.retain(|activation| activation.id() != id);
     state.clone()
@@ -109,7 +109,7 @@ pub fn open_licence_checkout(app: AppHandle, checkout: Checkout) -> Result<(), S
 /// answer leaves it, to be asked about at the next launch.
 pub(super) async fn recheck_due(app: &AppHandle) {
   let (due, installation_id) = {
-    let licensing = app.state::<LicensingState>();
+    let licensing = licensing(app);
     let Ok(state) = licensing.state.read() else {
       return;
     };
@@ -123,7 +123,7 @@ pub(super) async fn recheck_due(app: &AppHandle) {
     if outcome == ActivationOutcome::Unavailable {
       continue;
     }
-    let licensing = app.state::<LicensingState>();
+    let licensing = licensing(app);
     let saved = licensing.state.write().ok().map(|mut state| {
       state.apply_check(&license_key, outcome, now(), &licensing.server_key);
       state.clone()
@@ -136,8 +136,7 @@ pub(super) async fn recheck_due(app: &AppHandle) {
 }
 
 fn installation_id(app: &AppHandle) -> String {
-  app
-    .state::<LicensingState>()
+  licensing(app)
     .state
     .read()
     .map(|state| state.installation_id.clone())

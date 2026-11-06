@@ -2,12 +2,12 @@
 // SPDX-License-Identifier: Elastic-2.0
 
 use serde::{Deserialize, Serialize};
-use tauri::{AppHandle, Manager};
+use tauri::AppHandle;
 use ts_rs::TS;
 
 use screenwide_licensing::{Access, Tool, TRIAL_DAYS};
 
-use super::LicensingState;
+use super::licensing;
 
 /// A paid tool, as the pages name it.
 #[derive(Clone, Copy, Debug, Deserialize, PartialEq, Eq, Serialize, TS)]
@@ -91,7 +91,7 @@ pub struct Licences {
 }
 
 pub(super) fn current(app: &AppHandle) -> Licences {
-  let licensing = app.state::<LicensingState>();
+  let licensing = licensing(app);
   let now = super::now();
   let Ok(state) = licensing.state.read() else {
     return Licences {

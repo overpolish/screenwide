@@ -14,7 +14,7 @@ mod view;
 
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::RwLock;
+use std::sync::{OnceLock, RwLock};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use screenwide_licensing::{LicenseState, VerifyingKey};
@@ -32,16 +32,30 @@ const OPEN_EVENT: &str = "licences://open";
 /// Tells every window the licences changed, with what they now are.
 const CHANGED_EVENT: &str = "licences://changed";
 
-pub(crate) struct LicensingState {
+/// Managed on the builder and read from disk on first use, by whoever asks
+/// first. Tauri builds the windows in `tauri.conf.json` before `setup`, and
+/// building each WebView runs the message loop, so a page can ask for its
+/// licences before `initialize` has run.
+#[derive(Default)]
+pub(crate) struct LicensingState(OnceLock<Licensing>);
+
+struct Licensing {
   state: RwLock<LicenseState>,
   /// None when the app has no config folder, where nothing can be kept.
   path: Option<PathBuf>,
   server_key: VerifyingKey,
 }
 
-/// Reads the state, or makes it with a new installation ID, and checks
-/// again with the server any keys that are due.
-pub(crate) fn initialize(app: &AppHandle) {
+fn licensing(app: &AppHandle) -> &Licensing {
+  app
+    .state::<LicensingState>()
+    .inner()
+    .0
+    .get_or_init(|| load(app))
+}
+
+/// Reads the state, or makes it with a new installation ID.
+fn load(app: &AppHandle) -> Licensing {
   let path = app
     .path()
     .app_config_dir()
@@ -54,11 +68,17 @@ pub(crate) fn initialize(app: &AppHandle) {
   if is_new {
     save(path.clone(), &state);
   }
-  app.manage(LicensingState {
+  Licensing {
     state: RwLock::new(state),
     path,
     server_key: screenwide_licensing::server_key(),
-  });
+  }
+}
+
+/// Loads the state, if no page has asked for it yet, and checks again with
+/// the server any keys that are due.
+pub(crate) fn initialize(app: &AppHandle) {
+  licensing(app);
   let app = app.clone();
   tauri::async_runtime::spawn(async move {
     commands::recheck_due(&app).await;
@@ -78,7 +98,7 @@ pub(crate) fn allow(app: &AppHandle, tool: Tool) -> bool {
 /// Whether `tool` may start now, starting the trial on first use, without
 /// opening Settings when it may not.
 pub(crate) fn may_start(app: &AppHandle, tool: Tool) -> bool {
-  let licensing = app.state::<LicensingState>();
+  let licensing = licensing(app);
   let (access, started) = {
     let Ok(mut state) = licensing.state.write() else {
       return true;

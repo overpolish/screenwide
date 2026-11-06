@@ -4,9 +4,11 @@
 // Packs a Windows release build as the Microsoft Store package (MSIX). Tauri
 // makes no MSIX, so this lays the build out as the NSIS installer does: the
 // app beside its bundled programs, with the resources the Tauri configs name
-// at the paths they map to. It adds the Store logos and the manifest
-// (`src-tauri/msix/AppxManifest.xml`), then packs the folder with the Windows
-// SDK's makeappx. The Store signs the package when it is submitted.
+// at the paths they map to. It adds the Store logos, the taskbar's unplated
+// logos (`src-tauri/msix/Assets`) and the manifest
+// (`src-tauri/msix/AppxManifest.xml`), indexes them with the Windows SDK's
+// makepri and packs the folder with its makeappx. The Store signs the package
+// when it is submitted.
 //
 //   node scripts/package-msix.mjs [--target <triple>]
 //
@@ -88,18 +90,24 @@ const logos = ["Square150x150Logo.png", "Square44x44Logo.png", "StoreLogo.png"];
 for (const logo of logos) {
   await copy(join(tauri, "icons", logo), join(stage, "Assets", logo));
 }
+// Without unplated sizes of the small logo, the taskbar and Start draw it
+// shrunk on a tile of the accent colour.
+await cp(join(tauri, "msix", "Assets"), join(stage, "Assets"), {
+  recursive: true,
+});
 
 const manifest = (
   await readFile(join(tauri, "msix", "AppxManifest.xml"), "utf8")
 )
-  .replace("{{VERSION}}", packageVersion)
-  .replace("{{ARCHITECTURE}}", architecture);
+  .replaceAll("{{VERSION}}", packageVersion)
+  .replaceAll("{{ARCHITECTURE}}", architecture);
 await writeFile(join(stage, "AppxManifest.xml"), manifest);
 
-// The newest Windows SDK's makeappx, for the machine this runs on, unless
-// MAKEAPPX names one.
-function findMakeappx() {
-  if (env.MAKEAPPX) return env.MAKEAPPX;
+// The newest Windows SDK's copy of `name` (makeappx, makepri), for the machine
+// this runs on, unless the variable of its name in capitals names one.
+function findSdkTool(name) {
+  const override = env[name.toUpperCase()];
+  if (override) return override;
   const kits = "C:\\Program Files (x86)\\Windows Kits\\10\\bin";
   const host = hostArch === "arm64" ? "arm64" : "x64";
   const versions = existsSync(kits)
@@ -110,12 +118,45 @@ function findMakeappx() {
     : [];
   for (const sdk of versions) {
     for (const folder of [host, "x64"]) {
-      const tool = join(kits, sdk, folder, "makeappx.exe");
+      const tool = join(kits, sdk, folder, `${name}.exe`);
       if (existsSync(tool)) return tool;
     }
   }
-  throw new Error("makeappx was not found; install the Windows SDK");
+  throw new Error(`${name} was not found; install the Windows SDK`);
 }
+
+// Windows finds a logo's sizes through the package's resource index, and
+// ignores any file it does not list. Only the logos are indexed, from a copy
+// of `Assets` laid out as in the package: the rest of the package is plain
+// files, some with dots makepri would read as qualifiers
+// (`whisper.cpp-MIT.txt`). The copy and the index's config stay out of the
+// package.
+const makepri = findSdkTool("makepri");
+const indexed = join(dirname(stage), "resources");
+await rm(indexed, { force: true, recursive: true });
+await cp(join(stage, "Assets"), join(indexed, "Assets"), { recursive: true });
+const priConfig = join(dirname(stage), "priconfig.xml");
+execFileSync(
+  makepri,
+  ["createconfig", "/cf", priConfig, "/dq", "en-US", "/pv", "10.0.0", "/o"],
+  { stdio: "inherit" },
+);
+execFileSync(
+  makepri,
+  [
+    "new",
+    "/pr",
+    indexed,
+    "/cf",
+    priConfig,
+    "/mn",
+    join(stage, "AppxManifest.xml"),
+    "/of",
+    join(stage, "resources.pri"),
+    "/o",
+  ],
+  { stdio: "inherit" },
+);
 
 const output = join(
   release,
@@ -124,8 +165,12 @@ const output = join(
   `Screenwide_${version}_${architecture}.msix`,
 );
 await mkdir(dirname(output), { recursive: true });
-execFileSync(findMakeappx(), ["pack", "/d", stage, "/p", output, "/o"], {
-  stdio: "inherit",
-});
+execFileSync(
+  findSdkTool("makeappx"),
+  ["pack", "/d", stage, "/p", output, "/o"],
+  {
+    stdio: "inherit",
+  },
+);
 console.log(`Packed ${output}`);
 console.log(`Staged ${stage}`);
