@@ -120,6 +120,12 @@ jobs:
         if: runner.os == 'Windows'
         run: pnpm tauri build ${{ matrix.args }}
 
+      # The speech enhancer's kernels are assembled per processor (and patched
+      # for ARM64, `src-tauri/vendor`); running it here proves them on each.
+      - name: Check the speech enhancer runs
+        if: runner.os == 'Windows'
+        run: pnpm transcriber:check-clean --target ${{ matrix.target }}
+
       # The Microsoft Store package. It goes to the draft release; Partner
       # Center takes it from there by hand, and the Store signs it. The Store
       # takes plain versions only, so a prerelease has none.

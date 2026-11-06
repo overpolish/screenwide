@@ -62,6 +62,7 @@
     "site:dev": "vite --config vite.site.config.ts",
     "storybook": "storybook dev -p 6006",
     "tauri": "tauri",
+    "transcriber:check-clean": "node scripts/check-transcriber-clean.mjs",
     "transcriber:prepare": "node scripts/prepare-transcriber.mjs",
     "window-hider:prepare": "node scripts/prepare-window-hider.mjs",
     "update:preview": "storybook dev -p 6006 --initial-path=/story/features-updates-island-update--available",
