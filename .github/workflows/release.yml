@@ -51,14 +51,16 @@ jobs:
             os: macos-15
             target: aarch64-apple-darwin
             args: --target aarch64-apple-darwin --bundles app,dmg
+          # Windows is released through the Microsoft Store only: its jobs
+          # build the app for the Store package and attach no installer.
           - name: Windows x64
             os: windows-latest
             target: x86_64-pc-windows-msvc
-            args: --target x86_64-pc-windows-msvc --bundles nsis
+            args: --target x86_64-pc-windows-msvc --no-bundle
           - name: Windows ARM64
             os: windows-11-arm
             target: aarch64-pc-windows-msvc
-            args: --target aarch64-pc-windows-msvc --bundles nsis
+            args: --target aarch64-pc-windows-msvc --no-bundle
 
     steps:
       - name: Check out repository
@@ -95,6 +97,7 @@ jobs:
         run: pnpm release:check-version ${{ github.ref_name }}
 
       - name: Build and upload signed bundles
+        if: runner.os == 'macOS'
         uses: tauri-apps/tauri-action@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -111,13 +114,15 @@ jobs:
           releaseId: ${{ needs.prepare.outputs.release_id }}
           releaseDraft: true
           tagName: ${{ github.ref_name }}
-          updaterJsonPreferNsis: true
           uploadUpdaterJson: true
 
-      # The Microsoft Store package, made from the same build. It goes to the
-      # draft release beside the installers; Partner Center takes it from
-      # there by hand, and the Store signs it. The Store takes plain versions
-      # only, so a prerelease has none.
+      - name: Build the app
+        if: runner.os == 'Windows'
+        run: pnpm tauri build ${{ matrix.args }}
+
+      # The Microsoft Store package. It goes to the draft release; Partner
+      # Center takes it from there by hand, and the Store signs it. The Store
+      # takes plain versions only, so a prerelease has none.
       - name: Pack and attach the Microsoft Store package
         if: runner.os == 'Windows' && !contains(github.ref_name, '-')
         shell: bash
@@ -152,26 +157,15 @@ jobs:
         run: |
           expected_version="${RELEASE_TAG#v}"
           jq --exit-status --arg version "$expected_version" '
-            def valid($platform):
-              (.platforms[$platform].url | type == "string" and length > 0) and
-              (.platforms[$platform].signature | type == "string" and length > 0);
             .version == $version and
-            valid("darwin-aarch64") and
-            valid("windows-x86_64-nsis") and
-            valid("windows-aarch64-nsis")
+            (.platforms["darwin-aarch64"].url | type == "string" and length > 0) and
+            (.platforms["darwin-aarch64"].signature | type == "string" and length > 0)
           ' latest.json > /dev/null
 
-      - name: Verify updater downloads
+      - name: Verify updater download
         run: |
-          jq --raw-output '
-            .platforms[
-              "darwin-aarch64",
-              "windows-x86_64-nsis",
-              "windows-aarch64-nsis"
-            ].url
-          ' latest.json | while IFS= read -r url; do
-            curl --fail --location --silent --show-error \
-              -H "Authorization: Bearer $GH_TOKEN" \
-              -H "Accept: application/octet-stream" \
-              --range 0-0 "$url" > /dev/null
-          done
+          url="$(jq --raw-output '.platforms["darwin-aarch64"].url' latest.json)"
+          curl --fail --location --silent --show-error \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/octet-stream" \
+            --range 0-0 "$url" > /dev/null

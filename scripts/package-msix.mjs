@@ -2,10 +2,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 // Packs a Windows release build as the Microsoft Store package (MSIX). Tauri
-// makes no MSIX, so this lays the build out as the NSIS installer does: the
-// app beside its bundled programs, with the resources the Tauri configs name
-// at the paths they map to. It adds the Store logos, the taskbar's unplated
-// logos (`src-tauri/msix/Assets`) and the manifest
+// makes no MSIX, so this lays the build out as Tauri's Windows installer
+// would: the app beside its bundled programs, with the resources the Tauri
+// configs name at the paths they map to. It adds the Store logos, the
+// taskbar's unplated logos (`src-tauri/msix/Assets`) and the manifest
 // (`src-tauri/msix/AppxManifest.xml`), indexes them with the Windows SDK's
 // makepri and packs the folder with its makeappx. The Store signs the package
 // when it is submitted.

@@ -17,8 +17,11 @@ import { SiteClip } from "./site-clip";
 
 import type { IslandPart } from "../primitives/island/island-outline-sync";
 
-const download = () => {
-  window.location.href = RELEASES;
+// Windows gets Screenwide from the Microsoft Store, which signs and updates
+// it; macOS from the latest GitHub release's DMG.
+const DOWNLOADS = {
+  macos: RELEASES,
+  windows: "https://apps.microsoft.com/detail/9MSN8CRH5W0F",
 };
 
 function DownloadButtons() {
@@ -33,7 +36,9 @@ function DownloadButtons() {
         <Button
           color={index === 0 ? "primary" : "neutral"}
           key={system}
-          onPress={download}
+          onPress={() => {
+            window.location.href = DOWNLOADS[system];
+          }}
         >
           {system === "macos"
             ? t("site-download-macos")

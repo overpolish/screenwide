@@ -15,10 +15,10 @@ if (!tag || !/^v\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/.test(tag)) {
   );
   exit(1);
 }
-if (!["darwin", "win32"].includes(platform)) {
-  console.error(
-    "Screenwide staging update clients are supported on macOS and Windows.",
-  );
+// Windows is released through the Microsoft Store, which updates it, so
+// releases carry no Windows updater bundle to stage.
+if (platform !== "darwin") {
+  console.error("Screenwide staging update clients are made on macOS only.");
   exit(1);
 }
 
@@ -39,9 +39,7 @@ const hasBundleOption = extraOptions.some(
     option === "-b" ||
     option.startsWith("--bundles="),
 );
-const defaultBundles = hasBundleOption
-  ? []
-  : ["--bundles", platform === "win32" ? "nsis" : "app"];
+const defaultBundles = hasBundleOption ? [] : ["--bundles", "app"];
 
 console.log(
   `Building Screenwide ${clientVersion} as an updater test client (source version ${String(packageJson.version)})`,

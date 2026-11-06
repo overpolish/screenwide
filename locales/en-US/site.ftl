@@ -46,7 +46,7 @@ site-glide-body = Snap windows to halves, quarters or thirds with a trackpad or 
 # Names the recording of Glide at work, for assistive technology.
 site-glide-recording = Two windows snapped into the halves of the screen
 site-footer-licence = Free software under the GNU GPL, version 3 or later.
-site-footer-requirements = macOS 14.2 or later, and Windows.
+site-footer-requirements = macOS 14.2 or later, and Windows 10 22H2 or later from the Microsoft Store.
 # Links to every release and its notes.
 site-footer-releases = All releases
 # Links to the privacy page.
@@ -60,14 +60,20 @@ site-privacy-document-title = Screenwide privacy
 # $date is when the page last changed, such as 6 November 2026.
 site-privacy-updated = Updated { $date }
 site-privacy-intro = Screenwide runs on your computer. It has no analytics or tracking, and your recordings, screenshots and projects stay on your computer.
+site-privacy-controller = Screenwide is made by overpolish, which is responsible for the personal data described on this page.
 site-privacy-app-title = What the app sends
-site-privacy-licence = Licence keys. When you add a key, and every three weeks after, the app sends it to license.getscreenwide.com with a random ID made for your installation. The server checks the key with Payhip and records only whether the check worked and which tools the key unlocks. The free trial is counted on your computer.
-site-privacy-updates = Updates. The version downloaded from this website asks GitHub for new versions and their release notes. The Microsoft Store version is updated by the Store.
-site-privacy-models = Models. Transcription and sound models are downloaded from Hugging Face when you choose to download them.
+site-privacy-licence = Licence keys. When you add a key, and every three weeks after, the app sends it to license.getscreenwide.com with a random ID made for your installation. The server checks the key with Payhip and records only whether the check worked and which tools the key unlocks. This is how the app gives you the tools you bought. The free trial is counted on your computer.
+site-privacy-updates = Updates. The macOS version asks GitHub for new versions and their release notes. The Windows version comes from the Microsoft Store, which updates it.
+site-privacy-models = Models. Models for transcripts, sound and the camera are downloaded from Hugging Face and GitHub when you choose to download them.
 site-privacy-buying-title = Buying tools
 site-privacy-buying = Purchases go through Payhip, which takes your payment and email address under its own privacy policy.
 site-privacy-site-title = This website
 site-privacy-site = The website and the licence server run on Cloudflare, which sees your IP address as any host does. The website sets no cookies and runs no analytics.
-site-privacy-questions-title = Questions
-# Links to the issues on GitHub.
-site-privacy-questions = Open an issue on GitHub
+site-privacy-retention-title = How long it is kept
+site-privacy-retention = The licence server keeps no record of keys or installations. Cloudflare keeps its logs, which hold the outcome of each check and details of the request such as your IP address, for up to 7 days. Payhip keeps your purchases under its own policy.
+site-privacy-transfers-title = Where it is handled
+site-privacy-transfers = Cloudflare, Payhip, GitHub and Hugging Face may handle this data outside the UK and the European Union, under the safeguards in their own terms.
+site-privacy-rights-title = Your rights
+site-privacy-rights = You can ask to see, correct or delete personal data about you, or object to how it is used. If you are not happy with the answer, you can complain to the Information Commissioner's Office, or to the data protection authority where you live.
+# Links to an email to Screenwide. $email is the address.
+site-privacy-questions = Email { $email }
