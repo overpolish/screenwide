@@ -17,6 +17,7 @@ const ELASTIC_PATHS = [
   "src/features/glide/",
   "src/features/reference/",
   "src/features/ruler/",
+  "src-tauri/crates/licensing/",
   "src-tauri/crates/osc/src/gpu/shaders/reference.wgsl",
   "src-tauri/crates/osc/src/gpu/vertices/ruler.rs",
   "src-tauri/src/app_windows/glide_island_control.rs",
