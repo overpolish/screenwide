@@ -5,7 +5,6 @@ use std::{path::PathBuf, sync::RwLock};
 
 use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Emitter, Manager};
-use tauri_plugin_autostart::ManagerExt;
 
 use crate::settings::background_preset::BackgroundPreset;
 use crate::settings::capture_exclusions::{self, HiddenApp};
@@ -184,7 +183,7 @@ fn validate(settings: &GeneralSettings) -> Result<(), String> {
 
 pub fn initialize(app: &AppHandle) {
   let mut settings = read(app);
-  settings.launch_at_login = app.autolaunch().is_enabled().unwrap_or(false);
+  settings.launch_at_login = crate::launch_at_login::is_enabled(app);
   capture_exclusions::apply(&settings);
   *app
     .state::<GeneralSettingsState>()
@@ -215,13 +214,7 @@ pub fn set_general_settings(
   validate(&settings)?;
   let current_settings = current(&app);
   if settings.launch_at_login != current_settings.launch_at_login {
-    let autolaunch = app.autolaunch();
-    if settings.launch_at_login {
-      autolaunch.enable().map_err(|error| error.to_string())?;
-    } else {
-      autolaunch.disable().map_err(|error| error.to_string())?;
-    }
-    settings.launch_at_login = autolaunch.is_enabled().unwrap_or(settings.launch_at_login);
+    settings.launch_at_login = crate::launch_at_login::set(&app, settings.launch_at_login)?;
   }
   #[cfg(target_os = "windows")]
   let capture_affinity_changed =

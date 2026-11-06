@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-FileCopyrightText: 2026 overpolish -->
+<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
+<!--
+  The Microsoft Store package's manifest. `scripts/package-msix.mjs` fills in
+  {{VERSION}} and {{ARCHITECTURE}} and packs it with the build. The identity
+  is the one Partner Center reserved for Screenwide; the Store rejects a
+  package whose identity differs.
+-->
+<Package
+  xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10"
+  xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10"
+  xmlns:desktop="http://schemas.microsoft.com/appx/manifest/desktop/windows10"
+  xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities"
+  IgnorableNamespaces="uap desktop rescap">
+  <Identity
+    Name="overpolish.Screenwide"
+    Publisher="CN=20209A30-FD28-4F20-817F-331CCDE1D196"
+    Version="{{VERSION}}"
+    ProcessorArchitecture="{{ARCHITECTURE}}" />
+  <Properties>
+    <DisplayName>Screenwide</DisplayName>
+    <PublisherDisplayName>overpolish</PublisherDisplayName>
+    <Logo>Assets\StoreLogo.png</Logo>
+  </Properties>
+  <!-- Build 19041 underlies Windows 10 22H2, the oldest Windows Microsoft
+       still supports. -->
+  <Dependencies>
+    <TargetDeviceFamily Name="Windows.Desktop" MinVersion="10.0.19041.0" MaxVersionTested="10.0.26100.0" />
+  </Dependencies>
+  <Resources>
+    <Resource Language="en-us" />
+  </Resources>
+  <Applications>
+    <Application Id="Screenwide" Executable="screenwide.exe" EntryPoint="Windows.FullTrustApplication">
+      <uap:VisualElements
+        DisplayName="Screenwide"
+        Description="Screenwide"
+        BackgroundColor="transparent"
+        Square150x150Logo="Assets\Square150x150Logo.png"
+        Square44x44Logo="Assets\Square44x44Logo.png" />
+      <Extensions>
+        <uap:Extension Category="windows.fileTypeAssociation">
+          <uap:FileTypeAssociation Name="screenwide">
+            <uap:DisplayName>Screenwide Project</uap:DisplayName>
+            <uap:SupportedFileTypes>
+              <uap:FileType>.screenwide</uap:FileType>
+            </uap:SupportedFileTypes>
+          </uap:FileTypeAssociation>
+        </uap:Extension>
+        <!-- Launch at login (`src-tauri/src/microsoft_store.rs`), off until
+             the user turns it on in Settings. -->
+        <desktop:Extension Category="windows.startupTask" Executable="screenwide.exe" EntryPoint="Windows.FullTrustApplication">
+          <desktop:StartupTask TaskId="ScreenwideStartup" Enabled="false" DisplayName="Screenwide" />
+        </desktop:Extension>
+      </Extensions>
+    </Application>
+  </Applications>
+  <Capabilities>
+    <!-- A desktop app, not a sandboxed one: it captures the screen, hides
+         chosen windows from capture and moves other apps' windows. -->
+    <rescap:Capability Name="runFullTrust" />
+    <DeviceCapability Name="webcam" />
+    <DeviceCapability Name="microphone" />
+  </Capabilities>
+</Package>

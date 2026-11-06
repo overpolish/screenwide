@@ -54,7 +54,11 @@ export function useUpdateBridge(
 
   useEffect(() => {
     latestRef.current = update;
-    if (["up-to-date", "available", "development"].includes(update.status))
+    if (
+      ["up-to-date", "available", "development", "store"].includes(
+        update.status,
+      )
+    )
       checkedAtRef.current = Date.now();
     const snapshot: UpdateSnapshot = {
       currentVersion: update.currentVersion,

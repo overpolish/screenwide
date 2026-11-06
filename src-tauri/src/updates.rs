@@ -36,9 +36,25 @@ pub(crate) fn give_way(app: &AppHandle) {
   tell(app, false);
 }
 
+/// Where this build's updates come from: its own updater, the Microsoft
+/// Store for the Store package, or nowhere for a development build.
+#[derive(Clone, Copy, serde::Serialize)]
+#[serde(rename_all = "lowercase")]
+pub enum UpdateSource {
+  Updater,
+  Store,
+  Development,
+}
+
 #[tauri::command]
-pub fn update_checks_enabled() -> bool {
-  !cfg!(debug_assertions)
+pub fn update_source() -> UpdateSource {
+  if crate::microsoft_store::is_packaged() {
+    UpdateSource::Store
+  } else if cfg!(debug_assertions) {
+    UpdateSource::Development
+  } else {
+    UpdateSource::Updater
+  }
 }
 
 /// Brings the island out at the top of the screen to offer an update, if it

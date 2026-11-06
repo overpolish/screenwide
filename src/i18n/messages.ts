@@ -1272,6 +1272,7 @@ export type Messages = {
   "settings-transcription-transcripts-description": null;
   "settings-update-to": { version: string | number };
   "settings-version": { version: string | number };
+  "settings-version-store": { version: string | number };
   "settings-voice-notes": null;
   "settings-voice-notes-enabled": null;
   "settings-voice-notes-enabled-description": null;
@@ -1295,6 +1296,7 @@ export type Messages = {
   "site-download-windows": null;
   "site-edit-recording": null;
   "site-footer-licence": null;
+  "site-footer-privacy": null;
   "site-footer-releases": null;
   "site-footer-requirements": null;
   "site-free-body": null;
@@ -1307,6 +1309,20 @@ export type Messages = {
   "site-hero-title": null;
   "site-name": null;
   "site-nav-source": null;
+  "site-privacy-app-title": null;
+  "site-privacy-buying": null;
+  "site-privacy-buying-title": null;
+  "site-privacy-document-title": null;
+  "site-privacy-intro": null;
+  "site-privacy-licence": null;
+  "site-privacy-models": null;
+  "site-privacy-questions": null;
+  "site-privacy-questions-title": null;
+  "site-privacy-site": null;
+  "site-privacy-site-title": null;
+  "site-privacy-title": null;
+  "site-privacy-updated": { date: string | number };
+  "site-privacy-updates": null;
   "site-read-body": null;
   "site-read-recording": null;
   "site-read-title": null;

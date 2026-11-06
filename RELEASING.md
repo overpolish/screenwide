@@ -5,7 +5,7 @@ SPDX-License-Identifier: GPL-3.0-or-later
 
 # Releasing Screenwide
 
-Screenwide publishes installers and signed Tauri updater bundles through GitHub Releases. A pushed version tag builds native Apple Silicon macOS, Windows x64, and Windows ARM64 artifacts. Intel macOS is not supported. The workflow creates a draft release so the files and release notes can be checked before users' apps see it.
+Screenwide publishes installers and signed Tauri updater bundles through GitHub Releases, and Microsoft Store packages for Windows. A pushed version tag builds native Apple Silicon macOS, Windows x64, and Windows ARM64 artifacts. Intel macOS is not supported. The workflow creates a draft release so the files and release notes can be checked before users' apps see it.
 
 ## User update flow
 
@@ -78,10 +78,28 @@ Windows installers are updater-signed but not yet Authenticode code-signed, so W
    git push origin v0.2.0
    ```
 
-4. Wait for the Release workflow to finish, including the **Verify updater assets** job. In the draft GitHub Release, verify the Apple Silicon macOS DMG, both Windows NSIS installers, signed updater bundles, and `latest.json`.
+4. Wait for the Release workflow to finish, including the **Verify updater assets** job. In the draft GitHub Release, verify the Apple Silicon macOS DMG, both Windows NSIS installers, both Microsoft Store packages (`.msix`, not made for prereleases), signed updater bundles, and `latest.json`.
 5. Edit the generated notes if needed, then publish the draft. Publishing makes it the endpoint served by `releases/latest/download/latest.json`, so installed copies can offer it.
 
 Do not publish a partially successful release. Rerun failed jobs or delete the draft and tag, correct the issue, and create a new version.
+
+## Microsoft Store
+
+The Store installs and updates its own copy of Screenwide from an MSIX package. Tauri makes none, so `pnpm msix:package` (`scripts/package-msix.mjs`) lays out a Windows release build as the NSIS installer does, adds the Store logos and the manifest (`src-tauri/msix/AppxManifest.xml`), and packs it with the Windows SDK's makeappx. The manifest carries the identity Partner Center reserved for Screenwide (`overpolish.Screenwide`, Store ID `9MSN8CRH5W0F`); the Store rejects a package whose identity differs. The Release workflow attaches the x64 and ARM64 packages to the draft release.
+
+A packaged copy knows it is one (`src-tauri/src/microsoft_store.rs`): it does not update itself, and Settings says the Store updates it, and it launches at login through the package's startup task rather than the autostart plugin, whose registry entry Windows redirects for packaged apps.
+
+To submit a release, open Screenwide in Partner Center, start a submission and upload both `.msix` files under Packages; the Store signs them. The listing's privacy policy is <https://getscreenwide.com/privacy>, and the `runFullTrust` capability needs a line saying why: Screenwide captures the screen, hides chosen windows from capture and moves other apps' windows, which a sandboxed app cannot.
+
+To try a package before submitting it, on Windows with developer mode turned on, build it and register its folder, which installs it unsigned under its package identity:
+
+```powershell
+pnpm tauri build --target x86_64-pc-windows-msvc --bundles nsis
+pnpm msix:package --target x86_64-pc-windows-msvc
+Add-AppxPackage -Register src-tauri\target\x86_64-pc-windows-msvc\msix\Screenwide\AppxManifest.xml
+```
+
+`Get-AppxPackage overpolish.Screenwide | Remove-AppxPackage` removes it.
 
 ## Debugging updates
 

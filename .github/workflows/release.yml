@@ -114,6 +114,20 @@ jobs:
           updaterJsonPreferNsis: true
           uploadUpdaterJson: true
 
+      # The Microsoft Store package, made from the same build. It goes to the
+      # draft release beside the installers; Partner Center takes it from
+      # there by hand, and the Store signs it. The Store takes plain versions
+      # only, so a prerelease has none.
+      - name: Pack and attach the Microsoft Store package
+        if: runner.os == 'Windows' && !contains(github.ref_name, '-')
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          pnpm msix:package --target ${{ matrix.target }}
+          gh release upload "${{ github.ref_name }}" \
+            src-tauri/target/${{ matrix.target }}/release/bundle/msix/*.msix --clobber
+
   verify:
     name: Verify updater assets
     needs: [prepare, build]

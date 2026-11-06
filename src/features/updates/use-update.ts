@@ -17,7 +17,13 @@ export type UpdateStatus =
   | "downloading"
   | "error"
   | "idle"
+  | "store"
   | "up-to-date";
+
+/** Where the build's updates come from (`updates::update_source`): its own
+ * updater, the Microsoft Store for the Store package, or nowhere for a
+ * development build. */
+type UpdateSource = "development" | "store" | "updater";
 
 const errorMessage = (reason: unknown) =>
   reason instanceof Error ? reason.message : String(reason);
@@ -44,16 +50,17 @@ export function useUpdate({ autoCheck = true } = {}) {
     setError(null);
     setStatus("checking");
     try {
-      const [version, checksEnabled] = await Promise.all([
+      const [version, source] = await Promise.all([
         getVersion(),
-        invoke<boolean>("update_checks_enabled"),
+        invoke<UpdateSource>("update_source"),
       ]);
       if (request !== checkRequestRef.current) return;
       setCurrentVersion(version);
 
-      if (!checksEnabled) {
-        updateDebug("Skipping updater check for a development build", {
+      if (source !== "updater") {
+        updateDebug("Skipping updater check", {
           currentVersion: version,
+          source,
         });
         if (updateRef.current) await updateRef.current.close();
         updateRef.current = null;
@@ -61,7 +68,7 @@ export function useUpdate({ autoCheck = true } = {}) {
         setReleaseDate(null);
         setReleaseNotes(null);
         setUpdateVersion(null);
-        setStatus("development");
+        setStatus(source);
         return;
       }
 

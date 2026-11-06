@@ -30,6 +30,8 @@ settings-section-licences = Licences
 settings-about = About
 settings-app-name = { -app-name }
 settings-version = Version { $version }
+# Under the app's name in a copy installed from the Microsoft Store, which updates it. $version is its version, such as 1.2.0.
+settings-version-store = Version { $version }. Updates come from the Microsoft Store.
 settings-update-to = Update to v{ $version }
 settings-check-updates = Check for Updates
 settings-saving = Saving
