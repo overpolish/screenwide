@@ -404,7 +404,7 @@ settings-licences-add = Add
 # A paid tool's row when its key is held. $hint is the key's last characters, so a buyer's keys can be told apart.
 settings-licences-licensed-key = Licensed, key ending { $hint }
 # $tools is a list of tool names, such as "Ruler and Glide".
-settings-licences-key-added = Added. It unlocks { $tools }.
+settings-licences-key-added = Key unlocked { $tools }.
 settings-licences-key-invalid = This key isn’t recognised. Check it against your receipt.
 settings-licences-key-disabled = This key has been refunded or turned off.
 settings-licences-key-unavailable = Couldn’t reach the licence server. Check your connection and try again.
