@@ -49,3 +49,25 @@ site-footer-licence = Free software under the GNU GPL, version 3 or later.
 site-footer-requirements = macOS 14.2 or later, and Windows.
 # Links to every release and its notes.
 site-footer-releases = All releases
+# Links to the privacy page.
+site-footer-privacy = Privacy
+
+## The privacy page, at /privacy. It says what the app and the website send, and to whom.
+
+site-privacy-title = Privacy
+# The browser tab's title on the privacy page.
+site-privacy-document-title = Screenwide privacy
+# $date is when the page last changed, such as 6 November 2026.
+site-privacy-updated = Updated { $date }
+site-privacy-intro = Screenwide runs on your computer. It has no analytics or tracking, and your recordings, screenshots and projects stay on your computer.
+site-privacy-app-title = What the app sends
+site-privacy-licence = Licence keys. When you add a key, and every three weeks after, the app sends it to license.getscreenwide.com with a random ID made for your installation. The server checks the key with Payhip and records only whether the check worked and which tools the key unlocks. The free trial is counted on your computer.
+site-privacy-updates = Updates. The version downloaded from this website asks GitHub for new versions and their release notes. The Microsoft Store version is updated by the Store.
+site-privacy-models = Models. Transcription and sound models are downloaded from Hugging Face when you choose to download them.
+site-privacy-buying-title = Buying tools
+site-privacy-buying = Purchases go through Payhip, which takes your payment and email address under its own privacy policy.
+site-privacy-site-title = This website
+site-privacy-site = The website and the licence server run on Cloudflare, which sees your IP address as any host does. The website sets no cookies and runs no analytics.
+site-privacy-questions-title = Questions
+# Links to the issues on GitHub.
+site-privacy-questions = Open an issue on GitHub

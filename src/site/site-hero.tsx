@@ -12,12 +12,10 @@ import { cn } from "../lib/styling";
 import { Button } from "../primitives/button/button";
 import { Text } from "../primitives/text/text";
 
+import { RELEASES } from "./site-chrome";
 import { SiteClip } from "./site-clip";
 
 import type { IslandPart } from "../primitives/island/island-outline-sync";
-
-export const RELEASES =
-  "https://github.com/overpolish/screenwide/releases/latest";
 
 const download = () => {
   window.location.href = RELEASES;

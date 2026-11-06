@@ -38,3 +38,9 @@ body {
   user-select: text;
   -webkit-user-select: text;
 }
+
+/* A page shorter than the window shows the page's surface below it, not the
+   browser's own background. */
+html {
+  background-color: var(--color-surface);
+}

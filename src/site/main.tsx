@@ -9,6 +9,7 @@ import { LANGUAGES, layoutLocale, loadLocale } from "../i18n/i18n";
 import { hostPlatform, stampPlatform } from "../lib/platform";
 
 import { SitePage } from "./site-page";
+import { SitePrivacy } from "./site-privacy";
 import "./site.css";
 
 /** The visitor's first language Screenwide is translated into, matched whole
@@ -36,6 +37,10 @@ const followScheme = () => {
 followScheme();
 darkScheme.addEventListener("change", followScheme);
 
+// One script serves both pages; each page's file is built from the same
+// entry, and the path says which page it is.
+const isPrivacy = location.pathname.startsWith("/privacy");
+
 void loadLocale({
   formatLocale: navigator.language,
   language: siteLanguage(),
@@ -43,7 +48,7 @@ void loadLocale({
   createRoot(document.getElementById("root") as HTMLElement).render(
     <StrictMode>
       <I18nProvider locale={layoutLocale()}>
-        <SitePage />
+        {isPrivacy ? <SitePrivacy /> : <SitePage />}
       </I18nProvider>
     </StrictMode>,
   );
