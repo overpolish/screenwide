@@ -12,15 +12,16 @@ import { cn } from "../lib/styling";
 import { Button } from "../primitives/button/button";
 import { Text } from "../primitives/text/text";
 
-import { RELEASES } from "./site-chrome";
 import { SiteClip } from "./site-clip";
 
 import type { IslandPart } from "../primitives/island/island-outline-sync";
 
 // Windows gets Screenwide from the Microsoft Store, which signs and updates
-// it; macOS from the latest GitHub release's DMG.
+// it; macOS from the latest GitHub release's DMG, which the release workflow
+// names without its version so this address always holds the newest.
 const DOWNLOADS = {
-  macos: RELEASES,
+  macos:
+    "https://github.com/overpolish/screenwide/releases/latest/download/Screenwide_aarch64.dmg",
   windows: "https://apps.microsoft.com/detail/9MSN8CRH5W0F",
 };
 

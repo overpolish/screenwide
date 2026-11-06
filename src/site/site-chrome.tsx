@@ -6,8 +6,7 @@ import { t } from "../i18n/i18n";
 import { cn } from "../lib/styling";
 import { Text } from "../primitives/text/text";
 
-export const RELEASES =
-  "https://github.com/overpolish/screenwide/releases/latest";
+const RELEASES = "https://github.com/overpolish/screenwide/releases/latest";
 
 /** An SVG drawn in the text's colour, so it follows the appearance. */
 export function MaskIcon({

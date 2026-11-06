@@ -115,6 +115,10 @@ jobs:
           releaseDraft: true
           tagName: ${{ github.ref_name }}
           uploadUpdaterJson: true
+          # No version in the names, so the website can link to
+          # releases/latest/download/Screenwide_aarch64.dmg. latest.json
+          # carries the updater bundle's own address.
+          releaseAssetNamePattern: "[name]_[arch][ext]"
 
       - name: Build the app
         if: runner.os == 'Windows'
