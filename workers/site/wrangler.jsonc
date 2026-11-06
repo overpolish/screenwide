@@ -1,0 +1,14 @@
+// SPDX-FileCopyrightText: 2026 overpolish
+// SPDX-License-Identifier: GPL-3.0-or-later
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "screenwide-site",
+  "compatibility_date": "2026-11-06",
+  // The website is static: Cloudflare serves the built page straight from
+  // its assets, with no Worker code. `pnpm site:build` writes it here.
+  "assets": { "directory": "../../dist-site" },
+  "routes": [
+    { "pattern": "getscreenwide.com", "custom_domain": true },
+    { "pattern": "www.getscreenwide.com", "custom_domain": true },
+  ],
+}

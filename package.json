@@ -56,6 +56,7 @@
     "test": "vitest run",
     "test:rust": "cargo test --manifest-path src-tauri/Cargo.toml --workspace",
     "site:build": "vite build --config vite.site.config.ts",
+    "site:deploy": "pnpm --filter screenwide-site-worker run deploy",
     "site:dev": "vite --config vite.site.config.ts",
     "storybook": "storybook dev -p 6006",
     "tauri": "tauri",

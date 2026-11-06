@@ -1,0 +1,12 @@
+{
+  "name": "screenwide-site-worker",
+  "private": true,
+  "license": "GPL-3.0-or-later",
+  "type": "module",
+  "scripts": {
+    "deploy": "pnpm --dir ../.. site:build && wrangler deploy"
+  },
+  "devDependencies": {
+    "wrangler": "4.158.0"
+  }
+}

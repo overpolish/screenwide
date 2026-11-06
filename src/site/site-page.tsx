@@ -33,15 +33,18 @@ export function SitePage() {
     <div className="min-h-full bg-surface text-fg">
       <div className="mx-auto max-w-site px-page">
         {/* The island hangs from the top in the middle, as it does on the
-            screen, between the name and the link. */}
-        <header className="grid grid-cols-[1fr_auto_1fr] items-start gap-separate pt-6">
-          <span className="flex h-control-height items-center gap-inline text-tile-title">
+            screen, between the name and the link. Where the three do not
+            fit in a row, the island takes a row of its own under them. It
+            is 440px wide, so below 32rem the page cannot hold it beside its
+            margins, and phone-width windows go without it. */}
+        <header className="grid grid-cols-[1fr_auto] items-start gap-x-separate gap-y-6 pt-6 lg:grid-cols-[1fr_auto_1fr]">
+          <span className="col-start-1 row-start-1 flex h-control-height items-center gap-inline text-tile-title">
             <MaskIcon className="size-icon-lg" src={mark} />
             {t("site-name")}
           </span>
-          <SiteIsland />
+          <SiteIsland className="col-span-2 row-start-2 hidden justify-self-center min-[32rem]:block lg:col-span-1 lg:col-start-2 lg:row-start-1" />
           <Button
-            className="justify-self-end"
+            className="col-start-2 row-start-1 justify-self-end lg:col-start-3"
             onPress={() => {
               window.location.href = SOURCE;
             }}

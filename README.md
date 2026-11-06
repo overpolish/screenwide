@@ -5,6 +5,7 @@
 	<img height="75" alt="" src="./src-tauri/icons/ScreenwideLogo.png" />
 	<h1>Screenwide</h1>
 	<p>Everything screen.</p>
+	<p><a href="https://getscreenwide.com">getscreenwide.com</a></p>
 	<img alt="Latest GitHub release" src="https://img.shields.io/github/v/release/overpolish/screenwide?display_name=tag&label=release&labelColor=5C5C5C&color=282320" />
 	<img alt="Platforms: macOS 14.2 or later and Windows" src="https://img.shields.io/badge/platforms-macOS_14.2%2B_%7C_Windows-282320?labelColor=5C5C5C" />
 	<img alt="License: GPL-3.0-or-later and Elastic-2.0" src="https://img.shields.io/badge/license-GPL--3.0_%2B_Elastic--2.0-282320?labelColor=5C5C5C" />
@@ -45,14 +46,14 @@ Recording, editing, screenshots and text recognition are free. Ruler, Annotate, 
 		<td><img alt="An arrow, counters aimed at the figures, a highlight and a focus drawn over a dashboard" src="./.github/assets/annotate.gif" /><br />Annotate</td>
 	</tr>
 	<tr>
-		<td><img alt="Two windows thrown into the halves of the screen" src="./.github/assets/glide.gif" /><br />Glide</td>
+		<td><img alt="Two windows snapped into the halves of the screen" src="./.github/assets/glide.gif" /><br />Glide</td>
 		<td><img alt="A reference of a design faded over the page as it was built" src="./.github/assets/references.gif" /><br />References</td>
 	</tr>
 </table>
 
 ## Download
 
-Get the latest version from [Releases](https://github.com/overpolish/screenwide/releases/latest).
+Download Screenwide from [getscreenwide.com](https://getscreenwide.com), or get any version from [Releases](https://github.com/overpolish/screenwide/releases).
 
 ## Building
 

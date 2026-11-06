@@ -8,6 +8,7 @@ import { RecordingIsland } from "../features/recording-controls/island/recording
 import { useIslandStage } from "../features/recording-controls/island/use-island-stage";
 import { t } from "../i18n/i18n";
 import { hostPlatform } from "../lib/platform";
+import { cn } from "../lib/styling";
 import { Button } from "../primitives/button/button";
 import { Text } from "../primitives/text/text";
 
@@ -49,9 +50,10 @@ function DownloadButtons() {
  * The real recording island, playing a recording's part as in its stories,
  * centred at the top of the page as it sits at the top of the screen. What
  * hangs beneath its row is drawn outside its box, so the frame keeps room
- * down to its lowest part, as the app sizes the island's window.
+ * down to its lowest part, as the app sizes the island's window, and the
+ * page below follows it as it grows and shrinks.
  */
-export function SiteIsland() {
+export function SiteIsland({ className }: { className?: string }) {
   // Window mode opens on one line rather than the displays' pictures, so the
   // island stays compact; a window is chosen already, so Record works at the
   // first press.
@@ -65,16 +67,13 @@ export function SiteIsland() {
   const onShapeChange = (parts: IslandPart[]) => {
     const top = ref.current?.getBoundingClientRect().top;
     if (top === undefined || parts.length === 0) return;
-    const bottom = Math.max(...parts.map((part) => part.y + part.height)) - top;
-    // Keeps the most room the island has needed, so the page under it does
-    // not jump each time the island shrinks to a recording's pill.
-    setHeight((current) => Math.max(current ?? 0, bottom));
+    // Reported every frame while the island moves, so the page under it
+    // moves with it rather than jumping when it settles.
+    setHeight(Math.max(...parts.map((part) => part.y + part.height)) - top);
   };
   return (
-    // The island is as wide as its row, wider than a phone; the app it
-    // records with does not run on one either.
     <div
-      className="hidden w-fit md:block"
+      className={cn("w-fit", className)}
       ref={ref}
       style={{ minHeight: height }}
     >
