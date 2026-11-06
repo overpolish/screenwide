@@ -1,5 +1,5 @@
 // SPDX-FileCopyrightText: 2026 overpolish
-// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-License-Identifier: Elastic-2.0
 
 //! The Rust side of the overlay: the displays it covers, and one wgpu surface
 //! per host window on the `CAMetalLayer` native code gives it.

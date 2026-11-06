@@ -1,5 +1,5 @@
 // SPDX-FileCopyrightText: 2026 overpolish
-// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-License-Identifier: Elastic-2.0
 
 //! The island while the overlay draws: it carries the annotate tools, on an
 //! island of their own or under the recording's row, and stands above the

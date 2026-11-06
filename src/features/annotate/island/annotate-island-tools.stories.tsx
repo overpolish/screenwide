@@ -1,5 +1,5 @@
 // SPDX-FileCopyrightText: 2026 overpolish
-// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-License-Identifier: Elastic-2.0
 
 import { annotateIslandMeta } from "./annotate-island-story-meta";
 import { PREVIEW_ANNOTATE_SETTINGS as settings } from "./annotate-preview";

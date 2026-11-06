@@ -1,5 +1,5 @@
 // SPDX-FileCopyrightText: 2026 overpolish
-// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-License-Identifier: Elastic-2.0
 
 //! Keeping the tool's pointer over the overlay's transparent host: the
 //! crosshair, or the I-beam for the highlight, which selects text.

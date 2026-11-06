@@ -24,7 +24,7 @@ pub use p256::ecdsa::VerifyingKey;
 pub use record::{Claims, RecordError, SignedRecord};
 pub use server::{server_key, ACTIVATION_URL};
 pub use state::{Access, Activation, LicenseState, RECHECK_DAYS, TRIAL_DAYS};
-pub use tool::Tool;
+pub use tool::{Tool, BUNDLE_CHECKOUT_URL};
 
 #[cfg(test)]
 mod tests;

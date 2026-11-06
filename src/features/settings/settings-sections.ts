@@ -5,7 +5,13 @@ import { t } from "../../i18n/i18n";
 
 /** The panes the sidebar lists. */
 export type SettingsSection =
-  "general" | "recording" | "tools" | "moments" | "transcription" | "hotkeys";
+  | "general"
+  | "recording"
+  | "tools"
+  | "moments"
+  | "transcription"
+  | "hotkeys"
+  | "licences";
 
 /** The title the window wears for a pane, and the sidebar lists it under. */
 export const sectionTitle = (section: SettingsSection) => {
@@ -14,6 +20,8 @@ export const sectionTitle = (section: SettingsSection) => {
       return t("settings-section-general");
     case "hotkeys":
       return t("settings-section-shortcuts");
+    case "licences":
+      return t("settings-section-licences");
     case "moments":
       return t("settings-section-moments");
     case "recording":

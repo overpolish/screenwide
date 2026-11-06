@@ -1,5 +1,5 @@
 // SPDX-FileCopyrightText: 2026 overpolish
-// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-License-Identifier: Elastic-2.0
 
 //! Whether live annotation is offered at all, what becomes of the annotations
 //! when the overlay closes, and the dress a fresh stroke is drawn in.

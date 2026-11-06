@@ -1,5 +1,5 @@
 // SPDX-FileCopyrightText: 2026 overpolish
-// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-License-Identifier: Elastic-2.0
 
 //! Reading the desktop at a highlight's press, or a blurring spotlight's,
 //! and keeping what each highlight still on screen was drawn over.

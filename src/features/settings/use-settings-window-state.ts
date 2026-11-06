@@ -3,6 +3,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 
+import { useLicences } from "./licences/use-licences";
 import { useAnnotateSettingsSave } from "./sections/use-annotate-settings-save";
 import { useGlideSettingsSave } from "./sections/use-glide-settings-save";
 import { useMomentSettings } from "./sections/use-moment-settings";
@@ -82,6 +83,7 @@ export function useSettingsWindowState() {
     });
   const moments = useMomentSettings(setError);
   const transcription = useTranscription(setError);
+  const licences = useLicences(setError);
 
   useEffect(() => {
     Promise.all([
@@ -173,6 +175,7 @@ export function useSettingsWindowState() {
     error,
     general,
     glide,
+    licences,
     moments,
     ocr,
     onCaptureChange,

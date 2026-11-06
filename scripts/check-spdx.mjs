@@ -10,13 +10,18 @@ const COPYRIGHT = "SPDX-FileCopyrightText: 2026 overpolish";
 const GPL = "GPL-3.0-or-later";
 const ELASTIC = "Elastic-2.0";
 
-// The paid tools (Ruler, References, Glide) are under the Elastic License 2.0
-// (`LICENSES/Elastic-2.0.txt`); everything else is under the GPL. A path that
-// ends in "/" covers the folder below it.
+// The paid tools and the licence gate they sit behind are under the Elastic
+// License 2.0 (`LICENSES/Elastic-2.0.txt`); everything else is under the GPL.
+// A path that ends in "/" covers the folder below it.
 const ELASTIC_PATHS = [
+  // Live Annotate: the overlay for drawing on the screen. Annotations in the
+  // editor, and the drawing they share with it, stay under the GPL.
+  "src/features/annotate/",
   "src/features/glide/",
   "src/features/reference/",
   "src/features/ruler/",
+  "src/features/settings/licences/",
+  "src/features/settings/settings-licences.stories.tsx",
   "src-tauri/crates/licensing/",
   "src-tauri/crates/osc/src/gpu/shaders/reference.wgsl",
   "src-tauri/crates/osc/src/gpu/vertices/ruler.rs",
@@ -26,8 +31,12 @@ const ELASTIC_PATHS = [
   "src-tauri/src/app_windows/screenshot_region/region_osc/ruler/",
   "src-tauri/src/app_windows/screenshot_region/region_osc/ruler.rs",
   "src-tauri/src/app_windows/screenshot_region/region_osc/state/ruler_updates.rs",
+  "src-tauri/src/annotate/",
+  "src-tauri/src/annotate.rs",
   "src-tauri/src/glide/",
   "src-tauri/src/glide.rs",
+  "src-tauri/src/licensing/",
+  "src-tauri/src/licensing.rs",
   "src-tauri/src/references/",
   "src-tauri/src/references.rs",
   "src-tauri/src/ruler/",

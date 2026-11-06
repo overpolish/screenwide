@@ -95,6 +95,9 @@ pub async fn start(app: &AppHandle) -> Result<(), String> {
   if !settings::enabled() || !adapter::available() {
     return Ok(());
   }
+  if !crate::licensing::allow(app, crate::licensing::Tool::Ruler) {
+    return Ok(());
+  }
 
   dismiss(app);
   capture_overlays::dismiss_except(app, &[capture_overlays::CaptureOverlay::Ruler]);

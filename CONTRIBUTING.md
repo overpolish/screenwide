@@ -56,7 +56,7 @@ Windows Defender scans every file a build writes, which can make Rust builds sev
 
 ## Licences
 
-Most of Screenwide is under the GPL; the paid tools (Ruler, References and Glide) are under the Elastic License 2.0. `scripts/check-spdx.mjs` lists the paths each licence covers, and `pnpm license:check` makes sure every file's SPDX header names the right one. A new file in a tool's folder takes `SPDX-License-Identifier: Elastic-2.0`; any other file takes `GPL-3.0-or-later`.
+Most of Screenwide is under the GPL; the paid tools and their licence check are under the Elastic License 2.0. `scripts/check-spdx.mjs` lists the paths each licence covers, and `pnpm license:check` makes sure every file's SPDX header names the right one. A new file in a tool's folder takes `SPDX-License-Identifier: Elastic-2.0`; any other file takes `GPL-3.0-or-later`.
 
 ## Also
 

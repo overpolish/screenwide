@@ -1,5 +1,5 @@
 // SPDX-FileCopyrightText: 2026 overpolish
-// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-License-Identifier: Elastic-2.0
 
 //! The settings scene (`annotate-scene.ts`) played across the end of one
 //! pass and the start of the next, a frame a sixtieth of a second, as the

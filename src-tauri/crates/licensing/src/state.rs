@@ -29,6 +29,13 @@ pub struct Activation {
   pub checked_at: i64,
 }
 
+impl Activation {
+  /// A name for the key that does not reveal it, for choosing which to remove.
+  pub fn id(&self) -> String {
+    key_hash(&self.license_key)
+  }
+}
+
 /// Everything the gate knows, saved by the app beside its settings. Times are
 /// seconds since 1970, passed in by the app.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]

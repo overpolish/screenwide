@@ -1,5 +1,5 @@
 // SPDX-FileCopyrightText: 2026 overpolish
-// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-License-Identifier: Elastic-2.0
 
 //! A focus drawn live: what lies around its box, softened as the editor's
 //! focus softens it. The overlay never sees the desktop under it, so the blur

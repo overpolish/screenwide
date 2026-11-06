@@ -1,5 +1,5 @@
 // SPDX-FileCopyrightText: 2026 overpolish
-// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-License-Identifier: Elastic-2.0
 
 //! Opening the overlay: building the hosts, or handing hosts that are only
 //! showing annotations back to drawing.
@@ -17,6 +17,10 @@ use crate::capture_overlays;
 /// handed back to drawing rather than rebuilt: taking them down and opening
 /// new ones would blank the annotations until the new surfaces first draw.
 pub fn start(app: &AppHandle) -> Result<(), String> {
+  // Live Annotate is a paid tool; a rebuild of an open overlay is not a start.
+  if settings::enabled() && !crate::licensing::allow(app, crate::licensing::Tool::Annotate) {
+    return Ok(());
+  }
   open(app, false)
 }
 

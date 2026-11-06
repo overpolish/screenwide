@@ -1,5 +1,5 @@
 // SPDX-FileCopyrightText: 2026 overpolish
-// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-License-Identifier: Elastic-2.0
 
 // The live overlay's one pass. Assembled with the editor's annotation pieces
 // and its focus falloff by `build/wgsl.rs`; this part

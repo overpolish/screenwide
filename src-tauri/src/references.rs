@@ -139,6 +139,9 @@ pub(crate) async fn open(
   picture: ReferencePicture,
   placement: Placement,
 ) -> Result<(), String> {
+  if !crate::licensing::allow(app, crate::licensing::Tool::References) {
+    return Ok(());
+  }
   let label = format!("{LABEL_PREFIX}{}", NEXT.fetch_add(1, Ordering::Relaxed));
   let texture = upload(picture.shown.as_ref().unwrap_or(&picture.original))?;
   let directory = directory(app)?;

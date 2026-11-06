@@ -5,6 +5,7 @@ import {
   AudioLines,
   Flag,
   Keyboard,
+  KeyRound,
   PencilRuler,
   Settings,
   Video,
@@ -20,6 +21,7 @@ const icons: [SettingsSection, ReactNode][] = [
   ["moments", <Flag key="moments" />],
   ["transcription", <AudioLines key="transcription" />],
   ["hotkeys", <Keyboard key="hotkeys" />],
+  ["licences", <KeyRound key="licences" />],
 ];
 
 /** The sections the sidebar lists, in its order, each under its title. */

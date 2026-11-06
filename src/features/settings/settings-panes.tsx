@@ -5,6 +5,7 @@ import { type ReactNode, type Ref } from "react";
 
 import { t } from "../../i18n/i18n";
 
+import { LicencesPane } from "./licences/licences-pane";
 import { GeneralPane } from "./panes/general-pane";
 import { MomentsPane } from "./panes/moments-pane";
 import { RecordingPane } from "./panes/recording-pane";
@@ -13,6 +14,7 @@ import { ToolsPane, type ToolsPaneProps } from "./panes/tools-pane";
 import { TranscriptionSettingsPanel } from "./sections/transcription-settings";
 import { ShortcutsPane } from "./shortcuts/shortcuts-pane";
 
+import type { LicencesControls } from "./licences/use-licences";
 import type { MomentSettingsState } from "./sections/use-moment-settings";
 import type { TranscriptionControls } from "./sections/use-transcription";
 import type { SettingsSection } from "./settings-sections";
@@ -23,6 +25,7 @@ import type { ShortcutSettings } from "../../bindings/ShortcutSettings";
 
 export type SettingsPanesProps = Omit<ToolsPaneProps, "defaults"> & {
   general: GeneralSettings | null;
+  licences: LicencesControls;
   moments: MomentSettingsState;
   onCaptureChange: (capturing: boolean) => Promise<void>;
   onChangeBinding: (action: ShortcutAction, shortcut: string | null) => void;
@@ -89,5 +92,7 @@ export function SettingsPanes(props: SettingsPanesProps) {
       );
     case "hotkeys":
       return <ShortcutsPane {...props} />;
+    case "licences":
+      return <LicencesPane controls={props.licences} paneRef={paneRef} />;
   }
 }

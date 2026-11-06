@@ -6,7 +6,7 @@ name = "screenwide"
 description = "Reliable screen and audio recording for macOS and Windows"
 version.workspace = true
 authors.workspace = true
-# Ruler, References and Glide are under the Elastic License 2.0.
+# The paid tools and their licence gate are under the Elastic License 2.0.
 license = "GPL-3.0-or-later AND Elastic-2.0"
 edition.workspace = true
 
@@ -40,6 +40,7 @@ screenwide-images = { path = "crates/images" }
 screenwide-imaging = { path = "crates/imaging" }
 screenwide-keyboard-effects = { path = "crates/keyboard_effects" }
 screenwide-lexicon = { path = "crates/lexicon" }
+screenwide-licensing = { path = "crates/licensing" }
 screenwide-moments = { path = "crates/moments" }
 screenwide-osc = { path = "crates/osc" }
 screenwide-output = { path = "crates/output" }
@@ -195,6 +196,7 @@ screenwide-images.workspace = true
 screenwide-imaging.workspace = true
 screenwide-keyboard-effects.workspace = true
 screenwide-lexicon.workspace = true
+screenwide-licensing.workspace = true
 screenwide-moments.workspace = true
 screenwide-osc.workspace = true
 screenwide-workspace.workspace = true

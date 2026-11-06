@@ -19,8 +19,10 @@ flowchart TD
   started -- "No" --> begin["Trial starts now, for every paid tool"] --> trial["Opens: in trial"]
   started -- "Yes" --> within{"Less than 14 days since it started?"}
   within -- "Yes" --> trial
-  within -- "No" --> expired["Expired: needs a key for this tool"]
+  within -- "No" --> expired["Turned away: Settings opens on Licences"]
 ```
+
+Each paid tool asks once, where it starts: `annotate::start`, `ruler::start`, `references::open` and Glide's `session::begin`, through `licensing::allow` in the app (`src-tauri/src/licensing.rs`). A Glide gesture after the trial shows the same lock as a window that cannot move, and opens Settings only the first time in a run, so a hand that glides out of habit is not sent to Settings each time. The app keeps the state in `license.json` beside its settings, and Settings › Licences (`src/features/settings/licences`) shows each tool's state, adds and removes keys and opens the checkouts.
 
 ## Adding a key, and checking it again
 

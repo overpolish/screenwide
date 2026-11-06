@@ -241,5 +241,11 @@ export function settingsSearchEntries({
     shortcut,
   );
 
+  // Licences
+  at("licences", t("settings-licences-keys"))(
+    [row(t("settings-licences-add-key"))],
+    t("settings-search-keywords-licences"),
+  );
+
   return entries;
 }

@@ -6,6 +6,11 @@ import { type ContextType, useState } from "react";
 import { featureStage } from "../../storybook/feature-story-stage";
 
 import { SAMPLE_RUNNING_APPS } from "./capture/hidden-apps-fixtures";
+import {
+  licencesPreviewApi,
+  licencesSeed,
+  type LicencesPreviewSeed,
+} from "./licences/licences-fixtures";
 import { SettingsApiContext } from "./settings-api-context";
 import { momentsPreviewApi } from "./settings-moments-fixtures";
 import {
@@ -33,6 +38,7 @@ const isModelSeed = (value: unknown): value is TranscriptionPreviewSeed =>
 
 export function createPreviewApi(
   modelSeed?: TranscriptionPreviewSeed,
+  licences: LicencesPreviewSeed = "trial",
 ): ContextType<typeof SettingsApiContext> {
   let general: GeneralSettings = {
     annotationColors: [],
@@ -154,6 +160,7 @@ export function createPreviewApi(
   };
   return {
     ...momentsPreviewApi(),
+    ...licencesPreviewApi(licences),
     ...transcriptionPreviewApi(modelSeed),
     beginShortcutCapture: () => Promise.resolve(null),
     browseDefaultLocation: (kind) =>
@@ -219,12 +226,14 @@ export const settingsWindowMeta = {
     controls: { exclude: ["initialSection", "updateSetting"] },
     layout: "fullscreen",
   },
-  // A story picks where the models start through `parameters.modelSeed`,
-  // since it is the preview's state rather than the window's props.
+  // A story picks where the models and licences start through
+  // `parameters.modelSeed` and `parameters.licencesSeed`, since they are the
+  // preview's state rather than the window's props.
   render: function Render(args, { parameters }) {
     const [api] = useState(() =>
       createPreviewApi(
         isModelSeed(parameters.modelSeed) ? parameters.modelSeed : undefined,
+        licencesSeed(parameters.licencesSeed),
       ),
     );
     const [checked, setChecked] = useState(false);

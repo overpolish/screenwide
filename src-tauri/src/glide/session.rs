@@ -177,6 +177,15 @@ pub(crate) fn begin<P: GlidePlatform>(app: &AppHandle, input: P::Input, anchor: 
     present_locked(app, next_id(), anchor.0, anchor.1);
     return false;
   }
+  // Glide is a paid tool. A gesture after the trial gets the same answer as
+  // a window that cannot move, and the first in a run also opens Settings on
+  // the Licences pane; later ones only show the lock, so a hand that glides
+  // out of habit is not sent to Settings each time.
+  if !crate::licensing::may_start(app, crate::licensing::Tool::Glide) {
+    present_locked(app, next_id(), anchor.0, anchor.1);
+    crate::licensing::show_licences_once(app, crate::licensing::Tool::Glide);
+    return false;
+  }
   let Some(wants_monitors) = P::monitor_request() else {
     return false;
   };

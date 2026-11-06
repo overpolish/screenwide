@@ -32,4 +32,19 @@ impl Tool {
       .into_iter()
       .find(|tool| tool.entitlement() == name)
   }
+
+  /// Where the tool is bought: Payhip's checkout, straight past its sales
+  /// page, since the website sells and Payhip only takes the payment.
+  pub fn checkout_url(self) -> &'static str {
+    match self {
+      Tool::Ruler => "https://store.overpolish.co/buy?s=1&link=XZ1n8",
+      Tool::References => "https://store.overpolish.co/buy?s=1&link=6GVnd",
+      Tool::Glide => "https://store.overpolish.co/buy?s=1&link=oSXt5",
+      Tool::Annotate => "https://store.overpolish.co/buy?s=1&link=oYtlS",
+    }
+  }
 }
+
+/// Where every paid tool is bought together. A bundle's checkout has its own
+/// address; the products' `buy` link opens an empty cart for it.
+pub const BUNDLE_CHECKOUT_URL: &str = "https://store.overpolish.co/order?link=vJeyB";

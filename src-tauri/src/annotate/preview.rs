@@ -1,5 +1,5 @@
 // SPDX-FileCopyrightText: 2026 overpolish
-// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-License-Identifier: Elastic-2.0
 
 //! Annotate at work over a picture, for a window that shows what it does:
 //! strokes made by the overlay's own gestures and drawn by its own shader,

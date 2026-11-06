@@ -5,9 +5,11 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
 import { createContext, use } from "react";
 
 import * as api from "./api";
+import * as licencesApi from "./licences/licences-api";
 
 export const SettingsApiContext = createContext({
   ...api,
+  ...licencesApi,
   minimize: () => getCurrentWindow().minimize(),
 });
 

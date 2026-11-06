@@ -5621,6 +5621,7 @@ dependencies = [
  "screenwide-imaging",
  "screenwide-keyboard-effects",
  "screenwide-lexicon",
+ "screenwide-licensing",
  "screenwide-moments",
  "screenwide-osc",
  "screenwide-output",

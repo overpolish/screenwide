@@ -1,5 +1,5 @@
 // SPDX-FileCopyrightText: 2026 overpolish
-// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-License-Identifier: Elastic-2.0
 
 //! Strokes drawn apart from the live overlay, for a window that shows
 //! Annotate at work: the same gestures making the same annotations, dressed

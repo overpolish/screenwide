@@ -22,6 +22,7 @@ settings-section-ocr = OCR
 settings-section-moments = Moments
 settings-section-transcription = Models
 settings-section-shortcuts = Shortcuts
+settings-section-licences = Licences
 
 ## General
 
@@ -349,6 +350,7 @@ settings-search-keywords-ocr = text recognition copy scan
 settings-search-keywords-models = ai download machine learning
 settings-search-keywords-shortcut = hotkey keyboard key binding
 settings-search-keywords-updates = version update upgrade
+settings-search-keywords-licences = license licence key serial activate buy purchase trial unlock
 settings-search-keywords-microphone = mic audio input
 settings-search-keywords-moments = marker bookmark flag
 settings-search-keywords-auto-zoom = zoom focus follow pointer cursor
@@ -372,3 +374,39 @@ settings-preview-dashboard-title = Weekly views
 settings-preview-desktop-projects = Projects
 settings-preview-desktop-screenshots = Screenshots
 settings-preview-desktop-notes = notes.txt
+
+## Licences
+
+settings-licences-references = References
+# A paid tool's row, when a key for it is held.
+settings-licences-licensed = Licensed
+# A paid tool's row during the trial. $days is the whole days left, at least 1.
+settings-licences-trial =
+    { $days ->
+        [one] In trial, 1 day left
+       *[other] In trial, { $days } days left
+    }
+# A paid tool's row before any paid tool has been used. $days is the trial's length.
+settings-licences-trial-unused = Free for { $days } days from the first time you use a paid tool
+settings-licences-expired = Trial ended. Buy it or add its key below.
+settings-licences-buy = Buy
+# The Buy button's name for assistive technology. $tool is the tool's name.
+settings-licences-buy-tool = Buy { $tool }
+settings-licences-bundle = Bundle
+settings-licences-bundle-title = Every paid tool
+settings-licences-bundle-description = Includes every paid tool added later.
+settings-licences-buy-bundle = Buy bundle
+settings-licences-keys = Keys
+settings-licences-keys-description = Each tool has its own key, sent with your receipt.
+settings-licences-add-key = Licence key
+settings-licences-key-placeholder = Paste a key from your receipt
+settings-licences-add = Add
+# A paid tool's row when its key is held. $hint is the key's last characters, so a buyer's keys can be told apart.
+settings-licences-licensed-key = Licensed, key ending { $hint }
+# $tools is a list of tool names, such as "Ruler and Glide".
+settings-licences-key-added = Added. It unlocks { $tools }.
+settings-licences-key-invalid = This key isn’t recognised. Check it against your receipt.
+settings-licences-key-disabled = This key has been refunded or turned off.
+settings-licences-key-unavailable = Couldn’t reach the licence server. Check your connection and try again.
+settings-licences-remove = Remove the key ending { $hint }
+settings-licences-confirm-remove = Confirm removing the key ending { $hint }

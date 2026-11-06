@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { MotionConfig, motion } from "motion/react";
-import { type ReactNode, useMemo, useState } from "react";
+import { type ReactNode, useCallback, useMemo, useState } from "react";
 
 import { SidebarNav } from "../../composites/sidebar-nav/sidebar-nav";
 import { WindowHeader } from "../../composites/window-header/window-header";
@@ -11,6 +11,7 @@ import { t } from "../../i18n/i18n";
 import { Alert } from "../../primitives/alert/alert";
 import { ScrollArea } from "../../primitives/scroll-area/scroll-area";
 
+import { useLicencesOpen } from "./licences/use-licences-open";
 import { SettingsSearchField } from "./search/settings-search-field";
 import { SettingsSearchResults } from "./search/settings-search-results";
 import { useSettingsSearch } from "./search/use-settings-search";
@@ -48,6 +49,11 @@ export function SettingsWindow({
     momentNames: moments,
     setSection,
   });
+  const openLicences = useCallback(() => {
+    search.setQuery("");
+    setSection("licences");
+  }, [search]);
+  useLicencesOpen(openLicences);
 
   return (
     // Settings' motion follows the system's reduced motion: fades stay,

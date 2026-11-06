@@ -20,6 +20,7 @@ mod glide;
 mod hidden_apps_windows;
 mod image_analysis;
 mod invoke_handler;
+mod licensing;
 mod moments;
 mod monitor_topology;
 mod osc;
