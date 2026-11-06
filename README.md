@@ -24,14 +24,6 @@ The timeline splits a recording into beats, where something happens, and lulls, 
 
 <img alt="The lulls on the timeline squeezed with one handle, the recording getting shorter as they speed up" src="./.github/assets/squeeze.gif" />
 
-## The script
-
-What was said is transcribed on your computer. Remove words from the script and they're cut from the recording; Remove pauses cuts the long silences.
-
-## Studio sound
-
-Studio sound rebuilds your voice with a model that runs on your computer, and studio ducking keeps it clear over other audio.
-
 ## Annotations
 
 Magnify a detail, put one part in focus, spotlight or redact it, and add arrows, counters, highlights and text, on recordings and screenshots alike.
