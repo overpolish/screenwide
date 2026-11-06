@@ -8,9 +8,9 @@ Keep a short entry here whenever adding or changing a vendored dependency patch.
 ## tract-linalg 0.21.4
 
 - **Source:** The crates.io release of `tract-linalg` 0.21.4, unchanged apart from `build.rs`, in `tract-linalg-0.21.4`. The transcriber's own manifest ([`../transcriber/Cargo.toml`](../transcriber/Cargo.toml)) patches it in, since the transcriber is a workspace of its own; it holds tract at 0.21.4 for DeepFilterNet.
-- **Reason:** Its build script writes the ARM64 kernels in Microsoft assembler syntax whenever the target is MSVC, though MSVC has no MASM for ARM64, and hands them to `cl`, which cannot assemble GNU-syntax ARM64. Windows ARM64 builds of the transcriber failed in `tract-linalg`'s build script.
-- **Changes:** `build.rs` lines 16–33: `use_masm` leaves out `aarch64`, and `arm64_cc` builds with LLVM's `clang-cl` and `llvm-lib` on Windows (plain `cc::Build::new()` elsewhere). Line 76 (`ConfigForHalf::cc`, the fp16 kernels and their probe) and line 189 (`arm64simd`) use `arm64_cc`. Building the transcriber for Windows ARM64 needs LLVM on `PATH`; GitHub's Windows ARM64 runners have it.
-- **Validation:** Cross-checked `tract-linalg`'s build script for `aarch64-pc-windows-msvc` on Windows x64. `pnpm transcriber:check-clean` runs the speech enhancer on the built transcriber, and the Release workflow runs it on both Windows runners, where it proves the ARM64 kernels on real ARM64.
+- **Reason:** Its build script writes the ARM64 kernels in Microsoft assembler syntax whenever the target is MSVC, though MSVC has no MASM for ARM64. Windows ARM64 builds of the transcriber failed in `tract-linalg`'s build script.
+- **Changes:** `build.rs` lines 16–23: `use_masm` leaves out `aarch64`, so the kernels stay GNU assembly. MSVC's `cl` cannot assemble those, so `scripts/prepare-transcriber.mjs` builds the Windows ARM64 transcriber's C, C++ and assembly with LLVM's `clang-cl`, which whisper.cpp needs on ARM anyway; LLVM must be on `PATH`, as it is on GitHub's Windows ARM64 runners.
+- **Validation:** Cross-checked `tract-linalg`'s build script for `aarch64-pc-windows-msvc` with `clang-cl` on Windows x64, and rebuilt the x64 transcriber with the vendored crate. `pnpm transcriber:check-clean` runs the speech enhancer on the built transcriber; the Release workflow runs it on both Windows runners, which proves the ARM64 kernels on real ARM64.
 - **Upgrade/removal:** Drop the patch when DeepFilterNet moves to a tract release that builds for Windows ARM64; retest with the Release workflow's Windows ARM64 job.
 
 ## Template for future patches

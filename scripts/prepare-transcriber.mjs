@@ -101,6 +101,14 @@ if (hostPlatform === "win32") {
     buildEnv[pathKey] = `${dirname(ninja)};${buildEnv[pathKey] ?? ""}`;
   }
 }
+// MSVC's compiler cannot build Windows ARM64's native parts: whisper.cpp's CPU
+// backend refuses it on ARM, and tract's kernels are GNU assembly it cannot
+// read. LLVM's clang-cl builds them all instead; it must be on PATH, as it is
+// on GitHub's Windows ARM64 runners.
+if (target === "aarch64-pc-windows-msvc") {
+  buildEnv.CC_aarch64_pc_windows_msvc = "clang-cl";
+  buildEnv.CXX_aarch64_pc_windows_msvc = "clang-cl";
+}
 // Node's own architecture can differ from Rust's host under emulation, so
 // ask rustc.
 const rustHost = execFileSync("rustc", ["-vV"], { encoding: "utf8" }).match(

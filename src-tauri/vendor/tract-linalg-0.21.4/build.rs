@@ -14,22 +14,12 @@ fn var(k: &str) -> String {
 }
 
 // Screenwide patch: MASM syntax only where MSVC has MASM. Windows ARM64 has
-// none; its kernels are GNU assembly, built by `arm64_cc`.
+// none, so its kernels stay GNU assembly, for clang-cl to build
+// (`scripts/prepare-transcriber.mjs` sets it as the compiler).
 fn use_masm() -> bool {
     env::var("CARGO_CFG_TARGET_ENV") == Ok("msvc".to_string())
         && var("HOST").contains("-windows-")
         && var("CARGO_CFG_TARGET_ARCH") != "aarch64"
-}
-
-// Screenwide patch: MSVC's cl cannot assemble the GNU-syntax ARM64 kernels,
-// so Windows ARM64 builds them with LLVM's clang-cl and llvm-lib, which must
-// be on PATH. Other targets keep cc's own choice.
-fn arm64_cc() -> cc::Build {
-    let mut cc = cc::Build::new();
-    if var("CARGO_CFG_TARGET_OS") == "windows" {
-        cc.compiler("clang-cl").archiver("llvm-lib");
-    }
-    cc
 }
 
 fn include_amx() -> bool {
@@ -73,7 +63,7 @@ impl ConfigForHalf {
     }
 
     fn cc(&self) -> cc::Build {
-        let mut cc = arm64_cc();
+        let mut cc = cc::Build::new();
         for flag in &self.extra_flags {
             cc.flag(flag);
         }
@@ -186,7 +176,7 @@ fn main() {
                 &suffix,
                 false,
             );
-            arm64_cc().files(files).static_flag(true).compile("arm64simd");
+            cc::Build::new().files(files).static_flag(true).compile("arm64simd");
             if include_amx() {
                 let files = preprocess_files("arm64/apple_amx", &[], &suffix, false);
                 cc::Build::new().files(files).static_flag(true).compile("appleamx");
