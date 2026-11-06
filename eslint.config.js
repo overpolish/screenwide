@@ -30,6 +30,9 @@ const frontendFiles = [
   "*.config.ts",
 ];
 
+// Cloudflare Workers, each type-checked against its own `tsconfig.json`.
+const workerFiles = ["workers/*/src/**/*.ts"];
+
 export default defineConfig([
   globalIgnores([
     "dist/**",
@@ -38,6 +41,9 @@ export default defineConfig([
     "src-tauri/**",
     "storybook-static/**",
     "src/bindings/**",
+    // Written by `wrangler types` and by `wrangler dev`.
+    "workers/*/worker-configuration.d.ts",
+    "workers/*/.wrangler/**",
   ]),
   {
     extends: [eslint.configs.recommended],
@@ -78,6 +84,19 @@ export default defineConfig([
           varsIgnorePattern: "^_",
         },
       ],
+    },
+  },
+  ...tseslint.configs.strictTypeChecked.map((config) => ({
+    ...config,
+    files: workerFiles,
+  })),
+  {
+    files: workerFiles,
+    languageOptions: {
+      parserOptions: {
+        projectService: true,
+        tsconfigRootDir: import.meta.dirname,
+      },
     },
   },
   {

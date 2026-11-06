@@ -11,7 +11,7 @@ use crate::{
 };
 
 /// How long the trial runs from the first time a tool is used.
-pub const TRIAL_DAYS: i64 = 30;
+pub const TRIAL_DAYS: i64 = 14;
 /// How often a held key is checked with the licence server again.
 pub const RECHECK_DAYS: i64 = 21;
 const DAY: i64 = 86_400;

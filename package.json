@@ -6,18 +6,24 @@
   "packageManager": "pnpm@11.21.0",
   "type": "module",
   "knip": {
-    "entry": [
-      "scripts/build-ffmpeg-windows.mjs"
-    ],
-    "ignore": [
-      "docs/assets/site.css"
-    ],
     "ignoreBinaries": [
       "cmake",
       "ninja",
       "otool",
       "rustc"
-    ]
+    ],
+    "workspaces": {
+      ".": {
+        "entry": [
+          "scripts/build-ffmpeg-windows.mjs"
+        ],
+        "ignore": [
+          "docs/assets/site.css",
+          "src-tauri/target/**"
+        ]
+      },
+      "workers/*": {}
+    }
   },
   "scripts": {
     "build": "pnpm ffmpeg:prepare && pnpm dxc:prepare && pnpm transcriber:prepare && pnpm window-hider:prepare && pnpm ffmpeg:verify-release && tsc && vite build",
@@ -25,7 +31,7 @@
     "bindings:check": "node scripts/check-bindings.mjs",
     "build-storybook": "storybook build",
     "classes:check": "node scripts/check-classes.mjs",
-    "check": "pnpm license:check && pnpm bindings:check && pnpm i18n:check && pnpm architecture:check && pnpm classes:check && pnpm knip && pnpm format:check && pnpm test && pnpm build && pnpm build-storybook && cargo clippy --manifest-path src-tauri/Cargo.toml --workspace --all-targets --all-features -- -D warnings && pnpm test:rust && cargo build --manifest-path src-tauri/Cargo.toml",
+    "check": "pnpm license:check && pnpm bindings:check && pnpm i18n:check && pnpm architecture:check && pnpm classes:check && pnpm --filter screenwide-license-worker typecheck && pnpm knip && pnpm format:check && pnpm test && pnpm build && pnpm build-storybook && cargo clippy --manifest-path src-tauri/Cargo.toml --workspace --all-targets --all-features -- -D warnings && pnpm test:rust && cargo build --manifest-path src-tauri/Cargo.toml",
     "dev": "pnpm ffmpeg:prepare && pnpm dxc:prepare && pnpm transcriber:prepare && pnpm window-hider:prepare && vite",
     "docs:dev": "python3 -m http.server 4173 --directory docs",
     "dev:permissions": "node scripts/dev-permissions-preview.mjs",

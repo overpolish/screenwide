@@ -8,10 +8,13 @@ pub enum Tool {
   Ruler,
   References,
   Glide,
+  /// The live Annotate overlay, for drawing on the screen. Annotations in
+  /// the editor stay free.
+  Annotate,
 }
 
 impl Tool {
-  pub const ALL: [Tool; 3] = [Tool::Ruler, Tool::References, Tool::Glide];
+  pub const ALL: [Tool; 4] = [Tool::Ruler, Tool::References, Tool::Glide, Tool::Annotate];
 
   /// The name the licence server signs for the tool in a record's
   /// entitlements. Part of the server's contract: never rename one.
@@ -20,6 +23,7 @@ impl Tool {
       Tool::Ruler => "ruler",
       Tool::References => "references",
       Tool::Glide => "glide",
+      Tool::Annotate => "annotate",
     }
   }
 

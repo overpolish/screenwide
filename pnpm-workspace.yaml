@@ -1,9 +1,15 @@
 # SPDX-FileCopyrightText: 2026 overpolish
 # SPDX-License-Identifier: GPL-3.0-or-later
 
+# The app is the root package; Cloudflare Workers it relies on sit under
+# `workers/`, each with its own dependencies.
+packages:
+  - "workers/*"
+
 allowBuilds:
   esbuild: true
   unrs-resolver: true
+  workerd: true
 minimumReleaseAgeExclude:
   - "@storybook/addon-themes@10.5.7"
   - "@storybook/addon-docs@10.5.7"
@@ -28,3 +34,5 @@ minimumReleaseAgeExclude:
   - vite@8.2.1
   - storybook@10.5.7
   - knip@6.32.1
+  - miniflare@5.20261104.0-beta
+  - wrangler@4.158.0

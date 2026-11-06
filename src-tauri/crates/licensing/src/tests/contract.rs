@@ -19,6 +19,11 @@ const WEBCRYPTO_SIGNATURE: &str =
 const WEBCRYPTO_INSTALLATION: &str = "0f1e2d3c4b5a69788796a5b4c3d2e1f0";
 
 #[test]
+fn the_built_in_server_key_is_a_p256_point() {
+  server_key();
+}
+
+#[test]
 fn a_record_signed_by_webcrypto_verifies() {
   let server_key =
     VerifyingKey::from_sec1_bytes(&STANDARD.decode(WEBCRYPTO_PUBLIC_KEY).unwrap()).unwrap();

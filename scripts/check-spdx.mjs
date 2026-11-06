@@ -32,6 +32,7 @@ const ELASTIC_PATHS = [
   "src-tauri/src/references.rs",
   "src-tauri/src/ruler/",
   "src-tauri/src/ruler.rs",
+  "workers/license/",
 ];
 
 const CHECKED_EXTENSIONS = new Set([
@@ -55,7 +56,8 @@ const CHECKED_EXTENSIONS = new Set([
   ".yaml",
   ".yml",
 ]);
-const EXCLUDED_FILES = new Set(["pnpm-lock.yaml"]);
+// A licence text is the terms themselves; it carries no other licence's header.
+const EXCLUDED_FILES = new Set(["pnpm-lock.yaml", "TOOLS-LICENSE.md"]);
 // ts-rs writes a fixed generated-file note as the first line of each binding.
 const EXCLUDED_DIRECTORIES = ["src-tauri/vendor/", "src/bindings/"];
 

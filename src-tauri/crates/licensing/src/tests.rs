@@ -103,7 +103,7 @@ fn a_high_s_signature_verifies_as_its_low_s_twin() {
 }
 
 #[test]
-fn the_trial_starts_at_first_use_and_lasts_thirty_days() {
+fn the_trial_starts_at_first_use_and_runs_for_trial_days() {
   let key = public(&server());
   let mut state = state();
   assert_eq!(state.access(Tool::Ruler, NOW, &key), Access::TrialUnused);

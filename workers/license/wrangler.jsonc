@@ -1,0 +1,25 @@
+// SPDX-FileCopyrightText: 2026 overpolish
+// SPDX-License-Identifier: Elastic-2.0
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "screenwide-license",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-11-06",
+  "compatibility_flags": ["nodejs_compat"],
+  "upload_source_maps": true,
+  "observability": { "enabled": true, "head_sampling_rate": 1 },
+  "routes": [{ "pattern": "license.getscreenwide.com", "custom_domain": true }],
+  // Set with `wrangler secret put`, never written here. The signing key is
+  // the private half of the key the app checks records against
+  // (`src-tauri/crates/licensing/src/server.rs`); each Payhip secret is on
+  // its product's edit page.
+  "secrets": {
+    "required": [
+      "LICENSE_SIGNING_KEY",
+      "PAYHIP_SECRET_RULER",
+      "PAYHIP_SECRET_REFERENCES",
+      "PAYHIP_SECRET_GLIDE",
+      "PAYHIP_SECRET_ANNOTATE",
+    ],
+  },
+}

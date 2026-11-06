@@ -5,19 +5,19 @@ SPDX-License-Identifier: Elastic-2.0
 
 # Licensing
 
-Who may use the paid tools: Ruler, References and Glide. The crate decides; the app sends the requests, saves the state (`LicenseState`) and passes the time in.
+Who may use the paid tools, listed in `Tool` (`src/tool.rs`). The crate decides; the app sends the requests, saves the state (`LicenseState`) and passes the time in.
 
 ## Whether a tool may open
 
-All three tools share one 30-day trial, which starts the first time any of them is used. After it, each tool needs a key bought for it. A key held here counts only while its record verifies: signed by the licence server, for this installation and for that key.
+Every paid tool (the list is `Tool`) shares one 14-day trial, which starts the first time any of them is used. After it, each tool needs a key bought for it. A key held here counts only while its record verifies: signed by the licence server, for this installation and for that key.
 
 ```mermaid
 flowchart TD
-  start["Ruler, References or Glide starts"] --> key{"A held key's record verifies<br/>and grants this tool?"}
+  start["A paid tool starts"] --> key{"A held key's record verifies<br/>and grants this tool?"}
   key -- "Yes" --> licensed["Opens: licensed"]
   key -- "No" --> started{"Trial started?"}
-  started -- "No" --> begin["Trial starts now, for all three tools"] --> trial["Opens: in trial"]
-  started -- "Yes" --> within{"Less than 30 days since it started?"}
+  started -- "No" --> begin["Trial starts now, for every paid tool"] --> trial["Opens: in trial"]
+  started -- "Yes" --> within{"Less than 14 days since it started?"}
   within -- "Yes" --> trial
   within -- "No" --> expired["Expired: needs a key for this tool"]
 ```
@@ -45,4 +45,4 @@ sequenceDiagram
   end
 ```
 
-The server's answer is fixed by `ActivationOutcome::from_response`. A record is the claims' JSON (`entitlements`, `keyHash`, `installationId`, `issuedAt`, optional `email`) and a P-256 signature over its exact bytes, both base64; the signature is r and s of 32 bytes each, as WebCrypto signs on the server. The test in `src/tests/contract.rs` holds a record WebCrypto signed, so a change on either side that breaks the other fails there.
+The server is the Worker in `workers/license`, whose README lists every answer it gives. The app's side of its answers is fixed by `ActivationOutcome::from_response`, and its address and public key by `src/server.rs`. A record is the claims' JSON (`entitlements`, `keyHash`, `installationId`, `issuedAt`, optional `email`) and a P-256 signature over its exact bytes, both base64; the signature is r and s of 32 bytes each, as WebCrypto signs on the server. The test in `src/tests/contract.rs` holds a record WebCrypto signed, so a change on either side that breaks the other fails there.

@@ -28,7 +28,7 @@ site-draw-body = Arrows, counters and highlights, drawn on screen as you present
 site-draw-recording = An arrow, counters and a highlight drawn over a dashboard
 # The paid tier. $price is the one-time price, such as £20.
 site-tools-title = Tools
-site-tools-body = 30 days free, then { $price } once. Every future tool included.
+site-tools-body = 14 days free, then { $price } once. Every future tool included.
 site-measure-title = Measure
 site-measure-body = Point at anything and the Ruler finds its edges.
 # Names the recording of the Ruler at work, for assistive technology.
