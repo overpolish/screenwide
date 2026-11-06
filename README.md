@@ -6,6 +6,7 @@
 	<h1>Screenwide</h1>
 	<p>Everything screen.</p>
 	<img alt="Latest GitHub release" src="https://img.shields.io/github/v/release/overpolish/screenwide?display_name=tag&label=release&labelColor=5C5C5C&color=282320" />
+	<img alt="Platforms: macOS 14.2 or later and Windows" src="https://img.shields.io/badge/platforms-macOS_14.2%2B_%7C_Windows-282320?labelColor=5C5C5C" />
 	<img alt="License: GPL-3.0-or-later and Elastic-2.0" src="https://img.shields.io/badge/license-GPL--3.0_%2B_Elastic--2.0-282320?labelColor=5C5C5C" />
 </div>
 
@@ -13,11 +14,34 @@
 
 <img alt="A recording playing in the editor, zooming in where the clicks and typing are" src="./.github/assets/demo.gif" />
 
-Screenwide records your screen and edits the recording in the same app. The editor shows what happened in the recording, what was said, where you clicked and what you typed, so you can cut the slow parts and zoom in where it matters. It runs on macOS 14.2 or later and on Windows.
+## Recording
 
-## Download
+Record a display, a window or part of the screen, with your camera, microphone and the computer's sound. A replay buffer keeps the last 30 seconds, for when something worth keeping has just happened.
 
-Get the latest version from [Releases](https://github.com/overpolish/screenwide/releases/latest).
+## Beats and lulls
+
+The timeline splits a recording into beats, where something happens, and lulls, where nothing does. One handle squeezes every lull at once while the beats play at full speed. A lull can also be cut, kept as recorded or trimmed to a breath.
+
+<img alt="The lulls on the timeline squeezed with one handle, the recording getting shorter as they speed up" src="./.github/assets/squeeze.gif" />
+
+## The script
+
+What was said is transcribed on your computer. Remove words from the script and they're cut from the recording; Remove pauses cuts the long silences.
+
+## Studio sound
+
+Studio sound rebuilds your voice with a model that runs on your computer, and studio ducking keeps it clear over other audio.
+
+## Annotations
+
+Magnify a detail, put one part in focus, spotlight or redact it, and add arrows, counters, highlights and text, on recordings and screenshots alike.
+
+<table>
+	<tr>
+		<td><img alt="A magnifier on a chart's peak and a focus on one card, added to a recording" src="./.github/assets/annotations-recording.gif" /><br />On a recording</td>
+		<td><img alt="Counters aimed at a headline and its subtitle, and a magnifier on a button, added to a screenshot" src="./.github/assets/annotations-screenshot.gif" /><br />On a screenshot</td>
+	</tr>
+</table>
 
 ## Free and paid
 
@@ -25,14 +49,18 @@ Recording, editing, screenshots and text recognition are free. Ruler, Annotate, 
 
 <table>
 	<tr>
-		<td><img alt="The Ruler measuring the gaps and sizes in a dialog" src="./.github/assets/ruler.gif" /><br />Ruler</td>
-		<td><img alt="An arrow, counters and a highlight drawn over a dashboard" src="./.github/assets/annotate.gif" /><br />Annotate</td>
+		<td><img alt="The Ruler checking a dialog's padding, field height and corner radius" src="./.github/assets/ruler.gif" /><br />Ruler</td>
+		<td><img alt="An arrow, counters aimed at the figures, a highlight and a focus drawn over a dashboard" src="./.github/assets/annotate.gif" /><br />Annotate</td>
 	</tr>
 	<tr>
 		<td><img alt="Two windows thrown into the halves of the screen" src="./.github/assets/glide.gif" /><br />Glide</td>
 		<td><img alt="A reference of a design faded over the page as it was built" src="./.github/assets/references.gif" /><br />References</td>
 	</tr>
 </table>
+
+## Download
+
+Get the latest version from [Releases](https://github.com/overpolish/screenwide/releases/latest).
 
 ## Building
 
