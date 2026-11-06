@@ -16,22 +16,24 @@ import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { arch, argv, exit, platform } from "node:process";
 
+// BtbN deletes its daily builds after about two weeks and keeps the build from
+// the end of each month, so a pin must be a month-end `autobuild-*` release.
 const builds = {
   arm64: {
     archiveUrl:
-      "https://github.com/BtbN/FFmpeg-Builds/releases/download/autobuild-2026-08-20-13-45/ffmpeg-n8.1.2-44-g7c533d0f86-winarm64-gpl-8.1.zip",
+      "https://github.com/BtbN/FFmpeg-Builds/releases/download/autobuild-2026-10-31-12-59/ffmpeg-n8.1.3-27-g8dca1586f4-winarm64-gpl-8.1.zip",
     archiveSha256:
-      "00152b582ea09b8a3a383b3020bc53b54113f8114a0da31f55d443500553ed3a",
+      "40029da82e02abf0d12491e23666e710b7a8943d13501594cf38e6135b95efba",
     executableSha256:
-      "364858dcabd2f0f5861275f1449c8da2d454f4d06034c75c41e57d6c42366a09",
+      "0fa09f6cd5582e7a9404312087203f2f921b4020459ddb69ab1669502a03972c",
   },
   x64: {
     archiveUrl:
-      "https://github.com/BtbN/FFmpeg-Builds/releases/download/autobuild-2026-08-20-13-45/ffmpeg-n8.1.2-44-g7c533d0f86-win64-gpl-8.1.zip",
+      "https://github.com/BtbN/FFmpeg-Builds/releases/download/autobuild-2026-10-31-12-59/ffmpeg-n8.1.3-27-g8dca1586f4-win64-gpl-8.1.zip",
     archiveSha256:
-      "410c82fc0a7d713fd83412138271b8559faa8cf8a74a75eaf541dfca75ea4590",
+      "401dffcf14c301082e1fc03b0bc876b92ea676bfc521fc56e80a1537d137034f",
     executableSha256:
-      "1698c91517032ceeed6df5427e1fc012adecb07e7c4a6b031efb8c0219d4891d",
+      "c46215f8889634396f0ac0acac738ef2145175e5b6caf28b3daa8ac9a9980c5f",
   },
 };
 

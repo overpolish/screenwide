@@ -18,9 +18,11 @@ Source downloads are retried only when their pinned SHA-256 does not match. If V
 
 ## Windows
 
-The x86-64 and ARM64 releases use BtbN's pinned static GPL builds `n8.1.2-44-g7c533d0f86` from release `autobuild-2026-08-20-13-45`:
+The x86-64 and ARM64 releases use BtbN's pinned static GPL builds `n8.1.3-27-g8dca1586f4` from release `autobuild-2026-10-31-12-59`:
 
-<https://github.com/BtbN/FFmpeg-Builds/releases/tag/autobuild-2026-08-20-13-45>
+<https://github.com/BtbN/FFmpeg-Builds/releases/tag/autobuild-2026-10-31-12-59>
+
+BtbN deletes its daily builds after about two weeks and keeps the build from the end of each month, so the pin is always a month-end release.
 
 `scripts/build-ffmpeg-windows.mjs` records and verifies both the archive and extracted executable hashes. The corresponding build scripts and FFmpeg source revision are available from <https://github.com/BtbN/FFmpeg-Builds>.
 
