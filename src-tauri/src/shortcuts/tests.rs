@@ -26,6 +26,10 @@ fn defaults_open_the_controls_save_replays_take_screenshots_and_recognize_text()
         ShortcutAction::TakeScreenshot,
         "CommandOrControl+Shift+Digit8"
       ),
+      (
+        ShortcutAction::TakeReferenceScreenshot,
+        "CommandOrControl+Shift+Digit7"
+      ),
       (ShortcutAction::RecognizeText, "CommandOrControl+Shift+KeyT"),
       (ShortcutAction::RulerOverlay, "CommandOrControl+Shift+KeyR"),
       (
