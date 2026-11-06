@@ -69,6 +69,9 @@ const CHECKED_EXTENSIONS = new Set([
 const EXCLUDED_FILES = new Set(["pnpm-lock.yaml", "TOOLS-LICENSE.md"]);
 // ts-rs writes a fixed generated-file note as the first line of each binding.
 const EXCLUDED_DIRECTORIES = ["src-tauri/vendor/", "src/bindings/"];
+// Files from elsewhere keep their own licence and holder, with the licence's
+// text in `LICENSES/`.
+const THIRD_PARTY = new Map([["src/assets/github-mark.svg", "MIT"]]);
 
 const licenseOf = (file) =>
   ELASTIC_PATHS.some((path) =>
@@ -96,8 +99,9 @@ for (const file of trackedFiles) {
     continue;
   }
   const header = readFileSync(file, "utf8").split(/\r?\n/, 12).join("\n");
-  const expected = licenseOf(file);
-  if (!header.includes(COPYRIGHT)) {
+  const thirdParty = THIRD_PARTY.get(file);
+  const expected = thirdParty ?? licenseOf(file);
+  if (!header.includes(thirdParty ? "SPDX-FileCopyrightText:" : COPYRIGHT)) {
     problems.push(`${file}: no SPDX copyright line`);
   } else if (!header.includes(`SPDX-License-Identifier: ${expected}`)) {
     problems.push(`${file}: should be SPDX-License-Identifier: ${expected}`);

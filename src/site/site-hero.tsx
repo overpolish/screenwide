@@ -32,7 +32,6 @@ function DownloadButtons() {
     <div className="mt-8 flex flex-wrap gap-separate">
       {systems.map((system, index) => (
         <Button
-          className="h-site-control px-5 text-tile"
           color={index === 0 ? "primary" : "neutral"}
           key={system}
           onPress={download}
@@ -47,14 +46,15 @@ function DownloadButtons() {
 }
 
 /**
- * The real recording island, playing a recording's part as in its stories.
- * What hangs beneath its row is drawn outside its box, so the frame keeps
- * room down to its lowest part, as the app sizes the island's window.
+ * The real recording island, playing a recording's part as in its stories,
+ * centred at the top of the page as it sits at the top of the screen. What
+ * hangs beneath its row is drawn outside its box, so the frame keeps room
+ * down to its lowest part, as the app sizes the island's window.
  */
-function HeroIsland() {
+export function SiteIsland() {
   // Window mode opens on one line rather than the displays' pictures, so the
-  // island sits beside the headline without towering over it; a window is
-  // chosen already, so Record works at the first press.
+  // island stays compact; a window is chosen already, so Record works at the
+  // first press.
   const island = useIslandStage({
     chosenWindow: PREVIEW_WINDOWS[0],
     initialMode: "window",
@@ -73,13 +73,12 @@ function HeroIsland() {
   return (
     // The island is as wide as its row, wider than a phone; the app it
     // records with does not run on one either.
-    <div className="mt-10 hidden md:block">
-      <Text className="block" variant="caption">
-        {t("site-hero-try")}
-      </Text>
-      <div className="mt-3 w-fit" ref={ref} style={{ minHeight: height }}>
-        <RecordingIsland {...island} onShapeChange={onShapeChange} />
-      </div>
+    <div
+      className="hidden w-fit md:block"
+      ref={ref}
+      style={{ minHeight: height }}
+    >
+      <RecordingIsland {...island} onShapeChange={onShapeChange} />
     </div>
   );
 }
@@ -97,7 +96,6 @@ export function SiteHero() {
         <Text className="mt-4 block" variant="caption">
           {t("site-hero-note")}
         </Text>
-        <HeroIsland />
       </div>
       <div className="overflow-hidden rounded-window ring-1 ring-divider">
         <SiteClip label={t("site-edit-recording")} name="edit" />

@@ -12,31 +12,35 @@ site-download-macos = Download for macOS
 site-download-windows = Download for Windows
 # Under the download buttons.
 site-hero-note = Free and open source. Tools sold separately.
-# Above the recording island on the page, which can be used.
-site-hero-try = The real recording controls. Try them.
 # Names the recording of the editor at work, for assistive technology.
 site-edit-recording = A recording playing in the editor, zooming in where the clicks and typing are
 site-free-title = Free and open source
-site-free-body = Recording, editing, screenshots, text recognition and drawing, under the GPL.
+site-free-body = Recording, editing, screenshots and text recognition, under the GPL.
 site-read-title = Read
 site-read-body = Copy text from anywhere on screen, even from a picture.
 # Names the recording of Text Recognition at work, for assistive technology.
 site-read-recording = Text Recognition reading a photographed page and pasting it into a note
-site-draw-title = Draw
-site-draw-body = Arrows, counters and highlights, drawn on screen as you present.
+site-annotate-title = Annotate
+site-annotate-body = Arrows, counters and highlights, drawn on screen as you present.
 # Names the recording of Annotate at work, for assistive technology.
-site-draw-recording = An arrow, counters and a highlight drawn over a dashboard
-# The paid tier. $price is the one-time price, such as £20.
-site-tools-title = Tools
-site-tools-body = 14 days free, then { $price } once. Every future tool included.
-site-measure-title = Measure
-site-measure-body = Point at anything and the Ruler finds its edges.
+site-annotate-recording = An arrow, counters and a highlight drawn over a dashboard
+# The paid tools, sold one by one or all together.
+site-tools-title = Paid tools
+site-tools-body = Free for 14 days. Buy the ones you use, or all of them together, including any added later.
+# A paid tool's button to its checkout.
+site-buy = Buy
+# The same button's name for assistive technology. $tool is the tool's name.
+site-buy-tool = Buy { $tool }
+# The button to buy every paid tool together.
+site-buy-bundle = Buy all tools
+site-ruler-title = Ruler
+site-ruler-body = Measure sizes, spacing and alignment on screen.
 # Names the recording of the Ruler at work, for assistive technology.
-site-measure-recording = The Ruler measuring the gaps and sizes in a dialog
-site-keep-title = Keep
-site-keep-body = Keep a screenshot on screen and fade it to compare.
+site-ruler-recording = The Ruler measuring the gaps and sizes in a dialog
+site-references-title = References
+site-references-body = Keep a screenshot on screen and fade it to compare.
 # Names the recording of a reference at work, for assistive technology.
-site-keep-recording = A reference of a design faded over the page as it was built
+site-references-recording = A reference of a design faded over the page as it was built
 site-glide-title = Glide
 site-glide-body = Throw a window into a half, a quarter or a third.
 # Names the recording of Glide at work, for assistive technology.
