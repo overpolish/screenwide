@@ -4,6 +4,8 @@ mod annotate;
 mod app_accent;
 mod app_locale;
 mod app_windows;
+#[cfg(target_os = "macos")]
+mod async_runtime;
 mod audio_preview;
 mod camera_preview;
 mod capture_overlays;
@@ -55,6 +57,8 @@ mod user_work;
 mod window_front;
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+  #[cfg(target_os = "macos")]
+  async_runtime::install();
   #[cfg(target_os = "macos")]
   screenwide_i18n::apply_layout_direction();
   let builder = plugins::with_plugins(tauri::Builder::default());

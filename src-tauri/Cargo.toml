@@ -103,7 +103,7 @@ tauri-plugin-global-shortcut = "2.3.2"
 # Crates below the app use Tauri plainly; the app's own entry carries the
 # features `tauri.conf.json` needs, which the Tauri CLI keeps in step.
 tauri = "2"
-tokio = { version = "1", features = ["macros", "rt", "time"] }
+tokio = { version = "1", features = ["macros", "rt", "rt-multi-thread", "time"] }
 trash = "5"
 # Serde attributes that only shape reading, such as an alias kept for a value
 # no longer written, have nothing to say to the TypeScript a type exports.

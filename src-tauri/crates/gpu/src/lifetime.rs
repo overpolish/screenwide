@@ -77,6 +77,11 @@ fn watch_idle() {
     std::thread::sleep(IDLE_CHECK);
     let idle = now_ms().saturating_sub(LAST_USE.load(Ordering::Relaxed));
     if idle >= IDLE_RELEASE.as_millis() as u64 {
+      // Metal autoreleases some of what the device frees, and this thread
+      // lives as long as the app, so only a pool of its own ever empties.
+      #[cfg(target_os = "macos")]
+      objc2::rc::autoreleasepool(|_| close_if_unused());
+      #[cfg(not(target_os = "macos"))]
       close_if_unused();
     }
   }
