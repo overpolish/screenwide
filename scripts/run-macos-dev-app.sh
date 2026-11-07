@@ -55,4 +55,8 @@ for tool in ffmpeg screenwide-transcriber silero-vad.bin; do
   fi
 done
 
+# Launched directly rather than by Launch Services, the app does not get the
+# environment its Info.plist sets, so the large allocation cache is turned off
+# here as the release's LSEnvironment does.
+export MallocLargeCache=0
 exec "$app_executable" "$@"

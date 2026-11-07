@@ -4,6 +4,14 @@
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 <plist version="1.0">
 <dict>
+  <!-- macOS keeps large freed allocations cached for reuse and does not hand
+       them back, even under memory pressure: a recording's frames left the
+       app holding hundreds of megabytes it no longer used. -->
+  <key>LSEnvironment</key>
+  <dict>
+    <key>MallocLargeCache</key>
+    <string>0</string>
+  </dict>
   <key>LSUIElement</key>
   <true/>
   <key>NSCameraUsageDescription</key>

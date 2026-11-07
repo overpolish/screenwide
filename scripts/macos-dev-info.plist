@@ -26,6 +26,11 @@ SPDX-License-Identifier: GPL-3.0-or-later
   <string>0.1.0</string>
   <key>LSMinimumSystemVersion</key>
   <string>14.2</string>
+  <key>LSEnvironment</key>
+  <dict>
+    <key>MallocLargeCache</key>
+    <string>0</string>
+  </dict>
   <key>LSUIElement</key>
   <true/>
   <key>NSAudioCaptureUsageDescription</key>
