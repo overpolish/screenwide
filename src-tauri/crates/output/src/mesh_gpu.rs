@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-use std::sync::LazyLock;
+use std::sync::Arc;
 
 use bytemuck::{Pod, Zeroable};
 use wgpu::util::DeviceExt;
@@ -39,19 +39,19 @@ struct MeshUniforms {
 }
 
 struct Renderer {
-  gpu: &'static screenwide_gpu::Gpu,
+  gpu: Arc<screenwide_gpu::Gpu>,
   pipeline: wgpu::ComputePipeline,
 }
 
-static RENDERER: LazyLock<Result<Renderer, String>> = LazyLock::new(Renderer::new);
+static RENDERER: screenwide_gpu::DeviceCache<Renderer> = screenwide_gpu::DeviceCache::new();
 
-fn renderer() -> Result<&'static Renderer, String> {
-  RENDERER.as_ref().map_err(Clone::clone)
+fn renderer() -> Result<Arc<Renderer>, String> {
+  RENDERER.get_or_try_init(&screenwide_gpu::shared()?, Renderer::new)
 }
 
 impl Renderer {
-  fn new() -> Result<Self, String> {
-    let gpu = screenwide_gpu::shared()?;
+  fn new(gpu: &Arc<screenwide_gpu::Gpu>) -> Result<Self, String> {
+    let gpu = Arc::clone(gpu);
     let shader = gpu
       .device
       .create_shader_module(wgpu::ShaderModuleDescriptor {

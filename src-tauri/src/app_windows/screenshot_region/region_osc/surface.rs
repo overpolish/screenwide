@@ -48,7 +48,7 @@ pub(crate) struct Texture {
 /// Everything shared by the anchor surface and its peers, so a peer costs one
 /// window plus one swap chain. macOS shared the `MTLDevice` the same way.
 pub(crate) struct Gpu {
-  shared: &'static screenwide_gpu::Gpu,
+  shared: Arc<screenwide_gpu::Gpu>,
   layout: wgpu::BindGroupLayout,
   pipeline: wgpu::RenderPipeline,
   linear_sampler: wgpu::Sampler,
@@ -61,8 +61,8 @@ pub(crate) struct Gpu {
 }
 
 impl Gpu {
-  pub(super) fn device(&self) -> &'static screenwide_gpu::Gpu {
-    self.shared
+  pub(super) fn device(&self) -> &Arc<screenwide_gpu::Gpu> {
+    &self.shared
   }
 }
 

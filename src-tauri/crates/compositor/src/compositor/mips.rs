@@ -10,6 +10,6 @@ impl Compositor {
   /// Makes `texture`'s levels after the first again from what was drawn into
   /// it, for a cut-out picture whose shadow the canvas reads from them.
   pub fn fill_mips(&self, texture: &wgpu::Texture) {
-    self.mips.fill(self.gpu, texture);
+    self.mips.fill(&self.gpu, texture);
   }
 }

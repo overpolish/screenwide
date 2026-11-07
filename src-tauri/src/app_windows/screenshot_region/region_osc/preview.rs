@@ -7,7 +7,7 @@
 //! owner and its state set here directly instead of through an overlay
 //! session.
 
-use std::sync::{Arc, LazyLock};
+use std::sync::Arc;
 
 use screenwide_gpu::surface::Frame;
 use screenwide_imaging::CapturedImage;
@@ -25,10 +25,10 @@ use crate::text_recognition::visual::RenderPacket;
 pub(crate) const PREVIEW_DISPLAY_ID: u32 = 1;
 
 /// The pipeline every preview shares, made with the first.
-static GPU: LazyLock<Result<Arc<Gpu>, String>> = LazyLock::new(Gpu::new);
+static GPU: screenwide_gpu::DeviceCache<Gpu> = screenwide_gpu::DeviceCache::new();
 
 fn gpu() -> Result<Arc<Gpu>, String> {
-  GPU.clone()
+  GPU.get_or_try_init(&screenwide_gpu::shared()?, Gpu::on)
 }
 
 struct Drawable(screenwide_gpu::surface::Surface);

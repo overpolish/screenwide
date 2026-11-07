@@ -6,13 +6,13 @@ use super::*;
 
 impl Compositor {
   /// A compositor drawing the cursor from the platform's artwork.
-  pub fn new(gpu: &'static Gpu) -> Result<Self, String> {
+  pub fn new(gpu: &std::sync::Arc<Gpu>) -> Result<Self, String> {
     Self::with_cursor_artworks(gpu, screenwide_cursor_effects::gpu_artworks())
   }
 
   /// A compositor drawing the cursor from `artworks`, one per style index.
   pub fn with_cursor_artworks(
-    gpu: &'static Gpu,
+    gpu: &std::sync::Arc<Gpu>,
     artworks: &[screenwide_cursor_effects::GpuArtwork],
   ) -> Result<Self, String> {
     let device = &gpu.device;
@@ -37,7 +37,7 @@ impl Compositor {
       .texture_with_pixels("Screenwide preview fallback", (1, 1, 1), FORMAT, &[0; 4])
       .create_view(&Default::default());
     Ok(Self {
-      gpu,
+      gpu: std::sync::Arc::clone(gpu),
       background_cache: BackgroundImageCache::default(),
       annotations: GpuBuffer::new(gpu, "Screenwide annotations"),
       samples: GpuBuffer::new(gpu, "Screenwide annotation exposure"),

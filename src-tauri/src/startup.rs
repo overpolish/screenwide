@@ -70,6 +70,10 @@ pub(crate) fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Erro
   }
   app_windows::initialize_predefined_windows(app.handle())?;
   app_windows::initialize_topology_management(app.handle());
+  // A hidden region overlay keeps its drawing surfaces until its next
+  // session; the device closing when idle lets them go first.
+  #[cfg(any(target_os = "macos", target_os = "windows"))]
+  screenwide_gpu::on_idle(app_windows::screenshot_region::region_osc::release_hidden);
   editor::initialize(app.handle());
   // The text pickers' fonts and template previews take a moment to ready;
   // done in the background now, the pickers have them when they open.

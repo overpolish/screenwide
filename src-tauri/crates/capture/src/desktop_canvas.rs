@@ -52,7 +52,7 @@ pub(crate) struct PieceSource<'a> {
 }
 
 pub(crate) struct DesktopCanvas {
-  gpu: &'static Gpu,
+  gpu: std::sync::Arc<Gpu>,
   width: u32,
   height: u32,
   layout: wgpu::BindGroupLayout,
@@ -75,7 +75,7 @@ impl DesktopCanvas {
     if sources.len() as u64 * self.stride > self.constants.size() {
       return Err("Desktop frames no longer match the capture plan".to_owned());
     }
-    let gpu = self.gpu;
+    let gpu = &self.gpu;
     let mut constants = vec![0_u8; (self.stride as usize) * sources.len()];
     let mut bindings = Vec::with_capacity(sources.len());
     for (index, source) in sources.iter().enumerate() {

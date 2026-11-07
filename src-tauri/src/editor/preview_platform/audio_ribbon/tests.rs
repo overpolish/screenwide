@@ -61,10 +61,10 @@ fn coverage(
 fn a_bar_keeps_its_coverage_at_every_subpixel_offset() {
   let gpu = screenwide_gpu::shared().expect("a graphics device");
   let painter = Painter::new(&gpu.device);
-  let levels = painter.bindings(&gpu.device, &levels_view(gpu, &[1.0]));
+  let levels = painter.bindings(&gpu.device, &levels_view(&gpu, &[1.0]));
   for half_height in [2.0, 6.0] {
     let sums = (0..16)
-      .map(|phase| coverage(&painter, gpu, &levels, phase as f32 / 16.0, half_height) as f32)
+      .map(|phase| coverage(&painter, &gpu, &levels, phase as f32 / 16.0, half_height) as f32)
       .collect::<Vec<_>>();
     let minimum = sums.iter().copied().fold(f32::MAX, f32::min);
     let maximum = sums.iter().copied().fold(f32::MIN, f32::max);

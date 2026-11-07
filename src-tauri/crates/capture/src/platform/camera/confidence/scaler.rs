@@ -30,7 +30,7 @@ struct Uniforms {
 }
 
 pub(super) struct Scaler {
-  gpu: &'static Gpu,
+  gpu: std::sync::Arc<Gpu>,
   layout: wgpu::BindGroupLayout,
   bgra: wgpu::RenderPipeline,
   biplanar: wgpu::RenderPipeline,
@@ -103,7 +103,7 @@ impl Scaler {
   /// Submits the scale and the copy into the readback buffer. False for a
   /// pixel format the camera is never asked for.
   fn draw(&mut self, buffer: &cv::PixelBuf, width: u32, height: u32) -> Result<bool, String> {
-    let gpu = self.gpu;
+    let gpu = std::sync::Arc::clone(&self.gpu);
     let format = buffer.pixel_format();
     let biplanar = format == cv::PixelFormat::_420V || format == cv::PixelFormat::_420F;
     if !biplanar && format != cv::PixelFormat::_32_BGRA {
@@ -111,9 +111,9 @@ impl Scaler {
     }
     let (first, second) = if biplanar {
       (
-        buffer_plane_texture(gpu, buffer, 0, wgpu::TextureFormat::R8Unorm, "camera luma")?,
+        buffer_plane_texture(&gpu, buffer, 0, wgpu::TextureFormat::R8Unorm, "camera luma")?,
         Some(buffer_plane_texture(
-          gpu,
+          &gpu,
           buffer,
           1,
           wgpu::TextureFormat::Rg8Unorm,
@@ -123,7 +123,7 @@ impl Scaler {
     } else {
       (
         buffer_plane_texture(
-          gpu,
+          &gpu,
           buffer,
           0,
           wgpu::TextureFormat::Bgra8Unorm,
@@ -206,7 +206,7 @@ impl Scaler {
   }
 
   fn target(&mut self, width: u32, height: u32) -> wgpu::Texture {
-    let gpu = self.gpu;
+    let gpu = std::sync::Arc::clone(&self.gpu);
     self
       .target
       .take_if(|target| (target.width(), target.height()) != (width, height));

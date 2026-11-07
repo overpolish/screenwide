@@ -34,6 +34,7 @@ pub struct Surface {
   /// configuration failed for a frame panics inside wgpu, so such a surface
   /// configures again before it hands out a frame.
   configured: AtomicBool,
+  _live: super::lifetime::LiveSurface,
 }
 
 // The surface is reached behind its owner's lock.
@@ -123,6 +124,7 @@ impl Surface {
       surface,
       config,
       configured: AtomicBool::new(false),
+      _live: super::lifetime::LiveSurface::new(),
     };
     surface.configure(gpu);
     surface

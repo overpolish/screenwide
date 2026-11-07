@@ -104,6 +104,11 @@ fn set_up(app: &AppHandle, label: WindowLabel, window: &WebviewWindow) -> tauri:
         std::thread::spawn(screenwide_gpu::release_unused);
       }
       destroyed(&destroyed_app, label);
+      // A page destroyed with its window cannot close its native pictures.
+      #[cfg(any(target_os = "macos", target_os = "windows"))]
+      if matches!(label, WindowLabel::Settings) {
+        crate::settings_preview::close_window_previews(label.as_str());
+      }
     }
   });
   Ok(())

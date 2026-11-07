@@ -16,7 +16,7 @@ use screenwide_gpu::macos::{bgra_buffer_texture, buffer_plane_texture};
 use screenwide_gpu::Gpu;
 
 pub(super) struct FrameComposer<'a> {
-  gpu: &'static Gpu,
+  gpu: std::sync::Arc<Gpu>,
   compositor: Compositor,
   planes: VideoPlanes,
   draw: FrameDraw<'a>,
@@ -35,7 +35,7 @@ impl<'a> FrameComposer<'a> {
     annotations_within_ms: Option<[u64; 2]>,
   ) -> Result<Self, String> {
     let gpu = screenwide_gpu::shared()?;
-    let compositor = Compositor::new(gpu)?;
+    let compositor = Compositor::new(&gpu)?;
     let (width, height) = screenwide_output::output_dimensions(request.output)?;
     let canvas = gpu
       .device
@@ -55,9 +55,9 @@ impl<'a> FrameComposer<'a> {
       })
       .create_view(&Default::default());
     Ok(Self {
+      planes: VideoPlanes::new(&gpu),
+      draw: FrameDraw::new(request, &gpu, annotations_within_ms)?,
       gpu,
-      planes: VideoPlanes::new(gpu),
-      draw: FrameDraw::new(request, gpu, annotations_within_ms)?,
       compositor,
       source: None,
       canvas,
@@ -69,7 +69,7 @@ impl<'a> FrameComposer<'a> {
   /// Draws `frame` into its destination and submits it, answering the token
   /// `wait` takes once the destination is to be read.
   pub(super) fn compose(&mut self, frame: &ExportFrame) -> Result<u64, String> {
-    let gpu = self.gpu;
+    let gpu = &*self.gpu;
     let screen = unsafe { pixel_buffer(frame.screen) }
       .ok_or_else(|| "The export frame has no picture".to_owned())?;
     let destination = unsafe { pixel_buffer(frame.destination) }

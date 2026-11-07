@@ -98,8 +98,8 @@ pub(super) fn attach(
     app: app.clone(),
     label: label.to_owned(),
     host,
-    picture: ChromeRenderer::with_snapshot(gpu, picture, &snapshot),
-    chrome: ChromeRenderer::with_snapshot(gpu, chrome, &snapshot),
+    picture: ChromeRenderer::with_snapshot(&gpu, picture, &snapshot),
+    chrome: ChromeRenderer::with_snapshot(&gpu, chrome, &snapshot),
     stage: Stage::new(size),
     // The upload keeps mip levels only for a picture with see-through
     // pixels, which its shadow is blurred from (`references::upload`).

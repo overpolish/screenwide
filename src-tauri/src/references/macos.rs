@@ -82,8 +82,8 @@ pub(super) fn attach(
   // surfaces live.
   let surfaces = unsafe {
     (
-      surface_on(gpu, &picture_layer)?,
-      surface_on(gpu, &chrome_layer)?,
+      surface_on(&gpu, &picture_layer)?,
+      surface_on(&gpu, &chrome_layer)?,
     )
   };
   // wgpu hands out no frame while the window is not on screen, and it is

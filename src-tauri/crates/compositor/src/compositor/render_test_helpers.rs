@@ -8,12 +8,12 @@ use super::*;
 
 pub(super) const OUTPUT: (u32, u32) = (1920, 1080);
 
-pub(super) fn gpu() -> &'static Gpu {
+pub(super) fn gpu() -> std::sync::Arc<Gpu> {
   screenwide_gpu::shared().expect("the shared GPU")
 }
 
 pub(super) fn compositor() -> Compositor {
-  Compositor::new(gpu()).expect("the preview compositor")
+  Compositor::new(&gpu()).expect("the preview compositor")
 }
 
 pub(super) fn target() -> wgpu::Texture {

@@ -72,15 +72,15 @@ pub struct WorkspaceScene {
 impl WorkspaceScene {
   pub fn new() -> Result<Self, String> {
     let gpu = screenwide_gpu::shared()?;
-    let compositor = Compositor::new(gpu)?;
+    let compositor = Compositor::new(&gpu)?;
     // Drawn as it is edited: a set of kinds new to it is compiled on another
     // thread while the frames go on with a variant that holds it.
     compositor.compile_annotation_kinds_in_background();
     Ok(Self {
       state: Mutex::new(SceneState {
         compositor,
-        backdrop: Backdrop::new(gpu),
-        loupe: loupe::Loupe::new(gpu),
+        backdrop: Backdrop::new(&gpu),
+        loupe: loupe::Loupe::new(&gpu),
         layers: Vec::new(),
         resize: None,
         sources: HashMap::new(),

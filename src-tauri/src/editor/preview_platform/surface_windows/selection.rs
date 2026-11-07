@@ -19,7 +19,7 @@ pub(super) struct SelectionOverlay {
 impl SelectionOverlay {
   /// The overlay's visual under `root`. The caller commits the tree.
   pub(super) fn new(
-    shared: &'static screenwide_gpu::Gpu,
+    shared: &std::sync::Arc<screenwide_gpu::Gpu>,
     composition: &IDCompositionDevice,
     root: &IDCompositionVisual,
   ) -> Result<Self, String> {

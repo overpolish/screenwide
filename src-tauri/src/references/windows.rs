@@ -109,7 +109,7 @@ pub(super) fn attach(
     rescale_pending: Cell::new(false),
   });
   window_proc::remember(pad, Rc::clone(&shared));
-  let (composition, surfaces) = match Composition::new(gpu, top) {
+  let (composition, surfaces) = match Composition::new(&gpu, top) {
     Ok(made) => made,
     Err(error) => {
       window_proc::forget(pad);

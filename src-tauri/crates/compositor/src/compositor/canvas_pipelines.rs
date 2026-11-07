@@ -84,20 +84,20 @@ pub(super) struct CanvasPipelines {
 /// layout their bindings are made against: two previews, the stills and an
 /// export then compile each variant once between them.
 pub(super) fn shared(
-  gpu: &'static Gpu,
+  gpu: &Arc<Gpu>,
   bindings: impl FnOnce() -> wgpu::BindGroupLayout,
 ) -> (wgpu::BindGroupLayout, Arc<CanvasPipelines>) {
-  type Shared = (usize, wgpu::BindGroupLayout, Arc<CanvasPipelines>);
-  static SHARED: Mutex<Vec<Shared>> = Mutex::new(Vec::new());
-  let device = std::ptr::from_ref(gpu) as usize;
-  let mut shared = SHARED.lock().unwrap_or_else(PoisonError::into_inner);
-  if let Some((_, layout, canvas)) = shared.iter().find(|(at, ..)| *at == device) {
-    return (layout.clone(), Arc::clone(canvas));
+  static SHARED: screenwide_gpu::DeviceCache<(wgpu::BindGroupLayout, Arc<CanvasPipelines>)> =
+    screenwide_gpu::DeviceCache::new();
+  let made = SHARED.get_or_try_init(gpu, |gpu| {
+    let layout = bindings();
+    let canvas = Arc::new(CanvasPipelines::new(&gpu.device, &layout));
+    Ok((layout, canvas))
+  });
+  match made {
+    Ok(made) => (made.0.clone(), Arc::clone(&made.1)),
+    Err(_) => unreachable!("making the canvas pipelines cannot fail"),
   }
-  let layout = bindings();
-  let canvas = Arc::new(CanvasPipelines::new(&gpu.device, &layout));
-  shared.push((device, layout.clone(), Arc::clone(&canvas)));
-  (layout, canvas)
 }
 
 /// The canvas shader built for `kinds` and `features`, compiled for each

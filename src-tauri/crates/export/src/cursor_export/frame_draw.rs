@@ -50,7 +50,7 @@ impl<'a> FrameDraw<'a> {
   /// `ExportAnnotations`.
   pub(super) fn new<'r: 'a>(
     request: &CursorExportRequest<'r>,
-    gpu: &'static screenwide_gpu::Gpu,
+    gpu: &std::sync::Arc<screenwide_gpu::Gpu>,
     annotations_within_ms: Option<[u64; 2]>,
   ) -> Result<Self, String> {
     let cursor = request

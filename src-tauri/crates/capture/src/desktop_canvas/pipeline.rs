@@ -7,7 +7,7 @@ use super::*;
 
 impl DesktopCanvas {
   /// A `width` by `height` canvas for at most `pieces` pieces.
-  pub(crate) fn new(gpu: &'static Gpu, width: u32, height: u32, pieces: usize) -> Self {
+  pub(crate) fn new(gpu: &std::sync::Arc<Gpu>, width: u32, height: u32, pieces: usize) -> Self {
     let device = &gpu.device;
     let module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
       label: Some("Screenwide desktop compositor shader"),
@@ -77,7 +77,7 @@ impl DesktopCanvas {
     let alignment = u64::from(device.limits().min_uniform_buffer_offset_alignment);
     let stride = (size_of::<PieceConstants>() as u64).next_multiple_of(alignment);
     Self {
-      gpu,
+      gpu: std::sync::Arc::clone(gpu),
       width,
       height,
       layout,

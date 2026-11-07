@@ -158,7 +158,7 @@ fn redacted(
   let mut encoder = gpu.device.create_command_encoder(&Default::default());
   let view = compositor
     .redactor
-    .apply(gpu, &mut encoder, source, &records, 0, false)
+    .apply(&gpu, &mut encoder, source, &records, 0, false)
     .unwrap()
     .expect("a box covering the source redacts it");
   gpu.queue.submit([encoder.finish()]);

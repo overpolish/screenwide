@@ -1,11 +1,11 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! The one wgpu device every renderer shares. Shaders are WGSL everywhere:
-//! on macOS they run on Metal; on Windows on Direct3D 12, compiled through
-//! the bundled DXC, because wgpu's default there, FXC, takes minutes on the
-//! larger shaders. The canvas variants the build precompiled are the
-//! exception on both.
+//! The wgpu device every renderer shares, open while something uses it
+//! (`lifetime`). Shaders are WGSL everywhere: on macOS they run on Metal; on
+//! Windows on Direct3D 12, compiled through the bundled DXC, because wgpu's
+//! default there, FXC, takes minutes on the larger shaders. The canvas
+//! variants the build precompiled are the exception on both.
 
 #[cfg(target_os = "windows")]
 mod windows;
@@ -15,40 +15,35 @@ pub use self::windows::bridge::{
 };
 #[cfg(target_os = "windows")]
 pub use self::windows::interop::{d3d11, D3d11Layer, SharedTexture};
+mod lifetime;
 #[cfg(target_os = "macos")]
 pub mod macos;
 pub mod mips;
 pub mod surface;
 mod textures;
 
-use std::sync::{Arc, OnceLock};
+pub use lifetime::{on_idle, shared, DeviceCache};
+
+use std::sync::Arc;
 
 pub struct Gpu {
   /// Surfaces are created from the instance that owns the device.
   pub(crate) instance: wgpu::Instance,
   pub device: wgpu::Device,
   pub queue: wgpu::Queue,
-}
-
-/// Opened on first use. A failure is kept, so every renderer reports the same
-/// reason instead of retrying a device that cannot open.
-static SHARED: OnceLock<Result<Gpu, String>> = OnceLock::new();
-
-pub fn shared() -> Result<&'static Gpu, String> {
-  SHARED
-    .get_or_init(|| pollster::block_on(Gpu::open()))
-    .as_ref()
-    .map_err(Clone::clone)
+  /// Which opening of the device this is, so a [`DeviceCache`] never hands
+  /// out what was made on one closed since.
+  generation: u64,
 }
 
 /// Frees what the device still holds for work that has ended, such as an
 /// editor's picture and decoders after it closes. wgpu destroys dropped
 /// resources only once it next submits or is polled, and the Direct3D 11
 /// layer only once it next flushes; with nothing more to draw, neither would
-/// happen and the memory would stay taken. Does nothing before the device
-/// has been opened.
+/// happen and the memory would stay taken. Does nothing while the device is
+/// closed.
 pub fn release_unused() {
-  let Some(Ok(gpu)) = SHARED.get() else {
+  let Some(gpu) = lifetime::current() else {
     return;
   };
   #[cfg(target_os = "windows")]
@@ -57,7 +52,7 @@ pub fn release_unused() {
 }
 
 impl Gpu {
-  async fn open() -> Result<Self, String> {
+  async fn open(generation: u64) -> Result<Self, String> {
     let instance = wgpu::Instance::new(instance_descriptor()?);
     // A dedicated GPU where there is one; wgpu falls back to the integrated
     // GPU on a machine without one.
@@ -99,6 +94,7 @@ impl Gpu {
       instance,
       device,
       queue,
+      generation,
     })
   }
 }

@@ -14,8 +14,8 @@ mod ruler_updates;
 mod scene;
 pub(crate) use attachment::{
   capture_keyboard, ensure_attached, ensure_ruler_attached, ensure_text_recognition_attached,
-  focus_ruler_input, input_hwnd, on_owning_thread, release_keyboard, set_capture_affinity,
-  with_context,
+  focus_ruler_input, input_hwnd, on_owning_thread, release_hidden, release_keyboard,
+  set_capture_affinity, with_context,
 };
 use attachment::{context_arc, with_surfaces};
 pub(crate) use content::{

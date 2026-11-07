@@ -8,7 +8,7 @@
 use super::*;
 
 pub(super) struct Backdrop {
-  gpu: &'static screenwide_gpu::Gpu,
+  gpu: std::sync::Arc<screenwide_gpu::Gpu>,
   scale_transform: IDCompositionScaleTransform,
   surface: Surface,
   pub(super) visual: IDCompositionVisual,
@@ -16,7 +16,7 @@ pub(super) struct Backdrop {
 
 impl Backdrop {
   pub(super) fn new(
-    gpu: &'static screenwide_gpu::Gpu,
+    gpu: &std::sync::Arc<screenwide_gpu::Gpu>,
     composition: &IDCompositionDevice,
     root: &IDCompositionVisual,
   ) -> Result<Self, String> {
@@ -38,7 +38,7 @@ impl Backdrop {
     // Two pixels square, stretched over the viewport by the scale transform.
     let surface = Surface::on_visual(gpu, &visual)?;
     let backdrop = Self {
-      gpu,
+      gpu: std::sync::Arc::clone(gpu),
       scale_transform,
       surface,
       visual,
@@ -49,7 +49,7 @@ impl Backdrop {
 
   /// Fills the backstop with `colour`, the webview's backdrop, straight alpha.
   pub(super) fn paint(&self, colour: [f64; 4]) -> Result<(), String> {
-    let Frame::Ready(frame) = self.surface.acquire(self.gpu)? else {
+    let Frame::Ready(frame) = self.surface.acquire(&self.gpu)? else {
       return Err("The Windows preview backstop has no frame to paint".to_owned());
     };
     let alpha = colour[3].clamp(0.0, 1.0);

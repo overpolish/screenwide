@@ -22,7 +22,7 @@ impl Compositor {
     prepared: &PreparedArrows,
     layer: LayerDraw,
   ) -> Result<wgpu::TextureView, String> {
-    let gpu = self.gpu;
+    let gpu = &*self.gpu;
     let (numbers, mut annotations) = numbered_arrows(&self.counter_atlas, gpu, prepared)?;
     let images = place_images(&self.image_atlas, gpu, prepared, &mut annotations)?;
     values.annotation_options[2] = numbers.as_ref().map_or(0, |atlas| atlas.size.0);

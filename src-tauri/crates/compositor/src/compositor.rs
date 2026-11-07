@@ -107,7 +107,7 @@ struct ArtworkStyle {
 }
 
 pub struct Compositor {
-  gpu: &'static Gpu,
+  gpu: std::sync::Arc<Gpu>,
   background_cache: BackgroundImageCache,
   /// Prepared annotations, written per draw.
   annotations: GpuBuffer,
@@ -169,8 +169,8 @@ pub struct SourceTexture {
 }
 
 impl Compositor {
-  pub fn gpu(&self) -> &'static Gpu {
-    self.gpu
+  pub fn gpu(&self) -> &std::sync::Arc<Gpu> {
+    &self.gpu
   }
 
   /// Where the shortcut strip shows, for the live preview's hit-testing.
@@ -181,7 +181,7 @@ impl Compositor {
   ) -> Result<Option<[f64; 4]>, String> {
     self
       .keyboard_cache
-      .visible_bounds(self.gpu, overlay, output)
+      .visible_bounds(&self.gpu, overlay, output)
   }
 }
 

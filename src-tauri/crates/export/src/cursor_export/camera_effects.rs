@@ -25,7 +25,7 @@ pub(crate) struct FrameEffects {
 impl FrameEffects {
   pub(crate) fn new(
     effects: Option<&ExportCameraEffects>,
-    gpu: &'static Gpu,
+    gpu: &std::sync::Arc<Gpu>,
   ) -> Result<Option<Self>, String> {
     let Some(effects) = effects else {
       return Ok(None);

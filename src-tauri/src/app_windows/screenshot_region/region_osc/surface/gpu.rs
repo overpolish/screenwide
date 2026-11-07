@@ -5,21 +5,25 @@ use super::*;
 
 impl Gpu {
   pub(crate) fn new() -> Result<Arc<Self>, String> {
-    let shared = screenwide_gpu::shared()?;
+    Self::on(&screenwide_gpu::shared()?).map(Arc::new)
+  }
+
+  /// The pipeline and its resources on `shared`.
+  pub(crate) fn on(shared: &Arc<screenwide_gpu::Gpu>) -> Result<Self, String> {
     let device = &shared.device;
     let module = shader_module(device);
     let layout = bind_group_layout(device);
     let pipeline = pipeline(device, &layout, &module);
     let placeholder = upload_rgba(shared, &[0_u8; 4], 1, 1);
-    Ok(Arc::new(Self {
-      shared,
+    Ok(Self {
+      shared: Arc::clone(shared),
       layout,
       pipeline,
       linear_sampler: sampler(device, wgpu::FilterMode::Linear),
       point_sampler: sampler(device, wgpu::FilterMode::Nearest),
       placeholder,
       mips: screenwide_gpu::mips::Mips::new(device, RGBA),
-    }))
+    })
   }
 
   /// One draw call's bindings. `constants` is read at a dynamic offset, one

@@ -83,9 +83,9 @@ impl ScenePicture {
       }
       #[cfg(target_os = "windows")]
       LayerPicture::Decoded((frame, subresource, size)) => {
-        let d3d11 = screenwide_gpu::d3d11()?;
-        let texture = compositor.source(d3d11, size)?;
-        compositor.copy_source(d3d11, &texture, frame, subresource)?;
+        let d3d11 = screenwide_gpu::d3d11(compositor.gpu())?;
+        let texture = compositor.source(&d3d11, size)?;
+        compositor.copy_source(&d3d11, &texture, frame, subresource)?;
         Ok(Self {
           texture,
           retained: false,
@@ -118,7 +118,8 @@ impl ScenePicture {
   ) -> Result<(), String> {
     #[cfg(target_os = "windows")]
     if let LayerPicture::Decoded((frame, subresource, _)) = picture {
-      compositor.copy_source(screenwide_gpu::d3d11()?, &self.texture, frame, subresource)?;
+      let d3d11 = screenwide_gpu::d3d11(compositor.gpu())?;
+      compositor.copy_source(&d3d11, &self.texture, frame, subresource)?;
     }
     #[cfg(not(target_os = "windows"))]
     let _ = (self, compositor, picture);

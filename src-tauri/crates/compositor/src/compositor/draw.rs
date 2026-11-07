@@ -99,7 +99,7 @@ impl Compositor {
     let picture = (settings.background_type == "image")
       .then_some(settings.background_image_path.as_deref())
       .flatten()
-      .and_then(|path| self.background_cache.resolve(self.gpu, path));
+      .and_then(|path| self.background_cache.resolve(&self.gpu, path));
     let (cursor_artwork, cursor_frame, cursor_model) =
       self.cursor_artwork_constants(composition.cursor)?;
     let [scene_motion, scene_image_motion, camera_motion_frame, camera_motion_crop] =

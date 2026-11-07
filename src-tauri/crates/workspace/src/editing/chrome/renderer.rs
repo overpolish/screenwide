@@ -6,11 +6,13 @@
 //! drawable; every vertex shares one constants block, so the chrome is one
 //! draw.
 
+use std::sync::Arc;
+
 use screenwide_gpu::surface::{Frame, Surface};
 use screenwide_osc::gpu::vertices::{self as osc_gpu, RenderConstants, Vertex};
 
 pub struct ChromeRenderer {
-  shared: &'static screenwide_gpu::Gpu,
+  shared: Arc<screenwide_gpu::Gpu>,
   surface: Surface,
   pipeline: wgpu::RenderPipeline,
   /// The constants block, and transparent texels for every texture the
@@ -22,14 +24,14 @@ pub struct ChromeRenderer {
 }
 
 impl ChromeRenderer {
-  pub fn new(shared: &'static screenwide_gpu::Gpu, surface: Surface) -> Self {
+  pub fn new(shared: &Arc<screenwide_gpu::Gpu>, surface: Surface) -> Self {
     Self::bound(shared, surface, None)
   }
 
   /// A renderer whose snapshot texture is `snapshot`, which the shader's
   /// frozen-picture quads (kind 33) draw.
   pub fn with_snapshot(
-    shared: &'static screenwide_gpu::Gpu,
+    shared: &Arc<screenwide_gpu::Gpu>,
     surface: Surface,
     snapshot: &wgpu::TextureView,
   ) -> Self {
@@ -37,7 +39,7 @@ impl ChromeRenderer {
   }
 
   fn bound(
-    shared: &'static screenwide_gpu::Gpu,
+    shared: &Arc<screenwide_gpu::Gpu>,
     surface: Surface,
     snapshot: Option<&wgpu::TextureView>,
   ) -> Self {
@@ -93,7 +95,7 @@ impl ChromeRenderer {
     });
     let vertex_capacity = 256;
     Self {
-      shared,
+      shared: Arc::clone(shared),
       surface,
       pipeline,
       bindings,
@@ -105,7 +107,7 @@ impl ChromeRenderer {
 
   /// Gives the drawable's memory back while the editor is hidden.
   pub fn release_drawables(&mut self) {
-    self.surface.resize(self.shared, (2, 2));
+    self.surface.resize(&self.shared, (2, 2));
   }
 
   pub fn present(
@@ -114,15 +116,15 @@ impl ChromeRenderer {
     vertices: &[Vertex],
     constants: &RenderConstants,
   ) -> Result<(), String> {
-    let gpu = self.shared;
-    self.surface.resize(gpu, size);
-    let Frame::Ready(frame) = self.surface.acquire(gpu)? else {
+    let gpu = Arc::clone(&self.shared);
+    self.surface.resize(&gpu, size);
+    let Frame::Ready(frame) = self.surface.acquire(&gpu)? else {
       return Ok(());
     };
     if !vertices.is_empty() {
       if vertices.len() > self.vertex_capacity {
         self.vertex_capacity = vertices.len().next_power_of_two().max(256);
-        self.vertex_buffer = vertex_buffer(gpu, self.vertex_capacity);
+        self.vertex_buffer = vertex_buffer(&gpu, self.vertex_capacity);
       }
       gpu
         .queue

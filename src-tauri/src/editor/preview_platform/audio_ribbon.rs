@@ -67,7 +67,7 @@ impl RibbonLook {
 }
 
 pub(crate) struct AudioRibbonRenderer {
-  gpu: &'static Gpu,
+  gpu: std::sync::Arc<Gpu>,
   surface: Surface,
   painter: Painter,
   /// The constants and the bucketed levels, once there are levels to draw.
@@ -79,9 +79,9 @@ pub(crate) struct AudioRibbonRenderer {
 
 impl AudioRibbonRenderer {
   /// A renderer drawing into `surface`, empty until it has levels.
-  pub(crate) fn new(gpu: &'static Gpu, surface: Surface) -> Self {
+  pub(crate) fn new(gpu: &std::sync::Arc<Gpu>, surface: Surface) -> Self {
     Self {
-      gpu,
+      gpu: std::sync::Arc::clone(gpu),
       surface,
       painter: Painter::new(&gpu.device),
       levels: None,
@@ -95,7 +95,7 @@ impl AudioRibbonRenderer {
   pub(crate) fn set_viewport(&mut self, size: (u32, u32)) {
     let size = (size.0.max(2), size.1.max(2));
     if size != self.surface.size() {
-      self.surface.resize(self.gpu, size);
+      self.surface.resize(&self.gpu, size);
       self.dirty = true;
     }
   }
@@ -106,10 +106,10 @@ impl AudioRibbonRenderer {
     self.dirty = true;
     if samples.is_empty() {
       self.levels = None;
-      self.surface.resize(self.gpu, (2, 2));
+      self.surface.resize(&self.gpu, (2, 2));
       return;
     }
-    let levels = levels_view(self.gpu, &samples);
+    let levels = levels_view(&self.gpu, &samples);
     self.levels = Some(self.painter.bindings(&self.gpu.device, &levels));
   }
 
@@ -145,11 +145,11 @@ impl AudioRibbonRenderer {
     if !self.dirty && self.last_constants == Some(constants) {
       return Ok(false);
     }
-    let Frame::Ready(frame) = self.surface.acquire(self.gpu)? else {
+    let Frame::Ready(frame) = self.surface.acquire(&self.gpu)? else {
       return Ok(false);
     };
     let target = frame.texture.create_view(&Default::default());
-    self.painter.encode(self.gpu, levels, constants, &target);
+    self.painter.encode(&self.gpu, levels, constants, &target);
     self.gpu.queue.present(frame);
     self.dirty = false;
     self.last_constants = Some(constants);
@@ -172,7 +172,7 @@ pub(crate) fn ribbon_still(
   }
   let gpu = screenwide_gpu::shared()?;
   let painter = Painter::new(&gpu.device);
-  let levels = painter.bindings(&gpu.device, &levels_view(gpu, &samples));
+  let levels = painter.bindings(&gpu.device, &levels_view(&gpu, &samples));
   let texture = gpu.device.create_texture(&wgpu::TextureDescriptor {
     label: Some("Screenwide audio ribbon still"),
     size: wgpu::Extent3d {
@@ -204,7 +204,7 @@ pub(crate) fn ribbon_still(
     ],
   };
   painter.encode(
-    gpu,
+    &gpu,
     &levels,
     constants,
     &texture.create_view(&Default::default()),

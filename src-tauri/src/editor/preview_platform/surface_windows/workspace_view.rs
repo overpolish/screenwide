@@ -12,7 +12,7 @@ use screenwide_workspace::scene::{NativeWorkspacePlacement, WorkspaceScene};
 
 pub(super) struct WorkspaceView {
   pub(super) scene: WorkspaceScene,
-  gpu: &'static screenwide_gpu::Gpu,
+  gpu: std::sync::Arc<screenwide_gpu::Gpu>,
   drawable: Mutex<Drawable>,
   visual: IDCompositionVisual,
 }
@@ -26,7 +26,7 @@ struct Drawable {
 
 impl WorkspaceView {
   pub(super) fn new(
-    gpu: &'static screenwide_gpu::Gpu,
+    gpu: &std::sync::Arc<screenwide_gpu::Gpu>,
     composition: &IDCompositionDevice,
     root: &IDCompositionVisual,
     above: &IDCompositionVisual,
@@ -45,7 +45,7 @@ impl WorkspaceView {
     surface.accept_copies(gpu);
     Ok(Self {
       scene: WorkspaceScene::new()?,
-      gpu,
+      gpu: std::sync::Arc::clone(gpu),
       drawable: Mutex::new(Drawable {
         surface,
         offset: None,
@@ -64,7 +64,7 @@ impl WorkspaceView {
       return false;
     }
     let _ = unsafe { self.visual.SetOffsetX2(-100_000.0) };
-    drawable.surface.resize(self.gpu, (2, 2));
+    drawable.surface.resize(&self.gpu, (2, 2));
     true
   }
 
@@ -83,7 +83,7 @@ impl WorkspaceView {
       .lock()
       .map_err(|_| "The Windows workspace drawable is poisoned".to_owned())?;
     let (x, y, width, height) = frame;
-    drawable.surface.resize(self.gpu, (width, height));
+    drawable.surface.resize(&self.gpu, (width, height));
     let moved = drawable.offset != Some((x, y));
     if moved {
       unsafe {
@@ -96,7 +96,7 @@ impl WorkspaceView {
       drawable.offset = Some((x, y));
     }
     // Nothing can be drawn now; the next change draws the scene again.
-    let Frame::Ready(target) = drawable.surface.acquire(self.gpu)? else {
+    let Frame::Ready(target) = drawable.surface.acquire(&self.gpu)? else {
       return Ok(moved);
     };
     self

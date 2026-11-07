@@ -32,7 +32,7 @@ impl PreviewEffects {
   pub fn set(
     &mut self,
     live: Option<Arc<LiveCameraEffects>>,
-    gpu: &'static Gpu,
+    gpu: &std::sync::Arc<Gpu>,
   ) -> Result<(), String> {
     let files = live.as_deref().map_or(&[][..], |live| &live.matte[..]);
     let same_matte = self

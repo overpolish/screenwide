@@ -16,6 +16,43 @@ pub(super) fn slot(hwnd: WindowId) -> Option<ContextSlot> {
   ))
 }
 
+/// Lets go of every overlay whose window is hidden. Its surfaces, windows and
+/// session go with it, and the next session on that window makes them again;
+/// until then it would keep the device open for a window nobody sees.
+pub(crate) fn release_hidden() {
+  let hidden: Vec<ContextSlot> = {
+    let Ok(mut map) = contexts().lock() else {
+      return;
+    };
+    let keys: Vec<isize> = map
+      .iter()
+      .filter(|(_, slot)| match slot.get() {
+        Some(Ok(context)) => !context.runtime.window.is_visible().unwrap_or(false),
+        _ => true,
+      })
+      .map(|(key, _)| *key)
+      .collect();
+    keys.iter().filter_map(|key| map.remove(key)).collect()
+  };
+  let Ok(mut by_surface) = by_surface().lock() else {
+    return;
+  };
+  for slot in &hidden {
+    if let Some(Ok(context)) = slot.get() {
+      by_surface.retain(|_, held| !Arc::ptr_eq(held, context));
+    }
+  }
+  drop(by_surface);
+  // Dropped on the thread that owns the overlay's windows, which destroys them.
+  if let Some(owner) = hidden
+    .iter()
+    .find_map(|slot| slot.get().and_then(|made| made.as_ref().ok()))
+    .map(|context| context.runtime.window.clone())
+  {
+    let _ = owner.run_on_main_thread(move || drop(hidden));
+  }
+}
+
 pub(super) fn attach(window: &WebviewWindow, width: f64, height: f64, purpose: Purpose) -> bool {
   let Some(hwnd) = host(window) else {
     eprintln!("The Windows region OSC found no window handle to attach to");

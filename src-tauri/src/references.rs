@@ -35,7 +35,7 @@ mod windows;
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicU64, Ordering};
-use std::sync::{Mutex, MutexGuard, OnceLock, PoisonError};
+use std::sync::{Mutex, MutexGuard, PoisonError};
 
 use screenwide_annotations::Annotation;
 use screenwide_imaging::CapturedImage;
@@ -241,9 +241,12 @@ fn upload(image: &CapturedImage) -> Result<wgpu::Texture, String> {
     },
     size,
   );
-  static MIPS: OnceLock<screenwide_gpu::mips::Mips> = OnceLock::new();
+  static MIPS: screenwide_gpu::DeviceCache<screenwide_gpu::mips::Mips> =
+    screenwide_gpu::DeviceCache::new();
   MIPS
-    .get_or_init(|| screenwide_gpu::mips::Mips::new(&gpu.device, FORMAT))
-    .fill(gpu, &texture);
+    .get_or_try_init(&gpu, |gpu| {
+      Ok(screenwide_gpu::mips::Mips::new(&gpu.device, FORMAT))
+    })?
+    .fill(&gpu, &texture);
   Ok(texture)
 }

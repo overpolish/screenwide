@@ -6,7 +6,7 @@ use super::*;
 impl Gpu {
   pub(super) fn new(host: HWND, editor: HWND) -> Result<Self, String> {
     let shared = screenwide_gpu::shared()?;
-    let d3d11 = screenwide_gpu::d3d11()?;
+    let d3d11 = screenwide_gpu::d3d11(&shared)?;
     // Every visual's content is a swap chain, so the composition device needs
     // no Direct3D device of its own.
     let composition: IDCompositionDevice =
@@ -21,8 +21,8 @@ impl Gpu {
       .map_err(|error| format!("The Windows preview visual tree could not be created: {error}"))?;
     unsafe { target.SetRoot(&root) }
       .map_err(|error| format!("The Windows preview visual tree could not be attached: {error}"))?;
-    let backdrop = Backdrop::new(shared, &composition, &root)?;
-    let workspace = WorkspaceView::new(shared, &composition, &root, &backdrop.visual)?;
+    let backdrop = Backdrop::new(&shared, &composition, &root)?;
+    let workspace = WorkspaceView::new(&shared, &composition, &root, &backdrop.visual)?;
     // The selection OSC lives in its own composition target on the editor
     // child window, which is kept above the WebView2 sibling. That window is
     // `WS_EX_NOREDIRECTIONBITMAP`, so DirectComposition owns all of its
@@ -33,8 +33,8 @@ impl Gpu {
       .map_err(|error| format!("The Windows selection visual could not be created: {error}"))?;
     unsafe { editor_target.SetRoot(&editor_root) }
       .map_err(|error| format!("The Windows selection visual could not be attached: {error}"))?;
-    let audio_ribbon = audio_ribbon::AudioRibbon::new(shared, &composition, &root)?;
-    let selection = selection::SelectionOverlay::new(shared, &composition, &editor_root)?;
+    let audio_ribbon = audio_ribbon::AudioRibbon::new(&shared, &composition, &root)?;
+    let selection = selection::SelectionOverlay::new(&shared, &composition, &editor_root)?;
     let viewport_clip = viewport_clip::ViewportClip::new(&composition, &root, &editor_root)?;
     unsafe { composition.Commit() }
       .map_err(|error| format!("The Windows preview compositor could not start: {error}"))?;

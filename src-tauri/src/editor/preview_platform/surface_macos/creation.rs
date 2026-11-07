@@ -77,13 +77,13 @@ fn build(
     .map_or(2.0, |window| window.backingScaleFactor());
   layers.set_scale(scale);
   // Safety: on the main thread, as wgpu configures each layer it is given.
-  let workspace = unsafe { WorkspaceView::new(shared, Retained::clone(&layers.workspace)) }?;
-  let chrome = unsafe { surface_on(shared, &layers.chrome) }?;
-  let ribbon = unsafe { AudioRibbon::new(shared, Retained::clone(&layers.ribbon)) }?;
+  let workspace = unsafe { WorkspaceView::new(&shared, Retained::clone(&layers.workspace)) }?;
+  let chrome = unsafe { surface_on(&shared, &layers.chrome) }?;
+  let ribbon = unsafe { AudioRibbon::new(&shared, Retained::clone(&layers.ribbon)) }?;
   let gpu = Gpu {
     layers,
     workspace,
-    selection: std::sync::Mutex::new(ChromeRenderer::new(shared, chrome)),
+    selection: std::sync::Mutex::new(ChromeRenderer::new(&shared, chrome)),
     audio_ribbon: std::sync::Mutex::new(ribbon),
   };
   let views = OnMain::new(

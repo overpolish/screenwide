@@ -17,7 +17,7 @@
 //! A video export decodes and encodes on one too: Media Foundation's hardware
 //! encoder on the layer took about 5 ms a frame whatever it encoded.
 
-use std::sync::{Mutex, OnceLock};
+use std::sync::{Arc, Mutex};
 
 use windows::{
   core::Interface,
@@ -35,7 +35,7 @@ use windows::{
 };
 
 use super::super::windows::raw_textures::{committed_texture, wgpu_texture, Dx12};
-use super::super::Gpu;
+use super::super::{DeviceCache, Gpu};
 
 /// Direct3D 11 on wgpu's device: what the preview's Media Foundation decoders
 /// run on.
@@ -46,6 +46,8 @@ pub struct D3d11Layer {
   /// Held across acquiring wrapped textures, using them and submitting, so
   /// two threads' hand-overs never interleave on the immediate context.
   hand_over: Mutex<()>,
+  /// The device it is layered on stays open while the layer is used.
+  _gpu: Arc<Gpu>,
 }
 
 // The device is multithread-protected, and every use of the immediate
@@ -64,14 +66,11 @@ pub struct SharedTexture {
 unsafe impl Send for SharedTexture {}
 unsafe impl Sync for SharedTexture {}
 
-/// Opened on first use and kept, like the device it is layered on.
-static LAYER: OnceLock<Result<D3d11Layer, String>> = OnceLock::new();
+/// Made on first use, and kept while the device it is layered on is open.
+static LAYER: DeviceCache<D3d11Layer> = DeviceCache::new();
 
-pub fn d3d11() -> Result<&'static D3d11Layer, String> {
-  LAYER
-    .get_or_init(|| D3d11Layer::open(super::super::shared()?))
-    .as_ref()
-    .map_err(Clone::clone)
+pub fn d3d11(gpu: &Arc<Gpu>) -> Result<Arc<D3d11Layer>, String> {
+  LAYER.get_or_try_init(gpu, D3d11Layer::open)
 }
 
 /// Lets go of what Direct3D 11 still holds for work that has ended. The layer
@@ -79,7 +78,7 @@ pub fn d3d11() -> Result<&'static D3d11Layer, String> {
 /// next flushes, so once nothing more is decoded, such as after an editor
 /// closes, their memory would stay taken until the next one opens.
 pub fn release_unused() {
-  let Some(Ok(layer)) = LAYER.get() else {
+  let Some(layer) = LAYER.peek() else {
     return;
   };
   let Ok(_held) = layer.hand_over.lock() else {
@@ -92,7 +91,7 @@ pub fn release_unused() {
 }
 
 impl D3d11Layer {
-  fn open(gpu: &Gpu) -> Result<Self, String> {
+  fn open(gpu: &Arc<Gpu>) -> Result<Self, String> {
     let hal = unsafe { gpu.device.as_hal::<Dx12>() }
       .ok_or_else(|| "The graphics device is not Direct3D 12".to_owned())?;
     let device12: ID3D12Device = hal.raw_device().clone();
@@ -126,6 +125,7 @@ impl D3d11Layer {
       context,
       on12,
       hand_over: Mutex::new(()),
+      _gpu: Arc::clone(gpu),
     })
   }
 

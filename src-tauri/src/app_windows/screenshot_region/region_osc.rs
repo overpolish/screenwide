@@ -44,7 +44,7 @@ pub(crate) use state::{
   configure_desktop_window, ensure_attached, ensure_ruler_attached,
   ensure_text_recognition_attached, focus_ruler_input, input_hwnd, on_owning_thread,
   present_region, reconcile_region_scene_request, refresh_ruler_pointer, region_scene,
-  region_scene_request_base, release_keyboard, reset_text_recognition_input,
+  region_scene_request_base, release_hidden, release_keyboard, reset_text_recognition_input,
   restore_normal_region_scene, ruler_phase, set_allow_drawing, set_aspect, set_backdrops,
   set_capture_affinity, set_committed, set_desktop_presented, set_input_enabled,
   set_magnifier_source, set_monitor, set_ocr, set_ruler_transient_chrome, set_show_frame,

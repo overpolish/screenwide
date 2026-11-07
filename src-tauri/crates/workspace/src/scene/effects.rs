@@ -15,8 +15,8 @@ impl WorkspaceScene {
   /// frame the scene holds read again for it.
   pub fn set_camera_effects(&self, live: Option<Arc<LiveCameraEffects>>) -> Result<(), String> {
     let mut state = self.state()?;
-    let gpu = state.compositor.gpu();
-    state.effects.set(live, gpu)?;
+    let gpu = Arc::clone(state.compositor.gpu());
+    state.effects.set(live, &gpu)?;
     let state = &mut *state;
     for layer in &mut state.layers {
       layer.source_matte = layer

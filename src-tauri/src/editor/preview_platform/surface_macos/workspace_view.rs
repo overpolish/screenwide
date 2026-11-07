@@ -18,7 +18,7 @@ use super::*;
 
 pub(super) struct WorkspaceView {
   pub(super) scene: WorkspaceScene,
-  gpu: &'static screenwide_gpu::Gpu,
+  gpu: std::sync::Arc<screenwide_gpu::Gpu>,
   drawable: Mutex<Drawable>,
   layer: Retained<CAMetalLayer>,
 }
@@ -40,7 +40,7 @@ struct Drawable {
 /// # Safety
 /// Main thread only, as wgpu configures the layer as it is made.
 pub(super) unsafe fn surface_on(
-  gpu: &'static screenwide_gpu::Gpu,
+  gpu: &screenwide_gpu::Gpu,
   layer: &CAMetalLayer,
 ) -> Result<Surface, String> {
   let pointer = NonNull::from(layer).cast::<std::ffi::c_void>();
@@ -51,7 +51,7 @@ impl WorkspaceView {
   /// # Safety
   /// Main thread only.
   pub(super) unsafe fn new(
-    gpu: &'static screenwide_gpu::Gpu,
+    gpu: &std::sync::Arc<screenwide_gpu::Gpu>,
     layer: Retained<CAMetalLayer>,
   ) -> Result<Self, String> {
     let mut surface = unsafe { surface_on(gpu, &layer) }?;
@@ -60,7 +60,7 @@ impl WorkspaceView {
     surface.accept_copies(gpu);
     Ok(Self {
       scene: WorkspaceScene::new()?,
-      gpu,
+      gpu: std::sync::Arc::clone(gpu),
       drawable: Mutex::new(Drawable {
         surface,
         frame: None,
@@ -79,7 +79,7 @@ impl WorkspaceView {
       return false;
     }
     place(&self.layer, None);
-    drawable.surface.resize(self.gpu, (2, 2));
+    drawable.surface.resize(&self.gpu, (2, 2));
     true
   }
 
@@ -99,7 +99,7 @@ impl WorkspaceView {
       .lock()
       .map_err(|_| "The macOS workspace drawable is poisoned".to_owned())?;
     let (x, y, width, height) = frame;
-    drawable.surface.resize(self.gpu, (width, height));
+    drawable.surface.resize(&self.gpu, (width, height));
     let moved = drawable.frame != Some(frame);
     if moved {
       let scale = scale.max(0.1);
@@ -115,7 +115,7 @@ impl WorkspaceView {
       drawable.frame = Some(frame);
     }
     // Nothing can be drawn now; the next change draws the scene again.
-    let Frame::Ready(target) = drawable.surface.acquire(self.gpu)? else {
+    let Frame::Ready(target) = drawable.surface.acquire(&self.gpu)? else {
       return Ok(moved);
     };
     self

@@ -8,7 +8,7 @@
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
 use std::path::{Path, PathBuf};
-use std::sync::{LazyLock, Mutex};
+use std::sync::{Arc, Mutex};
 
 use screenwide_compositor::compositor::caption_preview::{CaptionPreview, CaptionPreviewer};
 use screenwide_imaging::CapturedImage;
@@ -46,14 +46,18 @@ pub struct TemplatePreviewClip {
   pub height: u32,
 }
 
-/// The compositor previews are drawn with, made once: making one compiles
-/// its pipelines, which takes longer than drawing every template's preview.
-/// [`warm`] makes it at launch.
-static PREVIEWER: LazyLock<Result<Mutex<CaptionPreviewer>, String>> = LazyLock::new(|| {
-  Ok(Mutex::new(
-    CaptionPreviewer::new(screenwide_gpu::shared()?)?,
-  ))
-});
+/// The compositor previews are drawn with, made once while the device is
+/// open: making one compiles its pipelines, which takes longer than drawing
+/// every template's preview. [`warm`] makes it at launch where a preview is
+/// missing.
+static PREVIEWER: screenwide_gpu::DeviceCache<Mutex<CaptionPreviewer>> =
+  screenwide_gpu::DeviceCache::new();
+
+fn previewer() -> Result<Arc<Mutex<CaptionPreviewer>>, String> {
+  PREVIEWER.get_or_try_init(&screenwide_gpu::shared()?, |gpu| {
+    CaptionPreviewer::new(gpu).map(Mutex::new)
+  })
+}
 
 /// Draws each of `styles`' preview of the `sample` words, so it is only
 /// found when a template picker asks. A preview drawn before is only found,
@@ -126,9 +130,7 @@ fn preview_clip(
     return Ok(clip);
   }
   let words: Vec<&str> = sample.split_whitespace().collect();
-  let mut frames = PREVIEWER
-    .as_ref()
-    .map_err(Clone::clone)?
+  let mut frames = previewer()?
     .lock()
     .map_err(|_| "The template previewer is poisoned".to_owned())?
     .frames(style, &words, &PREVIEW, backdrop)?;

@@ -76,7 +76,7 @@ impl WorkspaceScene {
     if state.layers.len() != placements.len() {
       return Err("The workspace placements do not match its layers".to_owned());
     }
-    let gpu = state.compositor.gpu();
+    let gpu = std::sync::Arc::clone(state.compositor.gpu());
     let size = (target.width(), target.height());
     let magnified = magnifier.is_some_and(|magnifier| magnifier.active != 0);
     let revision = state.revision;
@@ -90,7 +90,7 @@ impl WorkspaceScene {
       let mut picture = match state.picture.take() {
         Some(picture) if (picture.texture.width(), picture.texture.height()) == size => picture,
         _ => RetainedPicture {
-          texture: picture_texture(gpu, size),
+          texture: picture_texture(&gpu, size),
           revision: None,
           placements: Vec::with_capacity(placements.len()),
           backdrop: None,

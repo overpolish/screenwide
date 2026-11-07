@@ -32,7 +32,7 @@ impl AudioRibbon {
   /// # Safety
   /// Main thread only.
   pub(super) unsafe fn new(
-    shared: &'static screenwide_gpu::Gpu,
+    shared: &std::sync::Arc<screenwide_gpu::Gpu>,
     layer: Retained<CAMetalLayer>,
   ) -> Result<Self, String> {
     let surface = unsafe { surface_on(shared, &layer) }?;

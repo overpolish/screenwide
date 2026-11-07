@@ -126,7 +126,7 @@ impl WindowFitter {
 }
 
 struct DesktopCompositor {
-  gpu: &'static Gpu,
+  gpu: std::sync::Arc<Gpu>,
   device: ID3D11Device,
   bridge: D3d11Bridge,
   width: u32,
@@ -144,15 +144,15 @@ mod tests;
 impl DesktopCompositor {
   fn new(capture: &ID3D11Device, width: u32, height: u32, pieces: usize) -> Result<Self, String> {
     let gpu = screenwide_gpu::shared()?;
-    let bridge = D3d11Bridge::new(gpu, capture)?;
-    let canvas = bridge.shared_texture(gpu, (width, height), FORMAT, "desktop canvas")?;
+    let bridge = D3d11Bridge::new(&gpu, capture)?;
+    let canvas = bridge.shared_texture(&gpu, (width, height), FORMAT, "desktop canvas")?;
     Ok(Self {
+      drawing: DesktopCanvas::new(&gpu, width, height, pieces),
       gpu,
       device: capture.clone(),
       bridge,
       width,
       height,
-      drawing: DesktopCanvas::new(gpu, width, height, pieces),
       sources: (0..pieces).map(|_| None).collect(),
       canvas,
     })
@@ -174,14 +174,14 @@ impl DesktopCompositor {
       *slot = Some(
         self
           .bridge
-          .shared_texture(self.gpu, size, FORMAT, "desktop source")?,
+          .shared_texture(&self.gpu, size, FORMAT, "desktop source")?,
       );
     }
     let source = slot.as_ref().expect("the desktop source was just made");
     let frame: ID3D11Resource = frame.cast().map_err(|error| error.to_string())?;
     let destination: ID3D11Resource = source.d3d11.cast().map_err(|error| error.to_string())?;
     unsafe { self.bridge.context.CopyResource(&destination, &frame) };
-    self.bridge.d3d11_to_gpu(self.gpu)
+    self.bridge.d3d11_to_gpu(&self.gpu)
   }
 
   /// Draws every piece onto the canvas and copies it out to a texture of
@@ -191,7 +191,7 @@ impl DesktopCompositor {
     if pieces.len() != self.sources.len() {
       return Err("Desktop frames no longer match the capture plan".to_owned());
     }
-    let gpu = self.gpu;
+    let gpu = &self.gpu;
     let sources = pieces
       .iter()
       .zip(&self.sources)

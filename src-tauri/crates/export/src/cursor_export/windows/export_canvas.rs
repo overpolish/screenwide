@@ -75,20 +75,20 @@ impl WindowsExportCanvas {
     output_size: (u32, u32),
   ) -> Result<Self, String> {
     let gpu = screenwide_gpu::shared()?;
-    let device = screenwide_gpu::video_device_on_gpu_adapter(gpu)?;
-    let bridge = D3d11Bridge::new(gpu, &device)?;
-    let source = bridged_source(&bridge, gpu, source_size, "export source")?;
+    let device = screenwide_gpu::video_device_on_gpu_adapter(&gpu)?;
+    let bridge = D3d11Bridge::new(&gpu, &device)?;
+    let source = bridged_source(&bridge, &gpu, source_size, "export source")?;
     let camera = camera_size
-      .map(|size| bridged_source(&bridge, gpu, size, "export camera"))
+      .map(|size| bridged_source(&bridge, &gpu, size, "export camera"))
       .transpose()?;
     let target = bridge.shared_texture(
-      gpu,
+      &gpu,
       output_size,
       wgpu::TextureFormat::Bgra8Unorm,
       "export target",
     )?;
     Ok(Self {
-      compositor: Compositor::new(gpu)?,
+      compositor: Compositor::new(&gpu)?,
       camera,
       output_size,
       source,
@@ -104,7 +104,7 @@ impl WindowsExportCanvas {
   }
 
   /// The GPU the export draws on.
-  pub(crate) fn gpu(&self) -> &'static screenwide_gpu::Gpu {
+  pub(crate) fn gpu(&self) -> &std::sync::Arc<screenwide_gpu::Gpu> {
     self.compositor.gpu()
   }
 

@@ -42,7 +42,7 @@ type Inputs<'a> = (
 );
 
 pub(crate) struct EffectsPass {
-  gpu: &'static Gpu,
+  gpu: std::sync::Arc<Gpu>,
   layout: wgpu::BindGroupLayout,
   effects: wgpu::RenderPipeline,
   sampler: wgpu::Sampler,
@@ -55,7 +55,7 @@ pub(crate) struct EffectsPass {
 }
 
 impl EffectsPass {
-  pub(crate) fn new(gpu: &'static Gpu) -> Self {
+  pub(crate) fn new(gpu: &std::sync::Arc<Gpu>) -> Self {
     let device = &gpu.device;
     let module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
       label: Some("Screenwide camera effects shader"),
@@ -105,7 +105,7 @@ impl EffectsPass {
     )
     .create_view(&Default::default());
     Self {
-      gpu,
+      gpu: std::sync::Arc::clone(gpu),
       effects: pipeline("fs_effects"),
       layout,
       sampler,
@@ -134,7 +134,7 @@ impl EffectsPass {
       .lock()
       .map_err(|_| "The camera effects are poisoned".to_owned())?;
     if slots.get(&slot).is_none_or(|held| held.size != camera.size) {
-      slots.insert(slot, Slot::new(self.gpu, camera.size));
+      slots.insert(slot, Slot::new(&self.gpu, camera.size));
     }
     let index = slot;
     let slot = slots.get_mut(&slot).expect("the slot is held");
@@ -146,7 +146,7 @@ impl EffectsPass {
       Some(CameraBackground::Image) => 3,
     };
     let matte_view = match matte {
-      Some(matte) if background != 0 => slot.matte(self.gpu, matte, effects.generation),
+      Some(matte) if background != 0 => slot.matte(&self.gpu, matte, effects.generation),
       _ => self.blank.clone(),
     };
     let grade = effects.grade;
@@ -219,7 +219,7 @@ impl EffectsPass {
       .entry((generation, index))
       .or_insert_with(|| {
         upload(
-          self.gpu,
+          &self.gpu,
           wgpu::TextureFormat::Rgba8Unorm,
           picture.dimensions(),
           picture.as_raw(),

@@ -189,7 +189,7 @@ fn cropped_source(piece: CapturePiece) -> CapturePiece {
 }
 
 struct DesktopCompositor {
-  gpu: &'static Gpu,
+  gpu: std::sync::Arc<Gpu>,
   width: u32,
   height: u32,
   drawing: DesktopCanvas,
@@ -202,10 +202,10 @@ impl DesktopCompositor {
     }
     let gpu = screenwide_gpu::shared()?;
     Ok(Self {
+      drawing: DesktopCanvas::new(&gpu, width, height, pieces),
       gpu,
       width,
       height,
-      drawing: DesktopCanvas::new(gpu, width, height, pieces),
     })
   }
 
@@ -216,7 +216,7 @@ impl DesktopCompositor {
     frames: &[(CapturePiece, &cv::PixelBuf)],
   ) -> Result<arc::R<cv::PixelBuf>, String> {
     let output = canvas_buffer(self.width, self.height)?;
-    let gpu = self.gpu;
+    let gpu = &self.gpu;
     let canvas = screenwide_gpu::macos::bgra_buffer_texture(gpu, &output, "desktop canvas")?;
     let textures = frames
       .iter()

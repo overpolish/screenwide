@@ -42,7 +42,7 @@ const _: () = assert!(std::mem::size_of::<Constants>() == 48);
 
 /// Everything every surface of one session shares.
 pub(in crate::annotate) struct Renderer {
-  gpu: &'static Gpu,
+  gpu: std::sync::Arc<Gpu>,
   pipeline: wgpu::RenderPipeline,
   layout: wgpu::BindGroupLayout,
   constants: wgpu::Buffer,
@@ -104,7 +104,7 @@ impl Renderer {
       cache: None,
     });
     Ok(Self {
-      gpu,
+      gpu: std::sync::Arc::clone(&gpu),
       pipeline,
       layout,
       constants: device.create_buffer(&wgpu::BufferDescriptor {
@@ -113,11 +113,11 @@ impl Renderer {
         usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
         mapped_at_creation: false,
       }),
-      arrows: GpuBuffer::new(gpu, "Screenwide annotate arrows"),
-      samples: GpuBuffer::new(gpu, "Screenwide annotate exposure"),
-      points: GpuBuffer::new(gpu, "Screenwide annotate highlight bands"),
-      text: GpuBuffer::new(gpu, "Screenwide annotate text"),
-      focus: GpuBuffer::new(gpu, "Screenwide annotate focus boxes"),
+      arrows: GpuBuffer::new(&gpu, "Screenwide annotate arrows"),
+      samples: GpuBuffer::new(&gpu, "Screenwide annotate exposure"),
+      points: GpuBuffer::new(&gpu, "Screenwide annotate highlight bands"),
+      text: GpuBuffer::new(&gpu, "Screenwide annotate text"),
+      focus: GpuBuffer::new(&gpu, "Screenwide annotate focus boxes"),
       chains: FocusChains::new(device),
       counters: CounterAtlas::default(),
       empty: gpu
@@ -131,8 +131,8 @@ impl Renderer {
     })
   }
 
-  pub(in crate::annotate) fn gpu(&self) -> &'static Gpu {
-    self.gpu
+  pub(in crate::annotate) fn gpu(&self) -> &std::sync::Arc<Gpu> {
+    &self.gpu
   }
 
   pub(in crate::annotate) fn chains(&self) -> &FocusChains {
@@ -158,7 +158,7 @@ impl Renderer {
     underlay: Option<&wgpu::TextureView>,
     focus: Option<&wgpu::TextureView>,
   ) -> Result<(), String> {
-    let gpu = self.gpu;
+    let gpu = &*self.gpu;
     let (numbers, numbered) = numbered_arrows(&self.counters, gpu, prepared)?;
     let blur = FocusFrame::of(prepared, size);
     let constants = Constants {

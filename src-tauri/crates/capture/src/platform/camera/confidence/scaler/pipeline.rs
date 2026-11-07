@@ -79,7 +79,7 @@ impl Scaler {
       })
     };
     Ok(Self {
-      gpu,
+      gpu: std::sync::Arc::clone(&gpu),
       bgra: pipeline("fs_bgra"),
       biplanar: pipeline("fs_biplanar"),
       layout,

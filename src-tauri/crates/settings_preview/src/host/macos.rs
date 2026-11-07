@@ -130,7 +130,7 @@ pub(super) fn create(
     slot.place(PreviewPlacement::hidden());
     let pointer = NonNull::from(&*slot.layer).cast::<std::ffi::c_void>();
     // Safety: on the main thread, on a live layer the slot keeps.
-    let surface = unsafe { screenwide_gpu::surface::Surface::on_metal_layer(gpu, pointer) }?;
+    let surface = unsafe { screenwide_gpu::surface::Surface::on_metal_layer(&gpu, pointer) }?;
     Ok((MainThreadBound::new(slot, mtm), surface))
   })
 }

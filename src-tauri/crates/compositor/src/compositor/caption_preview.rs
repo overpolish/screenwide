@@ -174,14 +174,14 @@ impl CaptionPreview {
 /// pipelines, which takes far longer than drawing a whole preview with it, so
 /// one is made once and kept.
 pub struct CaptionPreviewer {
-  gpu: &'static Gpu,
+  gpu: std::sync::Arc<Gpu>,
   compositor: Compositor,
 }
 
 impl CaptionPreviewer {
-  pub fn new(gpu: &'static Gpu) -> Result<Self, String> {
+  pub fn new(gpu: &std::sync::Arc<Gpu>) -> Result<Self, String> {
     Ok(Self {
-      gpu,
+      gpu: std::sync::Arc::clone(gpu),
       compositor: Compositor::new(gpu)?,
     })
   }
@@ -195,7 +195,7 @@ impl CaptionPreviewer {
     preview: &CaptionPreview,
     backdrop: TextPreviewBackdrop,
   ) -> Result<Vec<Vec<u8>>, String> {
-    let (gpu, compositor) = (self.gpu, &self.compositor);
+    let (gpu, compositor) = (&self.gpu, &self.compositor);
     let (width, height) = (preview.width.max(1), preview.height.max(1));
     let mut style = style.normalized();
     style.size_percent =

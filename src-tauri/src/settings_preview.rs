@@ -234,15 +234,23 @@ pub fn close_settings_preview(window: WebviewWindow, id: String) -> Result<(), S
 /// when it was loaded again.
 #[tauri::command]
 pub fn close_settings_previews(window: WebviewWindow) -> Result<(), String> {
+  close_window_previews(window.label());
+  Ok(())
+}
+
+/// Closes every preview in the window `label`, for a window destroyed with
+/// them open: its page can no longer close them, and each holds the device.
+pub(crate) fn close_window_previews(label: &str) {
   let closed: Vec<Open> = {
-    let mut previews = PREVIEWS.lock().map_err(|error| error.to_string())?;
+    let Ok(mut previews) = PREVIEWS.lock() else {
+      return;
+    };
     let keys: Vec<_> = previews
       .keys()
-      .filter(|(label, _)| label == window.label())
+      .filter(|(held, _)| held == label)
       .cloned()
       .collect();
     keys.iter().filter_map(|key| previews.remove(key)).collect()
   };
   drop(closed);
-  Ok(())
 }

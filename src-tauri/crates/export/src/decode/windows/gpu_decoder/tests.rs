@@ -16,7 +16,7 @@ fn decoded_preview_frame_stays_on_the_gpu() {
   let path = std::env::var_os("SCREENWIDE_WINDOWS_PREVIEW_TEST")
     .map(std::path::PathBuf::from)
     .expect("set SCREENWIDE_WINDOWS_PREVIEW_TEST to a recording");
-  let device = screenwide_gpu::d3d11()
+  let device = screenwide_gpu::d3d11(&screenwide_gpu::shared().expect("the shared device"))
     .expect("the Direct3D 11 layer")
     .device
     .clone();

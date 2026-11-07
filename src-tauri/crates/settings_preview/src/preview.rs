@@ -54,7 +54,8 @@ impl Preview {
     pictures: Vec<CapturedImage>,
     points: (f64, f64),
   ) -> Result<Self, String> {
-    let compositor = screenwide_compositor::compositor::Compositor::new(screenwide_gpu::shared()?)?;
+    let gpu = screenwide_gpu::shared()?;
+    let compositor = screenwide_compositor::compositor::Compositor::new(&gpu)?;
     let renderer = SceneRenderer::new(compositor, scene, pictures, points)?;
     Self::open(window, Stacking::Above, move |surface| {
       Ok(Box::new(SceneDriver::new(renderer, surface)?) as Box<dyn Renderer>)

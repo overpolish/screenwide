@@ -23,7 +23,7 @@ impl AudioRibbon {
   /// The ribbon's visual under `root`, hidden until it has levels. The
   /// caller commits the tree.
   pub(super) fn new(
-    shared: &'static screenwide_gpu::Gpu,
+    shared: &std::sync::Arc<screenwide_gpu::Gpu>,
     composition: &IDCompositionDevice,
     root: &IDCompositionVisual,
   ) -> Result<Self, String> {

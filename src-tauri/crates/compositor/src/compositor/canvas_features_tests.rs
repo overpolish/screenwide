@@ -30,7 +30,7 @@ struct Frame {
 }
 
 fn compositor() -> Compositor {
-  Compositor::new(gpu()).expect("the preview compositor")
+  Compositor::new(&gpu()).expect("the preview compositor")
 }
 
 /// A grey screen in the middle of the canvas, with a shadow and rounding.

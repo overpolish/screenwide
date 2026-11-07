@@ -5,7 +5,7 @@
 //! of the screenshot editor, a still frame of a recording. The canvas is
 //! drawn offscreen by the compositor and read back.
 
-use std::sync::{LazyLock, Mutex};
+use std::sync::Mutex;
 
 use super::*;
 use screenwide_cursor_effects::GpuCursor;
@@ -42,8 +42,13 @@ pub struct StillInputs<'a> {
 
 /// Every still is composed through one compositor, one at a time: its
 /// uniforms and lists are written for each draw before it is submitted.
-static STILLS: LazyLock<Result<Mutex<Compositor>, String>> =
-  LazyLock::new(|| Compositor::new(screenwide_gpu::shared()?).map(Mutex::new));
+static STILLS: screenwide_gpu::DeviceCache<Mutex<Compositor>> = screenwide_gpu::DeviceCache::new();
+
+fn stills() -> Result<std::sync::Arc<Mutex<Compositor>>, String> {
+  STILLS.get_or_try_init(&screenwide_gpu::shared()?, |gpu| {
+    Compositor::new(gpu).map(Mutex::new)
+  })
+}
 
 /// `image` composed on the canvas `settings` describe, as RGBA whose colour
 /// is premultiplied by its alpha.
@@ -52,9 +57,8 @@ pub fn compose_still(
   settings: &ScreenshotOutputSettings,
   inputs: StillInputs<'_>,
 ) -> Result<CapturedImage, String> {
-  let compositor = STILLS
-    .as_ref()
-    .map_err(Clone::clone)?
+  let stills = stills()?;
+  let compositor = stills
     .lock()
     .map_err(|_| "The still compositor is unavailable".to_owned())?;
   compose_still_on(&compositor, image, settings, inputs)
@@ -135,9 +139,8 @@ pub fn compose_layers(
   let (_, first) = layers
     .first()
     .ok_or_else(|| "The screenshot workspace is empty".to_owned())?;
-  let compositor = STILLS
-    .as_ref()
-    .map_err(Clone::clone)?
+  let stills = stills()?;
+  let compositor = stills
     .lock()
     .map_err(|_| "The still compositor is unavailable".to_owned())?;
   let gpu = compositor.gpu();

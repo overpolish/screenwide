@@ -65,7 +65,7 @@ fn swap_chain_size(current: (u32, u32), picture: (u32, u32)) -> (u32, u32) {
 pub(crate) struct SceneDriver {
   renderer: SceneRenderer,
   surface: Surface,
-  gpu: &'static screenwide_gpu::Gpu,
+  gpu: std::sync::Arc<screenwide_gpu::Gpu>,
   fill: EdgeFill,
   canvas: Option<wgpu::Texture>,
   size: (u32, u32),
@@ -83,12 +83,12 @@ pub(crate) struct SceneDriver {
 impl SceneDriver {
   pub(crate) fn new(renderer: SceneRenderer, mut surface: Surface) -> Result<Self, String> {
     let gpu = screenwide_gpu::shared()?;
-    surface.wait_for_display(gpu);
+    surface.wait_for_display(&gpu);
     Ok(Self {
       renderer,
       surface,
-      gpu,
       fill: EdgeFill::new(&gpu.device),
+      gpu,
       canvas: None,
       size: (0, 0),
       visible: false,
@@ -114,7 +114,7 @@ impl SceneDriver {
     }
     let canvas = match self.canvas.take() {
       Some(canvas) if (canvas.width(), canvas.height()) == size => canvas,
-      _ => canvas_texture(self.gpu, size),
+      _ => canvas_texture(&self.gpu, size),
     };
     let composed = self
       .renderer
@@ -139,7 +139,7 @@ impl SceneDriver {
         })
         .map_err(|error| error.to_string())?;
     }
-    let Frame::Ready(frame) = self.surface.acquire(self.gpu)? else {
+    let Frame::Ready(frame) = self.surface.acquire(&self.gpu)? else {
       return Ok(false);
     };
     let moment = self.renderer.moment(self.clock.tick(Instant::now()));
@@ -174,7 +174,7 @@ impl Renderer for SceneDriver {
   fn resize(&mut self, size: (u32, u32)) -> Option<Duration> {
     self.size = size;
     let swap_chain = swap_chain_size(self.surface.size(), size);
-    self.surface.resize(self.gpu, swap_chain);
+    self.surface.resize(&self.gpu, swap_chain);
     self.shown = false;
     Some(Duration::ZERO)
   }

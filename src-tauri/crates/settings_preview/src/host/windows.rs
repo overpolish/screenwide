@@ -135,7 +135,7 @@ pub(super) fn create(
   })()
   .map_err(|error| format!("A preview's visuals could not be made: {error}"))?;
   let (clip, clip_shape, frame, frame_shape, picture) = made;
-  let surface = screenwide_gpu::surface::Surface::on_visual(gpu, &picture)?;
+  let surface = screenwide_gpu::surface::Surface::on_visual(&gpu, &picture)?;
   let slot = Slot {
     composition,
     root,

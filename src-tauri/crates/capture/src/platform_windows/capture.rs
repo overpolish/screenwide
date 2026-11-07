@@ -58,7 +58,8 @@ pub(super) fn target_size(target: CaptureTarget) -> Result<(u32, u32), String> {
 /// stalls on the D3D11On12 layer, and only a device on wgpu's adapter can hand
 /// frames to the multi-display compositor.
 pub(super) fn create_device() -> Result<ID3D11Device, String> {
-  screenwide_gpu::device_on_gpu_adapter(screenwide_gpu::shared()?)
+  let gpu = screenwide_gpu::shared()?;
+  screenwide_gpu::device_on_gpu_adapter(&gpu)
 }
 
 pub(super) struct CaptureObjects {
