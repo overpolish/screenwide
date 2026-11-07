@@ -17,7 +17,7 @@
 //! A video export decodes and encodes on one too: Media Foundation's hardware
 //! encoder on the layer took about 5 ms a frame whatever it encoded.
 
-use std::sync::{LazyLock, Mutex};
+use std::sync::{Mutex, OnceLock};
 
 use windows::{
   core::Interface,
@@ -65,11 +65,30 @@ unsafe impl Send for SharedTexture {}
 unsafe impl Sync for SharedTexture {}
 
 /// Opened on first use and kept, like the device it is layered on.
-static LAYER: LazyLock<Result<D3d11Layer, String>> =
-  LazyLock::new(|| D3d11Layer::open(super::super::shared()?));
+static LAYER: OnceLock<Result<D3d11Layer, String>> = OnceLock::new();
 
 pub fn d3d11() -> Result<&'static D3d11Layer, String> {
-  LAYER.as_ref().map_err(Clone::clone)
+  LAYER
+    .get_or_init(|| D3d11Layer::open(super::super::shared()?))
+    .as_ref()
+    .map_err(Clone::clone)
+}
+
+/// Lets go of what Direct3D 11 still holds for work that has ended. The layer
+/// destroys what decoders and wrapped textures release only when its context
+/// next flushes, so once nothing more is decoded, such as after an editor
+/// closes, their memory would stay taken until the next one opens.
+pub fn release_unused() {
+  let Some(Ok(layer)) = LAYER.get() else {
+    return;
+  };
+  let Ok(_held) = layer.hand_over.lock() else {
+    return;
+  };
+  unsafe {
+    layer.context.ClearState();
+    layer.context.Flush();
+  }
 }
 
 impl D3d11Layer {

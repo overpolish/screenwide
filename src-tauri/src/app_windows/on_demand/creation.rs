@@ -98,6 +98,10 @@ fn set_up(app: &AppHandle, label: WindowLabel, window: &WebviewWindow) -> tauri:
     if matches!(event, WindowEvent::Destroyed) {
       if let Some(surface) = surface {
         crate::editor::preview_platform::forget(surface);
+        // What the editor drew and decoded is freed only once the device is
+        // next told to, which with the editor gone nothing else would do.
+        // Waiting on the device is kept off the main thread.
+        std::thread::spawn(screenwide_gpu::release_unused);
       }
       destroyed(&destroyed_app, label);
     }

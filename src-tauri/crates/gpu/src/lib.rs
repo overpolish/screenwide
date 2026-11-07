@@ -21,7 +21,7 @@ pub mod mips;
 pub mod surface;
 mod textures;
 
-use std::sync::{Arc, LazyLock};
+use std::sync::{Arc, OnceLock};
 
 pub struct Gpu {
   /// Surfaces are created from the instance that owns the device.
@@ -32,10 +32,28 @@ pub struct Gpu {
 
 /// Opened on first use. A failure is kept, so every renderer reports the same
 /// reason instead of retrying a device that cannot open.
-static SHARED: LazyLock<Result<Gpu, String>> = LazyLock::new(|| pollster::block_on(Gpu::open()));
+static SHARED: OnceLock<Result<Gpu, String>> = OnceLock::new();
 
 pub fn shared() -> Result<&'static Gpu, String> {
-  SHARED.as_ref().map_err(Clone::clone)
+  SHARED
+    .get_or_init(|| pollster::block_on(Gpu::open()))
+    .as_ref()
+    .map_err(Clone::clone)
+}
+
+/// Frees what the device still holds for work that has ended, such as an
+/// editor's picture and decoders after it closes. wgpu destroys dropped
+/// resources only once it next submits or is polled, and the Direct3D 11
+/// layer only once it next flushes; with nothing more to draw, neither would
+/// happen and the memory would stay taken. Does nothing before the device
+/// has been opened.
+pub fn release_unused() {
+  let Some(Ok(gpu)) = SHARED.get() else {
+    return;
+  };
+  #[cfg(target_os = "windows")]
+  windows::interop::release_unused();
+  let _ = gpu.device.poll(wgpu::PollType::wait_indefinitely());
 }
 
 impl Gpu {
