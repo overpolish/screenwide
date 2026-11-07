@@ -4,7 +4,18 @@
 //! A wgpu surface on a platform presentation target someone else owns and
 //! places: a DirectComposition visual on Windows, a `CAMetalLayer` on macOS.
 
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::time::Duration;
+
 use super::Gpu;
+
+/// How often a configuration is tried before a surface gives up until its
+/// next frame. wgpu waits for the GPU to go idle before configuring, and
+/// fails the configuration when another thread submits work during that
+/// wait; the device is shared, so that is a matter of timing, and the next
+/// try a moment later usually finds the queue empty.
+const CONFIGURE_ATTEMPTS: u32 = 5;
+const CONFIGURE_RETRY: Duration = Duration::from_millis(5);
 
 /// Every surface's format. Shaders write premultiplied BGRA, which is what
 /// both DirectComposition and Core Animation blend.
@@ -19,6 +30,10 @@ pub enum Frame {
 pub struct Surface {
   surface: wgpu::Surface<'static>,
   config: wgpu::SurfaceConfiguration,
+  /// Whether the last configuration took. Asking a surface whose
+  /// configuration failed for a frame panics inside wgpu, so such a surface
+  /// configures again before it hands out a frame.
+  configured: AtomicBool,
 }
 
 // The surface is reached behind its owner's lock.
@@ -104,8 +119,33 @@ impl Surface {
       alpha_mode,
       view_formats: Vec::new(),
     };
-    surface.configure(&gpu.device, &config);
-    Self { surface, config }
+    let surface = Self {
+      surface,
+      config,
+      configured: AtomicBool::new(false),
+    };
+    surface.configure(gpu);
+    surface
+  }
+
+  /// Applies the configuration, trying again a few times if wgpu fails it,
+  /// and records whether it took.
+  fn configure(&self, gpu: &Gpu) {
+    for attempt in 1..=CONFIGURE_ATTEMPTS {
+      let scope = gpu.device.push_error_scope(wgpu::ErrorFilter::Validation);
+      self.surface.configure(&gpu.device, &self.config);
+      match pollster::block_on(scope.pop()) {
+        None => {
+          self.configured.store(true, Ordering::Release);
+          return;
+        }
+        Some(error) if attempt == CONFIGURE_ATTEMPTS => {
+          eprintln!("A surface could not be configured: {error}");
+        }
+        Some(_) => std::thread::sleep(CONFIGURE_RETRY),
+      }
+    }
+    self.configured.store(false, Ordering::Release);
   }
 
   pub fn size(&self) -> (u32, u32) {
@@ -116,7 +156,7 @@ impl Surface {
   /// a picture composed elsewhere and copied in whole.
   pub fn accept_copies(&mut self, gpu: &Gpu) {
     self.config.usage |= wgpu::TextureUsages::COPY_DST;
-    self.surface.configure(&gpu.device, &self.config);
+    self.configure(gpu);
   }
 
   /// Presents each frame at a display refresh, one a refresh, and hands out
@@ -126,7 +166,7 @@ impl Surface {
   /// the pointer keeps presenting at once.
   pub fn wait_for_display(&mut self, gpu: &Gpu) {
     self.config.present_mode = wgpu::PresentMode::Fifo;
-    self.surface.configure(&gpu.device, &self.config);
+    self.configure(gpu);
   }
 
   /// Matches the swap chain to a physical size. No frame may be held across
@@ -139,10 +179,16 @@ impl Surface {
     }
     self.config.width = size.0;
     self.config.height = size.1;
-    self.surface.configure(&gpu.device, &self.config);
+    self.configure(gpu);
   }
 
   pub fn acquire(&self, gpu: &Gpu) -> Result<Frame, String> {
+    if !self.configured.load(Ordering::Acquire) {
+      self.configure(gpu);
+      if !self.configured.load(Ordering::Acquire) {
+        return Ok(Frame::Skipped);
+      }
+    }
     match self.surface.get_current_texture() {
       wgpu::CurrentSurfaceTexture::Success(frame)
       | wgpu::CurrentSurfaceTexture::Suboptimal(frame) => Ok(Frame::Ready(frame)),
@@ -150,7 +196,7 @@ impl Surface {
         Ok(Frame::Skipped)
       }
       wgpu::CurrentSurfaceTexture::Outdated | wgpu::CurrentSurfaceTexture::Lost => {
-        self.surface.configure(&gpu.device, &self.config);
+        self.configure(gpu);
         Ok(Frame::Skipped)
       }
       wgpu::CurrentSurfaceTexture::Validation => {
