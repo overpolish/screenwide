@@ -165,3 +165,10 @@ no_fp16 = []
 
 [badges.maintenance]
 status = "actively-developed"
+
+# Added for Screenwide: a path dependency is linted as local code, so warnings
+# crates.io would cap in upstream's own code show in every transcriber build.
+[lints.rust]
+deprecated = "allow"
+mismatched_lifetime_syntaxes = "allow"
+unexpected_cfgs = "allow"
