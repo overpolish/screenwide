@@ -138,14 +138,18 @@ pub(crate) fn show_licences(app: &AppHandle, tool: Option<Tool>) {
   // Settings is shown the way its own command shows it, off the thread a
   // gesture or a shortcut arrived on.
   tauri::async_runtime::spawn(async move {
-    if let Err(error) = crate::settings::show(&app) {
-      eprintln!("Could not open Settings for the licences: {error}");
-      return;
-    }
+    // Built now, Settings opens on the pane; already open, its page is told.
+    let open = app
+      .get_webview_window(WindowLabel::Settings.as_str())
+      .is_some();
     let request = OpenRequest {
       tool: tool.map(PaidTool::from),
     };
-    let _ = app.emit_to(WindowLabel::Settings.as_str(), OPEN_EVENT, request);
+    crate::settings::show_at(&app, (!open).then_some("licences"), move |app| {
+      if open {
+        let _ = app.emit_to(WindowLabel::Settings.as_str(), OPEN_EVENT, request);
+      }
+    });
   });
 }
 

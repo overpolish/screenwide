@@ -15,6 +15,7 @@
     "windows": [
       {
         "label": "editor-recording",
+        "create": false,
         "title": "Editor",
         "url": "/editor",
         "width": 1200,
@@ -40,6 +41,7 @@
       },
       {
         "label": "editor-screenshot",
+        "create": false,
         "title": "Editor",
         "url": "/editor",
         "width": 1200,
@@ -65,6 +67,7 @@
       },
       {
         "label": "projects",
+        "create": false,
         "title": "Projects",
         "url": "/projects",
         "width": 880,
@@ -90,6 +93,7 @@
       },
       {
         "label": "settings",
+        "create": false,
         "title": "Settings",
         "url": "/settings",
         "width": 800,
@@ -162,6 +166,7 @@
       },
       {
         "label": "tool-panel-recording",
+        "create": false,
         "title": "Tool Panel (Recording)",
         "url": "/standalone-listbox",
         "width": 320,
@@ -178,6 +183,7 @@
       },
       {
         "label": "tool-panel-screenshot",
+        "create": false,
         "title": "Tool Panel (Screenshot)",
         "url": "/standalone-listbox",
         "width": 320,

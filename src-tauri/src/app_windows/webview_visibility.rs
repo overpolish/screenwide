@@ -25,19 +25,6 @@ pub(super) fn show_webview(window: &WebviewWindow) -> tauri::Result<()> {
   webview.set_focus()
 }
 
-/// WebView2 goes on reading a hidden window's page as on screen, its
-/// `visibilityState` "visible", until the WebView is hidden too. A page told
-/// lets go of what it holds only while seen, and stops drawing.
-#[cfg(target_os = "windows")]
-pub(crate) fn set_page_shown(window: &WebviewWindow, shown: bool) -> tauri::Result<()> {
-  let webview: &tauri::Webview = window.as_ref();
-  if shown {
-    webview.show()
-  } else {
-    webview.hide()
-  }
-}
-
 pub(crate) fn hide_window(window: &WebviewWindow) -> tauri::Result<()> {
   window.hide()?;
   #[cfg(target_os = "macos")]

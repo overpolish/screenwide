@@ -6,7 +6,7 @@ use tauri::{AppHandle, Manager};
 use super::{window, EditorKind, EditorState};
 
 pub(super) fn focus_pending(app: &AppHandle, kind: EditorKind) {
-  let _ = window::show(app, kind);
+  window::show(app, kind, |_| {});
 }
 
 /// Whether the workspace has something open.
@@ -53,6 +53,9 @@ pub fn reserve_recording(app: &AppHandle) -> Result<(), String> {
     Err("Another capture is already starting".to_owned())
   } else {
     *reservation = Some(EditorKind::Recording);
+    drop(reservation);
+    // Built while the recording runs, so it is ready when the recording ends.
+    window::prepare(app, EditorKind::Recording);
     Ok(())
   }
 }
@@ -82,6 +85,11 @@ fn release(app: &AppHandle, expected: EditorKind) {
     .unwrap_or_else(|poisoned| poisoned.into_inner());
   if *reservation == Some(expected) {
     *reservation = None;
+    drop(reservation);
+    // The window built for a capture that came to nothing goes with it.
+    if !has_pending_kind(app, expected) {
+      window::close(app, expected);
+    }
   }
 }
 

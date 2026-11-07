@@ -145,3 +145,16 @@ pub(crate) fn prewarm(window: tauri::WebviewWindow) {
 
 #[cfg(not(any(target_os = "macos", target_os = "windows")))]
 pub(crate) fn prewarm(_window: tauri::WebviewWindow) {}
+
+/// What names `window`'s preview surface, read while the window is alive so
+/// the surface can be let go once the window is destroyed ([`forget`]).
+#[cfg(any(target_os = "macos", target_os = "windows"))]
+pub(crate) use surface::{forget, surface_key};
+
+#[cfg(not(any(target_os = "macos", target_os = "windows")))]
+pub(crate) fn surface_key(_window: &tauri::WebviewWindow) -> Option<usize> {
+  None
+}
+
+#[cfg(not(any(target_os = "macos", target_os = "windows")))]
+pub(crate) fn forget(_key: usize) {}

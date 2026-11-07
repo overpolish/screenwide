@@ -63,10 +63,10 @@ pub(super) fn take_artifact(app: &AppHandle, kind: EditorKind) -> Option<EditorA
   artifact
 }
 
-/// Closes one workspace and puts its window away. What it held stays in its
-/// project, to be opened again. The other workspace is untouched. Returns
-/// the project's manifest once its name has settled, for a caller that goes
-/// on to move it or put it in the Trash.
+/// Closes one workspace and its window. What it held stays in its project,
+/// to be opened again. The other workspace is untouched. Returns the
+/// project's manifest once its name has settled, for a caller that goes on
+/// to move it or put it in the Trash.
 pub fn close(app: &AppHandle, kind: EditorKind) -> Option<PathBuf> {
   if kind == EditorKind::Recording {
     clear_recording_preview(app);
@@ -82,7 +82,7 @@ pub fn close(app: &AppHandle, kind: EditorKind) -> Option<PathBuf> {
       }
       super::project_name::settle_name(app, project)
     });
-  let _ = window::hide(app, kind);
+  window::close(app, kind);
   emit_snapshot(app, kind);
   project
 }

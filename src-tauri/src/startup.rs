@@ -8,7 +8,7 @@
 //! it, in the order the steps depend on each other.
 
 #[cfg(target_os = "macos")]
-use tauri::{AppHandle, Manager};
+use tauri::AppHandle;
 
 use crate::{app_windows, editor};
 
@@ -69,8 +69,6 @@ pub(crate) fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Erro
     app_windows::initialize_standalone_listbox(app.handle())?;
   }
   app_windows::initialize_predefined_windows(app.handle())?;
-  #[cfg(target_os = "windows")]
-  app_windows::platform::initialize_webview_memory(app.handle())?;
   app_windows::initialize_topology_management(app.handle());
   editor::initialize(app.handle());
   // The text pickers' fonts and template previews take a moment to ready;
@@ -93,29 +91,6 @@ pub(crate) fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Erro
     editor::open_project_detached(app.handle(), file);
   }
 
-  #[cfg(target_os = "macos")]
-  hide_unrequested_windows(app.handle())?;
-
-  Ok(())
-}
-
-/// Windows that native effects may have ordered on screen during setup. Their
-/// first presentation always belongs to an explicit user action.
-#[cfg(target_os = "macos")]
-fn hide_unrequested_windows(app: &AppHandle) -> tauri::Result<()> {
-  let app_handle = app.clone();
-  let mut labels = vec![
-    app_windows::WindowLabel::Projects,
-    app_windows::WindowLabel::Settings,
-  ];
-  labels.extend(editor::EditorKind::ALL.map(editor::EditorKind::window_label));
-  app.run_on_main_thread(move || {
-    for label in &labels {
-      if let Some(window) = app_handle.get_webview_window(label.as_str()) {
-        let _ = app_windows::hide(&window);
-      }
-    }
-  })?;
   Ok(())
 }
 

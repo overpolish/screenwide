@@ -1,90 +1,29 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! Which predefined windows exist and how they come up.
+//! The windows built at launch and how they come up: the ones that must
+//! appear the moment a shortcut or gesture asks. The rest are built when
+//! opened (`super::on_demand`).
 //!
 //! Held here rather than in the application's setup closure, so that adding a
 //! window is a change to the window layer alone.
 
-use tauri::{AppHandle, Manager};
+use tauri::AppHandle;
+#[cfg(target_os = "macos")]
+use tauri::Manager;
 
-use super::{hide_instead_of_close, initialize_editor, initialize_normal_window, WindowLabel};
-
-/// Ordinary app windows: created hidden, and closing one hides it rather than
-/// destroying a window that has to be reopenable by label.
-const NORMAL: &[WindowLabel] = &[WindowLabel::Projects, WindowLabel::Settings];
+use super::{hide_instead_of_close, WindowLabel};
 
 /// Overlays and transients, which are only ever hidden, never closed.
 const DISMISSED_ON_CLOSE: &[WindowLabel] = &[
   WindowLabel::Island,
   WindowLabel::RegionSelector,
   WindowLabel::StandaloneListbox,
-  WindowLabel::ToolPanelRecording,
-  WindowLabel::ToolPanelScreenshot,
 ];
-
-/// The windows whose page carries the title bar. On macOS they are configured
-/// with a native overlay title bar, so the real traffic lights sit over the
-/// page; on Windows the page draws its own caption buttons and wants no native
-/// frame. `decorations` is a single configuration key for both platforms, so
-/// the Windows half is undone here.
-#[cfg(target_os = "windows")]
-const TITLE_BAR_IN_PAGE: &[WindowLabel] = &[
-  WindowLabel::EditorRecording,
-  WindowLabel::EditorScreenshot,
-  WindowLabel::Projects,
-  WindowLabel::Settings,
-];
-
-/// Takes the native frame back off the title-bar windows. Every one of them is
-/// created hidden, so nothing is on screen while the frame changes.
-#[cfg(target_os = "windows")]
-fn remove_native_frames(app: &AppHandle) -> tauri::Result<()> {
-  for &label in TITLE_BAR_IN_PAGE {
-    let Some(window) = app.get_webview_window(label.as_str()) else {
-      continue;
-    };
-    // Dropping the frame keeps the outer size, which would hand the page the
-    // caption's height as extra content. Put the configured size back.
-    let inner = window.inner_size()?;
-    window.set_decorations(false)?;
-    window.set_size(inner)?;
-  }
-
-  Ok(())
-}
 
 pub fn initialize_predefined_windows(app: &AppHandle) -> tauri::Result<()> {
-  #[cfg(target_os = "windows")]
-  remove_native_frames(app)?;
-  for &label in NORMAL {
-    if let Some(window) = app.get_webview_window(label.as_str()) {
-      initialize_normal_window(&window)?;
-    }
-  }
-  for kind in crate::editor::EditorKind::ALL {
-    let label = kind.window_label();
-    if let Some(window) = app.get_webview_window(label.as_str()) {
-      initialize_editor(&window)?;
-    }
-    // Closing an editor window cancels only its own pending capture.
+  for &label in DISMISSED_ON_CLOSE {
     hide_instead_of_close(app, label);
-  }
-  for &label in DISMISSED_ON_CLOSE.iter().chain(NORMAL) {
-    hide_instead_of_close(app, label);
-  }
-
-  // The tool panels are floating flyouts like the pop-up lists, but have no
-  // initialiser of their own: they are only ever shown. Their corners are
-  // rounded here, once, with the rest of the boot.
-  #[cfg(target_os = "windows")]
-  for label in [
-    WindowLabel::ToolPanelRecording,
-    WindowLabel::ToolPanelScreenshot,
-  ] {
-    if let Some(window) = app.get_webview_window(label.as_str()) {
-      super::platform::round_corners(&window)?;
-    }
   }
 
   // Predefined pages start hidden, including panels converted lazily later.
@@ -93,14 +32,6 @@ pub fn initialize_predefined_windows(app: &AppHandle) -> tauri::Result<()> {
     if !window.is_visible()? {
       super::webview_visibility::hide_webview(&window)?;
     }
-  }
-
-  // Settings' panes hold a native picture, its renderer and pictures on the
-  // GPU, and a microphone's level, each only while the page is seen; its
-  // page is hidden with it, here and in `crate::settings`.
-  #[cfg(target_os = "windows")]
-  if let Some(window) = app.get_webview_window(WindowLabel::Settings.as_str()) {
-    super::webview_visibility::set_page_shown(&window, false)?;
   }
 
   Ok(())

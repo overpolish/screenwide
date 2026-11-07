@@ -24,6 +24,8 @@ mod registry;
 mod view;
 mod workspace_view;
 
+pub(crate) use registry::{forget, surface_key};
+
 use std::sync::Mutex;
 
 use host::mac;

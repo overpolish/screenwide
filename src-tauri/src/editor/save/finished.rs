@@ -53,7 +53,7 @@ pub fn put_away_export(app: AppHandle, window: tauri::WebviewWindow) -> Result<(
   if kind == EditorKind::Recording {
     artifact::clear_recording_preview(&app);
   }
-  window::hide(&app, kind).map_err(|error| error.to_string())?;
+  window::close(&app, kind);
   emit_snapshot(&app, kind);
   Ok(())
 }

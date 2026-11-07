@@ -74,37 +74,23 @@ pub(super) fn present_new(
     super::project_look::clean_pictures(project);
     super::project_name::settle_name(app, project);
   }
-  reveal(app, kind)
+  reveal(app, kind);
+  Ok(())
 }
 
 /// Shows the artifact `present_new` installed for `kind`.
-fn reveal(app: &AppHandle, kind: EditorKind) -> Result<(), String> {
-  // The hidden webview still holds the last snapshot, an empty one, so the
-  // new capture goes to it before the window appears showing that.
+fn reveal(app: &AppHandle, kind: EditorKind) {
+  // A window already built still holds the last snapshot, an empty one, so
+  // the new capture goes to it before the window appears showing that. One
+  // built now reads the snapshot as its page loads.
   emit_snapshot(app, kind);
-  if let Err(error) = window::show(app, kind) {
-    // A hidden artifact is a deadlocked workspace. A recording stays in its
-    // project to be opened again; release the in-memory admission state so
-    // the current app remains usable.
-    let state = app.state::<EditorState>();
-    *state
-      .slot(kind)
-      .artifact
-      .lock()
-      .unwrap_or_else(|poisoned| poisoned.into_inner()) = None;
-    *state
-      .capture_reservation
-      .lock()
-      .unwrap_or_else(|poisoned| poisoned.into_inner()) = None;
-    emit_snapshot(app, kind);
-    return Err(error.to_string());
-  }
   // Once an artifact is safely in front of the user, the capture controls
   // have finished their job. Keeping this at the shared presentation boundary
   // gives screenshots and recordings the same handoff without affecting
   // clipboard-only screenshots, which never open the editor window.
-  let _ = crate::app_windows::hide_recording_ui(app.clone());
-  Ok(())
+  window::show(app, kind, |app| {
+    let _ = crate::app_windows::hide_recording_ui(app.clone());
+  });
 }
 
 /// Hands a finished recording to the editor window. `project` is its

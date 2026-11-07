@@ -110,7 +110,7 @@ pub fn copy_editor_to_clipboard(
     eprintln!("Could not remember the screenshot copy choice: {error}");
   }
 
-  let _ = window::hide(&app, kind);
+  window::close(&app, kind);
   emit_snapshot(&app, kind);
   // Only once the picture is on the clipboard and the editor has let go of it.
   if delete_project_after_export {

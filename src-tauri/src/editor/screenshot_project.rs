@@ -77,8 +77,9 @@ pub fn present_screenshot(
       .unwrap_or_else(|poisoned| poisoned.into_inner()) = None;
     drop(artifact);
     emit_snapshot(app, EditorKind::Screenshot);
-    window::show(app, EditorKind::Screenshot).map_err(|error| error.to_string())?;
-    let _ = crate::app_windows::hide_recording_ui(app.clone());
+    window::show(app, EditorKind::Screenshot, |app| {
+      let _ = crate::app_windows::hide_recording_ui(app.clone());
+    });
     return Ok(());
   }
 

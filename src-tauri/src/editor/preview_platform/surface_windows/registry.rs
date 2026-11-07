@@ -43,3 +43,27 @@ pub(super) fn surface_for_editor(hwnd: HWND) -> Option<std::sync::Arc<SurfaceInn
     .get(&(hwnd.0 as isize))
     .map(std::sync::Arc::clone)
 }
+
+/// What names `window`'s surface in the registry: its handle, read while the
+/// window is alive.
+pub(crate) fn surface_key(window: &WebviewWindow) -> Option<usize> {
+  window.hwnd().ok().map(|hwnd| hwnd.0 as usize)
+}
+
+/// Lets go of the surface of the destroyed window `key` named. Its
+/// DirectComposition tree and swap chains go once nothing else holds it.
+pub(crate) fn forget(key: usize) {
+  let slot = preview_surfaces()
+    .lock()
+    .ok()
+    .and_then(|mut surfaces| surfaces.remove(&(key as isize)));
+  let Some(inner) = slot.and_then(|slot| slot.get().and_then(|made| made.as_ref().ok()).cloned())
+  else {
+    return;
+  };
+  if let Ok(mut index) = surface_index().lock() {
+    index
+      .by_editor
+      .retain(|_, held| !std::sync::Arc::ptr_eq(held, &inner));
+  }
+}

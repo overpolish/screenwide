@@ -44,11 +44,7 @@ pub(super) fn handle(app: &AppHandle, id: &str) {
       crate::screenshots::open_clipboard_in_export(app);
     }
     OPEN_MENU_ID => show_main_window(app),
-    OPEN_PROJECT_MENU_ID => {
-      if let Err(error) = crate::project_browser::show(app) {
-        eprintln!("Could not open the projects window from the tray: {error}");
-      }
-    }
+    OPEN_PROJECT_MENU_ID => crate::project_browser::show(app),
     PAUSE_MENU_ID | RESUME_MENU_ID => report("pause", crate::recording::toggle_pause(app)),
     QUIT_MENU_ID => app.exit(0),
     RECOGNIZE_TEXT_MENU_ID => {
@@ -57,11 +53,7 @@ pub(super) fn handle(app: &AppHandle, id: &str) {
     RULER_OVERLAY_MENU_ID => {
       crate::ruler::start_detached(app);
     }
-    SETTINGS_MENU_ID => {
-      if let Err(error) = crate::settings::show(app) {
-        eprintln!("Could not open settings from the tray: {error}");
-      }
-    }
+    SETTINGS_MENU_ID => crate::settings::show(app),
     STOP_MENU_ID => report("stop", crate::recording::stop(app)),
     _ => {}
   }

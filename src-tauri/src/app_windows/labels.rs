@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash)]
 pub enum WindowLabel {
   /// The recording workspace's window. Each editor workspace has one of its
   /// own so a recording can wait for a decision while a screenshot is edited.

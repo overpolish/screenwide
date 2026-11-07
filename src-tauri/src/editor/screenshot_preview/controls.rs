@@ -18,6 +18,17 @@ pub fn stop_screenshot_preview(
   Ok(())
 }
 
+/// Stops the screenshot preview whatever its session, for an editor window
+/// about to be destroyed.
+pub(crate) fn stop_all(app: &tauri::AppHandle) {
+  use tauri::Manager;
+  if let Some(state) = app.try_state::<ScreenshotPreviewState>() {
+    if let Ok(mut manager) = state.0.lock() {
+      manager.stop();
+    }
+  }
+}
+
 /// Screenshot counterpart of `set_recording_preview_editor_suspended`: input
 /// and native chrome off, workspace transform kept.
 #[tauri::command]

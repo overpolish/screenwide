@@ -31,7 +31,7 @@ fn reasons(app: &AppHandle) -> MutexGuard<'_, Vec<String>> {
 }
 
 /// Shows the browser, saying why a project could not open. Callable from any
-/// thread; the window is handled on the main thread.
+/// thread.
 pub fn report(app: &AppHandle, reason: String) {
   {
     let mut reasons = reasons(app);
@@ -39,13 +39,10 @@ pub fn report(app: &AppHandle, reason: String) {
       reasons.push(reason);
     }
   }
-  let task_app = app.clone();
-  let _ = app.run_on_main_thread(move || {
-    if let Err(error) = super::show(&task_app) {
-      eprintln!("Could not show the project browser for a failed open: {error}");
-    }
-    let _ = task_app.emit_to(WindowLabel::Projects.as_str(), OPEN_FAILED_EVENT, ());
-  });
+  // A browser built now reads the reasons as its page loads; one already
+  // open is told they are waiting.
+  super::show(app);
+  let _ = app.emit_to(WindowLabel::Projects.as_str(), OPEN_FAILED_EVENT, ());
 }
 
 /// The reasons waiting, oldest first, for the browser to show; each is given

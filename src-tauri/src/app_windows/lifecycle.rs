@@ -25,6 +25,9 @@ pub fn hide_instead_of_close(app: &AppHandle, label: WindowLabel) {
           WindowLabel::Settings => {
             let _ = crate::settings::hide_settings(app.clone());
           }
+          WindowLabel::Projects => {
+            let _ = crate::project_browser::hide_project_browser(app.clone());
+          }
           #[cfg(target_os = "macos")]
           WindowLabel::Permissions => {
             let _ = crate::permissions::dismiss_permissions_window(app.clone());
@@ -65,6 +68,14 @@ pub fn show(window: &WebviewWindow, focus: bool) -> tauri::Result<()> {
   Ok(())
 }
 
+/// Brings an app window forward and focused, onto a display.
+pub fn present(app: &AppHandle, window: &WebviewWindow) -> tauri::Result<()> {
+  #[cfg(target_os = "macos")]
+  app.set_dock_visibility(true)?;
+  show(window, true)?;
+  recover_window_position(app, window)
+}
+
 #[cfg(not(target_os = "macos"))]
 pub fn initialize_island(app: &AppHandle) -> tauri::Result<()> {
   if let Some(window) = app.get_webview_window(WindowLabel::Island.as_str()) {
@@ -84,21 +95,14 @@ pub fn initialize_region_selector(app: &AppHandle) -> tauri::Result<()> {
   Ok(())
 }
 
-/// The shared listbox and both editors' tool panels come up the same way:
-/// each is a panel opened from another window, so each gets the overlay
-/// treatment the listbox has always had.
+/// The shared listbox is a panel opened from another window, so it gets the
+/// overlay treatment. The editors' tool panels get the same as they are built
+/// (`super::on_demand`).
 #[cfg(not(target_os = "macos"))]
 pub fn initialize_standalone_listbox(app: &AppHandle) -> tauri::Result<()> {
-  for label in [
-    WindowLabel::StandaloneListbox,
-    WindowLabel::ToolPanelRecording,
-    WindowLabel::ToolPanelScreenshot,
-  ] {
-    if let Some(window) = app.get_webview_window(label.as_str()) {
-      platform::initialize_standalone_listbox(&window)?;
-    }
+  if let Some(window) = app.get_webview_window(WindowLabel::StandaloneListbox.as_str()) {
+    platform::initialize_standalone_listbox(&window)?;
   }
-
   Ok(())
 }
 
@@ -143,6 +147,6 @@ pub fn initialize_normal_window(window: &WebviewWindow) -> tauri::Result<()> {
 
 /// Recover a window only when it no longer overlaps any connected display.
 /// Partially off-screen positions remain under the user's control.
-pub fn recover_window_position(app: &AppHandle, window: &WebviewWindow) -> tauri::Result<()> {
+fn recover_window_position(app: &AppHandle, window: &WebviewWindow) -> tauri::Result<()> {
   keep_window_on_a_monitor(app, window)
 }

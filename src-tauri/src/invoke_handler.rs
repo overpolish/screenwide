@@ -242,6 +242,7 @@ pub(crate) fn invoke_handler() -> impl Fn(tauri::ipc::Invoke) -> bool + Send + S
     shortcuts::set_shortcut_binding,
     app_accent::get_system_accent,
     app_locale::get_app_locale,
+    app_windows::on_demand::window_ready,
     app_windows::color_panel::close_color_panel,
     app_windows::color_panel::show_color_panel,
     app_windows::region_gesture::begin_region_selector_gesture,

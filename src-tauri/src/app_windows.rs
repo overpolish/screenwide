@@ -73,6 +73,7 @@ mod escape;
 pub(crate) mod geometry;
 mod lifecycle;
 pub(crate) mod monitor_capture;
+pub(crate) mod on_demand;
 pub(crate) mod options;
 #[cfg(target_os = "windows")]
 pub(crate) mod overlay_surface;
@@ -88,15 +89,13 @@ mod transient_popover;
 mod webview_visibility;
 
 pub(crate) use webview_visibility::hide_window as hide;
-#[cfg(target_os = "windows")]
-pub(crate) use webview_visibility::set_page_shown;
 
 pub use boot::initialize_predefined_windows;
 pub use dismissal::hide_without_focus_transfer;
 #[cfg(target_os = "macos")]
 pub use lifecycle::get_or_create;
 pub use lifecycle::{
-  hide_instead_of_close, initialize_editor, initialize_normal_window, recover_window_position, show,
+  hide_instead_of_close, initialize_editor, initialize_normal_window, present, show,
 };
 #[cfg(not(target_os = "macos"))]
 pub use lifecycle::{initialize_island, initialize_region_selector, initialize_standalone_listbox};

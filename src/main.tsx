@@ -17,6 +17,7 @@ import {
   forgetFailedLoads,
   recoverFromFailedLoad,
 } from "./windows/window-load-recovery";
+import { WindowReady } from "./windows/window-ready";
 import { loadWindow } from "./windows/window-routes";
 
 synchronizeSystemTheme();
@@ -46,6 +47,7 @@ void loadAppLocale()
       <StrictMode>
         <I18nProvider locale={layoutLocale()}>
           <Window />
+          <WindowReady />
         </I18nProvider>
       </StrictMode>,
     );

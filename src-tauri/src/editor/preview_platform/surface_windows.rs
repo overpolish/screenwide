@@ -33,6 +33,7 @@ use std::{
 
 use backdrop::Backdrop;
 use host::windows;
+pub(crate) use registry::{forget, surface_key};
 use registry::{preview_surfaces, surface_for_editor, surface_index};
 use resources::Gpu;
 use screenwide_compositor::PreviewSurfaceRect;

@@ -22,7 +22,7 @@ use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Manager};
 use ts_rs::TS;
 
-use crate::app_windows::{self, WindowLabel};
+use crate::app_windows::{self, on_demand, WindowLabel};
 use screenwide_project::ProjectSummary;
 
 /// A folder the browser lists projects from.
@@ -97,28 +97,28 @@ fn location(path: PathBuf, is_default: bool, home_drive: Option<&str>) -> Projec
   }
 }
 
-pub fn show(app: &AppHandle) -> tauri::Result<()> {
+pub fn show(app: &AppHandle) {
   crate::capture_overlays::dismiss_all(app);
-  let window = app
-    .get_webview_window(WindowLabel::Projects.as_str())
-    .ok_or(tauri::Error::WindowNotFound)?;
   drives::watch(app);
-  #[cfg(target_os = "macos")]
-  app.set_dock_visibility(true)?;
-  app_windows::show(&window, true)?;
-  app_windows::recover_window_position(app, &window)
+  let presenter = app.clone();
+  on_demand::open(app, WindowLabel::Projects, move |window| {
+    let shown = window.and_then(|window| {
+      app_windows::present(&presenter, &window).map_err(|error| error.to_string())
+    });
+    if let Err(error) = shown {
+      eprintln!("Could not open the projects window: {error}");
+    }
+  });
 }
 
 #[tauri::command]
-pub fn show_project_browser(app: AppHandle) -> tauri::Result<()> {
-  show(&app)
+pub fn show_project_browser(app: AppHandle) {
+  show(&app);
 }
 
 #[tauri::command]
 pub fn hide_project_browser(app: AppHandle) -> tauri::Result<()> {
-  if let Some(window) = app.get_webview_window(WindowLabel::Projects.as_str()) {
-    app_windows::hide_without_focus_transfer(&window)?;
-  }
+  on_demand::close(&app, WindowLabel::Projects);
   Ok(())
 }
 
