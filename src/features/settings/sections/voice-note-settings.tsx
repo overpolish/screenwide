@@ -1,10 +1,11 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useEffect, useState } from "react";
 
 import { ControlRow } from "../../../composites/control-row/control-row";
 import { t } from "../../../i18n/i18n";
+import { usePageVisible } from "../../../lib/use-page-visible";
 import { AudioMeter } from "../../../primitives/audio-meter/audio-meter";
 import { Button } from "../../../primitives/button/button";
 import { Switch } from "../../../primitives/switch/switch";
@@ -23,14 +24,6 @@ import type { PermissionStatus } from "../../permissions/types";
 import type { InputDevice } from "../../recording-inputs/types";
 
 const SAME_AS_RECORDING = "same-as-recording";
-
-const watchVisibility = (onChange: () => void) => {
-  document.addEventListener("visibilitychange", onChange);
-  return () => {
-    document.removeEventListener("visibilitychange", onChange);
-  };
-};
-const isPageVisible = () => document.visibilityState === "visible";
 
 /**
  * Whether holding a kind's shortcut records a voice note, and from which
@@ -82,7 +75,7 @@ export function VoiceNoteSettings({
 
   // Settings is hidden rather than closed, so the microphone is let go with
   // the window rather than left open behind it.
-  const isVisible = useSyncExternalStore(watchVisibility, isPageVisible);
+  const isVisible = usePageVisible();
   const isListening = settings.voiceNotes && isGranted;
   const level = useAudioPreview({
     active: isListening && isVisible,

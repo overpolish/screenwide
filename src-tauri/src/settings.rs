@@ -31,6 +31,9 @@ pub fn show(app: &AppHandle) -> tauri::Result<()> {
     .ok_or(tauri::Error::WindowNotFound)?;
   #[cfg(target_os = "macos")]
   app.set_dock_visibility(true)?;
+  // Shown before the window, so its first frame is drawn when it appears.
+  #[cfg(target_os = "windows")]
+  app_windows::set_page_shown(&window, true)?;
   app_windows::show(&window, true)?;
   app_windows::recover_window_position(app, &window)
 }
@@ -40,6 +43,8 @@ pub fn hide_settings(app: AppHandle) -> tauri::Result<()> {
   let _ = crate::shortcuts::end_shortcut_capture(app.clone());
   if let Some(window) = app.get_webview_window(WindowLabel::Settings.as_str()) {
     app_windows::hide_without_focus_transfer(&window)?;
+    #[cfg(target_os = "windows")]
+    app_windows::set_page_shown(&window, false)?;
   }
   Ok(())
 }

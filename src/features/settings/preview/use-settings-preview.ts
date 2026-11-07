@@ -4,6 +4,8 @@
 import { isTauri } from "@tauri-apps/api/core";
 import { type RefObject, useEffect, useRef, useState } from "react";
 
+import { usePageVisible } from "../../../lib/use-page-visible";
+
 import { paintPictures } from "./paint-pictures";
 import { clippingAncestors, placementOf } from "./preview-placement";
 import {
@@ -27,7 +29,9 @@ import { useToolPointer } from "./use-tool-pointer";
 // layer over its box every frame, clipped to what can be seen of it, and
 // plays a tool's pointer. A change of the setting's values reaches the
 // running scene; another kind of scene opens a new one. Outside the app
-// nothing opens and the box keeps its still picture.
+// nothing opens and the box keeps its still picture. Settings is hidden
+// rather than closed, so the native picture, which holds its renderer and
+// pictures on the GPU, is open only while the window is seen.
 
 export function useSettingsPreview({
   cursorRef,
@@ -46,13 +50,14 @@ export function useSettingsPreview({
   scene: SettingsPreviewScene;
 }) {
   const [openId, setOpenId] = useState<string | null>(null);
+  const isPageVisible = usePageVisible();
   const sceneRef = useRef(scene);
   sceneRef.current = scene;
   const kind = scene.kind;
   const values = JSON.stringify(scene);
 
   useEffect(() => {
-    if (!isTauri()) return;
+    if (!isTauri() || !isPageVisible) return;
     const id = crypto.randomUUID();
     let closed = false;
     const opened = paintPictures(sceneRef.current, { notch, wallpaper }).then(
@@ -81,7 +86,7 @@ export function useSettingsPreview({
         .catch(() => false)
         .then((open) => (open ? closeSettingsPreview(id) : null));
     };
-  }, [kind, notch, wallpaper]);
+  }, [isPageVisible, kind, notch, wallpaper]);
 
   useEffect(() => {
     if (!openId) return;

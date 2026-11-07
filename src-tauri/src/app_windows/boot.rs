@@ -95,5 +95,13 @@ pub fn initialize_predefined_windows(app: &AppHandle) -> tauri::Result<()> {
     }
   }
 
+  // Settings' panes hold a native picture, its renderer and pictures on the
+  // GPU, and a microphone's level, each only while the page is seen; its
+  // page is hidden with it, here and in `crate::settings`.
+  #[cfg(target_os = "windows")]
+  if let Some(window) = app.get_webview_window(WindowLabel::Settings.as_str()) {
+    super::webview_visibility::set_page_shown(&window, false)?;
+  }
+
   Ok(())
 }

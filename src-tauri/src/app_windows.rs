@@ -88,6 +88,8 @@ mod transient_popover;
 mod webview_visibility;
 
 pub(crate) use webview_visibility::hide_window as hide;
+#[cfg(target_os = "windows")]
+pub(crate) use webview_visibility::set_page_shown;
 
 pub use boot::initialize_predefined_windows;
 pub use dismissal::hide_without_focus_transfer;
