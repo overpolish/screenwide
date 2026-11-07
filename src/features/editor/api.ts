@@ -33,7 +33,6 @@ import {
 import type { RecordingFormatPayload } from "./export/recording-format";
 import type { CameraKey } from "../../bindings/CameraKey";
 import type { ExportedFile } from "../../bindings/ExportedFile";
-import type { ExportLookQuality } from "../../bindings/ExportLookQuality";
 import type { ExportSubtitles } from "../../bindings/ExportSubtitles";
 import type { ScreenshotFormat } from "../../bindings/ScreenshotFormat";
 import type { TextStyle } from "../../bindings/TextStyle";
@@ -317,7 +316,7 @@ export type RecordingProcessingOptions = {
   screenshotOutput: ScreenshotWorkspaceOutputSettings;
   timelineEdit?: RecordingTimelineEdit | null;
 };
-/** The options of a recording's export as the estimate and the compared
+/** The options of a recording's export as the export and the compared
  * frame read them, normalized as Rust expects. */
 export const recordingProcessingPayload = (
   options: RecordingProcessingOptions,
@@ -332,20 +331,6 @@ export const recordingProcessingPayload = (
     options.screenshotOutput,
   ),
 });
-/** The recording's size, in bytes, at each of `looks`, in order. */
-export const estimateRecordingExport = ({
-  artifactId,
-  looks,
-  ...options
-}: RecordingProcessingOptions & {
-  artifactId: number;
-  looks: ExportLookQuality[];
-}) =>
-  invoke<number[]>("estimate_recording_export", {
-    artifactId,
-    looks,
-    options: recordingProcessingPayload(options),
-  });
 // The format, with a GIF's stretch, travels in `processing`.
 type SaveExportOptions = RecordingProcessingOptions &
   RecordingFormatPayload & {

@@ -9,19 +9,12 @@
 use screenwide_output::ScreenshotOutputSettings;
 
 use super::CursorExportRequest;
-use crate::media_preview::{BakedVideoExportOptions, FrameFit, VideoExportOptions};
+use crate::media_preview::{BakedVideoExportOptions, FrameFit};
 
 /// `request`'s output settings at the resolution its video options ask for.
 pub(super) fn scaled(request: &CursorExportRequest<'_>) -> ScreenshotOutputSettings {
-  scaled_to(request.output, request.video)
-}
-
-/// `settings` at the resolution `video` asks for.
-pub(super) fn scaled_to(
-  settings: &ScreenshotOutputSettings,
-  video: VideoExportOptions,
-) -> ScreenshotOutputSettings {
-  let fit = FrameFit::of(settings.width, settings.height, video);
+  let settings = request.output;
+  let fit = FrameFit::of(settings.width, settings.height, request.video);
   ScreenshotOutputSettings {
     width: fit.width,
     height: fit.height,

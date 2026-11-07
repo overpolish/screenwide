@@ -18,8 +18,6 @@ import {
   AUDIO,
   COMPARE,
   COMPARE_LOADING,
-  MEASURING_QUALITY,
-  PARTLY_MEASURED_QUALITY,
   SCREENSHOT,
   VIDEO,
 } from "./export-story-fixtures";
@@ -161,15 +159,6 @@ export const Video: Story = {};
 // the edge with more, while the row and Export stay in view.
 export const ShortWindow: Story = {
   parameters: { stageHeight: 480 },
-};
-
-// Each card holds a stub in place of its size until it lands.
-export const Measuring: Story = {
-  args: { export: { ...VIDEO, quality: MEASURING_QUALITY } },
-};
-
-export const PartlyMeasured: Story = {
-  args: { export: { ...VIDEO, quality: PARTLY_MEASURED_QUALITY } },
 };
 
 export const ChooseWithArrows: Story = {

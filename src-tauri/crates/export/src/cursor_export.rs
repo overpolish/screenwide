@@ -108,18 +108,6 @@ pub fn export(request: CursorExportRequest<'_>) -> Result<ExportRunResult, Strin
   platform::export(request)
 }
 
-/// The bytes the video stream of `request`'s export takes at each of
-/// `looks`, in order, before its audio and its MP4 tables, as the platform's
-/// encoder would write it; the request's own `video` is not read. The
-/// request's destination is never written.
-pub fn estimate_video_bytes(
-  request: CursorExportRequest<'_>,
-  looks: &[VideoExportOptions],
-) -> Result<Vec<u64>, String> {
-  check_request(&request)?;
-  platform::estimate_video_bytes(request, looks)
-}
-
 /// The frame at `output_us` of `request`'s edited video, written to `png` as
 /// `picture` asks: as the platform's encoder leaves it at the request's size
 /// and compression, see `media_preview::PreviewStretch`, or as drawn. The

@@ -2,9 +2,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 //! What one exported video file shows, described once for the export that
-//! writes it, the estimate that sizes it and the preview that shows a frame
-//! of it, so they always agree on whether the picture is drawn by the
-//! compositor and on what it draws.
+//! writes it and the preview that shows a frame of it, so they always agree
+//! on whether the picture is drawn by the compositor and on what it draws.
 
 use std::path::Path;
 use std::sync::atomic::AtomicBool;

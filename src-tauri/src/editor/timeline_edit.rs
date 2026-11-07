@@ -39,7 +39,7 @@ pub fn snapshot_fields(
   })
 }
 
-/// The edit an export or its estimate follows: the one the window sent, if
+/// The edit an export or its compare follows: the one the window sent, if
 /// it is this recording's, otherwise the one saved in the project.
 pub fn export_edit(
   sent: Option<&RecordingTimelineEdit>,
@@ -53,7 +53,7 @@ pub fn export_edit(
   }
 }
 
-/// The plan an export or its estimate follows, made of [`export_edit`].
+/// The plan an export or its compare follows, made of [`export_edit`].
 pub fn export_plan(
   sent: Option<&RecordingTimelineEdit>,
   project: &Path,

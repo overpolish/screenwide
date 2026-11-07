@@ -11,13 +11,12 @@
 
 use std::path::PathBuf;
 
-use crate::recording_model::{AudioTrackKind, AudioTrackVolume, RecordingAudioTrack};
+use crate::recording_model::{AudioTrackVolume, RecordingAudioTrack};
 use arguments::filter_path;
 
 /// The bitrate the mixdown is encoded at. Summing tracks means decoding them,
 /// so this is the one place in the app that re-encodes audio; generous enough
 /// that the mix is not what a person hears a problem in.
-const MIXDOWN_BITRATE_BPS: u64 = 192_000;
 const MIXDOWN_BITRATE: &str = "192k";
 
 /// How the selected tracks appear in the file being produced.
@@ -201,43 +200,6 @@ impl TrackSelection {
     !self.covers(tracks)
       || self.processes()
       || matches!(layout, AudioLayout::Mixdown) && self.stream_indices.len() > 1
-  }
-
-  /// The selected audio's expected encoded size.
-  ///
-  /// Recorded AAC is copied, so its configured bitrate is the useful estimate.
-  /// A track found by inspection has no kind metadata; treating it like the larger
-  /// system-audio stream is safer than promising a file that is too small.
-  pub fn estimated_audio_bytes(
-    &self,
-    tracks: &[RecordingAudioTrack],
-    layout: AudioLayout,
-    duration_ms: u64,
-  ) -> u64 {
-    if self.stream_indices.is_empty() {
-      return 0;
-    }
-
-    let bitrate = if (matches!(layout, AudioLayout::Mixdown) && self.stream_indices.len() > 1)
-      || self.processes()
-    {
-      if matches!(layout, AudioLayout::SeparateTracks) {
-        MIXDOWN_BITRATE_BPS.saturating_mul(self.stream_indices.len() as u64)
-      } else {
-        MIXDOWN_BITRATE_BPS
-      }
-    } else {
-      tracks
-        .iter()
-        .filter(|track| self.stream_indices.contains(&track.stream_index))
-        .map(|track| match track.kind {
-          AudioTrackKind::Microphone => 128_000,
-          AudioTrackKind::SystemAudio | AudioTrackKind::Unknown => 192_000,
-        })
-        .sum()
-    };
-
-    bitrate.saturating_mul(duration_ms) / 8_000
   }
 }
 

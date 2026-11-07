@@ -210,7 +210,6 @@ export type Messages = {
   "editor-export-look-original": null;
   "editor-export-look-smaller": null;
   "editor-export-look-smallest": null;
-  "editor-export-measuring": null;
   "editor-export-mix-audio": null;
   "editor-export-progress": null;
   "editor-export-quality": null;

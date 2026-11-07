@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 //! What an export of the open recording reads, gathered from the export
-//! window's options once, for the size estimate and the preview frame to
-//! describe the same pictures the export draws.
+//! window's options once, for the preview frame to describe the same
+//! pictures the export draws.
 
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -13,29 +13,22 @@ use crate::editor::export_picture::{ExportPicture, Screen};
 use screenwide_cursor_effects::CursorEffectSettings;
 use screenwide_export::camera_effects::live::LiveCameraEffects;
 use screenwide_export::media_preview::VideoExportOptions;
-use screenwide_export::recording_model::{
-  RecordingAudioTrack, RecordingCamera, RecordingOutputSettings,
-};
+use screenwide_export::recording_model::{RecordingCamera, RecordingOutputSettings};
 use screenwide_export::track_selection::{AudioLayout, TrackSelection};
 use screenwide_keyboard_effects::KeyboardEffectSettings;
 use screenwide_scenes::CameraOverlaySettings;
 use screenwide_text::captions::CaptionTrack;
 use screenwide_timeline_edit::TimelinePlan;
 
-mod looks;
-
 pub(super) struct ExportInputs {
   pub bake_camera: bool,
   pub camera: Option<RecordingCamera>,
-  pub camera_compression: u8,
   pub camera_effects: Option<Arc<LiveCameraEffects>>,
   camera_overlay: CameraOverlaySettings,
-  pub camera_resolution_scale_percent: u16,
   captions: Option<CaptionTrack>,
   pub compression: u8,
   cursor: Option<(PathBuf, CursorEffectSettings)>,
   pub duration_ms: u64,
-  pub include_camera: bool,
   include_primary_video: bool,
   keyboard: Option<(PathBuf, KeyboardEffectSettings)>,
   pub layout: AudioLayout,
@@ -47,7 +40,6 @@ pub(super) struct ExportInputs {
   size: (u32, u32),
   source_scale_percent: u16,
   pub timeline: Option<TimelinePlan>,
-  pub tracks: Vec<RecordingAudioTrack>,
 }
 
 impl ExportInputs {
@@ -63,7 +55,7 @@ impl ExportInputs {
       bake_camera,
       camera_compression,
       camera_overlay,
-      // A screen colour changes the camera file's size too little to measure.
+      // A screen colour changes nothing the compare shows.
       camera_key: _,
       camera_resolution_scale_percent,
       collapse_audio,
@@ -74,7 +66,7 @@ impl ExportInputs {
       enabled_stream_indices,
       include_camera,
       include_primary_video,
-      // The looks measure the video; a sound-only export offers none, and a
+      // The compare shows the video; a sound-only export offers none, and a
       // GIF's look is fixed.
       recording_format: _,
       gif_range: _,
@@ -198,10 +190,8 @@ impl ExportInputs {
     Ok(Self {
       bake_camera,
       camera,
-      camera_compression,
       camera_effects,
       camera_overlay,
-      camera_resolution_scale_percent,
       captions,
       compression,
       cursor: cursor
@@ -213,7 +203,6 @@ impl ExportInputs {
         })
         .map(|cursor| (cursor, cursor_effects)),
       duration_ms,
-      include_camera,
       include_primary_video,
       keyboard: keyboard
         .filter(|_| keyboard_effects.bake)
@@ -227,8 +216,16 @@ impl ExportInputs {
       size,
       source_scale_percent,
       timeline,
-      tracks,
     })
+  }
+
+  /// The scale Original stands for: the capture's own, or the camera's
+  /// where the recording is of the camera alone.
+  pub(super) fn original_scale_percent(&self) -> u16 {
+    match self.primary_kind {
+      PrimaryRecordingKind::Camera => 100,
+      _ => self.source_scale_percent.clamp(100, 400),
+    }
   }
 
   /// The scale and compression the screen's video is exported at.

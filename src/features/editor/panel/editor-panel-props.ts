@@ -57,8 +57,6 @@ export type EditorPanelProps = {
   keyboardEffects?: KeyboardEffectSettings;
   /** What each of the Export island's looks sets. */
   lookQualities?: ExportLookQuality[];
-  /** Each look's measured size, in look order. */
-  lookSizeBytes?: (number | null)[];
   /** Draws the camera into the video, or saves it as a file of its own. */
   onBakeCameraChange?: (bake: boolean) => void;
   onBrowse?: () => void;

@@ -20,8 +20,7 @@ pub(super) const REWIND_PREROLL_US: u64 = 500_000;
 
 /// How far ahead of the frame in hand a wanted frame must be before the
 /// readers start again there rather than decode their way to it. A cut this
-/// long, or a gap between the stretches a size estimate draws, costs less to
-/// seek over than to decode through.
+/// long costs less to seek over than to decode through.
 const SKIP_AHEAD_US: u64 = 3_000_000;
 
 /// The whole rate an export of a recording captured at `nominal` frames a

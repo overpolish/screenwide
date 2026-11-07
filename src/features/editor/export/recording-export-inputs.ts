@@ -17,8 +17,8 @@ import {
 
 import { VideoExportSettings } from "./recording-export-settings";
 
-/** What the editor knows of a recording's export: what the size estimate
- * and the preview frame are made from. */
+/** What the editor knows of a recording's export: what the export and the
+ * compared frame are made from. */
 export type RecordingExportInputs = {
   artifact: EditorArtifact | null;
   audioTrackVolumes: AudioTrackVolume[];

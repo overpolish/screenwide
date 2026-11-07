@@ -18,7 +18,7 @@ use screenwide_sidecar::ffmpeg_command;
 use screenwide_timeline::{within_output_windows, TimelineRange};
 use screenwide_timeline_edit::TimelinePlan;
 
-use super::sample_frames::SampleFrames;
+use super::h264_frames::frame_count;
 use super::*;
 
 /// How much of the edited video is encoded ahead of the frame shown.
@@ -259,7 +259,7 @@ pub fn preview_frame(
     filters.push(only_frame(last));
     return write_frame(stretch_command(source, &stretch, &filters), png);
   }
-  // A raw stream, whose frames `SampleFrames` counts; passed through so
+  // A raw stream, whose frames `frame_count` counts; passed through so
   // every decoded frame is encoded once, as the drawn side counts them.
   let encoded = preview_temp_path("h264");
   let mut command = stretch_command(source, &stretch, &filters);
@@ -269,14 +269,7 @@ pub fn preview_frame(
     .arg(&encoded);
   let result = run(command)
     .and_then(|_| std::fs::read(&encoded).map_err(|error| error.to_string()))
-    .and_then(|stream| {
-      write_last_frame(
-        &encoded,
-        Some("h264"),
-        SampleFrames::of(&stream).frames(),
-        png,
-      )
-    });
+    .and_then(|stream| write_last_frame(&encoded, Some("h264"), frame_count(&stream), png));
   let _ = std::fs::remove_file(&encoded);
   result
 }

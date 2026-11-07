@@ -116,12 +116,6 @@ export type RecordingSavePlan = {
   showsMeasuredProgress: boolean;
 };
 
-/** The name of a combination of tracks, matching what backend mixes use. */
-export const mixSignature = (streamIndices: number[]) =>
-  streamIndices.length > 0
-    ? [...streamIndices].sort((a, b) => a - b).join("-")
-    : "silent";
-
 /** The neutral settings make a missing camera a no-op at every API boundary. */
 export const cameraExportSettings = (
   artifact: EditorArtifact | null,

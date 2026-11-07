@@ -180,33 +180,3 @@ fn only_processes_an_export_when_its_contents_or_layout_change() {
   let only = TrackSelection::new(&tracks(1), &[0]);
   assert!(!only.needs_processing(&tracks(1), AudioLayout::Mixdown));
 }
-
-#[test]
-fn estimates_selected_and_collapsed_audio_from_their_real_bitrates() {
-  let typed = vec![
-    RecordingAudioTrack {
-      kind: AudioTrackKind::SystemAudio,
-      label: "System audio".to_owned(),
-      stream_index: 0,
-    },
-    RecordingAudioTrack {
-      kind: AudioTrackKind::Microphone,
-      label: "Microphone".to_owned(),
-      stream_index: 1,
-    },
-  ];
-  let both = TrackSelection::new(&typed, &[0, 1]);
-  assert_eq!(
-    both.estimated_audio_bytes(&typed, AudioLayout::SeparateTracks, 10_000),
-    400_000
-  );
-  assert_eq!(
-    both.estimated_audio_bytes(&typed, AudioLayout::Mixdown, 10_000),
-    240_000
-  );
-  let microphone = TrackSelection::new(&typed, &[1]);
-  assert_eq!(
-    microphone.estimated_audio_bytes(&typed, AudioLayout::SeparateTracks, 10_000),
-    160_000
-  );
-}

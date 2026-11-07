@@ -5,8 +5,8 @@ use super::*;
 
 /// The frame at `output_us` of `request`'s export, at `png`, as `picture`
 /// asks: drawn and encoded at the end of its stretch exactly as the export
-/// draws and encodes it, x264 writing the stretch as a raw stream as it does
-/// for an estimate, or drawn alone and never encoded.
+/// draws and encodes it, x264 writing the stretch as a raw stream, or drawn
+/// alone and never encoded.
 pub(in super::super::super) fn preview_frame(
   request: CursorExportRequest<'_>,
   output_us: u64,
@@ -23,19 +23,8 @@ pub(in super::super::super) fn preview_frame(
   let (stretch, output_plan) = match picture {
     media_preview::PreviewPicture::Encoded => (
       media_preview::PreviewStretch::leading_to(&whole, output_us)?,
-      mux::X264Output::Measured {
-        outputs: vec![mux::MeasuredOutput {
-          path: media_preview::estimate_temp_path(),
-          width: request.output.width,
-          height: request.output.height,
-          compression: request.video.compression,
-          bitrate: super::super::super::video_bitrate(
-            request.output.width,
-            request.output.height,
-            request.video.compression,
-          ),
-        }],
-        stretch_starts: None,
+      mux::X264Output::Encoded {
+        path: media_preview::preview_temp_path("h264.part"),
       },
     ),
     media_preview::PreviewPicture::Drawn => (
@@ -68,19 +57,19 @@ pub(in super::super::super) fn preview_frame(
   );
   let _ = std::fs::remove_file(&fallback);
   let written = match rendered? {
-    (ExportRunResult::Completed, Some(stream)) => stream.measure(cancelled)?,
+    (ExportRunResult::Completed, Some(stream)) => stream.read_back(cancelled)?,
     (ExportRunResult::Completed, None) => {
       return Err("The preview needs FFmpeg, which could not be started".to_owned());
     }
     (ExportRunResult::Cancelled, _) => None,
   };
-  let Some(written) = written.and_then(|streams| streams.into_iter().next()) else {
+  let Some(written) = written else {
     return Ok(ExportRunResult::Cancelled);
   };
   match picture {
     media_preview::PreviewPicture::Encoded => {
       let raw = media_preview::preview_temp_path("h264");
-      let frames = media_preview::SampleFrames::of(&written).frames();
+      let frames = media_preview::frame_count(&written);
       let result = std::fs::write(&raw, written)
         .map_err(|error| error.to_string())
         .and_then(|()| media_preview::write_last_frame(&raw, Some("h264"), frames, png));

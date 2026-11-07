@@ -23,17 +23,12 @@ pub(super) fn emit_snapshot(app: &AppHandle, kind: EditorKind) {
 /// artifact it was made from.
 pub(super) fn clear_recording_preview(app: &AppHandle) {
   super::recording_preview_player::stop_all(app);
-  let state = app.state::<EditorState>();
-  state
+  app
+    .state::<EditorState>()
     .recording_preview
     .lock()
     .unwrap_or_else(|poisoned| poisoned.into_inner())
     .take();
-  state
-    .compression_estimates
-    .lock()
-    .unwrap_or_else(|poisoned| poisoned.into_inner())
-    .clear();
 }
 
 /// The next artifact identity. Two consecutive captures are otherwise

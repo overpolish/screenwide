@@ -104,7 +104,6 @@ export function useEditorExportIsland(
       gif: gifReadiness(gifRangeOf(strip.item)),
       hasTranscript,
       isAudioOnly,
-      lookSizeBytes: props.lookSizeBytes ?? [],
       recordingOutput: props.recordingOutput ?? null,
       recordingTimelineEdit: props.recordingTimelineEdit ?? null,
       settings: {

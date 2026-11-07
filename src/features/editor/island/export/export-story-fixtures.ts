@@ -7,32 +7,17 @@ import type {
   ToolPanelExportQuality,
 } from "../../tools/tool-panel-export";
 
-// A two-minute screen recording at 2880 × 1800, measured at each look, as
-// the editor publishes it to the Export island.
+// A two-minute screen recording at 2880 × 1800, as the editor publishes it
+// to the Export island.
 
 const QUALITY: ToolPanelExportQuality = {
   look: "balanced",
   looks: [
-    { bytes: 9_400_000, height: 900, id: "smallest", width: 1440 },
-    { bytes: 18_700_000, height: 1350, id: "smaller", width: 2160 },
-    { bytes: 41_200_000, height: 1800, id: "balanced", width: 2880 },
-    { bytes: 186_000_000, height: 1800, id: "original", width: 2880 },
+    { height: 900, id: "smallest", width: 1440 },
+    { height: 1350, id: "smaller", width: 2160 },
+    { height: 1800, id: "balanced", width: 2880 },
+    { height: 1800, id: "original", width: 2880 },
   ],
-};
-
-/** The looks while they are still being measured. */
-export const MEASURING_QUALITY: ToolPanelExportQuality = {
-  ...QUALITY,
-  looks: QUALITY.looks.map((look) => ({ ...look, bytes: null })),
-};
-
-/** The looks part-way through measuring: the smaller two have landed,
- * the rest are still being measured. */
-export const PARTLY_MEASURED_QUALITY: ToolPanelExportQuality = {
-  ...QUALITY,
-  looks: QUALITY.looks.map((look, index) =>
-    index < 2 ? look : { ...look, bytes: null },
-  ),
 };
 
 /** A frame of a window with text, drawn at the size the backend writes. */

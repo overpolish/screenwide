@@ -1,12 +1,13 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
-/* eslint-disable @eslint-react/set-state-in-effect -- The compared pictures are made outside React, as the estimate is. */
+/* eslint-disable @eslint-react/set-state-in-effect -- The compared pictures are made outside React. */
 
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { useEffect, useRef, useState } from "react";
 
 import { usePreviewStill } from "../recording/preview/preview-still-store";
 
+import { stopExportPreviews } from "./export-file-api";
 import {
   previewRecordingExportFrame,
   previewScreenshotExport,
@@ -118,6 +119,17 @@ export function useExportCompare(
   useEffect(() => {
     setMade(NOTHING);
   }, [artifactId]);
+
+  // The island put away lets go of the pictures still being made, so they
+  // do not hold the GPU from the editor's preview.
+  const wasOpenRef = useRef(isOpen);
+  useEffect(() => {
+    if (!isOpen && wasOpenRef.current)
+      stopExportPreviews().catch((cause: unknown) => {
+        console.error("Could not stop the compared pictures", cause);
+      });
+    wasOpenRef.current = isOpen;
+  }, [isOpen]);
 
   useEffect(() => {
     if (!isOpen || originalKey === null || exportKey === null) return;

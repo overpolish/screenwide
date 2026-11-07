@@ -271,26 +271,3 @@ pub(in super::super) fn export(
   let _ = std::fs::remove_file(&video);
   result
 }
-
-/// The bytes the video stream of `request`'s export takes at each of
-/// `looks`: the constant bitrate its encoder is held to, over the edited
-/// video, at the size `render_video` draws it.
-pub(in super::super) fn estimate_video_bytes(
-  request: CursorExportRequest<'_>,
-  looks: &[VideoExportOptions],
-) -> Result<Vec<u64>, String> {
-  let duration_ms = request
-    .timeline
-    .map_or(request.duration_ms, |timeline| timeline.duration_ms());
-  looks
-    .iter()
-    .map(|look| {
-      let output = export_output::scaled_to(request.output, *look);
-      let (width, height) = screenwide_output::output_dimensions(&output)?;
-      Ok(
-        super::super::video_bitrate(width, height, look.compression).saturating_mul(duration_ms)
-          / 8_000,
-      )
-    })
-    .collect()
-}

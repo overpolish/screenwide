@@ -25,13 +25,13 @@ use super::track_selection::{AudioEncoding, AudioLayout, TrackSelection};
 mod audio;
 mod bake;
 mod encode;
-mod estimate;
 mod frame_fit;
+mod h264_frames;
 #[cfg(target_os = "macos")]
 mod macos;
 mod output;
 mod preview_frame;
-mod sample_frames;
+mod quality;
 mod tools;
 #[cfg(target_os = "windows")]
 mod windows;
@@ -50,29 +50,27 @@ pub use encode::{
 };
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 pub(crate) use encode::{remux_temp_path, run_export};
-pub use estimate::{estimate_compressed_video_bytes, supports_compression};
 pub use frame_fit::FrameFit;
 #[cfg(target_os = "macos")]
 pub use macos::recording_info;
 pub use output::duration_ms;
+pub use quality::supports_compression;
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 pub use screenwide_compositor::compositor::BakeGeometry;
 pub use tools::inspect_audio_tracks;
 #[cfg(target_os = "windows")]
 pub use windows::recording_info;
 
-pub(crate) use estimate::export_crf;
-use estimate::resolution_filter;
 #[cfg(target_os = "macos")]
-pub(crate) use estimate::{estimate_temp_path, sample_windows, sampled_to_whole};
+pub(crate) use h264_frames::frame_count;
 use output::{holds_bytes, plays_from_start_to_end, EXPORT_MP4_OUTPUT, OUTPUT_ERROR_DETAIL};
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 pub(crate) use preview_frame::{edited_ranges, write_last_frame, PreviewStretch};
 pub use preview_frame::{preview_frame, PreviewPicture};
 #[cfg(target_os = "macos")]
 pub(crate) use preview_frame::{preview_temp_path, write_picture};
-#[cfg(target_os = "macos")]
-pub(crate) use sample_frames::{stretch_starts, SampleFrames};
+pub(crate) use quality::export_crf;
+use quality::resolution_filter;
 
 use crate::recording_model::{AudioTrackKind, RecordingAudioTrack};
 

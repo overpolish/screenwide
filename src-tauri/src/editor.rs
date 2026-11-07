@@ -104,7 +104,6 @@ pub use workspace::{
 };
 mod window;
 
-use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
@@ -256,11 +255,6 @@ pub struct EditorState {
   screenshot_delete_project_after_export: Mutex<Option<bool>>,
   recording_preview: Mutex<Option<screenwide_export::media_preview::RecordingPreview>>,
   recording_preview_preparation: Mutex<()>,
-  /// Cached by artifact, stream kind (screen/camera/baked), quality and scale.
-  compression_estimates: Mutex<HashMap<(u64, u8, u8, u16), u64>>,
-  compression_estimate_preparation: Mutex<()>,
-  /// Set to stop the estimate running now once a newer one is asked for.
-  running_estimate: Mutex<Arc<AtomicBool>>,
   /// Set to stop an export preview frame being made once a newer one of the
   /// same side is asked for: the Original frame, then the exported one.
   running_export_preview: Mutex<[Arc<AtomicBool>; 2]>,

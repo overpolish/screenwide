@@ -13,8 +13,9 @@ import { EditorKind } from "../types";
  * the export moved it to Recently Deleted. */
 export const putAwayExport = () => invoke<null>("put_away_export");
 
-/** Lets go of the size estimate still being made, once the island is away. */
-export const stopExportEstimate = () => invoke<null>("stop_export_estimate");
+/** Lets go of the compared pictures still being made, once the island is
+ * away. */
+export const stopExportPreviews = () => invoke<null>("stop_export_previews");
 
 export const revealExportFile = (workspace: EditorKind) =>
   invoke<null>("reveal_export_file", { workspace });

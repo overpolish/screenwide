@@ -114,7 +114,6 @@ export function exportIslandSnapshot({
   gif,
   hasTranscript,
   isAudioOnly,
-  lookSizeBytes,
   recordingOutput,
   recordingTimelineEdit,
   settings,
@@ -130,8 +129,6 @@ export function exportIslandSnapshot({
   gif: ToolPanelGif;
   hasTranscript: boolean;
   isAudioOnly: boolean;
-  /** Each look's measured size, in look order. */
-  lookSizeBytes: readonly (number | null)[];
   recordingOutput: RecordingOutputSettings | null;
   recordingTimelineEdit: RecordingTimelineEdit | null;
   settings: EditorExportSettings;
@@ -200,7 +197,6 @@ export function exportIslandSnapshot({
       recording && kind === "video" && !isGif && hasQuality(recording)
         ? exportQuality({
             cameraOutput,
-            lookSizeBytes,
             recording,
             recordingOutput,
             settings,
@@ -214,13 +210,11 @@ export function exportIslandSnapshot({
 
 function exportQuality({
   cameraOutput,
-  lookSizeBytes,
   recording,
   recordingOutput,
   settings,
 }: {
   cameraOutput: CameraOutput | null;
-  lookSizeBytes: readonly (number | null)[];
   recording: Recording;
   recordingOutput: RecordingOutputSettings | null;
   settings: EditorExportSettings;
@@ -257,8 +251,7 @@ function exportQuality({
           }
         : null,
     ),
-    looks: EXPORT_LOOKS.map((id, index) => ({
-      bytes: lookSizeBytes[index] ?? null,
+    looks: EXPORT_LOOKS.map((id) => ({
       ...dimensions(lookQuality(id, scales.screen).resolutionScalePercent),
       id,
     })),

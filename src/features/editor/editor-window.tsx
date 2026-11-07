@@ -237,8 +237,8 @@ export function EditorWindow() {
     bakeCamera,
     enabledVideoTracks,
   });
-  // Memoized: the estimate re-runs whenever the edits it is handed change
-  // identity, so a copy made on every render would estimate forever.
+  // Memoized: the edits are handed on to the Export island's compare and the
+  // export, which would otherwise see new ones on every render.
   const exportEdits = useMemo(
     () =>
       exportedRecordingEdits({
@@ -365,14 +365,11 @@ export function EditorWindow() {
     recordingTimelineEdit: exportEdits.timelineEdit,
     resolutionScalePercent,
   };
-  const { exportCompare, lookQualities, lookSizeBytes } = useExportMeasures(
-    exportInputs,
-    {
-      cameraOutput,
-      recordingFormat,
-      screenshot: { format: screenshotFormat, output: screenshotOutput },
-    },
-  );
+  const { exportCompare, lookQualities } = useExportMeasures(exportInputs, {
+    cameraOutput,
+    recordingFormat,
+    screenshot: { format: screenshotFormat, output: screenshotOutput },
+  });
 
   const onEnabledTracksChange = useCallback(
     (streamIndices: number[]) => {
@@ -545,7 +542,6 @@ export function EditorWindow() {
         isSaving={isSaving}
         keyboardEffects={keyboardEffects}
         lookQualities={lookQualities}
-        lookSizeBytes={lookSizeBytes}
         onBakeCameraChange={setBakeCamera}
         onBrowse={() => {
           browseExportDirectory()

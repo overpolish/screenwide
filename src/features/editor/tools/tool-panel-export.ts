@@ -10,11 +10,8 @@ import type { CameraOutput } from "../export/camera-output";
 import type { ExportLook } from "../export/export-looks";
 import type { ExportPhase } from "../export/use-export-progress";
 
-/** One of the four looks, with what it makes: the screen's size, and the
- * file's estimated size once measured. */
+/** One of the four looks, with the size of the picture it makes. */
 export type ToolPanelExportLook = {
-  /** In bytes; null until measured, or where it cannot be. */
-  bytes: number | null;
   height: number;
   id: ExportLook;
   width: number;

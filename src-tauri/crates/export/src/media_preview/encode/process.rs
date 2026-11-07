@@ -103,16 +103,16 @@ pub(crate) struct StreamedExport {
   child: Option<Child>,
   stdin: Option<std::process::ChildStdin>,
   stderr_reader: Option<std::thread::JoinHandle<Vec<u8>>>,
-  /// The files FFmpeg writes: the export's one, or each stream an estimate
-  /// measures, the frames read once and encoded into every one.
-  outputs: Vec<PathBuf>,
+  /// The file FFmpeg writes: the export, or the raw stream the compare
+  /// decodes its frame from.
+  output: PathBuf,
 }
 
 #[cfg(target_os = "macos")]
 impl StreamedExport {
   /// FFmpeg started with `args`, which read the video from standard input
-  /// and write `outputs`.
-  pub(crate) fn start(args: Vec<OsString>, outputs: Vec<PathBuf>) -> Result<Self, String> {
+  /// and write `output`.
+  pub(crate) fn start(args: Vec<OsString>, output: PathBuf) -> Result<Self, String> {
     let mut child = ffmpeg_command()
       .args(args)
       .stdin(Stdio::piped())
@@ -126,7 +126,7 @@ impl StreamedExport {
       child: Some(child),
       stdin,
       stderr_reader: Some(stderr_reader),
-      outputs,
+      output,
     })
   }
 
@@ -144,20 +144,16 @@ impl StreamedExport {
     cancelled: &AtomicBool,
   ) -> Result<ExportRunResult, String> {
     drop(self.stdin.take());
-    let (Some(child), Some(stderr_reader), Some(temporary)) = (
-      self.child.take(),
-      self.stderr_reader.take(),
-      self.outputs.first().cloned(),
-    ) else {
+    let (Some(child), Some(stderr_reader)) = (self.child.take(), self.stderr_reader.take()) else {
       return Err("FFmpeg was already stopped".to_owned());
     };
-    finish(child, stderr_reader, &temporary, destination, cancelled)
+    finish(child, stderr_reader, &self.output, destination, cancelled)
   }
 
-  /// Ends the video and lets FFmpeg finish, answering what it wrote to each
-  /// output, in order, and removing it: samples to measure, not files to
-  /// keep. None where `cancelled` stopped it first.
-  pub(crate) fn measure(mut self, cancelled: &AtomicBool) -> Result<Option<Vec<Vec<u8>>>, String> {
+  /// Ends the video and lets FFmpeg finish, answering what it wrote and
+  /// removing it: a picture to read, not a file to keep. None where
+  /// `cancelled` stopped it first.
+  pub(crate) fn read_back(mut self, cancelled: &AtomicBool) -> Result<Option<Vec<u8>>, String> {
     drop(self.stdin.take());
     let (Some(mut child), Some(stderr_reader)) = (self.child.take(), self.stderr_reader.take())
     else {
@@ -168,29 +164,16 @@ impl StreamedExport {
     }
     let status = child.wait();
     let stderr = stderr_reader.join().unwrap_or_default();
-    let written = self
-      .outputs
-      .iter()
-      .map(|output| {
-        let stream = std::fs::read(output)
-          .ok()
-          .filter(|stream| !stream.is_empty());
-        let _ = std::fs::remove_file(output);
-        stream
-      })
-      .collect::<Option<Vec<_>>>();
+    let written = std::fs::read(&self.output)
+      .ok()
+      .filter(|stream| !stream.is_empty());
+    let _ = std::fs::remove_file(&self.output);
     if cancelled.load(Ordering::Acquire) {
       return Ok(None);
     }
     match (status, written) {
-      (Ok(status), Some(streams)) if status.success() => Ok(Some(streams)),
+      (Ok(status), Some(stream)) if status.success() => Ok(Some(stream)),
       _ => Err(remux_error(&stderr)),
-    }
-  }
-
-  fn remove_outputs(&self) {
-    for output in &self.outputs {
-      let _ = std::fs::remove_file(output);
     }
   }
 
@@ -201,7 +184,7 @@ impl StreamedExport {
     let mut child = self.child.take()?;
     let _ = child.kill();
     let _ = child.wait();
-    self.remove_outputs();
+    let _ = std::fs::remove_file(&self.output);
     let stderr = self.stderr_reader.take()?.join().unwrap_or_default();
     (!String::from_utf8_lossy(&stderr).trim().is_empty()).then(|| remux_error(&stderr))
   }
@@ -214,7 +197,7 @@ impl Drop for StreamedExport {
     if let Some(mut child) = self.child.take() {
       let _ = child.kill();
       let _ = child.wait();
-      self.remove_outputs();
+      let _ = std::fs::remove_file(&self.output);
     }
   }
 }

@@ -25,8 +25,6 @@ editor-export-look-balanced = Balanced
 editor-export-look-original = Original
 # A look's picture size, in pixels.
 editor-export-dimensions = { $width } × { $height }
-# Shown in place of a file size while it is being measured.
-editor-export-measuring = Measuring
 # A subtitle file made from the transcript, written beside the exported video.
 editor-export-subtitles = Save subtitles
 # Names the choice of subtitle file format, beside Save subtitles.

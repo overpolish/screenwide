@@ -15,8 +15,8 @@ use super::*;
 ///
 /// Given only an average bitrate, each vendor's encoder picks its own rate
 /// control: most hold it constant, some let it float with the picture. Held
-/// constant on every GPU, an export comes out at the size its estimate
-/// promised. The values must reach the encoder this way, before its media
+/// constant on every GPU, a look makes a file of the same size whichever
+/// GPU encodes it. The values must reach the encoder this way, before its media
 /// types are negotiated: the Microsoft AVC DX12 encoder ignores codec API
 /// values set later.
 pub(super) fn constant_bitrate(bitrate: u32) -> Result<IPropertyStore, String> {

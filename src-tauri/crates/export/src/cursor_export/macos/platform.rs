@@ -21,8 +21,6 @@ use frames::FrameComposer;
 mod frame_source;
 mod mux;
 
-mod estimate;
-pub(in super::super) use estimate::estimate_video_bytes;
 mod preview;
 pub(in super::super) use preview::preview_frame;
 
