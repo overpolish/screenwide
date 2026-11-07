@@ -69,7 +69,9 @@ impl<'a> FrameComposer<'a> {
   /// Draws `frame` into its destination and submits it, answering the token
   /// `wait` takes once the destination is to be read.
   pub(super) fn compose(&mut self, frame: &ExportFrame) -> Result<u64, String> {
-    let gpu = &*self.gpu;
+    // A handle of its own, so `self` can be borrowed mutably while drawing.
+    let gpu = std::sync::Arc::clone(&self.gpu);
+    let gpu = &*gpu;
     let screen = unsafe { pixel_buffer(frame.screen) }
       .ok_or_else(|| "The export frame has no picture".to_owned())?;
     let destination = unsafe { pixel_buffer(frame.destination) }
@@ -151,7 +153,7 @@ impl<'a> FrameComposer<'a> {
     if let Some(source) = self.source.as_ref().filter(|source| source.size == size) {
       return source.clone();
     }
-    let source = super::frame_source::canvas_source(self.gpu, size);
+    let source = super::frame_source::canvas_source(&self.gpu, size);
     self.source = Some(source.clone());
     source
   }

@@ -2,8 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 //! The shared device's Metal side: IOSurface-backed CoreVideo buffers and
-//! textures other code owns as wgpu textures, without a copy, and the raw
-//! device and queue for Objective-C that encodes beside wgpu.
+//! textures other code owns as wgpu textures, without a copy.
 
 use cidre::cv;
 use objc2::rc::Retained;
@@ -15,44 +14,6 @@ use objc2_metal::{
 use wgpu::hal::api::Metal;
 
 use super::Gpu;
-
-/// The shared device's `MTLDevice` and `MTLCommandQueue`, unretained. Command
-/// buffers committed to this queue run after every wgpu submission made
-/// before them, which is what lets Objective-C draw over a wgpu frame in the
-/// same drawable. Both live as long as the shared device, for the process.
-pub fn metal_device_and_queue(
-  gpu: &Gpu,
-) -> Result<(*mut std::ffi::c_void, *mut std::ffi::c_void), String> {
-  let device = {
-    let hal = unsafe { gpu.device.as_hal::<Metal>() }
-      .ok_or_else(|| "The graphics device is not running on Metal".to_owned())?;
-    Retained::as_ptr(hal.raw_device()).cast_mut().cast()
-  };
-  let queue = {
-    let hal = unsafe { gpu.queue.as_hal::<Metal>() }
-      .ok_or_else(|| "The graphics queue is not running on Metal".to_owned())?;
-    std::ptr::from_ref(hal.as_raw()).cast_mut().cast()
-  };
-  Ok((device, queue))
-}
-
-/// The shared device's `id<MTLDevice>` for Objective-C that makes layers and
-/// textures beside wgpu, or NULL when there is no device.
-#[no_mangle]
-pub extern "C" fn screenwide_shared_metal_device() -> *mut std::ffi::c_void {
-  super::shared()
-    .and_then(metal_device_and_queue)
-    .map_or(std::ptr::null_mut(), |(device, _)| device)
-}
-
-/// The shared device's `id<MTLCommandQueue>`, on which a command buffer runs
-/// after every wgpu submission made before it, or NULL when there is none.
-#[no_mangle]
-pub extern "C" fn screenwide_shared_metal_queue() -> *mut std::ffi::c_void {
-  super::shared()
-    .and_then(metal_device_and_queue)
-    .map_or(std::ptr::null_mut(), |(_, queue)| queue)
-}
 
 /// `raw`, a BGRA `MTLTexture` on the shared device that someone else owns,
 /// such as a `CAMetalDrawable`'s, as a texture wgpu renders into.
