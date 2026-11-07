@@ -86,7 +86,7 @@ Do not publish a partially successful release. Rerun failed jobs or delete the d
 
 The Store installs and updates its own copy of Screenwide from an MSIX package. Tauri makes none, so `pnpm msix:package` (`scripts/package-msix.mjs`) lays out a Windows release build as Tauri's Windows installer would, adds the Store logos and the manifest (`src-tauri/msix/AppxManifest.xml`), and packs it with the Windows SDK's makeappx. The manifest carries the identity Partner Center reserved for Screenwide (`overpolish.Screenwide`, Store ID `9MSN8CRH5W0F`); the Store rejects a package whose identity differs. The Release workflow attaches the x64 and ARM64 packages to the draft release.
 
-The taskbar and Start show the small logo at the sizes in `src-tauri/msix/Assets` (`Square44x44Logo.targetsize-*_altform-unplated.png`), listed in the package's `resources.pri`, which the script builds with the SDK's makepri. Without them Windows draws the 44 px logo shrunk on a tile of the accent colour. `pnpm msix-logos:prepare` scales them from `src-tauri/icons/ScreenwideLogo.png`; run it after the icon changes and commit the PNGs.
+The taskbar and Start show the small logo at the sizes in `src-tauri/msix/Assets` (`Square44x44Logo.targetsize-*_altform-unplated.png`), listed in the package's `resources.pri`, which the script builds with the SDK's makepri. Without them Windows draws the 44 px logo shrunk on a tile of the accent colour.
 
 A packaged copy knows it is one (`src-tauri/src/microsoft_store.rs`): it does not update itself, and Settings says the Store updates it, and it launches at login through the package's startup task rather than the autostart plugin, whose registry entry Windows redirects for packaged apps. Windows lets only the package's own processes execute the files in its install folder, so the window hider is loaded into the apps being hidden from a copy in the package's cache folder (`src-tauri/src/hidden_apps_windows/shared_library.rs`).
 
@@ -111,6 +111,10 @@ Import-Certificate -FilePath screenwide-msix-test.cer -CertStoreLocation Cert:\L
 signtool sign /fd SHA256 /sha1 $cert.Thumbprint src-tauri\target\x86_64-pc-windows-msvc\release\bundle\msix\Screenwide_1.0.0_x64.msix
 Add-AppxPackage -Path src-tauri\target\x86_64-pc-windows-msvc\release\bundle\msix\Screenwide_1.0.0_x64.msix
 ```
+
+## The app icon
+
+`src-tauri/icons/Screenwide.icon` is the icon, made in Icon Composer. macOS reads it compiled (`Assets.car`, by `pnpm macos-icon:prepare` while bundling) with `icon.icns` as the fallback, and draws it on Apple's grid, whose artwork sits inside a margin a tenth of each side wide. Windows and browsers draw an icon file as it is, so theirs are rendered edge to edge: after the icon changes, run `pnpm icons:prepare` on a Mac with Xcode 26 and commit what it writes. It renders the document with Icon Composer's `ictool` into `ScreenwideLogo.png`, the site's `favicon.png` and, through `tauri icon`, the Windows and Linux icons (`icon.ico`, `icon.png`, the sized PNGs, `Square*Logo.png`, `StoreLogo.png`), then the Store's small logos (`pnpm msix-logos:prepare`). It leaves the macOS icon alone.
 
 ## Model files
 

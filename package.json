@@ -10,7 +10,8 @@
       "cmake",
       "ninja",
       "otool",
-      "rustc"
+      "rustc",
+      "xcode-select"
     ],
     "workspaces": {
       ".": {
@@ -50,6 +51,7 @@
     "license:check": "node scripts/check-spdx.mjs",
     "tray-icons:prepare": "node scripts/prepare-tray-menu-icons.mjs",
     "tray-countdown-icons:prepare": "node scripts/prepare-tray-countdown-icons.mjs",
+    "icons:prepare": "node scripts/prepare-app-icons.mjs",
     "macos-icon:prepare": "node scripts/prepare-macos-icon.mjs",
     "msix-logos:prepare": "node scripts/prepare-msix-logos.mjs",
     "msix:package": "node scripts/package-msix.mjs",

@@ -3,8 +3,8 @@
 
 // Scales the app icon into the unplated sizes of the Store package's small
 // logo, which the taskbar and Start draw it at
-// (`scripts/package-msix.mjs` indexes them). Run after the icon changes and
-// commit the PNGs, so packaging needs no renderer.
+// (`scripts/package-msix.mjs` indexes them). `pnpm icons:prepare` runs it
+// after rendering the icon; commit the PNGs, so packaging needs no renderer.
 
 import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 
