@@ -32,8 +32,13 @@ pub use self::windows::band_guard::initialize as initialize_band_guard;
 #[cfg(target_os = "macos")]
 pub(crate) fn forget_panel(app: &tauri::AppHandle, label: super::WindowLabel) {
   // A window built again under the same label must not be handed the panel
-  // of the one destroyed before it.
-  let _ = app.remove_webview_panel(label.as_str());
+  // of the one destroyed before it. The window is released as the class it
+  // was built as: AppKit registered key-value observers on that class, and
+  // `-[NSWindow dealloc]` throws when it cannot find them on the panel class,
+  // which aborts the app.
+  if let Ok(panel) = app.get_webview_panel(label.as_str()) {
+    let _ = panel.to_window();
+  }
 }
 mod glide_island;
 #[cfg(target_os = "macos")]
