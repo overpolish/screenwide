@@ -10,7 +10,7 @@
 //! timeline; the edits that change the segments re-time them as they are
 //! made.
 
-use screenwide_timeline::{source_to_output_us, TimelineRange};
+use screenwide_timeline::{output_at_us, source_to_output_us, TimelineRange};
 mod validation;
 pub use validation::validate;
 mod silences;
@@ -208,6 +208,17 @@ impl TimelinePlan {
   #[cfg_attr(not(target_os = "windows"), allow(dead_code))]
   pub fn source_to_output_us(&self, source_us: u64) -> Option<u64> {
     source_to_output_us(&self.ranges, source_us)
+  }
+
+  /// Where the frame shown for the source moment `source_us` sits in the
+  /// output. A moment the edit cuts away, such as a playhead resting at 0
+  /// in a recording whose start is cut, shows the frame restoring it would
+  /// sit beside; past the last kept moment, the last frame.
+  pub fn output_frame_at_us(&self, source_us: u64) -> u64 {
+    self.source_to_output_us(source_us).unwrap_or_else(|| {
+      let landed = output_at_us(&self.ranges, source_us as f64).round() as u64;
+      landed.min(self.duration_us.saturating_sub(1))
+    })
   }
 
   fn is_identity(&self, source_duration_us: u64) -> bool {

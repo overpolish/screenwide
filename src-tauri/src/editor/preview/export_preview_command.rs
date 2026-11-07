@@ -176,10 +176,7 @@ pub async fn preview_recording_export_frame(
     let output_us = inputs
       .timeline
       .as_ref()
-      .map_or(Some(source_us), |timeline| {
-        timeline.source_to_output_us(source_us)
-      })
-      .ok_or_else(|| "The playhead is on a part of the recording the edit leaves out".to_owned())?;
+      .map_or(source_us, |timeline| timeline.output_frame_at_us(source_us));
     let picture = inputs
       .primary_picture()
       .ok_or_else(|| "The export has no video to preview".to_owned())?;

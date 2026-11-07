@@ -109,6 +109,31 @@ fn export_plan_coalesces_cuts_and_maps_retained_source_time() {
 }
 
 #[test]
+fn a_moment_cut_away_shows_the_frame_beside_it() {
+  // From 8 s, 0-2 s and 5-6 s are cut: 2-5 s plays from 0, 6-8 s from 3 s.
+  let mut timeline = edit(1, 0.25);
+  timeline.next_segment_id = 4;
+  timeline.segments.remove(0);
+  timeline.segments[0].source_end = 0.625;
+  timeline.segments.push(RecordingTimelineSegment {
+    id: 3,
+    source_end: 1.0,
+    source_start: 0.75,
+    playback_rate: 1.0,
+  });
+  let plan = TimelinePlan::from_edit(&timeline, 8_000).unwrap();
+  assert_eq!(plan.output_frame_at_us(0), 0);
+  assert_eq!(plan.output_frame_at_us(3_000_000), 1_000_000);
+  assert_eq!(plan.output_frame_at_us(5_500_000), 3_000_000);
+
+  // With 4-8 s cut, a playhead in the cut shows the last frame kept.
+  let mut end_cut = edit(1, 0.5);
+  end_cut.segments.truncate(1);
+  let plan = TimelinePlan::from_edit(&end_cut, 8_000).unwrap();
+  assert_eq!(plan.output_frame_at_us(6_000_000), 3_999_999);
+}
+
+#[test]
 fn export_plan_ignores_cut_only_timelines() {
   assert!(TimelinePlan::from_edit(&edit(1, 0.5), 8_000).is_none());
 }
