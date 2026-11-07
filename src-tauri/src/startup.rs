@@ -69,6 +69,8 @@ pub(crate) fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Erro
     app_windows::initialize_standalone_listbox(app.handle())?;
   }
   app_windows::initialize_predefined_windows(app.handle())?;
+  #[cfg(target_os = "windows")]
+  app_windows::platform::initialize_webview_memory(app.handle())?;
   app_windows::initialize_topology_management(app.handle());
   editor::initialize(app.handle());
   // The text pickers' fonts and template previews take a moment to ready;

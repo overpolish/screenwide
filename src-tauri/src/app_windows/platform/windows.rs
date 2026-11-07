@@ -4,4 +4,5 @@
 pub(super) mod band_guard;
 pub(super) mod composition;
 pub(super) mod island_window;
+pub(super) mod webview_memory;
 pub(super) mod windows_api;

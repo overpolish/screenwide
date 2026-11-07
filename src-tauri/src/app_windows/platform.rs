@@ -29,6 +29,8 @@ use tauri::{LogicalPosition, LogicalSize};
 
 #[cfg(target_os = "windows")]
 pub use self::windows::band_guard::initialize as initialize_band_guard;
+#[cfg(target_os = "windows")]
+pub use self::windows::webview_memory::initialize as initialize_webview_memory;
 mod glide_island;
 #[cfg(target_os = "macos")]
 pub(crate) use self::macos::appearance::light_appearance;
