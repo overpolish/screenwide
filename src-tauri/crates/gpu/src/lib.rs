@@ -62,6 +62,12 @@ impl Gpu {
         } else {
           wgpu::Features::empty()
         },
+        // wgpu's default reserves Direct3D 12 memory 128 to 256 MB at a time
+        // for each kind of resource, sized for games. Idle, Screenwide holds a
+        // few small textures, and on integrated graphics those empty blocks
+        // are the computer's RAM. Large frames get allocations of their own
+        // whichever is chosen. Metal ignores the hint.
+        memory_hints: wgpu::MemoryHints::MemoryUsage,
         ..Default::default()
       })
       .await
