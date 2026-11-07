@@ -12,6 +12,7 @@ import { placed, type Span, type TimelineScale } from "../timeline-scale";
 import { SpringBadge } from "./spring-badge";
 import { notched, useBadgeSize } from "./spring-badge-notch";
 import { SpringEnd } from "./spring-end";
+import { glyphPlaces } from "./spring-glyphs";
 import { SpringWire } from "./spring-wire";
 
 import type { LullPlay } from "../../island/lull/lull-island";
@@ -112,6 +113,17 @@ export function Spring({
     hasBadge && isBadgeShown && badge.size
       ? notched(badge.size, isSelected ? SELECTED_OUTLINE_PX : 0)
       : undefined;
+  // A screen playing in the middle of each moving stretch, on the coil's
+  // line, however short the stretch is; stretches close together share one.
+  const glyphs = isNarrow
+    ? []
+    : glyphPlaces(
+        moving.map(
+          (stretch) =>
+            (scale.toX((stretch.start + stretch.end) / 2) - startX) * width,
+        ),
+        px,
+      );
 
   return (
     <button
@@ -164,34 +176,15 @@ export function Spring({
           }}
         />
       ) : null}
-      <SpringWire
-        gaps={
-          isNarrow
-            ? []
-            : moving.map(
-                (stretch) =>
-                  (scale.toX((stretch.start + stretch.end) / 2) - startX) *
-                  width,
-              )
-        }
-        look={look}
-        seconds={recorded}
-        width={px}
-      />
-      {isNarrow
-        ? null
-        : moving.map((stretch) => (
-            // In the middle of the stretch, on the coil's line, however
-            // short the stretch is, where the wire fades out round it.
-            <MonitorPlay
-              aria-hidden
-              className="pointer-events-none absolute top-1/2 size-icon-xs -translate-1/2 text-fg-secondary"
-              key={stretch.start}
-              style={{
-                insetInlineStart: `${String(((scale.toX((stretch.start + stretch.end) / 2) - startX) / spanX) * 100)}%`,
-              }}
-            />
-          ))}
+      <SpringWire gaps={glyphs} look={look} seconds={recorded} width={px} />
+      {glyphs.map((at) => (
+        <MonitorPlay
+          aria-hidden
+          className="pointer-events-none absolute top-1/2 size-icon-xs -translate-1/2 text-fg-secondary"
+          key={at}
+          style={{ insetInlineStart: `${String((at / px) * 100)}%` }}
+        />
+      ))}
       {hasBadge ? (
         // Squeezed too narrow to carry it, the badge waits for the pointer
         // or the selection, since the lulls squeezed hardest are the ones

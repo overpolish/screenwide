@@ -85,3 +85,14 @@ export const Crowded: Story = {
     ],
   },
 };
+
+// Pressed in the last moments, the keys end at the strip's end rather than
+// running past it, each tick still where its shortcut was pressed.
+export const AtTheEnd: Story = {
+  args: {
+    shortcuts: [
+      { end: 62, id: "save", keys: ["Command", "S"], start: 61 },
+      { end: 64, id: "stop", keys: ["Command", "Shift", "Y"], start: 63.6 },
+    ],
+  },
+};

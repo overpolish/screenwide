@@ -4,6 +4,8 @@
 import { cn } from "../../../../lib/styling";
 import { springCoil } from "../../glyphs/spring-coil";
 
+import { gapMask } from "./spring-glyphs";
+
 // A lull drawn as what it behaves like: a coil spring, seen from the side
 // and a little from above. It has as many coils as its recorded length
 // earns, and keeps them however it is squeezed, so squeezing packs them
@@ -52,8 +54,9 @@ export function SpringWire({
   seconds: number;
   /** Its drawn width, in px. */
   width: number;
-  /** Where glyphs sit on the coil, in px along it: the wire fades out round
-   * each, so the glyph reads clear of it. */
+  /** Where glyphs sit on the coil, in px along it, in order, as
+   * `glyphPlaces` gives them: the wire fades out round each, so the glyph
+   * reads clear of it. */
   gaps?: number[];
 }) {
   if (width < PACKED_BELOW_PX) return <PackedSpring look={look} />;
@@ -108,27 +111,6 @@ export function SpringWire({
       ))}
     </svg>
   );
-}
-
-/** Half the clear room, in px, the wire leaves round a glyph on it: the
- * glyph's width with a little air. */
-const GAP_HALF_PX = 7;
-/** How far, in px, the wire fades out on each side of that room, as a
- * scroll area fades its content at an edge rather than cutting it. */
-const GAP_FADE_PX = 8;
-
-/** A mask that fades the wire out round each of `gaps`, in px along it. */
-function gapMask(gaps: number[]) {
-  const px = (at: number) => `${String(at)}px`;
-  const stops = [...gaps]
-    .sort((first, second) => first - second)
-    .flatMap((at) => [
-      `#000 ${px(at - GAP_HALF_PX - GAP_FADE_PX)}`,
-      `transparent ${px(at - GAP_HALF_PX)}`,
-      `transparent ${px(at + GAP_HALF_PX)}`,
-      `#000 ${px(at + GAP_HALF_PX + GAP_FADE_PX)}`,
-    ]);
-  return `linear-gradient(to right, #000, ${stops.join(", ")}, #000)`;
 }
 
 /** A spring with no room to stretch out, drawn as one squeezed shut: its

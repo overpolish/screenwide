@@ -16,8 +16,9 @@ import { type Span } from "../timeline-scale";
 // recording, it is never moved or trimmed: pressed, it is chosen, and the
 // Keyboard island it opens styles every shortcut at once; chosen, it can be
 // deleted. Where shortcuts were pressed close together, the lane sets its
-// keys a little after the tick (`labelOffset`), so they sit side by side;
-// the tick, under the keys, never crosses another shortcut's.
+// keys a little after the tick (`labelOffset`), so they sit side by side,
+// and near the strip's end a little before it, so they end at the end; the
+// tick, under the keys, never crosses another shortcut's.
 
 export type TimelineShortcut = Span & {
   id: string;
@@ -32,7 +33,8 @@ export type ShortcutChipProps = {
   shortcut: TimelineShortcut;
   /** Where it was pressed, in px along the strip. */
   x: number;
-  /** How far past the tick its keys sit, in px. */
+  /** How far from the tick its keys start, in px: after it where pressed
+   * close after another shortcut, before it near the strip's end. */
   labelOffset?: number;
   /** How wide its keys are drawn, in px, to set the next one clear. */
   onMeasure?: (width: number) => void;
@@ -86,7 +88,7 @@ export function ShortcutChip({
           event.stopPropagation();
         }}
         ref={measure}
-        // Its keys start at its tick, or just after the shortcut before.
+        // Its keys start at its tick, or as the lane sets them clear.
         style={{ insetInlineStart: x + labelOffset }}
       >
         <Shortcut aria-hidden>

@@ -11,7 +11,8 @@ import { ShortcutChip, type TimelineShortcut } from "./shortcut-chip";
 // keys with a tick under them where it was pressed. Pressed close together,
 // a shortcut's keys are set after the keys before them, a clear gap apart,
 // so they sit side by side as separate shortcuts rather than over each
-// other or run together; its tick stays where it was pressed.
+// other or run together; near the strip's end they are set back so they
+// end at it. Its tick stays where it was pressed.
 // Pressing one chooses it; with Shift, it is taken in or left out of what
 // is chosen. Delete or Backspace deletes what is chosen.
 
@@ -63,10 +64,20 @@ export function ShortcutLane({
     .sort((first, second) => first.start - second.start)
     .map((shortcut) => {
       const x = scale.toX(shortcut.start) * width;
-      const labelOffset = Math.max(0, reached + GAP_PX - x);
-      reached = x + labelOffset + (widths[shortcut.id] ?? KEYS_PX);
-      return { labelOffset, shortcut, x };
+      const keysPx = widths[shortcut.id] ?? KEYS_PX;
+      const from = Math.max(x, reached + GAP_PX);
+      reached = from + keysPx;
+      return { from, keysPx, shortcut, x };
     });
+  // Keys pressed in the last moments would run past the strip's end, as if
+  // there were more recording there, so they end at it instead, and those
+  // before them are drawn back to stay clear; each tick stays where it was.
+  let limit = width;
+  for (let index = placed.length - 1; index >= 0; index -= 1) {
+    const each = placed[index];
+    each.from = Math.min(each.from, limit - each.keysPx);
+    limit = each.from - GAP_PX;
+  }
 
   return (
     <div
@@ -80,11 +91,11 @@ export function ShortcutLane({
         onDelete(selected);
       }}
     >
-      {placed.map(({ labelOffset, shortcut, x }) => (
+      {placed.map(({ from, shortcut, x }) => (
         <ShortcutChip
           isSelected={selected.includes(shortcut.id)}
           key={shortcut.id}
-          labelOffset={labelOffset}
+          labelOffset={from - x}
           onMeasure={measureOf(shortcut.id)}
           onPress={(event) => {
             const isIn = selected.includes(shortcut.id);

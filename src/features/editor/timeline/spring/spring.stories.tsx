@@ -175,6 +175,8 @@ export const States: Story = {
 
 // A screen playing sits on the coil where the picture moves by itself, such
 // as a page loading, since that holds down how fast the whole lull plays.
+// Stretches too close for a glyph each share one, and where even those would
+// hide the coil, one stands for them all.
 export const Moving: Story = {
   decorators: [featureStage({ width: 304 })],
   parameters: { controls: { disable: true } },
@@ -183,6 +185,13 @@ export const Moving: Story = {
       {[
         { label: "Still", moving: [] },
         { label: "Page loading", moving: [{ end: 9, start: 5 }] },
+        {
+          label: "Scrolling throughout",
+          moving: Array.from({ length: 11 }, (_, index) => ({
+            end: SPAN.start + index + 0.6,
+            start: SPAN.start + index + 0.2,
+          })),
+        },
       ].map(({ label, moving }) => (
         <StoryGridRow key={label} label={label}>
           {[false, true].map((isSelected) => (
