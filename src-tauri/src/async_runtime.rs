@@ -1,13 +1,16 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! The async runtime Tauri runs commands and their replies on, built so each
-//! worker thread empties an autorelease pool whenever it goes idle.
+//! The async runtime Tauri runs commands and their replies on, built so
+//! autoreleased objects do not outlive the work that made them.
 //!
 //! WebKit autoreleases a webview's views and window while a command's reply
 //! is handed back on a worker. A thread with no pool of its own keeps such
 //! objects until it exits, and Tokio's workers live as long as the app, so
-//! every closed editor stayed in memory with its layers and surfaces.
+//! every closed editor stayed in memory with its layers and surfaces. Each
+//! worker empties a pool whenever it goes idle. Blocking threads have no such
+//! moment, so they empty theirs as they exit, which they do soon after their
+//! last task.
 
 use std::{cell::Cell, ffi::c_void, sync::OnceLock};
 
@@ -25,6 +28,9 @@ pub fn install() {
   let runtime = RUNTIME.get_or_init(|| {
     tokio::runtime::Builder::new_multi_thread()
       .enable_all()
+      // Tokio's default of ten seconds kept each closed editor whole for as
+      // long, and a burst of screenshots held every editor at once.
+      .thread_keep_alive(std::time::Duration::from_secs(1))
       .on_thread_start(open_pool)
       .on_thread_park(drain_pool)
       .on_thread_stop(close_pool)
