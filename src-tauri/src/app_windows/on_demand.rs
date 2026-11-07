@@ -1,12 +1,14 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! The windows a person opens deliberately: both editors and their tool
-//! panels, Projects and Settings. Each is built from its `tauri.conf.json`
-//! entry when it is first asked for and destroyed when it closes, so a
-//! Screenwide with nothing open holds only the windows that must appear the
-//! moment a shortcut or gesture asks (the island, the region selector, menus,
-//! Glide, tooltips), and no editor holds the GPU while none is open.
+//! The windows built when first wanted rather than at launch: both editors
+//! and their tool panels, Projects, Settings, the region overlay, the shared
+//! menu window and Glide. Each is built from its `tauri.conf.json` entry and
+//! destroyed when it closes, so a Screenwide with nothing open holds only the
+//! island, which must appear the moment a shortcut asks, and Glide while it is
+//! on and licensed (`crate::glide::window`). The region overlay and the menu
+//! window are never closed by what uses them, so they go once they have stayed
+//! hidden for a while (`release`).
 //!
 //! A new window is shown only once its page says it has rendered
 //! (`window_ready`), so it never appears empty; what asked for it waits until
@@ -23,7 +25,10 @@ use tauri::{AppHandle, Manager, PhysicalPosition, PhysicalSize, WebviewWindow};
 use super::WindowLabel;
 
 mod creation;
+mod readiness;
+mod release;
 use creation::build_in_background;
+use readiness::{failed, ready, reopened};
 
 const ON_DEMAND: &[WindowLabel] = &[
   WindowLabel::EditorRecording,
@@ -32,7 +37,16 @@ const ON_DEMAND: &[WindowLabel] = &[
   WindowLabel::ToolPanelScreenshot,
   WindowLabel::Projects,
   WindowLabel::Settings,
+  WindowLabel::RegionSelector,
+  WindowLabel::StandaloneListbox,
+  WindowLabel::Glide,
 ];
+
+/// Whether `label`'s window is built when wanted, by [`open`], rather than at
+/// launch.
+pub(crate) fn is_on_demand(label: WindowLabel) -> bool {
+  ON_DEMAND.contains(&label)
+}
 
 /// The windows whose page carries the title bar. On macOS they are configured
 /// with a native overlay title bar, so the real traffic lights sit over the
@@ -143,6 +157,24 @@ pub(crate) fn prepare(app: &AppHandle, label: WindowLabel) {
   open(app, label, |_| {});
 }
 
+/// [`open`], awaited: the window for `label` once it is ready, built first
+/// when it is not open.
+pub(crate) async fn opened(app: &AppHandle, label: WindowLabel) -> Result<WebviewWindow, String> {
+  let (sender, receiver) = std::sync::mpsc::channel();
+  open(app, label, move |window| {
+    let _ = sender.send(window);
+  });
+  tauri::async_runtime::spawn_blocking(move || receiver.recv())
+    .await
+    .map_err(|error| error.to_string())?
+    .map_err(|_| {
+      format!(
+        "The {} window was closed before it was ready",
+        label.as_str()
+      )
+    })?
+}
+
 /// Puts the window for `label` away and destroys it, its tool panel with it.
 /// Whatever was still waiting for it to be built is dropped: closing came
 /// after.
@@ -210,53 +242,6 @@ fn frame_of(window: &WebviewWindow) -> Option<Frame> {
     size: window.inner_size().ok()?,
     maximized: window.is_maximized().ok()?,
   })
-}
-
-fn ready(app: &AppHandle, label: WindowLabel, build: Option<u64>) {
-  let (waiting, frame) = {
-    let mut state = state();
-    match state.stages.get(&label) {
-      Some(Stage::Loading { build: current, .. })
-        if build.is_none_or(|build| build == *current) => {}
-      _ => return,
-    }
-    let Some(Stage::Loading { waiting, .. }) = state.stages.insert(label, Stage::Ready) else {
-      return;
-    };
-    (waiting, state.frames.get(&label).copied())
-  };
-  let Some(window) = app.get_webview_window(label.as_str()) else {
-    return;
-  };
-  for then in waiting {
-    then(Ok(window.clone()));
-  }
-  // Maximizing a hidden window would show it, so a window closed maximized is
-  // maximized again once what opened it has shown it.
-  if frame.is_some_and(|frame| frame.maximized) && window.is_visible().unwrap_or(false) {
-    let _ = window.maximize();
-  }
-}
-
-fn failed(label: WindowLabel, error: String) {
-  let waiting = match state().stages.remove(&label) {
-    Some(Stage::Loading { waiting, .. }) => waiting,
-    _ => Vec::new(),
-  };
-  eprintln!("Could not build the {} window: {error}", label.as_str());
-  for then in waiting {
-    then(Err(error.clone()));
-  }
-}
-
-fn reopened(label: WindowLabel, window: &WebviewWindow) {
-  let waiting = match state().stages.insert(label, Stage::Ready) {
-    Some(Stage::Closing(waiting)) => waiting,
-    _ => Vec::new(),
-  };
-  for then in waiting {
-    then(Ok(window.clone()));
-  }
 }
 
 fn destroyed(app: &AppHandle, label: WindowLabel) {

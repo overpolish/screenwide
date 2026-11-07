@@ -11,7 +11,7 @@ use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use tauri::{AppHandle, Emitter, Manager};
 
 const SETTINGS_FILE: &str = "glide-settings.json";
-const SETTINGS_CHANGED_EVENT: &str = "glide-settings://changed";
+pub(super) const SETTINGS_CHANGED_EVENT: &str = "glide-settings://changed";
 
 /// The widest gap worth offering: past this the regions stop reading as a grid
 /// and start reading as floating windows.

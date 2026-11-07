@@ -4,6 +4,7 @@
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import { announceWindowReady } from "../../lib/announce-window-ready";
 import { selectStatus, useRecordingStore } from "../recording-controls/store";
 import {
   hideRegionSelector,
@@ -63,7 +64,9 @@ export function RegionSelectorWindow() {
   const isCapturingRef = useRef(false);
   const nativeMonitorRef = useRef<number | null>(null);
   const isIdle = recordingStatus === "idle";
-  useScreenshotShortcut();
+  // Built when first wanted, the window is ready once it can hear the
+  // screenshot shortcut it may have been built for.
+  useScreenshotShortcut(announceWindowReady);
   useScreenshotCancel();
   // Picking a window borrows the overlay to outline the one under the
   // pointer, with nothing to edit.

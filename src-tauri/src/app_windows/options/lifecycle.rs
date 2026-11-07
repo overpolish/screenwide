@@ -6,8 +6,8 @@
 use tauri::{AppHandle, Emitter, Manager};
 
 use super::{
-  context_for, detach_from_parent, open_panel_labels, platform, standalone_listbox_contexts,
-  synchronize_open_flag, StandaloneListboxClosed, STANDALONE_LISTBOX,
+  context_for, detach_from_parent, next_panel_request, open_panel_labels, platform,
+  standalone_listbox_contexts, synchronize_open_flag, StandaloneListboxClosed, STANDALONE_LISTBOX,
 };
 
 /// Puts one panel window away. Every other panel window is left exactly as it
@@ -17,6 +17,7 @@ pub(crate) fn close_standalone_listbox(
   return_focus: bool,
   panel: &str,
 ) -> tauri::Result<()> {
+  next_panel_request(Some(panel));
   let _lifecycle = STANDALONE_LISTBOX.lock();
   close_locked(&app, return_focus, panel)
 }
@@ -27,6 +28,7 @@ pub(crate) fn close_all_standalone_listboxes(
   app: AppHandle,
   return_focus: bool,
 ) -> tauri::Result<()> {
+  next_panel_request(None);
   let _lifecycle = STANDALONE_LISTBOX.lock();
   let mut result = Ok(());
   for panel in open_panel_labels() {

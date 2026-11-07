@@ -85,27 +85,6 @@ pub fn initialize_island(app: &AppHandle) -> tauri::Result<()> {
   Ok(())
 }
 
-#[cfg(not(target_os = "macos"))]
-pub fn initialize_region_selector(app: &AppHandle) -> tauri::Result<()> {
-  if let Some(window) = app.get_webview_window(WindowLabel::RegionSelector.as_str()) {
-    platform::initialize_region_selector(&window)?;
-    window.set_ignore_cursor_events(true)?;
-  }
-
-  Ok(())
-}
-
-/// The shared listbox is a panel opened from another window, so it gets the
-/// overlay treatment. The editors' tool panels get the same as they are built
-/// (`super::on_demand`).
-#[cfg(not(target_os = "macos"))]
-pub fn initialize_standalone_listbox(app: &AppHandle) -> tauri::Result<()> {
-  if let Some(window) = app.get_webview_window(WindowLabel::StandaloneListbox.as_str()) {
-    platform::initialize_standalone_listbox(&window)?;
-  }
-  Ok(())
-}
-
 pub fn initialize_editor(window: &WebviewWindow) -> tauri::Result<()> {
   platform::initialize_editor(window)?;
   // A bundled macOS application can order its ordinary main window onscreen

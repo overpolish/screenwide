@@ -80,6 +80,10 @@ export const isScreenshotShortcut = (
   action === "takeScreenshotToClipboard" ||
   action === "takeReferenceScreenshot";
 
+/** The screenshot shortcut this window was just built for, if any. */
+export const takePendingShortcutAction = () =>
+  invoke<ShortcutAction | null>("take_pending_shortcut_action");
+
 /**
  * The screenshot shortcut's borrowing of the region overlay, from opening it
  * in region-edit mode to handing the still to its requested destination.

@@ -11,10 +11,14 @@
 mod registry;
 pub(super) use registry::context_for;
 pub(super) use registry::is_standalone_listbox_open;
+use registry::note_shared_listbox_opener;
 pub(super) use registry::open_panel_labels;
 pub(super) use registry::panel_label;
+pub(crate) use registry::shared_listbox_needed;
 pub(super) use registry::standalone_listbox_contexts;
 pub(super) use registry::synchronize_open_flag;
+mod pending;
+use pending::{next_panel_request, show_once_built};
 
 use std::collections::BTreeMap;
 use std::sync::{Mutex, MutexGuard};
@@ -116,6 +120,26 @@ pub fn show_standalone_listbox(
   page_height: Option<f64>,
 ) -> tauri::Result<()> {
   let panel = panel_label(panel);
+  if app.get_webview_window(&panel).is_none() {
+    show_once_built(&app, &panel, move |app, panel| {
+      show_standalone_listbox(
+        app,
+        focus_contents,
+        parent_window_label,
+        trigger_id,
+        offset,
+        size,
+        anchor,
+        sticky,
+        Some(panel),
+        page_height,
+      )
+    });
+    return Ok(());
+  }
+  if panel == WindowLabel::StandaloneListbox.as_str() {
+    note_shared_listbox_opener(&parent_window_label);
+  }
   let _lifecycle = STANDALONE_LISTBOX.lock();
   let parent = app
     .get_webview_window(&parent_window_label)

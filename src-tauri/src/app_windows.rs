@@ -6,7 +6,6 @@ pub use glide_island_control::defer_hide_glide_island;
 pub(crate) use glide_island_control::fade_glide_island;
 #[cfg(target_os = "macos")]
 pub use glide_island_control::hide_glide_island;
-pub use glide_island_control::initialize_glide_island;
 #[cfg(target_os = "macos")]
 pub(crate) use glide_island_control::position_glide_island;
 pub use glide_island_control::show_glide_island;
@@ -94,11 +93,11 @@ pub use boot::initialize_predefined_windows;
 pub use dismissal::hide_without_focus_transfer;
 #[cfg(target_os = "macos")]
 pub use lifecycle::get_or_create;
+#[cfg(not(target_os = "macos"))]
+pub use lifecycle::initialize_island;
 pub use lifecycle::{
   hide_instead_of_close, initialize_editor, initialize_normal_window, present, show,
 };
-#[cfg(not(target_os = "macos"))]
-pub use lifecycle::{initialize_island, initialize_region_selector, initialize_standalone_listbox};
 pub use popover_dismissal::manage_transient_popover_dismissal;
 pub use region::{
   hide_region_selector, is_region_selector_visible, set_region_selector_passthrough,

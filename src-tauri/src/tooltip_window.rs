@@ -5,8 +5,8 @@
 //!
 //! The Editor's preview is a native surface layered above the webview, so a
 //! tooltip drawn in the page is covered by it. This one is a window instead:
-//! one window serves every trigger, prebuilt during Windows startup and built
-//! on first hover on macOS, then hidden and shown again from then on.
+//! one window serves every trigger, built on first hover, then hidden and
+//! shown again from then on.
 //!
 //! It never takes the keyboard. The window is built unfocused and, on macOS,
 //! converted into a non-activating panel that refuses key status outright, so
@@ -81,26 +81,21 @@ fn pending_tooltip(app: &AppHandle) -> Option<(AnchorRect, String)> {
     .map(|pending| (pending.anchor, pending.parent_label.clone()))
 }
 
-/// The tooltip window is prebuilt on Windows so an IPC callback never creates
-/// a WebView synchronously. macOS keeps its lazy first-use construction.
-fn get_or_create(app: &AppHandle) -> tauri::Result<WebviewWindow> {
-  let label = WindowLabel::Tooltip.as_str();
-  if let Some(window) = app.get_webview_window(label) {
-    return Ok(window);
+/// The tooltip window, built on first hover. macOS builds it there and then.
+/// WebView2 cannot create a webview while the main thread answers a command,
+/// so Windows builds it in the background and has none to give this time; the
+/// tooltip asked for is shown once it is built, if it is still wanted.
+fn get_or_create(app: &AppHandle) -> tauri::Result<Option<WebviewWindow>> {
+  if let Some(window) = app.get_webview_window(WindowLabel::Tooltip.as_str()) {
+    return Ok(Some(window));
   }
   #[cfg(target_os = "windows")]
   {
-    Err(tauri::Error::Anyhow(
-      std::io::Error::other("The Windows tooltip window was not initialized").into(),
-    ))
+    creation::build_in_background(app);
+    Ok(None)
   }
   #[cfg(not(target_os = "windows"))]
-  creation::build(app)
-}
-
-#[cfg(target_os = "windows")]
-pub fn initialize(app: &AppHandle) -> tauri::Result<()> {
-  creation::initialize(app)
+  creation::build(app).map(Some)
 }
 
 /// Puts the window on screen without its pixels, so the page lays out and can
@@ -152,15 +147,7 @@ pub fn show_tooltip(
     ..anchor
   };
 
-  let window = get_or_create(&app).map_err(|error| error.to_string())?;
-  // A control on the live annotation overlay's toolbar sits above every
-  // ordinary window, so the tooltip describing it has to clear that toolbar.
-  // Decided per tooltip rather than kept as state: the overlay comes and goes
-  // while this window is reused for the whole session.
-  #[cfg(target_os = "macos")]
-  platform::set_above_capture_overlays(&window, crate::annotate::is_active(&app))
-    .map_err(|error| error.to_string())?;
-  let was_visible = window.is_visible().unwrap_or(false);
+  // Kept first: a window built for it reads the words on mount.
   {
     let state = app.state::<TooltipState>();
     let mut pending = state
@@ -173,6 +160,17 @@ pub fn show_tooltip(
       parent_label: parent_window_label,
     });
   }
+  let Some(window) = get_or_create(&app).map_err(|error| error.to_string())? else {
+    return Ok(());
+  };
+  // A control on the live annotation overlay's toolbar sits above every
+  // ordinary window, so the tooltip describing it has to clear that toolbar.
+  // Decided per tooltip rather than kept as state: the overlay comes and goes
+  // while this window is reused for the whole session.
+  #[cfg(target_os = "macos")]
+  platform::set_above_capture_overlays(&window, crate::annotate::is_active(&app))
+    .map_err(|error| error.to_string())?;
+  let was_visible = window.is_visible().unwrap_or(false);
 
   // A tooltip already on screen is hidden first: shown at once, the new words
   // would sit in the old bubble, at its old size and place, for the round
@@ -265,9 +263,15 @@ fn anchor_monitor(
 }
 
 /// Takes the tooltip away. The window is nobody's child, so there is nothing
-/// to detach first.
+/// to detach first. What it was to say is forgotten too, so a window still
+/// being built for it, or a fit still on its way, does not bring it back.
 #[tauri::command]
 pub fn hide_tooltip(app: AppHandle) -> Result<(), String> {
+  *app
+    .state::<TooltipState>()
+    .0
+    .lock()
+    .unwrap_or_else(|poisoned| poisoned.into_inner()) = None;
   let Some(window) = app.get_webview_window(WindowLabel::Tooltip.as_str()) else {
     return Ok(());
   };

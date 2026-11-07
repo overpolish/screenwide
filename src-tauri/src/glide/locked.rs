@@ -28,6 +28,13 @@ const LOCKED_HOLD: std::time::Duration = std::time::Duration::from_millis(700);
 /// on every path - including its own failure - so the lease is released once
 /// however the fade ends.
 pub(crate) fn present_locked(app: &AppHandle, session_id: u64, x: f64, y: f64) {
+  // Glide's window is let go when Glide may not be used (`super::window`);
+  // the gesture is then answered by Settings alone.
+  if tauri::Manager::get_webview_window(app, crate::app_windows::WindowLabel::Glide.as_str())
+    .is_none()
+  {
+    return;
+  }
   let busy = BusyLease::acquire();
   if let Err(error) = present(app, session_id, x, y) {
     eprintln!("Could not present the Glide lock: {error}");

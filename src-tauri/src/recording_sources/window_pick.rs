@@ -64,6 +64,11 @@ fn pick() -> std::sync::MutexGuard<'static, Option<Pick>> {
   PICK.lock().unwrap_or_else(PoisonError::into_inner)
 }
 
+/// Whether a window is being picked, on the region overlay.
+pub(crate) fn is_picking() -> bool {
+  pick().is_some()
+}
+
 /// Moves the pick to the window under the pointer when the pointer has
 /// moved, and says so when that changes which window it is.
 fn follow_pointer(pick: &mut Pick) -> Option<Option<WindowPickHover>> {
@@ -137,6 +142,10 @@ pub async fn start_window_pick(
   anchor_monitor_id: Option<u32>,
 ) -> Result<(), String> {
   let reading = tauri::async_runtime::spawn_blocking(read_targets);
+  // The pick is drawn on the region overlay, built now if it is not open so
+  // it loads while the desktop is read.
+  let overlay = crate::app_windows::WindowLabel::RegionSelector;
+  crate::app_windows::on_demand::prepare(&app, overlay);
   let monitors = list_monitors(app.clone())?;
   let anchor = anchor_monitor_id
     .filter(|id| monitors.iter().any(|monitor| monitor.id == *id))
@@ -166,6 +175,11 @@ pub async fn start_window_pick(
     });
     follow_pointer(pick).unwrap_or(None)
   };
+  // The overlay hears that picking has begun, so it has to be listening.
+  if let Err(error) = crate::app_windows::on_demand::opened(&app, overlay).await {
+    pick().take();
+    return Err(error);
+  }
   // Said even when nothing is under the pointer: hearing it is what tells
   // the overlay and the island that picking has begun.
   announce(&app, generation, hover);

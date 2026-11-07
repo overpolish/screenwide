@@ -34,6 +34,10 @@ pub(super) fn prepare_windows(
   }
 
   if options.mode == RecordingMode::Region {
+    // The recording's boundary is drawn on the region overlay. Started by a
+    // shortcut, the overlay may have been let go; built again, its page draws
+    // the boundary from the recording's state.
+    app_windows::on_demand::prepare(app, app_windows::WindowLabel::RegionSelector);
     // Retain the desktop-wide cutout surfaces, but remove editing chrome and
     // stop taking clicks now that the user is no longer editing the region.
     app_windows::screenshot_region::presentation::set_region_selector_osc_frame_visible(

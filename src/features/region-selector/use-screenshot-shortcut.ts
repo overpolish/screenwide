@@ -11,6 +11,7 @@ import {
   handleScreenshotShortcut,
   handoffScreenshotShortcut,
   isScreenshotShortcut,
+  takePendingShortcutAction,
 } from "./screenshot-session";
 
 import type { ShortcutAction } from "../../bindings/ShortcutAction";
@@ -19,35 +20,39 @@ const SHORTCUT_ACTION_EVENT = "global-shortcut://action";
 const SCREENSHOT_SHORTCUT_REQUESTED_EVENT =
   "screenshot-region://shortcut-requested";
 
-export function useScreenshotShortcut(enabled = true) {
+/** Carries out the screenshot shortcuts. Built for one, the page takes it once
+ * it is listening; `onListening` then runs, so Rust can tell it the rest. */
+export function useScreenshotShortcut(onListening: () => void) {
   useEffect(() => {
-    if (!enabled) return;
-
     let unlisten: UnlistenFn | undefined;
     let disposed = false;
+
+    const carryOut = (action: ShortcutAction) => {
+      if (!isScreenshotShortcut(action)) return;
+      // Rust routes active sessions through the dedicated handoff event.
+      // Tauri listeners can still observe the original targeted event; do
+      // not let that duplicate turn a destination switch into a dismissal.
+      reportShortcutDiagnostic("received", action);
+      if (useRecordingSourceStore.getState().isScreenshotCapture) {
+        reportShortcutDiagnostic("duplicateIgnored", action);
+        return;
+      }
+      handleScreenshotShortcut(action)
+        .then(() => {
+          reportShortcutDiagnostic("completed", action);
+        })
+        .catch((error: unknown) => {
+          reportShortcutDiagnostic("failed", action, error);
+          console.error("Could not open the region for a screenshot", error);
+        });
+    };
 
     // `listen` receives events for any target, so each window must match the
     // shortcut action it owns exactly.
     void Promise.all([
       listen<ShortcutAction>(SHORTCUT_ACTION_EVENT, ({ payload }) => {
         if (disposed) return;
-        if (!isScreenshotShortcut(payload)) return;
-        // Rust routes active sessions through the dedicated handoff event.
-        // Tauri listeners can still observe the original targeted event; do
-        // not let that duplicate turn a destination switch into a dismissal.
-        reportShortcutDiagnostic("received", payload);
-        if (useRecordingSourceStore.getState().isScreenshotCapture) {
-          reportShortcutDiagnostic("duplicateIgnored", payload);
-          return;
-        }
-        handleScreenshotShortcut(payload)
-          .then(() => {
-            reportShortcutDiagnostic("completed", payload);
-          })
-          .catch((error: unknown) => {
-            reportShortcutDiagnostic("failed", payload, error);
-            console.error("Could not open the region for a screenshot", error);
-          });
+        carryOut(payload);
       }),
       listen<ShortcutAction>(
         SCREENSHOT_SHORTCUT_REQUESTED_EVENT,
@@ -75,6 +80,12 @@ export function useScreenshotShortcut(enabled = true) {
           });
         } else {
           reportShortcutDiagnostic("listenerReady");
+          void takePendingShortcutAction()
+            .then((action) => {
+              if (action && !disposed) carryOut(action);
+            })
+            .catch(() => undefined)
+            .finally(onListening);
           unlisten = () => {
             listeners.forEach((listener) => {
               listener();
@@ -91,5 +102,5 @@ export function useScreenshotShortcut(enabled = true) {
       disposed = true;
       unlisten?.();
     };
-  }, [enabled]);
+  }, [onListening]);
 }

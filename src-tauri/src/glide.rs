@@ -27,6 +27,8 @@ pub(crate) use locked::present_locked;
 mod picker_cards;
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 mod session;
+#[cfg(any(target_os = "macos", target_os = "windows"))]
+pub(crate) mod window;
 
 mod events;
 pub mod settings;
@@ -64,7 +66,8 @@ const ISLAND_WIDTH: f64 = 212.0;
 const ISLAND_HEIGHT: f64 = 173.0;
 
 pub fn initialize(app: &AppHandle) -> Result<(), String> {
-  crate::app_windows::initialize_glide_island(app).map_err(|error| error.to_string())?;
+  #[cfg(any(target_os = "macos", target_os = "windows"))]
+  window::start(app);
   platform::start(app.clone())
 }
 

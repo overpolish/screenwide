@@ -3,13 +3,6 @@
 
 use super::*;
 
-pub fn initialize_glide_island(app: &AppHandle) -> tauri::Result<()> {
-  let window = app
-    .get_webview_window(WindowLabel::Glide.as_str())
-    .ok_or(tauri::Error::WindowNotFound)?;
-  platform::initialize_glide_window(&window)
-}
-
 pub fn hide_glide_island(app: &AppHandle) -> tauri::Result<()> {
   let window = app
     .get_webview_window(WindowLabel::Glide.as_str())

@@ -79,6 +79,15 @@ pub fn is_region_selector_visible(app: &AppHandle) -> bool {
     .is_some_and(|region| region.is_visible().unwrap_or(false))
 }
 
+/// Whether the region overlay is wanted though it may be hidden: during a
+/// recording, which may be of a region, a screenshot session or a window
+/// being picked. Otherwise a hidden overlay is let go (`on_demand`).
+pub(crate) fn region_selector_needed(app: &AppHandle) -> bool {
+  !crate::recording::is_idle(app)
+    || is_screenshot_region_session()
+    || crate::recording_sources::window_pick::is_picking()
+}
+
 #[tauri::command]
 pub fn show_region_selector(
   app: AppHandle,
@@ -94,9 +103,12 @@ pub fn show_region_selector(
     return Ok(());
   }
 
-  let region = app
-    .get_webview_window(WindowLabel::RegionSelector.as_str())
-    .ok_or_else(|| tauri::Error::WindowNotFound)?;
+  // Built on demand. Once loaded, the page shows itself from the same state
+  // that asked for it here.
+  let Some(region) = app.get_webview_window(WindowLabel::RegionSelector.as_str()) else {
+    super::on_demand::prepare(&app, WindowLabel::RegionSelector);
+    return Ok(());
+  };
   // Persisting a resize rehydrates every window's shared source store. The
   // overlay is already covering this monitor, so do not run native show/order
   // choreography again merely because its React geometry changed.

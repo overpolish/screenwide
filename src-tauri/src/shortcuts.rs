@@ -9,6 +9,10 @@ use action_routing::preserved_capture_overlays;
 #[cfg(test)]
 use action_routing::requires_frontend_turn;
 use action_routing::run_action;
+pub use action_routing::{
+  __cmd__take_pending_shortcut_action, __tauri_command_name_take_pending_shortcut_action,
+  take_pending_shortcut_action,
+};
 
 use serde::{Deserialize, Serialize};
 use std::{

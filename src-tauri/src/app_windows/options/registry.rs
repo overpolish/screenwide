@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use super::*;
+use std::collections::BTreeSet;
 
 pub(in crate::app_windows) fn standalone_listbox_contexts(
 ) -> MutexGuard<'static, BTreeMap<String, StandaloneListboxContext>> {
@@ -44,4 +45,37 @@ pub(in crate::app_windows) fn synchronize_open_flag() {
     .values()
     .any(|context| context.open);
   STANDALONE_LISTBOX.set_open(any_open);
+}
+
+/// The windows that have opened a menu in the shared listbox. It is kept while
+/// any of them is on screen, and let go once none is (`on_demand`).
+static SHARED_LISTBOX_OPENERS: Mutex<BTreeSet<String>> = Mutex::new(BTreeSet::new());
+
+pub(super) fn note_shared_listbox_opener(parent: &str) {
+  SHARED_LISTBOX_OPENERS
+    .lock()
+    .unwrap_or_else(|poisoned| poisoned.into_inner())
+    .insert(parent.to_owned());
+}
+
+/// Whether the shared listbox is wanted though it may be hidden: it is
+/// showing something, or a window that opens menus in it is on screen.
+pub(crate) fn shared_listbox_needed(app: &AppHandle) -> bool {
+  if context_for(WindowLabel::StandaloneListbox.as_str()).is_some() {
+    return true;
+  }
+  // Copied out before asking each window, which waits on the main thread:
+  // the main thread may itself be waiting for this lock to note an opener.
+  let openers: Vec<String> = {
+    let mut openers = SHARED_LISTBOX_OPENERS
+      .lock()
+      .unwrap_or_else(|poisoned| poisoned.into_inner());
+    openers.retain(|label| app.get_webview_window(label).is_some());
+    openers.iter().cloned().collect()
+  };
+  openers.iter().any(|label| {
+    app
+      .get_webview_window(label)
+      .is_some_and(|window| window.is_visible().unwrap_or(false))
+  })
 }

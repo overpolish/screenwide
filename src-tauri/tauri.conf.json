@@ -119,6 +119,7 @@
       },
       {
         "label": "glide",
+        "create": false,
         "title": "Glide",
         "url": "/glide",
         "width": 212,
@@ -135,6 +136,7 @@
       },
       {
         "label": "region-selector",
+        "create": false,
         "title": "Region Selector",
         "url": "/region-selector",
         "acceptFirstMouse": true,
@@ -150,6 +152,7 @@
       },
       {
         "label": "standalone-listbox",
+        "create": false,
         "title": "Listbox",
         "url": "/standalone-listbox",
         "width": 208,

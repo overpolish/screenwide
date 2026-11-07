@@ -17,8 +17,6 @@ use crate::{app_windows, editor};
 /// it consults exist.
 pub(crate) fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
   crate::shortcuts::diagnostics::initialize(app.handle());
-  #[cfg(target_os = "windows")]
-  crate::tooltip_window::initialize(app.handle())?;
   // Before any overlay can be shown: the watch has to be in place by the time
   // another application first takes the foreground over one.
   #[cfg(target_os = "windows")]
@@ -63,11 +61,7 @@ pub(crate) fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Erro
 
   // Create panels lazily so conversion cannot order a stale frame onscreen.
   #[cfg(not(target_os = "macos"))]
-  {
-    app_windows::initialize_island(app.handle())?;
-    app_windows::initialize_region_selector(app.handle())?;
-    app_windows::initialize_standalone_listbox(app.handle())?;
-  }
+  app_windows::initialize_island(app.handle())?;
   app_windows::initialize_predefined_windows(app.handle())?;
   app_windows::initialize_topology_management(app.handle());
   // A hidden region overlay keeps its drawing surfaces until its next

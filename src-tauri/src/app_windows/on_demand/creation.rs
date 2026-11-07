@@ -84,12 +84,30 @@ fn set_up(app: &AppHandle, label: WindowLabel, window: &WebviewWindow) -> tauri:
     WindowLabel::Projects | WindowLabel::Settings => {
       super::super::initialize_normal_window(window)?;
     }
+    #[cfg(any(target_os = "macos", target_os = "windows"))]
+    WindowLabel::Glide => {
+      super::super::platform::initialize_glide_window(window)?;
+    }
+    WindowLabel::RegionSelector => {
+      #[cfg(not(target_os = "macos"))]
+      {
+        super::super::platform::initialize_region_selector(window)?;
+        window.set_ignore_cursor_events(true)?;
+      }
+      // Converted to a panel when first shown, and shown with its webview.
+      #[cfg(target_os = "macos")]
+      super::super::hide(window)?;
+      super::release::when_unused(app, label, super::super::region::region_selector_needed);
+    }
     _ => {
       #[cfg(not(target_os = "macos"))]
       super::super::platform::initialize_standalone_listbox(window)?;
       // Converted to a panel when first shown, and shown with its webview.
       #[cfg(target_os = "macos")]
       super::super::hide(window)?;
+      if label == WindowLabel::StandaloneListbox {
+        super::release::when_unused(app, label, super::super::options::shared_listbox_needed);
+      }
     }
   }
   super::super::hide_instead_of_close(app, label);

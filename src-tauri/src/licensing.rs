@@ -115,6 +115,17 @@ pub(crate) fn may_start(app: &AppHandle, tool: Tool) -> bool {
   access.allows_use()
 }
 
+/// Whether `tool` may be used now, without starting the trial: a key grants
+/// it, or the trial is under way or not yet begun.
+pub(crate) fn allows(app: &AppHandle, tool: Tool) -> bool {
+  let licensing = licensing(app);
+  licensing.state.read().map_or(true, |state| {
+    state
+      .access(tool, now(), &licensing.server_key)
+      .allows_use()
+  })
+}
+
 /// Opens Settings on the Licences pane, the first time `tool` is turned away
 /// in this run only: for a tool started by a gesture that may be repeated in
 /// quick succession, such as Glide's.
@@ -155,6 +166,9 @@ pub(crate) fn show_licences(app: &AppHandle, tool: Option<Tool>) {
 
 fn emit_changed(app: &AppHandle) {
   let _ = app.emit(CHANGED_EVENT, view::current(app));
+  // Glide's window is kept only while Glide may be used.
+  #[cfg(any(target_os = "macos", target_os = "windows"))]
+  crate::glide::window::reconcile(app);
 }
 
 /// Writes the state off the calling thread, which may be one that answers a

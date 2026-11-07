@@ -27,14 +27,74 @@ pub(super) const fn action_window(action: ShortcutAction) -> Option<WindowLabel>
   }
 }
 
+/// Actions waiting for the page that carries them out to be built. The page
+/// takes its own as soon as it is listening (`take_pending_shortcut_action`):
+/// sent the moment it says it is ready, the event could reach the page before
+/// its listener did.
+static PENDING: std::sync::Mutex<Vec<(WindowLabel, ShortcutAction)>> =
+  std::sync::Mutex::new(Vec::new());
+
+fn take_pending(window: WindowLabel) -> Option<ShortcutAction> {
+  let mut pending = PENDING
+    .lock()
+    .unwrap_or_else(std::sync::PoisonError::into_inner);
+  let index = pending.iter().position(|(label, _)| *label == window)?;
+  Some(pending.remove(index).1)
+}
+
 pub(super) fn notify_frontend(app: &AppHandle, action: ShortcutAction) {
-  if let Some(window) = action_window(action) {
-    let result = app.emit_to(window.as_str(), SHORTCUT_ACTION_EVENT, action);
-    diagnostics::record(
-      "frontend_dispatch",
-      serde_json::json!({"action": action, "window": window.as_str(), "error": result.err().map(|error| error.to_string())}),
-    );
+  let Some(window) = action_window(action) else {
+    return;
+  };
+  if !crate::app_windows::on_demand::is_on_demand(window) {
+    return dispatch(app, window, action);
   }
+  {
+    let mut pending = PENDING
+      .lock()
+      .unwrap_or_else(std::sync::PoisonError::into_inner);
+    pending.retain(|(label, _)| *label != window);
+    pending.push((window, action));
+  }
+  let dispatch_app = app.clone();
+  crate::app_windows::on_demand::open(app, window, move |opened| {
+    // A page built for the action has taken it already; one built before is
+    // listening, and is told.
+    let Some(action) = take_pending(window) else {
+      return;
+    };
+    match opened {
+      Ok(_) => dispatch(&dispatch_app, window, action),
+      Err(error) => diagnostics::record(
+        "frontend_dispatch",
+        serde_json::json!({"action": action, "window": window.as_str(), "error": error}),
+      ),
+    }
+  });
+}
+
+fn dispatch(app: &AppHandle, window: WindowLabel, action: ShortcutAction) {
+  let result = app.emit_to(window.as_str(), SHORTCUT_ACTION_EVENT, action);
+  diagnostics::record(
+    "frontend_dispatch",
+    serde_json::json!({"action": action, "window": window.as_str(), "error": result.err().map(|error| error.to_string())}),
+  );
+}
+
+/// The shortcut action waiting for the asking page, which has just been
+/// built for it and is now listening.
+#[tauri::command]
+pub fn take_pending_shortcut_action(window: tauri::WebviewWindow) -> Option<ShortcutAction> {
+  let label = WindowLabel::ALL
+    .iter()
+    .copied()
+    .find(|label| label.as_str() == window.label())?;
+  let action = take_pending(label)?;
+  diagnostics::record(
+    "frontend_dispatch",
+    serde_json::json!({"action": action, "window": label.as_str(), "error": null, "taken": true}),
+  );
+  Some(action)
 }
 
 pub(super) const fn preserved_capture_overlays(
