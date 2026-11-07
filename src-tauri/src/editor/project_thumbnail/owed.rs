@@ -86,7 +86,9 @@ async fn make_owed(app: &AppHandle, only: Option<u64>) -> Result<(), String> {
   let mut positions = Vec::with_capacity(owed.strip_positions_ms.len() + 1);
   positions.push(owed.still_position_ms);
   positions.extend(&owed.strip_positions_ms);
-  let mut frames = compose_preview_frames(app, owed.request, positions).await?;
+  // Made at the still's width, the larger of the two pictures they serve.
+  let mut frames =
+    compose_preview_frames(app, owed.request, positions, Some(super::PREVIEW_WIDTH)).await?;
   let strip = frames.split_off(1);
   let still = frames
     .pop()
