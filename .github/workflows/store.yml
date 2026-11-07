@@ -1,0 +1,89 @@
+# SPDX-FileCopyrightText: 2026 overpolish
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+# Hands a published release to the Microsoft Store as a draft submission: both
+# architectures' packages in one bundle, with the release notes as What's new.
+# The draft waits in Partner Center to be checked and submitted by hand.
+name: Microsoft Store
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag to submit, such as v1.0.1
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: store
+  cancel-in-progress: false
+
+jobs:
+  draft:
+    name: Draft Store submission
+    # The Store takes plain versions only, so a prerelease has no package.
+    if: github.event_name == 'workflow_dispatch' || !github.event.release.prerelease
+    runs-on: windows-latest
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      TAG: ${{ github.event.release.tag_name || inputs.tag }}
+      PRODUCT_ID: 9MSN8CRH5W0F
+    steps:
+      - name: Download the release's packages
+        shell: pwsh
+        run: |
+          gh release download $env:TAG --repo $env:GITHUB_REPOSITORY --pattern "*.msix" --dir msix
+          $packages = Get-ChildItem msix -Filter *.msix
+          if ($packages.Count -ne 2) { throw "Expected the x64 and ARM64 packages, found $($packages.Count)" }
+          $packages | ForEach-Object { $_.Name }
+
+      # One upload per submission: a second would replace the first, so both
+      # architectures go up together as a bundle.
+      - name: Bundle both architectures
+        shell: pwsh
+        run: |
+          $version = "$($env:TAG.TrimStart('v')).0"
+          $makeappx = Get-ChildItem "${env:ProgramFiles(x86)}\Windows Kits\10\bin\*\x64\makeappx.exe" |
+            Sort-Object FullName -Descending | Select-Object -First 1
+          New-Item -ItemType Directory -Force upload | Out-Null
+          & $makeappx.FullName bundle /d msix /p "upload\Screenwide_$version.msixbundle" /bv $version /o
+          if ($LASTEXITCODE -ne 0) { throw "makeappx failed" }
+          Compress-Archive -Path "upload\Screenwide_$version.msixbundle" -DestinationPath "Screenwide_$version.zip"
+          Move-Item "Screenwide_$version.zip" "Screenwide_$version.msixupload"
+          "UPLOAD=$PWD\Screenwide_$version.msixupload" >> $env:GITHUB_ENV
+
+      - name: Install the Microsoft Store Developer CLI
+        uses: microsoft/setup-msstore-cli@v1
+
+      - name: Sign in to Partner Center
+        shell: pwsh
+        run: |
+          msstore settings --enableTelemetry false
+          msstore reconfigure `
+            --tenantId "${{ secrets.MSSTORE_TENANT_ID }}" `
+            --sellerId "${{ secrets.MSSTORE_SELLER_ID }}" `
+            --clientId "${{ secrets.MSSTORE_CLIENT_ID }}" `
+            --clientSecret "${{ secrets.MSSTORE_CLIENT_SECRET }}"
+
+      # `publish` recreates the draft from the last published submission, so it
+      # runs before What's new is set.
+      - name: Upload the bundle to a draft submission
+        shell: pwsh
+        run: msstore publish $env:UPLOAD -id $env:PRODUCT_ID --noCommit
+
+      - name: Set What's new from the release notes
+        shell: pwsh
+        run: |
+          $notes = gh release view $env:TAG --repo $env:GITHUB_REPOSITORY --json body --jq .body
+          # The Store takes plain text of at most 1500 characters.
+          if ($notes.Length -gt 1500) { $notes = $notes.Substring(0, 1500) }
+          $submission = msstore submission get $env:PRODUCT_ID | ConvertFrom-Json
+          foreach ($language in $submission.Listings.PSObject.Properties) {
+            $language.Value.BaseListing.ReleaseNotes = $notes
+          }
+          msstore submission update $env:PRODUCT_ID ($submission | ConvertTo-Json -Depth 100 -Compress)
+          "The draft for $env:TAG is in Partner Center, waiting to be submitted." >> $env:GITHUB_STEP_SUMMARY
