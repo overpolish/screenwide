@@ -9,8 +9,8 @@ use super::*;
 
 pub(super) fn handle(app: &AppHandle, id: &str) {
   // The replay items leave every overlay up: a save looks back at what was
-  // on screen.
-  if replay::handle(app, id) {
+  // on screen. Keep Awake has nothing to do with what is on screen.
+  if replay::handle(app, id) || keep_awake::handle(app, id) {
     return;
   }
   let preserved: &[crate::capture_overlays::CaptureOverlay] = match id {

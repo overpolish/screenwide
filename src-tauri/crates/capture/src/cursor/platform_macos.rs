@@ -191,6 +191,12 @@ fn run(stop: &AtomicBool, sink: &EventSink, ready: mpsc::Sender<Result<(), Strin
       CGEventType::OtherMouseUp,
     ],
     |_, event_type, event| {
+      // Keep Awake's moves go nowhere and are not the user's.
+      if event.get_integer_value_field(EventField::EVENT_SOURCE_USER_DATA)
+        == screenwide_keep_awake::EVENT_TAG
+      {
+        return CallbackResult::Keep;
+      }
       let at = Instant::now();
       if is_motion(event_type)
         && last_motion

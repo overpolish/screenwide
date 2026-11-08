@@ -23,7 +23,8 @@ pub(super) const fn action_window(action: ShortcutAction) -> Option<WindowLabel>
     | ShortcutAction::AnnotateOverlay
     | ShortcutAction::PauseResumeRecording
     | ShortcutAction::RulerOverlay
-    | ShortcutAction::SaveReplay => None,
+    | ShortcutAction::SaveReplay
+    | ShortcutAction::ToggleKeepAwake => None,
   }
 }
 
@@ -112,8 +113,9 @@ pub(super) const fn preserved_capture_overlays(
       crate::capture_overlays::CaptureOverlay::Ruler,
     ],
     ShortcutAction::RulerOverlay => &[crate::capture_overlays::CaptureOverlay::Ruler],
-    // Saving looks back at what was on screen; whatever is up stays up.
-    ShortcutAction::SaveReplay => &[
+    // Saving looks back at what was on screen; whatever is up stays up. Keep
+    // Awake has nothing to do with what is on screen.
+    ShortcutAction::SaveReplay | ShortcutAction::ToggleKeepAwake => &[
       crate::capture_overlays::CaptureOverlay::Annotate,
       crate::capture_overlays::CaptureOverlay::Ruler,
       crate::capture_overlays::CaptureOverlay::TextRecognition,
@@ -226,5 +228,6 @@ pub(super) fn run_action(app: &AppHandle, action: ShortcutAction) {
     ShortcutAction::SaveReplay => {
       let _ = crate::recording::replay::save(app);
     }
+    ShortcutAction::ToggleKeepAwake => crate::keep_awake::toggle(app),
   }
 }

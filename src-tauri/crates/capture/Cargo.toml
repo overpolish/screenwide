@@ -41,6 +41,7 @@ nokhwa = { workspace = true, features = ["input-avfoundation"] }
 objc2.workspace = true
 objc2-app-kit.workspace = true
 objc2-foundation.workspace = true
+screenwide-keep-awake.workspace = true
 xcap.workspace = true
 
 [target.'cfg(target_os = "windows")'.dependencies]

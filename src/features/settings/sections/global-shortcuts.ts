@@ -46,3 +46,11 @@ export const screenshotShortcuts = (): GlobalShortcut[] => [
     label: t("settings-shortcut-reference-screenshot"),
   },
 ];
+
+export const keepAwakeShortcuts = (): GlobalShortcut[] => [
+  {
+    action: "toggleKeepAwake",
+    description: t("settings-shortcut-keep-awake-description"),
+    label: t("settings-shortcut-keep-awake"),
+  },
+];

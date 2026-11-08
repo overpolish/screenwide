@@ -93,6 +93,7 @@ pub enum ShortcutAction {
   AnnotateOverlay,
   AnnotateClear,
   RulerOverlay,
+  ToggleKeepAwake,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize, TS)]

@@ -3,6 +3,7 @@
 
 import {
   Camera,
+  Coffee,
   Flag,
   type LucideIcon,
   PanelsTopLeft,
@@ -20,6 +21,7 @@ import {
 } from "../sections/glide-rows";
 import {
   type GlobalShortcut,
+  keepAwakeShortcuts,
   recordingShortcuts,
   screenshotShortcuts,
 } from "../sections/global-shortcuts";
@@ -269,6 +271,13 @@ export function shortcutEntries(sources: ShortcutSources): ShortcutEntry[] {
       scope: "ocr",
       value: ocr?.bindings[action] ?? null,
     });
+
+  const keepAwake = t("settings-keep-awake");
+  entries.push(
+    ...keepAwakeShortcuts().map((item) =>
+      global({ ...item, group: keepAwake, icon: Coffee }),
+    ),
+  );
 
   return entries;
 }

@@ -23,6 +23,7 @@ import {
   modifierTitle,
 } from "../sections/glide-rows";
 import {
+  keepAwakeShortcuts,
   recordingShortcuts,
   screenshotShortcuts,
 } from "../sections/global-shortcuts";
@@ -238,6 +239,10 @@ export function settingsSearchEntries({
   );
   at("hotkeys", t("settings-section-ocr"))(
     [row(t("settings-ocr-activate")), ...ocrShortcuts().map(shortcutRow)],
+    shortcut,
+  );
+  at("hotkeys", t("settings-keep-awake"))(
+    keepAwakeShortcuts().map(shortcutRow),
     shortcut,
   );
 

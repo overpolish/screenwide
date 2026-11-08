@@ -73,6 +73,9 @@ pub(crate) fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Erro
   // done in the background now, the pickers have them when they open.
   editor::text_templates::warm(app.handle());
   crate::shortcuts::initialize(app.handle());
+  // After the tray and shortcuts: turning it back on relabels the tray item
+  // and reads its shortcut.
+  crate::keep_awake::restore(app.handle());
   screenwide_accent::initialize(app.handle());
   crate::recording::sleep::initialize(app.handle());
   app_windows::manage_transient_popover_dismissal(app.handle());

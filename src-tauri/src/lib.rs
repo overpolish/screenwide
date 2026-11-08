@@ -22,6 +22,7 @@ mod glide;
 mod hidden_apps_windows;
 mod image_analysis;
 mod invoke_handler;
+mod keep_awake;
 mod launch_at_login;
 mod licensing;
 mod microsoft_store;

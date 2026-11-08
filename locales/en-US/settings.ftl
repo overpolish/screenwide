@@ -10,6 +10,8 @@ settings-add-moment = Add Moment
 settings-shortcuts-feature-off = Turn on { $feature } to use these shortcuts.
 settings-recording = Recording
 settings-screenshots = Screenshots
+# The Shortcuts pane's group for Keep Awake, the tray's switch that keeps the computer awake and its user shown as active.
+settings-keep-awake = Keep Awake
 
 ## Sidebar sections, also the window's title
 
@@ -235,6 +237,8 @@ settings-shortcut-copy-screenshot = Copy a screenshot
 settings-shortcut-copy-screenshot-description = Choose an area to copy, ready to paste elsewhere.
 settings-shortcut-reference-screenshot = Keep a reference
 settings-shortcut-reference-screenshot-description = Choose an area to keep on screen at its true size.
+settings-shortcut-keep-awake = Turn Keep Awake on or off
+settings-shortcut-keep-awake-description = Keeps the computer awake and shows you as active.
 # The row of a moment's shortcut in the Shortcuts pane. $moment is the moment's name, which the user chooses.
 settings-shortcut-place-moment = Place { $moment }
 

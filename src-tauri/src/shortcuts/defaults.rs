@@ -53,6 +53,10 @@ impl Default for ShortcutSettings {
           action: ShortcutAction::AnnotateClear,
           shortcut: Some("CommandOrControl+Shift+Backspace".to_owned()),
         },
+        ShortcutBinding {
+          action: ShortcutAction::ToggleKeepAwake,
+          shortcut: None,
+        },
       ],
     }
   }

@@ -12,6 +12,7 @@ use screenwide_i18n::t;
 mod actions;
 mod click;
 mod icons;
+mod keep_awake;
 mod replay;
 mod replay_saved;
 pub use replay_saved::confirm as confirm_replay_saved;
@@ -159,6 +160,7 @@ fn build_menu(app: &AppHandle, status: RecordingStatus) -> tauri::Result<Menu<Wr
     .item(&ruler_overlay)
     .item(&annotate)
     .item(&clear_annotations)
+    .item(&keep_awake::item(app)?)
     .icon(
       SETTINGS_MENU_ID,
       t!("tray-settings"),

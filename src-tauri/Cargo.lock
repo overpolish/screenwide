@@ -5617,6 +5617,7 @@ dependencies = [
  "screenwide-i18n",
  "screenwide-images",
  "screenwide-imaging",
+ "screenwide-keep-awake",
  "screenwide-keyboard-effects",
  "screenwide-lexicon",
  "screenwide-licensing",
@@ -5732,6 +5733,7 @@ dependencies = [
  "screenwide-annotations",
  "screenwide-gpu",
  "screenwide-h264",
+ "screenwide-keep-awake",
  "screenwide-osc",
  "screenwide-project",
  "screenwide-records",
@@ -5869,6 +5871,15 @@ version = "1.0.1"
 dependencies = [
  "rayon",
  "serde",
+]
+
+[[package]]
+name = "screenwide-keep-awake"
+version = "1.0.1"
+dependencies = [
+ "core-foundation 0.10.1",
+ "core-graphics 0.25.0",
+ "windows 0.62.2",
 ]
 
 [[package]]

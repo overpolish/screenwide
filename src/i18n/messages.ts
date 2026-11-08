@@ -1034,6 +1034,7 @@ export type Messages = {
   "settings-hide-menu-bar-description": { platform: string | number };
   "settings-include-app": null;
   "settings-include-app-description": null;
+  "settings-keep-awake": null;
   "settings-launch-at-login": null;
   "settings-licences-add": null;
   "settings-licences-add-key": null;
@@ -1197,6 +1198,8 @@ export type Messages = {
   "settings-sections": null;
   "settings-shortcut-copy-screenshot": null;
   "settings-shortcut-copy-screenshot-description": null;
+  "settings-shortcut-keep-awake": null;
+  "settings-shortcut-keep-awake-description": null;
   "settings-shortcut-pause-resume": null;
   "settings-shortcut-place-moment": { moment: string | number };
   "settings-shortcut-reference-screenshot": null;
@@ -1387,6 +1390,8 @@ export type Messages = {
   "tray-clear-annotations": null;
   "tray-delayed-screenshot": null;
   "tray-discard-recording": null;
+  "tray-keep-awake-off": null;
+  "tray-keep-awake-on": null;
   "tray-open": null;
   "tray-open-clipboard-screenshot": null;
   "tray-pause-recording": null;

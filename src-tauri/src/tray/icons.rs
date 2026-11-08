@@ -11,6 +11,7 @@ mod assets {
   pub const CANCEL: &[u8] = include_bytes!("../../icons/menu/windows/cancel.png");
   pub const CLIPBOARD: &[u8] = include_bytes!("../../icons/menu/windows/clipboard.png");
   pub const DISCARD: &[u8] = include_bytes!("../../icons/menu/windows/discard.png");
+  pub const KEEP_AWAKE: &[u8] = include_bytes!("../../icons/menu/windows/keep-awake.png");
   pub const OPEN: &[u8] = include_bytes!("../../icons/menu/windows/open.png");
   pub const PAUSE: &[u8] = include_bytes!("../../icons/menu/windows/pause.png");
   pub const QUIT: &[u8] = include_bytes!("../../icons/menu/windows/quit.png");
@@ -30,6 +31,7 @@ mod assets {
   pub const CANCEL: &[u8] = include_bytes!("../../icons/menu/cancel.png");
   pub const CLIPBOARD: &[u8] = include_bytes!("../../icons/menu/clipboard.png");
   pub const DISCARD: &[u8] = include_bytes!("../../icons/menu/discard.png");
+  pub const KEEP_AWAKE: &[u8] = include_bytes!("../../icons/menu/keep-awake.png");
   pub const OPEN: &[u8] = include_bytes!("../../icons/menu/open.png");
   pub const PAUSE: &[u8] = include_bytes!("../../icons/menu/pause.png");
   pub const QUIT: &[u8] = include_bytes!("../../icons/menu/quit.png");

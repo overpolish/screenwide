@@ -7,6 +7,7 @@ import { fileURLToPath } from "node:url";
 import { Resvg } from "@resvg/resvg-js";
 import {
   ClipboardPaste,
+  Coffee,
   DoorOpen,
   FolderOpen,
   History,
@@ -42,6 +43,7 @@ for (const [name, icon] of Object.entries({
   cancel: X,
   clipboard: ClipboardPaste,
   discard: Trash2,
+  "keep-awake": Coffee,
   open: Monitor,
   pause: Pause,
   project: FolderOpen,

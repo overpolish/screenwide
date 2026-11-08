@@ -39,6 +39,7 @@ screenwide-h264 = { path = "crates/h264" }
 screenwide-i18n = { path = "crates/i18n" }
 screenwide-images = { path = "crates/images" }
 screenwide-imaging = { path = "crates/imaging" }
+screenwide-keep-awake = { path = "crates/keep_awake" }
 screenwide-keyboard-effects = { path = "crates/keyboard_effects" }
 screenwide-lexicon = { path = "crates/lexicon" }
 screenwide-licensing = { path = "crates/licensing" }
@@ -196,6 +197,7 @@ screenwide-gpu.workspace = true
 screenwide-i18n.workspace = true
 screenwide-images.workspace = true
 screenwide-imaging.workspace = true
+screenwide-keep-awake.workspace = true
 screenwide-keyboard-effects.workspace = true
 screenwide-lexicon.workspace = true
 screenwide-licensing.workspace = true

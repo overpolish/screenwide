@@ -1,0 +1,25 @@
+# SPDX-FileCopyrightText: 2026 overpolish
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+[package]
+name = "screenwide-keep-awake"
+description = "Keep Awake: the computer stays awake and its user shown as present while away, with nothing they would notice"
+version.workspace = true
+authors.workspace = true
+license.workspace = true
+edition.workspace = true
+
+[lib]
+doctest = false
+
+[target.'cfg(target_os = "macos")'.dependencies]
+core-foundation.workspace = true
+core-graphics.workspace = true
+
+[target.'cfg(target_os = "windows")'.dependencies]
+windows = { workspace = true, features = [
+  "Win32_Foundation",
+  "Win32_System_RemoteDesktop",
+  "Win32_System_SystemInformation",
+  "Win32_UI_Input_KeyboardAndMouse",
+] }
