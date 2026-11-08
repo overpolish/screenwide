@@ -34,5 +34,7 @@ pub(crate) fn with_plugins(builder: Builder<Wry>) -> Builder<Wry> {
   let builder = builder
     .plugin(tauri_plugin_macos_permissions::init())
     .plugin(tauri_nspanel::init());
+  #[cfg(target_os = "windows")]
+  let builder = builder.plugin(crate::app_windows::keyboard_menu_windows::plugin());
   builder
 }

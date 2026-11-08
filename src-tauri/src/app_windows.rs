@@ -33,6 +33,8 @@ pub(crate) mod island_overlay;
 pub(crate) mod island_placement;
 #[cfg(target_os = "windows")]
 mod island_windows;
+#[cfg(target_os = "windows")]
+pub(crate) mod keyboard_menu_windows;
 pub use island::{__cmd__finish_hiding_island, __tauri_command_name_finish_hiding_island};
 pub use island::{__cmd__island_presence, __tauri_command_name_island_presence};
 pub use island::{__cmd__island_ready_to_move, __tauri_command_name_island_ready_to_move};
