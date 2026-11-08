@@ -63,7 +63,7 @@ site-privacy-intro = Screenwide runs on your computer. It has no analytics or tr
 site-privacy-controller = Screenwide is made by overpolish, which is responsible for the personal data described on this page.
 site-privacy-app-title = What the app sends
 site-privacy-licence = Licence keys. When you add a key, and every three weeks after, the app sends it to license.getscreenwide.com with a random ID made for your installation. The server checks the key with Payhip and records only whether the check worked and which tools the key unlocks. This is how the app gives you the tools you bought. The free trial is counted on your computer.
-site-privacy-updates = Updates. The macOS version asks GitHub for new versions and their release notes. The Windows version comes from the Microsoft Store, which updates it.
+site-privacy-updates = Updates. The app asks for new versions and their release notes: the macOS version asks GitHub, and the Windows version asks the Microsoft Store, then GitHub for the notes. The Microsoft Store installs the Windows version's updates.
 site-privacy-models = Models. Models for transcripts, sound and the camera are downloaded from Hugging Face and GitHub when you choose to download them.
 site-privacy-buying-title = Buying tools
 site-privacy-buying = Purchases go through Payhip, which takes your payment and email address under its own privacy policy.
@@ -72,7 +72,7 @@ site-privacy-site = The website and the licence server run on Cloudflare, which 
 site-privacy-retention-title = How long it is kept
 site-privacy-retention = The licence server keeps no record of keys or installations. Cloudflare keeps its logs, which hold the outcome of each check and details of the request such as your IP address, for up to 7 days. Payhip keeps your purchases under its own policy.
 site-privacy-transfers-title = Where it is handled
-site-privacy-transfers = Cloudflare, Payhip, GitHub and Hugging Face may handle this data outside the UK and the European Union, under the safeguards in their own terms.
+site-privacy-transfers = Cloudflare, Payhip, GitHub, Microsoft and Hugging Face may handle this data outside the UK and the European Union, under the safeguards in their own terms.
 site-privacy-rights-title = Your rights
 site-privacy-rights = You can ask to see, correct or delete personal data about you, or object to how it is used. If you are not happy with the answer, you can complain to the Information Commissioner's Office, or to the data protection authority where you live.
 # Links to an email to Screenwide. $email is the address.

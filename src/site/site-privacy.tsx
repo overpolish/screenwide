@@ -12,7 +12,7 @@ import { SiteBrand, SiteFooter } from "./site-chrome";
 const CONTACT = "dom@overpolish.co";
 
 // When the page last changed; move it with every change to what it says.
-const UPDATED = new Date(2026, 10, 6);
+const UPDATED = new Date(2026, 10, 8);
 
 function Section({ children, title }: { children: string; title: string }) {
   return (
