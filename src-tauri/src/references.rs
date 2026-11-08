@@ -84,13 +84,15 @@ pub(crate) fn is_reference_label(label: &str) -> bool {
   label.starts_with(LABEL_PREFIX)
 }
 
-/// Where the pictures live while their windows are open.
+/// Where the pictures live while their windows are open: a folder named after
+/// the app, since a debug build (Screenwide Dev) runs beside the release and
+/// each clears its own at startup.
 fn directory(app: &AppHandle) -> Result<PathBuf, String> {
   let directory = app
     .path()
     .temp_dir()
     .map_err(|error| error.to_string())?
-    .join("Screenwide")
+    .join(&app.package_info().name)
     .join("references");
   std::fs::create_dir_all(&directory).map_err(|error| error.to_string())?;
   Ok(directory)
