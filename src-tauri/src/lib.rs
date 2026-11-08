@@ -13,6 +13,8 @@ mod capture_overlays;
 mod cursor_scrub;
 #[cfg(target_os = "windows")]
 mod desktop_icons;
+#[cfg(debug_assertions)]
+mod dev_identity;
 mod editor;
 mod fault;
 mod file_browser;
@@ -62,6 +64,9 @@ pub fn run() {
   async_runtime::install();
   #[cfg(target_os = "macos")]
   screenwide_i18n::apply_layout_direction();
+  let context = tauri::generate_context!();
+  #[cfg(debug_assertions)]
+  let context = dev_identity::apply(context);
   let builder = plugins::with_plugins(tauri::Builder::default());
   #[cfg(any(target_os = "macos", target_os = "windows"))]
   let builder = builder.manage(glide::settings::GlideSettingsState::default());
@@ -85,7 +90,7 @@ pub fn run() {
     .manage(tooltip_window::TooltipState::default())
     .invoke_handler(invoke_handler::invoke_handler())
     .setup(startup::setup)
-    .build(tauri::generate_context!())
+    .build(context)
     .expect("error while running tauri application");
 
   #[cfg(target_os = "macos")]

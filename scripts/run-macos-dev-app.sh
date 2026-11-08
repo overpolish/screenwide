@@ -22,7 +22,7 @@ esac
 
 script_directory=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 workspace_directory=$(dirname -- "$script_directory")
-app_directory="$(dirname -- "$binary")/Screenwide.app"
+app_directory="$(dirname -- "$binary")/Screenwide Dev.app"
 app_executable="$app_directory/Contents/MacOS/screenwide"
 app_resources="$app_directory/Contents/Resources"
 

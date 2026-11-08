@@ -8,13 +8,11 @@ use std::path::PathBuf;
 use screenwide_project::NewProject;
 use tauri::{AppHandle, Manager};
 
-/// The folder new projects go in when Settings names none, inside the
-/// platform's Movies or Videos folder.
-const DEFAULT_FOLDER: &str = "Screenwide";
-
-/// The folder new projects are made in. A folder chosen in Settings that is
-/// not there, such as one on a drive that is not plugged in, is an error: the
-/// recording must not quietly land somewhere the user did not choose.
+/// The folder new projects are made in: the one chosen in Settings, or else a
+/// folder named after the app in the platform's Movies or Videos folder. A
+/// folder chosen in Settings that is not there, such as one on a drive that is
+/// not plugged in, is an error: the recording must not quietly land somewhere
+/// the user did not choose.
 pub(crate) fn projects_directory(app: &AppHandle) -> Result<PathBuf, String> {
   if let Some(directory) = crate::settings::current(app).project_directory {
     return if directory.is_dir() {
@@ -26,10 +24,12 @@ pub(crate) fn projects_directory(app: &AppHandle) -> Result<PathBuf, String> {
       ))
     };
   }
+  // The app's name, so a debug build (Screenwide Dev) keeps its projects apart
+  // from the release's.
   app
     .path()
     .video_dir()
-    .map(|directory| directory.join(DEFAULT_FOLDER))
+    .map(|directory| directory.join(&app.package_info().name))
     .map_err(|error| error.to_string())
 }
 
