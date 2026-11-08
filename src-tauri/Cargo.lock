@@ -5576,7 +5576,7 @@ checksum = "94143f37725109f92c262ed2cf5e59bce7498c01bcc1502d7b9afe439a4e9f49"
 
 [[package]]
 name = "screenwide"
-version = "1.0.1"
+version = "1.0.2"
 dependencies = [
  "arboard",
  "block2",
@@ -5669,7 +5669,7 @@ dependencies = [
 
 [[package]]
 name = "screenwide-accent"
-version = "1.0.1"
+version = "1.0.2"
 dependencies = [
  "block2",
  "objc2-app-kit",
@@ -5682,7 +5682,7 @@ dependencies = [
 
 [[package]]
 name = "screenwide-activity"
-version = "1.0.1"
+version = "1.0.2"
 dependencies = [
  "screenwide-sidecar",
  "serde",
@@ -5691,7 +5691,7 @@ dependencies = [
 
 [[package]]
 name = "screenwide-annotations"
-version = "1.0.1"
+version = "1.0.2"
 dependencies = [
  "bytemuck",
  "getrandom 0.3.4",
@@ -5706,7 +5706,7 @@ dependencies = [
 
 [[package]]
 name = "screenwide-auto-zoom"
-version = "1.0.1"
+version = "1.0.2"
 dependencies = [
  "screenwide-records",
  "screenwide-scenes",
@@ -5715,7 +5715,7 @@ dependencies = [
 
 [[package]]
 name = "screenwide-capture"
-version = "1.0.1"
+version = "1.0.2"
 dependencies = [
  "bytemuck",
  "cidre",
@@ -5753,7 +5753,7 @@ dependencies = [
 
 [[package]]
 name = "screenwide-compositor"
-version = "1.0.1"
+version = "1.0.2"
 dependencies = [
  "bytemuck",
  "cc",
@@ -5776,7 +5776,7 @@ dependencies = [
 
 [[package]]
 name = "screenwide-cursor-effects"
-version = "1.0.1"
+version = "1.0.2"
 dependencies = [
  "image",
  "objc2",
@@ -5791,7 +5791,7 @@ dependencies = [
 
 [[package]]
 name = "screenwide-export"
-version = "1.0.1"
+version = "1.0.2"
 dependencies = [
  "bytemuck",
  "cc",
@@ -5825,7 +5825,7 @@ dependencies = [
 
 [[package]]
 name = "screenwide-gpu"
-version = "1.0.1"
+version = "1.0.2"
 dependencies = [
  "cidre",
  "objc2",
@@ -5839,14 +5839,14 @@ dependencies = [
 
 [[package]]
 name = "screenwide-h264"
-version = "1.0.1"
+version = "1.0.2"
 dependencies = [
  "windows 0.62.2",
 ]
 
 [[package]]
 name = "screenwide-i18n"
-version = "1.0.1"
+version = "1.0.2"
 dependencies = [
  "fluent-bundle",
  "fluent-langneg",
@@ -5859,7 +5859,7 @@ dependencies = [
 
 [[package]]
 name = "screenwide-images"
-version = "1.0.1"
+version = "1.0.2"
 dependencies = [
  "image",
  "screenwide-annotations",
@@ -5867,7 +5867,7 @@ dependencies = [
 
 [[package]]
 name = "screenwide-imaging"
-version = "1.0.1"
+version = "1.0.2"
 dependencies = [
  "rayon",
  "serde",
@@ -5875,7 +5875,7 @@ dependencies = [
 
 [[package]]
 name = "screenwide-keep-awake"
-version = "1.0.1"
+version = "1.0.2"
 dependencies = [
  "core-foundation 0.10.1",
  "core-graphics 0.25.0",
@@ -5884,7 +5884,7 @@ dependencies = [
 
 [[package]]
 name = "screenwide-keyboard-effects"
-version = "1.0.1"
+version = "1.0.2"
 dependencies = [
  "screenwide-placement",
  "screenwide-records",
@@ -5897,7 +5897,7 @@ dependencies = [
 
 [[package]]
 name = "screenwide-lexicon"
-version = "1.0.1"
+version = "1.0.2"
 dependencies = [
  "icu_normalizer",
  "regex",
@@ -5905,7 +5905,7 @@ dependencies = [
 
 [[package]]
 name = "screenwide-licensing"
-version = "1.0.1"
+version = "1.0.2"
 dependencies = [
  "base64 0.22.1",
  "getrandom 0.3.4",
@@ -5917,7 +5917,7 @@ dependencies = [
 
 [[package]]
 name = "screenwide-moments"
-version = "1.0.1"
+version = "1.0.2"
 dependencies = [
  "screenwide-capture",
  "screenwide-i18n",
@@ -5930,7 +5930,7 @@ dependencies = [
 
 [[package]]
 name = "screenwide-osc"
-version = "1.0.1"
+version = "1.0.2"
 dependencies = [
  "bytemuck",
  "cc",
@@ -5944,7 +5944,7 @@ dependencies = [
 
 [[package]]
 name = "screenwide-output"
-version = "1.0.1"
+version = "1.0.2"
 dependencies = [
  "bytemuck",
  "cc",
@@ -5965,7 +5965,7 @@ dependencies = [
 
 [[package]]
 name = "screenwide-placement"
-version = "1.0.1"
+version = "1.0.2"
 dependencies = [
  "serde",
  "ts-rs",
@@ -5973,7 +5973,7 @@ dependencies = [
 
 [[package]]
 name = "screenwide-project"
-version = "1.0.1"
+version = "1.0.2"
 dependencies = [
  "screenwide-timeline-edit",
  "serde",
@@ -5986,7 +5986,7 @@ dependencies = [
 
 [[package]]
 name = "screenwide-qr"
-version = "1.0.1"
+version = "1.0.2"
 dependencies = [
  "image",
  "qrcode",
@@ -5996,7 +5996,7 @@ dependencies = [
 
 [[package]]
 name = "screenwide-records"
-version = "1.0.1"
+version = "1.0.2"
 dependencies = [
  "serde",
  "serde_json",
@@ -6004,7 +6004,7 @@ dependencies = [
 
 [[package]]
 name = "screenwide-scenes"
-version = "1.0.1"
+version = "1.0.2"
 dependencies = [
  "serde",
  "serde_json",
@@ -6013,7 +6013,7 @@ dependencies = [
 
 [[package]]
 name = "screenwide-settings-preview"
-version = "1.0.1"
+version = "1.0.2"
 dependencies = [
  "dispatch2",
  "image",
@@ -6039,11 +6039,11 @@ dependencies = [
 
 [[package]]
 name = "screenwide-sidecar"
-version = "1.0.1"
+version = "1.0.2"
 
 [[package]]
 name = "screenwide-speech"
-version = "1.0.1"
+version = "1.0.2"
 dependencies = [
  "realfft",
  "screenwide-i18n",
@@ -6056,7 +6056,7 @@ dependencies = [
 
 [[package]]
 name = "screenwide-text"
-version = "1.0.1"
+version = "1.0.2"
 dependencies = [
  "cc",
  "regex",
@@ -6074,11 +6074,11 @@ dependencies = [
 
 [[package]]
 name = "screenwide-timeline"
-version = "1.0.1"
+version = "1.0.2"
 
 [[package]]
 name = "screenwide-timeline-edit"
-version = "1.0.1"
+version = "1.0.2"
 dependencies = [
  "screenwide-annotations",
  "screenwide-scenes",
@@ -6099,21 +6099,21 @@ dependencies = [
 
 [[package]]
 name = "screenwide-wgsl"
-version = "1.0.1"
+version = "1.0.2"
 dependencies = [
  "naga",
 ]
 
 [[package]]
 name = "screenwide-window-hiding"
-version = "1.0.1"
+version = "1.0.2"
 dependencies = [
  "windows 0.62.2",
 ]
 
 [[package]]
 name = "screenwide-workspace"
-version = "1.0.1"
+version = "1.0.2"
 dependencies = [
  "bytemuck",
  "cidre",
