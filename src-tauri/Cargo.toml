@@ -20,7 +20,7 @@ members = ["crates/*"]
 exclude = ["transcriber", "vendor", "window-hider"]
 
 [workspace.package]
-version = "1.0.2"
+version = "1.0.3"
 authors = ["overpolish"]
 license = "GPL-3.0-or-later"
 edition = "2021"
@@ -234,6 +234,7 @@ windows = { workspace = true, features = [
   "Graphics_DirectX",
   "Graphics_DirectX_Direct3D11",
   "Media_Ocr",
+  "Services_Store",
   "Storage",
   "Storage_Search",
   "Storage_Streams",

@@ -24,7 +24,8 @@ import type { UpdateStatus } from "../use-update";
 // notes under the row, scrolling, with Skip this version as a quiet action at
 // their foot. Install clears the row into the download, its progress under
 // it, then the install, after which the app restarts; a failure says so with
-// Try again.
+// Try again. The Store package's Install opens the Microsoft Store instead,
+// which installs it, and without a version named there are no notes to open.
 
 export type UpdateIslandProps = Pick<
   IslandProps,
@@ -34,6 +35,8 @@ export type UpdateIslandProps = Pick<
   /** How far the download has got, 0 to 1; null while it cannot say. */
   downloadProgress: number | null;
   error: string | null;
+  /** Install opens the Microsoft Store, which installs the update. */
+  installsFromStore: boolean;
   isNotesOpen: boolean;
   onInstall: () => void;
   onLater: () => void;
@@ -93,6 +96,7 @@ export function UpdateIsland(props: UpdateIslandProps) {
   const {
     downloadProgress,
     error,
+    installsFromStore,
     isNotesOpen,
     isShown = true,
     notch,
@@ -111,26 +115,32 @@ export function UpdateIsland(props: UpdateIslandProps) {
   const released = parseDate(releaseDate);
 
   const titles: Record<Phase, string> = {
-    available: t("updates-available-version", { version }),
+    available: updateVersion
+      ? t("updates-available-version", { version })
+      : t("updates-available"),
     downloading: t("updates-downloading", { version }),
-    error: t("updates-failed", { version }),
+    error: installsFromStore
+      ? t("updates-store-failed")
+      : t("updates-failed", { version }),
     installing: t("updates-installing", { version }),
   };
   const end =
     phase === "available" ? (
       <span className="flex items-center gap-1">
-        <Button
-          aria-expanded={isNotesOpen}
-          onPress={() => {
-            onNotesOpenChange(!isNotesOpen);
-          }}
-          variant="ghost"
-        >
-          {t("updates-whats-new")}
-        </Button>
+        {updateVersion ? (
+          <Button
+            aria-expanded={isNotesOpen}
+            onPress={() => {
+              onNotesOpenChange(!isNotesOpen);
+            }}
+            variant="ghost"
+          >
+            {t("updates-whats-new")}
+          </Button>
+        ) : null}
         <Button onPress={onLater}>{t("updates-later")}</Button>
         <Button color="primary" onPress={onInstall}>
-          {t("updates-install")}
+          {installsFromStore ? t("updates-open-store") : t("updates-install")}
         </Button>
       </span>
     ) : phase === "error" ? (
@@ -143,7 +153,7 @@ export function UpdateIsland(props: UpdateIslandProps) {
     ) : null;
 
   let section = null;
-  if (phase === "available" && isNotesOpen)
+  if (phase === "available" && isNotesOpen && updateVersion)
     section = (
       <div key="notes">
         <Notes onSkip={props.onSkip} releaseNotes={props.releaseNotes} />

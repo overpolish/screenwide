@@ -14,6 +14,8 @@ use tauri::{AppHandle, Emitter};
 
 use crate::app_windows::island_placement::IslandPlacement;
 use crate::app_windows::{self, WindowLabel};
+#[cfg(target_os = "windows")]
+use crate::microsoft_store::updates as store;
 
 const EVENT: &str = "updates://island";
 
@@ -37,7 +39,8 @@ pub(crate) fn give_way(app: &AppHandle) {
 }
 
 /// Where this build's updates come from: its own updater, the Microsoft
-/// Store for the Store package, or nowhere for a development build.
+/// Store for the Store package (`store_update`), or nowhere for a
+/// development build.
 #[derive(Clone, Copy, serde::Serialize)]
 #[serde(rename_all = "lowercase")]
 pub enum UpdateSource {
@@ -54,6 +57,42 @@ pub fn update_source() -> UpdateSource {
     UpdateSource::Development
   } else {
     UpdateSource::Updater
+  }
+}
+
+/// The update the Microsoft Store has for the Store package, with its
+/// version when the Store's catalog says which; null when it has none.
+#[cfg(target_os = "windows")]
+#[tauri::command]
+pub async fn store_update() -> Result<Option<store::StoreUpdate>, String> {
+  store::find().await
+}
+
+/// Only Windows has the Microsoft Store.
+#[cfg(not(target_os = "windows"))]
+#[tauri::command]
+pub fn store_update() -> Option<()> {
+  None
+}
+
+/// Opens Screenwide's page in the Microsoft Store, where the user installs
+/// the update. The app does not install it itself: that would close it from
+/// under the user and needs the Store's own window parented to one of ours.
+#[tauri::command]
+pub fn open_store_page(app: AppHandle) -> Result<(), String> {
+  #[cfg(target_os = "windows")]
+  {
+    use tauri_plugin_opener::OpenerExt;
+
+    app
+      .opener()
+      .open_url(store::STORE_PAGE_URL, None::<&str>)
+      .map_err(|error| error.to_string())
+  }
+  #[cfg(not(target_os = "windows"))]
+  {
+    let _ = app;
+    Err("The Microsoft Store is only on Windows".to_owned())
   }
 }
 

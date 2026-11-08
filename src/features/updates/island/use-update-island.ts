@@ -26,6 +26,11 @@ import type { UpdateIslandProps } from "./update-island";
 /** How often a version found while the island was busy asks for it again. */
 const RETRY_MS = 60_000;
 
+/** What an offer is known by when the Microsoft Store has an update but its
+ * catalog did not say which version: it is offered once, and cannot be
+ * skipped. */
+const UNNAMED_STORE_UPDATE = "microsoft-store";
+
 const report = (action: string) => (cause: unknown) => {
   console.error(`Could not ${action}`, cause);
 };
@@ -35,8 +40,9 @@ const report = (action: string) => (cause: unknown) => {
  * A version found by a check is offered once, never one that was skipped:
  * the island comes out for it when nothing is recorded or exported and it is
  * out for nothing else, asking again until it is free. Nothing downloads
- * until Install. `isUp` while the island offers it; whatever takes the island
- * or puts it away ends the offer.
+ * until Install; the Store package's Install opens the Microsoft Store and
+ * puts the island away. `isUp` while the island offers it; whatever takes
+ * the island or puts it away ends the offer.
  */
 export function useUpdateIsland(): {
   isUp: boolean;
@@ -53,8 +59,16 @@ export function useUpdateIsland(): {
   // A version found while the island was busy, to offer once it is free.
   const [waiting, setWaiting] = useState<string | null>(null);
   const update = useUpdate({ autoCheck: checkOnLaunch });
-  const { checkForUpdates, discardUpdate, status, updateVersion } = update;
+  const {
+    checkForUpdates,
+    discardUpdate,
+    installsFromStore,
+    status,
+    updateVersion,
+  } = update;
   const busy = status === "downloading";
+  const offerKey =
+    updateVersion ?? (installsFromStore ? UNNAMED_STORE_UPDATE : null);
 
   const present = useCallback(async () => {
     const shown = await presentUpdateIsland();
@@ -106,31 +120,29 @@ export function useUpdateIsland(): {
   }, [checkOnLaunch, scheduleUpdateCheck]);
 
   useEffect(() => {
-    if (status !== "available" || !updateVersion) return;
-    if (updateVersionWasSkipped(updateVersion)) {
+    if (status !== "available" || !offerKey) return;
+    if (updateVersion && updateVersionWasSkipped(updateVersion)) {
       updateDebug("Suppressing the offer of a skipped version", {
         updateVersion,
       });
       void discardUpdate();
       return;
     }
-    if (offeredVersionRef.current === updateVersion) return;
-    offeredVersionRef.current = updateVersion;
+    if (offeredVersionRef.current === offerKey) return;
+    offeredVersionRef.current = offerKey;
     updateDebug("Offering the update on the island", { updateVersion });
     // The offer starts when the updater announces a new version, an event from
     // outside React, so its state is set here rather than while rendering.
     // eslint-disable-next-line @eslint-react/set-state-in-effect
     setIsNotesOpen(false);
     // eslint-disable-next-line @eslint-react/set-state-in-effect
-    setWaiting(updateVersion);
-  }, [discardUpdate, status, updateVersion]);
+    setWaiting(offerKey);
+  }, [discardUpdate, offerKey, status, updateVersion]);
 
   // Asks for the island now, and again while it is busy, until it comes out
   // or the version is no longer on offer.
   const offer =
-    waiting && status === "available" && updateVersion === waiting
-      ? waiting
-      : null;
+    waiting && status === "available" && offerKey === waiting ? waiting : null;
   useEffect(() => {
     if (!offer) return;
     let cancelled = false;
@@ -161,8 +173,15 @@ export function useUpdateIsland(): {
       currentVersion: update.currentVersion,
       downloadProgress: update.downloadProgress,
       error: update.error,
+      installsFromStore,
       isNotesOpen,
-      onInstall: () => void update.installUpdate(),
+      // The Store's page takes over from the island once it opens.
+      onInstall: () => {
+        void update.installUpdate().then((handedToStore) => {
+          if (handedToStore)
+            withdrawUpdateIsland().catch(report("put the update island away"));
+        });
+      },
       onLater: later,
       onNotesOpenChange: setIsNotesOpen,
       onSkip: () => {

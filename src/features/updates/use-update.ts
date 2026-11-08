@@ -17,23 +17,32 @@ export type UpdateStatus =
   | "downloading"
   | "error"
   | "idle"
-  | "store"
   | "up-to-date";
 
 /** Where the build's updates come from (`updates::update_source`): its own
- * updater, the Microsoft Store for the Store package, or nowhere for a
- * development build. */
+ * updater, the Microsoft Store for the Store package, which the app checks
+ * but leaves the Store to install, or nowhere for a development build. */
 type UpdateSource = "development" | "store" | "updater";
+
+/** An update the Microsoft Store has (`updates::store_update`), with its
+ * version when the Store's catalog said which. */
+type StoreUpdate = { version: string | null };
 
 const errorMessage = (reason: unknown) =>
   reason instanceof Error ? reason.message : String(reason);
 
 export function useUpdate({ autoCheck = true } = {}) {
   const checkRequestRef = useRef(0);
-  const checkInFlightRef = useRef(false);
+  // The request a check is running for. A check whose request was superseded,
+  // by unmounting or a discard, no longer blocks a new one: its answer is
+  // dropped anyway. Under StrictMode's remount it would otherwise hold off the
+  // remounted check for good, leaving the status at "checking".
+  const checkInFlightRef = useRef<number | null>(null);
+  const sourceRef = useRef<UpdateSource | null>(null);
   const updateRef = useRef<Update | null>(null);
   const [currentVersion, setCurrentVersion] = useState<string | null>(null);
   const [downloadProgress, setDownloadProgress] = useState<number | null>(null);
+  const [installsFromStore, setInstallsFromStore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [releaseDate, setReleaseDate] = useState<string | null>(null);
   const [releaseNotes, setReleaseNotes] = useState<string | null>(null);
@@ -43,9 +52,9 @@ export function useUpdate({ autoCheck = true } = {}) {
   const [updateVersion, setUpdateVersion] = useState<string | null>(null);
 
   const checkForUpdates = useCallback(async () => {
-    if (checkInFlightRef.current) return;
-    checkInFlightRef.current = true;
+    if (checkInFlightRef.current === checkRequestRef.current) return;
     const request = ++checkRequestRef.current;
+    checkInFlightRef.current = request;
     updateDebug("Starting update check", { request });
     setError(null);
     setStatus("checking");
@@ -57,18 +66,40 @@ export function useUpdate({ autoCheck = true } = {}) {
       if (request !== checkRequestRef.current) return;
       setCurrentVersion(version);
 
+      sourceRef.current = source;
+      setInstallsFromStore(source === "store");
+
       if (source !== "updater") {
-        updateDebug("Skipping updater check", {
-          currentVersion: version,
-          source,
-        });
+        const found =
+          source === "store"
+            ? await invoke<StoreUpdate | null>("store_update")
+            : null;
+        const foundVersion = found?.version ?? null;
+        const notes = foundVersion
+          ? await fetchReleaseNotesHtml(foundVersion)
+          : null;
+        if (request !== checkRequestRef.current) return;
+        updateDebug(
+          source === "development"
+            ? "Skipping updater check"
+            : found
+              ? "Microsoft Store update available"
+              : "No Microsoft Store update available",
+          { currentVersion: version, source, updateVersion: foundVersion },
+        );
         if (updateRef.current) await updateRef.current.close();
         updateRef.current = null;
         setDownloadProgress(null);
         setReleaseDate(null);
-        setReleaseNotes(null);
-        setUpdateVersion(null);
-        setStatus(source);
+        setReleaseNotes(notes);
+        setUpdateVersion(foundVersion);
+        setStatus(
+          source === "development"
+            ? "development"
+            : found
+              ? "available"
+              : "up-to-date",
+        );
         return;
       }
 
@@ -100,7 +131,7 @@ export function useUpdate({ autoCheck = true } = {}) {
       setError(errorMessage(reason));
       setStatus("error");
     } finally {
-      checkInFlightRef.current = false;
+      if (checkInFlightRef.current === request) checkInFlightRef.current = null;
     }
   }, []);
 
@@ -113,9 +144,28 @@ export function useUpdate({ autoCheck = true } = {}) {
     setStatus("idle");
   }, []);
 
+  /** Installs the update and relaunches, or for the Store package opens its
+   * page in the Microsoft Store. Resolves true once the Store has it. */
   const installUpdate = useCallback(async () => {
+    if (sourceRef.current === "store") {
+      setError(null);
+      setStatus("available");
+      updateDebug("Opening the update in the Microsoft Store");
+      try {
+        await invoke("open_store_page");
+        return true;
+      } catch (reason: unknown) {
+        updateDebug("The Microsoft Store did not open", {
+          error: errorMessage(reason),
+        });
+        setError(errorMessage(reason));
+        setStatus("error");
+        return false;
+      }
+    }
+
     const update = updateRef.current;
-    if (!update) return;
+    if (!update) return false;
 
     setDownloadProgress(null);
     setError(null);
@@ -148,6 +198,7 @@ export function useUpdate({ autoCheck = true } = {}) {
       setError(errorMessage(reason));
       setStatus("error");
     }
+    return false;
   }, []);
 
   useEffect(() => {
@@ -167,6 +218,7 @@ export function useUpdate({ autoCheck = true } = {}) {
     downloadProgress,
     error,
     installUpdate,
+    installsFromStore,
     releaseDate,
     releaseNotes,
     status,

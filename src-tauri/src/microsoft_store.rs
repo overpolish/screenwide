@@ -2,11 +2,15 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 //! Whether the app runs from its Microsoft Store package (MSIX, laid out by
-//! `scripts/package-msix.mjs` from `msix/AppxManifest.xml`), and the startup
-//! task that package launches it at login with. The Store installs and
-//! updates the package, and Windows redirects a packaged app's registry
-//! writes, so a packaged app neither updates itself nor registers at login
-//! through the autostart plugin.
+//! `scripts/package-msix.mjs` from `msix/AppxManifest.xml`), the startup
+//! task that package launches it at login with, and the updates the Store
+//! has for it. The Store installs and updates the package, and Windows
+//! redirects a packaged app's registry writes, so a packaged app neither
+//! updates itself nor registers at login through the autostart plugin: it
+//! asks the Store whether there is a newer version and sends the user there.
+
+#[cfg(target_os = "windows")]
+pub mod updates;
 
 /// Whether the process runs with a package identity. Never on macOS; on
 /// Windows, only when installed from the Store package or registered from

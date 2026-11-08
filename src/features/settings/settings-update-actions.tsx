@@ -13,7 +13,8 @@ import type { UpdateSnapshot } from "../updates/update-bridge";
 /** The Software Update row of the General pane, as System Settings lists one:
  * the app with its version beneath, and a single button trailing. Figures are
  * tabular so a version does not shift as the numbers change. A copy from the
- * Microsoft Store has no button: the Store updates it. */
+ * Microsoft Store offers its updates the same way; the Store may not say
+ * which version it has. */
 export function SoftwareUpdateSetting({
   currentVersion,
   error,
@@ -21,30 +22,28 @@ export function SoftwareUpdateSetting({
   status,
   updateVersion,
 }: UpdateSnapshot & { onPress: () => void }) {
-  const available =
-    (status === "available" || status === "downloading") && updateVersion;
-  const fromStore = status === "store";
+  const available = status === "available" || status === "downloading";
   return (
     <>
       <ControlRow
         className="tabular-nums"
         description={
           currentVersion
-            ? fromStore
-              ? t("settings-version-store", { version: currentVersion })
-              : t("settings-version", { version: currentVersion })
+            ? t("settings-version", { version: currentVersion })
             : undefined
         }
         title={t("settings-app-name")}
       >
         {(controlProps) =>
-          fromStore ? null : available ? (
+          available ? (
             <Button
               aria-describedby={controlProps["aria-describedby"]}
               color="primary"
               onPress={onPress}
             >
-              {t("settings-update-to", { version: updateVersion })}
+              {updateVersion
+                ? t("settings-update-to", { version: updateVersion })
+                : t("settings-update")}
             </Button>
           ) : (
             <Button

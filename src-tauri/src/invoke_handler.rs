@@ -221,6 +221,8 @@ pub(crate) fn invoke_handler() -> impl Fn(tauri::ipc::Invoke) -> bool + Send + S
     tooltip_window::hide_tooltip,
     tooltip_window::show_tooltip,
     updates::update_source,
+    updates::store_update,
+    updates::open_store_page,
     updates::present_update_island,
     updates::update_island_shown,
     updates::withdraw_update_island,

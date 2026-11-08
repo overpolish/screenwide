@@ -51,6 +51,7 @@ const meta = {
     currentVersion: "1.0.0",
     downloadProgress: null,
     error: null,
+    installsFromStore: false,
     isNotesOpen: false,
     isShown: true,
     onInstall: fn(),
@@ -112,4 +113,17 @@ export const Error: Story = {
 
 export const Installing: Story = {
   args: { downloadProgress: 1, status: "downloading" },
+};
+
+export const MicrosoftStore: Story = {
+  args: { installsFromStore: true, releaseDate: null },
+};
+
+export const MicrosoftStoreWithoutVersion: Story = {
+  args: {
+    installsFromStore: true,
+    releaseDate: null,
+    releaseNotes: null,
+    updateVersion: null,
+  },
 };

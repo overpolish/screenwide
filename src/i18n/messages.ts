@@ -1272,9 +1272,9 @@ export type Messages = {
   "settings-transcription-system-language": { language: string | number };
   "settings-transcription-transcripts": null;
   "settings-transcription-transcripts-description": null;
+  "settings-update": null;
   "settings-update-to": { version: string | number };
   "settings-version": { version: string | number };
-  "settings-version-store": { version: string | number };
   "settings-voice-notes": null;
   "settings-voice-notes-enabled": null;
   "settings-voice-notes-enabled-description": null;
@@ -1413,6 +1413,7 @@ export type Messages = {
   "tray-tooltip-replay-saved": null;
   "tray-tooltip-starting": null;
   "tray-tooltip-stopping": null;
+  "updates-available": null;
   "updates-available-version": { version: string | number };
   "updates-download-percent": { percent: string | number };
   "updates-download-starting": null;
@@ -1422,10 +1423,12 @@ export type Messages = {
   "updates-installing": { version: string | number };
   "updates-island": null;
   "updates-later": null;
+  "updates-open-store": null;
   "updates-release-notes-fallback": null;
   "updates-released": { date: string | number };
   "updates-restart-note": null;
   "updates-skip": null;
+  "updates-store-failed": null;
   "updates-task": null;
   "updates-try-again": null;
   "updates-whats-new": null;
