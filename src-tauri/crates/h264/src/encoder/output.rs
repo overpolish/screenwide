@@ -1,12 +1,10 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! What the encoder hands back, as frames the replay ring can keep.
+//! What the encoder hands back, as frames a file or the replay ring can keep.
 
-use std::sync::Arc;
-
-use super::super::annexb;
 use super::*;
+use crate::annexb;
 
 /// An attribute blob, such as the sequence header an encoder publishes on
 /// its output type.
@@ -20,10 +18,7 @@ pub(super) fn blob(attributes: &IMFMediaType, key: &GUID) -> Option<Vec<u8>> {
 impl Encoder {
   /// Takes every event the encoder has raised so far, and every frame it has
   /// ready. Never waits.
-  pub(in super::super) fn collect(
-    &mut self,
-    encoded: &mut Vec<EncodedFrame>,
-  ) -> Result<(), String> {
+  pub fn collect(&mut self, encoded: &mut Vec<EncodedFrame>) -> Result<(), String> {
     let Some(events) = self.events.clone() else {
       while self.output(encoded)? {}
       return Ok(());
@@ -151,15 +146,23 @@ impl Encoder {
       };
       if forced != self.forced {
         eprintln!(
-          "Replay buffer: {} {} keyframe requests",
+          "{}: {} {} keyframe requests",
+          self.settings.purpose,
           self.name,
           if keyframe { "honours" } else { "ignores" }
         );
         self.forced = forced;
       }
     }
-    // A clip starts on a keyframe, so each one has to carry the parameter
-    // sets; an encoder that only wrote them once has them added here.
+    // The encoder keeps the duration it was given; one that drops it is
+    // taken to have kept the frame rate.
+    let duration_100ns = unsafe { sample.GetSampleDuration() }
+      .ok()
+      .filter(|duration| *duration > 0)
+      .unwrap_or(10_000_000 / i64::from(self.settings.fps.max(1)));
+    // A file or a clip starts on a keyframe, so each one has to carry the
+    // parameter sets; an encoder that only wrote them once has them added
+    // here.
     let prefix = match keyframe.then(|| annexb::parameter_sets(bytes)) {
       Some(Some(sets)) => {
         self.parameter_sets = Some(sets);
@@ -168,14 +171,15 @@ impl Encoder {
       Some(None) => self.parameter_sets.as_deref(),
       None => None,
     };
-    let sample: Arc<[u8]> = match prefix {
+    let data: Arc<[u8]> = match prefix {
       Some(prefix) => [prefix, bytes].concat().into(),
       None => Arc::from(bytes),
     };
     Some(EncodedFrame {
       keyframe,
       pts_ns: pts_100ns.saturating_mul(100),
-      sample,
+      duration_ns: duration_100ns.saturating_mul(100),
+      sample: data,
     })
   }
 }

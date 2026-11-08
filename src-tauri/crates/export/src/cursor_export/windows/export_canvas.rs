@@ -35,7 +35,6 @@ pub(crate) struct WindowsExportCanvas {
   compositor: Compositor,
   /// The baked camera's frame, and its Direct3D 11 side.
   camera: Option<(compositor::SourceTexture, ID3D11Texture2D)>,
-  output_size: (u32, u32),
   /// The screen's frame, and its Direct3D 11 side.
   source: (compositor::SourceTexture, ID3D11Texture2D),
   /// The device Media Foundation decodes and encodes on.
@@ -43,6 +42,31 @@ pub(crate) struct WindowsExportCanvas {
   bridge: D3d11Bridge,
   /// What each frame is drawn into, which the export's device copies out of.
   target: BridgedTexture,
+  /// The drawn frame, copied out for the encoder. One serves every frame:
+  /// the encoder copies it into a picture of its own on this device before
+  /// taking the next, and the device runs its copies in order.
+  out: ID3D11Texture2D,
+}
+
+fn output_texture(device: &ID3D11Device, size: (u32, u32)) -> Result<ID3D11Texture2D, String> {
+  let description = D3D11_TEXTURE2D_DESC {
+    Width: size.0,
+    Height: size.1,
+    MipLevels: 1,
+    ArraySize: 1,
+    Format: DXGI_FORMAT_B8G8R8A8_UNORM,
+    SampleDesc: DXGI_SAMPLE_DESC {
+      Count: 1,
+      Quality: 0,
+    },
+    Usage: D3D11_USAGE_DEFAULT,
+    BindFlags: D3D11_BIND_RENDER_TARGET.0 as u32,
+    ..Default::default()
+  };
+  let mut texture = None;
+  unsafe { device.CreateTexture2D(&description, None, Some(&mut texture)) }
+    .map_err(|error| format!("The Windows export target could not be created: {error}"))?;
+  texture.ok_or_else(|| "D3D11 created no Windows export target".to_owned())
 }
 
 /// A texture decoded frames are copied into on the export's device, as the
@@ -90,7 +114,7 @@ impl WindowsExportCanvas {
     Ok(Self {
       compositor: Compositor::new(&gpu)?,
       camera,
-      output_size,
+      out: output_texture(&device, output_size)?,
       source,
       device,
       bridge,
@@ -134,7 +158,7 @@ impl WindowsExportCanvas {
 
   /// The decoded `screen` frame, and `camera`'s where the camera is baked
   /// in, drawn by `draw` at `moment` (its source time and the output time it
-  /// covers) into a texture of its own for the encoder.
+  /// covers) into the texture the encoder reads.
   pub(crate) fn compose(
     &self,
     draw: &mut FrameDraw<'_>,
@@ -151,34 +175,6 @@ impl WindowsExportCanvas {
     }
     let gpu = self.gpu();
     self.bridge.d3d11_to_gpu(gpu)?;
-    // Sink Writer retains DXGI surfaces and feeds the hardware encoder
-    // asynchronously. A single repainted render target therefore lets a later
-    // frame overwrite an earlier sample before Media Foundation consumes it.
-    // Give each submitted sample its own texture; MF's sample owns that texture
-    // until encoding completes and naturally bounds outstanding allocations
-    // through Sink Writer backpressure.
-    let description = D3D11_TEXTURE2D_DESC {
-      Width: self.output_size.0,
-      Height: self.output_size.1,
-      MipLevels: 1,
-      ArraySize: 1,
-      Format: DXGI_FORMAT_B8G8R8A8_UNORM,
-      SampleDesc: DXGI_SAMPLE_DESC {
-        Count: 1,
-        Quality: 0,
-      },
-      Usage: D3D11_USAGE_DEFAULT,
-      BindFlags: D3D11_BIND_RENDER_TARGET.0 as u32,
-      ..Default::default()
-    };
-    let mut copy = None;
-    unsafe {
-      self
-        .device
-        .CreateTexture2D(&description, None, Some(&mut copy))
-    }
-    .map_err(|error| format!("The Windows export target could not be created: {error}"))?;
-    let copy = copy.ok_or_else(|| "D3D11 created no Windows export target".to_owned())?;
     draw.draw(
       &self.compositor,
       &self.target.view,
@@ -189,7 +185,7 @@ impl WindowsExportCanvas {
     // The export's device waits for the frame drawn above before copying it
     // out. The next frame's drawing waits for this copy too: it is recorded
     // before the next frame's own copies, which wgpu waits for.
-    let destination: ID3D11Resource = copy.cast().map_err(|error| error.to_string())?;
+    let destination: ID3D11Resource = self.out.cast().map_err(|error| error.to_string())?;
     let drawn: ID3D11Resource = self
       .target
       .d3d11
@@ -200,6 +196,6 @@ impl WindowsExportCanvas {
       self.bridge.context.CopyResource(&destination, &drawn);
       self.bridge.context.Flush();
     }
-    Ok(copy)
+    Ok(self.out.clone())
   }
 }

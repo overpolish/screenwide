@@ -3,10 +3,9 @@
 
 //! Windows final-video composition. Media Foundation decodes on a plain
 //! Direct3D 11 device on wgpu's adapter, the preview shader draws offscreen
-//! in wgpu, and the hardware H.264 transform consumes the copy on the same
+//! in wgpu, and the hardware H.264 encoder takes the copy on the same
 //! Direct3D 11 device; see `export_canvas`.
 
-mod encoder_config;
 mod preview;
 mod render;
 pub(in super::super) use preview::preview_frame;
@@ -18,13 +17,8 @@ use std::{
   sync::atomic::{AtomicU64, Ordering},
 };
 
-use ::windows::{
-  core::{Interface, PCWSTR},
-  Win32::{
-    Graphics::Direct3D11::{ID3D11Device, ID3D11Texture2D},
-    Media::MediaFoundation::*,
-  },
-};
+use ::windows::Win32::Graphics::Direct3D11::{ID3D11Device, ID3D11Texture2D};
+use screenwide_h264::{FileEncoder, RateControl, Settings};
 
 use super::super::*;
 use super::export_canvas::WindowsExportCanvas;
@@ -34,138 +28,29 @@ use crate::decode::windows::gpu_decoder::GpuVideoReader;
 const GPU_PROGRESS_PERCENT: u64 = 95;
 static EXPORT_ATTEMPTS: AtomicU64 = AtomicU64::new(0);
 
-fn win<T>(result: ::windows::core::Result<T>) -> Result<T, String> {
-  result.map_err(|error| error.to_string())
-}
-
-struct VideoSink {
-  _byte_stream: IMFByteStream,
-  _device_manager: IMFDXGIDeviceManager,
-  media_sink: IMFMediaSink,
-  sink: Option<IMFSinkWriter>,
-}
-
-impl VideoSink {
-  fn new(
-    path: &Path,
-    device: &ID3D11Device,
-    ((width, height), fps): ((u32, u32), u32),
-    bitrate: u64,
-  ) -> Result<Self, String> {
-    let mut reset_token = 0;
-    let mut manager = None;
-    win(unsafe { MFCreateDXGIDeviceManager(&mut reset_token, &mut manager) })?;
-    let manager =
-      manager.ok_or_else(|| "Media Foundation created no export D3D manager".to_owned())?;
-    win(unsafe { manager.ResetDevice(device, reset_token) })?;
-
-    let attributes = attributes(4)?;
-    win(unsafe { attributes.SetUINT32(&MF_READWRITE_ENABLE_HARDWARE_TRANSFORMS, 1) })?;
-    win(unsafe { attributes.SetUnknown(&MF_SINK_WRITER_D3D_MANAGER, &manager) })?;
-    let bitrate = bitrate.min(u64::from(u32::MAX)) as u32;
-    match encoder_config::constant_bitrate(bitrate) {
-      Ok(store) => win(unsafe { attributes.SetUnknown(&MF_SINK_WRITER_ENCODER_CONFIG, &store) })?,
-      Err(message) => eprintln!("windows export: constant bitrate not applied: {message}"),
-    }
-    let output = video_type(MFVideoFormat_H264, (width, height), fps)?;
-    win(unsafe { output.SetUINT32(&MF_MT_AVG_BITRATE, bitrate) })?;
-    win(unsafe { output.SetUINT32(&MF_MT_MPEG2_PROFILE, eAVEncH264VProfile_High.0 as u32) })?;
-    win(unsafe { output.SetUINT32(&MF_MT_MAX_KEYFRAME_SPACING, fps) })?;
-
-    let wide = path
-      .to_str()
-      .ok_or_else(|| "The export path is not valid UTF-8".to_owned())?
-      .encode_utf16()
-      .chain(Some(0))
-      .collect::<Vec<_>>();
-    let byte_stream = win(unsafe {
-      MFCreateFile(
-        MF_ACCESSMODE_WRITE,
-        MF_OPENMODE_DELETE_IF_EXIST,
-        MF_FILEFLAGS_NONE,
-        PCWSTR(wide.as_ptr()),
-      )
-    })?;
-    let media_sink = win(unsafe { MFCreateFMPEG4MediaSink(&byte_stream, &output, None) })?;
-    let sink = win(unsafe { MFCreateSinkWriterFromMediaSink(&media_sink, &attributes) })?;
-    let input = video_type(MFVideoFormat_ARGB32, (width, height), fps)?;
-    win(unsafe { sink.SetInputMediaType(0, &input, None) })?;
-    win(unsafe { sink.BeginWriting() })?;
-    Ok(Self {
-      _byte_stream: byte_stream,
-      _device_manager: manager,
-      media_sink,
-      sink: Some(sink),
-    })
-  }
-
-  fn write(
-    &self,
-    texture: &ID3D11Texture2D,
-    pts_100ns: i64,
-    duration_100ns: i64,
-  ) -> Result<(), String> {
-    let buffer = unsafe { MFCreateDXGISurfaceBuffer(&ID3D11Texture2D::IID, texture, 0, false) }
-      .map_err(|error| error.to_string())?;
-    let two_dimensional = buffer
-      .cast::<IMF2DBuffer>()
-      .map_err(|error| error.to_string())?;
-    let length =
-      unsafe { two_dimensional.GetContiguousLength() }.map_err(|error| error.to_string())?;
-    win(unsafe { buffer.SetCurrentLength(length) })?;
-    let sample = unsafe { MFCreateSample() }.map_err(|error| error.to_string())?;
-    win(unsafe { sample.AddBuffer(&buffer) })?;
-    win(unsafe { sample.SetSampleTime(pts_100ns.max(0)) })?;
-    win(unsafe { sample.SetSampleDuration(duration_100ns.max(1)) })?;
-    let sink = self
-      .sink
-      .as_ref()
-      .ok_or_else(|| "The export encoder is already finalized".to_owned())?;
-    win(unsafe { sink.WriteSample(0, &sample) })
-  }
-
-  fn finish(mut self) -> Result<(), String> {
-    let sink = self
-      .sink
-      .take()
-      .ok_or_else(|| "The export encoder is already finalized".to_owned())?;
-    win(unsafe { sink.Finalize() })?;
-    drop(sink);
-    win(unsafe { self.media_sink.Shutdown() })
-  }
-}
-
-impl Drop for VideoSink {
-  fn drop(&mut self) {
-    self.sink.take();
-    let _ = unsafe { self.media_sink.Shutdown() };
-  }
-}
-
-fn attributes(capacity: u32) -> Result<IMFAttributes, String> {
-  let mut value = None;
-  win(unsafe { MFCreateAttributes(&mut value, capacity) })?;
-  value.ok_or_else(|| "Media Foundation created no export attributes".to_owned())
-}
-
-fn video_type(
-  subtype: ::windows::core::GUID,
-  (width, height): (u32, u32),
-  fps: u32,
-) -> Result<IMFMediaType, String> {
-  let value = unsafe { MFCreateMediaType() }.map_err(|error| error.to_string())?;
-  win(unsafe { value.SetGUID(&MF_MT_MAJOR_TYPE, &MFMediaType_Video) })?;
-  win(unsafe { value.SetGUID(&MF_MT_SUBTYPE, &subtype) })?;
-  win(unsafe {
-    value.SetUINT64(
-      &MF_MT_FRAME_SIZE,
-      (u64::from(width) << 32) | u64::from(height),
-    )
-  })?;
-  win(unsafe { value.SetUINT64(&MF_MT_FRAME_RATE, (u64::from(fps) << 32) | 1) })?;
-  win(unsafe { value.SetUINT64(&MF_MT_PIXEL_ASPECT_RATIO, (1_u64 << 32) | 1) })?;
-  win(unsafe { value.SetUINT32(&MF_MT_INTERLACE_MODE, MFVideoInterlace_Progressive.0 as u32) })?;
-  Ok(value)
+/// The export's video file at `path`, encoded on `device`.
+fn video_file(
+  path: &Path,
+  device: &ID3D11Device,
+  ((width, height), fps): ((u32, u32), u32),
+  bitrate: u64,
+) -> Result<FileEncoder, String> {
+  let fps = fps.max(1);
+  let settings = Settings {
+    width,
+    height,
+    fps,
+    bitrate: u32::try_from(bitrate).unwrap_or(u32::MAX),
+    // Given only an average, each vendor's encoder picks its own rate
+    // control and some let it float with the picture. Held constant on
+    // every GPU, a look makes a file of the same size whichever GPU encodes
+    // it.
+    rate_control: RateControl::Constant,
+    keyframe_interval: fps,
+    low_latency: false,
+    purpose: "Export",
+  };
+  FileEncoder::create(device, settings, None, path, None)
 }
 
 fn gpu_video_path() -> PathBuf {

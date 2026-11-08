@@ -27,6 +27,7 @@ pub(super) fn show_webview(window: &WebviewWindow) -> tauri::Result<()> {
 
 pub(crate) fn hide_window(window: &WebviewWindow) -> tauri::Result<()> {
   window.hide()?;
+  super::on_demand::note_hidden(window);
   #[cfg(target_os = "macos")]
   hide_webview(window)?;
   Ok(())

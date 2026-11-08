@@ -1,10 +1,11 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! The H.264 bits a clip needs to decode on its own: every clip starts on a
-//! keyframe, and that keyframe has to carry the stream's parameter sets.
-//! Media Foundation encoders write Annex B, but not all of them repeat the
-//! sequence and picture parameter sets in front of every keyframe.
+//! The H.264 bits a picture needs to decode on its own: a file or a clip
+//! starts on a keyframe, and that keyframe has to carry the stream's
+//! parameter sets. Media Foundation encoders write Annex B, but not all of
+//! them repeat the sequence and picture parameter sets in front of every
+//! keyframe.
 
 const NAL_SLICE: u8 = 1;
 const NAL_IDR: u8 = 5;
@@ -48,12 +49,12 @@ fn header_units(data: &[u8]) -> impl Iterator<Item = (u8, &[u8])> {
 }
 
 /// Whether `data` holds an IDR picture.
-pub(super) fn is_idr(data: &[u8]) -> bool {
+pub fn is_idr(data: &[u8]) -> bool {
   header_units(data).any(|(kind, _)| kind == NAL_IDR)
 }
 
 /// The SPS and PPS units in `data`, in order, if it has both.
-pub(super) fn parameter_sets(data: &[u8]) -> Option<Vec<u8>> {
+pub fn parameter_sets(data: &[u8]) -> Option<Vec<u8>> {
   let mut sets = Vec::new();
   let (mut sps, mut pps) = (false, false);
   for (kind, unit) in header_units(data) {

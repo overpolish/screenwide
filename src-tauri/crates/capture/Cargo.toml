@@ -45,6 +45,7 @@ xcap.workspace = true
 
 [target.'cfg(target_os = "windows")'.dependencies]
 nokhwa = { workspace = true, features = ["input-msmf"] }
+screenwide-h264.workspace = true
 wasapi.workspace = true
 windows = { workspace = true, features = [
   "Foundation",

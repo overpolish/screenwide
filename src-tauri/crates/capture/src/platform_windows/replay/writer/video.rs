@@ -3,9 +3,8 @@
 
 //! Video onto the replay timeline and into the encoder.
 
-use super::super::convert::SLOTS;
-use super::super::encoder::Picture;
 use super::*;
+use screenwide_h264::{Picture, SLOTS};
 
 impl ReplayWriter {
   /// Takes one captured frame, reporting whether it was the first one
@@ -157,7 +156,11 @@ impl ReplayWriter {
       if self.leads && frame.keyframe {
         self.keyframes.publish(frame.pts_ns);
       }
-      self.frames.push(frame);
+      self.frames.push(EncodedFrame {
+        keyframe: frame.keyframe,
+        pts_ns: frame.pts_ns,
+        sample: frame.sample,
+      });
     }
   }
 

@@ -6,6 +6,10 @@
 //! each is destroyed once it has stayed hidden, with nothing needing it, for
 //! [`GRACE`]. The grace keeps a quick hide and show, such as a mode change or
 //! a second menu, from paying for a new window each time.
+//!
+//! A window is looked at only every [`CHECK`], and a quick use can start and
+//! end between two looks, so each hide is noted as it happens and the grace
+//! counts from the latest one.
 
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -25,6 +29,8 @@ const CHECK: Duration = Duration::from_secs(5);
 /// built again stops rather than watching the new one twice.
 static WATCHES: LazyLock<Mutex<HashMap<WindowLabel, u64>>> = LazyLock::new(Default::default);
 static NEXT_WATCH: AtomicU64 = AtomicU64::new(0);
+/// When each watched window was last put away.
+static HIDDEN_AT: LazyLock<Mutex<HashMap<WindowLabel, Instant>>> = LazyLock::new(Default::default);
 
 fn is_current(label: WindowLabel, watch: u64) -> bool {
   WATCHES
@@ -32,6 +38,31 @@ fn is_current(label: WindowLabel, watch: u64) -> bool {
     .unwrap_or_else(PoisonError::into_inner)
     .get(&label)
     == Some(&watch)
+}
+
+/// Notes that the window labelled `label` has just been hidden, if it is
+/// one being watched.
+pub(super) fn note_hidden(label: &str) {
+  let watched = WATCHES
+    .lock()
+    .unwrap_or_else(PoisonError::into_inner)
+    .keys()
+    .copied()
+    .find(|watched| watched.as_str() == label);
+  if let Some(watched) = watched {
+    HIDDEN_AT
+      .lock()
+      .unwrap_or_else(PoisonError::into_inner)
+      .insert(watched, Instant::now());
+  }
+}
+
+fn hidden_at(label: WindowLabel) -> Option<Instant> {
+  HIDDEN_AT
+    .lock()
+    .unwrap_or_else(PoisonError::into_inner)
+    .get(&label)
+    .copied()
 }
 
 /// Destroys `label`'s window once it has been hidden, and `needed` has said
@@ -59,7 +90,9 @@ pub(super) fn when_unused(app: &AppHandle, label: WindowLabel, needed: fn(&AppHa
           unused_since = None;
           continue;
         }
-        if unused_since.get_or_insert_with(Instant::now).elapsed() >= GRACE {
+        let since = *unused_since.get_or_insert_with(Instant::now);
+        let since = hidden_at(label).map_or(since, |hidden| hidden.max(since));
+        if since.elapsed() >= GRACE {
           super::close(&app, label);
           return;
         }

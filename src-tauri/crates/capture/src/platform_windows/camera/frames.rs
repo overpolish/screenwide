@@ -57,9 +57,8 @@ pub(super) fn texture(
       Quality: 0,
     },
     Usage: D3D11_USAGE_DEFAULT,
-    // Matches the screen-capture textures the sink writer already accepts. A
-    // shader-resource-only texture is rejected by the Media Foundation video
-    // pipeline with E_INVALIDARG when the sample reaches the encoder.
+    // Bound as the screen-capture textures are, which the recording's NV12
+    // conversion reads.
     BindFlags: (D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE).0 as u32,
     ..Default::default()
   };

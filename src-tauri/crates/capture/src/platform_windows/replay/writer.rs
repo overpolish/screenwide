@@ -22,11 +22,10 @@ use std::sync::mpsc::{self, Receiver, RecvTimeoutError, TryRecvError};
 use std::time::{Duration, Instant};
 
 use super::super::writer::{Command, Frame, MediaFoundation, WriterConfig, NANOS_PER_100NS};
-use super::convert::Converter;
-use super::encoder::{Encoder, Size};
 use super::{EncodedFrame, KeyframeLink};
-use crate::encoding::Timeline;
+use crate::encoding::{bitrate_bps, Timeline};
 use crate::replay_ring::VideoRing;
+use screenwide_h264::{Converter, Crop, Encoder, RateControl, Settings};
 
 /// How long a screen may sit unchanged before its last frame is encoded
 /// again as a keyframe. A screen that does not change sends no frames, and a
@@ -60,7 +59,7 @@ struct ReplayWriter {
   config: WriterConfig,
   converter: Converter,
   /// What the encoder handed back and the ring has not yet taken.
-  encoded: Vec<EncodedFrame>,
+  encoded: Vec<screenwide_h264::EncodedFrame>,
   encoder: Encoder,
   failed: Option<String>,
   /// The primary keyframe a follower last matched.
@@ -151,21 +150,34 @@ impl ReplayWriter {
       length,
       writer,
     } = config;
-    let size = Size {
+    let fps = writer.fps.max(1);
+    let settings = Settings {
       width: writer.width,
       height: writer.height,
-      fps: writer.fps.max(1),
+      fps,
+      bitrate: u32::try_from(bitrate_bps(writer.width, writer.height, fps)).unwrap_or(u32::MAX),
+      rate_control: RateControl::Average,
+      // Half-second keyframes, as a recording has, so a clip starts close
+      // to where it was asked to.
+      keyframe_interval: (fps / 2).max(1),
+      low_latency: true,
+      purpose: "Replay buffer",
     };
-    let encoder = Encoder::new(&writer.device, size)?;
+    let encoder = Encoder::new(&writer.device, settings)?;
     let converter = Converter::new(
       &writer.device,
-      size.width,
-      size.height,
-      size.fps,
-      writer.source_crop,
+      settings.width,
+      settings.height,
+      fps,
+      writer.source_crop.map(|crop| Crop {
+        x: crop.x,
+        y: crop.y,
+        width: crop.width,
+        height: crop.height,
+      }),
       encoder.input_bind_flags(),
     )?;
-    let cadence = Duration::from_nanos(1_000_000_000 / u64::from(size.fps));
+    let cadence = Duration::from_nanos(1_000_000_000 / u64::from(fps));
     Ok(Self {
       base: Instant::now(),
       converter,
@@ -174,7 +186,7 @@ impl ReplayWriter {
       failed: None,
       followed_keyframe_ns: i64::MIN,
       force_keyframe: false,
-      frame_duration_100ns: 10_000_000 / i64::from(size.fps),
+      frame_duration_100ns: 10_000_000 / i64::from(fps),
       frames: VideoRing::new(duration_ns(length)),
       keyframes,
       last_encoded_at: None,

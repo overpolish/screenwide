@@ -3,9 +3,9 @@
 
 //! Answering a save: what this writer holds for the clip, on its own thread.
 
-use super::super::encoder::Picture;
 use super::super::{ClipFrom, ClipTake, VideoTake};
 use super::*;
+use screenwide_h264::Picture;
 
 impl ReplayWriter {
   pub(super) fn take(&mut self, at: Instant, from: ClipFrom) -> Result<ClipTake, String> {

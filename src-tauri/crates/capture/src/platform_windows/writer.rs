@@ -9,7 +9,6 @@ mod timeline;
 use frames::crop_frame;
 pub(super) use frames::snapshot_frame;
 pub(super) use media_types::attributes;
-use media_types::{encoder_config, video_type};
 use timeline::announce_start;
 
 use std::ops::ControlFlow;
@@ -17,17 +16,14 @@ use std::path::PathBuf;
 use std::sync::{mpsc, Arc, OnceLock};
 use std::time::{Duration, Instant};
 
-use windows::core::{Interface, PCWSTR};
-use windows::Win32::Foundation::{PROPERTYKEY, RPC_E_CHANGED_MODE};
+use windows::core::Interface;
+use windows::Win32::Foundation::RPC_E_CHANGED_MODE;
 use windows::Win32::Graphics::Direct3D11::{
   ID3D11Device, ID3D11Resource, ID3D11Texture2D, D3D11_BIND_RENDER_TARGET,
   D3D11_BIND_SHADER_RESOURCE, D3D11_BOX, D3D11_TEXTURE2D_DESC, D3D11_USAGE_DEFAULT,
 };
 use windows::Win32::Media::MediaFoundation::*;
-use windows::Win32::System::Com::StructuredStorage::PROPVARIANT;
 use windows::Win32::System::Com::{CoInitializeEx, CoUninitialize, COINIT_MULTITHREADED};
-use windows::Win32::System::Variant::VT_UI4;
-use windows::Win32::UI::Shell::PropertiesSystem::{IPropertyStore, PSCreateMemoryPropertyStore};
 
 use crate::capture_geometry::CaptureRect;
 use crate::encoding::{bitrate_bps, FailureReport, FinalizeInfo, Timeline};
@@ -112,11 +108,7 @@ impl Drop for MediaFoundation {
 }
 
 struct Sink {
-  _byte_stream: IMFByteStream,
-  _device_manager: IMFDXGIDeviceManager,
-  media_sink: IMFMediaSink,
-  sink: Option<IMFSinkWriter>,
-  stream: u32,
+  file: Option<screenwide_h264::FileEncoder>,
 }
 
 struct Writer {

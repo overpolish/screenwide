@@ -213,6 +213,12 @@ pub(crate) fn close(app: &AppHandle, label: WindowLabel) {
   }
 }
 
+/// Tells the release watch that `window` has just been hidden, so a use too
+/// short for it to see still restarts the grace.
+pub(crate) fn note_hidden(window: &WebviewWindow) {
+  release::note_hidden(window.label());
+}
+
 /// A new page saying it has rendered, so its window can be shown.
 #[tauri::command]
 pub fn window_ready(app: AppHandle, window: WebviewWindow) {

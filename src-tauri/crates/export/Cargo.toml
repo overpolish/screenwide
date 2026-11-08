@@ -40,6 +40,7 @@ wgpu.workspace = true
 cidre.workspace = true
 
 [target.'cfg(target_os = "windows")'.dependencies]
+screenwide-h264.workspace = true
 windows = { workspace = true, features = [
   "Foundation",
   "Graphics_Imaging",

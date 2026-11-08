@@ -8,7 +8,7 @@
 use std::path::Path;
 
 use ort::ep::ExecutionProviderDispatch;
-use ort::session::Session;
+use ort::session::{builder::SessionBuilder, Session};
 
 /// Loads the model at `path` for the feature named `what`, on the GPU if it
 /// can be.
@@ -35,6 +35,18 @@ pub(crate) fn on_cpu(path: &Path, what: &str) -> Result<Session, String> {
   Session::builder()
     .and_then(|mut builder| builder.commit_from_file(path))
     .map_err(|error| format!("Could not load the {what} model: {error}"))
+}
+
+/// The model in `bytes` on the CPU, for a model changed after it was read.
+pub(crate) fn cpu_from_memory(bytes: &[u8]) -> ort::Result<Session> {
+  Session::builder()?.commit_from_memory(bytes)
+}
+
+/// The model in `bytes` on the GPU through DirectML, for a model changed
+/// after it was read.
+#[cfg(windows)]
+pub(crate) fn directml_from_memory(bytes: &[u8]) -> ort::Result<Session> {
+  gpu_builder(ort::ep::DirectML::default().build())?.commit_from_memory(bytes)
 }
 
 /// The model at `path` for the feature named `what` on the CPU with
@@ -113,16 +125,18 @@ fn platform_gpu(_path: &Path, _cache: &Path) -> Option<ort::Result<Session>> {
   None
 }
 
-fn on_gpu(path: &Path, backend: ExecutionProviderDispatch) -> ort::Result<Session> {
+fn gpu_builder(backend: ExecutionProviderDispatch) -> ort::Result<SessionBuilder> {
   let builder = Session::builder()?;
   // DirectML takes neither of these, and refuses the session if they are on.
   #[cfg(windows)]
   let builder = builder
     .with_memory_pattern(false)?
     .with_parallel_execution(false)?;
-  builder
-    .with_execution_providers([backend.error_on_failure()])?
-    .commit_from_file(path)
+  Ok(builder.with_execution_providers([backend.error_on_failure()])?)
+}
+
+fn on_gpu(path: &Path, backend: ExecutionProviderDispatch) -> ort::Result<Session> {
+  gpu_builder(backend)?.commit_from_file(path)
 }
 
 #[cfg(target_os = "macos")]

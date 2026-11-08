@@ -9,7 +9,14 @@
 //! faded across inside the overlap, as its reference inference does, and
 //! the audio is read and written as it goes, so an hour of it is never held
 //! in memory at once.
+//!
+//! On Windows the model runs in parts on the GPU (`staged`). A part that
+//! fails, or an answer no singing could give, moves the work to the CPU,
+//! which redoes that chunk and the rest, so ducking never fails because of
+//! the GPU.
 
+#[cfg(windows)]
+mod staged;
 #[cfg(test)]
 mod tests;
 
@@ -17,9 +24,10 @@ use std::fs::File;
 use std::io::{BufReader, BufWriter, Read, Write};
 use std::path::Path;
 
+use ort::session::Session;
 use ort::value::Tensor;
 
-use crate::session::session;
+use crate::session::on_cpu;
 
 /// Samples of each side the model hears at once: 7.8 s at its rate.
 const SEGMENT: usize = 343_980;
@@ -30,6 +38,98 @@ const SIDES: usize = 2;
 const VOCALS: usize = 3;
 /// The feature's name in what the helper reports.
 const WHAT: &str = "Studio ducking";
+
+/// Where the model runs.
+enum Runner {
+  #[cfg(windows)]
+  Staged(staged::Staged),
+  Whole(Session),
+}
+
+impl Runner {
+  fn new(model: &Path) -> Result<Self, String> {
+    #[cfg(windows)]
+    {
+      let staged = std::fs::read(model)
+        .map_err(|error| error.to_string())
+        .and_then(|bytes| staged::Staged::new(&bytes));
+      match staged {
+        Ok(staged) => {
+          eprintln!("{WHAT} runs HT Demucs on the GPU through DirectML, in parts");
+          return Ok(Self::Staged(staged));
+        }
+        Err(error) => eprintln!("{WHAT} runs on the CPU: the GPU could not take it: {error}"),
+      }
+      on_cpu(model, WHAT).map(Self::Whole)
+    }
+    #[cfg(not(windows))]
+    crate::session::session(model, WHAT).map(Self::Whole)
+  }
+
+  /// The singing in one planar segment.
+  fn singing(&mut self, model: &Path, planar: Vec<f32>) -> Result<Vec<f32>, String> {
+    #[cfg(windows)]
+    if let Self::Staged(staged) = self {
+      let peak = planar
+        .iter()
+        .fold(0.0_f32, |peak, sample| peak.max(sample.abs()));
+      let answer = Tensor::from_array(([1_usize, SIDES, SEGMENT], planar.clone()))
+        .map_err(|error| error.to_string())
+        .and_then(|input| staged.run(input.into_dyn()))
+        .and_then(|mut outputs| {
+          let stems = outputs.remove("stems").ok_or("the model made no stems")?;
+          let (_, stems) = stems
+            .try_extract_tensor::<f32>()
+            .map_err(|error| error.to_string())?;
+          vocals(stems)
+        })
+        .and_then(|singing| plausible(singing, peak));
+      match answer {
+        Ok(singing) => return Ok(singing),
+        Err(error) => {
+          eprintln!("{WHAT} moves to the CPU: {error}");
+          *self = Self::Whole(on_cpu(model, WHAT)?);
+        }
+      }
+    }
+    let Self::Whole(session) = self else {
+      unreachable!("the GPU runner moves to the CPU before this")
+    };
+    let failed = |error: ort::Error| format!("{WHAT} could not run: {error}");
+    let input = Tensor::from_array(([1_usize, SIDES, SEGMENT], planar)).map_err(failed)?;
+    let outputs = session.run(ort::inputs!["mix" => input]).map_err(failed)?;
+    let (_, stems) = outputs["stems"]
+      .try_extract_tensor::<f32>()
+      .map_err(failed)?;
+    vocals(stems)
+  }
+}
+
+/// The singing among the model's four stems.
+fn vocals(stems: &[f32]) -> Result<Vec<f32>, String> {
+  let from = VOCALS * SIDES * SEGMENT;
+  stems
+    .get(from..from + SIDES * SEGMENT)
+    .map(<[f32]>::to_vec)
+    .ok_or_else(|| "the model made too few stems".to_owned())
+}
+
+/// `singing` unless no singing in audio peaking at `peak` could be it: a
+/// separated voice is never far louder than the mix it came from, and a
+/// GPU that went wrong answers with numbers thousands of times too large.
+#[cfg(windows)]
+fn plausible(singing: Vec<f32>, peak: f32) -> Result<Vec<f32>, String> {
+  let limit = 2.0 * peak + 0.01;
+  match singing
+    .iter()
+    .find(|sample| !sample.is_finite() || sample.abs() > limit)
+  {
+    Some(sample) => Err(format!(
+      "the GPU answered {sample} for audio peaking at {peak}"
+    )),
+    None => Ok(singing),
+  }
+}
 
 /// Writes the singing in the stereo samples at `audio`, at the separation
 /// rate, to `output` in the same form, by the model at `model`. Tells
@@ -47,21 +147,12 @@ pub fn separate_vocals(
   let mut writer = BufWriter::new(
     File::create(output).map_err(|error| format!("Could not write the singing: {error}"))?,
   );
-  let mut session = session(model, WHAT)?;
-  let failed = |error: ort::Error| format!("{WHAT} could not run: {error}");
+  let mut runner = Runner::new(model)?;
   overlap_add(
     &mut reader,
     &mut writer,
     total,
-    &mut |planar| {
-      let input = Tensor::from_array(([1_usize, SIDES, SEGMENT], planar)).map_err(failed)?;
-      let outputs = session.run(ort::inputs!["mix" => input]).map_err(failed)?;
-      let (_, stems) = outputs["stems"]
-        .try_extract_tensor::<f32>()
-        .map_err(failed)?;
-      let from = VOCALS * SIDES * SEGMENT;
-      Ok(stems[from..from + SIDES * SEGMENT].to_vec())
-    },
+    &mut |planar| runner.singing(model, planar),
     progress,
   )?;
   writer

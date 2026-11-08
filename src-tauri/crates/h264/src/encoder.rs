@@ -1,9 +1,9 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! The H.264 encoder transform, driven directly so its encoded samples can be
-//! kept. The recording writer's Sink Writer encodes into a file and never
-//! hands the samples back.
+//! The H.264 encoder transform, driven directly: its encoded samples come
+//! back to the caller, and it is shut down through the activation object
+//! that made it, which a Sink Writer that makes its own encoder never does.
 //!
 //! Hardware encoders take the NV12 textures straight from the GPU and are
 //! usually asynchronous: they ask for input and announce output through
@@ -16,6 +16,7 @@ mod output;
 mod setup;
 
 use std::collections::VecDeque;
+use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 use windows::core::{Interface, GUID, PWSTR};
@@ -28,9 +29,7 @@ use windows::Win32::Media::MediaFoundation::*;
 use windows::Win32::System::Com::{CoCreateInstance, CoTaskMemFree, CLSCTX_INPROC_SERVER};
 use windows::Win32::System::Variant::{VARIANT, VT_UI4};
 
-use super::super::writer::{attributes, win};
-use super::EncodedFrame;
-use crate::encoding::bitrate_bps;
+use crate::mf::{attributes, win};
 use setup::Candidate;
 
 /// How long the encoder may take to ask for a frame or hand one back before
@@ -41,11 +40,40 @@ const STALL_TIMEOUT: Duration = Duration::from_secs(2);
 const SETTLE_TIMEOUT: Duration = Duration::from_millis(250);
 const POLL: Duration = Duration::from_micros(500);
 
+/// How the encoder spends its bits.
+#[derive(Clone, Copy, Eq, PartialEq)]
+pub enum RateControl {
+  /// The encoder's own choice around `bitrate`.
+  Average,
+  /// `bitrate` held on every GPU, so a file comes out the size it was
+  /// estimated at.
+  Constant,
+}
+
+/// The picture and how it is encoded.
 #[derive(Clone, Copy)]
-pub(super) struct Size {
+pub struct Settings {
   pub width: u32,
   pub height: u32,
   pub fps: u32,
+  /// Bits per second.
+  pub bitrate: u32,
+  pub rate_control: RateControl,
+  /// Frames from one keyframe to the next.
+  pub keyframe_interval: u32,
+  /// Frames come out as soon as each is encoded, as live capture needs.
+  pub low_latency: bool,
+  /// What the encoder is for, in what it logs.
+  pub purpose: &'static str,
+}
+
+/// One encoded frame, Annex B, keyframes carrying the parameter sets.
+#[derive(Clone)]
+pub struct EncodedFrame {
+  pub keyframe: bool,
+  pub pts_ns: i64,
+  pub duration_ns: i64,
+  pub sample: Arc<[u8]>,
 }
 
 #[derive(Clone, Copy)]
@@ -65,7 +93,7 @@ enum ForcedKeyframes {
 
 /// How a frame handed to [`Encoder::encode`] has to be encoded.
 #[derive(Clone, Copy, Eq, PartialEq)]
-pub(super) enum Picture {
+pub enum Picture {
   /// Whatever the encoder chooses.
   Any,
   /// A keyframe if the encoder starts one when asked.
@@ -84,7 +112,7 @@ enum Input {
   },
 }
 
-pub(super) struct Encoder {
+pub struct Encoder {
   candidate: Candidate,
   codec: Option<ICodecAPI>,
   device: ID3D11Device,
@@ -104,23 +132,23 @@ pub(super) struct Encoder {
   /// Frames handed over and not yet back, with the texture slot each read.
   pending: VecDeque<(i64, usize)>,
   provides_samples: bool,
-  size: Size,
+  settings: Settings,
   streams: Streams,
   transform: IMFTransform,
 }
 
 impl Encoder {
-  /// The first encoder on `device`'s adapter that accepts the settings,
+  /// The first encoder on `device`'s adapter that accepts `settings`,
   /// hardware before software.
-  pub(super) fn new(device: &ID3D11Device, size: Size) -> Result<Self, String> {
+  pub fn new(device: &ID3D11Device, settings: Settings) -> Result<Self, String> {
     let mut failures = Vec::new();
-    for candidate in setup::candidates(device) {
+    for candidate in setup::candidates(device, settings.purpose) {
       let name = setup::name(&candidate);
-      match Self::start(device, candidate, size, name.clone()) {
+      match Self::start(device, candidate, settings, name.clone()) {
         Ok(encoder) => {
           eprintln!(
-            "Replay buffer encoding {}x{} at {} fps with {name}",
-            size.width, size.height, size.fps
+            "{} encoding {}x{} at {} fps with {name}",
+            settings.purpose, settings.width, settings.height, settings.fps
           );
           return Ok(encoder);
         }
@@ -128,7 +156,8 @@ impl Encoder {
       }
     }
     Err(format!(
-      "No H.264 encoder could keep the replay buffer ({})",
+      "No H.264 encoder could take the {} ({})",
+      settings.purpose.to_lowercase(),
       failures.join("; ")
     ))
   }
@@ -136,7 +165,7 @@ impl Encoder {
   fn start(
     device: &ID3D11Device,
     candidate: Candidate,
-    size: Size,
+    settings: Settings,
     name: String,
   ) -> Result<Self, String> {
     let transform = setup::transform(&candidate)?;
@@ -155,15 +184,15 @@ impl Encoder {
     } else {
       Input::Cpu {
         context: win(unsafe { device.GetImmediateContext() })?,
-        staging: input::staging_texture(device, size)?,
+        staging: input::staging_texture(device, settings)?,
       }
     };
     let codec = transform.cast::<ICodecAPI>().ok();
     if let Some(codec) = &codec {
-      setup::configure_codec(codec, size.fps);
+      setup::configure_codec(codec, &settings);
     }
     let streams = setup::streams(&transform);
-    setup::set_types(&transform, streams, size)?;
+    setup::set_types(&transform, streams, &settings)?;
     let info = win(unsafe { transform.GetOutputStreamInfo(streams.output) })?;
     let provides_samples = info.dwFlags
       & (MFT_OUTPUT_STREAM_PROVIDES_SAMPLES.0 | MFT_OUTPUT_STREAM_CAN_PROVIDE_SAMPLES.0) as u32
@@ -186,31 +215,31 @@ impl Encoder {
       input,
       name,
       need_input: 0,
-      output_size: info.cbSize.max(size.width * size.height),
+      output_size: info.cbSize.max(settings.width * settings.height),
       parameter_sets,
       pending: VecDeque::new(),
       provides_samples,
-      size,
+      settings,
       streams,
       transform,
     })
   }
 
-  pub(super) fn input_bind_flags(&self) -> u32 {
+  pub fn input_bind_flags(&self) -> u32 {
     self.input_bind_flags
   }
 
   /// Whether the frame in texture `slot` is still being read by the encoder.
-  pub(super) fn holds(&self, slot: usize) -> bool {
+  pub fn holds(&self, slot: usize) -> bool {
     self.pending.iter().any(|&(_, held)| held == slot)
   }
 
-  pub(super) fn ignores_forced_keyframes(&self) -> bool {
+  pub fn ignores_forced_keyframes(&self) -> bool {
     self.forced == ForcedKeyframes::Ignored
   }
 
   /// Whether the encoder still holds frames it has not handed back.
-  pub(super) fn is_busy(&self) -> bool {
+  pub fn is_busy(&self) -> bool {
     !self.pending.is_empty()
   }
 

@@ -225,7 +225,9 @@ fn reorder(window: &WebviewWindow, band: ::windows::Win32::Foundation::HWND) -> 
 
 #[cfg(target_os = "windows")]
 pub fn hide(window: &WebviewWindow) -> tauri::Result<()> {
-  window.hide()
+  window.hide()?;
+  crate::app_windows::on_demand::note_hidden(window);
+  Ok(())
 }
 
 #[cfg(target_os = "windows")]

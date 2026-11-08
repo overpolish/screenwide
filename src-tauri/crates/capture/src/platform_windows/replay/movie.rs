@@ -14,7 +14,8 @@ use windows::core::PCWSTR;
 use windows::Win32::Media::MediaFoundation::*;
 
 use super::super::writer::{attributes, win, NANOS_PER_100NS};
-use super::{annexb, VideoTake};
+use super::VideoTake;
+use screenwide_h264::annexb;
 
 /// Writes `video`'s frames to `path`, timed from `start_ns`, the clip's
 /// first instant, through `end_ns`, its last.

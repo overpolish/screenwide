@@ -1,42 +1,47 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! Captured BGRA frames into the NV12 pictures the encoder takes, on the GPU.
-//!
-//! The Sink Writer a recording uses converts colour itself; the encoder
-//! transform the replay buffer drives does not. The conversion also takes the
-//! frame out of the capture's own surface, which Windows Graphics Capture
-//! recycles, into a texture the replay buffer owns for as long as the
-//! encoder or a quiet-screen refresh needs it.
+//! BGRA frames into the NV12 pictures the encoder takes, on the GPU. The
+//! conversion also takes the frame out of its source, which may be recycled
+//! or redrawn, such as a capture's own surface, into a texture kept for as
+//! long as the encoder or a quiet-screen refresh needs it.
 
 use windows::core::Interface;
 use windows::Win32::Foundation::RECT;
 use windows::Win32::Graphics::Direct3D11::*;
 use windows::Win32::Graphics::Dxgi::Common::{DXGI_FORMAT_NV12, DXGI_RATIONAL, DXGI_SAMPLE_DESC};
 
-use super::super::writer::win;
-use crate::capture_geometry::CaptureRect;
+use crate::mf::win;
 
 /// Enough textures for an encoder that holds a few frames in flight, the
 /// last frame kept for a refresh, and the next one being converted.
-pub(super) const SLOTS: usize = 6;
+pub const SLOTS: usize = 6;
 
-/// Studio-range BT.601, the colour the recording writer's Sink Writer
-/// converts to, so a clip's pixels match a recording's exactly. The first
+/// Studio-range BT.601, the colour Media Foundation's own conversion gave
+/// recordings and exports, so files match those made before. The first
 /// field of `D3D11_VIDEO_PROCESSOR_COLOR_SPACE` leaves the matrix bit (2) at
 /// BT.601, and the nominal range sits at bits 4 and 5.
 const OUTPUT_COLOR_SPACE: u32 = (D3D11_VIDEO_PROCESSOR_NOMINAL_RANGE_16_235.0 as u32) << 4;
-/// Full-range RGB, as captured.
+/// Full-range RGB, as captured and drawn.
 const INPUT_COLOR_SPACE: u32 = 0;
+
+/// The part of the source a picture is taken from, in pixels.
+#[derive(Clone, Copy)]
+pub struct Crop {
+  pub x: u32,
+  pub y: u32,
+  pub width: u32,
+  pub height: u32,
+}
 
 struct Slot {
   texture: ID3D11Texture2D,
   view: ID3D11VideoProcessorOutputView,
 }
 
-pub(super) struct Converter {
+pub struct Converter {
   context: ID3D11VideoContext,
-  crop: Option<CaptureRect>,
+  crop: Option<Crop>,
   device: ID3D11VideoDevice,
   enumerator: ID3D11VideoProcessorEnumerator,
   processor: ID3D11VideoProcessor,
@@ -44,12 +49,12 @@ pub(super) struct Converter {
 }
 
 impl Converter {
-  pub(super) fn new(
+  pub fn new(
     device: &ID3D11Device,
     width: u32,
     height: u32,
     fps: u32,
-    crop: Option<CaptureRect>,
+    crop: Option<Crop>,
     bind_flags: u32,
   ) -> Result<Self, String> {
     let video = win(device.cast::<ID3D11VideoDevice>())?;
@@ -113,13 +118,13 @@ impl Converter {
     })
   }
 
-  pub(super) fn texture(&self, slot: usize) -> &ID3D11Texture2D {
+  pub fn texture(&self, slot: usize) -> &ID3D11Texture2D {
     &self.slots[slot].texture
   }
 
   /// Converts `source` into texture `slot`, cropped and scaled to the
   /// encoder's picture.
-  pub(super) fn convert(&self, source: &ID3D11Texture2D, slot: usize) -> Result<(), String> {
+  pub fn convert(&self, source: &ID3D11Texture2D, slot: usize) -> Result<(), String> {
     let mut source_description = D3D11_TEXTURE2D_DESC::default();
     unsafe { source.GetDesc(&mut source_description) };
     let area = match self.crop {

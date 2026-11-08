@@ -9,7 +9,7 @@ use super::*;
 impl Encoder {
   /// Hands one NV12 frame to the encoder. Whatever the encoder has finished
   /// by then is appended to `encoded`.
-  pub(in super::super) fn encode(
+  pub fn encode(
     &mut self,
     texture: &ID3D11Texture2D,
     slot: usize,
@@ -64,13 +64,19 @@ impl Encoder {
   }
 
   /// Waits until every frame handed over has come back out.
-  pub(in super::super) fn flush(&mut self, encoded: &mut Vec<EncodedFrame>) -> Result<(), String> {
+  pub fn flush(&mut self, encoded: &mut Vec<EncodedFrame>) -> Result<(), String> {
     let deadline = Instant::now() + SETTLE_TIMEOUT;
     if self.settle(encoded, deadline, |encoder| encoder.pending.is_empty())? {
       return Ok(());
     }
     // An encoder that holds frames back for its own look-ahead gives them up
     // when drained, and carries on after.
+    self.drain(encoded)
+  }
+
+  /// Takes every frame the encoder still holds, its look-ahead included, at
+  /// the end of a file.
+  pub fn finish(&mut self, encoded: &mut Vec<EncodedFrame>) -> Result<(), String> {
     self.drain(encoded)
   }
 
@@ -96,7 +102,7 @@ impl Encoder {
     self.drain(encoded)?;
     self.shut_down();
     let candidate = std::mem::replace(&mut self.candidate, Candidate::Software);
-    let mut fresh = Self::start(&self.device, candidate, self.size, self.name.clone())?;
+    let mut fresh = Self::start(&self.device, candidate, self.settings, self.name.clone())?;
     fresh.forced = self.forced;
     fresh.parameter_sets = self.parameter_sets.take().or(fresh.parameter_sets.take());
     *self = fresh;
@@ -140,7 +146,7 @@ impl Encoder {
         win(unsafe { buffer.SetCurrentLength(length) })?;
         buffer
       }
-      Input::Cpu { context, staging } => read_back(context, staging, texture, self.size)?,
+      Input::Cpu { context, staging } => read_back(context, staging, texture, self.settings)?,
     };
     let sample = win(unsafe { MFCreateSample() })?;
     win(unsafe { sample.AddBuffer(&buffer) })?;

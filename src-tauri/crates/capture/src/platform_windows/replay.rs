@@ -16,9 +16,6 @@
 //! thread so capture never waits on a save. A clip's video is written to an
 //! MP4 as it was encoded, and its audio is added the way a recording's is.
 
-mod annexb;
-mod convert;
-mod encoder;
 mod movie;
 mod session;
 mod writer;

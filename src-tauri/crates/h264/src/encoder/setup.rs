@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! Finding an H.264 encoder and setting it up the way recordings are encoded.
+//! Finding an H.264 encoder and setting it up the way it is asked to encode.
 
 use super::*;
 
@@ -14,9 +14,9 @@ pub(super) enum Candidate {
 
 /// The hardware encoders on the adapter `device` lives on, best first, then
 /// the software encoder.
-pub(super) fn candidates(device: &ID3D11Device) -> Vec<Candidate> {
+pub(super) fn candidates(device: &ID3D11Device, purpose: &str) -> Vec<Candidate> {
   let mut found = hardware(device).unwrap_or_else(|error| {
-    eprintln!("Replay buffer found no hardware H.264 encoder: {error}");
+    eprintln!("{purpose} found no hardware H.264 encoder: {error}");
     Vec::new()
   });
   found.push(Candidate::Software);
@@ -126,28 +126,44 @@ fn set_codec_value(codec: &ICodecAPI, api: &GUID, value: u32) -> Result<(), Stri
   win(unsafe { codec.SetValue(api, &variant) })
 }
 
-/// The recording writer's encoder settings, with the two a replay needs on
-/// top: frames come out in the order they go in, and promptly.
+/// The keyframe interval and the rate control `settings` ask for, no
+/// B-frames, so frames come out in the order they go in, and low latency
+/// where asked.
 ///
 /// Set before the media types, because some encoders only honour codec
-/// values given that early.
-pub(super) fn configure_codec(codec: &ICodecAPI, fps: u32) {
-  for (api, value, what) in [
+/// values given that early: the Microsoft AVC DX12 encoder ignores those
+/// set later.
+pub(super) fn configure_codec(codec: &ICodecAPI, settings: &Settings) {
+  let mut values = vec![
     (
       CODECAPI_AVEncMPVGOPSize,
-      (fps / 2).max(1),
+      settings.keyframe_interval.max(1),
       "keyframe interval",
     ),
     (CODECAPI_AVEncMPVDefaultBPictureCount, 0, "B-frame count"),
-    (CODECAPI_AVLowLatencyMode, 1, "low-latency mode"),
-  ] {
+  ];
+  if settings.low_latency {
+    values.push((CODECAPI_AVLowLatencyMode, 1, "low-latency mode"));
+  }
+  if settings.rate_control == RateControl::Constant {
+    values.push((
+      CODECAPI_AVEncCommonRateControlMode,
+      eAVEncCommonRateControlMode_CBR.0 as u32,
+      "constant bitrate",
+    ));
+    values.push((CODECAPI_AVEncCommonMeanBitRate, settings.bitrate, "bitrate"));
+  }
+  for (api, value, what) in values {
     // An encoder that does not offer a setting has nothing to take; low
     // latency already rules out B-frames on encoders without the count.
     if unsafe { codec.IsSupported(&api) }.is_err() {
       continue;
     }
     if let Err(error) = set_codec_value(codec, &api, value) {
-      eprintln!("Replay buffer encoder did not take its {what}: {error}");
+      eprintln!(
+        "{} encoder did not take its {what}: {error}",
+        settings.purpose
+      );
     }
   }
 }
@@ -158,9 +174,11 @@ pub(super) fn force_keyframe(codec: &ICodecAPI) -> Result<(), String> {
 
 /// Picture size and rate, shared by the input and output types. Colour is
 /// left untagged, as recordings leave it.
-fn picture_type(subtype: GUID, size: Size) -> Result<IMFMediaType, String> {
+fn picture_type(subtype: GUID, settings: &Settings) -> Result<IMFMediaType, String> {
   let media_type = win(unsafe { MFCreateMediaType() })?;
-  let Size { width, height, fps } = size;
+  let Settings {
+    width, height, fps, ..
+  } = *settings;
   win(unsafe { media_type.SetGUID(&MF_MT_MAJOR_TYPE, &MFMediaType_Video) })?;
   win(unsafe { media_type.SetGUID(&MF_MT_SUBTYPE, &subtype) })?;
   win(unsafe {
@@ -181,20 +199,19 @@ fn picture_type(subtype: GUID, size: Size) -> Result<IMFMediaType, String> {
 pub(super) fn set_types(
   transform: &IMFTransform,
   streams: Streams,
-  size: Size,
+  settings: &Settings,
 ) -> Result<(), String> {
-  let output = picture_type(MFVideoFormat_H264, size)?;
-  let bitrate = bitrate_bps(size.width, size.height, size.fps);
+  let output = picture_type(MFVideoFormat_H264, settings)?;
+  win(unsafe { output.SetUINT32(&MF_MT_AVG_BITRATE, settings.bitrate) })?;
+  win(unsafe { output.SetUINT32(&MF_MT_MPEG2_PROFILE, eAVEncH264VProfile_High.0 as u32) })?;
   win(unsafe {
     output.SetUINT32(
-      &MF_MT_AVG_BITRATE,
-      u32::try_from(bitrate).unwrap_or(u32::MAX),
+      &MF_MT_MAX_KEYFRAME_SPACING,
+      settings.keyframe_interval.max(1),
     )
   })?;
-  win(unsafe { output.SetUINT32(&MF_MT_MPEG2_PROFILE, eAVEncH264VProfile_High.0 as u32) })?;
-  win(unsafe { output.SetUINT32(&MF_MT_MAX_KEYFRAME_SPACING, (size.fps / 2).max(1)) })?;
   win(unsafe { transform.SetOutputType(streams.output, &output, 0) })?;
-  let input = picture_type(MFVideoFormat_NV12, size)?;
+  let input = picture_type(MFVideoFormat_NV12, settings)?;
   win(unsafe { transform.SetInputType(streams.input, &input, 0) })
 }
 

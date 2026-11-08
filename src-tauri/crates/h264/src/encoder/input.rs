@@ -7,7 +7,7 @@ use super::*;
 
 pub(super) fn staging_texture(
   device: &ID3D11Device,
-  size: Size,
+  size: Settings,
 ) -> Result<ID3D11Texture2D, String> {
   let description = D3D11_TEXTURE2D_DESC {
     Width: size.width,
@@ -35,7 +35,7 @@ pub(super) fn read_back(
   context: &ID3D11DeviceContext,
   staging: &ID3D11Texture2D,
   texture: &ID3D11Texture2D,
-  size: Size,
+  size: Settings,
 ) -> Result<IMFMediaBuffer, String> {
   let source = win(texture.cast::<ID3D11Resource>())?;
   let target = win(staging.cast::<ID3D11Resource>())?;

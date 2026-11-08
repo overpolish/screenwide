@@ -107,7 +107,7 @@ pub(super) fn render_video(
   let fps = frame_clock::frame_rate(
     media_preview::recording_info(request.screen).and_then(|info| info.frames_per_second),
   );
-  let sink = VideoSink::new(
+  let mut sink = video_file(
     path,
     device,
     (output_size, fps),
