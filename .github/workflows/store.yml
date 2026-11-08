@@ -78,7 +78,9 @@ jobs:
       - name: Set What's new from the release notes
         shell: pwsh
         run: |
-          $notes = gh release view $env:TAG --repo $env:GITHUB_REPOSITORY --json body --jq .body
+          # PowerShell captures each line of a command's output as an array
+          # element; the Store wants the notes as one string.
+          $notes = (gh release view $env:TAG --repo $env:GITHUB_REPOSITORY --json body --jq .body) -join "`n"
           # The Store takes plain text of at most 1500 characters.
           if ($notes.Length -gt 1500) { $notes = $notes.Substring(0, 1500) }
           $submission = msstore submission get $env:PRODUCT_ID | ConvertFrom-Json
