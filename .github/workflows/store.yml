@@ -1,9 +1,11 @@
 # SPDX-FileCopyrightText: 2026 overpolish
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-# Hands a published release to the Microsoft Store as a draft submission: both
-# architectures' packages in one bundle, with the release notes as What's new.
-# The draft waits in Partner Center to be checked and submitted by hand.
+# Hands a published release to the Microsoft Store: both architectures'
+# packages in one bundle, replacing the last release's, with the release notes
+# as What's new. Partner Center shows a submission's API changes only once it
+# is committed, and committing starts certification; the submission is kept on
+# manual publishing, so it waits after certification for Publish now.
 name: Microsoft Store
 
 on:
@@ -23,8 +25,8 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  draft:
-    name: Draft Store submission
+  submit:
+    name: Submit to the Store
     # The Store takes plain versions only, so a prerelease has no package.
     if: github.event_name == 'workflow_dispatch' || !github.event.release.prerelease
     runs-on: windows-latest
@@ -70,12 +72,13 @@ jobs:
             --clientSecret "${{ secrets.MSSTORE_CLIENT_SECRET }}"
 
       # `publish` recreates the draft from the last published submission, so it
-      # runs before What's new is set.
-      - name: Upload the bundle to a draft submission
+      # runs before the submission is changed, and leaves it uncommitted so the
+      # changes go in with the package.
+      - name: Upload the bundle to a new submission
         shell: pwsh
         run: msstore publish $env:UPLOAD -id $env:PRODUCT_ID --noCommit
 
-      - name: Set What's new from the release notes
+      - name: Set What's new and replace the last release's packages
         shell: pwsh
         run: |
           # PowerShell captures each line of a command's output as an array
@@ -84,8 +87,23 @@ jobs:
           # The Store takes plain text of at most 1500 characters.
           if ($notes.Length -gt 1500) { $notes = $notes.Substring(0, 1500) }
           $submission = msstore submission get $env:PRODUCT_ID | ConvertFrom-Json
+          if ($LASTEXITCODE -ne 0) { throw "Could not read the submission" }
           foreach ($language in $submission.Listings.PSObject.Properties) {
             $language.Value.BaseListing.ReleaseNotes = $notes
           }
+          # msstore removes only packages of the uploaded file's own extension,
+          # so the last release's .msix packages would otherwise ship beside it.
+          foreach ($package in $submission.ApplicationPackages) {
+            if ($package.FileStatus -eq 'Uploaded') { $package.FileStatus = 'PendingDelete' }
+          }
+          # Certification is followed by a wait for Publish now, not a release.
+          $submission.TargetPublishMode = 'Manual'
           msstore submission update $env:PRODUCT_ID ($submission | ConvertTo-Json -Depth 100 -Compress)
-          "The draft for $env:TAG is in Partner Center, waiting to be submitted." >> $env:GITHUB_STEP_SUMMARY
+          if ($LASTEXITCODE -ne 0) { throw "Could not update the submission" }
+
+      - name: Commit the submission for certification
+        shell: pwsh
+        run: |
+          msstore submission publish $env:PRODUCT_ID
+          if ($LASTEXITCODE -ne 0) { throw "Could not commit the submission" }
+          "$env:TAG is in certification. Once it passes, Partner Center waits for Publish now." >> $env:GITHUB_STEP_SUMMARY
