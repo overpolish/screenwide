@@ -49,19 +49,7 @@ pub(super) fn pointer_move(
             .and_then(Option::as_ref)
             .map(|pane| pane_canvas_rect(pane, owns_geometry));
           if let Some(pane) = pane {
-            // A turned layer's grips are dragged across the layer as its turn
-            // stood at the press, so the press and `point` are carried back
-            // for them; a move travels the canvas, as the picture does.
-            let (pointer_start, point) = if gesture.operation == SelectionGestureOperation::Resize
-              && gesture.selection_start.framed != crate::editing::FRAMED_FIXED
-            {
-              (
-                turn::unturned_point(&state, gesture.selection_start, gesture.pointer_start),
-                turn::unturned_point(&state, gesture.selection_start, point),
-              )
-            } else {
-              (gesture.pointer_start, point)
-            };
+            let pointer_start = gesture.pointer_start;
             let dx =
               (point.0 - pointer_start.0) / (pane.width * state.workspace_transform.zoom).max(1.0);
             let dy =
@@ -114,6 +102,39 @@ pub(super) fn pointer_move(
               );
             } else if gesture.operation == SelectionGestureOperation::CropResize {
               super::crop_resize::apply(&mut state, &mut gesture, &mut selection, pane, (dx, dy));
+            } else if let Some(turned) = gesture.start_turn {
+              // A turned layer is resized where it is drawn. The canvas's
+              // guides do not lie along its sides as drawn, so it does not
+              // snap to them.
+              clear_selection_snap_guides(&mut state);
+              let start = gesture.selection_start;
+              let limits = recenter::selection_resize(
+                start,
+                gesture.edges,
+                (0.0, 0.0),
+                (pane.width, pane.height),
+                state.workspace_transform.zoom,
+                centered,
+              );
+              match turn::turned_resize(
+                turned,
+                gesture.edges,
+                centered,
+                point,
+                (limits.minimum_scale, limits.maximum_scale),
+              ) {
+                Some((factor, (x, y))) => {
+                  selection.x = x;
+                  selection.y = y;
+                  selection.width = start.width * factor;
+                  selection.height = start.height * factor;
+                  gesture.last_delta = (x - start.x, y - start.y);
+                  gesture.last_scale = factor;
+                }
+                // No scale keeps the layer in front of the eye: it stays as
+                // the last sample left it.
+                None => selection = state.selection.unwrap_or(start),
+              }
             } else {
               let edges = gesture.edges;
               let start = gesture.selection_start;
@@ -196,7 +217,11 @@ pub(super) fn pointer_move(
               gesture.last_delta = (selection.x - start.x, selection.y - start.y);
               gesture.last_scale = factor;
             }
-            state.selection = Some(selection);
+            // Once a frame has placed the pane, as a scene does, the chrome
+            // keeps that frame's box until the next frame replaces it.
+            if !gesture.follows_frame {
+              state.selection = Some(selection);
+            }
             state.gesture = Some(ActiveGesture::Selection(gesture));
             update_magnifier(&mut state);
             draw_workspace(inner, &mut state);

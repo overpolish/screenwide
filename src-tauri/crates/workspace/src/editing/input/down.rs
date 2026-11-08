@@ -70,6 +70,13 @@ pub(super) fn down(inner: &std::sync::Arc<SurfaceInner>, scale: f64, x: f64, y: 
         pane_start: selection_pane_rect(&state, selection),
         pointer_start: point,
         selection_start: selection,
+        // A scene's fixed window is resized by `framed`, on the canvas.
+        start_turn: (selection.layer_id != FRAME_LAYER_ID
+          && selection.crop_mode == 0
+          && selection.framed != crate::editing::FRAMED_FIXED)
+          .then(|| super::turn::turned_start(&state, selection))
+          .flatten(),
+        follows_frame: false,
       };
       if gesture.operation == SelectionGestureOperation::FrameResize {
         // Remember the transform that belongs to the canvas size being
@@ -137,6 +144,8 @@ pub(super) fn down(inner: &std::sync::Arc<SurfaceInner>, scale: f64, x: f64, y: 
         pane_start: selection_pane_rect(&state, selection),
         pointer_start: point,
         selection_start: selection,
+        start_turn: None,
+        follows_frame: false,
       };
       // A pane a scene places never grows the canvas: the scene owns where it
       // sits on a canvas of a fixed size.

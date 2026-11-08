@@ -97,6 +97,37 @@ impl WorkspaceEditor {
     }
   }
 
+  /// The selection as the frame just drawn has it. A pane a scene places
+  /// lands where the scene put it, which can stop short of the drag: the
+  /// scene keeps its box's middle on the canvas and its size between its
+  /// smallest and largest. During a move or resize of such a pane the chrome
+  /// takes that box from then on, so it stays on the picture rather than
+  /// running past it; each sample is still measured from the press. Otherwise
+  /// this is [`Self::set_selection`].
+  pub fn set_drawn_selection(&self, selection: Option<PreviewSelection>) {
+    if let Ok(mut state) = self.inner.state.lock() {
+      if let (Some(drawn), Some(ActiveGesture::Selection(mut gesture))) = (selection, state.gesture)
+      {
+        let start = gesture.selection_start;
+        if matches!(
+          gesture.operation,
+          SelectionGestureOperation::Move | SelectionGestureOperation::Resize
+        ) && start.framed != 0
+          && drawn.framed != 0
+          && drawn.pane_index == start.pane_index
+          && drawn.layer_id == start.layer_id
+        {
+          gesture.follows_frame = true;
+          state.gesture = Some(ActiveGesture::Selection(gesture));
+          state.selection = selection;
+          draw_selection(&self.inner, &state);
+          return;
+        }
+      }
+    }
+    self.set_selection(selection);
+  }
+
   /// The layers a press can land on. `hit_testing` lets a press pick and move
   /// them, as the select tool's do; without it they only say which picture a
   /// fresh annotation is drawn on. With no layers there is nothing to pick.

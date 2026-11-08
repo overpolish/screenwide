@@ -40,7 +40,7 @@ impl PreviewPlayerManager {
     if let Some(selection) =
       sources.selection_for_frame(&composition, placed, (self.position_ms, 0.0))
     {
-      surface.set_selection(Some(selection));
+      surface.set_drawn_selection(Some(selection));
     }
     let baked = composition.bake_camera && sources.camera_path.is_some();
     let mut panes = vec![(0, &composition.recording_output.primary)];

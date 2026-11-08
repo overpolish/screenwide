@@ -193,7 +193,7 @@ pub(in crate::editor::recording_preview_player) fn present<F: PaneFrame>(
   }
   let _batch = selection.map(|selection| {
     let batch = surface.present_batch();
-    surface.set_selection(Some(selection));
+    surface.set_drawn_selection(Some(selection));
     batch
   });
   surface

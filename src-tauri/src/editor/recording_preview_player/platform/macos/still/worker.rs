@@ -213,7 +213,7 @@ pub(super) fn show(
     if let Some(selection) = arranged.as_ref().and_then(|(composition, placed)| {
       sources.selection_for_frame(composition, *placed, (screen_position_ms, 0.0))
     }) {
-      surface.set_selection(Some(selection));
+      surface.set_drawn_selection(Some(selection));
     }
     surface
       .present_recording_workspace(&layers)

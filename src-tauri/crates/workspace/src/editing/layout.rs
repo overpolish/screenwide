@@ -35,7 +35,7 @@ impl WorkspaceEditor {
     if let Ok(mut state) = self.inner.state.lock() {
       state.workspace.laying_out = true;
       for pane in state.panes.iter_mut().flatten() {
-        pane.seen = false;
+        pane.laid = false;
       }
     }
   }
@@ -72,6 +72,7 @@ impl WorkspaceEditor {
       return;
     };
     pane.seen = true;
+    pane.laid = true;
     if !owns_geometry {
       pane.base_rect = rect;
     }
@@ -165,8 +166,8 @@ impl WorkspaceEditor {
   }
 
   /// Where the panes are on screen, in the viewport's points, for a layout
-  /// that is to leave them there. Asked before `begin_layout`, which forgets
-  /// which panes are shown.
+  /// that is to leave them there. Asked before the layout lays them out
+  /// afresh.
   pub fn displayed_workspace(&self) -> Option<PreviewSurfaceRect> {
     let state = self.inner.state.lock().ok()?;
     let transform = state.workspace_transform;
@@ -201,6 +202,14 @@ impl WorkspaceEditor {
 
   pub fn finish_layout(&self) {
     if let Ok(mut state) = self.inner.state.lock() {
+      // What this layout left out is hidden only now: the panes it is
+      // still placing stay shown to every pointer sample meanwhile.
+      if state.workspace.laying_out {
+        for pane in state.panes.iter_mut().flatten() {
+          pane.seen &= pane.laid;
+          pane.laid = false;
+        }
+      }
       state.workspace.laying_out = false;
       draw_selection(&self.inner, &state);
       draw_workspace(&self.inner, &mut state);

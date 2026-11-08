@@ -25,6 +25,10 @@ pub(super) use chrome::{
   carried_point, carried_rect, carried_segment, chrome, TurnChrome, RING_KIND,
 };
 
+/// A turned layer resized by one of its grips, worked out where it is drawn.
+mod resize;
+pub(super) use resize::{turned_resize, turned_start, TurnedStart};
+
 /// A ring held: the drag, the selection as the press found it, where the
 /// press landed, and the resize edges whose cursor runs the way it turns
 /// there.
@@ -144,6 +148,24 @@ pub(super) fn layer_point(inner: &SurfaceInner, point: (f64, f64)) -> (f64, f64)
     .state
     .lock()
     .map_or(point, |state| selected_layer_point(&state, point))
+}
+
+/// `point` as it lands on the selected layer standing upright, read under the
+/// surface's lock, for a drag: `None` where it lies past the layer's
+/// horizon. Nothing of the layer is drawn there, and the reading
+/// [`layer_point`] gives, far off every layer, would carry what the drag
+/// holds off with it.
+pub(super) fn layer_reading(inner: &SurfaceInner, point: (f64, f64)) -> Option<(f64, f64)> {
+  let Ok(state) = inner.state.lock() else {
+    return Some(point);
+  };
+  match state
+    .selection
+    .and_then(|selection| homographies(&state, selection))
+  {
+    Some((_, inverse)) => apply(inverse, point),
+    None => Some(point),
+  }
 }
 
 /// Whether the gizmo's rings are shown: the select tool's chrome over a

@@ -19,6 +19,10 @@ pub struct SurfaceState {
   pub frame_resize_committed: bool,
   pub gesture: Option<ActiveGesture>,
   pub last_pointer: (f64, f64),
+  /// The last pointer sample of a press, read on the selected layer, that
+  /// landed on it rather than past its horizon: where a release past the
+  /// horizon ends what the press holds.
+  pub drag_reading: (f64, f64),
   /// The modifiers held as of the pointer event being handled.
   pub modifiers: Modifiers,
   /// The shortcut modifier (Command, Ctrl on Windows) was held as Select came
@@ -73,6 +77,7 @@ impl Default for SurfaceState {
       object_picking: Default::default(),
       gesture: None,
       last_pointer: (0.0, 0.0),
+      drag_reading: (0.0, 0.0),
       modifiers: Modifiers::default(),
       shortcut_spent: false,
       select_held: false,
@@ -110,6 +115,13 @@ pub struct EditorGesture {
   pub pane_start: PreviewSurfaceRect,
   pub pointer_start: (f64, f64),
   pub selection_start: PreviewSelection,
+  /// A turned layer's resize, measured against the layer as the press found
+  /// it drawn; `None` for any other gesture, and for a layer drawn upright.
+  pub start_turn: Option<super::turn::TurnedStart>,
+  /// The frame drawn for this drag has placed the pane itself, as a scene
+  /// does: the chrome keeps the box that frame drew, which a later frame
+  /// replaces, rather than the box each sample asks for.
+  pub follows_frame: bool,
 }
 
 /// Everything a Frame resize needs to stay reversible and drift-free: the

@@ -53,25 +53,49 @@ pub(super) fn handle_editor_input(inner: &Arc<SurfaceInner>, input: PointerInput
       pressed,
       snapping,
     } => {
+      // A layout under way has the viewport and the panes half moved. Every
+      // drag is measured from its press, so skipping the sample loses
+      // nothing: the next one, once the layout lands, reads it all afresh.
+      if pressed
+        && inner
+          .state
+          .lock()
+          .is_ok_and(|state| state.workspace.laying_out)
+      {
+        return;
+      }
       if pressed && turn::pointer_move(inner, logical(x, y)) {
         return;
       }
+      // A sample past a turned layer's horizon reads nowhere on it, so what
+      // the press holds stays where the last sample on it put it.
+      let reading = if pressed {
+        turn::layer_reading(inner, logical(x, y))
+      } else {
+        Some(turn::layer_point(inner, logical(x, y)))
+      };
+      if let (true, Some(layer)) = (pressed, reading) {
+        if let Ok(mut state) = inner.state.lock() {
+          state.drag_reading = layer;
+        }
+      }
       if pressed
         && (object_picking::pointer_move(inner, logical(x, y))
-          || annotation::typing_move(inner, turn::layer_point(inner, logical(x, y))))
+          || reading.is_some_and(|layer| annotation::typing_move(inner, layer)))
       {
         return;
       }
       if !pressed {
         turn::hover(inner, logical(x, y));
       }
-      let layer = turn::layer_point(inner, logical(x, y));
-      annotation::update_hover(inner, layer, pressed);
-      if pressed && annotation::pointer_move(inner, layer) {
-        if let Ok(mut state) = inner.state.lock() {
-          state.last_pointer = logical(x, y);
+      if let Some(layer) = reading {
+        annotation::update_hover(inner, layer, pressed);
+        if pressed && annotation::pointer_move(inner, layer) {
+          if let Ok(mut state) = inner.state.lock() {
+            state.last_pointer = logical(x, y);
+          }
+          return;
         }
-        return;
       }
       let snapping = snapping && !spent;
       pointer_move::pointer_move(inner, scale, centered, x, y, pressed, snapping);
@@ -171,6 +195,9 @@ fn press(inner: &Arc<SurfaceInner>, scale: f64, centered: bool, x: f64, y: f64) 
   }
   // A turned layer's annotations are pressed where its turn draws them.
   let layer = turn::layer_point(inner, point);
+  if let Ok(mut state) = inner.state.lock() {
+    state.drag_reading = layer;
+  }
   // A press is never a hover: the halo goes out before anything moves.
   annotation::update_hover(inner, layer, true);
   // The arrow chrome gets the press first and keeps it if it lands on a
@@ -197,7 +224,10 @@ fn release(inner: &Arc<SurfaceInner>, scale: f64, x: f64, y: f64) {
     refresh_cursor_for(inner);
     return;
   }
-  let layer = turn::layer_point(inner, point);
+  // Let go past a turned layer's horizon, what the press holds ends where
+  // the last sample on the layer put it.
+  let layer = turn::layer_reading(inner, point)
+    .unwrap_or_else(|| inner.state.lock().map_or(point, |state| state.drag_reading));
   if annotation::typing_up(inner) || annotation::up(inner, layer) {
     if let Ok(mut state) = inner.state.lock() {
       state.last_pointer = point;

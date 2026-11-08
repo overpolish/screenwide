@@ -20,6 +20,8 @@ fn report(state: &SurfaceState, held: &TurnDrag, selection: PreviewSelection) ->
     pane_start: selection_pane_rect(state, held.start),
     pointer_start: held.origin,
     selection_start: held.start,
+    start_turn: None,
+    follows_frame: false,
   }
 }
 

@@ -36,7 +36,12 @@ pub struct Pane {
   /// The window's device-pixel scale as of the pane's last layout, so a blur
   /// expressed in CSS pixels can be converted without the surface state.
   pub scale: f64,
+  /// Shown by the last finished layout. A layout only hides what it left
+  /// out once it finishes, so a drag sampled part way through still finds
+  /// every pane it was working on.
   pub seen: bool,
+  /// Laid out by the layout under way.
+  pub laid: bool,
   /// The screenshot item the pane holds, by its token.
   pub source_token: Option<u64>,
 }
@@ -60,6 +65,7 @@ impl Default for Pane {
       selection_stale: false,
       scale: 1.0,
       seen: true,
+      laid: false,
       source_token: None,
     }
   }
