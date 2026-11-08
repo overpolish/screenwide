@@ -101,7 +101,14 @@ fn set_up(app: &AppHandle, label: WindowLabel, window: &WebviewWindow) -> tauri:
     }
     _ => {
       #[cfg(not(target_os = "macos"))]
-      super::super::platform::initialize_standalone_listbox(window)?;
+      if matches!(
+        label,
+        WindowLabel::ToolPanelRecording | WindowLabel::ToolPanelScreenshot
+      ) {
+        super::super::platform::initialize_tool_panel(window)?;
+      } else {
+        super::super::platform::initialize_standalone_listbox(window)?;
+      }
       // Converted to a panel when first shown, and shown with its webview.
       #[cfg(target_os = "macos")]
       super::super::hide(window)?;

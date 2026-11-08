@@ -88,6 +88,7 @@ pub fn add_turned_selection(out: &mut Vec<Vertex>, view: Size, corners: [Point; 
   // A side's pill lies along it, the length and thickness of an upright one.
   let length = 12.0 + 4.0 / scale;
   let thickness = 6.0 + 4.0 / scale;
+  let middles = side_middles(corners);
   for side in 0..4 {
     let (from, to) = (corners[side], corners[(side + 1) % 4]);
     add_circle(
@@ -103,10 +104,7 @@ pub fn add_turned_selection(out: &mut Vec<Vertex>, view: Size, corners: [Point; 
       continue;
     }
     let reach = (length - thickness) * 0.5 / span;
-    let middle = Point {
-      x: (from.x + to.x) * 0.5,
-      y: (from.y + to.y) * 0.5,
-    };
+    let middle = middles[side];
     let along = Point {
       x: (to.x - from.x) * reach,
       y: (to.y - from.y) * reach,
@@ -127,3 +125,53 @@ pub fn add_turned_selection(out: &mut Vec<Vertex>, view: Size, corners: [Point; 
     );
   }
 }
+
+/// Where the middle of each side lands, side `n` running from `corners[n]`
+/// to the next. Seen in perspective that is not halfway between the side's
+/// ends: the far half of a side is drawn shorter than the near half. A press
+/// on a pill is read back through the turn onto the upright picture, where
+/// it is tested against the side's true middle, so the pill is drawn there.
+/// The one projection that takes a square onto `corners` is the turn itself,
+/// whatever the picture's own proportions, so the corners alone place it.
+fn side_middles(corners: [Point; 4]) -> [Point; 4] {
+  let halfway = |side: usize| {
+    let (from, to) = (corners[side], corners[(side + 1) % 4]);
+    Point {
+      x: (from.x + to.x) * 0.5,
+      y: (from.y + to.y) * 0.5,
+    }
+  };
+  let [p0, p1, p2, p3] = corners;
+  let (dx1, dy1) = (p1.x - p2.x, p1.y - p2.y);
+  let (dx2, dy2) = (p3.x - p2.x, p3.y - p2.y);
+  let (dx3, dy3) = (p0.x - p1.x + p2.x - p3.x, p0.y - p1.y + p2.y - p3.y);
+  let det = dx1 * dy2 - dx2 * dy1;
+  if det.abs() < 1e-9 {
+    return std::array::from_fn(halfway);
+  }
+  // The square's own (u, v) to the screen, after Heckbert's square-to-quad
+  // mapping; flat on screen, `g` and `h` are zero and this is affine.
+  let g = (dx3 * dy2 - dx2 * dy3) / det;
+  let h = (dx1 * dy3 - dx3 * dy1) / det;
+  let (a, b) = (p1.x - p0.x + g * p1.x, p3.x - p0.x + h * p3.x);
+  let (d, e) = (p1.y - p0.y + g * p1.y, p3.y - p0.y + h * p3.y);
+  let at = |side: usize, (u, v): (f64, f64)| {
+    let w = g * u + h * v + 1.0;
+    if w <= 1e-9 {
+      return halfway(side);
+    }
+    Point {
+      x: (a * u + b * v + p0.x) / w,
+      y: (d * u + e * v + p0.y) / w,
+    }
+  };
+  [
+    at(0, (0.5, 0.0)),
+    at(1, (1.0, 0.5)),
+    at(2, (0.5, 1.0)),
+    at(3, (0.0, 0.5)),
+  ]
+}
+
+#[cfg(test)]
+mod tests;

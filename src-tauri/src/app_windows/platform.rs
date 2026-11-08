@@ -6,15 +6,13 @@ mod macos;
 #[cfg(target_os = "windows")]
 mod windows;
 #[cfg(target_os = "windows")]
-pub use self::windows::island_window::{
-  hide_island, initialize_island, island_input_holds, set_island_input, show_island,
-};
+pub use self::windows::island_window::{initialize_island, island_input_holds, set_island_input};
 #[cfg(target_os = "windows")]
 pub use self::windows::windows_api::{
-  hide, initialize_editor, initialize_region_selector, initialize_standalone_listbox,
-  initialize_tooltip, is_visible, prepare_to_show, raise_without_activation,
-  restore_recording_level, set_capture_affinity, set_normal_level, set_opacity, set_owner,
-  set_pointer_passthrough, show,
+  hide, hide_without_activation, initialize_editor, initialize_region_selector,
+  initialize_standalone_listbox, initialize_tool_panel, initialize_tooltip, is_visible,
+  prepare_to_show, raise_without_activation, restore_recording_level, set_capture_affinity,
+  set_normal_level, set_opacity, set_owner, set_pointer_passthrough, show, show_without_activation,
 };
 
 #[cfg(target_os = "macos")]
@@ -183,32 +181,6 @@ fn disable_show_transitions(window: &WebviewWindow) -> tauri::Result<()> {
   Ok(())
 }
 
-/// Asks DWM to round the window's corners, as it does for every framed
-/// window on Windows 11 but not for an undecorated one. The floating panels
-/// (pop-up lists, tooltips, the window list) are Fluent flyouts, which
-/// carry the 8px overlay corner; the DWM corner is the only one that clips
-/// the window's own material and shadow.
-#[cfg(target_os = "windows")]
-pub(crate) fn round_corners(window: &WebviewWindow) -> tauri::Result<()> {
-  use ::windows::Win32::{
-    Foundation::HWND,
-    Graphics::Dwm::{DwmSetWindowAttribute, DWMWA_WINDOW_CORNER_PREFERENCE, DWMWCP_ROUND},
-  };
-
-  let hwnd = HWND(window.hwnd()?.0);
-  let preference = DWMWCP_ROUND;
-  unsafe {
-    DwmSetWindowAttribute(
-      hwnd,
-      DWMWA_WINDOW_CORNER_PREFERENCE,
-      (&raw const preference).cast(),
-      std::mem::size_of_val(&preference) as u32,
-    )
-  }
-  .map_err(std::io::Error::other)?;
-  Ok(())
-}
-
 #[cfg(target_os = "macos")]
 pub fn prepare_to_show(window: &WebviewWindow) -> tauri::Result<()> {
   enable_inactive_webview_hover(window)?;
@@ -240,6 +212,11 @@ pub fn initialize_region_selector(_window: &WebviewWindow) -> tauri::Result<()> 
 
 #[cfg(not(any(target_os = "macos", target_os = "windows")))]
 pub fn initialize_standalone_listbox(_window: &WebviewWindow) -> tauri::Result<()> {
+  Ok(())
+}
+
+#[cfg(not(any(target_os = "macos", target_os = "windows")))]
+pub fn initialize_tool_panel(_window: &WebviewWindow) -> tauri::Result<()> {
   Ok(())
 }
 

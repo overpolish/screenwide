@@ -15,12 +15,14 @@
 use std::sync::Mutex;
 
 use serde::{Deserialize, Serialize};
-use tauri::{AppHandle, Emitter, LogicalPosition, LogicalSize, Manager, WebviewWindow};
+use tauri::{AppHandle, Emitter, LogicalSize, Manager, WebviewWindow};
 
 use crate::app_windows::options::presentation;
 use crate::app_windows::{platform, WindowLabel};
 
 mod creation;
+mod placement;
+use placement::placement;
 
 /// Sent to an already-loaded tooltip when it is asked to say something else.
 /// The first presentation has no one listening yet and reads the words itself.
@@ -108,17 +110,25 @@ fn present_concealed(app: &AppHandle, window: &WebviewWindow) -> tauri::Result<(
   // event loop, which has no ordering against the dispatch queue the reveal
   // is made on, and could take the tooltip back to nothing after it.
   #[cfg(target_os = "macos")]
-  platform::raise_without_activation(window)?;
-  #[cfg(not(target_os = "macos"))]
   {
-    // Windows conceals by cloaking the window, which stays fully opaque
-    // underneath, and is raised without ever being activated.
-    platform::show(window, 1.0)?;
+    platform::raise_without_activation(window)?;
+    window.set_ignore_cursor_events(true)?;
+  }
+  // Windows conceals by cloaking the window, which stays fully opaque
+  // underneath. Shown through tao it would be activated, which blurs the
+  // window asking and so closes the tooltip it asked for. It keeps the
+  // pointer passthrough it was built with: changing it, a tao flag, while the
+  // window is shown would hide it again.
+  #[cfg(target_os = "windows")]
+  {
+    platform::show_without_activation(window)?;
     platform::raise_without_activation(window)?;
   }
-  // `platform::show` exists for the recording overlays, which take the
-  // pointer. A tooltip does not.
-  window.set_ignore_cursor_events(true)?;
+  #[cfg(not(any(target_os = "macos", target_os = "windows")))]
+  {
+    platform::show(window, 1.0)?;
+    window.set_ignore_cursor_events(true)?;
+  }
   Ok(())
 }
 
@@ -207,61 +217,6 @@ pub fn fit_tooltip(app: AppHandle, width: f64, height: f64) -> Result<(), String
   presentation::reveal_after_resize(&window).map_err(|error| error.to_string())
 }
 
-/// Where a tooltip of `size` belongs: centred under its anchor, flipped above
-/// it when there is no room below, and never off the edge of the display the
-/// anchor is on. Computed from the requested size, because macOS has queued
-/// the resize rather than applied it.
-fn placement(
-  app: &AppHandle,
-  parent_label: &str,
-  anchor: AnchorRect,
-  size: LogicalSize<f64>,
-) -> LogicalPosition<f64> {
-  let mut position = LogicalPosition::new(
-    anchor.x + (anchor.width - size.width) / 2.0,
-    anchor.y + anchor.height + GAP,
-  );
-
-  let Some(monitor) = anchor_monitor(app, parent_label, anchor) else {
-    return position;
-  };
-  let scale = monitor.scale_factor();
-  let work_area = monitor.work_area();
-  let origin = work_area.position.to_logical::<f64>(scale);
-  let extent = work_area.size.to_logical::<f64>(scale);
-
-  if position.y + size.height > origin.y + extent.height {
-    position.y = anchor.y - size.height - GAP;
-  }
-  let max_x = origin.x + (extent.width - size.width).max(0.0);
-  let max_y = origin.y + (extent.height - size.height).max(0.0);
-  position.x = position.x.clamp(origin.x, max_x.max(origin.x));
-  position.y = position.y.clamp(origin.y, max_y.max(origin.y));
-  position
-}
-
-/// The display the described control is on, which is the one the tooltip has
-/// to stay inside. Asked for by point rather than taken from the tooltip
-/// window, which is still wherever the last tooltip left it.
-fn anchor_monitor(
-  app: &AppHandle,
-  parent_label: &str,
-  anchor: AnchorRect,
-) -> Option<tauri::Monitor> {
-  let scale = app
-    .get_webview_window(parent_label)
-    .and_then(|parent| parent.scale_factor().ok())
-    .unwrap_or(1.0);
-  let center = (
-    (anchor.x + anchor.width / 2.0) * scale,
-    (anchor.y + anchor.height / 2.0) * scale,
-  );
-  match app.monitor_from_point(center.0, center.1) {
-    Ok(Some(monitor)) => Some(monitor),
-    _ => app.primary_monitor().ok().flatten(),
-  }
-}
-
 /// Takes the tooltip away. The window is nobody's child, so there is nothing
 /// to detach first. What it was to say is forgotten too, so a window still
 /// being built for it, or a fit still on its way, does not bring it back.
@@ -275,6 +230,9 @@ pub fn hide_tooltip(app: AppHandle) -> Result<(), String> {
   let Some(window) = app.get_webview_window(WindowLabel::Tooltip.as_str()) else {
     return Ok(());
   };
+  #[cfg(target_os = "windows")]
+  return platform::hide_without_activation(&window).map_err(|error| error.to_string());
+  #[cfg(not(target_os = "windows"))]
   platform::hide(&window).map_err(|error| error.to_string())
 }
 

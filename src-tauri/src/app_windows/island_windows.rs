@@ -186,7 +186,7 @@ pub(super) fn show(app: &AppHandle) -> tauri::Result<()> {
   HIDING.store(false, Ordering::Relaxed);
   platform::set_island_input(&window, true)?;
   island::announce(app, shown);
-  platform::show_island(&window)?;
+  platform::show_without_activation(&window)?;
   apply_level(app)?;
   watch(app.clone());
   Ok(())
@@ -213,5 +213,5 @@ pub(super) fn refresh_hit_area(app: &AppHandle) {
 
 pub(super) fn hide(app: &AppHandle) -> tauri::Result<()> {
   WATCHING.store(0, Ordering::Relaxed);
-  platform::hide_island(&window(app)?)
+  platform::hide_without_activation(&window(app)?)
 }

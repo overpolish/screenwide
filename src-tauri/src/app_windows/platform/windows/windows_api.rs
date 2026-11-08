@@ -113,15 +113,27 @@ pub fn initialize_region_selector(window: &WebviewWindow) -> tauri::Result<()> {
 #[cfg(target_os = "windows")]
 pub fn initialize_standalone_listbox(window: &WebviewWindow) -> tauri::Result<()> {
   initialize_overlay(window)?;
-  super::super::round_corners(window)
+  super::window_frame::shape_as_panel(window)
 }
 
-/// The tooltip is an overlay like the rest, and never activated: it is shown
-/// with `raise_without_activation`, which keeps focus where the user left it.
+/// The editor's island window, laid over the editor's whole content area
+/// under its title bar. Square and without a rim: a rounded window gets the
+/// light rim Windows 11 draws, which would outline the editor's content.
+#[cfg(target_os = "windows")]
+pub fn initialize_tool_panel(window: &WebviewWindow) -> tauri::Result<()> {
+  initialize_overlay(window)?;
+  super::window_frame::remove_border(window)
+}
+
+/// The tooltip is an overlay like the rest, and never activated: tao is told
+/// it cannot take focus before it is first shown, so its rewrites of the
+/// extended style keep `WS_EX_NOACTIVATE`, and it is shown with
+/// `show_without_activation`.
 #[cfg(target_os = "windows")]
 pub fn initialize_tooltip(window: &WebviewWindow) -> tauri::Result<()> {
   initialize_overlay(window)?;
-  super::super::round_corners(window)
+  window.set_focusable(false)?;
+  super::window_frame::shape_as_panel(window)
 }
 
 /// Makes `window` an owned window of `owner`, or ownerless when `owner` is
@@ -236,4 +248,37 @@ pub fn show(window: &WebviewWindow, opacity: f64) -> tauri::Result<()> {
   prepare_to_show(window)?;
   windows::composition::refresh(window)?;
   window.show()
+}
+
+/// Shows `window` where it was placed, leaving the keyboard where it was.
+///
+/// tao shows a window with `SW_SHOW`, which activates it even with
+/// `WS_EX_NOACTIVATE`; its `"focus": false` holds for the first show only. A
+/// window shown here has to be hidden with `hide_without_activation` too:
+/// tao's own flags still say hidden, so its `hide` changes nothing. For the
+/// same reason nothing may change a tao flag while it is shown, or tao's
+/// rewrite of the extended style would drop `WS_VISIBLE`.
+#[cfg(target_os = "windows")]
+pub fn show_without_activation(window: &WebviewWindow) -> tauri::Result<()> {
+  use ::windows::Win32::{
+    Foundation::HWND,
+    UI::WindowsAndMessaging::{ShowWindowAsync, SW_SHOWNOACTIVATE},
+  };
+
+  set_opacity(window, 1.0)?;
+  prepare_to_show(window)?;
+  windows::composition::refresh(window)?;
+  let _ = unsafe { ShowWindowAsync(HWND(window.hwnd()?.0), SW_SHOWNOACTIVATE) };
+  Ok(())
+}
+
+#[cfg(target_os = "windows")]
+pub fn hide_without_activation(window: &WebviewWindow) -> tauri::Result<()> {
+  use ::windows::Win32::{
+    Foundation::HWND,
+    UI::WindowsAndMessaging::{ShowWindowAsync, SW_HIDE},
+  };
+
+  let _ = unsafe { ShowWindowAsync(HWND(window.hwnd()?.0), SW_HIDE) };
+  Ok(())
 }

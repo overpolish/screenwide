@@ -4,27 +4,19 @@
 //! The island's window: an overlay like the rest that never takes the
 //! keyboard, and lets presses through everywhere but the island.
 //!
-//! It is shown and hidden here rather than through tao. tao shows a window
-//! with `SW_SHOW`, which activates it even with `WS_EX_NOACTIVATE`; its
-//! `"focus": false` holds for the first show only. Shown over the Ruler or
-//! OCR, the island then took the keyboard from their overlay, and only
-//! Escape, which the island's page answers, still worked. tao also rewrites
-//! the extended style from its own flags whenever any of them changes, so
-//! nothing changes one once the island has been shown: its flags would
-//! still say hidden, and the rewrite would drop `WS_VISIBLE`.
+//! It is shown and hidden with `show_without_activation` rather than through
+//! tao, which would activate it: shown over the Ruler or OCR, the island then
+//! took the keyboard from their overlay, and only Escape, which the island's
+//! page answers, still worked.
 
 use tauri::WebviewWindow;
 use windows::Win32::{
   Foundation::HWND,
-  UI::WindowsAndMessaging::{
-    GetWindowLongPtrW, SetWindowLongPtrW, ShowWindowAsync, GWL_EXSTYLE, SW_HIDE, SW_SHOWNOACTIVATE,
-    WS_EX_NOACTIVATE,
-  },
+  UI::WindowsAndMessaging::{GetWindowLongPtrW, SetWindowLongPtrW, GWL_EXSTYLE, WS_EX_NOACTIVATE},
 };
 
 use super::super::initialize_overlay;
-use super::composition;
-use super::windows_api::{passthrough_style, prepare_to_show, set_opacity};
+use super::windows_api::passthrough_style;
 
 /// The island: an overlay like the rest, never activated, and without the
 /// rounded corner the other panels take, as it draws its own shape and
@@ -35,20 +27,6 @@ pub fn initialize_island(window: &WebviewWindow) -> tauri::Result<()> {
   initialize_overlay(window)?;
   window.set_focusable(false)?;
   set_island_input(window, true)
-}
-
-/// Shows the island where it was placed, leaving the keyboard where it was.
-pub fn show_island(window: &WebviewWindow) -> tauri::Result<()> {
-  set_opacity(window, 1.0)?;
-  prepare_to_show(window)?;
-  composition::refresh(window)?;
-  let _ = unsafe { ShowWindowAsync(HWND(window.hwnd()?.0), SW_SHOWNOACTIVATE) };
-  Ok(())
-}
-
-pub fn hide_island(window: &WebviewWindow) -> tauri::Result<()> {
-  let _ = unsafe { ShowWindowAsync(HWND(window.hwnd()?.0), SW_HIDE) };
-  Ok(())
 }
 
 /// The island's extended style: never activated, and letting presses through
