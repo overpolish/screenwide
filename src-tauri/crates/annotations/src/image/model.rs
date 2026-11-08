@@ -177,24 +177,8 @@ pub(crate) fn axes(angle: f64) -> ([f64; 2], [f64; 2]) {
   ([cos, sin], [-sin, cos])
 }
 
-/// `point` in the picture's own frame: how far it lies along the picture's
-/// own right and down from `center`, the picture turned `angle`.
-#[cfg(any(target_os = "macos", target_os = "windows", test))]
-pub(crate) fn to_local(
-  center: AnnotationPoint,
-  angle: f64,
-  point: AnnotationPoint,
-) -> AnnotationPoint {
-  let (across, down) = axes(angle);
-  let (x, y) = (point.x - center.x, point.y - center.y);
-  AnnotationPoint {
-    x: x * across[0] + y * across[1],
-    y: x * down[0] + y * down[1],
-  }
-}
-
-/// The point `local` names in the picture's own frame, back on the picture
-/// it was taken from.
+/// Where the point `local` of the picture's own frame lands, the picture
+/// turned `angle` about `center`.
 #[cfg(any(target_os = "macos", target_os = "windows", test))]
 pub(crate) fn from_local(
   center: AnnotationPoint,

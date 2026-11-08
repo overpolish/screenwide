@@ -240,14 +240,26 @@ fn a_turned_image_fits_the_box_its_grips_stand_on() {
   assert!((high.y - low.y - 100.0).abs() < 1e-9, "{low:?} {high:?}");
 }
 
+/// An upright picture's own point, as shares of its half extents, drawn in
+/// the box from `low` to `high`.
+fn upright(low: AnnotationPoint, high: AnnotationPoint) -> impl Fn(f64, f64) -> AnnotationPoint {
+  move |x, y| {
+    point(
+      (low.x + high.x) * 0.5 + x * (high.x - low.x) * 0.5,
+      (low.y + high.y) * 0.5 + y * (high.y - low.y) * 0.5,
+    )
+  }
+}
+
 #[test]
 fn a_corner_sizes_the_picture_from_the_opposite_corner() {
   let (low, high) = (point(0.0, 0.0), point(100.0, 50.0));
+  let middle = point(50.0, 25.0);
   // The bottom-right corner dragged out to twice the width, less far down:
   // the larger ask wins, so the box reaches the hand.
   let (center, size) = resized(
-    low,
-    high,
+    upright(low, high),
+    middle,
     100.0,
     EDGE_RIGHT | EDGE_BOTTOM,
     point(200.0, 60.0),
@@ -255,7 +267,13 @@ fn a_corner_sizes_the_picture_from_the_opposite_corner() {
   assert_eq!(size, 200.0);
   assert_eq!(center, point(100.0, 50.0));
   // The top-left one holds the bottom-right corner.
-  let (center, size) = resized(low, high, 100.0, EDGE_LEFT | EDGE_TOP, point(50.0, 25.0));
+  let (center, size) = resized(
+    upright(low, high),
+    middle,
+    100.0,
+    EDGE_LEFT | EDGE_TOP,
+    point(50.0, 25.0),
+  );
   assert_eq!(size, 50.0);
   assert_eq!(center, point(75.0, 37.5));
 }
@@ -263,10 +281,74 @@ fn a_corner_sizes_the_picture_from_the_opposite_corner() {
 #[test]
 fn a_side_dragged_past_its_opposite_stops_at_the_smallest_image() {
   let (low, high) = (point(0.0, 0.0), point(100.0, 100.0));
-  let (center, size) = resized(low, high, 100.0, EDGE_LEFT, point(150.0, 50.0));
+  let (center, size) = resized(
+    upright(low, high),
+    point(50.0, 50.0),
+    100.0,
+    EDGE_LEFT,
+    point(150.0, 50.0),
+  );
   assert_eq!(size, MIN_IMAGE_SIZE);
   // An edge leaves the other axis centred where it was.
   assert_eq!(center, point(100.0 - MIN_IMAGE_SIZE / 2.0, 50.0));
+}
+
+#[test]
+fn a_tilted_image_s_grip_holds_its_drawn_opposite_and_reaches_the_hand() {
+  use super::frame::ImageFrame;
+  use crate::gesture::AnnotationHandle;
+  let (mut image, _) = turned(0.3, point(0.0, 0.0));
+  let tilt = ImageTilt { x: 15.0, y: 60.0 };
+  if let AnnotationShape::Image { tilt: turn, .. } = &mut image.shape {
+    *turn = Some(tilt);
+  }
+  let frame = |shape: &AnnotationShape| {
+    let AnnotationShape::Image {
+      center,
+      size,
+      angle,
+      aspect,
+      ..
+    } = shape
+    else {
+      unreachable!()
+    };
+    let (half_width, half_height) = super::model::half_extents(*size, *aspect);
+    ImageFrame {
+      center: *center,
+      angle: *angle,
+      tilt,
+      half_width,
+      half_height,
+    }
+  };
+  let before = frame(&image.shape).corners();
+  // Pulled out past where the flat picture's side would stop: its right
+  // side is swung away, so the drawn picture runs short of it.
+  let hand = point(before[2].x + 40.0, before[2].y + 5.0);
+  let origin = crate::gesture::AnnotationDragOrigin::new(before[2], &image.shape);
+  super::gesture::drag(
+    &mut image,
+    AnnotationHandle::Edges(EDGE_RIGHT | EDGE_BOTTOM),
+    hand,
+    &origin,
+    None,
+  );
+  let after = frame(&image.shape).corners();
+  let close = |a: AnnotationPoint, b: AnnotationPoint| (a.x - b.x).hypot(a.y - b.y) < 1e-6;
+  assert!(close(after[0], before[0]), "{:?} {:?}", after[0], before[0]);
+  // The hand lies on the drawn line of a moved side, and beyond neither.
+  let side = |from: AnnotationPoint, to: AnnotationPoint| {
+    let run = (to.x - from.x, to.y - from.y);
+    (run.0 * (hand.y - from.y) - run.1 * (hand.x - from.x)) / run.0.hypot(run.1)
+  };
+  let (right, bottom) = (side(after[1], after[2]), side(after[2], after[3]));
+  assert!(
+    right.abs().min(bottom.abs()) < 1e-6,
+    "{right} {bottom} {after:?}"
+  );
+  // Clockwise corners on a canvas whose y runs down: inside is positive.
+  assert!(right > -1e-6 && bottom > -1e-6, "{right} {bottom}");
 }
 
 /// A square picture 100 across in the middle of nowhere, turned `angle`,

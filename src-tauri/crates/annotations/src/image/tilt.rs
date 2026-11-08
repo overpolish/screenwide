@@ -14,7 +14,7 @@
 //! `annotation_image_untilt`.
 
 #[cfg(any(target_os = "macos", target_os = "windows", test))]
-use super::model::{from_local, to_local};
+use super::model::from_local;
 use crate::AnnotationPoint;
 use screenwide_scenes::rotation::{apply, inverted, turned_homography, Homography};
 use screenwide_scenes::SceneRotation;
@@ -109,19 +109,6 @@ pub(crate) fn placed(
   local: AnnotationPoint,
 ) -> AnnotationPoint {
   from_local(center, angle, tilt.tilted(longer, local))
-}
-
-/// The picture's own point drawn at `point`, or `None` where nothing of the
-/// picture is drawn there.
-#[cfg(any(target_os = "macos", target_os = "windows", test))]
-pub(crate) fn unplaced(
-  center: AnnotationPoint,
-  angle: f64,
-  tilt: ImageTilt,
-  longer: f64,
-  point: AnnotationPoint,
-) -> Option<AnnotationPoint> {
-  tilt.untilted(longer, to_local(center, angle, point))
 }
 
 /// Turns `shape`, where it is an image, to `rotation`: tilted in depth about
