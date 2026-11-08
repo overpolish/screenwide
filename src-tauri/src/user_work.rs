@@ -69,7 +69,7 @@ impl UserActivity {
   }
 
   /// For long work someone started and expects finished on their return,
-  /// such as an export: the Mac stays awake until it ends.
+  /// such as an export: the computer does not sleep when idle until it ends.
   pub(crate) fn begin_keeping_awake(reason: &str) -> Self {
     Self {
       _platform: platform::Activity::begin(reason, true),

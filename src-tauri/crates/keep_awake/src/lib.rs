@@ -13,7 +13,8 @@
 //! Once the user has been idle for [`NUDGE_AFTER`], one mouse move to where
 //! the pointer already is goes out, and the cursor stays put. Each carries
 //! [`EVENT_TAG`], so Screenwide's own event taps can leave it out of a
-//! recording.
+//! recording. On Windows the move also restarts the power timers, since
+//! Windows drops input sent while an elevated app is in front.
 //!
 //! Nothing is sent while the screen is locked or the display asleep: locking
 //! stays the way to be shown away, and a sleeping display is not woken.

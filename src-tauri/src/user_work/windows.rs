@@ -3,10 +3,17 @@
 
 use std::sync::{Mutex, PoisonError};
 
+use windows::core::PWSTR;
+use windows::Win32::Foundation::{CloseHandle, HANDLE};
+use windows::Win32::System::Power::{
+  PowerClearRequest, PowerCreateRequest, PowerRequestSystemRequired, PowerSetRequest,
+};
+use windows::Win32::System::SystemServices::POWER_REQUEST_CONTEXT_VERSION;
 use windows::Win32::System::Threading::{
   GetCurrentProcess, GetCurrentThread, ProcessPowerThrottling, SetProcessInformation,
-  SetThreadInformation, ThreadPowerThrottling, PROCESS_POWER_THROTTLING_CURRENT_VERSION,
-  PROCESS_POWER_THROTTLING_EXECUTION_SPEED, PROCESS_POWER_THROTTLING_STATE,
+  SetThreadInformation, ThreadPowerThrottling, POWER_REQUEST_CONTEXT_SIMPLE_STRING,
+  PROCESS_POWER_THROTTLING_CURRENT_VERSION, PROCESS_POWER_THROTTLING_EXECUTION_SPEED,
+  PROCESS_POWER_THROTTLING_STATE, REASON_CONTEXT, REASON_CONTEXT_0,
   THREAD_POWER_THROTTLING_CURRENT_VERSION, THREAD_POWER_THROTTLING_EXECUTION_SPEED,
   THREAD_POWER_THROTTLING_STATE,
 };
@@ -17,16 +24,20 @@ use super::Urgency;
 /// the first activity turns throttling off and the last hands it back.
 static ACTIVITIES: Mutex<usize> = Mutex::new(0);
 
-pub(super) struct Activity;
+pub(super) struct Activity {
+  _awake: Option<SystemRequired>,
+}
 
 impl Activity {
-  pub(super) fn begin(_reason: &str, _keep_awake: bool) -> Self {
+  pub(super) fn begin(reason: &str, keep_awake: bool) -> Self {
     let mut activities = ACTIVITIES.lock().unwrap_or_else(PoisonError::into_inner);
     if *activities == 0 {
       set_process_throttling(PROCESS_POWER_THROTTLING_EXECUTION_SPEED);
     }
     *activities += 1;
-    Self
+    Self {
+      _awake: keep_awake.then(|| SystemRequired::hold(reason)).flatten(),
+    }
   }
 }
 
@@ -36,6 +47,54 @@ impl Drop for Activity {
     *activities -= 1;
     if *activities == 0 {
       set_process_throttling(0);
+    }
+  }
+}
+
+/// Keeps the system from sleeping when idle while held; the display may still
+/// turn off. A power request belongs to no thread, unlike
+/// `SetThreadExecutionState`, so an activity may end on another thread than
+/// the one that began it.
+struct SystemRequired(HANDLE);
+
+// SAFETY: the handle names a kernel object, usable from any thread.
+unsafe impl Send for SystemRequired {}
+
+impl SystemRequired {
+  fn hold(reason: &str) -> Option<Self> {
+    let mut text: Vec<u16> = reason.encode_utf16().chain([0]).collect();
+    let context = REASON_CONTEXT {
+      Version: POWER_REQUEST_CONTEXT_VERSION,
+      Flags: POWER_REQUEST_CONTEXT_SIMPLE_STRING,
+      Reason: REASON_CONTEXT_0 {
+        SimpleReasonString: PWSTR(text.as_mut_ptr()),
+      },
+    };
+    // SAFETY: `context` and the NUL-terminated string it points to outlive
+    // the call, which copies the reason.
+    let request = match unsafe { PowerCreateRequest(&context) } {
+      Ok(request) => Self(request),
+      Err(error) => {
+        eprintln!("Could not create a power request for {reason}: {error}");
+        return None;
+      }
+    };
+    // SAFETY: the handle was just created; dropping `request` closes it.
+    if let Err(error) = unsafe { PowerSetRequest(request.0, PowerRequestSystemRequired) } {
+      eprintln!("Could not keep the system awake for {reason}: {error}");
+      return None;
+    }
+    Some(request)
+  }
+}
+
+impl Drop for SystemRequired {
+  fn drop(&mut self) {
+    // SAFETY: the handle came from `PowerCreateRequest` and is closed once.
+    // Clearing a request never set fails harmlessly.
+    unsafe {
+      let _ = PowerClearRequest(self.0, PowerRequestSystemRequired);
+      let _ = CloseHandle(self.0);
     }
   }
 }

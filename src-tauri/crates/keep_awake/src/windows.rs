@@ -4,6 +4,9 @@
 use std::time::Duration;
 
 use windows::core::PWSTR;
+use windows::Win32::System::Power::{
+  SetThreadExecutionState, ES_DISPLAY_REQUIRED, ES_SYSTEM_REQUIRED,
+};
 use windows::Win32::System::RemoteDesktop::{
   WTSFreeMemory, WTSQuerySessionInformationW, WTSSessionInfoEx, WTSINFOEXW,
   WTS_CURRENT_SERVER_HANDLE, WTS_CURRENT_SESSION, WTS_SESSIONSTATE_LOCK,
@@ -64,7 +67,10 @@ pub(super) fn screen_in_use() -> bool {
   !locked
 }
 
-/// Sends a mouse move of no distance, which the cursor does not follow.
+/// Sends a mouse move of no distance, which the cursor does not follow, and
+/// restarts the display-off and sleep timers. Windows drops the move without
+/// saying so while an elevated app is in front (UIPI); the timers keep the
+/// computer awake then, though chat apps may show the user away.
 pub(super) fn nudge() {
   let input = INPUT {
     r#type: INPUT_MOUSE,
@@ -81,4 +87,8 @@ pub(super) fn nudge() {
   };
   // SAFETY: one fully initialised input, sized as the call requires.
   unsafe { SendInput(&[input], size_of::<INPUT>() as i32) };
+  // Without `ES_CONTINUOUS` this holds nothing: it restarts the timers once,
+  // as input would, and leaves no request in `powercfg /requests`.
+  // SAFETY: takes only flags.
+  unsafe { SetThreadExecutionState(ES_SYSTEM_REQUIRED | ES_DISPLAY_REQUIRED) };
 }
