@@ -14,10 +14,11 @@ import { Keyboard, Shortcut } from "../../../../primitives/keyboard/keyboard";
 import { hotkeyTriggerClassName } from "./hotkey-trigger-style";
 
 // The shortcut as keycaps, or a placeholder while there is none. While it
-// records, the prompt stands in for the keys and the focus ring stays on,
-// as the field being typed into keeps it. What it shows swaps as an
-// island's parts do (`IslandSwap`): the keys blur away and the prompt
-// clears in where they were.
+// records, the prompt stands in for the keys. The focus ring follows how it
+// was reached, as on any button: a press by pointer shows none, and the
+// prompt alone says it is listening. What it shows swaps as an island's
+// parts do (`IslandSwap`): the keys blur away and the prompt clears in where
+// they were.
 
 export function HotkeyTrigger({
   "aria-describedby": describedBy,
@@ -75,12 +76,7 @@ export function HotkeyTrigger({
       aria-labelledby={labelledBy ? `${labelledBy} ${id}` : undefined}
       aria-pressed={capturing}
       // Positioned, so what it showed is lifted out of the flow as it goes.
-      className={cn(
-        hotkeyTriggerClassName,
-        "relative",
-        capturing && "ring-3",
-        className,
-      )}
+      className={cn(hotkeyTriggerClassName, "relative", className)}
       id={id}
       isDisabled={isDisabled}
       onPress={onPress}
