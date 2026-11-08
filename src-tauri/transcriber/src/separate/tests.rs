@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-use super::{overlap_add, SEGMENT, SIDES, STRIDE};
+use super::{overlap_add, plausible, SEGMENT, SIDES, STRIDE};
 
 /// Interleaved stereo frames, each side different and no two frames alike.
 fn audio(frames: usize) -> Vec<f32> {
@@ -52,4 +52,17 @@ fn a_model_giving_back_what_it_hears_gives_back_the_audio_at_any_length() {
     );
     assert_eq!(last_progress, 1.0, "{frames} frames");
   }
+}
+
+#[test]
+fn a_gpu_answer_is_kept_only_when_singing_could_be_it() {
+  // Up to twice the mix's peak, with a margin for near silence.
+  assert!(plausible(vec![0.0, -0.6, 0.6], 0.3).is_ok());
+  assert!(plausible(vec![0.009], 0.0).is_ok());
+  assert!(plausible(vec![0.0, 0.62], 0.3).is_err());
+  assert!(plausible(vec![0.011], 0.0).is_err());
+  // A broken GPU's answers.
+  assert!(plausible(vec![0.1, f32::NAN], 0.3).is_err());
+  assert!(plausible(vec![f32::INFINITY], 0.3).is_err());
+  assert!(plausible(vec![-1_800.0], 0.3).is_err());
 }

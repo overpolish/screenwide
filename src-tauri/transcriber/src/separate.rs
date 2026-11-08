@@ -10,9 +10,10 @@
 //! the audio is read and written as it goes, so an hour of it is never held
 //! in memory at once.
 //!
-//! On Windows the model runs in parts on the GPU (`staged`). A part that
-//! fails, or an answer no singing could give, moves the work to the CPU,
-//! which redoes that chunk and the rest, so ducking never fails because of
+//! The model runs on the GPU where it can: on Windows in parts through
+//! DirectML (`staged`), elsewhere whole. A GPU that fails, or gives an
+//! answer no singing could give, moves the work to the CPU, which redoes
+//! that chunk and the rest, so ducking never fails or goes wrong because of
 //! the GPU.
 
 #[cfg(windows)]
@@ -43,66 +44,89 @@ const WHAT: &str = "Studio ducking";
 enum Runner {
   #[cfg(windows)]
   Staged(staged::Staged),
-  Whole(Session),
+  #[cfg(not(windows))]
+  Gpu(Session),
+  Cpu(Session),
 }
 
 impl Runner {
   fn new(model: &Path) -> Result<Self, String> {
     #[cfg(windows)]
+    let gpu = match std::fs::read(model)
+      .map_err(|error| error.to_string())
+      .and_then(|bytes| staged::Staged::new(&bytes))
     {
-      let staged = std::fs::read(model)
-        .map_err(|error| error.to_string())
-        .and_then(|bytes| staged::Staged::new(&bytes));
-      match staged {
-        Ok(staged) => {
-          eprintln!("{WHAT} runs HT Demucs on the GPU through DirectML, in parts");
-          return Ok(Self::Staged(staged));
-        }
-        Err(error) => eprintln!("{WHAT} runs on the CPU: the GPU could not take it: {error}"),
+      Ok(staged) => {
+        eprintln!("{WHAT} runs HT Demucs on the GPU through DirectML, in parts");
+        Some(Self::Staged(staged))
       }
-      on_cpu(model, WHAT).map(Self::Whole)
-    }
+      Err(error) => {
+        eprintln!("{WHAT} runs on the CPU: the GPU could not take it: {error}");
+        None
+      }
+    };
     #[cfg(not(windows))]
-    crate::session::session(model, WHAT).map(Self::Whole)
+    let gpu = crate::session::gpu_session(model, WHAT).map(Self::Gpu);
+    match gpu {
+      Some(runner) => Ok(runner),
+      None => on_cpu(model, WHAT).map(Self::Cpu),
+    }
   }
 
-  /// The singing in one planar segment.
+  /// The singing in one planar segment. `model` reloads it on the CPU when
+  /// the GPU's answer cannot be used.
   fn singing(&mut self, model: &Path, planar: Vec<f32>) -> Result<Vec<f32>, String> {
-    #[cfg(windows)]
-    if let Self::Staged(staged) = self {
+    if !matches!(self, Self::Cpu(_)) {
       let peak = planar
         .iter()
         .fold(0.0_f32, |peak, sample| peak.max(sample.abs()));
-      let answer = Tensor::from_array(([1_usize, SIDES, SEGMENT], planar.clone()))
-        .map_err(|error| error.to_string())
-        .and_then(|input| staged.run(input.into_dyn()))
-        .and_then(|mut outputs| {
-          let stems = outputs.remove("stems").ok_or("the model made no stems")?;
-          let (_, stems) = stems
-            .try_extract_tensor::<f32>()
-            .map_err(|error| error.to_string())?;
-          vocals(stems)
-        })
-        .and_then(|singing| plausible(singing, peak));
-      match answer {
+      match self
+        .on_gpu(planar.clone())
+        .and_then(|singing| plausible(singing, peak))
+      {
         Ok(singing) => return Ok(singing),
         Err(error) => {
           eprintln!("{WHAT} moves to the CPU: {error}");
-          *self = Self::Whole(on_cpu(model, WHAT)?);
+          *self = Self::Cpu(on_cpu(model, WHAT)?);
         }
       }
     }
-    let Self::Whole(session) = self else {
+    let Self::Cpu(session) = self else {
       unreachable!("the GPU runner moves to the CPU before this")
     };
-    let failed = |error: ort::Error| format!("{WHAT} could not run: {error}");
-    let input = Tensor::from_array(([1_usize, SIDES, SEGMENT], planar)).map_err(failed)?;
-    let outputs = session.run(ort::inputs!["mix" => input]).map_err(failed)?;
-    let (_, stems) = outputs["stems"]
-      .try_extract_tensor::<f32>()
-      .map_err(failed)?;
-    vocals(stems)
+    whole(session, planar).map_err(|error| format!("{WHAT} could not run: {error}"))
   }
+
+  /// The GPU's answer for one planar segment, not yet checked.
+  fn on_gpu(&mut self, planar: Vec<f32>) -> Result<Vec<f32>, String> {
+    match self {
+      #[cfg(windows)]
+      Self::Staged(staged) => {
+        let input = Tensor::from_array(([1_usize, SIDES, SEGMENT], planar))
+          .map_err(|error| error.to_string())?;
+        let mut outputs = staged.run(input.into_dyn())?;
+        let stems = outputs.remove("stems").ok_or("the model made no stems")?;
+        let (_, stems) = stems
+          .try_extract_tensor::<f32>()
+          .map_err(|error| error.to_string())?;
+        vocals(stems)
+      }
+      #[cfg(not(windows))]
+      Self::Gpu(session) => whole(session, planar),
+      Self::Cpu(_) => unreachable!("the CPU runner is never asked for the GPU's answer"),
+    }
+  }
+}
+
+/// The singing in one planar segment by the whole model in `session`.
+fn whole(session: &mut Session, planar: Vec<f32>) -> Result<Vec<f32>, String> {
+  let failed = |error: ort::Error| error.to_string();
+  let input = Tensor::from_array(([1_usize, SIDES, SEGMENT], planar)).map_err(failed)?;
+  let outputs = session.run(ort::inputs!["mix" => input]).map_err(failed)?;
+  let (_, stems) = outputs["stems"]
+    .try_extract_tensor::<f32>()
+    .map_err(failed)?;
+  vocals(stems)
 }
 
 /// The singing among the model's four stems.
@@ -117,7 +141,6 @@ fn vocals(stems: &[f32]) -> Result<Vec<f32>, String> {
 /// `singing` unless no singing in audio peaking at `peak` could be it: a
 /// separated voice is never far louder than the mix it came from, and a
 /// GPU that went wrong answers with numbers thousands of times too large.
-#[cfg(windows)]
 fn plausible(singing: Vec<f32>, peak: f32) -> Result<Vec<f32>, String> {
   let limit = 2.0 * peak + 0.01;
   match singing

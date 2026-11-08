@@ -13,20 +13,28 @@ use ort::session::{builder::SessionBuilder, Session};
 /// Loads the model at `path` for the feature named `what`, on the GPU if it
 /// can be.
 pub(crate) fn session(path: &Path, what: &str) -> Result<Session, String> {
+  match gpu_session(path, what) {
+    Some(session) => Ok(session),
+    None => on_cpu(path, what),
+  }
+}
+
+/// The model at `path` for the feature named `what` on the GPU, or nothing
+/// where ONNX Runtime cannot take it there.
+pub(crate) fn gpu_session(path: &Path, what: &str) -> Option<Session> {
   let name = path
     .file_name()
     .map_or_else(Default::default, |name| name.to_string_lossy());
-  match gpu().map(|backend| on_gpu(path, backend)) {
-    Some(Ok(session)) => {
+  match on_gpu(path, gpu()?) {
+    Ok(session) => {
       eprintln!("{what} runs {name} on the GPU through {BACKEND}");
-      return Ok(session);
+      Some(session)
     }
-    Some(Err(error)) => {
+    Err(error) => {
       eprintln!("{what} runs {name} on the CPU: {BACKEND} could not take it: {error}");
+      None
     }
-    None => {}
   }
-  on_cpu(path, what)
 }
 
 /// Loads the model at `path` for the feature named `what` on the CPU, for a
@@ -38,6 +46,7 @@ pub(crate) fn on_cpu(path: &Path, what: &str) -> Result<Session, String> {
 }
 
 /// The model in `bytes` on the CPU, for a model changed after it was read.
+#[cfg(windows)]
 pub(crate) fn cpu_from_memory(bytes: &[u8]) -> ort::Result<Session> {
   Session::builder()?.commit_from_memory(bytes)
 }
