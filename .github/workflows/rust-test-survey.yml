@@ -1,0 +1,64 @@
+# SPDX-FileCopyrightText: 2026 overpolish
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+name: Rust Test Survey
+
+# Runs each Rust test in its own process on the hosted runners, which have no
+# real GPU, and lists every test that fails or crashes there.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  survey:
+    name: ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, windows-latest]
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Install Node.js
+        uses: actions/setup-node@v7
+        with:
+          cache: pnpm
+          node-version-file: .nvmrc
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+
+      # The transcriber's engine draws on the GPU through Vulkan on Windows,
+      # and builds its shaders with the SDK's compiler.
+      - name: Install Vulkan SDK
+        if: runner.os == 'Windows'
+        uses: jakoch/install-vulkan-sdk-action@v1
+        with:
+          cache: true
+          install_runtime: false
+          vulkan_version: latest
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Prepare native binaries
+        run: pnpm native:prepare
+
+      - name: Run each test on its own
+        run: node scripts/survey-rust-tests.mjs
+
+      - name: Upload the failures
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: rust-test-survey-${{ matrix.os }}
+          path: rust-test-survey.json
+          if-no-files-found: ignore

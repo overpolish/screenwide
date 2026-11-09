@@ -88,13 +88,5 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      # Diagnostic: the app's tests crash on Windows with an access violation,
-      # and a parallel run cannot say which test. One at a time, the last test
-      # started is the one that crashed.
-      - name: Name the crashing Windows test
-        if: runner.os == 'Windows'
-        continue-on-error: true
-        run: pnpm native:prepare && cargo test --manifest-path src-tauri/Cargo.toml -p screenwide --lib -- --test-threads=1
-
       - name: Check formatting, lint, and builds
         run: pnpm check
