@@ -28,9 +28,14 @@ fn tool_path(name: &str) -> PathBuf {
     name.to_owned()
   };
   // Alongside the app first: a bundled copy is the one this build was tested
-  // against.
+  // against. A test runs from `target/debug/deps`, one folder below where
+  // `pnpm ffmpeg:prepare` puts the debug app's copy.
   if let Ok(current) = std::env::current_exe() {
-    if let Some(directory) = current.parent() {
+    let beside = current.parent();
+    let debug_app = beside
+      .filter(|directory| cfg!(debug_assertions) && directory.ends_with("deps"))
+      .and_then(Path::parent);
+    for directory in [beside, debug_app].into_iter().flatten() {
       let bundled = directory.join(&executable);
       if bundled.is_file() {
         return bundled;
