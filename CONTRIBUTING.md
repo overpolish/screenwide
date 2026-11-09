@@ -58,6 +58,16 @@ Windows Defender scans every file a build writes, which can make Rust builds sev
 
 Most of Screenwide is under the GPL; the paid tools and their licence check are under the Elastic License 2.0. `scripts/check-spdx.mjs` lists the paths each licence covers, and `pnpm license:check` makes sure every file's SPDX header names the right one. A new file in a tool's folder takes `SPDX-License-Identifier: Elastic-2.0`; any other file takes `GPL-3.0-or-later`.
 
+## Issues and ideas
+
+- **Bugs** are issues: use the bug report form. Say what happened, how to make it happen, and what you expected.
+- **Ideas and questions** start in [Discussions](https://github.com/overpolish/screenwide/discussions): ideas in Ideas, where you can upvote others, and questions in Q&A. An idea becomes an issue once it has been thought through to high-level acceptance criteria, so open issues are work that is decided.
+- **Security problems** are reported privately, through the repository's Security tab.
+
+Issues are labelled by type (`bug`, `feature`, `polish`, `chore`), by area (`area: editor`, `area: screenshot`, …), and by platform when only one is affected (`platform: windows`). There is no project board and there are no milestones; releases are cut from `main`, and their notes are drafted from the commits.
+
+Work is committed straight to `main`. A commit that finishes an issue ends with a `Closes #N` line, and one that only touches it with `Refs #N`.
+
 ## Also
 
 - [TRANSLATING.md](TRANSLATING.md): adding a language and translating the interface.

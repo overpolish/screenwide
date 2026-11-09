@@ -8,6 +8,9 @@ Screenwide is a Tauri desktop app for macOS and Windows. The frontend uses React
 ## Git
 
 - Preserve unrelated changes. Do not commit, stage, or discard work unless asked.
+- Work is committed straight to `main`, without branches or pull requests. A commit's subject is `type(scope): summary` (Conventional Commits, lowercase, imperative, no trailing period). Its only body is an issue line when the work has an issue: `Closes #N` closes it once the commit reaches `main`, `Refs #N` links without closing. `scripts/release-notes.mjs` drafts each release's notes from the `feat` and `fix` subjects and their `Closes` lines.
+- Issues are bugs, and work thought through to high-level acceptance criteria, labelled by type (`bug`, `feature`, `polish`, `chore`), area (`area: editor`, …) and, when it happens on one platform only, platform (`platform: windows`). Ideas, the maintainer's own included, and questions start in Discussions; an idea becomes an issue once it has acceptance criteria.
+- When asked to record what someone found, file each bug as an issue (what happened, steps, what was expected; acceptance criteria where the fix is known) and each change that is not yet decided as an Ideas discussion, each with its area label. `CONTRIBUTING.md` describes the same process for people.
 
 ## Structure and naming
 

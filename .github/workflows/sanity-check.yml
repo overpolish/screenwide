@@ -3,7 +3,11 @@
 
 name: Sanity Check
 
+# Work is committed straight to main, so each push is checked; a pull request
+# is checked too, for contributions.
 on:
+  push:
+    branches: [main]
   pull_request:
     branches: [main]
   workflow_dispatch:

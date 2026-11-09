@@ -1,0 +1,16 @@
+# SPDX-FileCopyrightText: 2026 overpolish
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+# Issues are bugs and work thought through to high-level acceptance criteria.
+# Ideas, the maintainer's included, and questions start in Discussions.
+blank_issues_enabled: false
+contact_links:
+  - name: Suggest an idea
+    url: https://github.com/overpolish/screenwide/discussions/categories/ideas
+    about: Suggest a feature or change, or upvote one already there.
+  - name: Ask a question
+    url: https://github.com/overpolish/screenwide/discussions/categories/q-a
+    about: Ask how to do something in Screenwide.
+  - name: Report a security problem
+    url: https://github.com/overpolish/screenwide/security/advisories/new
+    about: Report it privately, not as a public issue.

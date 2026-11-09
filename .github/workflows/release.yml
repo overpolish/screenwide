@@ -21,6 +21,12 @@ jobs:
     outputs:
       release_id: ${{ steps.create_release.outputs.release_id }}
     steps:
+      # Every tag, so the notes can find the last release to compare with.
+      - name: Check out repository
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
       - name: Create or find draft release
         id: create_release
         env:
@@ -29,12 +35,13 @@ jobs:
         run: |
           release_id="$(gh release view "$TAG_NAME" --json databaseId --jq .databaseId 2>/dev/null || true)"
           if [ -z "$release_id" ]; then
+            node scripts/release-notes.mjs "$TAG_NAME" > release-notes.md
             release_id="$(gh api --method POST "repos/$GITHUB_REPOSITORY/releases" \
               -f tag_name="$TAG_NAME" \
               -f target_commitish="$GITHUB_SHA" \
               -f name="Screenwide $TAG_NAME" \
               -F draft=true \
-              -F generate_release_notes=true \
+              -F body=@release-notes.md \
               --jq .id)"
           fi
           echo "release_id=$release_id" >> "$GITHUB_OUTPUT"

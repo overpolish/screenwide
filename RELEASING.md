@@ -78,7 +78,7 @@ The project has no Windows code-signing certificate, so it ships no Windows inst
    ```
 
 4. Wait for the Release workflow to finish, including the **Verify updater assets** job. In the draft GitHub Release, verify the Apple Silicon macOS DMG (`Screenwide_aarch64.dmg`, the name the website's download button links to), its signed updater bundle, `latest.json` (macOS only), and both Microsoft Store packages (`.msix`, not made for prereleases).
-5. Edit the generated notes if needed, then publish the draft. Publishing makes it the endpoint served by `releases/latest/download/latest.json`, so installed copies can offer it, and starts the Microsoft Store workflow (below). The notes are what the update offer and the Store's What's new show, so write them for the people using the app. GitHub fills them only with merged pull requests, of which this repository has none.
+5. Edit the drafted notes, then publish the draft. Publishing makes it the endpoint served by `releases/latest/download/latest.json`, so installed copies can offer it, and starts the Microsoft Store workflow (below). The notes are what the update offer and the Store's What's new show, so write them for the people using the app. The draft lists the `feat` and `fix` commits since the last release (`scripts/release-notes.mjs`), whose subjects are lowercase, so names such as macOS and Microsoft Store need their capitals back.
 
 Do not publish a partially successful release. Rerun failed jobs or delete the draft and tag, correct the issue, and create a new version.
 
