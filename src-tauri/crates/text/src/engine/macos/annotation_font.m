@@ -13,6 +13,9 @@ static void register_inter_font(void) {
         URLForResource:@"Inter-VariableFont_opsz,wght"
          withExtension:@"ttf"
           subdirectory:@"fonts"];
+#ifdef SCREENWIDE_DEBUG_INTER_PATH
+    if (url == nil) url = [NSURL fileURLWithPath:@SCREENWIDE_DEBUG_INTER_PATH];
+#endif
     if (url != nil)
       CTFontManagerRegisterFontsForURL((__bridge CFURLRef)url,
                                        kCTFontManagerScopeProcess, NULL);

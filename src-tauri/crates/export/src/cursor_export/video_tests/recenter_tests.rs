@@ -6,6 +6,7 @@ use std::process::Command;
 use super::*;
 
 #[test]
+#[cfg_attr(screenwide_no_gpu, ignore = "requires a hardware GPU")]
 fn exports_recenter_inset_pixels_outside_the_source_crop() {
   let directory = std::env::temp_dir().join(format!(
     "screenwide-recenter-inset-export-test-{}",

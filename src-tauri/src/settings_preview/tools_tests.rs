@@ -225,6 +225,10 @@ fn changed(before: &[u8], after: &[u8]) -> usize {
 }
 
 #[test]
+#[cfg_attr(
+  all(screenwide_no_gpu, target_os = "macos"),
+  ignore = "requires a hardware GPU"
+)]
 fn the_ruler_measures_over_time() {
   let frames = play("ruler", true);
   let first = frames.first().expect("a frame");
@@ -235,6 +239,7 @@ fn the_ruler_measures_over_time() {
 }
 
 #[test]
+#[cfg_attr(screenwide_no_gpu, ignore = "requires a hardware GPU")]
 fn ocr_chooses_an_area_over_time() {
   let frames = play("ocr", false);
   let first = frames.first().expect("a frame");

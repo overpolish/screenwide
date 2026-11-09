@@ -41,6 +41,7 @@ fn camera_options() -> BakedVideoExportOptions {
 }
 
 #[test]
+#[cfg_attr(screenwide_no_gpu, ignore = "requires a hardware GPU")]
 fn a_still_casts_a_cut_out_cameras_shadow_as_the_export_does() {
   let directory = directory("cut-out-still");
   let effects = camera_with_matte(&directory, CameraBackground::Transparent, 2_000);

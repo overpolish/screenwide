@@ -61,6 +61,7 @@ fn drawn_with(settings: ScreenshotOutputSettings, points: &[(u32, u32)]) -> Vec<
 }
 
 #[test]
+#[cfg_attr(all(screenwide_no_gpu, windows), ignore = "requires a hardware GPU")]
 fn a_screen_turned_away_leaves_the_canvas_where_its_far_side_stood() {
   // Just inside the upright screen's right edge, and its middle.
   let points = [(1_150, 540), (960, 540)];
@@ -81,6 +82,7 @@ fn a_screen_turned_away_leaves_the_canvas_where_its_far_side_stood() {
 }
 
 #[test]
+#[cfg_attr(all(screenwide_no_gpu, windows), ignore = "requires a hardware GPU")]
 fn a_quarter_turn_stands_the_screen_on_its_side() {
   // Above the upright screen's top edge, inside the turned one's.
   let points = [(960, 360)];
@@ -97,6 +99,7 @@ fn a_quarter_turn_stands_the_screen_on_its_side() {
 }
 
 #[test]
+#[cfg_attr(all(screenwide_no_gpu, windows), ignore = "requires a hardware GPU")]
 fn a_turn_made_while_the_shutter_was_open_is_blurred_along_its_way() {
   // Above the upright screen's top edge, inside the screen stood on its
   // side: the turn sweeps over it part of the way from upright.

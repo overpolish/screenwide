@@ -200,6 +200,7 @@ fn red([r, g, b]: [u8; 3]) -> bool {
 }
 
 #[test]
+#[cfg_attr(screenwide_no_gpu, ignore = "requires a hardware GPU")]
 fn a_camera_redaction_covers_the_camera_and_ends_at_its_edge() {
   // From well outside the camera's top-left corner to its middle.
   let pixel = exported(
@@ -217,6 +218,7 @@ fn a_camera_redaction_covers_the_camera_and_ends_at_its_edge() {
 }
 
 #[test]
+#[cfg_attr(screenwide_no_gpu, ignore = "requires a hardware GPU")]
 fn a_camera_lens_enlarges_the_camera_under_it() {
   // A green box in the camera's top-left corner, 30 across, and a lens over
   // its corner at (20, 20), in the camera's own pixels: twice over, the box
@@ -245,6 +247,7 @@ fn a_camera_lens_enlarges_the_camera_under_it() {
 /// camera's own frames: red, where a fill the camera never handed over would
 /// leave the box flat in its own green.
 #[test]
+#[cfg_attr(screenwide_no_gpu, ignore = "requires a hardware GPU")]
 fn a_camera_erase_fills_from_the_camera() {
   let mut erase = green_box(point(20.0, 20.0), point(60.0, 60.0));
   erase.style.redaction = AnnotationRedaction::Erase;

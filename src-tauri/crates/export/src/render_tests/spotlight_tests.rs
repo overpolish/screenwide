@@ -75,6 +75,7 @@ fn near(drawn: u8, expected: f32) -> bool {
 }
 
 #[test]
+#[cfg_attr(all(screenwide_no_gpu, windows), ignore = "requires a hardware GPU")]
 fn the_shade_falls_outside_the_box_by_the_rust_rule() {
   let annotation = spotlight(point(100.0, 60.0), point(220.0, 140.0), 20.0, false);
   let image = composed(grey(200), vec![annotation]);
@@ -94,6 +95,7 @@ fn the_shade_falls_outside_the_box_by_the_rust_rule() {
 }
 
 #[test]
+#[cfg_attr(all(screenwide_no_gpu, windows), ignore = "requires a hardware GPU")]
 fn overlapping_spotlights_share_one_shade() {
   let first = spotlight(point(40.0, 40.0), point(140.0, 160.0), 0.0, false);
   let mut second = spotlight(point(120.0, 40.0), point(260.0, 160.0), 0.0, false);
@@ -106,6 +108,7 @@ fn overlapping_spotlights_share_one_shade() {
 }
 
 #[test]
+#[cfg_attr(all(screenwide_no_gpu, windows), ignore = "requires a hardware GPU")]
 fn a_blurring_spotlight_softens_only_what_lies_outside_it() {
   let annotation = spotlight(point(100.0, 60.0), point(220.0, 140.0), 0.0, true);
   let image = composed(stripes(), vec![annotation]);
@@ -124,6 +127,7 @@ fn a_blurring_spotlight_softens_only_what_lies_outside_it() {
 }
 
 #[test]
+#[cfg_attr(all(screenwide_no_gpu, windows), ignore = "requires a hardware GPU")]
 fn a_spotlight_that_does_not_blur_leaves_the_picture_sharp() {
   let annotation = spotlight(point(100.0, 60.0), point(220.0, 140.0), 0.0, false);
   let image = composed(stripes(), vec![annotation]);

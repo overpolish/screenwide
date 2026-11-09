@@ -56,6 +56,10 @@ jobs:
       fail-fast: false
       matrix:
         os: [macos-latest, windows-latest]
+    # Hosted runners have no hardware GPU or video encoder; the tests that
+    # need one are ignored under this cfg.
+    env:
+      RUSTFLAGS: --cfg screenwide_no_gpu
 
     steps:
       - name: Check out repository

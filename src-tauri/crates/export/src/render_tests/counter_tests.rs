@@ -103,6 +103,7 @@ fn write_png(name: &str, image: &screenwide_imaging::CapturedImage) {
 }
 
 #[test]
+#[cfg_attr(all(screenwide_no_gpu, windows), ignore = "requires a hardware GPU")]
 fn a_counter_draws_a_disc_with_its_tail_and_number() {
   let image = composed(counter(1, 0.0));
   write_png("counter-1-east", &image);
@@ -133,6 +134,7 @@ fn a_counter_draws_a_disc_with_its_tail_and_number() {
 }
 
 #[test]
+#[cfg_attr(all(screenwide_no_gpu, windows), ignore = "requires a hardware GPU")]
 fn the_tail_follows_the_angle_it_is_given() {
   let reach = DIAMETER * 0.5 * (COUNTER_TAIL_REACH - 0.15);
   for (label, angle, offset) in [
@@ -154,6 +156,7 @@ fn the_tail_follows_the_angle_it_is_given() {
 }
 
 #[test]
+#[cfg_attr(all(screenwide_no_gpu, windows), ignore = "requires a hardware GPU")]
 fn a_two_digit_counter_keeps_its_number_inside_the_disc() {
   let image = composed(counter(42, 0.0));
   write_png("counter-42", &image);
@@ -164,6 +167,7 @@ fn a_two_digit_counter_keeps_its_number_inside_the_disc() {
 }
 
 #[test]
+#[cfg_attr(all(screenwide_no_gpu, windows), ignore = "requires a hardware GPU")]
 fn a_counter_arrives_by_growing_into_place() {
   let mut annotation = counter(3, 0.0);
   annotation.reveal = counter_reveal_window(0.0, 2_000.0, 0.0);
@@ -187,6 +191,7 @@ fn a_counter_arrives_by_growing_into_place() {
 }
 
 #[test]
+#[cfg_attr(all(screenwide_no_gpu, windows), ignore = "requires a hardware GPU")]
 fn a_counter_smears_over_the_sizes_it_grew_through() {
   // A frame's worth of growth part way through the arrival: the disc covered
   // every size between the two, so its edge is a band rather than a step.
@@ -226,6 +231,7 @@ fn a_counter_smears_over_the_sizes_it_grew_through() {
 /// A document has no ceiling on its annotations: well past the thousand a
 /// fixed array once held, the last counter is still drawn, number and all.
 #[test]
+#[cfg_attr(all(screenwide_no_gpu, windows), ignore = "requires a hardware GPU")]
 fn the_last_of_a_long_list_of_counters_is_drawn_with_its_number() {
   const COLUMNS: u32 = 40;
   const ROWS: u32 = 30;

@@ -63,6 +63,7 @@ fn ink_components(image: &screenwide_imaging::CapturedImage) -> usize {
 /// The head cross-section must be symmetric about the line from the trimmed
 /// shaft endpoint to the tip, even when the endpoint tangent points elsewhere.
 #[test]
+#[cfg_attr(all(screenwide_no_gpu, windows), ignore = "requires a hardware GPU")]
 fn large_curved_head_base_is_centred_on_the_trimmed_curve() {
   let (start, control, end) = (point(287.0, 701.0), point(666.5, 247.0), point(100.0, 77.0));
   let width = 60.0;
@@ -104,6 +105,7 @@ fn large_curved_head_base_is_centred_on_the_trimmed_curve() {
 /// scale as a unit so the heads overlap the shaft and leave one connected
 /// annotation.
 #[test]
+#[cfg_attr(all(screenwide_no_gpu, windows), ignore = "requires a hardware GPU")]
 fn short_thick_curved_arrow_stays_connected() {
   let (start, control, end) = (point(106.0, 299.0), point(312.5, 186.5), point(129.0, 40.0));
   for (name, head) in [("end", AnnotationHead::End), ("both", AnnotationHead::Both)] {
@@ -121,6 +123,7 @@ fn short_thick_curved_arrow_stays_connected() {
 /// usable shaft. Fit room must come from the rest of that half, rather than
 /// treating the midpoint as the whole arrow's available length.
 #[test]
+#[cfg_attr(all(screenwide_no_gpu, windows), ignore = "requires a hardware GPU")]
 fn folded_short_curved_arrow_stays_connected() {
   let (start, control, end) = (point(100.0, 300.0), point(95.0, 0.0), point(130.0, 100.0));
   let image = composed(

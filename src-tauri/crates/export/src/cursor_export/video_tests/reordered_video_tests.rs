@@ -11,6 +11,7 @@ use super::*;
 use screenwide_timeline_edit::{RecordingTimelineEdit, RecordingTimelineSegment, TimelinePlan};
 
 #[test]
+#[cfg_attr(screenwide_no_gpu, ignore = "requires a hardware GPU")]
 fn exports_reordered_segments_in_the_order_they_play() {
   let directory = directory("reordered");
   let screen = directory.join("screen.mov");
@@ -84,6 +85,7 @@ fn exports_reordered_segments_in_the_order_they_play() {
 }
 
 #[test]
+#[cfg_attr(screenwide_no_gpu, ignore = "requires a hardware GPU")]
 fn exports_the_stretch_after_a_long_cut() {
   let directory = directory("long-cut");
   let screen = directory.join("screen.mov");

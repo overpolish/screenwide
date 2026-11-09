@@ -10,6 +10,9 @@ authors.workspace = true
 license = "GPL-3.0-or-later AND Elastic-2.0"
 edition.workspace = true
 
+[lints]
+workspace = true
+
 # The app crate sits on top; the crates under `crates/` are what it is built
 # from, each a layer the ones above it depend on and never the reverse.
 [workspace]
@@ -24,6 +27,11 @@ version = "1.0.3"
 authors = ["overpolish"]
 license = "GPL-3.0-or-later"
 edition = "2021"
+
+# CI's hosted runners have no hardware GPU or video encoder, and build with
+# `--cfg screenwide_no_gpu` so the tests that need one are ignored there.
+[workspace.lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ["cfg(screenwide_no_gpu)"] }
 
 [workspace.dependencies]
 screenwide-accent = { path = "crates/accent" }

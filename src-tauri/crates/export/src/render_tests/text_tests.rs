@@ -118,6 +118,7 @@ fn inked(
 }
 
 #[test]
+#[cfg_attr(all(screenwide_no_gpu, windows), ignore = "requires a hardware GPU")]
 fn a_text_box_draws_its_box_and_inks_its_text_to_read_on_it() {
   let text = "Click here";
   let extent = box_extent(text);
@@ -152,6 +153,7 @@ fn a_text_box_draws_its_box_and_inks_its_text_to_read_on_it() {
 }
 
 #[test]
+#[cfg_attr(all(screenwide_no_gpu, windows), ignore = "requires a hardware GPU")]
 fn a_pointer_reaches_the_tip_it_is_given_and_nowhere_else() {
   let text = "Menu";
   let extent = box_extent(text);

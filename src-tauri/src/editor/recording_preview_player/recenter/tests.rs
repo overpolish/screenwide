@@ -10,6 +10,10 @@ use screenwide_export::track_selection::{AudioLayout, TrackSelection};
 use std::sync::atomic::AtomicBool;
 
 #[test]
+#[cfg_attr(
+  all(screenwide_no_gpu, target_os = "macos"),
+  ignore = "requires a hardware GPU"
+)]
 fn recenter_detected_dark_background_matches_native_composition() {
   let directory = std::env::temp_dir().join(format!(
     "screenwide-recenter-colour-test-{}",

@@ -148,6 +148,7 @@ fn is_dark([r, g, b]: [u8; 3]) -> bool {
 }
 
 #[test]
+#[cfg_attr(all(screenwide_no_gpu, windows), ignore = "requires a hardware GPU")]
 fn draws_a_caption_word_in_its_own_colour_with_a_dark_outline_and_no_box() {
   let set = pieces(styled("clean"));
   let canvas = drawn(&set);
@@ -167,6 +168,7 @@ fn draws_a_caption_word_in_its_own_colour_with_a_dark_outline_and_no_box() {
 }
 
 #[test]
+#[cfg_attr(all(screenwide_no_gpu, windows), ignore = "requires a hardware GPU")]
 fn draws_the_outline_in_the_colour_picked_and_none_when_off() {
   let first_word = |style: TextStyle| {
     let set = pieces(style);
@@ -188,6 +190,7 @@ fn draws_the_outline_in_the_colour_picked_and_none_when_off() {
 }
 
 #[test]
+#[cfg_attr(all(screenwide_no_gpu, windows), ignore = "requires a hardware GPU")]
 fn draws_the_box_template_on_a_dark_backdrop_and_the_highlight_on_a_pill() {
   let boxed = pieces(styled("box"));
   let canvas = drawn(&boxed);
@@ -220,6 +223,7 @@ fn white_count(set: &(Vec<CaptionPiece>, CaptionFaces)) -> usize {
 }
 
 #[test]
+#[cfg_attr(all(screenwide_no_gpu, windows), ignore = "requires a hardware GPU")]
 fn draws_a_word_growing_in_at_its_size_then() {
   let settled = pieces(styled("clean"));
   let mut growing = settled.clone();
@@ -232,6 +236,7 @@ fn draws_a_word_growing_in_at_its_size_then() {
 }
 
 #[test]
+#[cfg_attr(all(screenwide_no_gpu, windows), ignore = "requires a hardware GPU")]
 fn sets_the_type_in_the_family_and_weight_the_style_names() {
   let in_font = |family: Option<&str>, weight| {
     pieces(TextStyle {
@@ -256,6 +261,7 @@ fn sets_the_type_in_the_family_and_weight_the_style_names() {
 }
 
 #[test]
+#[cfg_attr(all(screenwide_no_gpu, windows), ignore = "requires a hardware GPU")]
 fn fits_the_pill_to_type_set_in_another_face() {
   // Courier New ships with both macOS and Windows and sets "MMM" at two
   // thirds of Inter's width: a pill sized by Inter would reach far past it.
@@ -314,6 +320,7 @@ fn hand_over_template_fonts() {
 }
 
 #[test]
+#[cfg_attr(all(screenwide_no_gpu, windows), ignore = "requires a hardware GPU")]
 fn sets_the_accent_in_a_family_a_template_brings_upright_or_italic() {
   let accented = |family: &str, italic| {
     pieces(TextStyle {
@@ -349,6 +356,7 @@ fn sets_the_accent_in_a_family_a_template_brings_upright_or_italic() {
 }
 
 #[test]
+#[cfg_attr(all(screenwide_no_gpu, windows), ignore = "requires a hardware GPU")]
 fn smears_a_moving_word_along_the_way_it_came_over_the_exposure() {
   let still = pieces(styled("clean"));
   // The same frame, the words having come 80 px from the left over it.
@@ -381,6 +389,7 @@ fn smears_a_moving_word_along_the_way_it_came_over_the_exposure() {
 }
 
 #[test]
+#[cfg_attr(all(screenwide_no_gpu, windows), ignore = "requires a hardware GPU")]
 fn draws_a_word_turned_in_depth_narrower_with_its_far_side_shorter() {
   let flat = pieces(styled("clean"));
   // The same words turned 60 degrees about their upright axes, their

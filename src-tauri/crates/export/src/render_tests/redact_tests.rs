@@ -116,6 +116,7 @@ pub(super) fn pixel(rgba: &[u8], x: u32, y: u32) -> [u8; 3] {
 }
 
 #[test]
+#[cfg_attr(all(screenwide_no_gpu, windows), ignore = "requires a hardware GPU")]
 fn erase_and_colour_carry_nothing_of_what_they_cover() {
   for mode in [AnnotationRedaction::Erase, AnnotationRedaction::Color] {
     let annotation = redaction(mode);
@@ -137,6 +138,7 @@ fn distance(a: [u8; 3], b: [u8; 3]) -> i32 {
 /// The depixelation guarantee: text laid out differently inside each zone,
 /// in the same colours, pixelates to the very same pixels.
 #[test]
+#[cfg_attr(all(screenwide_no_gpu, windows), ignore = "requires a hardware GPU")]
 fn pixelate_carries_each_zones_colours_and_none_of_the_layout_within_it() {
   let annotation = redaction(AnnotationRedaction::Pixelate);
   for output in [identity(), resampled()] {
@@ -150,6 +152,7 @@ fn pixelate_carries_each_zones_colours_and_none_of_the_layout_within_it() {
 /// text in one colour over the first zone and another over the second lands
 /// in each colour's own zone.
 #[test]
+#[cfg_attr(all(screenwide_no_gpu, windows), ignore = "requires a hardware GPU")]
 fn pixelate_puts_each_colour_where_it_was_to_the_nearest_zone() {
   const SECOND: [u8; 3] = [230, 220, 40];
   let mut source = text(1);
@@ -193,6 +196,7 @@ fn pixelate_puts_each_colour_where_it_was_to_the_nearest_zone() {
 /// touched. Compared through the compositor, whose own rounding applies to
 /// both.
 #[test]
+#[cfg_attr(all(screenwide_no_gpu, windows), ignore = "requires a hardware GPU")]
 fn erase_and_colour_fill_the_snapped_box_and_nothing_else() {
   let source = picture(1);
   let filled = |fill: [u8; 3]| {
@@ -217,6 +221,7 @@ fn erase_and_colour_fill_the_snapped_box_and_nothing_else() {
 }
 
 #[test]
+#[cfg_attr(all(screenwide_no_gpu, windows), ignore = "requires a hardware GPU")]
 fn pixelate_draws_blocks_that_a_new_seed_lays_out_again() {
   let source = text(1);
   let annotation = redaction(AnnotationRedaction::Pixelate);

@@ -209,6 +209,7 @@ fn baked_export(directory: &Path, effects: ExportCameraEffects) -> std::path::Pa
 }
 
 #[test]
+#[cfg_attr(screenwide_no_gpu, ignore = "requires a hardware GPU")]
 fn a_baked_camera_shows_its_picture_where_the_matte_finds_no_person() {
   let directory = directory("baked");
   let effects = camera_with_matte(&directory, CameraBackground::Image, 2_000);
@@ -224,6 +225,7 @@ fn a_baked_camera_shows_its_picture_where_the_matte_finds_no_person() {
 /// A range over the first second only: the picture behind the person there,
 /// and the room as recorded once the range is over.
 #[test]
+#[cfg_attr(screenwide_no_gpu, ignore = "requires a hardware GPU")]
 fn a_baked_camera_keeps_its_room_outside_its_background_range() {
   let directory = directory("ranged");
   let effects = camera_with_matte(&directory, CameraBackground::Image, 1_000);
@@ -244,6 +246,7 @@ fn a_baked_camera_keeps_its_room_outside_its_background_range() {
 }
 
 #[test]
+#[cfg_attr(screenwide_no_gpu, ignore = "requires a hardware GPU")]
 fn a_camera_recording_without_a_background_shows_the_canvas_behind_the_person() {
   let directory = directory("transparent");
   let destination = directory.join("output.mp4");

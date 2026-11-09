@@ -55,6 +55,7 @@ fn bright_bottom(movie: &std::path::Path, at_seconds: &str) -> usize {
 }
 
 #[test]
+#[cfg_attr(screenwide_no_gpu, ignore = "requires a hardware GPU")]
 fn exports_captions_into_the_picture_while_they_show() {
   let directory = std::env::temp_dir().join(format!(
     "screenwide-caption-export-test-{}",

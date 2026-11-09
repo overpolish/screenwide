@@ -60,6 +60,7 @@ fn corner() -> Vec<AnnotationPoint> {
 }
 
 #[test]
+#[cfg_attr(all(screenwide_no_gpu, windows), ignore = "requires a hardware GPU")]
 fn a_drawn_stroke_paints_the_line_it_is_picked_by() {
   let points = corner();
   let pixels = composed(vec![stroke(points.clone(), false)]);
@@ -83,6 +84,7 @@ fn a_drawn_stroke_paints_the_line_it_is_picked_by() {
 }
 
 #[test]
+#[cfg_attr(all(screenwide_no_gpu, windows), ignore = "requires a hardware GPU")]
 fn a_smoothed_stroke_cuts_its_corner() {
   let pixels = composed(vec![stroke(corner(), true)]);
   // The line runs round the inside of the corner rather than into it.
@@ -92,6 +94,7 @@ fn a_smoothed_stroke_cuts_its_corner() {
 }
 
 #[test]
+#[cfg_attr(all(screenwide_no_gpu, windows), ignore = "requires a hardware GPU")]
 fn a_stroke_drawing_itself_in_paints_only_the_line_it_has_reached() {
   // Half of the L's 280 pixels: along its top, as far as 180 across.
   let mut drawing = stroke(corner(), false);
@@ -116,6 +119,7 @@ fn a_stroke_drawing_itself_in_paints_only_the_line_it_has_reached() {
 }
 
 #[test]
+#[cfg_attr(all(screenwide_no_gpu, windows), ignore = "requires a hardware GPU")]
 fn a_stroke_drawing_itself_in_smears_its_end_over_the_exposure() {
   // While the shutter was open the end ran from 112 pixels along the L to
   // 140, from 152 across to 180.

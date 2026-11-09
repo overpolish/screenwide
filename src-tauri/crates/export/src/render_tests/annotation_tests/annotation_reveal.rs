@@ -121,6 +121,7 @@ fn covered(
 /// window's end: a reveal that walked the curve's parameter instead of its
 /// length would run ahead of the bend on one arm and lag on the other.
 #[test]
+#[cfg_attr(all(screenwide_no_gpu, windows), ignore = "requires a hardware GPU")]
 fn the_shaft_grows_from_the_tail_by_arc_length() {
   for (label, curve, width) in [("straight", STRAIGHT, 6.0), ("curved", CURVED, 4.0)] {
     // 500ms is half of the one-second opening phase, and the ease is well
@@ -144,6 +145,7 @@ fn the_shaft_grows_from_the_tail_by_arc_length() {
 /// the two are further apart than a stroke is wide: revealing half the arrow
 /// has to stop at the first, so this fails outright on the second.
 #[test]
+#[cfg_attr(all(screenwide_no_gpu, windows), ignore = "requires a hardware GPU")]
 fn half_a_bent_arrow_stops_at_half_its_length() {
   let width = 4.0;
   let arc = along(CURVED, 0.5);
@@ -181,6 +183,7 @@ fn half_a_bent_arrow_stops_at_half_its_length() {
 /// everywhere, and a gap in it is not a thing a threshold can tell from its own
 /// faintness.
 #[test]
+#[cfg_attr(all(screenwide_no_gpu, windows), ignore = "requires a hardware GPU")]
 fn the_seam_never_gaps_while_the_annotation_grows() {
   for (label, curve, width) in [("straight", STRAIGHT, 6.0), ("curved", CURVED, 4.0)] {
     for elapsed in [300.0, 500.0, 800.0, 2_400.0, 2_700.0] {
@@ -208,6 +211,7 @@ fn the_seam_never_gaps_while_the_annotation_grows() {
 /// The out phase collapses towards the head rather than away from it: the
 /// tail catches up, and the arrow leaves from where it was pointing.
 #[test]
+#[cfg_attr(all(screenwide_no_gpu, windows), ignore = "requires a hardware GPU")]
 fn the_tail_catches_up_to_the_head() {
   let width = 6.0;
   // Three quarters through the closing phase, where the in-out ease has
@@ -251,6 +255,7 @@ fn ink(image: &screenwide_imaging::CapturedImage) -> usize {
 /// triangle worth building must not be drawn as one, and a triangle with no
 /// winding reads as inside every pixel on the canvas.
 #[test]
+#[cfg_attr(all(screenwide_no_gpu, windows), ignore = "requires a hardware GPU")]
 fn nothing_is_drawn_before_the_reveal_starts() {
   let frame_ms = 1_000.0 / 60.0;
   let whole = ink(&composed(SIZE, shape(STRAIGHT, 6.0)));
@@ -278,6 +283,7 @@ fn nothing_is_drawn_before_the_reveal_starts() {
 /// boundary that changed how the annotation is prepared would show up here as a
 /// step, whichever direction it stepped in.
 #[test]
+#[cfg_attr(all(screenwide_no_gpu, windows), ignore = "requires a hardware GPU")]
 fn the_reveal_never_steps_between_frames() {
   let width = 6.0;
   let whole = ink(&composed(SIZE, shape(STRAIGHT, width)));
@@ -316,6 +322,7 @@ fn the_reveal_never_steps_between_frames() {
 /// An annotation that does not animate is drawn whole for the clip's whole
 /// length, and an annotation holding between its phases is drawn the same way.
 #[test]
+#[cfg_attr(all(screenwide_no_gpu, windows), ignore = "requires a hardware GPU")]
 fn an_annotation_that_does_not_animate_is_never_cut_short() {
   let width = 6.0;
   let whole = composed(SIZE, shape(STRAIGHT, width));
@@ -347,6 +354,7 @@ fn prepared(
 /// still frame's moving end and the end it reached, the moving frame lays down
 /// partial ink where a still frame has none, and the smear ends there.
 #[test]
+#[cfg_attr(all(screenwide_no_gpu, windows), ignore = "requires a hardware GPU")]
 fn the_annotation_smears_along_the_path_it_travelled() {
   let frame_ms = 1_000.0 / 60.0;
   for (label, curve, width) in [("straight", STRAIGHT, 12.0), ("curved", CURVED, 8.0)] {
@@ -399,6 +407,7 @@ fn the_annotation_smears_along_the_path_it_travelled() {
 /// standing still beside it. Each is blown up around the span the annotation's
 /// moving end crossed during the exposure.
 #[test]
+#[cfg_attr(all(screenwide_no_gpu, windows), ignore = "requires a hardware GPU")]
 fn renders_the_smear_along_the_travelled_span() {
   let frame_ms = 1_000.0 / 60.0;
   for (label, curve, width) in [("straight", STRAIGHT, 12.0), ("curved", CURVED, 8.0)] {
@@ -445,6 +454,7 @@ fn renders_the_smear_along_the_travelled_span() {
 /// Every phase, rendered out for the eyeball pass. An arrow headed at both
 /// ends wears one on the end that moves, so it gets its own frames.
 #[test]
+#[cfg_attr(all(screenwide_no_gpu, windows), ignore = "requires a hardware GPU")]
 fn renders_every_reveal_phase() {
   let frame_ms = 1_000.0 / 60.0;
   for elapsed in [10.0, 100.0, 375.0, 2_400.0, 2_700.0, 2_950.0] {
@@ -486,6 +496,7 @@ fn renders_every_reveal_phase() {
 /// annotation sets off is a whole arrow fading in, not an arrowhead with a stub
 /// of stroke budding out of its base and not a stroke waiting on a head.
 #[test]
+#[cfg_attr(all(screenwide_no_gpu, windows), ignore = "requires a hardware GPU")]
 fn the_head_rides_ahead_of_the_stroke_from_the_start() {
   let width = 12.0;
   let arc = arc_length(STRAIGHT);
@@ -530,6 +541,7 @@ fn the_head_rides_ahead_of_the_stroke_from_the_start() {
 /// Setting off there is nothing to hold in: the stroke has outrun its own
 /// width, which is still growing in, before it is a pixel wide.
 #[test]
+#[cfg_attr(all(screenwide_no_gpu, windows), ignore = "requires a hardware GPU")]
 fn a_short_stroke_keeps_its_cap_inside_the_annotation() {
   let along_path = |from: AnnotationPoint, to: AnnotationPoint, strokes: f64, width: f64| {
     let (dx, dy) = (to.x - from.x, to.y - from.y);

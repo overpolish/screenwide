@@ -243,6 +243,10 @@ fn reads_ffmpeg_progress_as_milliseconds() {
 }
 
 #[test]
+#[cfg_attr(
+  all(screenwide_no_gpu, target_os = "macos"),
+  ignore = "requires a hardware GPU"
+)]
 fn compresses_a_real_movie_when_x264_is_available() {
   if !supports_compression() {
     eprintln!("skipped: this FFmpeg does not include libx264");

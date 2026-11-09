@@ -181,6 +181,7 @@ fn redaction(mode: AnnotationRedaction) -> RecordingAnnotationClip {
 }
 
 #[test]
+#[cfg_attr(screenwide_no_gpu, ignore = "requires a hardware GPU")]
 fn an_exported_redaction_carries_nothing_of_what_moves_under_it() {
   let directory =
     std::env::temp_dir().join(format!("screenwide-redact-video-{}", std::process::id()));
@@ -247,6 +248,7 @@ fn changing_background(directory: &Path) -> PathBuf {
 }
 
 #[test]
+#[cfg_attr(screenwide_no_gpu, ignore = "requires a hardware GPU")]
 fn an_exported_erase_follows_the_background_it_sits_on() {
   let directory =
     std::env::temp_dir().join(format!("screenwide-redact-surface-{}", std::process::id()));

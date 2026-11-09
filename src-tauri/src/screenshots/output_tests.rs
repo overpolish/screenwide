@@ -6,6 +6,7 @@ use screenwide_output::fixtures::{assert_colour_close, solid_image, test_output_
 use screenwide_output::*;
 
 #[test]
+#[cfg_attr(all(screenwide_no_gpu, windows), ignore = "requires a hardware GPU")]
 fn fits_a_screenshot_inside_a_custom_coloured_canvas() {
   let output = compose_screenshot(
     &solid_image(200, 100, [200, 100, 50, 255]),
@@ -60,6 +61,7 @@ fn places_a_source_crop_inside_the_scaled_image() {
 }
 
 #[test]
+#[cfg_attr(all(screenwide_no_gpu, windows), ignore = "requires a hardware GPU")]
 fn clips_an_artistically_placed_screenshot_at_the_canvas_edge() {
   let mut output_settings = test_output_settings(400, 400);
   output_settings.crop_x = -80.0;
@@ -80,6 +82,7 @@ fn clips_an_artistically_placed_screenshot_at_the_canvas_edge() {
 }
 
 #[test]
+#[cfg_attr(all(screenwide_no_gpu, windows), ignore = "requires a hardware GPU")]
 fn allows_the_image_to_cover_only_part_of_its_crop_window() {
   let mut output_settings = test_output_settings(400, 400);
   output_settings.image_x = 100.0 - output_settings.image_width / 2.0;
@@ -104,6 +107,7 @@ fn accepts_short_hex_background_colours() {
 }
 
 #[test]
+#[cfg_attr(all(screenwide_no_gpu, windows), ignore = "requires a hardware GPU")]
 fn renders_a_mesh_background_with_antibanding_grain() {
   let mut output_settings = test_output_settings(400, 400);
   output_settings.background_type = "mesh".to_owned();
@@ -123,6 +127,7 @@ fn renders_a_mesh_background_with_antibanding_grain() {
 }
 
 #[test]
+#[cfg_attr(all(screenwide_no_gpu, windows), ignore = "requires a hardware GPU")]
 fn rounds_the_custom_canvas_background() {
   let mut output_settings = test_output_settings(400, 400);
   output_settings.background_radius_percent = 10.0;
@@ -138,6 +143,7 @@ fn rounds_the_custom_canvas_background() {
 }
 
 #[test]
+#[cfg_attr(all(screenwide_no_gpu, windows), ignore = "requires a hardware GPU")]
 fn adds_the_default_shadow_behind_the_placed_screenshot() {
   let mut output_settings = test_output_settings(400, 400);
   output_settings.drop_shadow = true;

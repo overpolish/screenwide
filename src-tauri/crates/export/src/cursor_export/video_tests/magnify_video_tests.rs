@@ -171,6 +171,7 @@ fn level(path: &Path, [x0, y0, x1, y1]: [u32; 4]) -> f64 {
 }
 
 #[test]
+#[cfg_attr(screenwide_no_gpu, ignore = "requires a hardware GPU")]
 fn an_exported_lens_shows_the_frame_under_it_and_not_what_is_redacted() {
   let directory =
     std::env::temp_dir().join(format!("screenwide-magnify-video-{}", std::process::id()));

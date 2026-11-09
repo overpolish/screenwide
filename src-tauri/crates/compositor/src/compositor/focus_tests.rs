@@ -145,6 +145,7 @@ const OUTLINE_EDGE: (u32, (u32, u32)) = (630, (990, 1030));
 const CAMERA_SEAM: (u32, (u32, u32)) = (200, (1480, 1520));
 
 #[test]
+#[cfg_attr(all(screenwide_no_gpu, windows), ignore = "requires a hardware GPU")]
 fn without_a_focus_every_edge_stays_sharp() {
   let pixels = drawn(&[outline()]);
   let (y, span) = SCREEN_EDGE;
@@ -157,6 +158,7 @@ fn without_a_focus_every_edge_stays_sharp() {
 }
 
 #[test]
+#[cfg_attr(all(screenwide_no_gpu, windows), ignore = "requires a hardware GPU")]
 fn a_focus_softens_the_screen_against_the_background_and_what_lies_under_it() {
   let pixels = drawn(&[outline(), focus()]);
   let (y, span) = SCREEN_EDGE;
@@ -171,6 +173,7 @@ fn a_focus_softens_the_screen_against_the_background_and_what_lies_under_it() {
 }
 
 #[test]
+#[cfg_attr(all(screenwide_no_gpu, windows), ignore = "requires a hardware GPU")]
 fn what_lies_over_the_focus_stays_sharp() {
   let pixels = drawn(&[focus(), outline()]);
   let (y, span) = OUTLINE_EDGE;
@@ -185,6 +188,7 @@ fn what_lies_over_the_focus_stays_sharp() {
 }
 
 #[test]
+#[cfg_attr(all(screenwide_no_gpu, windows), ignore = "requires a hardware GPU")]
 fn a_camera_in_front_of_the_screen_stays_sharp_under_a_focus_on_it() {
   let pixels = drawn_with_camera(&[focus()], Some(true), None);
   let (y, span) = CAMERA_SEAM;
@@ -196,6 +200,7 @@ fn a_camera_in_front_of_the_screen_stays_sharp_under_a_focus_on_it() {
 }
 
 #[test]
+#[cfg_attr(all(screenwide_no_gpu, windows), ignore = "requires a hardware GPU")]
 fn a_camera_behind_the_screen_softens_as_a_spotlight_would_darken_it() {
   let pixels = drawn_with_camera(&[focus()], Some(false), None);
   let (y, span) = CAMERA_SEAM;
@@ -217,6 +222,7 @@ fn brightness_at(pixels: &[u8], (x, y): (u32, u32)) -> u32 {
 }
 
 #[test]
+#[cfg_attr(all(screenwide_no_gpu, windows), ignore = "requires a hardware GPU")]
 fn a_hovered_focus_wears_a_halo_round_its_box_over_the_blur() {
   // A box over the black screen's middle: canvas (910, 490) to (1010, 590).
   let focus = new_focus(
@@ -234,6 +240,7 @@ fn a_hovered_focus_wears_a_halo_round_its_box_over_the_blur() {
 }
 
 #[test]
+#[cfg_attr(all(screenwide_no_gpu, windows), ignore = "requires a hardware GPU")]
 fn the_screen_edge_blurs_into_the_background_without_a_seam() {
   // A box 150 pixels in from the screen's right edge, where the screen is
   // only a little soft and the background beyond it is wholly blurred.
@@ -268,6 +275,7 @@ fn the_screen_edge_blurs_into_the_background_without_a_seam() {
 }
 
 #[test]
+#[cfg_attr(all(screenwide_no_gpu, windows), ignore = "requires a hardware GPU")]
 fn the_canvas_keeps_its_rounded_corners_sharp_under_a_focus() {
   let compositor = compositor();
   let source = compositor
@@ -366,6 +374,7 @@ fn drawn_placed(corner: [f32; 2]) -> Vec<u8> {
 }
 
 #[test]
+#[cfg_attr(all(screenwide_no_gpu, windows), ignore = "requires a hardware GPU")]
 fn the_blur_moves_with_the_picture_as_the_view_pans() {
   // The screen spans the view from (40, 60); row 700 is far past the box,
   // wholly blurred, and read from the chain's coarsest levels.

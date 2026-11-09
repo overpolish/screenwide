@@ -95,6 +95,7 @@ fn expected(inked: u32, pixels: u32) -> f64 {
 }
 
 #[test]
+#[cfg_attr(all(screenwide_no_gpu, windows), ignore = "requires a hardware GPU")]
 fn classic_pixelation_paints_each_block_its_average() {
   let text = TEXTS[0];
   let blocks = Blocks::new(text, 16);
@@ -115,6 +116,7 @@ fn classic_pixelation_paints_each_block_its_average() {
 /// thousand PINs to the PIN itself at the smallest block, and to a sliver of
 /// them at the next. This is why the editor calls it a look.
 #[test]
+#[cfg_attr(all(screenwide_no_gpu, windows), ignore = "requires a hardware GPU")]
 fn classic_pixelation_gives_a_pin_away() {
   for text in TEXTS {
     for block in [16, 24] {

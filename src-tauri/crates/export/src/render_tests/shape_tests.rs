@@ -103,12 +103,14 @@ fn assert_drawn_as_picked(annotation: &Annotation) {
 }
 
 #[test]
+#[cfg_attr(all(screenwide_no_gpu, windows), ignore = "requires a hardware GPU")]
 fn a_clean_shape_is_drawn_as_it_is_picked() {
   assert_drawn_as_picked(&shape(point(100.0, 80.0), point(380.0, 240.0), 0.0, false));
   assert_drawn_as_picked(&shape(point(100.0, 80.0), point(380.0, 240.0), 20.0, false));
 }
 
 #[test]
+#[cfg_attr(all(screenwide_no_gpu, windows), ignore = "requires a hardware GPU")]
 fn a_hand_drawn_shape_is_drawn_as_it_is_picked() {
   for seed in [1, 7, 0x5eed_1234] {
     for (start, end, radius) in [
@@ -125,6 +127,7 @@ fn a_hand_drawn_shape_is_drawn_as_it_is_picked() {
 
 /// Rounding a square all the way leaves its corners dark and its circle lit.
 #[test]
+#[cfg_attr(all(screenwide_no_gpu, windows), ignore = "requires a hardware GPU")]
 fn a_square_rounded_all_the_way_is_drawn_as_a_circle() {
   let image = composed(shape(point(140.0, 60.0), point(340.0, 260.0), 50.0, false));
   assert!(red(&image, 142, 62) < 5);

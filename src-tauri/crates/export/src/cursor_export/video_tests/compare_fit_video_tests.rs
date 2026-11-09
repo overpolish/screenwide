@@ -129,6 +129,7 @@ fn compared(original: &Path, exported: &Path, fit: FrameFit, compare: &Path) {
 }
 
 #[test]
+#[cfg_attr(all(screenwide_no_gpu, windows), ignore = "requires a hardware GPU")]
 fn lines_up_the_compared_frames_at_the_smaller_looks() {
   let directory = std::env::temp_dir().join("screenwide-compare-fit");
   let _ = std::fs::remove_dir_all(&directory);

@@ -298,6 +298,7 @@ const CUSP: (AnnotationPoint, AnnotationPoint, AnnotationPoint) = (
 );
 
 #[test]
+#[cfg_attr(all(screenwide_no_gpu, windows), ignore = "requires a hardware GPU")]
 fn renders_every_arrow_case() {
   for case in cases() {
     let image = composed(case.size, case.annotation);
@@ -309,6 +310,7 @@ fn renders_every_arrow_case() {
 }
 
 #[test]
+#[cfg_attr(all(screenwide_no_gpu, windows), ignore = "requires a hardware GPU")]
 fn composites_an_arrow_annotation_into_a_gpu_still() {
   // The image is placed one source pixel to one output pixel, so the arrow's
   // source-space control points are also its canvas coordinates.
@@ -402,6 +404,7 @@ fn shaft_offset(
 /// The shaft should follow its quadratic centreline up to the point where a
 /// head takes over.
 #[test]
+#[cfg_attr(all(screenwide_no_gpu, windows), ignore = "requires a hardware GPU")]
 fn the_shaft_stays_centred_on_its_curve() {
   let curves = [
     (
@@ -460,6 +463,7 @@ fn the_shaft_stays_centred_on_its_curve() {
 /// the wrong place, and long stretches of shaft simply did not draw. A bend
 /// of five pixels over a chord of three thousand lost a fifth of the curve.
 #[test]
+#[cfg_attr(all(screenwide_no_gpu, windows), ignore = "requires a hardware GPU")]
 fn a_nearly_straight_shaft_is_continuous() {
   let (start, end) = (point(200.0, 1200.0), point(3600.0, 1000.0));
   for bend in [3.0_f64, 5.0, 6.0, 10.0, 24.0] {
@@ -489,6 +493,7 @@ fn a_nearly_straight_shaft_is_continuous() {
 /// step off the curve - small slanted gaps with round caps, at every sample
 /// midpoint along the bend.
 #[test]
+#[cfg_attr(all(screenwide_no_gpu, windows), ignore = "requires a hardware GPU")]
 fn a_tight_bend_has_no_gaps() {
   let curves = [
     ("hairpin", HAIRPIN_SIZE, HAIRPIN),
@@ -519,6 +524,7 @@ fn a_tight_bend_has_no_gaps() {
 /// which is what an edge feathered in canvas pixels looks like once a layer
 /// is drawn smaller than its canvas.
 #[test]
+#[cfg_attr(all(screenwide_no_gpu, windows), ignore = "requires a hardware GPU")]
 fn the_stroke_edge_is_feathered() {
   let (start, control, end) = (
     point(120.0, 600.0),

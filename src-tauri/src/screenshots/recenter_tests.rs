@@ -5,6 +5,7 @@ use super::compose_screenshot;
 use screenwide_output::fixtures::{assert_colour_close, solid_image, test_output_settings};
 
 #[test]
+#[cfg_attr(all(screenwide_no_gpu, windows), ignore = "requires a hardware GPU")]
 fn inset_stays_distinct_from_the_canvas_background() {
   let mut settings = test_output_settings(400, 400);
   settings.recenter_inset_color = Some("#445566".to_owned());
@@ -21,6 +22,7 @@ fn inset_stays_distinct_from_the_canvas_background() {
 }
 
 #[test]
+#[cfg_attr(all(screenwide_no_gpu, windows), ignore = "requires a hardware GPU")]
 fn source_crop_reveals_inset_without_changing_the_outer_frame() {
   let mut settings = test_output_settings(400, 400);
   settings.recenter_inset_color = Some("#445566".to_owned());

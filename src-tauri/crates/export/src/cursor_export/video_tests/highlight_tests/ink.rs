@@ -71,6 +71,7 @@ fn over_dark(source: &CapturedImage) -> CapturedImage {
 }
 
 #[test]
+#[cfg_attr(all(screenwide_no_gpu, windows), ignore = "requires a hardware GPU")]
 fn a_recoloured_edge_is_inked_in_full_from_a_third_of_the_glyph() {
   // A thin stroke's anti-aliased pixels mostly fall short of its brightest.
   // Each edge pixel is inked in a straight line from the page, in light,
@@ -93,6 +94,7 @@ fn a_recoloured_edge_is_inked_in_full_from_a_third_of_the_glyph() {
 }
 
 #[test]
+#[cfg_attr(all(screenwide_no_gpu, windows), ignore = "requires a hardware GPU")]
 fn a_recoloured_edge_is_inked_in_its_glyphs_colour_not_the_pages() {
   // Cyan text on a dark page: every edge pixel is the highlight mixed with
   // the glyph's own ink, not with a greyer ink taken from the page it held.
@@ -118,6 +120,7 @@ fn a_recoloured_edge_is_inked_in_its_glyphs_colour_not_the_pages() {
 }
 
 #[test]
+#[cfg_attr(all(screenwide_no_gpu, windows), ignore = "requires a hardware GPU")]
 fn dim_and_coloured_text_is_inked_as_fully_as_the_brightest_on_its_line() {
   // A terminal line in three colours, the selection having read its ink from
   // the brightest. Measured against that alone, purple and dim grey would
@@ -142,6 +145,7 @@ fn dim_and_coloured_text_is_inked_as_fully_as_the_brightest_on_its_line() {
 }
 
 #[test]
+#[cfg_attr(all(screenwide_no_gpu, windows), ignore = "requires a hardware GPU")]
 fn overlapping_highlights_merge_rather_than_invert() {
   // The second reads the page as it was before the first recoloured it, not
   // the first's yellow, which over a dark page would pass for bright ink.
@@ -166,6 +170,7 @@ fn overlapping_highlights_merge_rather_than_invert() {
 }
 
 #[test]
+#[cfg_attr(all(screenwide_no_gpu, windows), ignore = "requires a hardware GPU")]
 fn a_label_the_line_is_drawn_on_is_tinted_with_its_type() {
   // A terminal's red label with black type on it, the line's height and
   // wider than any stroke. Taken for one big glyph, it would be inked dark

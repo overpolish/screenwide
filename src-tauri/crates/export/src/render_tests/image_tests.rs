@@ -100,6 +100,7 @@ fn is_red(colour: [u8; 4]) -> bool {
 }
 
 #[test]
+#[cfg_attr(all(screenwide_no_gpu, windows), ignore = "requires a hardware GPU")]
 fn an_image_is_drawn_from_its_picture_with_its_clear_corners_left_alone() {
   let drawn = composed(image(red_disc(), 1.0, 0.0), [0, 0, 0, 255]);
   assert!(is_red(pixel(&drawn, CENTRE.0, CENTRE.1)));
@@ -108,6 +109,7 @@ fn an_image_is_drawn_from_its_picture_with_its_clear_corners_left_alone() {
 }
 
 #[test]
+#[cfg_attr(all(screenwide_no_gpu, windows), ignore = "requires a hardware GPU")]
 fn a_turned_image_stands_its_long_side_the_way_it_was_turned() {
   // Twice as wide as tall, a quarter turn round: tall and narrow. The card
   // a missing picture is drawn as fills its whole box, where a picture of
@@ -121,6 +123,7 @@ fn a_turned_image_stands_its_long_side_the_way_it_was_turned() {
 }
 
 #[test]
+#[cfg_attr(all(screenwide_no_gpu, windows), ignore = "requires a hardware GPU")]
 fn an_image_whose_picture_is_missing_is_drawn_as_a_grey_card() {
   let drawn = composed(image("image:missing", 1.0, 0.0), [0, 0, 0, 255]);
   let [red, green, blue, _] = pixel(&drawn, CENTRE.0, CENTRE.1);
@@ -129,6 +132,7 @@ fn an_image_whose_picture_is_missing_is_drawn_as_a_grey_card() {
 }
 
 #[test]
+#[cfg_attr(all(screenwide_no_gpu, windows), ignore = "requires a hardware GPU")]
 fn an_image_casts_its_shadow_only_when_asked() {
   // Just past the bottom of the circle, which fills its box.
   let below = (CENTRE.0, CENTRE.1 + 53);
@@ -149,6 +153,7 @@ fn an_image_casts_its_shadow_only_when_asked() {
 }
 
 #[test]
+#[cfg_attr(all(screenwide_no_gpu, windows), ignore = "requires a hardware GPU")]
 fn a_moving_image_shows_the_frame_its_moment_falls_in() {
   use screenwide_images::animation::gif;
   store_ready();

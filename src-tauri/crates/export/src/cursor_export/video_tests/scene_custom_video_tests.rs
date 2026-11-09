@@ -15,6 +15,7 @@ fn black(pixel: [u8; 3]) -> bool {
 }
 
 #[test]
+#[cfg_attr(screenwide_no_gpu, ignore = "requires a hardware GPU")]
 fn exports_a_custom_scene_in_its_own_boxes_and_corners() {
   let directory = directory("custom");
   let screen = directory.join("screen.mov");

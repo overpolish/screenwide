@@ -315,6 +315,7 @@ fn guesses(
 /// type a pixel thin, and for thin type twice the size, at every block size.
 /// Ordinary pixelation of the same PINs needed ten at most.
 #[test]
+#[cfg_attr(all(screenwide_no_gpu, windows), ignore = "requires a hardware GPU")]
 fn pixelate_leaves_the_attack_nothing_to_narrow() {
   for text in TEXTS {
     for block in [8, 12, 16] {

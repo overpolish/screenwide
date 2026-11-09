@@ -82,6 +82,7 @@ fn blue(rgba: &[u8], x: u32, y: u32) -> u8 {
 }
 
 #[test]
+#[cfg_attr(all(screenwide_no_gpu, windows), ignore = "requires a hardware GPU")]
 fn an_enlarged_pixel_is_drawn_as_a_crisp_square() {
   let drawn = composed(stripes(), vec![lens(4.0)]);
   // Four times over, each source column is four output columns wide, and
@@ -118,6 +119,7 @@ fn lit_middle() -> Vec<u8> {
 }
 
 #[test]
+#[cfg_attr(all(screenwide_no_gpu, windows), ignore = "requires a hardware GPU")]
 fn the_lens_shows_what_lies_under_its_middle_enlarged() {
   let drawn = composed(lit_middle(), vec![lens(2.0)]);
   // Twice over, the 20 lit pixels under its middle fill its middle 40.
@@ -129,6 +131,7 @@ fn the_lens_shows_what_lies_under_its_middle_enlarged() {
 }
 
 #[test]
+#[cfg_attr(all(screenwide_no_gpu, windows), ignore = "requires a hardware GPU")]
 fn the_glass_catches_the_light_along_its_rim() {
   let drawn = composed(lit_middle(), vec![lens(2.0)]);
   // The lens's top edge faces the light: its outermost row is lit well
@@ -138,6 +141,7 @@ fn the_glass_catches_the_light_along_its_rim() {
 }
 
 #[test]
+#[cfg_attr(all(screenwide_no_gpu, windows), ignore = "requires a hardware GPU")]
 fn a_lens_setting_off_is_flat() {
   // Not yet settled, the lens enlarges nothing and no glass bends what it
   // shows, so it lifts off the picture without a jump.
@@ -160,6 +164,7 @@ fn a_lens_setting_off_is_flat() {
 }
 
 #[test]
+#[cfg_attr(all(screenwide_no_gpu, windows), ignore = "requires a hardware GPU")]
 fn a_settling_lens_smears_what_it_shows_as_it_grows() {
   // While the shutter was open the lens grew from half way: (238, 100) was
   // off the smaller lens, dark, and is lit once it has grown and enlarged.
@@ -178,6 +183,7 @@ fn a_settling_lens_smears_what_it_shows_as_it_grows() {
 }
 
 #[test]
+#[cfg_attr(all(screenwide_no_gpu, windows), ignore = "requires a hardware GPU")]
 fn a_redaction_under_the_lens_stays_hidden_in_it() {
   let secret: Vec<u8> = [255; 4].repeat(SIZE.0 as usize * SIZE.1 as usize);
   let mut cover = new_redact("redact".to_owned(), point(190.0, 70.0), None);
@@ -193,6 +199,7 @@ fn a_redaction_under_the_lens_stays_hidden_in_it() {
 }
 
 #[test]
+#[cfg_attr(all(screenwide_no_gpu, windows), ignore = "requires a hardware GPU")]
 fn a_lens_shows_nothing_the_crop_cut_away() {
   // Dark on the left, bright on the right, and the crop keeps only the left,
   // laid on a black canvas.
@@ -249,6 +256,7 @@ fn spotlight(blur: bool) -> Annotation {
 }
 
 #[test]
+#[cfg_attr(all(screenwide_no_gpu, windows), ignore = "requires a hardware GPU")]
 fn a_lens_enlarges_the_marks_below_it_and_not_those_above() {
   // The arrow runs through the lens's lit middle along y = 100, 8 wide: the
   // lens shows it twice as wide, so (220, 105) lies on it only below.
@@ -267,6 +275,7 @@ fn a_lens_enlarges_the_marks_below_it_and_not_those_above() {
 }
 
 #[test]
+#[cfg_attr(all(screenwide_no_gpu, windows), ignore = "requires a hardware GPU")]
 fn a_spotlight_shades_the_marks_below_it_and_not_those_above() {
   let blue = |rgba: &[u8]| rgba[((170 * SIZE.0 + 240) * 4 + 2) as usize];
   let arrow = || blue_arrow(180.0, 300.0, 170.0);
@@ -277,6 +286,7 @@ fn a_spotlight_shades_the_marks_below_it_and_not_those_above() {
 }
 
 #[test]
+#[cfg_attr(all(screenwide_no_gpu, windows), ignore = "requires a hardware GPU")]
 fn a_blurring_spotlight_softens_the_marks_below_it_and_not_those_above() {
   // Across the arrow's edge, over a picture that is flat there, so only the
   // arrow's own blur can tell a blurring spotlight from one that only shades.
@@ -307,6 +317,7 @@ fn a_blurring_spotlight_softens_the_marks_below_it_and_not_those_above() {
 }
 
 #[test]
+#[cfg_attr(all(screenwide_no_gpu, windows), ignore = "requires a hardware GPU")]
 fn a_blurred_mark_fades_smoothly_rather_than_in_copies() {
   // A canvas large enough that the blur spans several pixels: its deviation
   // is the shorter side over 250, here 4.8.

@@ -133,6 +133,7 @@ fn every_scene() -> Vec<PreviewScene> {
 }
 
 #[test]
+#[cfg_attr(all(screenwide_no_gpu, windows), ignore = "requires a hardware GPU")]
 fn hiding_desktop_icons_records_the_bare_screen() {
   let frame = |scene: PreviewScene| {
     let renderer = renderer(scene);
@@ -149,6 +150,7 @@ fn hiding_desktop_icons_records_the_bare_screen() {
 }
 
 #[test]
+#[cfg_attr(all(screenwide_no_gpu, windows), ignore = "requires a hardware GPU")]
 fn leaving_bars_out_records_only_the_kept_part_of_the_screen() {
   let frame = |scene: PreviewScene| {
     let renderer = renderer(scene);
@@ -189,6 +191,7 @@ fn leaving_bars_out_records_only_the_kept_part_of_the_screen() {
 }
 
 #[test]
+#[cfg_attr(all(screenwide_no_gpu, windows), ignore = "requires a hardware GPU")]
 fn every_recording_scene_draws_a_picture() {
   for scene in every_scene() {
     let renderer = renderer(scene.clone());
@@ -205,6 +208,7 @@ fn every_recording_scene_draws_a_picture() {
 }
 
 #[test]
+#[cfg_attr(all(screenwide_no_gpu, windows), ignore = "requires a hardware GPU")]
 fn auto_zoom_zooms_into_the_work_and_back() {
   let zoomed = renderer(PreviewScene::AutoZoom {
     on: true,
@@ -243,6 +247,7 @@ fn frame_rate_holds_each_frame_for_its_length() {
 /// its file, the zooms planned from that file, the frame arranged by the
 /// scenes and composed as a still of the recording.
 #[test]
+#[cfg_attr(all(screenwide_no_gpu, windows), ignore = "requires a hardware GPU")]
 fn auto_zoom_frames_are_the_editors() {
   let directory = std::env::temp_dir().join(format!(
     "screenwide-settings-preview-{}",

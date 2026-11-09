@@ -37,6 +37,7 @@ fn exported_yellow(destination: &std::path::Path, time: &str, width: u32, height
 }
 
 #[test]
+#[cfg_attr(screenwide_no_gpu, ignore = "requires a hardware GPU")]
 fn exports_timed_arrows_across_a_cut_and_speed_change() {
   let directory =
     std::env::temp_dir().join(format!("screenwide-timed-arrow-{}", std::process::id()));

@@ -47,6 +47,7 @@ fn disc_centre(destination: &std::path::Path, time: &str, width: u32) -> Option<
 /// tracking, the path worked out, and the export drawing each frame where
 /// the path puts it.
 #[test]
+#[cfg_attr(screenwide_no_gpu, ignore = "requires a hardware GPU")]
 fn exports_a_pinned_counter_where_the_scrolling_content_carried_it() {
   let directory =
     std::env::temp_dir().join(format!("screenwide-pinned-counter-{}", std::process::id()));

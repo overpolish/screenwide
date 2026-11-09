@@ -58,6 +58,7 @@ fn export_scene(name: &str, scene: serde_json::Value) -> (PathBuf, PathBuf) {
 }
 
 #[test]
+#[cfg_attr(screenwide_no_gpu, ignore = "requires a hardware GPU")]
 fn exports_the_camera_alone_across_the_canvas() {
   let (directory, destination) = export_scene(
     "camera-only",
@@ -79,6 +80,7 @@ fn exports_the_camera_alone_across_the_canvas() {
 }
 
 #[test]
+#[cfg_attr(screenwide_no_gpu, ignore = "requires a hardware GPU")]
 fn exports_a_stacked_pair_swapped_with_the_camera_on_top() {
   // On a 640 by 360 canvas the camera is 154 by 87 from y 40, centred over
   // a 308 by 173 screen from y 147.
@@ -100,6 +102,7 @@ fn exports_a_stacked_pair_swapped_with_the_camera_on_top() {
 }
 
 #[test]
+#[cfg_attr(screenwide_no_gpu, ignore = "requires a hardware GPU")]
 fn exports_a_custom_scene_with_the_camera_behind_the_screen() {
   // The screen fills the canvas and the camera's box sits in its middle, 128
   // by 72 from x 256, y 144: behind the screen, so hidden there.

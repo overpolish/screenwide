@@ -152,6 +152,7 @@ pub(super) fn exported(
 }
 
 #[test]
+#[cfg_attr(screenwide_no_gpu, ignore = "requires a hardware GPU")]
 fn exports_the_screen_and_camera_where_the_scene_puts_them() {
   let directory = directory("split");
   let screen = directory.join("screen.mov");
@@ -217,6 +218,7 @@ fn exports_the_screen_and_camera_where_the_scene_puts_them() {
 }
 
 #[test]
+#[cfg_attr(screenwide_no_gpu, ignore = "requires a hardware GPU")]
 fn exports_a_zoom_into_the_screen_without_a_camera() {
   let directory = directory("zoom");
   let screen = directory.join("screen.mov");

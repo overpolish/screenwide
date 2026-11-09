@@ -24,6 +24,7 @@ fn keyboard_output(width: u32, height: u32) -> screenwide_output::ScreenshotOutp
 }
 
 #[test]
+#[cfg_attr(all(screenwide_no_gpu, windows), ignore = "requires a hardware GPU")]
 fn keeps_a_five_hundred_percent_keyboard_edge_sharp_at_4k() {
   use screenwide_keyboard_effects::KeyboardOverlay;
 
@@ -79,6 +80,7 @@ fn keeps_a_five_hundred_percent_keyboard_edge_sharp_at_4k() {
 }
 
 #[test]
+#[cfg_attr(screenwide_no_gpu, ignore = "requires a hardware GPU")]
 fn exports_keyboard_shortcuts_into_a_real_movie() {
   let directory = std::env::temp_dir().join(format!(
     "screenwide-keyboard-export-test-{}",

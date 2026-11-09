@@ -186,6 +186,7 @@ fn detail(image: &[u8], [x0, y0, x1, y1]: [u32; 4]) -> f64 {
 }
 
 #[test]
+#[cfg_attr(screenwide_no_gpu, ignore = "requires a hardware GPU")]
 fn an_exported_spotlight_shades_and_blurs_only_outside_its_light() {
   let directory =
     std::env::temp_dir().join(format!("screenwide-spotlight-video-{}", std::process::id()));
@@ -245,6 +246,7 @@ fn grey_recording(directory: &Path) -> PathBuf {
 /// holds through the join rather than lifting as the first leaves and
 /// falling again as the second arrives, and the light glides between them.
 #[test]
+#[cfg_attr(screenwide_no_gpu, ignore = "requires a hardware GPU")]
 fn butted_spotlights_hold_the_shade_through_the_join() {
   let directory =
     std::env::temp_dir().join(format!("screenwide-spotlight-join-{}", std::process::id()));

@@ -13,6 +13,7 @@ use std::process::Command;
 pub(super) use crate::render_tests::output;
 
 #[test]
+#[cfg_attr(all(screenwide_no_gpu, windows), ignore = "requires a hardware GPU")]
 fn composites_keyboard_pixels_into_a_gpu_still() {
   use screenwide_keyboard_effects::KeyboardOverlay;
 
@@ -68,6 +69,7 @@ fn pixels<const N: usize>(bytes: &[u8]) -> std::slice::Iter<'_, [u8; N]> {
 }
 
 #[test]
+#[cfg_attr(screenwide_no_gpu, ignore = "requires a hardware GPU")]
 fn exports_composited_cursor_pixels_into_a_real_movie() {
   let directory = std::env::temp_dir().join(format!(
     "screenwide-cursor-export-test-{}",
@@ -317,6 +319,7 @@ fn exports_composited_cursor_pixels_into_a_real_movie() {
 /// stretching it. These tests pin both routing and hotspot-anchored geometry;
 /// system artwork is unavailable outside a GUI session.
 #[test]
+#[cfg_attr(screenwide_no_gpu, ignore = "requires a hardware GPU")]
 fn exports_a_custom_cursor_at_the_fallback_arrows_aspect() {
   let directory = std::env::temp_dir().join(format!(
     "screenwide-custom-cursor-export-test-{}",
@@ -466,6 +469,7 @@ fn exports_a_custom_cursor_at_the_fallback_arrows_aspect() {
 }
 
 #[test]
+#[cfg_attr(screenwide_no_gpu, ignore = "requires a hardware GPU")]
 fn exports_camera_and_cursor_through_the_same_gpu_compositor() {
   let directory = std::env::temp_dir().join(format!(
     "screenwide-camera-cursor-test-{}",

@@ -8,12 +8,23 @@ fn main() {
     // Type is set by Core Text on macOS: the faces and the line widths the
     // Rust side sizes text from.
     println!("cargo:rerun-if-changed=src/engine/macos");
-    cc::Build::new()
+    let mut build = cc::Build::new();
+    build
       .file("src/engine/macos/annotation_font.m")
       .file("src/engine/macos/annotation_text_box.m")
       .file("src/engine/macos/installed_fonts.m")
-      .flag("-fobjc-arc")
-      .compile("screenwide_text_engine");
+      .flag("-fobjc-arc");
+    // The app finds Inter in its bundle. Tests and other debug programs run
+    // outside one, so a debug build also knows the repository's copy.
+    if std::env::var("PROFILE").as_deref() == Ok("debug") {
+      let manifest = std::env::var("CARGO_MANIFEST_DIR").expect("Cargo supplied it");
+      let inter = std::path::Path::new(&manifest)
+        .join("../../assets/Inter-VariableFont_opsz,wght.ttf")
+        .display()
+        .to_string();
+      build.define("SCREENWIDE_DEBUG_INTER_PATH", format!("{inter:?}").as_str());
+    }
+    build.compile("screenwide_text_engine");
     for framework in ["AppKit", "CoreText"] {
       println!("cargo:rustc-link-lib=framework={framework}");
     }

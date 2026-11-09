@@ -129,6 +129,7 @@ fn lens(centre: AnnotationPoint) -> Annotation {
 }
 
 #[test]
+#[cfg_attr(all(screenwide_no_gpu, windows), ignore = "requires a hardware GPU")]
 fn the_cursor_goes_over_a_mark() {
   let drawn = composed(vec![arrow()], CURSOR);
   // The arrow's yellow has no blue; the cursor's white does.
@@ -145,6 +146,7 @@ fn the_cursor_goes_over_a_mark() {
 }
 
 #[test]
+#[cfg_attr(all(screenwide_no_gpu, windows), ignore = "requires a hardware GPU")]
 fn a_spotlights_shade_darkens_the_cursor_but_no_mark_above_it() {
   let dark = composed(
     vec![
@@ -170,6 +172,7 @@ fn a_spotlights_shade_darkens_the_cursor_but_no_mark_above_it() {
 }
 
 #[test]
+#[cfg_attr(all(screenwide_no_gpu, windows), ignore = "requires a hardware GPU")]
 fn a_blurring_spotlight_softens_the_cursor_outside_its_light() {
   // Three pixels left of the cursor's edge, the sharp cursor leaves the
   // shaded picture alone, and the blurred one spills onto it.
@@ -190,6 +193,7 @@ fn a_blurring_spotlight_softens_the_cursor_outside_its_light() {
 }
 
 #[test]
+#[cfg_attr(all(screenwide_no_gpu, windows), ignore = "requires a hardware GPU")]
 fn a_blurred_cursor_fades_smoothly_rather_than_in_copies() {
   let drawn = composed(
     vec![spotlight(point(50.0, 50.0), point(200.0, 200.0), true)],
@@ -220,6 +224,7 @@ fn a_blurred_cursor_fades_smoothly_rather_than_in_copies() {
 }
 
 #[test]
+#[cfg_attr(all(screenwide_no_gpu, windows), ignore = "requires a hardware GPU")]
 fn a_lens_shows_the_cursor_under_it_enlarged() {
   let drawn = composed(vec![lens(point(512.0, 412.0))], CURSOR);
   // The cursor's 24 under the lens's middle fill its middle 48: (530, 412)
@@ -234,6 +239,7 @@ fn a_lens_shows_the_cursor_under_it_enlarged() {
 }
 
 #[test]
+#[cfg_attr(all(screenwide_no_gpu, windows), ignore = "requires a hardware GPU")]
 fn a_lens_hides_the_cursor_under_its_rim() {
   // Under the rim of a lens at (512, 412), what shows is the grey nearer its
   // middle, not the cursor lying there.

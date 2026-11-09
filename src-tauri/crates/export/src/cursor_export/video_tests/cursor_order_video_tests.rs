@@ -200,6 +200,7 @@ fn brightest_cursor(
 }
 
 #[test]
+#[cfg_attr(screenwide_no_gpu, ignore = "requires a hardware GPU")]
 fn an_exported_cursor_outside_a_spotlights_light_is_shaded() {
   let directory = std::env::temp_dir().join(format!(
     "screenwide-cursor-order-video-{}",
