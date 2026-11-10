@@ -102,6 +102,14 @@ impl EditorWindow {
   /// whenever nothing is being typed.
   pub(super) fn focus_webview(&self) {
     let _ = self.webview.set_focus();
+    // The typing window hid with the keyboard, which Windows hands to its
+    // parent, this input window. Focusing the app window leaves it there, so
+    // the page would see no key again until something in it was clicked.
+    let _ = self.webview.with_webview(|webview| unsafe {
+      let _ = webview.controller().MoveFocus(
+        webview2_com::Microsoft::Web::WebView2::Win32::COREWEBVIEW2_MOVE_FOCUS_REASON_PROGRAMMATIC,
+      );
+    });
   }
 
   /// `ShowWindowAsync` posts rather than sends, so callers off the event-loop
