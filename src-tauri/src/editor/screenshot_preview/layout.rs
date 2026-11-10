@@ -169,10 +169,11 @@ pub async fn layout_screenshot_preview_surface(
       .map(ScreenshotSelectionOverlay::preview_selection)
       .collect::<Vec<_>>()
   });
-  // Install hit targets and the arrow chrome before the selected item.
-  // `set_selection` performs the draw, so everything it depends on -
-  // the targets, and which tool owns the chrome - has to be in place first,
-  // or the layer's chrome shows for a frame as the arrow tool comes in hand.
+  // The targets, which tool owns the chrome and the selected item each draw
+  // the chrome as they land, so one batch holds them to a single draw.
+  // Drawn one at a time, the layer's chrome would show for a frame as a pen
+  // comes in hand, or as Select comes back with the layer let go in the same
+  // layout.
   // Under a drawing tool the targets only say which picture a fresh
   // annotation is drawn on: a press there never picks up or moves a layer.
   #[cfg(any(target_os = "macos", target_os = "windows"))]
@@ -182,6 +183,7 @@ pub async fn layout_screenshot_preview_surface(
   .is_none();
   #[cfg(not(any(target_os = "macos", target_os = "windows")))]
   let picks_layers = true;
+  let chrome_batch = surface.present_batch();
   surface.set_selection_targets(selection_targets.as_deref(), picks_layers);
   #[cfg(any(target_os = "macos", target_os = "windows"))]
   surface.set_annotations(
@@ -195,6 +197,7 @@ pub async fn layout_screenshot_preview_surface(
   #[cfg(not(any(target_os = "macos", target_os = "windows")))]
   let _ = annotation_layout;
   surface.set_selection(selection);
+  drop(chrome_batch);
   #[cfg(any(target_os = "macos", target_os = "windows"))]
   surface.set_editor_active(native_editor.unwrap_or(true));
   // No interaction view exists off the two native preview backends.
