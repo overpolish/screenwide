@@ -13,6 +13,8 @@
 use std::sync::{Mutex, PoisonError};
 
 use serde::{Deserialize, Serialize};
+#[cfg(target_os = "windows")]
+use tauri::Manager;
 use tauri::{AppHandle, Emitter};
 use ts_rs::TS;
 
@@ -71,6 +73,21 @@ pub fn show_quick_screenshot_island(app: AppHandle, destination: QuickScreenshot
   }
 }
 
+/// Stands the island over the overlay once it is up. Windows orders topmost
+/// windows by whichever was raised last, and the overlay is shown after the
+/// island and raised again by every press on it, so there the island is
+/// owned by it, as the Ruler's and Text Recognition's are. macOS already
+/// orders the island above the overlay by level.
+#[cfg(target_os = "windows")]
+pub(crate) fn stand_over_overlay(app: &AppHandle) {
+  if !is_up() {
+    return;
+  }
+  if let Some(overlay) = app.get_webview_window(WindowLabel::RegionSelector.as_str()) {
+    app_windows::island_overlay::stand_over(app, Some(&overlay));
+  }
+}
+
 /// The shutter is about to fire. A still that takes Screenwide's windows
 /// would take the island too, so it goes at once.
 pub(crate) fn before_shutter(app: &AppHandle, includes_own_windows: bool) {
@@ -89,6 +106,10 @@ pub(crate) fn withdraw(app: &AppHandle) {
     return;
   }
   tell(app, None);
+  // Released before the overlay can close, which would take the island it
+  // owns with it.
+  #[cfg(target_os = "windows")]
+  app_windows::island_overlay::stand_over(app, None);
   let result = if crate::recording::is_idle(app) && !app_windows::is_recording_ui_visible() {
     app_windows::island::hide(app)
   } else {

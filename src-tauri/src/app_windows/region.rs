@@ -186,6 +186,8 @@ pub fn hide_region_selector(app: AppHandle) -> tauri::Result<()> {
 }
 
 fn raise_recording_controls(app: &AppHandle) -> tauri::Result<()> {
+  #[cfg(target_os = "windows")]
+  crate::screenshots::quick_island::stand_over_overlay(app);
   if !recording_controls_may_raise(
     RECORDING_CONTROLS_VISIBLE.load(Ordering::Relaxed),
     region_gesture::is_active(),
