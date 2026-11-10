@@ -160,11 +160,12 @@ export function ScreenshotSection({
   const hasSelectedAnnotation = annotations.hasSelection;
   // Select first, then nothing chosen: taken up, Select would bring back the
   // annotations it held when it was put down (`useSelectToolMemory`). The
-  // Screenshot mode put away lets its layer go, so its island leaves.
+  // layer goes too, whether chosen by hand or by the tool that took one up,
+  // since Select on a chosen layer is the Screenshot mode.
   const backToSelect = () => {
     setTool("select");
     annotations.clearSelection();
-    if (isScreenOpen) onSelectedItemChange?.(null);
+    onSelectedItemChange?.(null);
   };
   // A tool that draws on a layer takes one in hand, the newest where none
   // is chosen.
@@ -215,10 +216,7 @@ export function ScreenshotSection({
         : undefined,
     // ⌘D lets go of everything chosen, the layer as well, with Select in
     // hand.
-    onDeselectAll: () => {
-      backToSelect();
-      onSelectedItemChange?.(null);
-    },
+    onDeselectAll: backToSelect,
     onMarqueeTool: () => {
       toggle("marquee");
     },
