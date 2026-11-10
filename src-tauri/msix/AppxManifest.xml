@@ -12,7 +12,8 @@
   xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10"
   xmlns:desktop="http://schemas.microsoft.com/appx/manifest/desktop/windows10"
   xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities"
-  IgnorableNamespaces="uap desktop rescap">
+  xmlns:uap11="http://schemas.microsoft.com/appx/manifest/uap/windows10/11"
+  IgnorableNamespaces="uap desktop rescap uap11">
   <Identity
     Name="overpolish.Screenwide"
     Publisher="CN=20209A30-FD28-4F20-817F-331CCDE1D196"
@@ -60,6 +61,10 @@
     <!-- A desktop app, not a sandboxed one: it captures the screen, hides
          chosen windows from capture and moves other apps' windows. -->
     <rescap:Capability Name="runFullTrust" />
+    <!-- Lets the user allow capture without Windows' yellow border
+         (`src-tauri/src/capture_border_windows.rs`). Ignorable, so Windows 10
+         installs the package without it. -->
+    <uap11:Capability Name="graphicsCaptureWithoutBorder" />
     <DeviceCapability Name="webcam" />
     <DeviceCapability Name="microphone" />
   </Capabilities>

@@ -8,6 +8,8 @@ mod app_windows;
 mod async_runtime;
 mod audio_preview;
 mod camera_preview;
+#[cfg(target_os = "windows")]
+mod capture_border_windows;
 mod capture_overlays;
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 mod cursor_scrub;

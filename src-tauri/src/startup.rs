@@ -44,6 +44,8 @@ pub(crate) fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Erro
   crate::settings::initialize(app.handle());
   #[cfg(target_os = "windows")]
   crate::hidden_apps_windows::restore_left_hidden(app.handle());
+  #[cfg(target_os = "windows")]
+  crate::capture_border_windows::request_borderless();
   // Load controls before native input monitoring starts.
   #[cfg(any(target_os = "macos", target_os = "windows"))]
   crate::glide::settings::initialize(app.handle());

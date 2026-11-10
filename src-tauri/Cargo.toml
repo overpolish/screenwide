@@ -242,6 +242,7 @@ windows = { workspace = true, features = [
   "Graphics_DirectX",
   "Graphics_DirectX_Direct3D11",
   "Media_Ocr",
+  "Security_Authorization_AppCapabilityAccess",
   "Services_Store",
   "Storage",
   "Storage_Search",

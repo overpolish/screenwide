@@ -48,6 +48,7 @@ Windows Defender scans every file a build writes, which can make Rust builds sev
 - `pnpm tauri dev` runs the app, rebuilding as the code changes.
 - `pnpm storybook` shows every primitive, composite and feature on its own. `pnpm dev:storybook-native` shows them in the app's real native windows, which menus, popovers and tooltips open in.
 - `pnpm dev:recording-failures`, `pnpm dev:screenshot-failures` and `pnpm dev:permissions` run the app with failures or missing permissions faked, to see how each is shown.
+- On Windows, behaviour only the Microsoft Store copy has (its package identity, the borderless capture prompt, its startup task and updates) needs a packaged build: [RELEASING.md](RELEASING.md#microsoft-store) shows how to build one and register it unsigned in developer mode.
 - `pnpm site:dev` serves the website in `src/site`, built from the app's own components; `pnpm site:build` builds it into `dist-site`, and `pnpm site:deploy` builds it and publishes it to getscreenwide.com through the static Cloudflare Worker in `workers/site`.
 
 ## Check
