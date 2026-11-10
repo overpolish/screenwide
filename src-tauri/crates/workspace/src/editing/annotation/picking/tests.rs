@@ -235,3 +235,28 @@ fn an_annotation_a_layer_in_front_hides_is_not_picked_there() {
     assert_eq!(shaft_at_point(&state, shown), Some(0), "chosen {chosen:?}");
   }
 }
+
+#[test]
+fn a_stroke_is_picked_on_its_line_and_never_by_its_box() {
+  // A straight stroke from (20, 10) to (180, 90), 8 display points wide,
+  // chosen with the select tool in hand: the case a box would pick most.
+  let mut state = layered(1, Some(1));
+  state.annotation.paths = vec![[0.1, 0.1], [0.5, 0.5], [0.9, 0.9]];
+  state.annotation.handles = vec![NativeAnnotationHandles {
+    kind: AnnotationKind::Draw.raw(),
+    layer_id: 1,
+    start_x: 0.1,
+    start_y: 0.1,
+    end_x: 0.9,
+    end_y: 0.9,
+    start_head: 0.0,
+    end_head: 3.0,
+    ..arrow()
+  }];
+  state.annotation.mode = MODE_SELECT;
+  state.annotation.selected = 0;
+  let on_line = crate::editing::turn::selected_layer_point(&state, (100.0, 50.0));
+  let in_box = crate::editing::turn::selected_layer_point(&state, (160.0, 20.0));
+  assert_eq!(shaft_at_point(&state, on_line), Some(0));
+  assert_eq!(shaft_at_point(&state, in_box), None);
+}

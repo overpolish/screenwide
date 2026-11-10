@@ -162,20 +162,19 @@ pub(super) fn shape_body_distance(
 }
 
 /// Whether the annotation at `index` is picked by its inside as well as its
-/// line: a shape or a stroke once it is chosen, or while the select tool is
-/// in hand. It can be carried from anywhere in it, while any other tool still
-/// draws inside one not in hand. The twin of the rule in
+/// line: a shape once it is chosen, or while the select tool is in hand. It
+/// can be carried from anywhere in it, while any other tool still draws
+/// inside one not in hand. A stroke is picked by its line alone, however
+/// large the box round it: its box is only chrome. The twin of the rule in
 /// `annotation_shaft_at_point`.
 pub(super) fn grabs_inside(
   state: &SurfaceState,
   index: usize,
   item: &NativeAnnotationHandles,
 ) -> bool {
-  matches!(
-    item.shape_kind(),
-    AnnotationKind::Shape | AnnotationKind::Draw
-  ) && (matches!(state.annotation.mode, MODE_SELECT | MODE_MARQUEE)
-    || state.annotation.selected == index as i32)
+  item.shape_kind() == AnnotationKind::Shape
+    && (matches!(state.annotation.mode, MODE_SELECT | MODE_MARQUEE)
+      || state.annotation.selected == index as i32)
 }
 
 /// The resize cursor a box's grip shows: its sides say which way.

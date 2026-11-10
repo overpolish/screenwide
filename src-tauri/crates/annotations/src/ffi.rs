@@ -14,7 +14,7 @@ use super::arrow::geometry::prepare_arrow;
 use super::counter::geometry::prepare_counter;
 use super::counter::silhouette::prepared_counter_distance;
 use super::focus::geometry::{focus_distance, prepare_focus};
-use super::freehand::geometry::{freehand_body_distance, freehand_distance, prepare_freehand};
+use super::freehand::geometry::{freehand_distance, prepare_freehand};
 use super::geometry::ArrowGeometry;
 use super::highlight::geometry::{flow_distance, prepare_highlight, HighlightFlow};
 use super::image::geometry::{image_distance, prepare_image};
@@ -214,36 +214,24 @@ pub unsafe extern "C" fn screenwide_annotation_distance(
 }
 
 /// How far a point falls outside a stroke's drawn line, from its fitted
-/// chain of `count` points, `x` then `y` each, in the caller's pixels. With
-/// `body`, the box from `low` to `high` that holds the stroke picks it too:
-/// what picks a chosen stroke from anywhere inside it.
+/// chain of `count` points, `x` then `y` each, in the caller's pixels.
 ///
 /// # Safety
 /// `chain` must point at `count` readable pairs of floats, or be null.
 #[cfg(target_os = "macos")]
 #[no_mangle]
-#[allow(clippy::too_many_arguments)]
 pub unsafe extern "C" fn screenwide_freehand_distance(
   px: f32,
   py: f32,
   chain: *const [f32; 2],
   count: u32,
   width: f32,
-  body: u32,
-  low_x: f32,
-  low_y: f32,
-  high_x: f32,
-  high_y: f32,
 ) -> f32 {
   if chain.is_null() || count == 0 {
     return f32::INFINITY;
   }
   let chain = std::slice::from_raw_parts(chain, count as usize);
-  if body != 0 {
-    freehand_body_distance([px, py], chain, width, [low_x, low_y], [high_x, high_y])
-  } else {
-    freehand_distance([px, py], chain, width)
-  }
+  freehand_distance([px, py], chain, width)
 }
 
 /// How far a point falls outside a prepared shape's stroke or the box it

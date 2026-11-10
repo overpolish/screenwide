@@ -173,7 +173,7 @@ pub struct LensPick {
 /// taken; a lens covering it is not taken at once: the press is read
 /// through it and the search carries on below it, among what is drawn
 /// there, and only where nothing drawn is hit is the lens itself taken, to
-/// be moved. An inside seen through a lens - a shape's, a stroke's - never
+/// be moved. A shape's inside seen through a lens never
 /// takes the press from the lens, or a lens over a large shape could not be
 /// moved. Off every lens, `hits` is asked first of what is drawn (`false`)
 /// and then of insides (`true`), as with no lens at all. `lens` says which

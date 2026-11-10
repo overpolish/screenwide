@@ -150,7 +150,7 @@ use item_layer::{drawn_pictures, point_on_item_layer};
 /// The topmost arrow whose drawn shape `point` lands on. There is no
 /// tolerance around it: the arrow is picked, and haloed, exactly where it is
 /// painted, which is what keeps the halo off the space beside an annotation.
-/// A shape or a stroke grabbed by its inside is `redact_chrome::grabs_inside`'s
+/// A shape grabbed by its inside is `redact_chrome::grabs_inside`'s
 /// call, and what is drawn wins over an inside, whatever the stacking: a
 /// press on an annotation seen through a shape in front picks that
 /// annotation, and only a press on nothing drawn falls to the inside it
@@ -197,7 +197,7 @@ pub(super) fn pick_at_point(state: &SurfaceState, point: (f64, f64)) -> Option<(
       }
       let drawn = layer_image_rect(state, item.layer_id).is_some_and(|image| {
         let distance = if item.shape_kind() == AnnotationKind::Draw {
-          draw_distance(state, image, item, (x, y), insides)
+          draw_distance(state, image, item, (x, y))
         } else if insides {
           super::redact_chrome::shape_body_distance(image, item, (x, y))
         } else {

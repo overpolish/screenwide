@@ -41,20 +41,3 @@ pub fn prepare_freehand(
 pub fn freehand_distance(point: [f32; 2], chain: &[[f32; 2]], width: f32) -> f32 {
   super::path::chain_distance(point, chain) - width.max(0.0) * 0.5
 }
-
-/// How far `point` falls outside the stroke or the box from `low` to `high`
-/// that holds it: what picks a chosen stroke from anywhere inside its box.
-pub fn freehand_body_distance(
-  point: [f32; 2],
-  chain: &[[f32; 2]],
-  width: f32,
-  low: [f32; 2],
-  high: [f32; 2],
-) -> f32 {
-  let outside = [
-    (low[0] - point[0]).max(point[0] - high[0]),
-    (low[1] - point[1]).max(point[1] - high[1]),
-  ];
-  let boxed = outside[0].max(0.0).hypot(outside[1].max(0.0)) + outside[0].max(outside[1]).min(0.0);
-  freehand_distance(point, chain, width).min(boxed)
-}

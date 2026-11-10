@@ -10,7 +10,7 @@ use super::*;
 use screenwide_annotations::arrow::distance::prepared_arrow_distance;
 use screenwide_annotations::arrow::geometry::prepare_arrow;
 use screenwide_annotations::counter::silhouette::counter_distance;
-use screenwide_annotations::freehand::geometry::{freehand_body_distance, freehand_distance};
+use screenwide_annotations::freehand::geometry::freehand_distance;
 use screenwide_annotations::highlight::geometry::flow_distance;
 use screenwide_annotations::reveal::AnnotationReveal;
 use screenwide_annotations::text::geometry::text_distance;
@@ -91,14 +91,13 @@ pub(super) fn arrow_distance(
 }
 
 /// How far `point` is from a stroke's drawn line, in display points, from
-/// the fitted line its grips point into; with `body`, its box picks it too.
-/// The twin of `annotation_draw_distance`.
+/// the fitted line its grips point into. The twin of
+/// `annotation_draw_distance`.
 pub(super) fn draw_distance(
   state: &SurfaceState,
   image: PreviewSurfaceRect,
   item: &NativeAnnotationHandles,
   point: (f64, f64),
-  body: bool,
 ) -> f32 {
   let (first, count) = (item.start_head as usize, item.end_head as usize);
   let Some(line) = first
@@ -116,18 +115,5 @@ pub(super) fn draw_distance(
     .collect();
   let probe = [point.0 as f32, point.1 as f32];
   let width = (item.width * image.width) as f32;
-  if !body {
-    return freehand_distance(probe, &chain, width);
-  }
-  let (low, high) = (
-    display_point(image, item.start_x, item.start_y),
-    display_point(image, item.end_x, item.end_y),
-  );
-  freehand_body_distance(
-    probe,
-    &chain,
-    width,
-    [low.0 as f32, low.1 as f32],
-    [high.0 as f32, high.1 as f32],
-  )
+  freehand_distance(probe, &chain, width)
 }

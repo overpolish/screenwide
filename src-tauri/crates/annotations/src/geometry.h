@@ -89,11 +89,9 @@ float screenwide_shape_body_distance(float px, float py,
                                      const AnnotationArrowGeometry *geometry);
 
 /// How far a point falls outside a stroke's drawn line, from its fitted chain
-/// of `count` points, each an `x` and a `y` in the caller's pixels. With
-/// `body`, the box from `low` to `high` holding the stroke picks it too.
+/// of `count` points, each an `x` and a `y` in the caller's pixels.
 float screenwide_freehand_distance(float px, float py, const float *chain, uint32_t count,
-                                   float width, uint32_t body, float low_x, float low_y,
-                                   float high_x, float high_y);
+                                   float width);
 
 /// How far a point falls outside a highlight, from what its grips' record
 /// carries placed in display points: its first band's top-left corner and

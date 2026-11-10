@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-use super::geometry::{freehand_body_distance, freehand_distance};
+use super::geometry::freehand_distance;
 use super::gesture::{drag, drag_new};
 use super::model::new_draw;
 use super::path::{chain, chain_distance, curves, fitted, simplify, MAX_CURVES};
@@ -131,14 +131,12 @@ fn a_long_scribble_is_thinned_until_it_fits() {
 }
 
 #[test]
-fn a_stroke_is_picked_on_its_line_and_its_box_only_once_chosen() {
+fn a_stroke_is_picked_on_its_line_only() {
   let chain = fitted(&[point(0.0, 0.0), point(100.0, 100.0)], false);
   // On the line, inside the pen, and off it.
   assert!(freehand_distance([50.0, 50.0], &chain, 8.0) < 0.0);
   assert!(freehand_distance([52.0, 48.0], &chain, 8.0) < 0.0);
   assert!(freehand_distance([80.0, 20.0], &chain, 8.0) > 30.0);
-  // The box takes a press anywhere inside it.
-  assert!(freehand_body_distance([80.0, 20.0], &chain, 8.0, [0.0, 0.0], [100.0, 100.0]) <= 0.0);
 }
 
 #[test]
