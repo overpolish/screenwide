@@ -19,10 +19,12 @@ mod lifetime;
 #[cfg(target_os = "macos")]
 pub mod macos;
 pub mod mips;
+mod precompiled;
 pub mod surface;
 mod textures;
 
-pub use lifetime::{on_idle, shared, DeviceCache};
+pub use lifetime::{on_idle, open_soon, shared, DeviceCache};
+pub use precompiled::{precompiled_modules, PrecompiledModules, PrecompiledStages};
 
 use std::sync::Arc;
 

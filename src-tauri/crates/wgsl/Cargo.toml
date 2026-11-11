@@ -3,7 +3,7 @@
 
 [package]
 name = "screenwide-wgsl"
-description = "For build scripts: joining WGSL shaders from their parts and validating them"
+description = "For build scripts: joining WGSL shaders from their parts, validating them and compiling them ahead of time"
 version.workspace = true
 authors.workspace = true
 license.workspace = true
@@ -13,4 +13,6 @@ edition.workspace = true
 doctest = false
 
 [dependencies]
-naga = { workspace = true, features = ["wgsl-in"] }
+# The same naga wgpu compiles WGSL with, so a shader that builds also loads,
+# and a shader precompiled here is the text wgpu would write.
+naga = { workspace = true, features = ["wgsl-in", "hlsl-out", "msl-out"] }

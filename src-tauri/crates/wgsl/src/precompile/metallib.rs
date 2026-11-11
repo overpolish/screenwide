@@ -2,13 +2,13 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 //! Metal libraries for macOS. naga writes each stage as wgpu-hal 30 writes it
-//! for the preview's pipeline layout (`create_pipeline_layout` and
+//! for the shader's pipeline layout (`create_pipeline_layout` and
 //! `load_shader` in its `metal/device.rs`): the same slots and the same
 //! options, but for a fixed language version and without buffer bounds
 //! checks (see [`options`]). Apple's Metal compiler then compiles it as wgpu
-//! would through `MTLCompileOptions`. `compositor/precompiled_tests.rs` draws
-//! with the result and with the shader compiled from WGSL, and requires the
-//! same pixels.
+//! would through `MTLCompileOptions`. Each shader's tests draw with the
+//! result and with the shader compiled from WGSL, and require the same
+//! pixels.
 //!
 //! The compiler is not part of Xcode's default install: Xcode 26 downloads it
 //! with `xcodebuild -downloadComponent MetalToolchain`.
@@ -18,8 +18,7 @@ use std::process::{Command, Output};
 
 use naga::back::msl;
 
-use super::preview_bindings::{PreviewBinding, PREVIEW_BINDINGS};
-use super::{cached, Stages};
+use super::{cached, in_binding_order, parse, Binding, Precompiled, Stages};
 
 /// The Metal Shading Language of macOS 14, the oldest `tauri.conf.json`
 /// supports; wgpu itself picks the newest the running system has.
@@ -63,29 +62,24 @@ impl Compiler {
     }
   }
 
-  pub(super) fn compile(&self, source: &str, cache: &Path) -> Stages {
-    let module = naga::front::wgsl::parse_str(source).expect("the preview shader parses");
-    let info = naga::valid::Validator::new(
-      naga::valid::ValidationFlags::all(),
-      naga::valid::Capabilities::all(),
-    )
-    .validate(&module)
-    .expect("the preview shader validates");
-    let options = options();
+  pub(super) fn compile(&self, shader: &Precompiled, cache: &Path) -> Stages {
+    let (module, info) = parse(shader);
+    let options = options(&shader.bindings);
     let stage = |stage, entry: &str| {
-      let text = msl_text(&module, &info, stage, entry, &options);
+      let text = msl_text(shader.name, &module, &info, stage, entry, &options);
       // naga still declares the sizes buffer and passes it down; reading a
       // field of it, as `arrayLength` does, would read what wgpu never binds.
       assert!(
         !text.contains("_buffer_sizes."),
-        "the preview shader's {entry} reads a buffer's length, which a precompiled Metal \
-         library cannot be given"
+        "the {} shader's {entry} reads a buffer's length, which a precompiled Metal library \
+         cannot be given",
+        shader.name
       );
       cached(
         cache,
         (&text, ARGUMENTS, &self.identity),
         "metallib",
-        |output| self.run(&text, entry, output),
+        |output| self.run(shader.name, &text, entry, output),
       )
     };
     Stages {
@@ -94,7 +88,7 @@ impl Compiler {
     }
   }
 
-  fn run(&self, text: &str, entry: &str, output: &Path) {
+  fn run(&self, name: &str, text: &str, entry: &str, output: &Path) {
     let input = output.with_extension("metal");
     let air = output.with_extension("air");
     std::fs::write(&input, text)
@@ -103,7 +97,7 @@ impl Compiler {
       let result = result.unwrap_or_else(|error| panic!("{TOOLCHAIN_MISSING}: {error}"));
       assert!(
         result.status.success(),
-        "{what} the preview shader's {entry}:\n{}",
+        "{what} the {name} shader's {entry}:\n{}",
         String::from_utf8_lossy(&result.stderr)
       );
     };
@@ -142,6 +136,7 @@ fn xcrun(
 /// point, and only that entry point's resources mapped. wgpu looks the
 /// function up by the name the pipeline gives, so naga must keep it.
 fn msl_text(
+  name: &str,
   module: &naga::Module,
   info: &naga::valid::ModuleInfo,
   stage: naga::ShaderStage,
@@ -154,7 +149,7 @@ fn msl_text(
     Some((stage, entry)),
     &Default::default(),
   )
-  .expect("the preview shader's overrides resolve");
+  .unwrap_or_else(|error| panic!("the {name} shader's overrides do not resolve: {error}"));
   let mut options = options.clone();
   options
     .per_entry_point_map
@@ -171,44 +166,46 @@ fn msl_text(
       binding_array_length_map: Default::default(),
     },
   )
-  .unwrap_or_else(|error| panic!("naga could not write the preview shader's {entry}: {error}"));
+  .unwrap_or_else(|error| panic!("naga could not write the {name} shader's {entry}: {error}"));
   assert_eq!(
     translation.entry_point_names[0].as_deref().ok(),
     Some(entry),
-    "naga renamed the preview shader's {entry}"
+    "naga renamed the {name} shader's {entry}"
   );
   text
 }
 
-/// The slots wgpu-hal 30 derives from the preview's layout: one bind group,
-/// seen by the fragment stage only, no immediates. Each stage counts buffers,
+/// The slots wgpu-hal 30 derives from a layout of one bind group, seen by
+/// the fragment stage only, and no immediates. Each stage counts buffers,
 /// textures and samplers apart, in binding order, and takes the buffer after
 /// its last for the sizes of runtime-sized arrays; the vertex stage takes it
 /// always, for vertex pulling.
 ///
 /// Buffer accesses are left unchecked, which wgpu does only when asked. A
-/// checked access to a runtime-sized array (bindings 7, 8, 10, 11 and 14)
-/// reads that array's length from the sizes buffer, and wgpu fills that
-/// buffer from the `sized_bindings` it finds while compiling MSL itself; for
-/// a precompiled library it has none, and binds nothing in that slot. naga
-/// sets the policy for every buffer at once, so the uniform arrays in
-/// bindings 0 and 1 go unchecked too. Indices into the shader's own arrays
-/// and texel loads stay checked: neither reads the sizes buffer.
-fn options() -> msl::Options {
+/// checked access to a runtime-sized storage array reads that array's length
+/// from the sizes buffer, and wgpu fills that buffer from the
+/// `sized_bindings` it finds while compiling MSL itself; for a precompiled
+/// library it has none, and binds nothing in that slot. naga sets the policy
+/// for every buffer at once, so uniform arrays go unchecked too. Indices into
+/// the shader's own arrays and texel loads stay checked: neither reads the
+/// sizes buffer.
+fn options(bindings: &[(u32, Binding)]) -> msl::Options {
   let mut fragment = msl::EntryPointResources::default();
   let (mut buffers, mut textures, mut samplers) = (0, 0, 0);
-  for (kind, binding) in PREVIEW_BINDINGS.iter().zip(0..) {
+  let mut storage = false;
+  for (binding, kind) in in_binding_order(bindings) {
     let mut target = msl::BindTarget::default();
     match kind {
-      PreviewBinding::Uniform | PreviewBinding::Storage => {
+      Binding::Uniform | Binding::Storage => {
+        storage |= matches!(kind, Binding::Storage);
         target.buffer = Some(buffers);
         buffers += 1;
       }
-      PreviewBinding::Texture | PreviewBinding::TextureArray => {
+      Binding::Texture | Binding::TextureArray => {
         target.texture = Some(textures);
         textures += 1;
       }
-      PreviewBinding::Sampler => {
+      Binding::Sampler => {
         target.sampler = Some(msl::BindSamplerTarget::Resource(samplers));
         samplers += 1;
       }
@@ -217,10 +214,7 @@ fn options() -> msl::Options {
       .resources
       .insert(naga::ResourceBinding { group: 0, binding }, target);
   }
-  if PREVIEW_BINDINGS
-    .iter()
-    .any(|kind| matches!(kind, PreviewBinding::Storage))
-  {
+  if storage {
     fragment.sizes_buffer = Some(buffers);
   }
   let vertex = msl::EntryPointResources {

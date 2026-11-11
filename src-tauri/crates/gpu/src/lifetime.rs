@@ -13,7 +13,7 @@
 //! and is filled again on the next use.
 
 use std::sync::atomic::{AtomicBool, AtomicU64, AtomicUsize, Ordering};
-use std::sync::{Arc, Mutex, MutexGuard, Once, PoisonError, Weak};
+use std::sync::{Arc, Mutex, MutexGuard, Once, PoisonError, TryLockError, Weak};
 use std::time::{Duration, Instant};
 
 use super::Gpu;
@@ -63,6 +63,29 @@ pub fn shared() -> Result<Arc<Gpu>, String> {
       .spawn(watch_idle);
   });
   opened
+}
+
+/// Starts opening the shared device on a thread of its own, for a caller
+/// that will draw soon but has other work first, such as an overlay that
+/// freezes the desktop before drawing over it. Whatever asks for the device
+/// meanwhile waits only for what is left of the opening.
+pub fn open_soon() {
+  LAST_USE.store(now_ms(), Ordering::Relaxed);
+  // Held while another thread opens the device: it is on its way already.
+  let current = match CURRENT.try_lock() {
+    Ok(current) => current,
+    Err(TryLockError::Poisoned(error)) => error.into_inner(),
+    Err(TryLockError::WouldBlock) => return,
+  };
+  if current.is_some() {
+    return;
+  }
+  drop(current);
+  let _ = std::thread::Builder::new()
+    .name("screenwide-gpu-open".to_owned())
+    .spawn(|| {
+      let _ = shared();
+    });
 }
 
 /// The device if it is open, without opening it.

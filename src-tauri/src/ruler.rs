@@ -98,7 +98,8 @@ pub async fn start(app: &AppHandle) -> Result<(), String> {
   if !crate::licensing::allow(app, crate::licensing::Tool::Ruler) {
     return Ok(());
   }
-
+  // Opens while the desktop freezes, which the overlay waits for anyway.
+  screenwide_gpu::open_soon();
   dismiss(app);
   capture_overlays::dismiss_except(app, &[capture_overlays::CaptureOverlay::Ruler]);
   let generation = app.state::<RulerState>().begin();

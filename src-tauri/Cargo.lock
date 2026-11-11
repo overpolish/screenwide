@@ -5758,7 +5758,6 @@ version = "1.0.3"
 dependencies = [
  "bytemuck",
  "cc",
- "naga",
  "screenwide-annotations",
  "screenwide-cursor-effects",
  "screenwide-gpu",

@@ -10,8 +10,7 @@ use screenwide_compositor::annotation_gpu::{
 use screenwide_gpu::Gpu;
 
 use super::focus::{FocusChains, FocusFrame};
-
-const SHADER: &str = include_str!(concat!(env!("OUT_DIR"), "/annotate_overlay.wgsl"));
+use super::pipeline::{self, Source};
 
 /// The twin of `Overlay` in `annotate_overlay.wgsl`.
 #[repr(C)]
@@ -64,45 +63,21 @@ pub(in crate::annotate) struct Renderer {
 
 impl Renderer {
   pub(in crate::annotate) fn new() -> Result<Self, String> {
+    Self::with_shader(Source::Precompiled)
+  }
+
+  /// A renderer whose shader compiles from WGSL, which the precompiled
+  /// shader is checked against.
+  #[cfg(test)]
+  pub(in crate::annotate) fn compiled_from_wgsl() -> Result<Self, String> {
+    Self::with_shader(Source::Wgsl)
+  }
+
+  fn with_shader(source: Source) -> Result<Self, String> {
     let gpu = screenwide_gpu::shared()?;
     let device = &gpu.device;
-    let module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
-      label: Some("Screenwide annotate overlay shader"),
-      source: wgpu::ShaderSource::Wgsl(SHADER.into()),
-    });
-    let layout = bind_group_layout(device);
-    let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-      label: Some("Screenwide annotate overlay layout"),
-      bind_group_layouts: &[Some(&layout)],
-      immediate_size: 0,
-    });
-    // The result is already premultiplied, so it is written rather than
-    // blended: one pass over a cleared target has nothing to blend with.
-    let pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
-      label: Some("Screenwide annotate overlay pipeline"),
-      layout: Some(&pipeline_layout),
-      vertex: wgpu::VertexState {
-        module: &module,
-        entry_point: Some("vs_main"),
-        compilation_options: Default::default(),
-        buffers: &[],
-      },
-      fragment: Some(wgpu::FragmentState {
-        module: &module,
-        entry_point: Some("fs_main"),
-        compilation_options: Default::default(),
-        targets: &[Some(wgpu::ColorTargetState {
-          format: screenwide_gpu::surface::FORMAT,
-          blend: None,
-          write_mask: wgpu::ColorWrites::ALL,
-        })],
-      }),
-      primitive: Default::default(),
-      depth_stencil: None,
-      multisample: Default::default(),
-      multiview_mask: None,
-      cache: None,
-    });
+    let layout = pipeline::bind_group_layout(device);
+    let pipeline = pipeline::pipeline(device, &layout, source);
     Ok(Self {
       gpu: std::sync::Arc::clone(&gpu),
       pipeline,
@@ -244,50 +219,4 @@ impl Renderer {
     gpu.queue.submit([encoder.finish()]);
     Ok(())
   }
-}
-
-/// The overlay's own uniform and pictures, then the annotation lists and
-/// atlas at the bindings `annotations.wgsl` declares.
-fn bind_group_layout(device: &wgpu::Device) -> wgpu::BindGroupLayout {
-  let entry = |binding, ty| wgpu::BindGroupLayoutEntry {
-    binding,
-    visibility: wgpu::ShaderStages::FRAGMENT,
-    ty,
-    count: None,
-  };
-  let storage = wgpu::BindingType::Buffer {
-    ty: wgpu::BufferBindingType::Storage { read_only: true },
-    has_dynamic_offset: false,
-    min_binding_size: None,
-  };
-  let texture = wgpu::BindingType::Texture {
-    sample_type: wgpu::TextureSampleType::Float { filterable: true },
-    view_dimension: wgpu::TextureViewDimension::D2,
-    multisampled: false,
-  };
-  device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-    label: Some("Screenwide annotate overlay bindings"),
-    entries: &[
-      entry(
-        0,
-        wgpu::BindingType::Buffer {
-          ty: wgpu::BufferBindingType::Uniform,
-          has_dynamic_offset: false,
-          min_binding_size: None,
-        },
-      ),
-      entry(1, texture),
-      entry(2, texture),
-      entry(
-        3,
-        wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
-      ),
-      entry(4, storage),
-      entry(7, storage),
-      entry(8, storage),
-      entry(9, texture),
-      entry(10, storage),
-      entry(11, storage),
-    ],
-  })
 }

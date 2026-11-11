@@ -63,8 +63,10 @@ struct Device {
 /// A still of each monitor in `monitor_ids`, in the same order. The monitors'
 /// ids are their `HMONITOR`s, as `xcap` numbers them.
 pub fn capture(monitor_ids: &[u32]) -> Vec<Result<CapturedImage, String>> {
+  // Made while a tray menu item finishes fading: nothing is captured yet.
+  let device = device();
   super::menu_fade::wait();
-  let device = match device() {
+  let device = match device {
     Ok(device) => device,
     Err(error) => return monitor_ids.iter().map(|_| Err(error.clone())).collect(),
   };

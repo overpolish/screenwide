@@ -39,7 +39,18 @@ fn drawn_over(
   annotations: &[screenwide_annotations::Annotation],
   desktop: Option<&screenwide_imaging::CapturedImage>,
 ) -> Vec<u8> {
-  let renderer = Renderer::new().expect("the overlay renderer");
+  drawn_by(
+    &Renderer::new().expect("the overlay renderer"),
+    annotations,
+    desktop,
+  )
+}
+
+fn drawn_by(
+  renderer: &Renderer,
+  annotations: &[screenwide_annotations::Annotation],
+  desktop: Option<&screenwide_imaging::CapturedImage>,
+) -> Vec<u8> {
   let gpu = renderer.gpu();
   let underlay = desktop.map(|image| underlay::upload(gpu, image).expect("the underlay uploads"));
   let focus = desktop.map(|image| {
@@ -136,29 +147,77 @@ fn a_counter_shows_its_number_on_its_disc() {
 /// desktop it was drawn on, softened, over everything well past it.
 #[test]
 fn a_focus_blurs_around_its_box_and_leaves_the_box_live() {
-  // A one-pixel checkerboard, which any blur turns grey.
-  let rgba = (0..HEIGHT)
-    .flat_map(|y| (0..WIDTH).map(move |x| if (x + y) % 2 == 0 { 255 } else { 0 }))
-    .flat_map(|value| [value, value, value, 255])
-    .collect();
-  let desktop = screenwide_imaging::CapturedImage {
-    width: WIDTH,
-    height: HEIGHT,
-    rgba,
-  };
-  let focus = screenwide_annotations::focus::model::new_focus(
-    "focus".to_owned(),
-    [
-      AnnotationPoint { x: 60.0, y: 40.0 },
-      AnnotationPoint { x: 100.0, y: 80.0 },
-    ],
-    None,
-  );
-  let pixels = drawn_over(&[focus], Some(&desktop));
+  let pixels = drawn_over(&[focus()], Some(&checkerboard()));
   // Inside the box: nothing laid, so the live desktop shows.
   assert_eq!(pixel(&pixels, 80, 60)[3], 0);
   // Well past it: the desktop it was drawn on, opaque and softened to grey.
   let [blue, _, _, alpha] = pixel(&pixels, 5, 5);
   assert_eq!(alpha, 255);
   assert!((60..200).contains(&blue), "{blue} is not softened");
+}
+
+/// A one-pixel checkerboard, which any blur turns grey.
+fn checkerboard() -> screenwide_imaging::CapturedImage {
+  let rgba = (0..HEIGHT)
+    .flat_map(|y| (0..WIDTH).map(move |x| if (x + y) % 2 == 0 { 255 } else { 0 }))
+    .flat_map(|value| [value, value, value, 255])
+    .collect();
+  screenwide_imaging::CapturedImage {
+    width: WIDTH,
+    height: HEIGHT,
+    rgba,
+  }
+}
+
+fn focus() -> screenwide_annotations::Annotation {
+  screenwide_annotations::focus::model::new_focus(
+    "focus".to_owned(),
+    [
+      AnnotationPoint { x: 60.0, y: 40.0 },
+      AnnotationPoint { x: 100.0, y: 80.0 },
+    ],
+    None,
+  )
+}
+
+/// The shader the build compiled draws what the same shader compiled from
+/// WGSL draws: arrows, counters and a focus over the desktop.
+#[test]
+fn the_precompiled_shader_draws_what_wgsl_draws() {
+  let precompiled = Renderer::new().expect("the overlay renderer");
+  if cfg!(any(target_os = "macos", target_os = "windows")) {
+    assert!(
+      super::pipeline::precompiled_on(&precompiled.gpu().device),
+      "the build compiled no annotate overlay shader for this device"
+    );
+  }
+  let compiled = Renderer::compiled_from_wgsl().expect("the overlay renderer");
+  let mut counter_style = style(48.0);
+  counter_style.head = AnnotationHead::None;
+  let annotations = [
+    new_arrow(
+      "arrow".to_owned(),
+      AnnotationPoint { x: 20.0, y: 20.0 },
+      AnnotationPoint { x: 100.0, y: 100.0 },
+      Some(&style(8.0)),
+    ),
+    new_counter(
+      "counter".to_owned(),
+      AnnotationPoint { x: 120.0, y: 40.0 },
+      3,
+      Some(&counter_style),
+      None,
+    ),
+    focus(),
+  ];
+  let desktop = checkerboard();
+  let drawn = drawn_by(&precompiled, &annotations, Some(&desktop));
+  assert!(
+    drawn.chunks_exact(4).any(|pixel| pixel != [0, 0, 0, 0]),
+    "nothing was drawn"
+  );
+  assert!(
+    drawn == drawn_by(&compiled, &annotations, Some(&desktop)),
+    "the precompiled shader draws different pixels"
+  );
 }

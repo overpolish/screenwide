@@ -29,6 +29,8 @@ fn open(app: &AppHandle, rebuild: bool) -> Result<(), String> {
     return Ok(());
   }
 
+  // Opens while the host windows are built.
+  screenwide_gpu::open_soon();
   let hosts = host::windows(app);
   let resume = !rebuild && app.state::<AnnotateState>().is_showing() && !hosts.is_empty();
   // Before the layout is read: closing hosts forgets the displays the native

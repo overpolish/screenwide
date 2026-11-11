@@ -5,8 +5,12 @@
 //! is listed as the parts it joins, in order. Each module is validated with
 //! naga and written to `OUT_DIR/<name>.wgsl`, which the renderer embeds with
 //! `include_str!`: a broken shader fails the build instead of the first draw.
+//! [`precompile`] compiles a shader for the target's GPU ahead of time.
 
 use std::path::Path;
+
+mod precompile;
+pub use precompile::{precompile, Binding, Precompiled};
 
 /// Joins and validates each of `modules`, a name and its parts relative to
 /// the crate being built, into `OUT_DIR`.

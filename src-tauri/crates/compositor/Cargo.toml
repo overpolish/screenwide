@@ -41,7 +41,4 @@ screenwide-placement.workspace = true
 
 [build-dependencies]
 cc.workspace = true
-# The same naga wgpu compiles WGSL with, so a shader that builds also loads,
-# and the canvas shader precompiled here is the text wgpu would write.
-naga = { workspace = true, features = ["wgsl-in", "hlsl-out", "msl-out"] }
 screenwide-wgsl.workspace = true
