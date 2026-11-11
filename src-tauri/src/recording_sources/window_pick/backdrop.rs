@@ -25,17 +25,20 @@ impl Backdrops {
   /// Freezes every display. One that cannot be captured is picked over
   /// without a backdrop.
   pub(super) async fn capture(monitors: &[MonitorDetails]) -> Self {
+    use crate::screenshots::{freeze_monitors, FrozenDesktop};
+    let ids = monitors
+      .iter()
+      .map(|monitor| monitor.id)
+      .collect::<Vec<_>>();
+    let stills = freeze_monitors(&ids, FrozenDesktop::WithoutOwnWindows).await;
     let mut images = HashMap::new();
-    for monitor in monitors {
-      match crate::screenshots::capture_desktop_backdrop(monitor.id).await {
+    for (id, still) in ids.into_iter().zip(stills) {
+      match still {
         Ok(image) => {
-          images.insert(monitor.id, Arc::new(image));
+          images.insert(id, Arc::new(image));
         }
         Err(error) => {
-          eprintln!(
-            "Could not freeze display {} behind window picking: {error}",
-            monitor.id
-          );
+          eprintln!("Could not freeze display {id} behind window picking: {error}");
         }
       }
     }

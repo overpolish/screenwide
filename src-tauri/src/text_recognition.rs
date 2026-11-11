@@ -227,7 +227,7 @@ async fn start_session(app: &AppHandle, generation: u64) -> Result<(), String> {
 
   capture_overlays::emit_lifecycle(app, true);
   crate::app_windows::sync_recording_ui_escape(app, crate::ruler::is_active(app));
-  island::present(app, &window);
+  island::stand_over(app, &window);
 
   Ok(())
 }

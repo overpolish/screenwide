@@ -184,50 +184,74 @@ async fn capture_content(
   }
 }
 
-/// Freezes a whole monitor before OCR surfaces appear. Screenwide's own
-/// windows deliberately remain in the image so text can be recognized there.
-pub(crate) async fn capture_overlay_snapshot(monitor_id: u32) -> Result<CapturedImage, String> {
+/// What a frozen desktop keeps of Screenwide's own windows.
+#[derive(Clone, Copy)]
+pub(crate) enum FrozenDesktop {
+  /// Under the Ruler and Text Recognition, which measure and read whatever
+  /// is on screen, Screenwide's windows included.
+  WithOwnWindows,
+  /// Behind window picking: Screenwide's windows stay out where the
+  /// platform allows, so the island is not blurred in under itself.
+  WithoutOwnWindows,
+}
+
+/// Notes that a tray menu item was just clicked: Windows draws the item
+/// fading away for a moment after the menu closes, and a freeze it starts
+/// waits for it to go.
+#[cfg(target_os = "windows")]
+pub(crate) fn menu_item_clicked() {
+  platform_windows::menu_fade::clicked();
+}
+
+/// Freezes every monitor in `monitor_ids` at once, so the wait is the
+/// slowest monitor's rather than every monitor's in turn. Answers in the
+/// order asked, never with the pointer in.
+pub(crate) async fn freeze_monitors(
+  monitor_ids: &[u32],
+  desktop: FrozenDesktop,
+) -> Vec<Result<CapturedImage, String>> {
   #[cfg(target_os = "macos")]
   {
-    tauri::async_runtime::spawn_blocking(move || {
-      platform::capture_blocking(
-        ScreenshotTarget::Screen { monitor_id },
-        platform::LeftOut {
-          chosen: false,
-          include_own_windows: true,
-        },
-        false,
-      )
-    })
-    .await
-    .map_err(|error| error.to_string())?
+    let left_out = platform::LeftOut {
+      chosen: false,
+      include_own_windows: matches!(desktop, FrozenDesktop::WithOwnWindows),
+    };
+    let captures = monitor_ids
+      .iter()
+      .map(|&monitor_id| {
+        tauri::async_runtime::spawn_blocking(move || {
+          platform::capture_blocking(ScreenshotTarget::Screen { monitor_id }, left_out, false)
+        })
+      })
+      .collect::<Vec<_>>();
+    let mut stills = Vec::with_capacity(captures.len());
+    for capture in captures {
+      stills.push(
+        capture
+          .await
+          .map_err(|error| error.to_string())
+          .and_then(|still| still),
+      );
+    }
+    stills
   }
 
+  // Windows cannot leave Screenwide's windows out of a still.
   #[cfg(target_os = "windows")]
   {
-    tauri::async_runtime::spawn_blocking(move || {
-      platform_windows::capture(ScreenshotTarget::Screen { monitor_id }, false)
-    })
-    .await
-    .map_err(|error| error.to_string())?
+    let _ = desktop;
+    let ids = monitor_ids.to_vec();
+    tauri::async_runtime::spawn_blocking(move || platform_windows::monitors::capture(&ids))
+      .await
+      .unwrap_or_else(|error| monitor_ids.iter().map(|_| Err(error.to_string())).collect())
   }
 
   #[cfg(not(any(target_os = "macos", target_os = "windows")))]
   {
-    let _ = monitor_id;
-    Err("Text recognition is not available on this platform".to_owned())
+    let _ = desktop;
+    monitor_ids
+      .iter()
+      .map(|_| Err("Freezing the desktop is not available on this platform".to_owned()))
+      .collect()
   }
-}
-
-/// Freezes a whole monitor as the desktop behind window picking. Screenwide's
-/// own windows stay out, where the platform allows, so the island is not
-/// blurred in under itself, and so does the pointer.
-pub(crate) async fn capture_desktop_backdrop(monitor_id: u32) -> Result<CapturedImage, String> {
-  capture_content(ScreenshotTarget::Screen { monitor_id }, false, false, false).await
-}
-
-pub(crate) async fn capture_text_recognition_snapshot(
-  monitor_id: u32,
-) -> Result<CapturedImage, String> {
-  capture_overlay_snapshot(monitor_id).await
 }

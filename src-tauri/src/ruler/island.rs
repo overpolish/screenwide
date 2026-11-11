@@ -102,20 +102,30 @@ fn shown() -> std::sync::MutexGuard<'static, Option<RulerIslandState>> {
   SHOWN.lock().unwrap_or_else(PoisonError::into_inner)
 }
 
-/// The Ruler is up: the island comes out with its tools, above the overlay.
-/// Called once the overlay is presented, so on Windows, where there are no
-/// window levels, raising the island puts it above the overlay.
-pub(super) fn present(app: &AppHandle) {
+/// The Ruler is starting: the island comes out with its tools at once, while
+/// the desktop is frozen and the overlay built, so the start is seen as it
+/// happens. Called with the island kept out of captures, so it is not frozen
+/// into the desktop.
+pub(super) fn come_out(app: &AppHandle) {
   let Some(state) = app.state::<RulerState>().island_state() else {
     return;
   };
   *shown() = Some(state);
   let _ = app.emit_to(WindowLabel::Island.as_str(), EVENT, Some(state));
-  let overlay = super::ruler_windows(app).into_iter().next();
-  app_windows::island_overlay::stand_over(app, overlay.as_ref());
   if let Err(error) = app_windows::island::show(app) {
     eprintln!("Could not show the island for the Ruler: {error}");
   }
+}
+
+/// The overlay is presented: the island stands above it. On Windows, where
+/// there are no window levels, that is by being owned by it.
+pub(super) fn stand_over_overlay(app: &AppHandle) {
+  if shown().is_none() {
+    return;
+  }
+  let overlay = super::ruler_windows(app).into_iter().next();
+  app_windows::island_overlay::stand_over(app, overlay.as_ref());
+  sync(app);
 }
 
 /// The Ruler went. The island drops its tools and its place above the

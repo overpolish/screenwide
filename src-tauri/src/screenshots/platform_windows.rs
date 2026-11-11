@@ -1,6 +1,9 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+pub(super) mod menu_fade;
+pub(super) mod monitors;
+
 use crate::screenshots::{desktop as still_composition, CapturedImage, ScreenshotTarget};
 use screenwide_capture::capture_geometry::physical_capture_rect;
 use screenwide_capture::desktop_capture::{self, DesktopDisplay, OutputLimits};

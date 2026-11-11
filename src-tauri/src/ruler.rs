@@ -120,19 +120,17 @@ async fn start_native(app: &AppHandle, generation: u64) -> Result<(), String> {
   // The island stays on screen and changes into the Ruler's tools over the
   // frozen desktop, so it is kept out of the desktop it is frozen from.
   island::keep_out_of_captures(app, true).await;
-  let mut snapshots = Vec::with_capacity(monitors.len());
-  let mut captured = Ok(());
-  for (monitor_id, _, _) in &monitors {
-    match screenshots::capture_overlay_snapshot(*monitor_id).await {
-      Ok(snapshot) => snapshots.push((*monitor_id, snapshot)),
-      Err(error) => {
-        captured = Err(error);
-        break;
-      }
-    }
-  }
+  // Out at once, so the start shows while the desktop freezes and the
+  // overlay is built.
+  island::come_out(app);
+  let ids = monitors.iter().map(|(id, _, _)| *id).collect::<Vec<_>>();
+  let stills = screenshots::freeze_monitors(&ids, screenshots::FrozenDesktop::WithOwnWindows).await;
   island::keep_out_of_captures(app, false).await;
-  captured?;
+  let snapshots = ids
+    .into_iter()
+    .zip(stills)
+    .map(|(monitor_id, still)| still.map(|snapshot| (monitor_id, snapshot)))
+    .collect::<Result<Vec<_>, _>>()?;
   if !app.state::<RulerState>().is_current(generation) {
     return Ok(());
   }
@@ -172,7 +170,7 @@ async fn start_native(app: &AppHandle, generation: u64) -> Result<(), String> {
   adapter::present(&window)?;
   capture_overlays::emit_lifecycle(app, true);
   crate::app_windows::sync_recording_ui_escape(app, true);
-  island::present(app);
+  island::stand_over_overlay(app);
   // Probes and the loupe need only the gradients `install` computed, so the
   // element boxes for snapping, radius and centre lines follow off-screen.
   let app = app.clone();

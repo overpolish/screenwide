@@ -8,6 +8,9 @@ use tauri::AppHandle;
 use super::*;
 
 pub(super) fn handle(app: &AppHandle, id: &str) {
+  // Before anything it starts freezes the desktop.
+  #[cfg(target_os = "windows")]
+  crate::screenshots::menu_item_clicked();
   // The replay items leave every overlay up: a save looks back at what was
   // on screen. Keep Awake has nothing to do with what is on screen.
   if replay::handle(app, id) || keep_awake::handle(app, id) {

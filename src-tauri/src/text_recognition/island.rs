@@ -88,19 +88,26 @@ fn place(app: &AppHandle, placement: IslandPlacement) {
   }
 }
 
-/// Text Recognition is up: the island comes out at the top of the screen,
-/// above the overlay, while an area is drawn. Called once the overlay is
-/// presented, so on Windows the island is owned by it.
-pub(super) fn present(app: &AppHandle, overlay: &tauri::WebviewWindow) {
+/// Text Recognition is starting: the island comes out at the top at once, so
+/// the start shows while the desktop freezes. Called with the island kept
+/// out of captures.
+pub(super) fn come_out(app: &AppHandle) {
   tell(
     app,
     Some(TextRecognitionIslandState::Choosing { failed: false }),
   );
-  app_windows::island_overlay::stand_over(app, Some(overlay));
   place(app, IslandPlacement::Top);
   if let Err(error) = app_windows::island::show(app) {
     eprintln!("Could not show the island for Text Recognition: {error}");
   }
+}
+
+/// The overlay is presented: the island stands above it.
+pub(super) fn stand_over(app: &AppHandle, overlay: &tauri::WebviewWindow) {
+  if shown().is_none() {
+    return;
+  }
+  app_windows::island_overlay::stand_over(app, Some(overlay));
 }
 
 /// An area was drawn: the island hangs by it while it is read, on the
@@ -249,45 +256,4 @@ pub fn text_recognition_island_action(app: AppHandle, action: TextRecognitionIsl
 }
 
 #[cfg(test)]
-mod tests {
-  use screenwide_osc::desktop::DesktopDisplay;
-  use screenwide_osc::geometry::{Point, Size};
-
-  use super::*;
-
-  fn display(id: u32, x: f64) -> DesktopDisplay {
-    DesktopDisplay {
-      id,
-      origin: Point { x, y: 0.0 },
-      size: Size {
-        width: 100.0,
-        height: 80.0,
-      },
-      scale: 2.0,
-    }
-  }
-
-  #[test]
-  fn an_area_across_two_displays_belongs_to_the_one_holding_most_of_it() {
-    let binding = DesktopBinding {
-      displays: vec![display(1, 0.0), display(2, 100.0)],
-      anchor_id: 1,
-      size: Size {
-        width: 200.0,
-        height: 80.0,
-      },
-      layout_changed: false,
-    };
-    let (id, rect) = local_box(&binding, Rect::from_xywh(90.0, 10.0, 40.0, 20.0)).unwrap();
-    assert_eq!(id, 2);
-    assert_eq!(
-      rect,
-      LocalRect {
-        x: 0.0,
-        y: 10.0,
-        width: 30.0,
-        height: 20.0,
-      }
-    );
-  }
-}
+mod tests;
