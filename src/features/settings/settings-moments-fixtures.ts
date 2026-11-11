@@ -14,7 +14,7 @@ export function momentsPreviewApi() {
         customColor: null,
         id: "funny",
         name: "Funny",
-        shortcut: "CommandOrControl+Shift+Digit1",
+        shortcut: "CommandOrControl+Shift+Digit7",
       },
       {
         color: "#0088ff",
@@ -22,7 +22,7 @@ export function momentsPreviewApi() {
         customColor: "#2ec4b6",
         id: "notable",
         name: "Notable",
-        shortcut: "CommandOrControl+Shift+Digit2",
+        shortcut: "CommandOrControl+Shift+Digit8",
       },
     ],
     noteMicrophone: null,

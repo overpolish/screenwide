@@ -211,7 +211,11 @@ fn the_precompiled_mesh_paints_what_wgsl_paints() {
     .render(48, 32, &uniforms)
     .expect("the mesh paints");
   assert!(
-    painted.chunks_exact(4).any(|pixel| pixel != [0, 0, 0, 0]),
+    painted
+      .as_chunks::<4>()
+      .0
+      .iter()
+      .any(|pixel| pixel != &[0, 0, 0, 0]),
     "the precompiled mesh painted nothing"
   );
   assert!(

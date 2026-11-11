@@ -60,9 +60,11 @@ mod tests {
   #[test]
   #[ignore = "uses the video path in SCREENWIDE_MACOS_PREVIEW_TEST"]
   fn reads_recording_metadata_with_avfoundation() {
-    let path = std::env::var_os("SCREENWIDE_MACOS_PREVIEW_TEST")
-      .map(std::path::PathBuf::from)
-      .expect("set SCREENWIDE_MACOS_PREVIEW_TEST to a recording");
+    let Some(path) = std::env::var_os("SCREENWIDE_MACOS_PREVIEW_TEST") else {
+      eprintln!("skipped: set SCREENWIDE_MACOS_PREVIEW_TEST to a recording");
+      return;
+    };
+    let path = std::path::PathBuf::from(path);
     let info = recording_info_result(&path).unwrap();
     assert!(info.duration_ms > 1_000);
     assert!(info.width > 0 && info.height > 0);

@@ -209,19 +209,17 @@ export function settingsSearchEntries({
 
   // Shortcuts
   const shortcut = t("settings-search-keywords-shortcut");
-  // Only Windows' keys can be taken so far.
-  if (!isMac)
-    at("hotkeys", t("settings-shortcuts-system-keys"))(
-      [
-        row(
-          t("settings-shortcuts-system-keys-replace", {
-            platform: platformArg(),
-          }),
-          t("settings-shortcuts-system-keys-replace-description"),
-        ),
-      ],
-      shortcut,
-    );
+  at("hotkeys", t("settings-shortcuts-system-keys"))(
+    [
+      row(
+        t("settings-shortcuts-system-keys-replace", {
+          platform: platformArg(),
+        }),
+        t("settings-shortcuts-system-keys-replace-description"),
+      ),
+    ],
+    shortcut,
+  );
   at("hotkeys", t("settings-recording"))(
     recordingShortcuts().map(shortcutRow),
     shortcut,

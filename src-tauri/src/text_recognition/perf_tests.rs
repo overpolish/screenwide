@@ -134,6 +134,10 @@ fn run(width: u32, height: u32, scale: f64) {
 #[test]
 #[ignore = "times reading the page named by SCREENWIDE_OCR_PAGE"]
 fn reads_a_busy_page_in_one_wait() {
+  if std::env::var_os("SCREENWIDE_OCR_PAGE").is_none() {
+    eprintln!("skipped: set SCREENWIDE_OCR_PAGE to a picture");
+    return;
+  }
   run(1568, 931, 1.0);
   run(3136, 1862, 2.0);
 }

@@ -38,12 +38,22 @@ const isModelSeed = (value: unknown): value is TranscriptionPreviewSeed =>
   "status" in value &&
   "progress" in value;
 
-const WINDOWS_SYSTEM_SHORTCUTS: SystemShortcut[] = [
-  { action: "takeScreenshot", shortcut: "Super+Shift+KeyS" },
-  { action: "takeScreenshot", shortcut: "PrintScreen" },
-  { action: "toggleRecordingControls", shortcut: "Super+Shift+KeyR" },
-  { action: "recognizeText", shortcut: "Super+Shift+KeyT" },
-];
+const SYSTEM_SHORTCUTS: Record<"macos" | "windows", SystemShortcut[]> = {
+  macos: [
+    { action: "takeScreenshot", shortcut: "Super+Shift+Digit4" },
+    {
+      action: "takeScreenshotToClipboard",
+      shortcut: "Super+Control+Shift+Digit4",
+    },
+    { action: "toggleRecordingControls", shortcut: "Super+Shift+Digit5" },
+  ],
+  windows: [
+    { action: "takeScreenshot", shortcut: "Super+Shift+KeyS" },
+    { action: "takeScreenshot", shortcut: "PrintScreen" },
+    { action: "toggleRecordingControls", shortcut: "Super+Shift+KeyR" },
+    { action: "recognizeText", shortcut: "Super+Shift+KeyT" },
+  ],
+};
 
 export function createPreviewApi(
   modelSeed?: TranscriptionPreviewSeed,
@@ -177,8 +187,7 @@ export function createPreviewApi(
       ...shortcuts,
       bindings: shortcuts.bindings.map((binding) => ({ ...binding })),
     },
-    // Only Windows' keys are taken so far.
-    systemShortcuts: isWindows() ? WINDOWS_SYSTEM_SHORTCUTS : [],
+    systemShortcuts: SYSTEM_SHORTCUTS[isWindows() ? "windows" : "macos"],
   };
   return {
     ...momentsPreviewApi(),

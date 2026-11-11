@@ -25,7 +25,11 @@ fn field<T: serde::de::DeserializeOwned>(project: &serde_json::Value, pointer: &
 #[test]
 #[ignore = "set SCREENWIDE_EXPORT_BENCH_PROJECT to a .screenwide file"]
 fn benchmarks_project_export() {
-  let project = PathBuf::from(std::env::var("SCREENWIDE_EXPORT_BENCH_PROJECT").unwrap());
+  let Some(project) = std::env::var_os("SCREENWIDE_EXPORT_BENCH_PROJECT") else {
+    eprintln!("skipped: set SCREENWIDE_EXPORT_BENCH_PROJECT to a .screenwide file");
+    return;
+  };
+  let project = PathBuf::from(project);
   let directory = project.parent().unwrap().to_path_buf();
   let json: serde_json::Value =
     serde_json::from_str(&std::fs::read_to_string(&project).unwrap()).unwrap();

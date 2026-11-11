@@ -7,7 +7,7 @@ use std::sync::{Arc, OnceLock};
 use std::time::{Duration, Instant};
 
 use super::recorder::MomentRecorder;
-use super::settings::{validate, MomentKind, MomentSettings};
+use super::settings::{retire_defaults, validate, MomentKind, MomentSettings};
 
 fn kind(id: &str, shortcut: Option<&str>) -> MomentKind {
   MomentKind {
@@ -178,6 +178,43 @@ fn a_blank_shortcut_is_kept_as_none() {
 #[test]
 fn the_default_kinds_are_valid() {
   assert!(validate(MomentSettings::default()).is_ok());
+}
+
+#[test]
+fn kinds_left_on_the_keys_screenshots_took_move_to_their_new_defaults() {
+  let mut saved = settings(vec![
+    kind("funny", Some("CommandOrControl+Shift+Digit1")),
+    kind("notable", Some("CommandOrControl+Shift+Digit2")),
+  ]);
+  retire_defaults(&mut saved);
+  let shortcuts = |settings: &MomentSettings| {
+    settings
+      .kinds
+      .iter()
+      .map(|kind| kind.shortcut.clone())
+      .collect::<Vec<_>>()
+  };
+  assert_eq!(
+    shortcuts(&saved),
+    shortcuts(&MomentSettings::default()),
+    "both kinds take their current defaults"
+  );
+
+  // Keys the person chose stay, and so does a retired default whose new keys
+  // another kind already holds, spelled as Settings records them.
+  let modifier = if cfg!(target_os = "macos") {
+    "Super"
+  } else {
+    "Control"
+  };
+  let mut chosen = settings(vec![
+    kind("funny", Some("Super+Shift+Digit1")),
+    kind("notable", Some("CommandOrControl+Shift+Digit2")),
+    kind("custom", Some(&format!("{modifier}+Shift+Digit8"))),
+  ]);
+  let before = shortcuts(&chosen);
+  retire_defaults(&mut chosen);
+  assert_eq!(shortcuts(&chosen), before);
 }
 
 #[test]

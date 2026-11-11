@@ -534,16 +534,15 @@ fn abandon_a_recording(name: &str, container: Container, write_for_ms: u64) {
 }
 
 /// Re-runs this very test binary for one of the abandon helpers above, so
-/// the abort lands in a process of its own.
+/// the abort lands in a process of its own. `test` is named within this
+/// module, which is found from the code so the name follows a move.
 fn crash(test: &str) -> std::process::Output {
+  let module = module_path!()
+    .split_once("::")
+    .map_or(module_path!(), |(_crate, module)| module);
   std::process::Command::new(std::env::current_exe().expect("this test binary"))
-    .args([
-      test,
-      "--ignored",
-      "--exact",
-      "--nocapture",
-      "--test-threads=1",
-    ])
+    .arg(format!("{module}::{test}"))
+    .args(["--ignored", "--exact", "--nocapture", "--test-threads=1"])
     .env(ABANDON, "1")
     .output()
     .expect("the child test binary ran")
@@ -589,9 +588,9 @@ fn writes_a_plain_movie_then_dies() {
 #[test]
 #[ignore = "spawns and kills child processes; run with --ignored"]
 fn a_fragmented_movie_survives_a_crash_where_a_plain_one_does_not() {
-  let fragmented = crash("recording::platform::tests::writes_a_fragmented_movie_then_dies");
+  let fragmented = crash("writes_a_fragmented_movie_then_dies");
   println!("{}", String::from_utf8_lossy(&fragmented.stdout));
-  let plain = crash("recording::platform::tests::writes_a_plain_movie_then_dies");
+  let plain = crash("writes_a_plain_movie_then_dies");
   println!("{}", String::from_utf8_lossy(&plain.stdout));
 
   let frag_path = test_movie("abandoned-frag", fragmented_qt());

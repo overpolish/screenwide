@@ -6,7 +6,9 @@ use super::*;
 #[test]
 #[ignore = "set SCREENWIDE_GPU_BENCH_SOURCE to a 3600 x 2338 recording"]
 fn benchmarks_retina_gpu_cursor_export() {
-  let source = PathBuf::from(std::env::var("SCREENWIDE_GPU_BENCH_SOURCE").unwrap());
+  let Some(source) = bench_source() else {
+    return;
+  };
   let duration_ms = std::env::var("SCREENWIDE_GPU_BENCH_DURATION_MS")
     .ok()
     .and_then(|value| value.parse().ok())
@@ -108,7 +110,9 @@ fn benchmarks_retina_gpu_cursor_export() {
 #[test]
 #[ignore = "set SCREENWIDE_GPU_BENCH_SOURCE to a recording"]
 fn benchmarks_animated_mesh_export() {
-  let source = PathBuf::from(std::env::var("SCREENWIDE_GPU_BENCH_SOURCE").unwrap());
+  let Some(source) = bench_source() else {
+    return;
+  };
   let duration_ms = std::env::var("SCREENWIDE_GPU_BENCH_DURATION_MS")
     .ok()
     .and_then(|value| value.parse().ok())
@@ -182,6 +186,16 @@ fn benchmarks_animated_mesh_export() {
       std::fs::metadata(destination).unwrap().len(),
     );
   }
+}
+
+/// The recording the benchmarks export, or nothing when none is set, so a
+/// run of every ignored test passes them by.
+fn bench_source() -> Option<PathBuf> {
+  let source = std::env::var_os("SCREENWIDE_GPU_BENCH_SOURCE").map(PathBuf::from);
+  if source.is_none() {
+    eprintln!("skipped: set SCREENWIDE_GPU_BENCH_SOURCE to a recording");
+  }
+  source
 }
 
 fn mesh_output(width: u32, height: u32) -> screenwide_output::ScreenshotOutputSettings {

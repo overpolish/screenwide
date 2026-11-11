@@ -60,7 +60,7 @@ impl Renderer {
       SHADER,
       crate::precompiled_shaders::MESH,
     );
-    let pipeline = shader.compute_pipeline("Screenwide mesh pipeline", "main");
+    let pipeline = shader.compute_pipeline("Screenwide mesh pipeline", "build_mesh");
     Ok(Self {
       gpu,
       shader,

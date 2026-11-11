@@ -12,6 +12,7 @@ use super::*;
 const ANNOUNCE_EVENT: &str = "system-keys://announce";
 
 /// Each key, written as the settings window records keys, and what it runs.
+#[cfg(not(target_os = "macos"))]
 const TAKEN: &[(SystemKey, &str, ShortcutAction)] = &[
   (
     SystemKey::ScreenClip,
@@ -32,6 +33,26 @@ const TAKEN: &[(SystemKey, &str, ShortcutAction)] = &[
     SystemKey::TextExtractor,
     "Super+Shift+KeyT",
     ShortcutAction::RecognizeText,
+  ),
+];
+/// macOS has no key of its own for reading text, so Recognize text keeps
+/// only its own shortcut there.
+#[cfg(target_os = "macos")]
+const TAKEN: &[(SystemKey, &str, ShortcutAction)] = &[
+  (
+    SystemKey::AreaScreenshot,
+    "Super+Shift+Digit4",
+    ShortcutAction::TakeScreenshot,
+  ),
+  (
+    SystemKey::AreaScreenshotToClipboard,
+    "Super+Control+Shift+Digit4",
+    ShortcutAction::TakeScreenshotToClipboard,
+  ),
+  (
+    SystemKey::ScreenshotToolbar,
+    "Super+Shift+Digit5",
+    ShortcutAction::ToggleRecordingControls,
   ),
 ];
 

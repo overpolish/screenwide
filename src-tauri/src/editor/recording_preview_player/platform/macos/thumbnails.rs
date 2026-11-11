@@ -187,8 +187,10 @@ mod tests {
     use std::sync::Arc;
     use std::time::Instant;
 
-    let path = std::env::var("SCREENWIDE_THUMBNAIL_BENCHMARK")
-      .expect("set SCREENWIDE_THUMBNAIL_BENCHMARK to a 30-minute video");
+    let Some(path) = std::env::var_os("SCREENWIDE_THUMBNAIL_BENCHMARK") else {
+      eprintln!("skipped: set SCREENWIDE_THUMBNAIL_BENCHMARK to a 30-minute video");
+      return;
+    };
     let made = Arc::new(AtomicUsize::new(0));
     let channel = Channel::new({
       let made = made.clone();

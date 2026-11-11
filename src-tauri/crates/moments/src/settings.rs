@@ -59,12 +59,51 @@ impl Default for MomentSettings {
     };
     Self {
       kinds: vec![
-        kind("funny", "Funny", "#ffcc00", 1),
-        kind("notable", "Notable", "#0088ff", 2),
+        kind("funny", "Funny", "#ffcc00", 7),
+        kind("notable", "Notable", "#0088ff", 8),
       ],
       note_microphone: None,
       transcribe_notes: true,
       voice_notes: true,
+    }
+  }
+}
+
+/// Defaults a kind shipped with before its current one, by kind id: Take
+/// screenshot and Copy a screenshot took these keys. Settings saves the keys
+/// it records with their modifiers spelled out, so a kind still holding one
+/// of these verbatim was never changed.
+const RETIRED_DEFAULTS: &[(&str, &str)] = &[
+  ("funny", "CommandOrControl+Shift+Digit1"),
+  ("notable", "CommandOrControl+Shift+Digit2"),
+];
+
+/// Moves each kind still on a retired default to its current one, unless
+/// another kind already holds those keys.
+pub(crate) fn retire_defaults(settings: &mut MomentSettings) {
+  let defaults = MomentSettings::default();
+  let id_of = |value: &str| value.parse::<Shortcut>().ok().map(|shortcut| shortcut.id());
+  for index in 0..settings.kinds.len() {
+    let kind = &settings.kinds[index];
+    let retired = RETIRED_DEFAULTS
+      .iter()
+      .any(|&(id, keys)| kind.id == id && kind.shortcut.as_deref() == Some(keys));
+    let Some(current) = defaults
+      .kinds
+      .iter()
+      .find(|default| retired && default.id == kind.id)
+      .and_then(|default| default.shortcut.clone())
+    else {
+      continue;
+    };
+    let held = settings.kinds.iter().any(|other| {
+      other
+        .shortcut
+        .as_deref()
+        .is_some_and(|keys| id_of(keys) == id_of(&current))
+    });
+    if !held {
+      settings.kinds[index].shortcut = Some(current);
     }
   }
 }
@@ -151,7 +190,10 @@ pub fn load(path: &Path) {
   let stored = std::fs::read(path)
     .ok()
     .and_then(|bytes| serde_json::from_slice::<MomentSettings>(&bytes).ok())
-    .and_then(|settings| validate(settings).ok());
+    .and_then(|mut settings| {
+      retire_defaults(&mut settings);
+      validate(settings).ok()
+    });
   if let Some(settings) = stored {
     *SETTINGS
       .write()

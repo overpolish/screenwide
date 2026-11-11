@@ -201,7 +201,10 @@ fn exhaustively_read(image: &GrayImage) -> Vec<String> {
 #[test]
 #[ignore = "reads the page named by SCREENWIDE_OCR_PAGE"]
 fn reads_every_code_an_exhaustive_search_reads() {
-  let path = std::env::var("SCREENWIDE_OCR_PAGE").expect("SCREENWIDE_OCR_PAGE names a picture");
+  let Some(path) = std::env::var_os("SCREENWIDE_OCR_PAGE") else {
+    eprintln!("skipped: set SCREENWIDE_OCR_PAGE to a picture");
+    return;
+  };
   let page = image::open(path).expect("the page opens").into_rgba8();
   for (width, height) in [(1568, 931), (3136, 1862)] {
     let rgba = image::imageops::resize(&page, width, height, FilterType::Triangle);

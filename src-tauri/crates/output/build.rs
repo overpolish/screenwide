@@ -23,7 +23,7 @@ fn main() {
       name: "MESH",
       source: assembled("mesh"),
       layout: &shader_layouts::MESH,
-      entry_points: &["main"],
+      entry_points: &["build_mesh"],
     }],
   );
   // Build scripts run on the host, so the target is read from Cargo rather

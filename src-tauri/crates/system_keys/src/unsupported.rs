@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! Only Windows' keys are taken so far; elsewhere nothing starts.
+//! Only Windows' and macOS's keys are taken; elsewhere nothing starts.
 
 use super::OnKey;
 

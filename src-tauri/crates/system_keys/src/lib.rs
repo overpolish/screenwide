@@ -2,15 +2,21 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 //! The system's own screenshot keys, taken for Screenwide's tools while a
-//! [`SystemKeys`] is held. On Windows the shell owns Win+Shift+S and its
-//! neighbours, so no registered hot key can have them; a low-level keyboard
-//! hook sees each press before the shell does and keeps the ones Screenwide
-//! takes from it. The hook goes with the process, so nothing has to be given
-//! back after a crash.
+//! [`SystemKeys`] is held. Neither platform lets an app register them: on
+//! Windows the shell owns Win+Shift+S and its neighbours, and on macOS the
+//! screenshot keys are the system's own hot keys. So each press is seen
+//! before the system sees it, by a low-level keyboard hook on Windows and an
+//! event tap on macOS, which keeps the ones Screenwide takes. Both go with the
+//! process, and the system's hot key settings are never changed, so nothing
+//! has to be given back after a crash.
 
-#[cfg(not(target_os = "windows"))]
+#[cfg(target_os = "macos")]
+mod macos;
+#[cfg(target_os = "macos")]
+use macos as platform;
+#[cfg(not(any(target_os = "macos", target_os = "windows")))]
 mod unsupported;
-#[cfg(not(target_os = "windows"))]
+#[cfg(not(any(target_os = "macos", target_os = "windows")))]
 use unsupported as platform;
 #[cfg(target_os = "windows")]
 mod windows;
@@ -28,6 +34,12 @@ pub enum SystemKey {
   ScreenRecord,
   /// Win+Shift+T: PowerToys' Text Extractor.
   TextExtractor,
+  /// Cmd+Shift+4: a picture of an area, saved.
+  AreaScreenshot,
+  /// Cmd+Ctrl+Shift+4: a picture of an area, copied.
+  AreaScreenshotToClipboard,
+  /// Cmd+Shift+5: the Screenshot app's toolbar.
+  ScreenshotToolbar,
 }
 
 /// Whether the system's keys can be taken here.

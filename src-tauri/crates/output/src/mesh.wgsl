@@ -63,7 +63,7 @@ fn antibanding_dither(id: vec2<u32>, seed: u32) -> f32 {
 }
 
 @compute @workgroup_size(16, 16)
-fn main(@builtin(global_invocation_id) id: vec3<u32>) {
+fn build_mesh(@builtin(global_invocation_id) id: vec3<u32>) {
   if (id.x >= mesh.dimensions.x || id.y >= mesh.dimensions.y) {
     return;
   }

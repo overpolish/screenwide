@@ -213,7 +213,11 @@ fn the_precompiled_shader_draws_what_wgsl_draws() {
   let desktop = checkerboard();
   let drawn = drawn_by(&precompiled, &annotations, Some(&desktop));
   assert!(
-    drawn.chunks_exact(4).any(|pixel| pixel != [0, 0, 0, 0]),
+    drawn
+      .as_chunks::<4>()
+      .0
+      .iter()
+      .any(|pixel| pixel != &[0, 0, 0, 0]),
     "nothing was drawn"
   );
   assert!(

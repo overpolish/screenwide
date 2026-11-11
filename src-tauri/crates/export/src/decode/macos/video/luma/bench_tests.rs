@@ -83,8 +83,14 @@ struct Setup {
   side: u32,
 }
 
-fn setup() -> Setup {
-  let path = PathBuf::from(var("SOURCE").expect("set SCREENWIDE_PIN_BENCH_SOURCE"));
+/// The benchmark's recording and pin, or nothing when no recording is set,
+/// so a run of every ignored test passes it by.
+fn setup() -> Option<Setup> {
+  let Some(source) = var("SOURCE") else {
+    eprintln!("skipped: set SCREENWIDE_PIN_BENCH_SOURCE to a recording");
+    return None;
+  };
+  let path = PathBuf::from(source);
   let duration_ms = duration_ms(&path);
   let region: Vec<f64> = var("REGION")
     .expect("set SCREENWIDE_PIN_BENCH_REGION to x0,y0,x1,y1 in source pixels")
@@ -108,12 +114,12 @@ fn setup() -> Setup {
       redaction: var("CENTRE").is_some(),
     },
   };
-  Setup {
+  Some(Setup {
     path,
     duration_ms,
     request,
     side: number("SIDE", u64::from(TRACKING_SIDE)) as u32,
-  }
+  })
 }
 
 /// `truth5k.mov`'s scroll: down 2000 pixels over three seconds, a second's
@@ -136,7 +142,9 @@ fn truth_scroll(ms: u64) -> f64 {
 #[test]
 #[ignore = "set SCREENWIDE_PIN_BENCH_SOURCE and _REGION to a recording"]
 fn pin_bench_tracking() {
-  let setup = setup();
+  let Some(setup) = setup() else {
+    return;
+  };
   let request = &setup.request;
   println!(
     "source {} ({} ms), clip {}..{} ms, pinned {} ms, tracking side {}",
@@ -341,7 +349,9 @@ fn sheet(setup: &Setup, path: &PinnedPath, directory: &std::path::Path) {
 #[test]
 #[ignore = "set SCREENWIDE_PIN_BENCH_SOURCE and _REGION to a recording"]
 fn pin_bench_playback_while_tracking() {
-  let setup = setup();
+  let Some(setup) = setup() else {
+    return;
+  };
   let play = |label: &str, tracking: Option<Arc<AtomicBool>>| {
     let asset = open_asset(&setup.path).unwrap();
     let (width, height) = {
