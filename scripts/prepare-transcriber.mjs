@@ -3,9 +3,10 @@
 
 // Builds the speech-to-text helper and puts it where Tauri's externalBin
 // expects it. Cargo decides what needs rebuilding, so an unchanged helper
-// costs about a second. The voice activity model the helper runs for the
-// microphone tools is fetched once, pinned to a revision and checked against
-// its digest, and bundled as a resource.
+// costs about a second. The models bundled for the helper to run, the voice
+// activity model for the microphone tools and, on Windows, the text reading
+// models for Text Recognition, are fetched once, pinned to a revision and
+// checked against their digests.
 
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
@@ -14,10 +15,35 @@ import { arch as hostArch, env, platform as hostPlatform } from "node:process";
 import { dirname, resolve } from "node:path";
 
 // Silero VAD v6.2.0, converted for whisper.cpp by the ggml authors (MIT).
-const vadModelUrl =
-  "https://huggingface.co/ggml-org/whisper-vad/resolve/9ffd54a1e1ee413ddf265af9913beaf518d1639b/ggml-silero-v6.2.0.bin";
-const vadModelSha256 =
-  "2aa269b785eeb53a82983a20501ddf7c1d9c48e33ab63a41391ac6c9f7fb6987";
+const vadModel = {
+  description: "voice activity model",
+  name: "silero-vad.bin",
+  sha256: "2aa269b785eeb53a82983a20501ddf7c1d9c48e33ab63a41391ac6c9f7fb6987",
+  url: "https://huggingface.co/ggml-org/whisper-vad/resolve/9ffd54a1e1ee413ddf265af9913beaf518d1639b/ggml-silero-v6.2.0.bin",
+};
+// PP-OCRv6 small, PaddlePaddle's own ONNX releases (Apache-2.0): Windows'
+// built-in OCR reads small screen text poorly, and macOS keeps Vision. The
+// recognition model's configuration lists the characters it reads.
+const textModels = [
+  {
+    description: "text detection model",
+    name: "ppocr-detection.onnx",
+    sha256: "d73e0058b7a8086bbd57f3d10b8bcd4ff95363f67e06e2762b5e814fe9c9410e",
+    url: "https://huggingface.co/PaddlePaddle/PP-OCRv6_small_det_onnx/resolve/28fe5895c24fd108c19eb3e8479f4ab385fbfc62/inference.onnx",
+  },
+  {
+    description: "text recognition model",
+    name: "ppocr-recognition.onnx",
+    sha256: "5435fd747c9e0efe15a96d0b378d5bd157e9492ed8fd80edf08f30d02fa24634",
+    url: "https://huggingface.co/PaddlePaddle/PP-OCRv6_small_rec_onnx/resolve/b8f84f0b80c529de40b4fbb3544b84fa7233a513/inference.onnx",
+  },
+  {
+    description: "text recognition configuration",
+    name: "ppocr-recognition.yml",
+    sha256: "ab078671bb49f06228eadccd34f1bb501e157f7a047095ffb943ba81512c77d1",
+    url: "https://huggingface.co/PaddlePaddle/PP-OCRv6_small_rec_onnx/resolve/b8f84f0b80c529de40b4fbb3544b84fa7233a513/inference.yml",
+  },
+];
 
 const triples = {
   "darwin-arm64": "aarch64-apple-darwin",
@@ -190,27 +216,31 @@ const sha256 = async (path) =>
   createHash("sha256")
     .update(await readFile(path))
     .digest("hex");
-const vadModel = resolve("src-tauri", "binaries", "silero-vad.bin");
-if ((await sha256(vadModel).catch(() => null)) !== vadModelSha256) {
-  const response = await fetch(vadModelUrl);
-  if (!response.ok) {
-    throw new Error(
-      `The voice activity model download failed with HTTP ${response.status}`,
-    );
+// In binaries, from where the Tauri configuration bundles it, and beside the
+// development build, where the app looks when it runs unbundled.
+const prepareModel = async ({ description, name, sha256: expected, url }) => {
+  const bundled = resolve("src-tauri", "binaries", name);
+  if ((await sha256(bundled).catch(() => null)) !== expected) {
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(
+        `The ${description} download failed with HTTP ${response.status}`,
+      );
+    }
+    const bytes = new Uint8Array(await response.arrayBuffer());
+    if (createHash("sha256").update(bytes).digest("hex") !== expected) {
+      throw new Error(
+        `The downloaded ${description} failed SHA-256 verification`,
+      );
+    }
+    await mkdir(dirname(bundled), { recursive: true });
+    await writeFile(bundled, bytes);
   }
-  const bytes = new Uint8Array(await response.arrayBuffer());
-  if (createHash("sha256").update(bytes).digest("hex") !== vadModelSha256) {
-    throw new Error(
-      "The downloaded voice activity model failed SHA-256 verification",
-    );
-  }
-  await mkdir(dirname(vadModel), { recursive: true });
-  await writeFile(vadModel, bytes);
+  await copyFile(bundled, resolve("src-tauri", "target", "debug", name));
+};
+await prepareModel(vadModel);
+if (requestedPlatform === "win32") {
+  for (const model of textModels) await prepareModel(model);
 }
-// Beside the development build, where the app looks when it runs unbundled.
-await copyFile(
-  vadModel,
-  resolve("src-tauri", "target", "debug", "silero-vad.bin"),
-);
 
 console.log(`Prepared the transcriber for ${target}`);

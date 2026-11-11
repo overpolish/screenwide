@@ -9,6 +9,7 @@ mod clean;
 mod engine;
 mod faces;
 mod matte;
+mod read_text;
 mod restore;
 mod separate;
 mod session;
@@ -20,6 +21,7 @@ use screenwide_transcriber::{Job, Reply, Request};
 fn main() {
   whisper_rs::install_logging_hooks();
   let mut engine = engine::Engine::default();
+  let mut text_reader: Option<read_text::TextReader> = None;
   let stdin = std::io::stdin();
   let mut stdout = std::io::stdout().lock();
   for line in stdin.lock().lines() {
@@ -163,6 +165,24 @@ fn main() {
             &mut progress,
           )
           .map(|()| Reply::FacesFound { id }),
+          Job::LoadTextReader {
+            detection,
+            recognition,
+            dictionary,
+          } => read_text::TextReader::load(detection, recognition, dictionary).map(|reader| {
+            text_reader = Some(reader);
+            Reply::TextReaderLoaded { id }
+          }),
+          Job::ReadText {
+            image,
+            width,
+            height,
+          } => match text_reader.as_mut() {
+            Some(reader) => reader
+              .read(image, *width, *height)
+              .map(|lines| Reply::TextRead { id, lines }),
+            None => Err("The text reader is not loaded".to_owned()),
+          },
         };
         result.unwrap_or_else(|message| Reply::Failed { id, message })
       }

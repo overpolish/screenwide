@@ -2,10 +2,14 @@
   "bundle": {
     "resources": {
       "assets/DirectML-LICENSE.txt": "licenses/DirectML-LICENSE.txt",
+      "assets/PaddleOCR-Apache-2.0.txt": "licenses/PaddleOCR-Apache-2.0.txt",
       "binaries/DXC-LICENSE-LLVM.txt": "licenses/DXC-LLVM.txt",
       "binaries/DXC-LICENSE-MIT.txt": "licenses/DXC-MIT.txt",
       "binaries/DirectML.dll": "DirectML.dll",
       "binaries/dxcompiler.dll": "dxcompiler.dll",
+      "binaries/ppocr-detection.onnx": "models/ppocr-detection.onnx",
+      "binaries/ppocr-recognition.onnx": "models/ppocr-recognition.onnx",
+      "binaries/ppocr-recognition.yml": "models/ppocr-recognition.yml",
       "binaries/screenwide-window-hider.dll": "screenwide-window-hider.dll"
     }
   }

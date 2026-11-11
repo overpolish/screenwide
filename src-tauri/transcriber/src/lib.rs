@@ -10,6 +10,9 @@ use std::path::PathBuf;
 
 use serde::{Deserialize, Serialize};
 
+mod text;
+pub use text::TextLine;
+
 /// Audio is handed over as a file of 32-bit float samples in native byte
 /// order, mono, at this rate: what the engine takes, so the helper needs no
 /// decoder of its own and the app's FFmpeg does the converting.
@@ -169,6 +172,25 @@ pub enum Job {
     duration_ms: u64,
     output: PathBuf,
   },
+  /// Loads the text reading models for the [`Job::ReadText`] jobs that
+  /// follow, answered with [`Reply::TextReaderLoaded`]. Loaded once for a
+  /// run of reads, as loading takes longer than a read.
+  LoadTextReader {
+    /// The text detection model file.
+    detection: PathBuf,
+    /// The text recognition model file.
+    recognition: PathBuf,
+    /// The recognition model's configuration, which holds its characters.
+    dictionary: PathBuf,
+  },
+  /// The text in a picture, answered with [`Reply::TextRead`]. The picture
+  /// is a file of its pixels, red, green, blue and alpha a byte each, row by
+  /// row from the top.
+  ReadText {
+    image: PathBuf,
+    width: u32,
+    height: u32,
+  },
 }
 
 /// When each camera frame the matte was made from shows: frame `n` of the
@@ -300,6 +322,15 @@ pub enum Reply {
   /// The camera's face track is written.
   FacesFound {
     id: u64,
+  },
+  /// The text reading models are loaded.
+  TextReaderLoaded {
+    id: u64,
+  },
+  /// The lines read in the picture, in reading order.
+  TextRead {
+    id: u64,
+    lines: Vec<TextLine>,
   },
   /// How far a long job has got, 0 to 1. Sent any number of times before the
   /// reply that ends the job, which every other kind is.

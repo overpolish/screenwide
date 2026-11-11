@@ -142,6 +142,8 @@ pub fn dismiss(app: &AppHandle) {
   }
   crate::app_windows::sync_recording_ui_escape(app, crate::ruler::is_active(app));
   hold_activity(None);
+  #[cfg(target_os = "windows")]
+  windows::reader::release();
 }
 
 pub async fn start(app: &AppHandle) -> Result<(), String> {
@@ -153,6 +155,9 @@ pub async fn start(app: &AppHandle) -> Result<(), String> {
   capture_overlays::dismiss_except(app, &[capture_overlays::CaptureOverlay::TextRecognition]);
   let generation = app.state::<TextRecognitionState>().begin();
   crate::glide::suspend_for_capture(app);
+  // While the desktop freezes and an area is drawn.
+  #[cfg(target_os = "windows")]
+  windows::reader::warm(app);
   #[cfg(target_os = "macos")]
   if let Err(error) = crate::osc::cursor_macos::acquire_text_recognition(app) {
     dismiss(app);

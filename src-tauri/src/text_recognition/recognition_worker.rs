@@ -60,9 +60,17 @@ fn read_text(rgba: &[u8], width: u32, height: u32) -> Result<Vec<RecognizedLine>
   macos::platform::recognize(rgba, width, height)
 }
 
+/// The bundled PP-OCR models, or Windows' own OCR where they cannot read.
 #[cfg(target_os = "windows")]
 fn read_text(rgba: &[u8], width: u32, height: u32) -> Result<Vec<RecognizedLine>, String> {
-  windows::platform::recognize(rgba, width, height)
+  match windows::reader::read(rgba, width, height) {
+    Some(Ok(lines)) => Ok(lines),
+    Some(Err(error)) => {
+      eprintln!("Text recognition's models failed; Windows' OCR reads instead: {error}");
+      windows::platform::recognize(rgba, width, height)
+    }
+    None => windows::platform::recognize(rgba, width, height),
+  }
 }
 
 #[cfg(not(any(target_os = "macos", target_os = "windows")))]

@@ -9,7 +9,7 @@ Screenwide is a Tauri app: the interface is React and TypeScript, and capture, d
 
 Every platform needs [Rust](https://rustup.rs), [Node.js](https://nodejs.org) and pnpm. The pnpm version is pinned in `package.json` (`packageManager`), so `corepack enable` picks the right one.
 
-The first `pnpm dev` (or `pnpm build`) prepares what the app ships beside itself: FFmpeg, the speech-to-text helper and its voice activity model, and on Windows the shader compiler and the window hider. Each is prepared once and checked against pinned digests after that. Tauri checks they exist before compiling the app, so even `cargo check` fails until they have been prepared once.
+The first `pnpm dev` (or `pnpm build`) prepares what the app ships beside itself: FFmpeg, the speech-to-text helper and its voice activity model, and on Windows the shader compiler, the window hider and the text recognition models. Each is prepared once and checked against pinned digests after that. Tauri checks they exist before compiling the app, so even `cargo check` fails until they have been prepared once.
 
 ### macOS
 

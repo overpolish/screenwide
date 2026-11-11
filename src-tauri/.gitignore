@@ -5,6 +5,7 @@
 /binaries/ffmpeg-*
 /binaries/screenwide-transcriber-*
 /binaries/silero-vad.bin
+/binaries/ppocr-*
 /binaries/libwebgpu_dawn.dylib
 /binaries/DirectML.dll
 /binaries/dxcompiler.dll

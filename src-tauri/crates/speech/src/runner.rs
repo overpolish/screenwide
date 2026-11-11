@@ -13,6 +13,7 @@ use self::samples::Samples;
 
 mod camera;
 pub mod samples;
+mod text;
 
 /// The transcriber program, started for a run of jobs and kept for the rest
 /// of them, since each start loads the model again. Dropping it closes its
@@ -223,6 +224,8 @@ impl Transcriber {
       | Reply::Tracked { id }
       | Reply::Composed { id }
       | Reply::FacesFound { id }
+      | Reply::TextReaderLoaded { id }
+      | Reply::TextRead { id, .. }
       | Reply::Halfway { id }
       | Reply::Progress { id, .. }
       | Reply::Failed { id, .. }) = &answer;
