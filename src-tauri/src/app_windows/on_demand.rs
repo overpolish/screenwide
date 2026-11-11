@@ -7,7 +7,8 @@
 //! destroyed when it closes, so a Screenwide with nothing open holds only the
 //! island, which must appear the moment a shortcut asks, and Glide while it is
 //! on and licensed (`crate::glide::window`). The region overlay and the menu
-//! window are never closed by what uses them, so they go once they have stayed
+//! window are never closed by what uses them, and the screenshot editor is
+//! built while an area is drawn for it, so they go once they have stayed
 //! hidden for a while (`release`).
 //!
 //! A new window is shown only once its page says it has rendered

@@ -16,6 +16,12 @@ pub use interactivity::set_region_selector_passthrough;
 pub use interactivity::{
   __cmd__set_region_selector_passthrough, __tauri_command_name_set_region_selector_passthrough,
 };
+mod shutter;
+pub use shutter::{
+  __cmd__begin_screenshot_drawing, __cmd__set_region_selector_opacity,
+  __tauri_command_name_begin_screenshot_drawing, __tauri_command_name_set_region_selector_opacity,
+};
+pub use shutter::{begin_screenshot_drawing, set_region_selector_opacity};
 
 #[cfg(test)]
 use borrowed_controls::recording_controls_may_restore;
@@ -231,49 +237,6 @@ const fn region_selector_may_show(
 
 pub(super) const fn recording_ui_may_hide(screenshot_session: bool) -> bool {
   !screenshot_session
-}
-
-#[tauri::command]
-#[allow(clippy::needless_return)]
-pub async fn set_region_selector_opacity(
-  window: tauri::WebviewWindow,
-  opacity: f64,
-) -> Result<(), String> {
-  #[cfg(target_os = "windows")]
-  {
-    let affinity = region_selector_capture_affinity(
-      opacity,
-      crate::settings::current(window.app_handle()).record_screenwide_windows,
-    );
-    // The shutter is one of our own captures: the windows whose exclusion
-    // depends on that, rather than on the preference, follow it here.
-    super::mark_capturing(super::Capture::Still, opacity <= 0.0);
-    // The shutter only excludes the borrowed Region overlay. Every other
-    // Screenwide window continues to follow the user's capture preference.
-    super::sync_capture_affinity(window.app_handle(), affinity.other_windows)
-      .map_err(|error| error.to_string())?;
-    super::set_window_capture_affinity(&window, affinity.region_selector)
-      .map_err(|error| error.to_string())?;
-    super::screenshot_region::set_recording_overlay_capture_affinity(
-      &window,
-      affinity.region_selector,
-    )
-    .map_err(|error| error.to_string())?;
-    if opacity <= 0.0 {
-      // Display affinity is committed asynchronously by DWM. Let that frame
-      // land before the shutter without changing anything visible onscreen.
-      tokio::time::sleep(std::time::Duration::from_millis(75)).await;
-    }
-    return Ok(());
-  }
-
-  #[cfg(target_os = "macos")]
-  if opacity <= 0.0 {
-    super::screenshot_region::set_recording_overlay_desktop_presented(&window, false)
-      .map_err(|error| error.to_string())?;
-  }
-  #[cfg(not(target_os = "windows"))]
-  return platform::set_opacity(&window, opacity).map_err(|error| error.to_string());
 }
 
 #[cfg(any(test, target_os = "windows"))]

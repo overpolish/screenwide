@@ -102,6 +102,7 @@ pub use workspace::{
   reserve_recording as reserve_recording_workspace,
   reserve_screenshot as reserve_screenshot_workspace,
 };
+pub(crate) use workspace::{prepare_screenshot_window, screenshot_window_needed};
 mod window;
 
 use std::path::{Path, PathBuf};

@@ -13,6 +13,9 @@ pub fn set_screenshot_region_session(
   let session_was_active = SCREENSHOT_REGION_SESSION.load(Ordering::Acquire);
   let mut restoring_region = false;
   if active && !session_was_active {
+    // A screenshot from the island has no shortcut to have opened the
+    // device already: it opens while the overlay is shown.
+    screenwide_gpu::open_soon();
     // First, so the overlay's own cursor lease is gone before the
     // screenshot's is taken, and Escape is no longer the overlay's when
     // it is re-armed below.

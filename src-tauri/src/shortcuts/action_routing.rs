@@ -178,6 +178,10 @@ pub(super) fn run_action(app: &AppHandle, action: ShortcutAction) {
       );
       return;
     }
+    // The overlay draws on the GPU, and the device may have closed while
+    // idle: it opens while the frontend takes its turn and the overlay is
+    // built, rather than after.
+    screenwide_gpu::open_soon();
   }
   if requires_frontend_turn(action) {
     // These operations create, show, or hide window graphs. Keep that work

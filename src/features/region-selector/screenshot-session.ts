@@ -4,6 +4,7 @@
 import { invoke } from "@tauri-apps/api/core";
 
 import {
+  beginScreenshotDrawing,
   hideRegionSelector,
   setRegionSelectorOpacity,
   setRegionSelectorPassthrough,
@@ -51,6 +52,19 @@ const showIsland = () =>
   ).catch((error: unknown) => {
     console.error("Could not show the screenshot island", error);
   });
+
+/** An area has started being drawn. The overlay is left out of the still now,
+ * so the shutter does not wait for that, and when the shot goes to the editor
+ * its window is built during the drawing, so the still opens in it at once.
+ * Not sooner, as building it beside the overlay slows the overlay. A shot
+ * that goes elsewhere, or never comes, leaves an editor that is let go of. */
+export const screenshotDrawingStarted = () => {
+  beginScreenshotDrawing(
+    sessionDestination === "editor" || sessionDestination === "both",
+  ).catch((error: unknown) => {
+    console.error("Could not begin the screenshot drawing", error);
+  });
+};
 
 /** The other shortcut, pressed mid-session, changes where the shot goes. */
 const switchScreenshotAction = async (action: ScreenshotShortcutAction) => {

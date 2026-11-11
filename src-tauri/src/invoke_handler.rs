@@ -262,6 +262,7 @@ pub(crate) fn invoke_handler() -> impl Fn(tauri::ipc::Invoke) -> bool + Send + S
     app_windows::options::hide_standalone_listbox,
     app_windows::options::open_standalone_listboxes,
     app_windows::region::set_recording_controls_borrowed,
+    app_windows::region::begin_screenshot_drawing,
     app_windows::region::set_region_selector_opacity,
     app_windows::region::set_region_selector_passthrough,
     app_windows::region::set_screenshot_region_session,

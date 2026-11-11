@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 //! Letting go of the on-demand windows nobody closes. The region overlay and
-//! the shared menu window are put away by what used them, never closed, so
+//! the shared menu window are put away by what used them, never closed, and
+//! the screenshot editor may be built for a screenshot that never comes, so
 //! each is destroyed once it has stayed hidden, with nothing needing it, for
 //! [`GRACE`]. The grace keeps a quick hide and show, such as a mode change or
 //! a second menu, from paying for a new window each time.

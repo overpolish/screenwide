@@ -22,6 +22,7 @@ import { EMPTY_REGION, fitRegion, snapRegion } from "./region-geometry";
 import {
   captureScreenshotRegion,
   screenshotCaptureDestination,
+  screenshotDrawingStarted,
 } from "./screenshot-session";
 import { useNativeScreenshotRegion } from "./use-native-screenshot-region";
 import { useRegionGestureVisibility } from "./use-region-gesture-visibility";
@@ -62,6 +63,9 @@ export function RegionSelectorWindow() {
   // A capture ends the session, so whichever gesture starts one shuts the
   // others out until the session is over.
   const isCapturingRef = useRef(false);
+  // Whether the drawing under way has begun its screenshot: gestures report
+  // on every move, and once is enough.
+  const isDrawingBegunRef = useRef(false);
   const nativeMonitorRef = useRef<number | null>(null);
   const isIdle = recordingStatus === "idle";
   // Built when first wanted, the window is ready once it can hear the
@@ -146,6 +150,9 @@ export function RegionSelectorWindow() {
       commitRecordingRegion(snapped, monitorId);
     },
     onGesture: ({ dragging, drawing, resizeDirection: direction }) => {
+      if (isScreenshotSurface && drawing && !isDrawingBegunRef.current)
+        screenshotDrawingStarted();
+      isDrawingBegunRef.current = isScreenshotSurface && drawing;
       const resizing = direction !== undefined;
       if (resizing && !resizeActiveRef.current)
         setCaptureRequest((current) => current + 1);

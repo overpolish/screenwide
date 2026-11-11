@@ -100,3 +100,24 @@ pub fn release_recording(app: &AppHandle) {
 pub fn release_screenshot(app: &AppHandle) {
   release(app, EditorKind::Screenshot);
 }
+
+/// Builds the screenshot editor while an area is drawn for it, so the still
+/// opens in it at once rather than waiting for a new window. One never used
+/// goes once it has stayed hidden for a while, as the region overlay does.
+pub(crate) fn prepare_screenshot_window(app: &AppHandle) {
+  window::prepare(app, EditorKind::Screenshot);
+}
+
+/// Whether the screenshot editor's window is wanted though hidden: it holds
+/// a screenshot, one is being taken, or an area is being drawn for one.
+pub(crate) fn screenshot_window_needed(app: &AppHandle) -> bool {
+  let state = app.state::<EditorState>();
+  let reserved = *state
+    .capture_reservation
+    .lock()
+    .unwrap_or_else(|poisoned| poisoned.into_inner())
+    == Some(EditorKind::Screenshot);
+  reserved
+    || has_pending_kind(app, EditorKind::Screenshot)
+    || crate::app_windows::region::is_screenshot_region_session()
+}
