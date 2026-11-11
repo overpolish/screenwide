@@ -45,7 +45,7 @@ pub struct StillInputs<'a> {
 static STILLS: screenwide_gpu::DeviceCache<Mutex<Compositor>> = screenwide_gpu::DeviceCache::new();
 
 fn stills() -> Result<std::sync::Arc<Mutex<Compositor>>, String> {
-  STILLS.get_or_try_init(&screenwide_gpu::shared()?, |gpu| {
+  STILLS.get_or_try_init(&screenwide_gpu::shared_for_readback()?, |gpu| {
     Compositor::new(gpu).map(Mutex::new)
   })
 }

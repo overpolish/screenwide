@@ -98,7 +98,7 @@ impl WindowsExportCanvas {
     camera_size: Option<(u32, u32)>,
     output_size: (u32, u32),
   ) -> Result<Self, String> {
-    let gpu = screenwide_gpu::shared()?;
+    let gpu = screenwide_gpu::shared(screenwide_gpu::Workload::Heavy)?;
     let device = screenwide_gpu::video_device_on_gpu_adapter(&gpu)?;
     let bridge = D3d11Bridge::new(&gpu, &device)?;
     let source = bridged_source(&bridge, &gpu, source_size, "export source")?;

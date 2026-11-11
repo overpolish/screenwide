@@ -75,7 +75,16 @@ pub(super) fn begin(
     Arc::clone(&on_failure),
     audio_destination(&path, replay_horizon_ns),
   )?;
-  let device = capture::create_device()?;
+  // The screen's stream and, beside it, the camera's.
+  let mut streams = vec![writer::recording_settings(width, height, fps)];
+  if let (false, Some(spec)) = (camera_primary, camera_spec.as_ref()) {
+    streams.push(writer::recording_settings(
+      spec.width,
+      spec.height,
+      spec.fps,
+    ));
+  }
+  let (gpu, device) = capture::recording_devices(&streams)?;
   let stopped_at = Arc::new(OnceLock::new());
   let (commands, first_frame, worker) = spawn_writer(
     "screenwide-windows-recording-writer",
@@ -151,7 +160,9 @@ pub(super) fn begin(
     }
   }
   if let Some((plan, show_cursor)) = desktop_plan {
-    let coordinator = Arc::new(Mutex::new(DesktopFrameCoordinator::new(&device, &plan)?));
+    let coordinator = Arc::new(Mutex::new(DesktopFrameCoordinator::new(
+      &gpu, &device, &plan,
+    )?));
     let failed = Arc::new(AtomicBool::new(false));
     for (source_index, piece) in plan.pieces.iter().enumerate() {
       let piece = *piece;
@@ -188,7 +199,7 @@ pub(super) fn begin(
   } else if let Some((CaptureTarget::Window(id), capture_width, capture_height, show_cursor)) =
     graphics_source
   {
-    let fitter = Mutex::new(WindowFitter::new(&device, width, height));
+    let fitter = Mutex::new(WindowFitter::new(&gpu, &device, width, height));
     let failed = AtomicBool::new(false);
     let report = Arc::clone(&on_failure);
     let corner_radius = Arc::clone(&session.corner_radius);

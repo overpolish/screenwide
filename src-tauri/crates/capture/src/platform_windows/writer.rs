@@ -9,6 +9,7 @@ mod timeline;
 use frames::crop_frame;
 pub(super) use frames::snapshot_frame;
 pub(super) use media_types::attributes;
+pub(super) use sink::recording_settings;
 use timeline::announce_start;
 
 use std::ops::ControlFlow;

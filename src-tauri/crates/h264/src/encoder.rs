@@ -162,6 +162,18 @@ impl Encoder {
     ))
   }
 
+  /// Whether a hardware encoder on `device`'s adapter takes `settings`,
+  /// tried as [`Encoder::new`] tries it.
+  pub fn hardware_takes(device: &ID3D11Device, settings: Settings) -> bool {
+    setup::candidates(device, settings.purpose)
+      .into_iter()
+      .filter(|candidate| matches!(candidate, Candidate::Hardware(_)))
+      .any(|candidate| {
+        let name = setup::name(&candidate);
+        Self::start(device, candidate, settings, name).is_ok()
+      })
+  }
+
   fn start(
     device: &ID3D11Device,
     candidate: Candidate,

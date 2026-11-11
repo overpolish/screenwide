@@ -28,7 +28,10 @@ pub(crate) const PREVIEW_DISPLAY_ID: u32 = 1;
 static GPU: screenwide_gpu::DeviceCache<Gpu> = screenwide_gpu::DeviceCache::new();
 
 fn gpu() -> Result<Arc<Gpu>, String> {
-  GPU.get_or_try_init(&screenwide_gpu::shared()?, Gpu::on)
+  GPU.get_or_try_init(
+    &screenwide_gpu::shared(screenwide_gpu::Workload::Light)?,
+    Gpu::on,
+  )
 }
 
 struct Drawable(screenwide_gpu::surface::Surface);

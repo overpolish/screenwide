@@ -73,12 +73,12 @@ pub fn d3d11(gpu: &Arc<Gpu>) -> Result<Arc<D3d11Layer>, String> {
   LAYER.get_or_try_init(gpu, D3d11Layer::open)
 }
 
-/// Lets go of what Direct3D 11 still holds for work that has ended. The layer
-/// destroys what decoders and wrapped textures release only when its context
-/// next flushes, so once nothing more is decoded, such as after an editor
-/// closes, their memory would stay taken until the next one opens.
-pub fn release_unused() {
-  let Some(layer) = LAYER.peek() else {
+/// Lets go of what Direct3D 11 still holds on `gpu` for work that has ended.
+/// The layer destroys what decoders and wrapped textures release only when
+/// its context next flushes, so once nothing more is decoded, such as after
+/// an editor closes, their memory would stay taken until the next one opens.
+pub fn release_unused(gpu: &Gpu) {
+  let Some(layer) = LAYER.peek(gpu) else {
     return;
   };
   let Ok(_held) = layer.hand_over.lock() else {

@@ -54,7 +54,7 @@ impl Preview {
     pictures: Vec<CapturedImage>,
     points: (f64, f64),
   ) -> Result<Self, String> {
-    let gpu = screenwide_gpu::shared()?;
+    let gpu = screenwide_gpu::shared(screenwide_gpu::Workload::Light)?;
     let compositor = screenwide_compositor::compositor::Compositor::new(&gpu)?;
     let renderer = SceneRenderer::new(compositor, scene, pictures, points)?;
     Self::open(window, Stacking::Above, move |surface| {

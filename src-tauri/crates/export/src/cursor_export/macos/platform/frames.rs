@@ -34,7 +34,7 @@ impl<'a> FrameComposer<'a> {
     request: &CursorExportRequest<'r>,
     annotations_within_ms: Option<[u64; 2]>,
   ) -> Result<Self, String> {
-    let gpu = screenwide_gpu::shared()?;
+    let gpu = screenwide_gpu::shared(screenwide_gpu::Workload::Heavy)?;
     let compositor = Compositor::new(&gpu)?;
     let (width, height) = screenwide_output::output_dimensions(request.output)?;
     let canvas = gpu

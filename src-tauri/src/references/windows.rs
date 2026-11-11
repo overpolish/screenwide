@@ -88,7 +88,7 @@ pub(super) fn attach(
   size: Size,
   origin: Option<Position>,
 ) -> Result<(), String> {
-  let gpu = screenwide_gpu::shared()?;
+  let gpu = screenwide_gpu::shared(screenwide_gpu::Workload::Light)?;
   let top = HWND(window.hwnd().map_err(|error| error.to_string())?.0);
   window_proc::register();
   let pad = overlay_surface::create_child(top, window_proc::CLASS)?;

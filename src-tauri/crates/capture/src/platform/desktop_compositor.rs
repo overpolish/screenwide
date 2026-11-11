@@ -200,7 +200,7 @@ impl DesktopCompositor {
     if width == 0 || height == 0 {
       return Err("The desktop canvas is empty".to_owned());
     }
-    let gpu = screenwide_gpu::shared()?;
+    let gpu = screenwide_gpu::shared(screenwide_gpu::Workload::Light)?;
     Ok(Self {
       drawing: DesktopCanvas::new(&gpu, width, height, pieces),
       gpu,

@@ -57,7 +57,8 @@ fn d3d11_pixel(layer: &D3d11Layer, shared: &SharedTexture) -> [u8; 4] {
 #[test]
 #[cfg_attr(all(screenwide_no_gpu, windows), ignore = "requires a hardware GPU")]
 fn a_shared_texture_carries_pixels_both_ways() {
-  let gpu = super::super::super::shared().expect("the shared device opens");
+  let gpu = super::super::super::shared(super::super::super::Workload::Heavy)
+    .expect("the shared device opens");
   let layer = d3d11(&gpu).expect("Direct3D 11 layers on the shared device");
   let shared = layer
     .shared_texture(&gpu, SIZE, wgpu::TextureFormat::Bgra8Unorm, "test frame")

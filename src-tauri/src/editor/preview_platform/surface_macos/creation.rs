@@ -53,7 +53,7 @@ fn build(
   // Safety: Tauri hands over the window's live content view.
   let host = unsafe { Retained::retain(host as *mut NSView) }
     .ok_or_else(|| "The editor window has no content view".to_owned())?;
-  let shared = screenwide_gpu::shared()?;
+  let shared = screenwide_gpu::shared(screenwide_gpu::Workload::Heavy)?;
   let layers = Layers::new();
 
   let below = PictureView::new(mtm, host.bounds());

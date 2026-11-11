@@ -54,9 +54,10 @@ static PREVIEWER: screenwide_gpu::DeviceCache<Mutex<CaptionPreviewer>> =
   screenwide_gpu::DeviceCache::new();
 
 fn previewer() -> Result<Arc<Mutex<CaptionPreviewer>>, String> {
-  PREVIEWER.get_or_try_init(&screenwide_gpu::shared()?, |gpu| {
-    CaptionPreviewer::new(gpu).map(Mutex::new)
-  })
+  PREVIEWER.get_or_try_init(
+    &screenwide_gpu::shared(screenwide_gpu::Workload::Heavy)?,
+    |gpu| CaptionPreviewer::new(gpu).map(Mutex::new),
+  )
 }
 
 /// Draws each of `styles`' preview of the `sample` words, so it is only

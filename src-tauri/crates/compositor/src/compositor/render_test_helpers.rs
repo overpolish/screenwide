@@ -9,7 +9,7 @@ use super::*;
 pub(super) const OUTPUT: (u32, u32) = (1920, 1080);
 
 pub(super) fn gpu() -> std::sync::Arc<Gpu> {
-  screenwide_gpu::shared().expect("the shared GPU")
+  screenwide_gpu::shared(screenwide_gpu::Workload::Heavy).expect("the shared GPU")
 }
 
 pub(super) fn compositor() -> Compositor {

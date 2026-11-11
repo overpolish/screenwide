@@ -99,7 +99,7 @@ pub async fn start(app: &AppHandle) -> Result<(), String> {
     return Ok(());
   }
   // Opens while the desktop freezes, which the overlay waits for anyway.
-  screenwide_gpu::open_soon();
+  screenwide_gpu::open_soon(screenwide_gpu::Workload::Light);
   dismiss(app);
   capture_overlays::dismiss_except(app, &[capture_overlays::CaptureOverlay::Ruler]);
   let generation = app.state::<RulerState>().begin();

@@ -50,7 +50,7 @@ pub(super) fn attach(
   origin: Option<Position>,
 ) -> Result<(), String> {
   let mtm = MainThreadMarker::new().ok_or("A reference's view is made on the main thread")?;
-  let gpu = screenwide_gpu::shared()?;
+  let gpu = screenwide_gpu::shared(screenwide_gpu::Workload::Light)?;
   let ns_window = window.ns_window().map_err(|error| error.to_string())?;
   let content = window.ns_view().map_err(|error| error.to_string())?;
   // Safety: Tauri hands out the live window and its content view.

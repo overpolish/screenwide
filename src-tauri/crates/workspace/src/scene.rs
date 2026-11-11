@@ -71,7 +71,7 @@ pub struct WorkspaceScene {
 
 impl WorkspaceScene {
   pub fn new() -> Result<Self, String> {
-    let gpu = screenwide_gpu::shared()?;
+    let gpu = screenwide_gpu::shared(screenwide_gpu::Workload::Heavy)?;
     let compositor = Compositor::new(&gpu)?;
     // Drawn as it is edited: a set of kinds new to it is compiled on another
     // thread while the frames go on with a variant that holds it.

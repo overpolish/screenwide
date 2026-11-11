@@ -119,7 +119,7 @@ fn exported(name: &str) -> Option<(CapturedImage, Size, f64, Vec<Step>)> {
 }
 
 fn target(picture: &CapturedImage) -> wgpu::Texture {
-  screenwide_gpu::shared()
+  screenwide_gpu::shared(screenwide_gpu::Workload::Light)
     .expect("the GPU")
     .device
     .create_texture(&wgpu::TextureDescriptor {
@@ -140,7 +140,7 @@ fn target(picture: &CapturedImage) -> wgpu::Texture {
 
 /// What the preview shows, as BGRA rows.
 fn read(texture: &wgpu::Texture) -> Vec<u8> {
-  let gpu = screenwide_gpu::shared().expect("the GPU");
+  let gpu = screenwide_gpu::shared(screenwide_gpu::Workload::Light).expect("the GPU");
   gpu.read_texture(texture).expect("the frame reads back")
 }
 

@@ -10,6 +10,7 @@
 //! of its own for the encoder. Fences order each hand-over between the two
 //! devices.
 
+use std::sync::Arc;
 use std::time::Instant;
 
 use windows::{
@@ -38,11 +39,11 @@ pub(super) struct DesktopFrameCoordinator {
 }
 
 impl DesktopFrameCoordinator {
-  /// Composes on `device`, the capture device, which has to be on wgpu's
-  /// adapter.
-  pub fn new(device: &ID3D11Device, plan: &CapturePlan) -> Result<Self, String> {
+  /// Composes on `gpu`, handed frames by `device`, the capture device on
+  /// the same adapter.
+  pub fn new(gpu: &Arc<Gpu>, device: &ID3D11Device, plan: &CapturePlan) -> Result<Self, String> {
     Ok(Self {
-      compositor: DesktopCompositor::new(device, plan.width, plan.height, plan.pieces.len())?,
+      compositor: DesktopCompositor::new(gpu, device, plan.width, plan.height, plan.pieces.len())?,
       latest: vec![None; plan.pieces.len()],
       pieces: plan.pieces.clone(),
       synchronizer: FrameSynchronizer::new(plan.pieces.len())?,
@@ -78,6 +79,7 @@ impl DesktopFrameCoordinator {
 /// one resized since is scaled to fit it, centred, the rest black
 /// (`fitted_window`).
 pub(super) struct WindowFitter {
+  gpu: Arc<Gpu>,
   device: ID3D11Device,
   width: u32,
   height: u32,
@@ -86,8 +88,9 @@ pub(super) struct WindowFitter {
 }
 
 impl WindowFitter {
-  pub fn new(device: &ID3D11Device, width: u32, height: u32) -> Self {
+  pub fn new(gpu: &Arc<Gpu>, device: &ID3D11Device, width: u32, height: u32) -> Self {
     Self {
+      gpu: Arc::clone(gpu),
       device: device.clone(),
       width,
       height,
@@ -110,6 +113,7 @@ impl WindowFitter {
     let compositor = match &mut self.compositor {
       Some(compositor) => compositor,
       empty => empty.insert(DesktopCompositor::new(
+        &self.gpu,
         &self.device,
         self.width,
         self.height,
@@ -126,7 +130,7 @@ impl WindowFitter {
 }
 
 struct DesktopCompositor {
-  gpu: std::sync::Arc<Gpu>,
+  gpu: Arc<Gpu>,
   device: ID3D11Device,
   bridge: D3d11Bridge,
   width: u32,
@@ -142,8 +146,14 @@ struct DesktopCompositor {
 mod tests;
 
 impl DesktopCompositor {
-  fn new(capture: &ID3D11Device, width: u32, height: u32, pieces: usize) -> Result<Self, String> {
-    let gpu = screenwide_gpu::shared()?;
+  fn new(
+    gpu: &Arc<Gpu>,
+    capture: &ID3D11Device,
+    width: u32,
+    height: u32,
+    pieces: usize,
+  ) -> Result<Self, String> {
+    let gpu = Arc::clone(gpu);
     let bridge = D3d11Bridge::new(&gpu, capture)?;
     let canvas = bridge.shared_texture(&gpu, (width, height), FORMAT, "desktop canvas")?;
     Ok(Self {

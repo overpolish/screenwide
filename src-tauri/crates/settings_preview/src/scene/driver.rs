@@ -82,7 +82,7 @@ pub(crate) struct SceneDriver {
 
 impl SceneDriver {
   pub(crate) fn new(renderer: SceneRenderer, mut surface: Surface) -> Result<Self, String> {
-    let gpu = screenwide_gpu::shared()?;
+    let gpu = screenwide_gpu::shared(screenwide_gpu::Workload::Light)?;
     surface.wait_for_display(&gpu);
     Ok(Self {
       renderer,

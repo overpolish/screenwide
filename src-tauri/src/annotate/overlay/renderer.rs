@@ -63,7 +63,7 @@ pub(in crate::annotate) struct Renderer {
 
 impl Renderer {
   pub(in crate::annotate) fn new() -> Result<Self, String> {
-    let gpu = screenwide_gpu::shared()?;
+    let gpu = screenwide_gpu::shared(screenwide_gpu::Workload::Light)?;
     let device = &gpu.device;
     let shader = pipeline::shader(device);
     Ok(Self {

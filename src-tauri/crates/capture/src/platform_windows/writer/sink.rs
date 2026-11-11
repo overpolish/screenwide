@@ -11,23 +11,28 @@ use super::*;
 /// a crash loses while keeping seeks cheap in the export scrubber.
 const FRAGMENT_100NS: u64 = 5_000_000;
 
+/// What the recording's encoder is asked for, for a `width` by `height`
+/// picture at `fps`.
+pub(in super::super) fn recording_settings(width: u32, height: u32, fps: u32) -> Settings {
+  let fps = fps.max(1);
+  Settings {
+    width,
+    height,
+    fps,
+    bitrate: u32::try_from(bitrate_bps(width, height, fps)).unwrap_or(u32::MAX),
+    rate_control: RateControl::Average,
+    // The export scrubber seeks a working recording keyframe to keyframe.
+    keyframe_interval: (fps / 2).max(1),
+    low_latency: true,
+    purpose: "Recording",
+  }
+}
+
 impl Sink {
   pub(super) fn new(config: &WriterConfig) -> Result<Self, String> {
-    let fps = config.fps.max(1);
-    let settings = Settings {
-      width: config.width,
-      height: config.height,
-      fps,
-      bitrate: u32::try_from(bitrate_bps(config.width, config.height, fps)).unwrap_or(u32::MAX),
-      rate_control: RateControl::Average,
-      // The export scrubber seeks a working recording keyframe to keyframe.
-      keyframe_interval: (fps / 2).max(1),
-      low_latency: true,
-      purpose: "Recording",
-    };
     let file = FileEncoder::create(
       &config.device,
-      settings,
+      recording_settings(config.width, config.height, config.fps),
       None,
       &config.path,
       Some(FRAGMENT_100NS),

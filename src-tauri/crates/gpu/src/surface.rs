@@ -124,7 +124,7 @@ impl Surface {
       surface,
       config,
       configured: AtomicBool::new(false),
-      _live: super::lifetime::LiveSurface::new(),
+      _live: super::lifetime::LiveSurface::new(gpu),
     };
     surface.configure(gpu);
     surface

@@ -179,7 +179,7 @@ fn every_generator_paints_a_varied_picture() {
 /// wrong parameters.
 #[test]
 fn the_precompiled_mesh_paints_what_wgsl_paints() {
-  let gpu = screenwide_gpu::shared().expect("the shared GPU");
+  let gpu = screenwide_gpu::shared(screenwide_gpu::Workload::Light).expect("the shared GPU");
   let precompiled = Renderer::new(&gpu).expect("the mesh renderer");
   let compiled = screenwide_gpu::compiling_wgsl(|| Renderer::new(&gpu)).expect("the mesh renderer");
   let generator = &every_generator()[1];

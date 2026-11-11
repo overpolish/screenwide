@@ -95,7 +95,7 @@ fn script() -> PointerScript {
 /// A renderer drawing the fallback cursor artwork: a test process never
 /// loads the system's, which takes the app's main thread.
 fn renderer(scene: PreviewScene) -> SceneRenderer {
-  let gpu = screenwide_gpu::shared().unwrap();
+  let gpu = screenwide_gpu::shared(screenwide_gpu::Workload::Light).unwrap();
   let compositor = screenwide_compositor::compositor::Compositor::new(&gpu).unwrap();
   SceneRenderer::new(compositor, scene, vec![screen(false), screen(true)], POINTS).unwrap()
 }

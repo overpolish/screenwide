@@ -38,7 +38,7 @@ fn constants_keep_monitor_crop_and_canvas_placement_separate() {
 #[test]
 #[cfg_attr(screenwide_no_gpu, ignore = "requires a hardware GPU")]
 fn the_precompiled_canvas_draws_what_wgsl_draws() {
-  let gpu = screenwide_gpu::shared().expect("the shared GPU");
+  let gpu = screenwide_gpu::shared(screenwide_gpu::Workload::Light).expect("the shared GPU");
   let (width, height) = (64, 32);
   let picture = |colour: [u8; 4]| {
     gpu.texture_with_pixels(

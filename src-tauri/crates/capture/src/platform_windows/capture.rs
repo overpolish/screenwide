@@ -3,7 +3,11 @@
 
 use std::ffi::c_void;
 use std::sync::mpsc::{SyncSender, TrySendError};
+use std::sync::Arc;
 use std::time::Instant;
+
+use screenwide_gpu::{Gpu, Workload};
+use screenwide_h264::Settings;
 
 use windows::core::{factory, AgileReference, IInspectable, Interface};
 use windows::Foundation::TypedEventHandler;
@@ -53,13 +57,32 @@ pub(super) fn target_size(target: CaptureTarget) -> Result<(u32, u32), String> {
   Ok((width, height))
 }
 
-/// The device screen capture, the camera and the encoder share: a plain
-/// Direct3D 11 device on the adapter wgpu draws with. Windows.Graphics.Capture
-/// stalls on the D3D11On12 layer, and only a device on wgpu's adapter can hand
-/// frames to the multi-display compositor.
-pub(super) fn create_device() -> Result<ID3D11Device, String> {
-  let gpu = screenwide_gpu::shared()?;
-  screenwide_gpu::device_on_gpu_adapter(&gpu)
+/// The devices a recording captures, composes and encodes on: the wgpu
+/// device and a plain Direct3D 11 device on the same graphics processor.
+/// Windows.Graphics.Capture stalls on the D3D11On12 layer, and only a device
+/// on wgpu's adapter can hand frames to the multi-display compositor.
+///
+/// The light processor, which draws the screen being captured, where its
+/// hardware encoder takes every stream the recording writes; otherwise the
+/// heavy one, rather than encoding on the processor.
+pub(super) fn recording_devices(streams: &[Settings]) -> Result<(Arc<Gpu>, ID3D11Device), String> {
+  let light = screenwide_gpu::shared(Workload::Light)?;
+  let device = screenwide_gpu::device_on_gpu_adapter(&light)?;
+  if streams
+    .iter()
+    .all(|stream| screenwide_h264::Encoder::hardware_takes(&device, *stream))
+  {
+    return Ok((light, device));
+  }
+  let heavy = screenwide_gpu::shared(Workload::Heavy)?;
+  if Arc::ptr_eq(&light, &heavy) {
+    return Ok((light, device));
+  }
+  eprintln!(
+    "Recording on the heavy graphics processor: the light one has no hardware encoder for it"
+  );
+  let device = screenwide_gpu::device_on_gpu_adapter(&heavy)?;
+  Ok((heavy, device))
 }
 
 pub(super) struct CaptureObjects {

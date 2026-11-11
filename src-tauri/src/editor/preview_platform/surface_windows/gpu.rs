@@ -5,7 +5,7 @@ use super::*;
 
 impl Gpu {
   pub(super) fn new(host: HWND, editor: HWND) -> Result<Self, String> {
-    let shared = screenwide_gpu::shared()?;
+    let shared = screenwide_gpu::shared(screenwide_gpu::Workload::Heavy)?;
     let d3d11 = screenwide_gpu::d3d11(&shared)?;
     // Every visual's content is a swap chain, so the composition device needs
     // no Direct3D device of its own.

@@ -91,7 +91,7 @@ pub(super) fn attach(
   size: Size,
   origin: Option<Position>,
 ) -> Result<(), String> {
-  let gpu = screenwide_gpu::shared()?;
+  let gpu = screenwide_gpu::shared(screenwide_gpu::Workload::Light)?;
   let snapshot = texture.create_view(&Default::default());
   let origin = origin.map_or_else(|| host.centred(size), |at| host.desktop_point(at));
   let mut native = Native {

@@ -171,7 +171,7 @@ pub(crate) fn ribbon_still(
   if samples.is_empty() {
     return Err("There is no audio to draw".to_owned());
   }
-  let gpu = screenwide_gpu::shared()?;
+  let gpu = screenwide_gpu::shared(screenwide_gpu::Workload::Heavy)?;
   let painter = Painter::new(&gpu.device);
   let levels = painter.bindings(&gpu.device, &levels_view(&gpu, &samples));
   let texture = gpu.device.create_texture(&wgpu::TextureDescriptor {

@@ -5,7 +5,7 @@ use super::*;
 
 impl Gpu {
   pub(crate) fn new() -> Result<Arc<Self>, String> {
-    Self::on(&screenwide_gpu::shared()?).map(Arc::new)
+    Self::on(&screenwide_gpu::shared(screenwide_gpu::Workload::Light)?).map(Arc::new)
   }
 
   /// The pipeline and its resources on `shared`.

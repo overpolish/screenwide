@@ -8,7 +8,7 @@ use screenwide_gpu::{RenderStages, Shader};
 
 impl Scaler {
   pub(in super::super) fn create() -> Result<Self, String> {
-    let gpu = screenwide_gpu::shared()?;
+    let gpu = screenwide_gpu::shared(screenwide_gpu::Workload::Light)?;
     let device = &gpu.device;
     let shader = Shader::new(
       device,

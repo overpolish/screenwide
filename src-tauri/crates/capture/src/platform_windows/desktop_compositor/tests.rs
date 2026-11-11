@@ -115,8 +115,9 @@ fn first_row(device: &ID3D11Device, texture: &ID3D11Texture2D, width: u32) -> Ve
 
 #[test]
 fn waits_for_every_source_then_composes_the_shared_canvas() {
-  let device = super::super::capture::create_device().unwrap();
-  let mut coordinator = DesktopFrameCoordinator::new(&device, &plan()).unwrap();
+  let gpu = screenwide_gpu::shared(screenwide_gpu::Workload::Light).unwrap();
+  let device = screenwide_gpu::device_on_gpu_adapter(&gpu).unwrap();
+  let mut coordinator = DesktopFrameCoordinator::new(&gpu, &device, &plan()).unwrap();
   let blue = [255, 0, 0, 255];
   let red = [0, 0, 255, 255];
   assert!(coordinator

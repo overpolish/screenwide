@@ -70,7 +70,7 @@ fn composed(annotations: Vec<Annotation>, at: (f32, f32)) -> Vec<u8> {
     width: SIDE,
   };
   let compositor = screenwide_compositor::compositor::Compositor::with_cursor_artworks(
-    &screenwide_gpu::shared().unwrap(),
+    &screenwide_gpu::shared(screenwide_gpu::Workload::Heavy).unwrap(),
     &[artwork],
   )
   .unwrap();

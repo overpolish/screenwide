@@ -201,7 +201,7 @@ fn forget(label: &str) {
 /// shadow it casts from what it shows is blurred from (`reference.wgsl`).
 fn upload(image: &CapturedImage) -> Result<wgpu::Texture, String> {
   const FORMAT: wgpu::TextureFormat = wgpu::TextureFormat::Rgba8Unorm;
-  let gpu = screenwide_gpu::shared()?;
+  let gpu = screenwide_gpu::shared(screenwide_gpu::Workload::Light)?;
   let see_through = image
     .rgba
     .as_chunks::<4>()

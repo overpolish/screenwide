@@ -16,10 +16,12 @@ fn decoded_preview_frame_stays_on_the_gpu() {
   let path = std::env::var_os("SCREENWIDE_WINDOWS_PREVIEW_TEST")
     .map(std::path::PathBuf::from)
     .expect("set SCREENWIDE_WINDOWS_PREVIEW_TEST to a recording");
-  let device = screenwide_gpu::d3d11(&screenwide_gpu::shared().expect("the shared device"))
-    .expect("the Direct3D 11 layer")
-    .device
-    .clone();
+  let device = screenwide_gpu::d3d11(
+    &screenwide_gpu::shared(screenwide_gpu::Workload::Heavy).expect("the shared device"),
+  )
+  .expect("the Direct3D 11 layer")
+  .device
+  .clone();
   let context = unsafe { device.GetImmediateContext() }.expect("D3D11 returned no test context");
   let mut reader = GpuVideoReader::open_with_device(&path, 0, false, device.clone()).unwrap();
   reader.seek(4_000, false).unwrap();

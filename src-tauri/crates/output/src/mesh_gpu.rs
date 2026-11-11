@@ -47,7 +47,7 @@ struct Renderer {
 static RENDERER: screenwide_gpu::DeviceCache<Renderer> = screenwide_gpu::DeviceCache::new();
 
 fn renderer() -> Result<Arc<Renderer>, String> {
-  RENDERER.get_or_try_init(&screenwide_gpu::shared()?, Renderer::new)
+  RENDERER.get_or_try_init(&screenwide_gpu::shared_for_readback()?, Renderer::new)
 }
 
 impl Renderer {

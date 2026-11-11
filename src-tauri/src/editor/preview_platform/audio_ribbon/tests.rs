@@ -59,7 +59,7 @@ fn coverage(
 /// while it scrolls.
 #[test]
 fn a_bar_keeps_its_coverage_at_every_subpixel_offset() {
-  let gpu = screenwide_gpu::shared().expect("a graphics device");
+  let gpu = screenwide_gpu::shared(screenwide_gpu::Workload::Heavy).expect("a graphics device");
   let painter = Painter::new(&gpu.device);
   let levels = painter.bindings(&gpu.device, &levels_view(&gpu, &[1.0]));
   for half_height in [2.0, 6.0] {

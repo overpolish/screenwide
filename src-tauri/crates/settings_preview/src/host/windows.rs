@@ -109,7 +109,7 @@ pub(super) fn create(
   window: &HostWindow,
   stacking: Stacking,
 ) -> Result<(Slot, screenwide_gpu::surface::Surface), String> {
-  let gpu = screenwide_gpu::shared()?;
+  let gpu = screenwide_gpu::shared(screenwide_gpu::Workload::Light)?;
   let composition = composition(window.hwnd)?;
   let device = &composition.device;
   let root = match stacking {

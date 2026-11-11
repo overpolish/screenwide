@@ -85,7 +85,7 @@ pub(super) fn create(
 ) -> Result<(MainThreadBound<Slot>, screenwide_gpu::surface::Surface), String> {
   let host = window.content_view;
   let find_page = window.find_page;
-  let gpu = screenwide_gpu::shared()?;
+  let gpu = screenwide_gpu::shared(screenwide_gpu::Workload::Light)?;
   dispatch2::run_on_main(move |mtm| {
     // Safety: Tauri hands over the window's live content view.
     let host = unsafe { Retained::retain(host as *mut NSView) }
