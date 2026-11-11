@@ -1,11 +1,10 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: Elastic-2.0
 
-//! The gate between steps that only take effect on release: picking a monitor
-//! or a desktop. Nothing there changes as the hand moves, so nothing is
-//! gained by waiting for it to rest; one push still makes at most one step,
-//! so a long drag does not run through every monitor. A push ends when the
-//! hand stops for a moment or turns back.
+//! The gate between Glide's steps. One push makes at most one step, so a
+//! long drag does not run across the grid or through every monitor, but the
+//! next step is ready as soon as that push ends, when the hand stops for a
+//! moment or turns back, without waiting for it to rest.
 
 use super::settling::GlidePhase;
 

@@ -5,9 +5,8 @@ use super::*;
 
 impl GlideDetector {
   /// One sample while picking a monitor. A step is ready again as soon as
-  /// the push that made it ends, by the hand stopping or turning back,
-  /// rather than once it has rested: the monitor is only taken on release.
-  /// Nothing waits on a push ending, so it is not reported as readiness.
+  /// the push that made it ends, by the hand stopping or turning back, as
+  /// when arranging a window.
   pub(super) fn update_monitor(&mut self, sample: GlideSample) -> GlideDetection {
     let GlideSample {
       delta_x,
@@ -23,7 +22,7 @@ impl GlideDetector {
       // turn back ends the push, and travel from the turn counts.
       self.stroke.stir(timestamp, delta_x, delta_y);
       self.rebase();
-      return self.detection(self.region, self.pending, false);
+      return self.detection(self.region, self.pending);
     }
     if stopped {
       self.rebase();
@@ -36,6 +35,6 @@ impl GlideDetector {
         self.stroke.hold(timestamp, (f64::from(x), f64::from(y)));
       }
     }
-    self.detection(self.region, self.pending, false)
+    self.detection(self.region, self.pending)
   }
 }

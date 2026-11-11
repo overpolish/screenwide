@@ -15,7 +15,6 @@ use super::{
 fn native_detection_payload_matches_the_preview_contract() {
   let payload = serde_json::to_value(GlideInputEvent::Detection {
     detection: GlideDetection {
-      became_ready: true,
       changed: true,
       pending: Some(GlideAction::Minimize),
       phase: GlidePhase::Ready,
@@ -29,7 +28,6 @@ fn native_detection_payload_matches_the_preview_contract() {
     serde_json::json!({
       "type": "detection",
       "detection": {
-        "becameReady": true,
         "changed": true,
         "pending": "minimize",
         "phase": "ready",

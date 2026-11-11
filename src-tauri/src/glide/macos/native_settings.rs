@@ -23,7 +23,6 @@ use crate::glide::settings::GlideSettings;
 #[derive(Clone, Copy)]
 pub(super) struct NativeGlideSettings {
   pub enabled: bool,
-  pub haptics: bool,
   pub mouse_modifier: NativeControl,
   pub monitors_modifier: NativeControl,
   pub spaces_modifier: NativeControl,
@@ -64,7 +63,6 @@ pub(super) fn apply(settings: &GlideSettings) {
 fn native(settings: &GlideSettings) -> NativeGlideSettings {
   NativeGlideSettings {
     enabled: settings.enabled,
-    haptics: settings.haptics,
     mouse_modifier: NativeControl::from_control(settings.mouse_modifier)
       .expect("validated Glide mouse control"),
     monitors_modifier: NativeControl::from_control(settings.monitors_modifier)

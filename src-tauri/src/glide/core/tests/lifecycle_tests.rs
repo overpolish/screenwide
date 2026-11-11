@@ -64,7 +64,6 @@ fn regridding_preserves_side_and_rows() {
   let result = gesture.detector.set_thirds(false);
   assert!(result.changed);
   assert_eq!(result.region, Some(region(2, 1, 1, 0, 1)));
-  assert!(!result.became_ready);
 }
 
 #[test]

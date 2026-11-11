@@ -61,8 +61,6 @@ pub(crate) trait GlidePlatform: Sized + 'static {
   /// done with.
   fn session_began(state: &mut Self::State);
 
-  /// The detector reports a destination worth a pulse.
-  fn on_ready(app: &AppHandle);
   /// A detector sample arrived; `moved` when it travelled.
   fn on_sample(extra: &mut Self::Extra, moved: bool);
   /// Hands the detector's monitor step to the picker. Answers whether the

@@ -1011,8 +1011,6 @@ export type Messages = {
   "settings-glide-double-tap": null;
   "settings-glide-double-tap-description": null;
   "settings-glide-enabled": null;
-  "settings-glide-haptics": null;
-  "settings-glide-haptics-description": null;
   "settings-glide-monitors-modifier": null;
   "settings-glide-monitors-modifier-description": null;
   "settings-glide-mouse-modifier": null;

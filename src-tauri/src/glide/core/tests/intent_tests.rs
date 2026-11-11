@@ -2,7 +2,13 @@
 // SPDX-License-Identifier: Elastic-2.0
 
 use super::{region, stroke, Gesture};
-use crate::glide::core::{GlideDetectorOptions, GlideRuntime, GlideSample};
+use crate::glide::core::{
+  GlideDetectorOptions, GlideEffects, GlidePhase, GlideRuntime, GlideSample,
+};
+
+fn ready(effects: GlideEffects) -> bool {
+  effects.detection.phase == GlidePhase::Ready
+}
 
 #[test]
 fn staggered_diagonals_choose_corners_in_all_four_directions() {
@@ -16,7 +22,6 @@ fn staggered_diagonals_choose_corners_in_all_four_directions() {
         corner.region,
         Some(region(2, u32::from(x > 0.0), 1, u32::from(y > 0.0), 1))
       );
-      assert!(!corner.became_ready);
     }
   }
 }
@@ -46,9 +51,9 @@ fn timer_commits_a_straight_opening_without_needing_more_motion() {
   let half = runtime.settle(30.0);
   assert_eq!(half.move_to, Some(region(2, 1, 1, 0, 2)));
   assert!(half.reveal);
-  assert!(!half.ready);
-  assert!(!runtime.settle(99.0).ready);
-  assert!(runtime.settle(100.0).ready);
+  assert!(!ready(half));
+  assert!(!ready(runtime.settle(31.0)));
+  assert!(ready(runtime.settle(32.0)));
 }
 
 #[test]
@@ -57,7 +62,6 @@ fn a_short_flick_commits_on_lift_without_waiting_for_the_timer() {
   runtime.update(sample(0.0, -45.0, 0.0));
   let half = runtime.finish_opening(10.0);
   assert_eq!(half.move_to, Some(region(2, 0, 1, 0, 2)));
-  assert!(!half.ready);
   assert!(runtime.finish_opening(11.0).move_to.is_none());
   let mut cancelled = GlideRuntime::default();
   cancelled.update(sample(0.0, 0.0, 45.0));
@@ -85,12 +89,12 @@ fn accumulated_sideways_drift_does_not_refine_but_a_slow_turn_can() {
 }
 
 #[test]
-fn resting_closes_the_refinement_and_clears_discarded_travel() {
+fn ending_the_push_closes_the_refinement_and_clears_discarded_travel() {
   let mut gesture = Gesture::new();
   gesture.move_by(stroke(45.0, 0.0));
   gesture.advance(10.0);
   gesture.move_by(stroke(0.0, -30.0));
-  assert!(gesture.rest());
+  assert!(gesture.stop());
   assert!(!gesture.move_by(stroke(0.0, -6.0)).changed);
 }
 
@@ -107,16 +111,16 @@ fn refinement_is_available_for_halves_and_thirds_but_not_full_screen_or_minimize
         runtime.settle(30.0);
         let corner = runtime.update(GlideSample {
           thirds,
-          ..sample(40.0, 0.0, y * 45.0)
+          ..sample(31.0, 0.0, y * 45.0)
         });
         assert_eq!(corner.move_to.unwrap().row_span, 1);
-        assert!(!corner.ready);
+        // Back the way it came: the push ends, and nothing moves.
         let opposite = runtime.update(GlideSample {
           thirds,
-          ..sample(50.0, 0.0, -y * 100.0)
+          ..sample(40.0, 0.0, -y * 100.0)
         });
         assert!(opposite.move_to.is_none());
-        assert!(!opposite.ready);
+        assert!(ready(opposite));
       }
     }
   }
@@ -124,7 +128,7 @@ fn refinement_is_available_for_halves_and_thirds_but_not_full_screen_or_minimize
     let mut runtime = GlideRuntime::default();
     runtime.update(sample(0.0, 0.0, y * 45.0));
     runtime.settle(30.0);
-    let sideways = runtime.update(sample(40.0, 80.0, 0.0));
+    let sideways = runtime.update(sample(31.0, 80.0, 0.0));
     assert!(sideways.move_to.is_none());
   }
 }

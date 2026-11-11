@@ -60,10 +60,3 @@ export const refusal = {
     ease: motionEasings.out,
   },
 };
-
-/** The hand has rested and the next gesture will land: the black takes a
- * breath, the visual sibling of the haptic tick. */
-export const breath = {
-  keyframes: { scale: [1, 1.04, 1] },
-  transition: { duration: motionDurations.travel, ease: motionEasings.out },
-};

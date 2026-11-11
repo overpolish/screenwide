@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: Elastic-2.0
 
 //! macOS's half of a Glide session: the window under the Accessibility hit
-//! test, the pinned cursor, haptics and the monitor picker, under the shared
-//! session flow in `glide::session`. Coordinates are logical points.
+//! test, the pinned cursor and the monitor picker, under the shared session
+//! flow in `glide::session`. Coordinates are logical points.
 
 use std::{sync::Arc, time::Instant};
 
@@ -155,12 +155,6 @@ impl GlidePlatform for MacGlide {
     state.suppress_mouse = false;
   }
 
-  fn on_ready(app: &AppHandle) {
-    if native_settings::snapshot().haptics {
-      let _ = super::haptic(app);
-    }
-  }
-
   fn on_sample(_extra: &mut (), _moved: bool) {}
 
   fn monitor_effects(app: &AppHandle, id: u64, step: Option<(i8, i8)>) -> bool {
@@ -278,7 +272,7 @@ pub(super) fn set_detector_thirds(app: &AppHandle, thirds: bool) {
 }
 
 /// Resting fingers produce no input callback, so the event tap's 16-ms
-/// run-loop poll completes the detector's rest gate.
+/// run-loop poll ends the push that made the last step.
 pub(super) fn settle_detector(app: &AppHandle) {
   shared::settle::<MacGlide>(app);
 }

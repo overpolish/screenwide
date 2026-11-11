@@ -77,7 +77,6 @@ pub struct GlideSettings {
   /// Uniform gap between placed windows, in logical pixels.
   pub window_gap: u32,
   pub cursor_follows: bool,
-  pub haptics: bool,
   pub double_tap_center: bool,
 }
 
@@ -91,7 +90,6 @@ struct GlideSettingsInput {
   thirds_modifier: GlideControl,
   window_gap: u32,
   cursor_follows: bool,
-  haptics: bool,
   double_tap_center: bool,
 }
 
@@ -106,7 +104,6 @@ impl Default for GlideSettingsInput {
       thirds_modifier: defaults.thirds_modifier,
       window_gap: defaults.window_gap,
       cursor_follows: defaults.cursor_follows,
-      haptics: defaults.haptics,
       double_tap_center: defaults.double_tap_center,
     }
   }
@@ -133,7 +130,6 @@ impl<'de> Deserialize<'de> for GlideSettings {
       thirds_modifier: input.thirds_modifier,
       window_gap: input.window_gap,
       cursor_follows: input.cursor_follows,
-      haptics: input.haptics,
       double_tap_center: input.double_tap_center,
     })
   }
@@ -182,7 +178,6 @@ impl Default for GlideSettings {
       thirds_modifier: GlideControl::SHIFT,
       window_gap: 0,
       cursor_follows: true,
-      haptics: true,
       double_tap_center: true,
     }
   }

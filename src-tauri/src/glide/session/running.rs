@@ -34,13 +34,12 @@ pub(crate) fn set_thirds<P: GlidePlatform>(app: &AppHandle, thirds: bool) {
   apply::<P>(app, result);
 }
 
-/// Resting input produces no samples, so the platform's poll completes the
-/// detector's rest gate.
+/// Resting input produces no samples, so the platform's poll ends the push
+/// that made the last step.
 pub(crate) fn settle<P: GlidePlatform>(app: &AppHandle) {
   let result = with_session::<P, _>(|session| {
     let effects = session.runtime.settle(session.timestamp());
-    (effects.ready || effects.detection.changed || effects.monitor_step.is_some())
-      .then_some((session.id, effects))
+    (effects.detection.changed || effects.monitor_step.is_some()).then_some((session.id, effects))
   })
   .flatten();
   apply::<P>(app, result);
@@ -61,11 +60,6 @@ fn apply<P: GlidePlatform>(app: &AppHandle, result: Option<(u64, GlideEffects)>)
     return;
   };
   events::detection(app, effects.detection);
-  // Readiness is shared with the preview pulse; a sample that immediately
-  // starts another fold must not tick while the detector is settling again.
-  if effects.ready {
-    P::on_ready(app);
-  }
   if P::monitor_effects(app, id, effects.monitor_step) {
     return;
   }

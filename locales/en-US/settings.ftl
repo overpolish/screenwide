@@ -124,8 +124,6 @@ settings-glide-monitors-modifier = Modifier for Monitors
 settings-glide-monitors-modifier-description = Hold while moving between monitors.
 settings-glide-window-gap = Space around windows
 settings-glide-cursor-follows = Move pointer with window
-settings-glide-haptics = Trackpad feedback
-settings-glide-haptics-description = Feel a tap when the next move is ready.
 settings-glide-double-tap = Double-tap or double-click to center
 settings-glide-double-tap-description = Two fingers, or hold mouse control while double-clicking.
 

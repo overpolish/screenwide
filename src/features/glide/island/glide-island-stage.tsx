@@ -40,16 +40,11 @@ export function GlideIslandStage({
           <GlideIsland
             iconSrc={iconSrc}
             key={JSON.stringify(region)}
-            pulse={0}
             {...gliding(region)}
           />
         ))
       ) : (
-        <GlideIsland
-          iconSrc={iconSrc}
-          pulse={played.pulse}
-          {...(script ? played.state : state)}
-        />
+        <GlideIsland iconSrc={iconSrc} {...(script ? played.state : state)} />
       )}
     </div>
   );

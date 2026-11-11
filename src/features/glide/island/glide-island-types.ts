@@ -23,8 +23,6 @@ export type GlideIslandState = {
 export type GlideIslandProps = GlideIslandState & {
   /** The glided app's icon, once it resolves. */
   iconSrc: null | string;
-  /** Counts the rests completed; each one plays the ready breath. */
-  pulse: number;
 };
 
 export const hasDestination = ({

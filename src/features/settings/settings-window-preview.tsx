@@ -97,7 +97,6 @@ export function createPreviewApi(
     cursorFollows: true,
     doubleTapCenter: true,
     enabled: true,
-    haptics: true,
     monitorsModifier: "KeyZ",
     mouseModifier: "AltLeft",
     spacesModifier: "MetaLeft",

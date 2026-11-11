@@ -2,11 +2,11 @@
 // SPDX-License-Identifier: Elastic-2.0
 
 import { AnimatePresence, motion, useAnimate } from "motion/react";
-import { type ReactNode, useEffect, useRef } from "react";
+import { type ReactNode, useEffect } from "react";
 
 import { ISLAND } from "../../../primitives/island/island-geometry";
 
-import { breath, emerge, morph, refusal } from "./glide-island-motion";
+import { emerge, morph, refusal } from "./glide-island-motion";
 
 /** The black's size and corner radius, in px. */
 export type GlideIslandShape = {
@@ -23,9 +23,6 @@ type BodyProps = {
   /** Names what the island shows, for assistive technology. Leave it out
    * where something round several islands names them once. */
   label?: string;
-  /** Counts the rests completed; each one plays the ready breath. Left
-   * out, the black never breathes. */
-  pulse?: number;
 };
 
 // The island's black, in the recording island's colour and shadow, centred
@@ -56,14 +53,8 @@ export function GlideIslandBody({
   );
 }
 
-function Black({ children, label, pulse, refuses, shape }: BodyProps) {
+function Black({ children, label, refuses, shape }: BodyProps) {
   const [blackRef, animate] = useAnimate<HTMLDivElement>();
-
-  const firstPulseRef = useRef(pulse);
-  useEffect(() => {
-    if (pulse === firstPulseRef.current) return;
-    void animate(blackRef.current, breath.keyframes, breath.transition);
-  }, [animate, blackRef, pulse]);
 
   useEffect(() => {
     if (!refuses) return;

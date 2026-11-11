@@ -36,8 +36,7 @@ const scripts = {
     { after: 700, icon: false, state: { ...IDLE, phase: "gliding" } },
     { after: 180, icon: true },
     { after: 320, state: { region: cell({ gridCols: 2 }) } },
-    { after: 420, rest: true },
-    { after: 700, state: { region: cell({ colSpan: 2, gridCols: 3 }) } },
+    { after: 1120, state: { region: cell({ colSpan: 2, gridCols: 3 }) } },
     { after: 450, state: { region: cell({ colStart: 1, gridCols: 3 }) } },
     {
       after: 450,
@@ -65,8 +64,7 @@ const scripts = {
       },
     },
     { after: 600, state: { region: cell({ colSpan: 2, gridCols: 2 }) } },
-    { after: 380, rest: true },
-    { after: 800, state: { phase: "committed" } },
+    { after: 1180, state: { phase: "committed" } },
     { after: 700, state: IDLE },
   ],
   /** A window the platform will not let us place: the lock, held a beat. */

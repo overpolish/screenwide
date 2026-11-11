@@ -142,10 +142,7 @@ export function settingsSearchEntries({
   // Tools
   const glide = t("settings-section-glide");
   at("tools", glide)(
-    [
-      row(t("settings-glide-enabled")),
-      ...glideToggles().filter(({ macOnly }) => !macOnly || isMac),
-    ],
+    [row(t("settings-glide-enabled")), ...glideToggles()],
     t("settings-search-keywords-glide"),
   );
   at("tools", glide)(

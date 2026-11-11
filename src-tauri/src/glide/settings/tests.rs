@@ -20,7 +20,6 @@ fn an_empty_file_is_the_defaults() {
   assert_eq!(settings.spaces_modifier, GlideControl::Key(Code::AltLeft));
   assert_eq!(settings.window_gap, 0);
   assert!(settings.cursor_follows);
-  assert!(settings.haptics);
   assert!(settings.double_tap_center);
 }
 

@@ -30,7 +30,6 @@ export function GlideWindow() {
   const [iconSrc, setIconSrc] = useState<null | string>(null);
   const [phase, setPhase] = useState<GlideIslandPhase>("idle");
   const [pending, setPending] = useState<GlideAction | null>(null);
-  const [readyPulse, setReadyPulse] = useState(0);
   const [region, setRegion] = useState<GlideRegion | null>(null);
 
   useEffect(() => {
@@ -45,12 +44,6 @@ export function GlideWindow() {
     // region it already occupies - a disarm restoring the region the arm was
     // taken over - asks for no move at all.
     let moved: GlideRegion | null = null;
-    // The haptic and the preview's ready breath are one "next gesture is
-    // armed" moment - the breath carries it where no trackpad is under hand,
-    // and it stays when the haptic is switched off.
-    const tickReady = () => {
-      setReadyPulse((count) => count + 1);
-    };
     const clear = () => {
       moved = null;
       setFit(null);
@@ -83,8 +76,6 @@ export function GlideWindow() {
       const detection = payload.detection;
 
       // The transitions themselves are silent - the preview is their feedback.
-      // The tick says the hand has rested and the next gesture will land.
-      if (detection.becameReady) tickReady();
       if (!detection.changed) return;
 
       setPending(detection.pending);
@@ -144,7 +135,6 @@ export function GlideWindow() {
         iconSrc={iconSrc}
         pending={pending}
         phase={phase}
-        pulse={readyPulse}
         region={region}
       />
     </main>

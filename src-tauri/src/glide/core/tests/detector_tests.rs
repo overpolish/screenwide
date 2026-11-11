@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Elastic-2.0
 
 use super::{region, stroke, Gesture, Stroke};
-use crate::glide::core::{GlideAction, GlideDetectorOptions, GlidePhase};
+use crate::glide::core::{GlideAction, GlidePhase};
 
 #[test]
 fn opening_folds_match_halves_and_thirds_policy() {
@@ -80,7 +80,7 @@ fn diagonal_cone_lands_directly_on_corners() {
 fn reversal_is_measured_from_the_turn_point() {
   let mut gesture = Gesture::new();
   gesture.move_by(stroke(45.0, 0.0));
-  gesture.rest();
+  gesture.stop();
   gesture.move_by(stroke(30.0, 0.0));
   assert!(!gesture.move_by(stroke(-12.0, 0.0)).changed);
   assert!(!gesture.move_by(stroke(-12.0, 0.0)).changed);
@@ -91,21 +91,42 @@ fn reversal_is_measured_from_the_turn_point() {
 }
 
 #[test]
-fn curves_reversals_and_axis_changes_wait_for_readiness() {
-  for (opening, follow_up) in [
-    (stroke(45.0, 0.0), stroke(-50.0, 0.0)),
-    (stroke(0.0, -45.0), stroke(50.0, 0.0)),
-    (stroke(45.0, -45.0), stroke(0.0, 50.0)),
-  ] {
-    let mut gesture = Gesture::new();
-    let first = gesture.move_by(opening);
-    let settling = gesture.move_by(follow_up);
-    assert!(!settling.changed);
-    assert!(!settling.became_ready);
-    assert_eq!(settling.region, first.region);
-    assert!(gesture.rest());
-    assert!(gesture.move_by(follow_up).changed);
+fn a_push_makes_one_step_however_far_it_goes() {
+  let mut gesture = Gesture::new();
+  let first = gesture.move_by(stroke(45.0, 0.0));
+  for _ in 0..20 {
+    gesture.advance(16.0);
+    let pushed = gesture.move_by(stroke(30.0, 0.0));
+    assert!(!pushed.changed);
+    assert_eq!(pushed.phase, GlidePhase::Settling);
   }
+  assert_eq!(gesture.detector.region(), first.region);
+}
+
+#[test]
+fn turning_back_ends_the_push_without_a_pause() {
+  let mut gesture = Gesture::new();
+  let first = gesture.move_by(stroke(45.0, 0.0));
+  let turned = gesture.move_by(stroke(-50.0, 0.0));
+  assert!(!turned.changed);
+  assert_eq!(turned.phase, GlidePhase::Ready);
+  assert_eq!(turned.region, first.region);
+  assert!(gesture.move_by(stroke(-50.0, 0.0)).changed);
+}
+
+#[test]
+fn sideways_travel_does_not_end_the_push_but_stopping_does() {
+  let mut gesture = Gesture::new();
+  let first = gesture.move_by(stroke(0.0, -45.0));
+  let sideways = gesture.move_by(stroke(50.0, 0.0));
+  assert!(!sideways.changed);
+  assert_eq!(sideways.phase, GlidePhase::Settling);
+  assert_eq!(sideways.region, first.region);
+  gesture.advance(31.0);
+  assert!(!gesture.settle());
+  gesture.advance(1.0);
+  assert!(gesture.settle());
+  assert!(gesture.move_by(stroke(50.0, 0.0)).changed);
 }
 
 #[test]
@@ -113,7 +134,7 @@ fn discarded_motion_cannot_spend_the_next_ready_step() {
   let mut gesture = Gesture::new();
   gesture.move_by(stroke(45.0, 0.0));
   gesture.move_by(stroke(100.0, -100.0));
-  assert!(gesture.rest());
+  assert!(gesture.stop());
   assert!(!gesture.move_by(stroke(0.0, -35.0)).changed);
   assert_eq!(
     gesture.move_by(stroke(0.0, -1.0)).region,
@@ -122,89 +143,77 @@ fn discarded_motion_cannot_spend_the_next_ready_step() {
 }
 
 #[test]
-fn settling_discards_motion_until_the_hand_is_quiet() {
-  let options = GlideDetectorOptions {
-    rest_ms: 120.0,
-    opening_grace_ms: 0.0,
-    ..GlideDetectorOptions::default()
-  };
-  let mut gesture = Gesture::with_options(options);
+fn a_held_minimize_waits_for_the_push_to_end() {
+  let mut gesture = Gesture::new();
   gesture.move_by(stroke(0.0, 45.0));
-
-  for _ in 0..4 {
-    gesture.advance(100.0);
+  for _ in 0..10 {
+    gesture.advance(16.0);
     assert_eq!(
       gesture.move_by(stroke(0.0, 60.0)).phase,
       GlidePhase::Settling
     );
   }
   assert_eq!(gesture.detector.pending(), Some(GlideAction::Minimize));
-  gesture.advance(120.0);
+  assert!(gesture.stop());
   let result = gesture.move_by(stroke(0.0, 60.0));
-  assert!(!result.became_ready);
   assert_eq!(result.region, Some(region(2, 0, 2, 1, 1)));
 }
 
 #[test]
-fn sub_noise_jitter_does_not_reset_the_rest() {
+fn sub_noise_jitter_does_not_keep_the_push_going() {
   let mut gesture = Gesture::new();
   gesture.move_by(stroke(0.0, 45.0));
   assert_eq!(gesture.detector.phase(), GlidePhase::Settling);
-  gesture.advance(40.0);
+  gesture.advance(20.0);
   assert_eq!(
     gesture.move_by(stroke(1.0, 0.0)).phase,
     GlidePhase::Settling
   );
-  assert_eq!(gesture.detector.rest_remaining(40.0), 60.0);
-  gesture.advance(60.0);
+  gesture.advance(12.0);
   assert!(gesture.settle());
 }
 
 #[test]
-fn readiness_is_reported_once_whether_timer_or_sample_wins() {
-  let mut timer = Gesture::new();
-  timer.move_by(stroke(45.0, 0.0));
-  timer.advance(100.0);
-  assert!(timer.settle());
-  assert!(!timer.settle());
-  assert!(!timer.move_by(stroke(-50.0, 0.0)).became_ready);
-
-  let mut sample = Gesture::new();
-  sample.move_by(stroke(45.0, 0.0));
-  sample.advance(100.0);
-  let ready = sample.move_by(stroke(-5.0, 0.0));
-  assert!(ready.became_ready);
-  assert_eq!(ready.phase, GlidePhase::Ready);
-  assert!(!sample.settle());
-}
-
-#[test]
-fn spending_readiness_in_the_same_sample_does_not_announce_it() {
+fn a_sample_after_the_pause_ends_the_push_without_the_timer() {
   let mut gesture = Gesture::new();
   gesture.move_by(stroke(45.0, 0.0));
-  gesture.advance(100.0);
-  let next = gesture.move_by(stroke(-50.0, 0.0));
-  assert!(next.changed);
-  assert!(!next.became_ready);
-  assert_eq!(next.phase, GlidePhase::Settling);
-  assert!(!gesture.settle());
-  assert!(gesture.rest());
-  assert!(!gesture.settle());
+  gesture.advance(32.0);
+  assert_eq!(gesture.move_by(stroke(-5.0, 0.0)).phase, GlidePhase::Ready);
 }
 
 #[test]
-fn one_vertical_turn_refines_a_half_then_waits_for_rest() {
+fn the_next_push_steps_at_once_and_is_held_in_turn() {
+  let mut gesture = Gesture::new();
+  gesture.move_by(stroke(45.0, 0.0));
+  gesture.advance(32.0);
+  let next = gesture.move_by(stroke(-50.0, 0.0));
+  assert!(next.changed);
+  assert_eq!(next.phase, GlidePhase::Settling);
+  assert!(gesture.stop());
+}
+
+#[test]
+fn one_vertical_turn_refines_a_half_within_its_push() {
   let mut gesture = Gesture::new();
   gesture.move_by(stroke(50.0, 0.0));
-  gesture.advance(80.0);
+  gesture.advance(10.0);
   let curve = gesture.move_by(stroke(0.0, -50.0));
   assert_eq!(curve.region, Some(region(2, 1, 1, 0, 1)));
-  assert!(!curve.became_ready);
-  gesture.advance(40.0);
-  assert!(!gesture.move_by(stroke(0.0, 100.0)).changed);
-  gesture.advance(99.0);
+  assert_eq!(curve.phase, GlidePhase::Settling);
+  gesture.advance(10.0);
+  assert!(!gesture.move_by(stroke(0.0, -100.0)).changed);
+  gesture.advance(31.0);
   assert!(!gesture.settle());
   gesture.advance(1.0);
   assert!(gesture.settle());
-  assert!(!gesture.settle());
+}
+
+#[test]
+fn a_half_ended_by_a_pause_steps_on_rather_than_refining() {
+  let mut gesture = Gesture::new();
+  gesture.move_by(stroke(50.0, 0.0));
+  assert!(gesture.stop());
+  let next = gesture.move_by(stroke(0.0, -50.0));
+  assert!(next.changed);
+  assert_eq!(next.phase, GlidePhase::Settling);
 }

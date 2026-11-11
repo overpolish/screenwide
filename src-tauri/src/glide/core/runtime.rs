@@ -16,7 +16,6 @@ use super::{
 pub struct GlideEffects {
   pub detection: GlideDetection,
   pub move_to: Option<GlideRegion>,
-  pub ready: bool,
   pub reveal: bool,
   pub monitor_step: Option<(i8, i8)>,
 }
@@ -99,7 +98,6 @@ impl GlideRuntime {
     GlideEffects {
       detection,
       move_to,
-      ready: detection.became_ready,
       reveal,
       monitor_step: self.detector.monitor_step(),
     }

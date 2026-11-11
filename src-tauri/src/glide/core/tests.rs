@@ -5,6 +5,8 @@ use super::{
   detector::{GlideDetection, GlideDetector, GlideSample},
   folds::GlideDetectorOptions,
   regions::GlideRegion,
+  settling::GlidePhase,
+  stroke::PUSH_GAP_MS,
 };
 
 #[derive(Clone, Copy, Default)]
@@ -47,17 +49,19 @@ impl Gesture {
     self.now += milliseconds;
   }
 
+  /// Lets time pass; answers whether the next step is ready.
   fn settle(&mut self) -> bool {
-    self.detector.settle(self.now).became_ready
+    self.detector.settle(self.now).phase == GlidePhase::Ready
   }
 
-  fn rest(&mut self) -> bool {
-    self.advance(self.detector.options().rest_ms);
+  /// The hand stops long enough to end the push.
+  fn stop(&mut self) -> bool {
+    self.advance(PUSH_GAP_MS);
     self.settle()
   }
 
   fn flick(&mut self, stroke: Stroke) -> GlideDetection {
-    self.rest();
+    self.stop();
     self.move_by(stroke)
   }
 }

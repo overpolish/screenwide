@@ -6,8 +6,4 @@ import type { GlideRegion } from "./GlideRegion";
 /**
  * The detector's complete observable state after one input or timer event.
  */
-export type GlideDetection = { 
-/**
- * A rest completed and this result still accepts the next step.
- */
-becameReady: boolean, changed: boolean, pending: GlideAction | null, phase: GlidePhase, region: GlideRegion | null, };
+export type GlideDetection = { changed: boolean, pending: GlideAction | null, phase: GlidePhase, region: GlideRegion | null, };

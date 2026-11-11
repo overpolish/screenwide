@@ -1,7 +1,11 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: Elastic-2.0
 
-use crate::glide::core::{GlideAction, GlideRuntime, GlideSample};
+use crate::glide::core::{GlideAction, GlideEffects, GlidePhase, GlideRuntime, GlideSample};
+
+fn ready(effects: GlideEffects) -> bool {
+  effects.detection.phase == GlidePhase::Ready
+}
 
 // These tests isolate runtime effects from the opening direction grace.
 fn runtime() -> GlideRuntime {
@@ -60,13 +64,12 @@ fn only_full_screen_region_commits_are_terminal_for_cursor_placement() {
 }
 
 #[test]
-fn rest_reports_one_ready_effect() {
+fn a_push_ends_once_the_hand_stops() {
   let mut runtime = runtime();
   runtime.update(sample(-45.0, 0.0, false, 0.0));
 
-  assert!(!runtime.settle(99.0).ready);
-  assert!(runtime.settle(100.0).ready);
-  assert!(!runtime.settle(101.0).ready);
+  assert!(!ready(runtime.settle(31.0)));
+  assert!(ready(runtime.settle(32.0)));
 }
 
 #[test]
@@ -85,34 +88,29 @@ fn disarming_over_an_applied_region_does_not_move_it_again() {
 }
 
 #[test]
-fn immediate_next_fold_does_not_send_a_stale_haptic_or_preview_pulse() {
+fn an_immediate_next_fold_is_held_until_its_own_push_ends() {
   let mut runtime = runtime();
   runtime.update(sample(-45.0, 0.0, false, 0.0));
   let next = runtime.update(sample(45.0, 0.0, false, 100.0));
   assert!(next.move_to.is_some());
-  assert!(!next.ready);
-  assert!(!next.detection.became_ready);
-  assert!(!runtime.settle(199.0).ready);
-  let ready = runtime.settle(200.0);
-  assert!(ready.ready);
-  assert!(ready.detection.became_ready);
-  assert!(!runtime.settle(201.0).ready);
+  assert!(!ready(next));
+  assert!(!ready(runtime.settle(131.0)));
+  assert!(ready(runtime.settle(132.0)));
 }
 
 #[test]
-fn continuous_drag_delays_the_tick_but_small_jitter_does_not() {
+fn continuous_drag_holds_the_push_but_small_jitter_does_not() {
   let mut runtime = runtime();
   runtime.update(sample(45.0, 0.0, false, 0.0));
-  for timestamp in [40.0, 80.0, 120.0, 160.0] {
+  for timestamp in [16.0, 32.0, 48.0, 64.0] {
     let dragging = runtime.update(sample(20.0, 0.0, false, timestamp));
-    assert!(!dragging.ready);
+    assert!(!ready(dragging));
     assert!(dragging.move_to.is_none());
   }
-  assert!(!runtime.update(sample(1.0, 0.0, false, 200.0)).ready);
-  assert!(!runtime.settle(259.0).ready);
-  assert!(runtime.settle(260.0).ready);
-  assert!(!runtime.settle(261.0).ready);
-  let up = runtime.update(sample(0.0, -36.0, false, 262.0));
+  assert!(!ready(runtime.update(sample(1.0, 0.0, false, 80.0))));
+  assert!(!ready(runtime.settle(95.0)));
+  assert!(ready(runtime.settle(96.0)));
+  let up = runtime.update(sample(0.0, -36.0, false, 98.0));
   assert_eq!(up.move_to.unwrap().row_span, 1);
 }
 
@@ -172,9 +170,8 @@ fn the_next_monitor_push_steps_once_the_last_has_stopped() {
       .monitor_step,
     None
   );
-  // Stopped for two polls, the push is over; that is not reported as
-  // readiness, as nothing waits on it.
-  assert!(!runtime.settle(42.0).ready);
+  // Stopped for two polls, the push is over.
+  assert!(ready(runtime.settle(42.0)));
   assert_eq!(
     runtime
       .update(sample(-45.0, -45.0, false, 50.0))
@@ -224,8 +221,8 @@ fn side_regions_keep_corner_refinement_and_two_thirds_keep_the_ladder() {
 fn noise_floor_counts_both_axes_and_includes_the_boundary() {
   let mut runtime = runtime();
   runtime.update(sample(45.0, 0.0, false, 0.0));
-  runtime.update(sample(1.0, -1.0, false, 80.0));
-  assert!(!runtime.settle(100.0).ready);
-  assert!(!runtime.settle(179.0).ready);
-  assert!(runtime.settle(180.0).ready);
+  runtime.update(sample(1.0, -1.0, false, 20.0));
+  assert!(!ready(runtime.settle(32.0)));
+  assert!(!ready(runtime.settle(51.0)));
+  assert!(ready(runtime.settle(52.0)));
 }

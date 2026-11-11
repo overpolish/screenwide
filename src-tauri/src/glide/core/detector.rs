@@ -5,7 +5,7 @@ use super::{
   folds::{self, GlideAction, GlideDetectorOptions},
   intent::{CornerRefinement, OpeningGate},
   regions::{self, GlideRegion},
-  settling::{GlidePhase, RestGate},
+  settling::GlidePhase,
   stroke::StrokeGate,
   travel::TurnPointTracker,
 };
@@ -20,8 +20,6 @@ mod monitor;
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
 pub struct GlideDetection {
-  /// A rest completed and this result still accepts the next step.
-  pub became_ready: bool,
   pub changed: bool,
   pub pending: Option<GlideAction>,
   pub phase: GlidePhase,
@@ -46,8 +44,7 @@ pub struct GlideDetector {
   options: GlideDetectorOptions,
   horizontal: TurnPointTracker,
   vertical: TurnPointTracker,
-  rest: RestGate,
-  /// Monitor selection's gate in place of `rest`.
+  /// Holds the next step until the push that made the last one ends.
   stroke: StrokeGate,
   pending: Option<GlideAction>,
   region: Option<GlideRegion>,
@@ -60,7 +57,6 @@ impl GlideDetector {
     Self {
       horizontal: TurnPointTracker::new(options.reversal_hysteresis),
       vertical: TurnPointTracker::new(options.reversal_hysteresis),
-      rest: RestGate::new(options.motion_noise_floor, options.rest_ms),
       stroke: StrokeGate::new(options.motion_noise_floor, options.reversal_hysteresis),
       opening: OpeningGate::default(),
       refinement: CornerRefinement::new(options.reversal_hysteresis),
@@ -77,10 +73,8 @@ impl GlideDetector {
     &self,
     previous_region: Option<GlideRegion>,
     previous_pending: Option<GlideAction>,
-    became_ready: bool,
   ) -> GlideDetection {
     GlideDetection {
-      became_ready: became_ready && self.phase() == GlidePhase::Ready,
       changed: previous_region != self.region || previous_pending != self.pending,
       pending: self.pending,
       phase: self.phase(),
@@ -163,6 +157,19 @@ impl GlideDetector {
     }
   }
 
+  /// The heading of the travel a step is about to be taken from, so the
+  /// push that made it can be told apart from the next.
+  fn heading(&self) -> (f64, f64) {
+    (self.horizontal.travel(), self.vertical.travel())
+  }
+
+  /// The push that made the last step ended: the travel it left counts for
+  /// nothing, and a corner can only be had from the push that made the side.
+  fn push_ended(&mut self) {
+    self.rebase();
+    self.refinement.arm(false);
+  }
+
   /// Applies one normalized adapter sample.
   pub fn update(&mut self, sample: GlideSample) -> GlideDetection {
     if self.monitor_navigation {
@@ -176,13 +183,9 @@ impl GlideDetector {
     } = sample;
     let previous_region = self.region;
     let previous_pending = self.pending;
-    let became_ready = self.rest.settle(timestamp);
     self.monitor_step = None;
-    if became_ready {
-      // Start fresh when the hand has rested, so discarded travel
-      // cannot immediately trigger the next step.
-      self.rebase();
-      self.refinement.arm(false);
+    if self.stroke.settle(timestamp) {
+      self.push_ended();
     }
     self.thirds = thirds;
     if delta_x.abs() + delta_y.abs() >= self.options.motion_noise_floor {
@@ -194,25 +197,34 @@ impl GlideDetector {
         self.horizontal.rebase();
       }
     }
-    self.horizontal.update(delta_x);
-    self.vertical.update(delta_y);
-    if self.rest.phase() == GlidePhase::Settling {
-      self.rest.stir(timestamp, delta_x.abs() + delta_y.abs());
+    if self.stroke.phase() == GlidePhase::Settling {
+      if self.stroke.stir(timestamp, delta_x, delta_y) {
+        // Turning back ends the push; travel from the turn counts.
+        self.push_ended();
+        self.horizontal.update(delta_x);
+        self.vertical.update(delta_y);
+        return self.detection(previous_region, previous_pending);
+      }
       let step =
         self
           .refinement
           .update(delta_x, delta_y, timestamp, self.options.vertical_threshold);
       if step != 0 {
         self.region = self.region.map(|region| regions::step_rows(region, step));
-        self.rest.hold(timestamp);
+        self.stroke.hold(timestamp, (0.0, f64::from(step)));
       }
-      // Other travel cannot buy further steps before stillness.
+      // Travel within the push that made the last step buys no other.
       self.rebase();
-    } else if self.transition(timestamp, false).is_some() {
-      self.rebase();
-      self.rest.hold(timestamp);
+      return self.detection(previous_region, previous_pending);
     }
-    self.detection(previous_region, previous_pending, became_ready)
+    self.horizontal.update(delta_x);
+    self.vertical.update(delta_y);
+    let heading = self.heading();
+    if self.transition(timestamp, false).is_some() {
+      self.rebase();
+      self.stroke.hold(timestamp, heading);
+    }
+    self.detection(previous_region, previous_pending)
   }
 }
 

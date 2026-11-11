@@ -5,4 +5,4 @@ export type GlideSettings = { enabled: boolean, mouseModifier: GlideControl, mon
 /**
  * Uniform gap between placed windows, in logical pixels.
  */
-windowGap: number, cursorFollows: boolean, haptics: boolean, doubleTapCenter: boolean, };
+windowGap: number, cursorFollows: boolean, doubleTapCenter: boolean, };

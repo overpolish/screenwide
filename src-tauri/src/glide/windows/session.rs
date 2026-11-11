@@ -122,8 +122,6 @@ impl GlidePlatform for WindowsGlide {
 
   fn session_began(_state: &mut Self::State) {}
 
-  fn on_ready(_app: &AppHandle) {}
-
   fn on_sample(extra: &mut Extra, moved: bool) {
     if moved {
       extra.armed = false;

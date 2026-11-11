@@ -28,7 +28,6 @@ export type GlideFrame = {
   grip: { x: number; y: number };
   island: {
     phase: GlideIslandPhase;
-    pulse: number;
     region: GlideRegion | null;
   } | null;
   /** The window the gesture moves, and the other one. */
@@ -92,11 +91,9 @@ function reaching(at: number, work: WorkArea, grip: { x: number; y: number }) {
 
 function islandAt(at: number): GlideFrame["island"] {
   if (at < PINNED || at >= GONE) return null;
-  if (at >= SENT) return { phase: "committed", pulse: 1, region: null };
+  if (at >= SENT) return { phase: "committed", region: null };
   return {
     phase: "gliding",
-    // The hand rests on the left half a moment before it is sent.
-    pulse: at >= 1.8 ? 1 : 0,
     region: at >= 1.2 ? leftHalf : null,
   };
 }

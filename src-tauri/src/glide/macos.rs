@@ -11,7 +11,6 @@ use core_graphics::event::{
 use tauri::AppHandle;
 
 mod center;
-mod commands;
 mod control;
 mod control_keys;
 mod cursor;
@@ -29,7 +28,6 @@ mod trackpad;
 mod tween;
 
 use center::{center_captured, center_window_at};
-pub(super) use commands::haptic;
 pub(super) use control::supports_control;
 use control_keys::is_thirds;
 use own_window::any_titlebar;

@@ -4,7 +4,6 @@
 import { ControlRow } from "../../../composites/control-row/control-row";
 import { SliderNumberField } from "../../../composites/slider-number-field/slider-number-field";
 import { t } from "../../../i18n/i18n";
-import { isMacHost } from "../../../lib/platform";
 import { Switch } from "../../../primitives/switch/switch";
 import { SettingsGroup } from "../settings-group";
 import { PreviewArea } from "../stage/preview-stage";
@@ -55,34 +54,32 @@ export function GlideSettingsPanel({
           )}
         </ControlRow>
       </PreviewArea>
-      {glideToggles()
-        .filter(({ macOnly }) => !macOnly || isMacHost)
-        .map((toggle) => (
-          <PreviewArea
-            follow={follow(
-              toggle.key === "doubleTapCenter" ? "glideCenter" : "glide",
-            )}
-            key={toggle.key}
+      {glideToggles().map((toggle) => (
+        <PreviewArea
+          follow={follow(
+            toggle.key === "doubleTapCenter" ? "glideCenter" : "glide",
+          )}
+          key={toggle.key}
+        >
+          <ControlRow
+            description={
+              "description" in toggle ? toggle.description : undefined
+            }
+            title={toggle.title}
           >
-            <ControlRow
-              description={
-                "description" in toggle ? toggle.description : undefined
-              }
-              title={toggle.title}
-            >
-              {(controlProps) => (
-                <Switch
-                  {...controlProps}
-                  isDisabled={isOff}
-                  isSelected={settings[toggle.key]}
-                  onChange={(selected) => {
-                    update({ [toggle.key]: selected });
-                  }}
-                />
-              )}
-            </ControlRow>
-          </PreviewArea>
-        ))}
+            {(controlProps) => (
+              <Switch
+                {...controlProps}
+                isDisabled={isOff}
+                isSelected={settings[toggle.key]}
+                onChange={(selected) => {
+                  update({ [toggle.key]: selected });
+                }}
+              />
+            )}
+          </ControlRow>
+        </PreviewArea>
+      ))}
       <PreviewArea follow={follow("glide")}>
         <ControlRow title={t("settings-glide-window-gap")}>
           {(controlProps) => (

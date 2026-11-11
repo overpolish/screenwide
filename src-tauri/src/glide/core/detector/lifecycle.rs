@@ -18,11 +18,7 @@ impl GlideDetector {
     self.pending
   }
   pub fn phase(&self) -> GlidePhase {
-    if self.monitor_navigation {
-      self.stroke.phase()
-    } else {
-      self.rest.phase()
-    }
+    self.stroke.phase()
   }
   pub fn region(&self) -> Option<GlideRegion> {
     self.region
@@ -40,11 +36,9 @@ impl GlideDetector {
     self.refinement.arm(false);
     self.horizontal.reset();
     self.vertical.reset();
-    self.rest.reset();
     self.stroke.reset();
     self.last_motion = 0.0;
     GlideDetection {
-      became_ready: false,
       changed,
       pending: None,
       phase: GlidePhase::Ready,
@@ -55,24 +49,13 @@ impl GlideDetector {
     self.monitor_step = None;
     let previous_region = self.region;
     let previous_pending = self.pending;
-    if self.opening.pending() && self.transition(timestamp, false).is_some() {
-      self.rebase();
-      self.rest.hold(self.last_motion);
+    if self.opening.pending() {
+      self.open(timestamp, false);
     }
-    let became_ready = if self.monitor_navigation {
-      // A monitor push ending only lets the next count; nothing waits on it.
-      if self.stroke.settle(timestamp) {
-        self.rebase();
-      }
-      false
-    } else {
-      self.rest.settle(timestamp)
-    };
-    if became_ready {
-      self.refinement.arm(false);
-      self.rebase();
+    if self.stroke.settle(timestamp) {
+      self.push_ended();
     }
-    self.detection(previous_region, previous_pending, became_ready)
+    self.detection(previous_region, previous_pending)
   }
   pub fn set_thirds(&mut self, thirds: bool) -> GlideDetection {
     self.monitor_step = None;
@@ -85,10 +68,7 @@ impl GlideDetector {
         self.horizontal.rebase();
       }
     }
-    self.detection(previous_region, previous_pending, false)
-  }
-  pub fn rest_remaining(&self, timestamp: f64) -> f64 {
-    self.rest.remaining(timestamp)
+    self.detection(previous_region, previous_pending)
   }
   /// A short flick can lift before the opening grace expires. Commit its last
   /// direction on release, while cancellation leaves it unapplied.
@@ -96,10 +76,18 @@ impl GlideDetector {
     self.monitor_step = None;
     let previous_region = self.region;
     let previous_pending = self.pending;
-    if self.opening.pending() && self.transition(timestamp, true).is_some() {
-      self.rebase();
-      self.rest.hold(self.last_motion);
+    if self.opening.pending() {
+      self.open(timestamp, true);
     }
-    self.detection(previous_region, previous_pending, false)
+    self.detection(previous_region, previous_pending)
+  }
+
+  /// Takes the opening fold held back by its grace, as a push of its own.
+  fn open(&mut self, timestamp: f64, force: bool) {
+    let heading = self.heading();
+    if self.transition(timestamp, force).is_some() {
+      self.rebase();
+      self.stroke.hold(self.last_motion, heading);
+    }
   }
 }

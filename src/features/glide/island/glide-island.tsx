@@ -22,7 +22,7 @@ import { type GlideIslandProps, hasDestination } from "./glide-island-types";
 // a shake. Sent, it goes at once.
 
 export function GlideIsland(props: GlideIslandProps) {
-  const { fit, iconSrc, pending, phase, pulse, region } = props;
+  const { fit, iconSrc, pending, phase, region } = props;
   const isShown = phase === "gliding" || phase === "locked";
   const isOpen = phase === "gliding" && hasDestination(props);
   const look = isOpen
@@ -40,7 +40,6 @@ export function GlideIsland(props: GlideIslandProps) {
           ? t("glide-locked")
           : describeDestination(region, pending)
       }
-      pulse={pulse}
       refuses={phase === "locked"}
       shape={look === "map" ? MAP_SHAPE : GLYPH_SHAPE}
     >

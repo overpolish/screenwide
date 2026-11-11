@@ -24,7 +24,6 @@ pub struct GlideDetectorOptions {
   pub vertical_release_threshold: f64,
   pub vertical_threshold: f64,
   pub motion_noise_floor: f64,
-  pub rest_ms: f64,
   pub opening_grace_ms: f64,
   pub reversal_hysteresis: f64,
 }
@@ -38,7 +37,6 @@ impl Default for GlideDetectorOptions {
       vertical_release_threshold: 20.,
       vertical_threshold: 36.,
       motion_noise_floor: 2.,
-      rest_ms: 100.,
       opening_grace_ms: 30.,
       reversal_hysteresis: 10.,
     }

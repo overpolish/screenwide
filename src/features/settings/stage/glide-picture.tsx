@@ -139,7 +139,6 @@ function GlideScreen({
             iconSrc={sampleAppIcon}
             pending={null}
             phase={island.phase}
-            pulse={island.pulse}
             region={island.region}
           />
         </div>

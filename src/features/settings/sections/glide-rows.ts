@@ -9,19 +9,11 @@ export const glideToggles = () =>
   [
     {
       key: "cursorFollows",
-      macOnly: false,
       title: t("settings-glide-cursor-follows"),
-    },
-    {
-      description: t("settings-glide-haptics-description"),
-      key: "haptics",
-      macOnly: true,
-      title: t("settings-glide-haptics"),
     },
     {
       description: t("settings-glide-double-tap-description"),
       key: "doubleTapCenter",
-      macOnly: false,
       title: t("settings-glide-double-tap"),
     },
   ] as const;
