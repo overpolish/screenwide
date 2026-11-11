@@ -17,14 +17,15 @@ export type GlideIslandShape = {
 
 type BodyProps = {
   children: ReactNode;
-  /** Counts the rests completed; each one plays the ready breath. */
-  pulse: number;
   /** The window will not move; the black shakes as it comes out. */
   refuses: boolean;
   shape: GlideIslandShape;
   /** Names what the island shows, for assistive technology. Leave it out
    * where something round several islands names them once. */
   label?: string;
+  /** Counts the rests completed; each one plays the ready breath. Left
+   * out, the black never breathes. */
+  pulse?: number;
 };
 
 // The island's black, in the recording island's colour and shadow, centred

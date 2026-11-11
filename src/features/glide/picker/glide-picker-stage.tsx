@@ -40,7 +40,6 @@ export function GlidePickerStage({
         {...props}
         {...(pick ? played.state : state)}
         iconSrc={showsIcon ? sampleAppIcon : null}
-        pulse={played.pulse}
       />
     </div>
   );

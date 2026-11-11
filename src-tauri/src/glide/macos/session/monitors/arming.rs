@@ -104,7 +104,6 @@ pub(super) fn publish(app: &AppHandle, id: u64) {
           origin: selection.source == index,
           index,
           count: selection.displays.len(),
-          phase: selection.card_phase,
           icon_path: selection.icon_path.clone(),
         })
         .collect::<Vec<_>>();

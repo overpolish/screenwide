@@ -152,7 +152,7 @@ pub(super) fn tick() {
         spaces::end(app, false);
         return;
       }
-      spaces::poll(app);
+      spaces::poll();
       return;
     }
     if session::active_input().is_none()

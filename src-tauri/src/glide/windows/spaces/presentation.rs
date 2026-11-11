@@ -3,7 +3,7 @@
 
 use super::*;
 
-pub(super) fn publish(app: &AppHandle, s: &mut Session, phase: &'static str) {
+pub(super) fn publish(app: &AppHandle, s: &mut Session) {
   let source = s.snapshot.membership[0].clone();
   let selected = s.selected.as_deref().unwrap_or(&source);
   let mut cards = Vec::new();
@@ -17,7 +17,6 @@ pub(super) fn publish(app: &AppHandle, s: &mut Session, phase: &'static str) {
         origin: desktop.id == source,
         index: cards.len(),
         count: 0,
-        phase,
         icon_path: s.icon_path.clone(),
       });
     }

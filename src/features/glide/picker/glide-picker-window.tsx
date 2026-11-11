@@ -3,7 +3,7 @@
 
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 
 import { GlidePickerCard } from "./glide-picker-card";
 import { describePick, type GlidePickerProps } from "./glide-picker-types";
@@ -16,7 +16,6 @@ type GlidePickerEvent = {
   index: number;
   kind: GlidePickerProps["kind"];
   origin: boolean;
-  phase: string;
   selected: boolean;
   sessionId: number;
 };
@@ -24,8 +23,6 @@ type GlidePickerEvent = {
 /** One card of the Spaces or display picker, in a window of its own. */
 export function GlidePickerWindow() {
   const [event, setEvent] = useState<GlidePickerEvent | null>(null);
-  const [pulse, setPulse] = useState(0);
-  const readySessionRef = useRef<number | null>(null);
 
   useEffect(() => {
     let disposed = false;
@@ -39,14 +36,6 @@ export function GlidePickerWindow() {
     void window
       .listen<GlidePickerEvent>("glide://picker-card", ({ payload }) => {
         setEvent(payload);
-        if (payload.phase !== "ready" || !payload.selected) {
-          if (payload.phase !== "ready") readySessionRef.current = null;
-          return;
-        }
-        if (readySessionRef.current !== payload.sessionId) {
-          readySessionRef.current = payload.sessionId;
-          setPulse((value) => value + 1);
-        }
       })
       .then(async (unlisten) => {
         if (disposed) {
@@ -82,7 +71,6 @@ export function GlidePickerWindow() {
               ? describePick(event.kind, event.index, event.count)
               : undefined
           }
-          pulse={pulse}
         />
       ) : null}
     </main>

@@ -54,7 +54,6 @@ pub(super) fn begin(app: &AppHandle, input: Input, anchor: CGPoint) -> bool {
     snapshot: None,
     selected: None,
     icon_path: None,
-    card_phase: "idle",
     buffered: (0.0, 0.0),
     moving: false,
     ending: false,
@@ -185,7 +184,6 @@ pub(in crate::glide::macos) fn poll(app: &AppHandle, normal: &session::SharedSta
       }
     }
   }
-  let mut ready = None;
   let mut end = false;
   if let Ok(mut state) = SESSION.lock() {
     if let Some(session) = state.as_mut() {
@@ -203,23 +201,13 @@ pub(in crate::glide::macos) fn poll(app: &AppHandle, normal: &session::SharedSta
       {
         session.ending = true;
       }
-      if !session.ending
-        && session
+      if !session.ending {
+        // Ends a push that has stopped, so the next starts from nothing.
+        session
           .detector
-          .settle(session.clock.elapsed().as_secs_f64() * 1000.0)
-      {
-        ready = session
-          .snapshot
-          .clone()
-          .map(|snapshot| (session.id, snapshot, session.selected.clone()));
+          .settle(session.clock.elapsed().as_secs_f64() * 1000.0);
       }
       end = session.ending && !session.moving;
-    }
-  }
-  if let Some((id, snapshot, selected)) = ready {
-    super::presentation::publish(app, id, &snapshot, selected.as_deref(), "ready");
-    if native_settings::snapshot().haptics {
-      let _ = crate::glide::platform::haptic(app);
     }
   }
   if end {

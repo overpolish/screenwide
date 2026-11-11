@@ -65,9 +65,9 @@ pub(crate) trait GlidePlatform: Sized + 'static {
   fn on_ready(app: &AppHandle);
   /// A detector sample arrived; `moved` when it travelled.
   fn on_sample(extra: &mut Self::Extra, moved: bool);
-  /// Hands the detector's monitor effects to the picker. Answers whether
-  /// the picker took them, in which case regions are not placed.
-  fn monitor_effects(app: &AppHandle, id: u64, step: Option<(i8, i8)>, ready: bool) -> bool;
+  /// Hands the detector's monitor step to the picker. Answers whether the
+  /// picker took it, in which case regions are not placed.
+  fn monitor_effects(app: &AppHandle, id: u64, step: Option<(i8, i8)>) -> bool;
   /// Hides the pointer for the revealed preview. Runs under the state lock,
   /// so an end on another thread cannot slip between the mark and the hide.
   fn hide_pointer();

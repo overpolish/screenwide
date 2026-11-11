@@ -143,20 +143,61 @@ fn monitor_navigation_does_not_resize_or_minimize() {
 }
 
 #[test]
-fn navigation_waits_for_stillness_and_accepts_a_diagonal_corner_repeat() {
+fn a_monitor_push_steps_once_however_far_it_goes() {
   let mut runtime = runtime();
   runtime.begin_monitor_navigation();
+  let steps = (0..40)
+    .filter_map(|at| {
+      runtime
+        .update(sample(-10.0, -10.0, false, f64::from(at) * 8.0))
+        .monitor_step
+    })
+    .collect::<Vec<_>>();
+  assert_eq!(steps, [(-1, -1)]);
+}
 
-  let mut dragging = runtime.update(sample(-45.0, -45.0, false, 0.0));
-  assert_eq!(dragging.monitor_step, Some((-1, -1)));
-  dragging = runtime.update(sample(-20.0, -20.0, false, 10.0));
-  assert_eq!(dragging.monitor_step, None);
-  assert!(runtime.settle(110.0).ready);
+#[test]
+fn the_next_monitor_push_steps_once_the_last_has_stopped() {
+  let mut runtime = runtime();
+  runtime.begin_monitor_navigation();
   assert_eq!(
     runtime
-      .update(sample(-45.0, -45.0, false, 111.0))
+      .update(sample(-45.0, -45.0, false, 0.0))
       .monitor_step,
     Some((-1, -1))
+  );
+  assert_eq!(
+    runtime
+      .update(sample(-20.0, -20.0, false, 10.0))
+      .monitor_step,
+    None
+  );
+  // Stopped for two polls, the push is over; that is not reported as
+  // readiness, as nothing waits on it.
+  assert!(!runtime.settle(42.0).ready);
+  assert_eq!(
+    runtime
+      .update(sample(-45.0, -45.0, false, 50.0))
+      .monitor_step,
+    Some((-1, -1))
+  );
+}
+
+#[test]
+fn turning_back_picks_the_monitor_back_without_stopping() {
+  let mut runtime = runtime();
+  runtime.begin_monitor_navigation();
+  assert_eq!(
+    runtime.update(sample(45.0, 0.0, false, 0.0)).monitor_step,
+    Some((1, 0))
+  );
+  assert_eq!(
+    runtime.update(sample(-15.0, 0.0, false, 8.0)).monitor_step,
+    None
+  );
+  assert_eq!(
+    runtime.update(sample(-45.0, 0.0, false, 16.0)).monitor_step,
+    Some((-1, 0))
   );
 }
 

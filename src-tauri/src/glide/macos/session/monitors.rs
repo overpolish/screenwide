@@ -22,7 +22,6 @@ pub(crate) struct Selection {
   pub active: bool,
   pub armed: bool,
   icon_path: Option<PathBuf>,
-  card_phase: &'static str,
 }
 
 fn snapshot(app: &AppHandle) -> Vec<Monitor> {
@@ -87,12 +86,11 @@ pub(super) fn capture(app: &AppHandle, point: CGPoint) -> Option<Selection> {
     active: false,
     armed: false,
     icon_path: None,
-    card_phase: "idle",
   })
 }
 
 /// Returns true while monitor selection owns the preview and blocks resizing.
-pub(super) fn update(app: &AppHandle, id: u64, step: Option<(i8, i8)>, ready: bool) -> bool {
+pub(super) fn update(app: &AppHandle, id: u64, step: Option<(i8, i8)>) -> bool {
   let Some(state) = STATE.get() else {
     return false;
   };
@@ -103,21 +101,16 @@ pub(super) fn update(app: &AppHandle, id: u64, step: Option<(i8, i8)>, ready: bo
     let Some(selection) = session.monitors.as_mut() else {
       return false;
     };
-    if ready {
-      selection.active = true;
-      selection.card_phase = "ready";
-    }
     if let Some(direction) = step {
       selection.active = true;
       selection.armed = false;
-      selection.card_phase = "settling";
       if let Some(next) = monitors::neighbour(&selection.displays, selection.selected, direction) {
         selection.selected = next;
       }
     }
     selection.active
   });
-  if active && (step.is_some() || ready) {
+  if active && step.is_some() {
     publish(app, id);
   }
   active

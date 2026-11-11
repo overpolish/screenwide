@@ -10,13 +10,7 @@ use crate::glide::{
 use std::path::PathBuf;
 use tauri::AppHandle;
 
-pub(super) fn publish(
-  app: &AppHandle,
-  id: u64,
-  snapshot: &Snapshot,
-  destination: Option<&str>,
-  phase: &'static str,
-) {
+pub(super) fn publish(app: &AppHandle, id: u64, snapshot: &Snapshot, destination: Option<&str>) {
   let group = snapshot.groups.iter().find(|group| {
     group
       .desktops
@@ -45,7 +39,6 @@ pub(super) fn publish(
       }
       session.revealed = true;
     }
-    session.card_phase = phase;
     let origin = session
       .snapshot
       .as_ref()
@@ -68,7 +61,6 @@ pub(super) fn publish(
       origin: origin.as_deref() == Some(desktop.id.as_str()),
       index,
       count: desktops.len(),
-      phase,
       icon_path: icon_path.clone(),
     })
     .collect::<Vec<_>>();

@@ -66,7 +66,7 @@ fn apply<P: GlidePlatform>(app: &AppHandle, result: Option<(u64, GlideEffects)>)
   if effects.ready {
     P::on_ready(app);
   }
-  if P::monitor_effects(app, id, effects.monitor_step, effects.ready) {
+  if P::monitor_effects(app, id, effects.monitor_step) {
     return;
   }
   if effects.reveal {

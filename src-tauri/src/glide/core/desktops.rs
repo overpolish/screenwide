@@ -6,7 +6,7 @@
 use serde::Deserialize;
 use std::time::{Duration, Instant};
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) enum Direction {
   Previous,
   Next,

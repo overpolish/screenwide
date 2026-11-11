@@ -37,8 +37,8 @@ export const ELSEWHERE: GlidePickerState = {
 };
 
 export const picks = {
-  /** From the laptop to the display on its right, a rest, across to the one
-   * on its left, a rest, and away. */
+  /** From the laptop to the display on its right, across to the one on its
+   * left, and away. */
   displays: [
     {
       after: 700,
@@ -47,14 +47,11 @@ export const picks = {
     },
     { after: 150, icon: true },
     { after: 650, state: { selected: 2 } },
-    { after: 500, rest: true },
-    { after: 800, state: { selected: 1 } },
+    { after: 1300, state: { selected: 1 } },
     { after: 400, state: { selected: 0 } },
-    { after: 500, rest: true },
-    { after: 900, state: { isShown: false } },
+    { after: 1400, state: { isShown: false } },
   ],
-  /** From the second Space to the last, a rest, one back, a rest, and
-   * away. */
+  /** From the second Space to the last, one back, and away. */
   spaces: [
     {
       after: 700,
@@ -64,10 +61,8 @@ export const picks = {
     { after: 150, icon: true },
     { after: 650, state: { selected: 2 } },
     { after: 450, state: { selected: 3 } },
-    { after: 500, rest: true },
-    { after: 800, state: { selected: 2 } },
-    { after: 500, rest: true },
-    { after: 900, state: { isShown: false } },
+    { after: 1300, state: { selected: 2 } },
+    { after: 1400, state: { isShown: false } },
   ],
 } satisfies Record<string, Beat<GlidePickerState>[]>;
 

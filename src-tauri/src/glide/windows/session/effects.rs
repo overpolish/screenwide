@@ -5,10 +5,10 @@
 
 use super::*;
 
-pub(super) fn update_monitor(app: &AppHandle, id: u64, direction: Option<(i8, i8)>, ready: bool) {
+pub(super) fn update_monitor(app: &AppHandle, id: u64, direction: Option<(i8, i8)>) {
   crate::glide::core::trace::input(
     "windows-monitor",
-    format!("update id={id} direction={direction:?} ready={ready}"),
+    format!("update id={id} direction={direction:?}"),
   );
   let Some(Some((anchor, offsets, cards, hide))) =
     shared::with_session::<WindowsGlide, _>(|session| {
@@ -40,7 +40,6 @@ pub(super) fn update_monitor(app: &AppHandle, id: u64, direction: Option<(i8, i8
           origin: index == selection.source,
           index,
           count: selection.displays.len(),
-          phase: if ready { "ready" } else { "settling" },
           icon_path: session.extra.icon_path.clone(),
         })
         .collect();

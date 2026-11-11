@@ -130,18 +130,12 @@ impl GlidePlatform for WindowsGlide {
     }
   }
 
-  fn monitor_effects(app: &AppHandle, id: u64, step: Option<(i8, i8)>, ready: bool) -> bool {
+  fn monitor_effects(app: &AppHandle, id: u64, step: Option<(i8, i8)>) -> bool {
     if let Some(step) = step {
-      effects::update_monitor(app, id, Some(step), false);
+      effects::update_monitor(app, id, Some(step));
       return true;
     }
-    if !monitor_mode() {
-      return false;
-    }
-    if ready {
-      effects::update_monitor(app, id, None, true);
-    }
-    true
+    monitor_mode()
   }
 
   fn hide_pointer() {
@@ -221,7 +215,7 @@ pub(super) fn arm_monitor(app: &AppHandle) -> bool {
   }) else {
     return false;
   };
-  effects::update_monitor(app, id, None, true);
+  effects::update_monitor(app, id, None);
   true
 }
 

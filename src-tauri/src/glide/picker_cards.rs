@@ -42,7 +42,6 @@ pub(crate) struct PickerCard {
   pub origin: bool,
   pub index: usize,
   pub count: usize,
-  pub phase: &'static str,
   pub icon_path: Option<PathBuf>,
 }
 

@@ -20,6 +20,7 @@ pub(crate) mod monitors;
 mod regions;
 mod runtime;
 mod settling;
+mod stroke;
 pub(crate) mod taps;
 pub(crate) mod trace;
 mod travel;

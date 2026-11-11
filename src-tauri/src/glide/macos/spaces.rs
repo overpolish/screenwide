@@ -71,7 +71,6 @@ struct Session {
   snapshot: Option<Snapshot>,
   selected: Option<String>,
   icon_path: Option<std::path::PathBuf>,
-  card_phase: &'static str,
   buffered: (f64, f64),
   moving: bool,
   ending: bool,

@@ -6,12 +6,14 @@ use super::{
   intent::{CornerRefinement, OpeningGate},
   regions::{self, GlideRegion},
   settling::{GlidePhase, RestGate},
+  stroke::StrokeGate,
   travel::TurnPointTracker,
 };
 use serde::Serialize;
 use ts_rs::TS;
 
 mod lifecycle;
+mod monitor;
 
 /// The detector's complete observable state after one input or timer event.
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, TS)]
@@ -45,6 +47,8 @@ pub struct GlideDetector {
   horizontal: TurnPointTracker,
   vertical: TurnPointTracker,
   rest: RestGate,
+  /// Monitor selection's gate in place of `rest`.
+  stroke: StrokeGate,
   pending: Option<GlideAction>,
   region: Option<GlideRegion>,
   thirds: bool,
@@ -57,6 +61,7 @@ impl GlideDetector {
       horizontal: TurnPointTracker::new(options.reversal_hysteresis),
       vertical: TurnPointTracker::new(options.reversal_hysteresis),
       rest: RestGate::new(options.motion_noise_floor, options.rest_ms),
+      stroke: StrokeGate::new(options.motion_noise_floor, options.reversal_hysteresis),
       opening: OpeningGate::default(),
       refinement: CornerRefinement::new(options.reversal_hysteresis),
       last_motion: 0.0,
@@ -75,10 +80,10 @@ impl GlideDetector {
     became_ready: bool,
   ) -> GlideDetection {
     GlideDetection {
-      became_ready: became_ready && self.rest.phase() == GlidePhase::Ready,
+      became_ready: became_ready && self.phase() == GlidePhase::Ready,
       changed: previous_region != self.region || previous_pending != self.pending,
       pending: self.pending,
-      phase: self.rest.phase(),
+      phase: self.phase(),
       region: self.region,
     }
   }
@@ -160,6 +165,9 @@ impl GlideDetector {
 
   /// Applies one normalized adapter sample.
   pub fn update(&mut self, sample: GlideSample) -> GlideDetection {
+    if self.monitor_navigation {
+      return self.update_monitor(sample);
+    }
     let GlideSample {
       delta_x,
       delta_y,

@@ -44,11 +44,11 @@ pub(super) fn inspect(app: &AppHandle, id: u64) {
             let session = state.as_mut().filter(|session| session.id == id)?;
             session.snapshot = Some(snapshot.clone());
             let (x, y) = std::mem::take(&mut session.buffered);
-            let phase = select(session, x, y).unwrap_or("idle");
-            Some((session.selected.clone(), phase))
+            select(session, x, y);
+            Some(session.selected.clone())
           });
-          if let Some((selected, phase)) = preview {
-            presentation::publish(&worker_app, id, &snapshot, selected.as_deref(), phase);
+          if let Some(selected) = preview {
+            presentation::publish(&worker_app, id, &snapshot, selected.as_deref());
             commit(&worker_app);
           }
         }
@@ -69,19 +69,20 @@ pub(super) fn inspect(app: &AppHandle, id: u64) {
   }
 }
 
-fn select(session: &mut Session, x: f64, y: f64) -> Option<&'static str> {
-  let snapshot = session.snapshot.as_ref()?;
+/// Steps the selection by one sample, answering whether the sample made a
+/// step, taken or not.
+fn select(session: &mut Session, x: f64, y: f64) -> bool {
+  let Some(snapshot) = session.snapshot.as_ref() else {
+    return false;
+  };
   let time = session.clock.elapsed().as_secs_f64() * 1000.0;
-  let direction = session.detector.update(x, y, time)?;
-  // A selection step rearms after stillness; no native carry happens here.
-  session.detector.completed(time);
-  match desktop_selection::step(snapshot, session.selected.as_deref(), direction) {
-    Ok(selected) => {
-      session.selected = Some(selected);
-      Some("settling")
-    }
-    Err(_) => Some("blocked"),
+  let Some(direction) = session.detector.update(x, y, time) else {
+    return false;
+  };
+  if let Ok(selected) = desktop_selection::step(snapshot, session.selected.as_deref(), direction) {
+    session.selected = Some(selected);
   }
+  true
 }
 
 pub(super) fn update(app: &AppHandle, x: f64, y: f64) {
@@ -96,16 +97,17 @@ pub(super) fn update(app: &AppHandle, x: f64, y: f64) {
       session.buffered.1 += y;
       return None;
     }
-    let phase = select(session, x, y)?;
+    if !select(session, x, y) {
+      return None;
+    }
     Some((
       session.id,
       session.snapshot.clone()?,
       session.selected.clone(),
-      phase,
     ))
   });
-  if let Some((id, snapshot, selected, phase)) = preview {
-    presentation::publish(app, id, &snapshot, selected.as_deref(), phase);
+  if let Some((id, snapshot, selected)) = preview {
+    presentation::publish(app, id, &snapshot, selected.as_deref());
   }
 }
 

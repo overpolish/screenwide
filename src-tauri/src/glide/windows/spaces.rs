@@ -136,7 +136,7 @@ pub(super) fn arm(app: &AppHandle, target: WindowTarget, anchor: POINT) -> bool 
   }
   if let Ok(mut state) = STATE.lock() {
     if let Some(session) = state.as_mut() {
-      presentation::publish(app, session, "idle");
+      presentation::publish(app, session);
     }
   }
   true
@@ -172,8 +172,7 @@ pub(super) fn handle_event(app: &AppHandle, dx: f64, dy: f64) -> bool {
     if let Ok(id) = desktop_selection::step(&s.snapshot, s.selected.as_deref(), d) {
       s.selected = Some(id);
     }
-    s.gesture.completed(t);
-    presentation::publish(app, s, "settling");
+    presentation::publish(app, s);
   }
   true
 }
@@ -191,13 +190,12 @@ pub(super) fn promote_scroll_to_contacts() -> bool {
     true
   })
 }
-pub(super) fn poll(app: &AppHandle) {
+pub(super) fn poll() {
   if let Ok(mut st) = STATE.lock() {
     if let Some(s) = st.as_mut() {
       let t = s.clock.elapsed().as_secs_f64() * 1000.;
-      if s.gesture.settle(t) {
-        presentation::publish(app, s, "ready");
-      }
+      // Ends a push that has stopped, so the next starts from nothing.
+      s.gesture.settle(t);
     }
   }
 }

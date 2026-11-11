@@ -30,7 +30,6 @@ export function GlidePickerCard({
   isSelected,
   isShown,
   label,
-  pulse,
 }: {
   /** The glided app's icon, once it resolves. */
   iconSrc: null | string;
@@ -39,8 +38,6 @@ export function GlidePickerCard({
   /** The window will go to this screen. */
   isSelected: boolean;
   isShown: boolean;
-  /** Counts this card's rests; each one plays the ready breath. */
-  pulse: number;
   /** Names the pick, where nothing round the card does. */
   label?: string;
 }) {
@@ -48,7 +45,6 @@ export function GlidePickerCard({
     <GlideIslandBody
       isShown={isShown}
       label={label}
-      pulse={pulse}
       refuses={false}
       shape={CARD}
     >

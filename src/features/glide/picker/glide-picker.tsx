@@ -1,8 +1,6 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: Elastic-2.0
 
-import { useState } from "react";
-
 import { arrangeSlots } from "./glide-picker-arrange";
 import { GlidePickerCard } from "./glide-picker-card";
 import {
@@ -17,19 +15,8 @@ import {
 // window of its own.
 
 export function GlidePicker(props: GlidePickerProps) {
-  const { iconSrc, isShown, origin, pulse, screens, selected } = props;
+  const { iconSrc, isShown, origin, screens, selected } = props;
   const { height, slots, width } = arrangeSlots(screens, CARD, CARD_GAP);
-  // Each native card counts the rests it was chosen for, so only the chosen
-  // card breathes; a rest here goes to the card chosen when it came.
-  const [rests, setRests] = useState(() => ({
-    counts: new Map<number, number>(),
-    pulse,
-  }));
-  if (rests.pulse !== pulse) {
-    const counts = new Map(rests.counts);
-    counts.set(selected, (counts.get(selected) ?? 0) + 1);
-    setRests({ counts, pulse });
-  }
   return (
     <div
       aria-label={describePick(props.kind, selected, screens.length)}
@@ -56,7 +43,6 @@ export function GlidePicker(props: GlidePickerProps) {
             isOrigin={index === origin}
             isSelected={index === selected}
             isShown={isShown}
-            pulse={rests.counts.get(index) ?? 0}
           />
         </div>
       ))}

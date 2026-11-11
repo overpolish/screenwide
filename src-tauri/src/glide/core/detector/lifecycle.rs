@@ -18,7 +18,11 @@ impl GlideDetector {
     self.pending
   }
   pub fn phase(&self) -> GlidePhase {
-    self.rest.phase()
+    if self.monitor_navigation {
+      self.stroke.phase()
+    } else {
+      self.rest.phase()
+    }
   }
   pub fn region(&self) -> Option<GlideRegion> {
     self.region
@@ -37,6 +41,7 @@ impl GlideDetector {
     self.horizontal.reset();
     self.vertical.reset();
     self.rest.reset();
+    self.stroke.reset();
     self.last_motion = 0.0;
     GlideDetection {
       became_ready: false,
@@ -54,7 +59,15 @@ impl GlideDetector {
       self.rebase();
       self.rest.hold(self.last_motion);
     }
-    let became_ready = self.rest.settle(timestamp);
+    let became_ready = if self.monitor_navigation {
+      // A monitor push ending only lets the next count; nothing waits on it.
+      if self.stroke.settle(timestamp) {
+        self.rebase();
+      }
+      false
+    } else {
+      self.rest.settle(timestamp)
+    };
     if became_ready {
       self.refinement.arm(false);
       self.rebase();

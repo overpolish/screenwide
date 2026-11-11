@@ -163,8 +163,8 @@ impl GlidePlatform for MacGlide {
 
   fn on_sample(_extra: &mut (), _moved: bool) {}
 
-  fn monitor_effects(app: &AppHandle, id: u64, step: Option<(i8, i8)>, ready: bool) -> bool {
-    monitors::update(app, id, step, ready)
+  fn monitor_effects(app: &AppHandle, id: u64, step: Option<(i8, i8)>) -> bool {
+    monitors::update(app, id, step)
   }
 
   fn hide_pointer() {

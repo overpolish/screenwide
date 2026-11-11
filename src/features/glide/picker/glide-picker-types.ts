@@ -18,8 +18,6 @@ export type GlidePickerProps = GlidePickerState & {
   /** The glided app's icon, once it resolves. */
   iconSrc: null | string;
   kind: "displays" | "spaces";
-  /** Counts the rests completed; each one plays the ready breath. */
-  pulse: number;
   screens: GlidePickerScreen[];
 };
 
