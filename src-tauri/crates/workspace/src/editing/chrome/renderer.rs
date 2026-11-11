@@ -44,9 +44,9 @@ impl ChromeRenderer {
     snapshot: Option<&wgpu::TextureView>,
   ) -> Self {
     let device = &shared.device;
-    let module = osc_gpu::shader_module(device);
-    let layout = osc_gpu::bind_group_layout(device);
-    let pipeline = osc_gpu::pipeline(device, &layout, &module);
+    let shader = osc_gpu::shader(device);
+    let layout = shader.bind_group_layout(0).clone();
+    let pipeline = osc_gpu::pipeline(&shader);
     let constants = device.create_buffer(&wgpu::BufferDescriptor {
       label: Some("Screenwide selection constants"),
       size: size_of::<RenderConstants>() as u64,

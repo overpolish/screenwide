@@ -5,74 +5,29 @@
 //! the layer's textures, and the one triangle every pass draws.
 
 use super::{Gpu, LAYER_FORMAT};
+use crate::precompiled_shaders::MARK_BLUR;
+use screenwide_gpu::{RenderStages, Shader};
 
 const SHADER: &str = include_str!(concat!(env!("OUT_DIR"), "/annotation_blur.wgsl"));
 
-/// The Gaussian pass's bindings: its axis, and the two layers it reads.
-pub(super) fn bind_group_layout(device: &wgpu::Device) -> wgpu::BindGroupLayout {
-  let entry = |binding, ty| wgpu::BindGroupLayoutEntry {
-    binding,
-    visibility: wgpu::ShaderStages::FRAGMENT,
-    ty,
-    count: None,
-  };
-  let layer = wgpu::BindingType::Texture {
-    sample_type: wgpu::TextureSampleType::Float { filterable: true },
-    view_dimension: wgpu::TextureViewDimension::D2,
-    multisampled: false,
-  };
-  device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-    label: Some("Screenwide mark blur bindings"),
-    entries: &[
-      entry(
-        0,
-        wgpu::BindingType::Buffer {
-          ty: wgpu::BufferBindingType::Uniform,
-          has_dynamic_offset: false,
-          min_binding_size: None,
-        },
-      ),
-      entry(1, layer),
-      entry(2, layer),
-    ],
-  })
-}
-
-/// The Gaussian pass along one axis of both layers.
-pub(super) fn pipeline(
-  device: &wgpu::Device,
-  layout: &wgpu::BindGroupLayout,
-) -> wgpu::RenderPipeline {
-  let module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
-    label: Some("Screenwide mark blur shader"),
-    source: wgpu::ShaderSource::Wgsl(SHADER.into()),
-  });
-  let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-    label: Some("Screenwide mark blur layout"),
-    bind_group_layouts: &[Some(layout)],
-    immediate_size: 0,
-  });
-  device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
-    label: Some("Screenwide mark blur pipeline"),
-    layout: Some(&pipeline_layout),
-    vertex: wgpu::VertexState {
-      module: &module,
-      entry_point: Some("vs_main"),
-      compilation_options: Default::default(),
-      buffers: &[],
-    },
-    fragment: Some(wgpu::FragmentState {
-      module: &module,
-      entry_point: Some("fs_main"),
-      compilation_options: Default::default(),
-      targets: &[Some(LAYER_FORMAT.into()), Some(LAYER_FORMAT.into())],
-    }),
+/// The Gaussian pass along one axis of both layers, and the layout of its
+/// bindings: its axis, and the two layers it reads.
+pub(super) fn pipeline(device: &wgpu::Device) -> (wgpu::RenderPipeline, wgpu::BindGroupLayout) {
+  let shader = Shader::new(
+    device,
+    "Screenwide mark blur",
+    &crate::shader_layouts::MARK_BLUR,
+    SHADER,
+    MARK_BLUR,
+  );
+  let pipeline = shader.render_pipeline(&RenderStages {
+    label: "Screenwide mark blur pipeline",
+    vertex: "vs_main",
+    fragment: "fs_main",
+    targets: &[Some(LAYER_FORMAT.into()), Some(LAYER_FORMAT.into())],
     primitive: Default::default(),
-    depth_stencil: None,
-    multisample: Default::default(),
-    multiview_mask: None,
-    cache: None,
-  })
+  });
+  (pipeline, shader.bind_group_layout(0).clone())
 }
 
 /// A texture the layer is drawn into or blurred through, `size` texels.

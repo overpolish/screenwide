@@ -22,9 +22,11 @@ bytemuck.workspace = true
 screenwide-accent.workspace = true
 screenwide-gpu.workspace = true
 screenwide-scenes.workspace = true
+screenwide-shader-layout.workspace = true
 serde.workspace = true
 wgpu.workspace = true
 
 [build-dependencies]
 cc.workspace = true
+screenwide-shader-layout.workspace = true
 screenwide-wgsl.workspace = true

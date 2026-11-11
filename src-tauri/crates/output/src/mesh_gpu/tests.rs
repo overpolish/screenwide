@@ -173,3 +173,49 @@ fn every_generator_paints_a_varied_picture() {
     );
   }
 }
+
+/// The compute stage the build compiled paints what the same shader compiled
+/// from WGSL paints: a binding laid out wrongly writes nothing, or reads the
+/// wrong parameters.
+#[test]
+fn the_precompiled_mesh_paints_what_wgsl_paints() {
+  let gpu = screenwide_gpu::shared().expect("the shared GPU");
+  let precompiled = Renderer::new(&gpu).expect("the mesh renderer");
+  let compiled = screenwide_gpu::compiling_wgsl(|| Renderer::new(&gpu)).expect("the mesh renderer");
+  let generator = &every_generator()[1];
+  let mut uniforms = MeshUniforms {
+    dimensions: [48, 32],
+    point_count: 0,
+    seed: 1_234,
+    warp_percent: 0.0,
+    generator: generator.id,
+    generator_color_count: generator.color_count as u32,
+    time: 2.0,
+    generator_speed: generator.speed,
+    padding: [0.0; 3],
+    base_color: color(&[12, 18, 52, 255]),
+    points: [[0.0; 8]; MAX_POINTS],
+    colors: [[0.0; 4]; MAX_POINTS],
+  };
+  for (index, value) in [
+    [40, 130, 200, 255],
+    [220, 120, 180, 255],
+    [250, 230, 190, 255],
+  ]
+  .iter()
+  .enumerate()
+  {
+    uniforms.colors[index] = color(value);
+  }
+  let painted = precompiled
+    .render(48, 32, &uniforms)
+    .expect("the mesh paints");
+  assert!(
+    painted.chunks_exact(4).any(|pixel| pixel != [0, 0, 0, 0]),
+    "the precompiled mesh painted nothing"
+  );
+  assert!(
+    painted == compiled.render(48, 32, &uniforms).expect("the mesh paints"),
+    "the precompiled mesh paints different pixels"
+  );
+}

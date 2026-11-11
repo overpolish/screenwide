@@ -4,48 +4,25 @@
 //! The redaction passes' pipelines, bindings and draw.
 
 use super::*;
-use screenwide_annotations::redact::records::RedactRecord;
+use screenwide_gpu::{RenderStages, Shader};
 
 /// Where each record sits in the records buffer. Every pass reads its own
 /// record through a dynamic offset, since all passes of a frame are recorded
 /// before any of them runs; Direct3D 12 aligns those offsets to 256 bytes.
 pub(super) const RECORD_STRIDE: u64 = 256;
 
-/// A pass of `source` writing `format`.
-pub(super) fn pipeline(
-  device: &wgpu::Device,
-  layout: &wgpu::PipelineLayout,
-  source: &str,
-  format: wgpu::TextureFormat,
-) -> wgpu::RenderPipeline {
-  let module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
-    label: Some("Screenwide redaction shader"),
-    source: wgpu::ShaderSource::Wgsl(source.into()),
-  });
-  device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
-    label: Some("Screenwide redaction pipeline"),
-    layout: Some(layout),
-    vertex: wgpu::VertexState {
-      module: &module,
-      entry_point: Some("vs_main"),
-      compilation_options: Default::default(),
-      buffers: &[],
-    },
-    fragment: Some(wgpu::FragmentState {
-      module: &module,
-      entry_point: Some("fs_main"),
-      compilation_options: Default::default(),
-      targets: &[Some(wgpu::ColorTargetState {
-        format,
-        blend: None,
-        write_mask: wgpu::ColorWrites::ALL,
-      })],
-    }),
+/// A pass of `shader` writing `format`.
+pub(super) fn pipeline(shader: &Shader, format: wgpu::TextureFormat) -> wgpu::RenderPipeline {
+  shader.render_pipeline(&RenderStages {
+    label: "Screenwide redaction pipeline",
+    vertex: "vs_main",
+    fragment: "fs_main",
+    targets: &[Some(wgpu::ColorTargetState {
+      format,
+      blend: None,
+      write_mask: wgpu::ColorWrites::ALL,
+    })],
     primitive: Default::default(),
-    depth_stencil: None,
-    multisample: Default::default(),
-    multiview_mask: None,
-    cache: None,
   })
 }
 
@@ -55,47 +32,6 @@ pub(super) fn records_buffer(gpu: &Gpu, count: u64) -> wgpu::Buffer {
     size: count.max(1) * RECORD_STRIDE,
     usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
     mapped_at_creation: false,
-  })
-}
-
-pub(super) fn bind_group_layout(device: &wgpu::Device) -> wgpu::BindGroupLayout {
-  let texture = |binding| wgpu::BindGroupLayoutEntry {
-    binding,
-    visibility: wgpu::ShaderStages::FRAGMENT,
-    ty: wgpu::BindingType::Texture {
-      sample_type: wgpu::TextureSampleType::Float { filterable: false },
-      view_dimension: wgpu::TextureViewDimension::D2,
-      multisampled: false,
-    },
-    count: None,
-  };
-  device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-    label: Some("Screenwide redaction bindings"),
-    entries: &[
-      wgpu::BindGroupLayoutEntry {
-        binding: 0,
-        visibility: wgpu::ShaderStages::FRAGMENT,
-        ty: wgpu::BindingType::Buffer {
-          ty: wgpu::BufferBindingType::Uniform,
-          has_dynamic_offset: true,
-          min_binding_size: wgpu::BufferSize::new(size_of::<RedactRecord>() as u64),
-        },
-        count: None,
-      },
-      texture(1),
-      wgpu::BindGroupLayoutEntry {
-        binding: 2,
-        visibility: wgpu::ShaderStages::FRAGMENT,
-        ty: wgpu::BindingType::Buffer {
-          ty: wgpu::BufferBindingType::Storage { read_only: true },
-          has_dynamic_offset: false,
-          min_binding_size: None,
-        },
-        count: None,
-      },
-      texture(3),
-      texture(4),
-    ],
   })
 }
 

@@ -24,6 +24,7 @@ screenwide-keyboard-effects.workspace = true
 screenwide-osc.workspace = true
 screenwide-output.workspace = true
 screenwide-scenes.workspace = true
+screenwide-shader-layout.workspace = true
 screenwide-text.workspace = true
 wgpu.workspace = true
 
@@ -37,4 +38,5 @@ windows = { workspace = true, features = ["Win32_Graphics_Direct3D11"] }
 screenwide-output = { workspace = true, features = ["test-support"] }
 
 [build-dependencies]
+screenwide-shader-layout.workspace = true
 screenwide-wgsl.workspace = true

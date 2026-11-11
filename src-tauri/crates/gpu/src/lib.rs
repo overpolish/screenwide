@@ -2,10 +2,13 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 //! The wgpu device every renderer shares, open while something uses it
-//! (`lifetime`). Shaders are WGSL everywhere: on macOS they run on Metal; on
-//! Windows on Direct3D 12, compiled through the bundled DXC, because wgpu's
-//! default there, FXC, takes minutes on the larger shaders. The canvas
-//! variants the build precompiled are the exception on both.
+//! (`lifetime`). Shaders are WGSL, run on Metal on macOS and on Direct3D 12
+//! on Windows, and come compiled from the build ([`Shader`]); on Windows
+//! what compiles at runtime goes through the bundled DXC, because wgpu's
+//! default there, FXC, takes minutes on the larger shaders.
+
+// The precompiled shaders' constants name this crate as others see it.
+extern crate self as screenwide_gpu;
 
 #[cfg(target_os = "windows")]
 mod windows;
@@ -15,16 +18,24 @@ pub use self::windows::bridge::{
 };
 #[cfg(target_os = "windows")]
 pub use self::windows::interop::{d3d11, D3d11Layer, SharedTexture};
+mod layouts;
 mod lifetime;
 #[cfg(target_os = "macos")]
 pub mod macos;
 pub mod mips;
 mod precompiled;
+mod precompiled_shaders {
+  include!(concat!(env!("OUT_DIR"), "/precompiled_shaders.rs"));
+}
+mod shader_layouts;
 pub mod surface;
 mod textures;
 
+pub use layouts::bind_group_layout;
 pub use lifetime::{on_idle, open_soon, shared, DeviceCache};
-pub use precompiled::{precompiled_modules, PrecompiledModules, PrecompiledStages};
+pub use precompiled::{
+  compiling_wgsl, PrecompiledEntryPoint, PrecompiledShader, RenderStages, Shader,
+};
 
 use std::sync::Arc;
 

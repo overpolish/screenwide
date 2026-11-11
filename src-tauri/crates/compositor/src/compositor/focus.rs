@@ -69,7 +69,7 @@ impl FocusBlur {
       })
     };
     let layouts = pipeline::layouts(device);
-    let (downsample, gather) = pipeline::pipelines(device, &layouts);
+    let (downsample, gather) = pipeline::pipelines(device);
     Self {
       constants: [
         uniform("Screenwide focus under canvas", size_of::<Constants>()),

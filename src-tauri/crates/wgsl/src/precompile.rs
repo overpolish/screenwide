@@ -6,10 +6,14 @@
 //! output, so a shader compiled at runtime is compiled again every time the
 //! device opens: the canvas shader took about 7 and 30 seconds over its two
 //! variants, the annotate overlay's about 1.5. On macOS the system keeps what
-//! Metal compiles, so the gain is smaller: about 0.4 seconds before a first
-//! launch's first frame, and about 15 ms per shader on every later launch.
-//! The GPU driver's own pass still runs at runtime, and the driver keeps
-//! what that makes.
+//! Metal compiles, so a launch after the first pays little, but the first
+//! one waits on every shader it draws with. The GPU driver's own pass still
+//! runs at runtime, and the driver keeps what that makes.
+//!
+//! Each shader is compiled against its [`ShaderLayout`], the one
+//! `screenwide_gpu::Shader` builds its pipelines from, and checked against
+//! it first: every resource an entry point uses has to be in the layout, of
+//! the kind the WGSL declares and seen by that entry point's stage.
 //!
 //! A macOS build needs Apple's Metal compiler, which Xcode 26 leaves out
 //! until `xcodebuild -downloadComponent MetalToolchain` downloads it; a
@@ -21,48 +25,37 @@
 use std::hash::{DefaultHasher, Hash, Hasher};
 use std::path::{Path, PathBuf};
 
+use screenwide_shader_layout::{ShaderLayout, Stages};
+
+mod check;
 #[cfg(target_os = "windows")]
 mod dxil;
 #[cfg(target_os = "macos")]
 mod metallib;
 
-/// What a binding in group 0 holds, which decides the register or slot
-/// wgpu gives it.
-#[derive(Clone, Copy)]
-pub enum Binding {
-  Uniform,
-  /// A read-only storage buffer.
-  Storage,
-  /// A filterable float 2D texture.
-  Texture,
-  /// A filterable float 2D array texture.
-  TextureArray,
-  /// A filtering sampler.
-  Sampler,
-}
-
-/// A shader to compile: its `vs_main` and `fs_main`, drawn with one bind
-/// group that only `fs_main` sees.
+/// A shader to compile.
 pub struct Precompiled<'a> {
   /// The constant the generated file declares for it.
   pub name: &'a str,
   pub source: String,
-  /// Group 0's bindings, each at its index. The pipeline's layout has to be
-  /// built from the same list, as the compiled stages expect wgpu's
-  /// registers for exactly that layout.
-  pub bindings: Vec<(u32, Binding)>,
+  pub layout: &'a ShaderLayout,
+  /// The entry points to compile. A vertex stage is drawn with any of the
+  /// fragment stages listed beside it, which all have to read what it
+  /// writes alike.
+  pub entry_points: &'a [&'a str],
 }
 
-/// A shader's compiled stages, as files.
+/// An entry point compiled to a file.
 #[cfg_attr(not(any(target_os = "macos", target_os = "windows")), allow(dead_code))]
-struct Stages {
-  vertex: PathBuf,
-  fragment: PathBuf,
+struct Compiled {
+  name: String,
+  workgroup_size: [u32; 3],
+  code: PathBuf,
 }
 
 /// Compiles each of `shaders` for the target and writes `OUT_DIR/<file>`,
 /// for the crate to `include!`: a constant of type
-/// `Option<screenwide_gpu::PrecompiledStages>` per shader, `None` where
+/// `Option<screenwide_gpu::PrecompiledShader>` per shader, `None` where
 /// nothing was compiled for the target.
 pub fn precompile(file: &str, shaders: &[Precompiled]) {
   let out_dir = PathBuf::from(std::env::var_os("OUT_DIR").expect("Cargo supplied OUT_DIR"));
@@ -74,6 +67,10 @@ pub fn precompile(file: &str, shaders: &[Precompiled]) {
     .join("shader-cache");
   std::fs::create_dir_all(&cache)
     .unwrap_or_else(|error| panic!("create {}: {error}", cache.display()));
+  for shader in shaders {
+    let (module, info) = parse(shader);
+    check::layout(shader, &module, &info);
+  }
   let compiled = if target == std::env::consts::OS {
     compile_for_host(shaders, &cache)
   } else {
@@ -86,20 +83,31 @@ pub fn precompile(file: &str, shaders: &[Precompiled]) {
     shaders.iter().map(|_| None).collect()
   };
   let mut generated = String::from("// Written by screenwide_wgsl::precompile.\n");
-  for (shader, stages) in shaders.iter().zip(compiled) {
-    let value = stages.map_or_else(
+  for (shader, entry_points) in shaders.iter().zip(compiled) {
+    let value = entry_points.map_or_else(
       || "None".to_owned(),
-      |stages| {
+      |entry_points| {
+        let entry_points = entry_points
+          .iter()
+          .map(|compiled| {
+            format!(
+              "screenwide_gpu::PrecompiledEntryPoint {{ name: {:?}, workgroup_size: {:?}, code: \
+               include_bytes!({:?}) }}",
+              compiled.name,
+              compiled.workgroup_size,
+              compiled.code.display().to_string(),
+            )
+          })
+          .collect::<Vec<_>>()
+          .join(", ");
         format!(
-          "Some(screenwide_gpu::PrecompiledStages {{ vertex: include_bytes!({:?}), fragment: \
-           include_bytes!({:?}) }})",
-          stages.vertex.display().to_string(),
-          stages.fragment.display().to_string(),
+          "Some(screenwide_gpu::PrecompiledShader {{ fingerprint: {:#x}, entry_points: &[{entry_points}] }})",
+          shader.layout.fingerprint(),
         )
       },
     );
     generated.push_str(&format!(
-      "const {}: Option<screenwide_gpu::PrecompiledStages> = {value};\n",
+      "pub(crate) const {}: Option<screenwide_gpu::PrecompiledShader> = {value};\n",
       shader.name
     ));
   }
@@ -108,19 +116,19 @@ pub fn precompile(file: &str, shaders: &[Precompiled]) {
 }
 
 #[cfg(target_os = "windows")]
-fn compile_for_host(shaders: &[Precompiled], cache: &Path) -> Vec<Option<Stages>> {
+fn compile_for_host(shaders: &[Precompiled], cache: &Path) -> Vec<Option<Vec<Compiled>>> {
   let compiler = dxil::Compiler::bundled();
   in_parallel(shaders, |shader| compiler.compile(shader, cache))
 }
 
 #[cfg(target_os = "macos")]
-fn compile_for_host(shaders: &[Precompiled], cache: &Path) -> Vec<Option<Stages>> {
+fn compile_for_host(shaders: &[Precompiled], cache: &Path) -> Vec<Option<Vec<Compiled>>> {
   let compiler = metallib::Compiler::installed();
   in_parallel(shaders, |shader| compiler.compile(shader, cache))
 }
 
 #[cfg(not(any(target_os = "macos", target_os = "windows")))]
-fn compile_for_host(shaders: &[Precompiled], _cache: &Path) -> Vec<Option<Stages>> {
+fn compile_for_host(shaders: &[Precompiled], _cache: &Path) -> Vec<Option<Vec<Compiled>>> {
   shaders.iter().map(|_| None).collect()
 }
 
@@ -129,8 +137,8 @@ fn compile_for_host(shaders: &[Precompiled], _cache: &Path) -> Vec<Option<Stages
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 fn in_parallel(
   shaders: &[Precompiled],
-  compile: impl Fn(&Precompiled) -> Stages + Sync,
-) -> Vec<Option<Stages>> {
+  compile: impl Fn(&Precompiled) -> Vec<Compiled> + Sync,
+) -> Vec<Option<Vec<Compiled>>> {
   std::thread::scope(|scope| {
     let jobs: Vec<_> = shaders
       .iter()
@@ -144,7 +152,6 @@ fn in_parallel(
 }
 
 /// `shader` parsed and validated.
-#[cfg(any(target_os = "macos", target_os = "windows"))]
 fn parse(shader: &Precompiled) -> (naga::Module, naga::valid::ModuleInfo) {
   let module = naga::front::wgsl::parse_str(&shader.source)
     .unwrap_or_else(|error| panic!("the {} shader does not parse: {error}", shader.name));
@@ -157,27 +164,53 @@ fn parse(shader: &Precompiled) -> (naga::Module, naga::valid::ModuleInfo) {
   (module, info)
 }
 
-/// `bindings` in the order wgpu numbers them: by index.
-#[cfg(any(target_os = "macos", target_os = "windows"))]
-fn in_binding_order(bindings: &[(u32, Binding)]) -> Vec<(u32, Binding)> {
-  let mut ordered = bindings.to_vec();
-  ordered.sort_by_key(|(index, _)| *index);
-  ordered
+/// The entry point `name` of `shader`.
+fn entry_point<'m>(
+  shader: &Precompiled,
+  module: &'m naga::Module,
+  name: &str,
+) -> (usize, &'m naga::EntryPoint) {
+  module
+    .entry_points
+    .iter()
+    .enumerate()
+    .find(|(_, entry)| entry.name == name)
+    .unwrap_or_else(|| panic!("the {} shader has no entry point {name}", shader.name))
+}
+
+/// The stages that see a binding, as one entry point's stage.
+fn stages_of(stage: naga::ShaderStage) -> Stages {
+  match stage {
+    naga::ShaderStage::Vertex => Stages::VERTEX,
+    naga::ShaderStage::Fragment => Stages::FRAGMENT,
+    naga::ShaderStage::Compute => Stages::COMPUTE,
+    other => panic!("{other:?} shaders are not precompiled"),
+  }
 }
 
 /// The file `key` names in `cache`, made by `compile` unless an earlier build
-/// made it. `compile` writes to the path it is given, which is moved into
-/// place once complete, so an interrupted build leaves nothing behind.
+/// made it. `compile` writes to a path of its own, which is moved into place
+/// once complete, so an interrupted build leaves nothing behind. Shaders
+/// that share an entry point's text share its file, and the build scripts of
+/// several crates and the threads of one may make it at once: each writes
+/// its own, and whichever moves into place last stands, the same bytes.
 #[cfg_attr(not(any(target_os = "macos", target_os = "windows")), allow(dead_code))]
 fn cached(cache: &Path, key: impl Hash, extension: &str, compile: impl FnOnce(&Path)) -> PathBuf {
+  static COMPILES: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
   let mut hasher = DefaultHasher::new();
   key.hash(&mut hasher);
   let path = cache.join(format!("{:016x}.{extension}", hasher.finish()));
   if !path.exists() {
-    let partial = path.with_extension(format!("{extension}.partial"));
+    let compile_number = COMPILES.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+    let partial = path.with_extension(format!(
+      "{extension}.{}-{compile_number}.partial",
+      std::process::id()
+    ));
     compile(&partial);
-    std::fs::rename(&partial, &path)
-      .unwrap_or_else(|error| panic!("move {} into place: {error}", path.display()));
+    if let Err(error) = std::fs::rename(&partial, &path) {
+      assert!(path.exists(), "move {} into place: {error}", path.display());
+      let _ = std::fs::remove_file(&partial);
+    }
   }
   path
 }

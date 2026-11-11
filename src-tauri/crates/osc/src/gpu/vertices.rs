@@ -15,9 +15,7 @@ use geometry::is_empty;
 use geometry::ndc;
 use geometry::push_quad;
 
-pub use super::pipeline::{
-  bind_group_layout, pipeline, sampler, shader_module, RenderConstants, Vertex,
-};
+pub use super::pipeline::{pipeline, sampler, shader, RenderConstants, Vertex};
 use crate::geometry::{Point, Rect, Size};
 
 /// Lens edge length in points; the box is this times the display scale.

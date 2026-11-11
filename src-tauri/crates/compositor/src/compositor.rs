@@ -13,7 +13,6 @@ mod canvas_features;
 mod canvas_features_tests;
 mod canvas_modules;
 mod canvas_pipelines;
-mod canvas_precompiled;
 mod canvas_variants;
 /// A caption style's preview, drawn as the export draws it.
 pub mod caption_preview;
@@ -33,7 +32,6 @@ mod lens_under;
 mod mark_blur;
 mod mips;
 mod pipeline;
-mod preview_bindings;
 mod redact;
 mod redact_pipeline;
 mod redact_targets;

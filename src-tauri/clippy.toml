@@ -1,0 +1,6 @@
+# SPDX-FileCopyrightText: 2026 overpolish
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+disallowed-methods = [
+  { path = "wgpu::Device::create_shader_module", reason = "make shaders with screenwide_gpu::Shader, which takes the code the build precompiled and compiles WGSL only where there is none" },
+]

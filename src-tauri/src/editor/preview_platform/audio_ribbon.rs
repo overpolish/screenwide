@@ -7,6 +7,7 @@
 //! in drawable pixels.
 
 mod pipeline;
+mod ribbon_layout;
 #[cfg(test)]
 mod tests;
 

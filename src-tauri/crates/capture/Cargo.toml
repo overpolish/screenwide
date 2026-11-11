@@ -9,6 +9,9 @@ authors.workspace = true
 license.workspace = true
 edition.workspace = true
 
+[lints]
+workspace = true
+
 [lib]
 doctest = false
 
@@ -23,6 +26,7 @@ screenwide-gpu.workspace = true
 screenwide-osc.workspace = true
 screenwide-project.workspace = true
 screenwide-records.workspace = true
+screenwide-shader-layout.workspace = true
 screenwide-sidecar.workspace = true
 serde.workspace = true
 serde_json.workspace = true
@@ -104,4 +108,5 @@ windows = { workspace = true, features = [
 xcap = { workspace = true, features = ["wgc"] }
 
 [build-dependencies]
+screenwide-shader-layout.workspace = true
 screenwide-wgsl.workspace = true

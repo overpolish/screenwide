@@ -5,7 +5,7 @@
 //! shows what lies past its edge over it, so what will not be exported can
 //! still be seen, moved and deleted.
 
-use screenwide_gpu::Gpu;
+use screenwide_gpu::{Gpu, RenderStages, Shader};
 
 const SHADER: &str = include_str!(concat!(env!("OUT_DIR"), "/workspace_backdrop.wgsl"));
 
@@ -45,52 +45,23 @@ pub struct Backdrop {
 impl Backdrop {
   pub fn new(gpu: &Gpu) -> Self {
     let device = &gpu.device;
-    let module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
-      label: Some("Screenwide workspace backdrop shader"),
-      source: wgpu::ShaderSource::Wgsl(SHADER.into()),
-    });
-    let layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-      label: Some("Screenwide workspace backdrop bindings"),
-      entries: &[wgpu::BindGroupLayoutEntry {
-        binding: 0,
-        visibility: wgpu::ShaderStages::FRAGMENT,
-        ty: wgpu::BindingType::Buffer {
-          ty: wgpu::BufferBindingType::Uniform,
-          has_dynamic_offset: false,
-          min_binding_size: None,
-        },
-        count: None,
-      }],
-    });
-    let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-      label: Some("Screenwide workspace backdrop layout"),
-      bind_group_layouts: &[Some(&layout)],
-      immediate_size: 0,
-    });
-    let pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
-      label: Some("Screenwide workspace backdrop"),
-      layout: Some(&pipeline_layout),
-      vertex: wgpu::VertexState {
-        module: &module,
-        entry_point: Some("vs_main"),
-        compilation_options: Default::default(),
-        buffers: &[],
-      },
-      fragment: Some(wgpu::FragmentState {
-        module: &module,
-        entry_point: Some("fs_main"),
-        compilation_options: Default::default(),
-        targets: &[Some(wgpu::ColorTargetState {
-          format: screenwide_gpu::surface::FORMAT,
-          blend: None,
-          write_mask: wgpu::ColorWrites::ALL,
-        })],
-      }),
+    let shader = Shader::new(
+      device,
+      "Screenwide workspace backdrop",
+      &crate::shader_layouts::BACKDROP,
+      SHADER,
+      crate::precompiled_shaders::BACKDROP,
+    );
+    let pipeline = shader.render_pipeline(&RenderStages {
+      label: "Screenwide workspace backdrop",
+      vertex: "vs_main",
+      fragment: "fs_main",
+      targets: &[Some(wgpu::ColorTargetState {
+        format: screenwide_gpu::surface::FORMAT,
+        blend: None,
+        write_mask: wgpu::ColorWrites::ALL,
+      })],
       primitive: Default::default(),
-      depth_stencil: None,
-      multisample: Default::default(),
-      multiview_mask: None,
-      cache: None,
     });
     let constants = device.create_buffer(&wgpu::BufferDescriptor {
       label: Some("Screenwide workspace backdrop constants"),
@@ -100,7 +71,7 @@ impl Backdrop {
     });
     let bindings = device.create_bind_group(&wgpu::BindGroupDescriptor {
       label: Some("Screenwide workspace backdrop bindings"),
-      layout: &layout,
+      layout: shader.bind_group_layout(0),
       entries: &[wgpu::BindGroupEntry {
         binding: 0,
         resource: constants.as_entire_binding(),

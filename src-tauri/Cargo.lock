@@ -5629,6 +5629,7 @@ dependencies = [
  "screenwide-records",
  "screenwide-scenes",
  "screenwide-settings-preview",
+ "screenwide-shader-layout",
  "screenwide-sidecar",
  "screenwide-speech",
  "screenwide-text",
@@ -5738,6 +5739,7 @@ dependencies = [
  "screenwide-osc",
  "screenwide-project",
  "screenwide-records",
+ "screenwide-shader-layout",
  "screenwide-sidecar",
  "screenwide-wgsl",
  "serde",
@@ -5767,6 +5769,7 @@ dependencies = [
  "screenwide-output",
  "screenwide-placement",
  "screenwide-scenes",
+ "screenwide-shader-layout",
  "screenwide-text",
  "screenwide-wgsl",
  "serde",
@@ -5809,6 +5812,7 @@ dependencies = [
  "screenwide-output",
  "screenwide-records",
  "screenwide-scenes",
+ "screenwide-shader-layout",
  "screenwide-sidecar",
  "screenwide-text",
  "screenwide-timeline",
@@ -5832,6 +5836,7 @@ dependencies = [
  "objc2-io-surface",
  "objc2-metal",
  "pollster",
+ "screenwide-shader-layout",
  "screenwide-wgsl",
  "wgpu",
  "windows 0.62.2",
@@ -5937,6 +5942,7 @@ dependencies = [
  "screenwide-accent",
  "screenwide-gpu",
  "screenwide-scenes",
+ "screenwide-shader-layout",
  "screenwide-wgsl",
  "serde",
  "wgpu",
@@ -5956,6 +5962,7 @@ dependencies = [
  "screenwide-gpu",
  "screenwide-imaging",
  "screenwide-scenes",
+ "screenwide-shader-layout",
  "screenwide-wgsl",
  "serde",
  "serde_json",
@@ -6030,12 +6037,18 @@ dependencies = [
  "screenwide-output",
  "screenwide-records",
  "screenwide-scenes",
+ "screenwide-shader-layout",
+ "screenwide-wgsl",
  "serde",
  "serde_json",
  "ts-rs",
  "wgpu",
  "windows 0.62.2",
 ]
+
+[[package]]
+name = "screenwide-shader-layout"
+version = "1.0.3"
 
 [[package]]
 name = "screenwide-sidecar"
@@ -6102,6 +6115,8 @@ name = "screenwide-wgsl"
 version = "1.0.3"
 dependencies = [
  "naga",
+ "naga-types",
+ "screenwide-shader-layout",
 ]
 
 [[package]]
@@ -6127,6 +6142,7 @@ dependencies = [
  "screenwide-osc",
  "screenwide-output",
  "screenwide-scenes",
+ "screenwide-shader-layout",
  "screenwide-text",
  "screenwide-wgsl",
  "wgpu",

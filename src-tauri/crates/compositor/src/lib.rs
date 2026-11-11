@@ -17,10 +17,16 @@ pub mod compositor;
 pub mod keyboard_artwork;
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 pub mod object_picking;
+#[cfg(any(target_os = "macos", target_os = "windows"))]
+mod precompiled_shaders {
+  include!(concat!(env!("OUT_DIR"), "/precompiled_shaders.rs"));
+}
 #[cfg(target_os = "macos")]
 pub mod platform_macos;
 #[cfg(target_os = "windows")]
 pub mod platform_windows;
+#[cfg(any(target_os = "macos", target_os = "windows"))]
+mod shader_layouts;
 pub mod workspace_editor;
 pub mod workspace_transform;
 

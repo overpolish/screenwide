@@ -11,12 +11,14 @@
 //! box drawn over another averages what the first left. Two targets take
 //! turns being that copy.
 
-use super::redact_pipeline::{bind_group_layout, draw, pipeline, records_buffer, RECORD_STRIDE};
+use super::redact_pipeline::{draw, pipeline, records_buffer, RECORD_STRIDE};
 use super::redact_targets::{target, Scratch, Target};
 use super::*;
+use crate::precompiled_shaders::{REDACT_CELLS, REDACT_PAINT, REDACT_ROWS};
 use screenwide_annotations::redact::records::{
   RedactRecord, RedactRecords, REDACT_BLUR, REDACT_MOSAIC, REDACT_SPOTLIGHT,
 };
+use screenwide_gpu::Shader;
 
 const CELLS_SHADER: &str = include_str!(concat!(env!("OUT_DIR"), "/redact_cells.wgsl"));
 const ROWS_SHADER: &str = include_str!(concat!(env!("OUT_DIR"), "/redact_rows.wgsl"));
@@ -55,24 +57,30 @@ pub(crate) struct Redactor {
 impl Redactor {
   pub(super) fn new(gpu: &Gpu) -> Self {
     let device = &gpu.device;
-    let layout = bind_group_layout(device);
-    let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-      label: Some("Screenwide redaction layout"),
-      bind_group_layouts: &[Some(&layout)],
-      immediate_size: 0,
-    });
-    let pipeline = |source, format| pipeline(device, &pipeline_layout, source, format);
+    let shader = |label, wgsl, precompiled| {
+      Shader::new(
+        device,
+        label,
+        &crate::shader_layouts::REDACT,
+        wgsl,
+        precompiled,
+      )
+    };
+    let cells_shader = shader("Screenwide redaction cells", CELLS_SHADER, REDACT_CELLS);
+    let rows_shader = shader("Screenwide redaction rows", ROWS_SHADER, REDACT_ROWS);
+    let paint_shader = shader("Screenwide redaction paint", PAINT_SHADER, REDACT_PAINT);
     let cells = Scratch::new(wgpu::TextureFormat::Rgba8Unorm);
     let rows = Scratch::new(wgpu::TextureFormat::Rgba16Float);
-    let paint = |format| (format, pipeline(PAINT_SHADER, format));
+    let paint = |format| (format, pipeline(&paint_shader, format));
     Self {
-      cells_pipeline: pipeline(CELLS_SHADER, cells.format()),
-      rows_pipeline: pipeline(ROWS_SHADER, rows.format()),
+      cells_pipeline: pipeline(&cells_shader, cells.format()),
+      rows_pipeline: pipeline(&rows_shader, rows.format()),
       paint_pipelines: [
         paint(wgpu::TextureFormat::Bgra8Unorm),
         paint(wgpu::TextureFormat::Rgba8Unorm),
       ],
-      layout,
+      // Every pass's layout is the same, which wgpu makes one layout of.
+      layout: cells_shader.bind_group_layout(0).clone(),
       records: std::sync::Mutex::new(records_buffer(gpu, 8)),
       zones: GpuBuffer::new(gpu, "Screenwide redaction zones"),
       work: std::sync::Mutex::new(std::collections::HashMap::new()),

@@ -12,10 +12,16 @@ pub mod geometry;
 pub mod gesture;
 pub mod gpu;
 pub mod protocol;
+#[cfg(any(target_os = "macos", target_os = "windows"))]
+mod precompiled_shaders {
+  include!(concat!(env!("OUT_DIR"), "/precompiled_shaders.rs"));
+}
 mod resize;
 pub mod scene;
 pub mod semantic;
 pub mod session;
+#[cfg(any(target_os = "macos", target_os = "windows"))]
+mod shader_layouts;
 pub mod style;
 pub mod turn;
 

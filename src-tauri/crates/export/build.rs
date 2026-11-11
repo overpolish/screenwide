@@ -1,7 +1,13 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+#[path = "src/shader_layouts.rs"]
+mod shader_layouts;
+
+use screenwide_wgsl::{assembled, Precompiled};
+
 fn main() {
+  println!("cargo:rerun-if-changed=src/shader_layouts.rs");
   screenwide_wgsl::assemble(&[(
     "camera_effects",
     &[
@@ -11,6 +17,15 @@ fn main() {
       "../compositor/src/shaders/fsr1.wgsl",
     ],
   )]);
+  screenwide_wgsl::precompile(
+    "precompiled_shaders.rs",
+    &[Precompiled {
+      name: "CAMERA_EFFECTS",
+      source: assembled("camera_effects"),
+      layout: &shader_layouts::CAMERA_EFFECTS,
+      entry_points: &["vs_main", "fs_effects"],
+    }],
+  );
   // Build scripts run on the host, so the target is read from Cargo rather
   // than `cfg!`: a Windows build from macOS must not compile Objective-C.
   if std::env::var("CARGO_CFG_TARGET_OS").as_deref() == Ok("macos") {

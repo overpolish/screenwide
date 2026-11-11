@@ -16,7 +16,11 @@ pub mod media_preview;
 pub mod pin_cache;
 pub mod pin_paths;
 pub mod recording_model;
+mod precompiled_shaders {
+  include!(concat!(env!("OUT_DIR"), "/precompiled_shaders.rs"));
+}
 #[cfg(all(test, any(target_os = "macos", target_os = "windows")))]
 mod render_tests;
 pub mod scenes;
+mod shader_layouts;
 pub mod track_selection;

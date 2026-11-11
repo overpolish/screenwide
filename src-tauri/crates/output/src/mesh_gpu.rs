@@ -40,6 +40,7 @@ struct MeshUniforms {
 
 struct Renderer {
   gpu: Arc<screenwide_gpu::Gpu>,
+  shader: screenwide_gpu::Shader,
   pipeline: wgpu::ComputePipeline,
 }
 
@@ -52,23 +53,19 @@ fn renderer() -> Result<Arc<Renderer>, String> {
 impl Renderer {
   fn new(gpu: &Arc<screenwide_gpu::Gpu>) -> Result<Self, String> {
     let gpu = Arc::clone(gpu);
-    let shader = gpu
-      .device
-      .create_shader_module(wgpu::ShaderModuleDescriptor {
-        label: Some("Screenwide mesh shader"),
-        source: wgpu::ShaderSource::Wgsl(SHADER.into()),
-      });
-    let pipeline = gpu
-      .device
-      .create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
-        label: Some("Screenwide mesh pipeline"),
-        layout: None,
-        module: &shader,
-        entry_point: Some("main"),
-        compilation_options: Default::default(),
-        cache: None,
-      });
-    Ok(Self { gpu, pipeline })
+    let shader = screenwide_gpu::Shader::new(
+      &gpu.device,
+      "Screenwide mesh",
+      &crate::shader_layouts::MESH,
+      SHADER,
+      crate::precompiled_shaders::MESH,
+    );
+    let pipeline = shader.compute_pipeline("Screenwide mesh pipeline", "main");
+    Ok(Self {
+      gpu,
+      shader,
+      pipeline,
+    })
   }
 
   fn render(&self, width: u32, height: u32, uniforms: &MeshUniforms) -> Result<Vec<u8>, String> {
@@ -95,7 +92,7 @@ impl Renderer {
     let view = texture.create_view(&Default::default());
     let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
       label: Some("Screenwide mesh bindings"),
-      layout: &self.pipeline.get_bind_group_layout(0),
+      layout: self.shader.bind_group_layout(0),
       entries: &[
         wgpu::BindGroupEntry {
           binding: 0,

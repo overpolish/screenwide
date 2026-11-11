@@ -10,15 +10,14 @@
 //! A variant is compiled the first time something asks for it, and every
 //! compositor on the device shares them. The variant with no annotation and
 //! the one with every kind come compiled from the build
-//! ([`super::canvas_precompiled`]), so all that is left of them here is the
+//! (`screenwide_wgsl::precompile`), so all that is left of them here is the
 //! GPU driver's own pass, which the system keeps. Any other set is compiled
 //! from WGSL when first asked for: on Windows that takes seconds, every
 //! launch, as nothing keeps DXC's output. A draw takes its own variant where
 //! it is ready; otherwise the smallest ready variant holding all its kinds,
-//! which draws the same picture more slowly; and only otherwise waits for its
-//! own. A preview keeps the variant with every kind ready, so a kind new to
-//! what it draws is drawn at once, and compiles the set it was missing in the
-//! background, which the frames after it change to.
+//! which draws the same picture more slowly; otherwise the one with every
+//! kind, which the build compiled, while its own compiles in the background
+//! for the frames after it. No draw waits for a variant to compile.
 //!
 //! An export draws every annotated frame with the variant with every kind
 //! ([`Compositor::hold_every_annotation_kind`]) and compiles nothing.
@@ -50,9 +49,9 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex, OnceLock, PoisonError};
 
 use super::canvas_features::{FeatureMask, ALL_FEATURES};
-use super::canvas_modules::{self, CanvasModules};
+use super::canvas_modules;
 use super::canvas_variants::{covers, every_kind, KindMask};
-use screenwide_gpu::Gpu;
+use screenwide_gpu::{Gpu, Shader};
 
 mod variant_choice;
 pub use variant_choice::EveryAnnotationKind;
@@ -70,7 +69,6 @@ pub(super) enum Target {
 
 pub(super) struct CanvasPipelines {
   device: wgpu::Device,
-  layout: wgpu::PipelineLayout,
   variants: Mutex<HashMap<(KindMask, FeatureMask), Arc<Variant>>>,
   /// Whether a draw missing its variant starts compiling it on another
   /// thread, as a preview's does, rather than only waiting for it.
@@ -83,16 +81,16 @@ pub(super) struct CanvasPipelines {
 /// The canvas pipelines every compositor on `gpu` shares, and the bind group
 /// layout their bindings are made against: two previews, the stills and an
 /// export then compile each variant once between them.
-pub(super) fn shared(
-  gpu: &Arc<Gpu>,
-  bindings: impl FnOnce() -> wgpu::BindGroupLayout,
-) -> (wgpu::BindGroupLayout, Arc<CanvasPipelines>) {
+pub(super) fn shared(gpu: &Arc<Gpu>) -> (wgpu::BindGroupLayout, Arc<CanvasPipelines>) {
   static SHARED: screenwide_gpu::DeviceCache<(wgpu::BindGroupLayout, Arc<CanvasPipelines>)> =
     screenwide_gpu::DeviceCache::new();
   let made = SHARED.get_or_try_init(gpu, |gpu| {
-    let layout = bindings();
-    let canvas = Arc::new(CanvasPipelines::new(&gpu.device, &layout));
-    Ok((layout, canvas))
+    let layout = screenwide_gpu::bind_group_layout(
+      &gpu.device,
+      "Screenwide preview bindings",
+      crate::shader_layouts::PREVIEW.groups[0],
+    );
+    Ok((layout, Arc::new(CanvasPipelines::new(&gpu.device))))
   });
   match made {
     Ok(made) => (made.0.clone(), Arc::clone(&made.1)),
@@ -106,7 +104,7 @@ struct Variant {
   kinds: KindMask,
   features: FeatureMask,
   precompiled: bool,
-  modules: OnceLock<CanvasModules>,
+  modules: OnceLock<Shader>,
   pipelines: [OnceLock<wgpu::RenderPipeline>; 3],
   /// Which targets a background thread is compiling already.
   queued: [AtomicBool; 3],
@@ -115,49 +113,31 @@ struct Variant {
 impl Variant {
   /// The pipeline for `target`, compiled here unless it is ready. A thread
   /// compiling it already is waited for rather than repeated.
-  fn pipeline(
-    &self,
-    device: &wgpu::Device,
-    layout: &wgpu::PipelineLayout,
-    target: Target,
-  ) -> &wgpu::RenderPipeline {
+  fn pipeline(&self, device: &wgpu::Device, target: Target) -> &wgpu::RenderPipeline {
     self.pipelines[target as usize].get_or_init(|| {
-      let modules = self.modules.get_or_init(|| {
-        canvas_modules::modules(device, self.kinds, self.features, self.precompiled)
+      let shader = self.modules.get_or_init(|| {
+        canvas_modules::shader(device, self.kinds, self.features, self.precompiled)
       });
-      canvas_modules::pipeline(device, layout, modules, target)
+      canvas_modules::pipeline(shader, target)
     })
   }
 }
 
 impl CanvasPipelines {
-  pub(super) fn new(device: &wgpu::Device, bindings: &wgpu::BindGroupLayout) -> Self {
-    Self::with_precompiled(device, bindings, true)
+  pub(super) fn new(device: &wgpu::Device) -> Self {
+    Self::with_precompiled(device, true)
   }
 
   /// Pipelines that compile every variant from WGSL, the precompiled ones
   /// included: what the build's output is checked against.
   #[cfg(test)]
-  pub(super) fn compiled_from_wgsl(
-    device: &wgpu::Device,
-    bindings: &wgpu::BindGroupLayout,
-  ) -> Self {
-    Self::with_precompiled(device, bindings, false)
+  pub(super) fn compiled_from_wgsl(device: &wgpu::Device) -> Self {
+    Self::with_precompiled(device, false)
   }
 
-  fn with_precompiled(
-    device: &wgpu::Device,
-    bindings: &wgpu::BindGroupLayout,
-    precompiled: bool,
-  ) -> Self {
-    let layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-      label: Some("Screenwide preview layout"),
-      bind_group_layouts: &[Some(bindings)],
-      immediate_size: 0,
-    });
+  fn with_precompiled(device: &wgpu::Device, precompiled: bool) -> Self {
     Self {
       device: device.clone(),
-      layout,
       variants: Mutex::default(),
       in_background: AtomicBool::new(false),
       precompiled,
@@ -183,7 +163,7 @@ impl CanvasPipelines {
   /// in the background where it is not; otherwise one keeping every feature:
   /// with `every`, the one with every kind for any annotated draw; otherwise
   /// their own where it is ready, else the smallest ready one holding them
-  /// all, else their own, compiled now.
+  /// all, else the one with every kind, which the build compiled.
   pub(super) fn get(
     &self,
     target: Target,
@@ -198,19 +178,23 @@ impl CanvasPipelines {
       }
       #[cfg(test)]
       if super::canvas_features::TEST_SLIM.get() == Some(true) {
-        return slim.pipeline(&self.device, &self.layout, target).clone();
+        return slim.pipeline(&self.device, target).clone();
       }
       self.compile_in_background(&slim, target);
     }
     if (every || ALWAYS_EVERY_KIND) && kinds != 0 {
       return self
         .variant(every_kind(), ALL_FEATURES)
-        .pipeline(&self.device, &self.layout, target)
+        .pipeline(&self.device, target)
         .clone();
     }
     let own = self.variant(kinds, ALL_FEATURES);
     if let Some(pipeline) = own.pipelines[target as usize].get() {
       return pipeline.clone();
+    }
+    // With no annotation, its own came compiled from the build.
+    if kinds == 0 {
+      return own.pipeline(&self.device, target).clone();
     }
     if self.in_background.load(Ordering::Relaxed) {
       self.compile_in_background(&own, target);
@@ -218,7 +202,10 @@ impl CanvasPipelines {
     if let Some(pipeline) = self.ready_cover(target, kinds) {
       return pipeline;
     }
-    own.pipeline(&self.device, &self.layout, target).clone()
+    self
+      .variant(every_kind(), ALL_FEATURES)
+      .pipeline(&self.device, target)
+      .clone()
   }
 
   /// The smallest ready variant for `target` keeping every feature that holds
@@ -240,15 +227,11 @@ impl CanvasPipelines {
     if variant.queued[target as usize].swap(true, Ordering::AcqRel) {
       return;
     }
-    let (task, device, layout) = (
-      Arc::clone(variant),
-      self.device.clone(),
-      self.layout.clone(),
-    );
+    let (task, device) = (Arc::clone(variant), self.device.clone());
     let spawned = std::thread::Builder::new()
       .name("canvas-shader".to_owned())
       .spawn(move || {
-        task.pipeline(&device, &layout, target);
+        task.pipeline(&device, target);
       });
     if spawned.is_err() {
       // Without a thread, the draw that next asks compiles it instead.

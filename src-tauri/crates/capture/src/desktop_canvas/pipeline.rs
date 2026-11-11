@@ -4,75 +4,29 @@
 //! The canvas pipeline and the resources every frame reuses.
 
 use super::*;
+use screenwide_gpu::{RenderStages, Shader};
 
 impl DesktopCanvas {
   /// A `width` by `height` canvas for at most `pieces` pieces.
   pub(crate) fn new(gpu: &std::sync::Arc<Gpu>, width: u32, height: u32, pieces: usize) -> Self {
     let device = &gpu.device;
-    let module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
-      label: Some("Screenwide desktop compositor shader"),
-      source: wgpu::ShaderSource::Wgsl(SHADER.into()),
-    });
-    let layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-      label: Some("Screenwide desktop compositor bindings"),
-      entries: &[
-        wgpu::BindGroupLayoutEntry {
-          binding: 0,
-          visibility: wgpu::ShaderStages::VERTEX,
-          ty: wgpu::BindingType::Buffer {
-            ty: wgpu::BufferBindingType::Uniform,
-            has_dynamic_offset: true,
-            min_binding_size: wgpu::BufferSize::new(size_of::<PieceConstants>() as u64),
-          },
-          count: None,
-        },
-        wgpu::BindGroupLayoutEntry {
-          binding: 1,
-          visibility: wgpu::ShaderStages::FRAGMENT,
-          ty: wgpu::BindingType::Texture {
-            sample_type: wgpu::TextureSampleType::Float { filterable: true },
-            view_dimension: wgpu::TextureViewDimension::D2,
-            multisampled: false,
-          },
-          count: None,
-        },
-        wgpu::BindGroupLayoutEntry {
-          binding: 2,
-          visibility: wgpu::ShaderStages::FRAGMENT,
-          ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
-          count: None,
-        },
-      ],
-    });
-    let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-      label: Some("Screenwide desktop compositor layout"),
-      bind_group_layouts: &[Some(&layout)],
-      immediate_size: 0,
-    });
-    let pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
-      label: Some("Screenwide desktop compositor pipeline"),
-      layout: Some(&pipeline_layout),
-      vertex: wgpu::VertexState {
-        module: &module,
-        entry_point: Some("vs_main"),
-        compilation_options: Default::default(),
-        buffers: &[],
-      },
-      fragment: Some(wgpu::FragmentState {
-        module: &module,
-        entry_point: Some("fs_main"),
-        compilation_options: Default::default(),
-        targets: &[Some(wgpu::ColorTargetState {
-          format: FORMAT,
-          blend: None,
-          write_mask: wgpu::ColorWrites::ALL,
-        })],
-      }),
+    let shader = Shader::new(
+      device,
+      "Screenwide desktop compositor",
+      &crate::shader_layouts::DESKTOP_COMPOSITOR,
+      SHADER,
+      crate::precompiled_shaders::DESKTOP_COMPOSITOR,
+    );
+    let pipeline = shader.render_pipeline(&RenderStages {
+      label: "Screenwide desktop compositor pipeline",
+      vertex: "vs_main",
+      fragment: "fs_main",
+      targets: &[Some(wgpu::ColorTargetState {
+        format: FORMAT,
+        blend: None,
+        write_mask: wgpu::ColorWrites::ALL,
+      })],
       primitive: Default::default(),
-      depth_stencil: None,
-      multisample: Default::default(),
-      multiview_mask: None,
-      cache: None,
     });
     let alignment = u64::from(device.limits().min_uniform_buffer_offset_alignment);
     let stride = (size_of::<PieceConstants>() as u64).next_multiple_of(alignment);
@@ -80,7 +34,7 @@ impl DesktopCanvas {
       gpu: std::sync::Arc::clone(gpu),
       width,
       height,
-      layout,
+      layout: shader.bind_group_layout(0).clone(),
       pipeline,
       sampler: device.create_sampler(&wgpu::SamplerDescriptor {
         label: Some("Screenwide desktop compositor sampler"),

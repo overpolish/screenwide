@@ -56,10 +56,8 @@ const MODULES: &[(&str, &[&str])] = &[
 ];
 
 fn main() {
-  let out_dir =
-    std::path::PathBuf::from(std::env::var_os("OUT_DIR").expect("Cargo supplied OUT_DIR"));
   screenwide_wgsl::assemble(MODULES);
-  precompiled_shaders::precompile(&out_dir);
+  precompiled_shaders::precompile();
   // Build scripts run on the host, so the target is read from Cargo rather
   // than `cfg!`: a Windows build from macOS must not compile Objective-C.
   if std::env::var("CARGO_CFG_TARGET_OS").as_deref() == Ok("macos") {

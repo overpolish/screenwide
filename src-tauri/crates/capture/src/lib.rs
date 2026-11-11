@@ -34,7 +34,13 @@ pub mod platform;
 pub mod platform_unsupported;
 #[cfg(target_os = "windows")]
 pub mod platform_windows;
+#[cfg(any(target_os = "macos", target_os = "windows"))]
+mod precompiled_shaders {
+  include!(concat!(env!("OUT_DIR"), "/precompiled_shaders.rs"));
+}
 pub mod replay_ring;
+#[cfg(any(target_os = "macos", target_os = "windows"))]
+mod shader_layouts;
 pub mod sidecar_output;
 pub mod types;
 

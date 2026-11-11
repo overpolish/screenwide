@@ -26,6 +26,7 @@ screenwide-annotations.workspace = true
 screenwide-gpu.workspace = true
 screenwide-imaging.workspace = true
 screenwide-scenes.workspace = true
+screenwide-shader-layout.workspace = true
 serde.workspace = true
 ts-rs.workspace = true
 wgpu.workspace = true
@@ -35,4 +36,5 @@ serde_json.workspace = true
 
 [build-dependencies]
 cc.workspace = true
+screenwide-shader-layout.workspace = true
 screenwide-wgsl.workspace = true

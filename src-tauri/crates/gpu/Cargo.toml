@@ -17,10 +17,12 @@ doctest = false
 
 [dependencies]
 pollster.workspace = true
+screenwide-shader-layout.workspace = true
 wgpu.workspace = true
 
 [build-dependencies]
 screenwide-wgsl.workspace = true
+screenwide-shader-layout.workspace = true
 
 [target.'cfg(target_os = "macos")'.dependencies]
 cidre.workspace = true

@@ -22,8 +22,14 @@ pub mod mesh_generator;
 #[cfg_attr(target_os = "macos", allow(dead_code))]
 mod mesh_gpu;
 mod output;
+#[cfg_attr(target_os = "macos", allow(dead_code))]
+mod precompiled_shaders {
+  include!(concat!(env!("OUT_DIR"), "/precompiled_shaders.rs"));
+}
 mod placement;
 mod recenter;
+#[cfg_attr(target_os = "macos", allow(dead_code))]
+mod shader_layouts;
 mod source_crop;
 
 pub use background_image::{

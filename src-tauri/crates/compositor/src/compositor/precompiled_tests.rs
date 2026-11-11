@@ -1,19 +1,19 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! The canvas variants the build compiled draw what the same shader compiled
-//! from WGSL draws. The build lays out the shader's bindings itself, the way
-//! it expects wgpu to lay out the preview's bind group; a wrong expectation,
-//! after a wgpu upgrade say, shows here as a different picture rather than as
-//! a broken first frame in the editor.
+//! The shaders the build compiled draw what the same shaders compiled from
+//! WGSL draw. The build lays out each shader's bindings itself, the way it
+//! expects wgpu to lay out the shader's layout; a wrong expectation, after a
+//! wgpu upgrade say, shows here as a different picture rather than as a
+//! broken first frame in the editor.
 
 use screenwide_imaging::CapturedImage;
 use std::sync::Arc;
 
 use super::canvas_pipelines::CanvasPipelines;
-use super::canvas_variants::every_kind;
 use super::render_test_helpers::{compositor, gpu, target, view, OUTPUT};
 use super::*;
+use crate::precompiled_shaders::{EVERY_KIND, NO_ANNOTATIONS};
 use screenwide_annotations::arrow::new_arrow;
 use screenwide_annotations::counter::new_counter;
 use screenwide_annotations::redact::new_redact;
@@ -34,8 +34,9 @@ fn picture() -> CapturedImage {
   }
 }
 
-/// An arrow, a counter and a redaction: annotation buffers, the counter
-/// atlas and its sampler, and the redaction pre-pass all read.
+/// An arrow, a counter, a redaction and a focus: annotation buffers, the
+/// counter atlas and its sampler, the tile binning, the redaction pre-pass,
+/// and the focus chain and its gather all read.
 fn annotations() -> Vec<Annotation> {
   let point = |x, y| AnnotationPoint { x, y };
   let mut redaction = new_redact("redaction".to_owned(), point(40.0, 8.0), None);
@@ -46,6 +47,11 @@ fn annotations() -> Vec<Annotation> {
     new_arrow("arrow".to_owned(), point(8.0, 8.0), point(56.0, 40.0), None),
     new_counter("counter".to_owned(), point(20.0, 48.0), 1, None, None),
     redaction,
+    screenwide_annotations::focus::model::new_focus(
+      "focus".to_owned(),
+      [point(4.0, 30.0), point(30.0, 60.0)],
+      None,
+    ),
   ]
 }
 
@@ -105,13 +111,11 @@ fn drawn(compositor: &Compositor, annotations: Vec<Annotation>) -> Vec<u8> {
   gpu().read_texture(&output).unwrap()
 }
 
-/// A compositor whose canvas variants are all compiled from WGSL.
+/// A compositor whose shaders are all compiled from WGSL: its own passes,
+/// and every canvas variant, which compositors on a device share.
 fn compiled_from_wgsl() -> Compositor {
-  let mut compositor = compositor();
-  compositor.canvas = Arc::new(CanvasPipelines::compiled_from_wgsl(
-    &gpu().device,
-    &compositor.layout,
-  ));
+  let mut compositor = screenwide_gpu::compiling_wgsl(compositor);
+  compositor.canvas = Arc::new(CanvasPipelines::compiled_from_wgsl(&gpu().device));
   compositor
 }
 
@@ -137,13 +141,18 @@ fn assert_same_pixels(precompiled: &[u8], compiled: &[u8], what: &str) {
 
 #[test]
 #[ignore = "requires a GPU adapter"]
-fn the_precompiled_variants_draw_what_wgsl_draws() {
-  for kinds in [0, every_kind()] {
-    assert!(
-      super::canvas_precompiled::modules(&gpu().device, kinds).is_some(),
-      "the build compiled no variant for kinds {kinds:#x} on this device"
-    );
-  }
+fn the_precompiled_shaders_draw_what_wgsl_draws() {
+  assert!(
+    gpu()
+      .device
+      .features()
+      .contains(wgpu::Features::PASSTHROUGH_SHADERS),
+    "this device takes no compiled shaders"
+  );
+  assert!(
+    NO_ANNOTATIONS.is_some() && EVERY_KIND.is_some(),
+    "the build compiled no canvas variants for this platform"
+  );
   let precompiled = compositor();
   let compiled = compiled_from_wgsl();
   let bare = drawn(&precompiled, Vec::new());

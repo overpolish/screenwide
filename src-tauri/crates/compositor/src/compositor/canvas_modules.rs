@@ -1,52 +1,43 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! A canvas variant's shader modules, from what the build compiled or from
-//! WGSL, and the render pipeline built from them for each target.
+//! A canvas variant's shader, from what the build compiled or from WGSL, and
+//! the render pipeline built from it for each target.
+
+use screenwide_gpu::{RenderStages, Shader};
 
 use super::canvas_features::{self, FeatureMask, ALL_FEATURES};
 use super::canvas_pipelines::Target;
-use super::canvas_precompiled;
-use super::canvas_variants::{source, KindMask};
+use super::canvas_variants::{every_kind, source, KindMask};
 use super::{mark_blur::LAYER_FORMAT, FORMAT};
+use crate::precompiled_shaders::{EVERY_KIND, NO_ANNOTATIONS};
 
-/// A variant's stages. Compiled from WGSL, both are the one module; the
-/// build compiles each stage to a module of its own.
-pub(super) struct CanvasModules {
-  pub(super) vertex: wgpu::ShaderModule,
-  pub(super) fragment: wgpu::ShaderModule,
-}
-
-/// The modules drawing `kinds` keeping `features`: the build's where it
-/// compiled them and `precompiled` allows, otherwise compiled from WGSL. The
-/// build compiles only variants keeping every feature.
-pub(super) fn modules(
+/// The shader drawing `kinds` keeping `features`: the build's where it
+/// compiled it and `precompiled` allows, otherwise compiled from WGSL. The
+/// build compiles the variant with no annotation and the one with every
+/// kind, both keeping every feature.
+pub(super) fn shader(
   device: &wgpu::Device,
   kinds: KindMask,
   features: FeatureMask,
   precompiled: bool,
-) -> CanvasModules {
-  (precompiled && features == ALL_FEATURES)
-    .then(|| canvas_precompiled::modules(device, kinds))
-    .flatten()
-    .unwrap_or_else(|| {
-      let module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
-        label: Some("Screenwide preview shader"),
-        source: wgpu::ShaderSource::Wgsl(canvas_features::keeping(source(kinds), features).into()),
-      });
-      CanvasModules {
-        vertex: module.clone(),
-        fragment: module,
-      }
-    })
+) -> Shader {
+  let built = match kinds {
+    _ if !precompiled || features != ALL_FEATURES => None,
+    0 => NO_ANNOTATIONS,
+    kinds if kinds == every_kind() => EVERY_KIND,
+    _ => None,
+  };
+  Shader::new(
+    device,
+    "Screenwide preview",
+    &crate::shader_layouts::PREVIEW,
+    &canvas_features::keeping(source(kinds), features),
+    built,
+  )
 }
 
-pub(super) fn pipeline(
-  device: &wgpu::Device,
-  layout: &wgpu::PipelineLayout,
-  modules: &CanvasModules,
-  target: Target,
-) -> wgpu::RenderPipeline {
+pub(super) fn pipeline(shader: &Shader, target: Target) -> wgpu::RenderPipeline {
   let format = match target {
     Target::Canvas | Target::Layer => FORMAT,
     Target::Delta => LAYER_FORMAT,
@@ -58,32 +49,18 @@ pub(super) fn pipeline(
     dst_factor: wgpu::BlendFactor::OneMinusSrcAlpha,
     operation: wgpu::BlendOperation::Add,
   };
-  device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
-    label: Some("Screenwide preview pipeline"),
-    layout: Some(layout),
-    vertex: wgpu::VertexState {
-      module: &modules.vertex,
-      entry_point: Some("vs_main"),
-      compilation_options: Default::default(),
-      buffers: &[],
-    },
-    fragment: Some(wgpu::FragmentState {
-      module: &modules.fragment,
-      entry_point: Some("fs_main"),
-      compilation_options: Default::default(),
-      targets: &[Some(wgpu::ColorTargetState {
-        format,
-        blend: matches!(target, Target::Layer).then_some(wgpu::BlendState {
-          color: over,
-          alpha: over,
-        }),
-        write_mask: wgpu::ColorWrites::ALL,
-      })],
-    }),
+  shader.render_pipeline(&RenderStages {
+    label: "Screenwide preview pipeline",
+    vertex: "vs_main",
+    fragment: "fs_main",
+    targets: &[Some(wgpu::ColorTargetState {
+      format,
+      blend: matches!(target, Target::Layer).then_some(wgpu::BlendState {
+        color: over,
+        alpha: over,
+      }),
+      write_mask: wgpu::ColorWrites::ALL,
+    })],
     primitive: Default::default(),
-    depth_stencil: None,
-    multisample: Default::default(),
-    multiview_mask: None,
-    cache: None,
   })
 }

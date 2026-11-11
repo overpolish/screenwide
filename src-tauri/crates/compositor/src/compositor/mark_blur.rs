@@ -164,7 +164,7 @@ impl MarkBlur {
         mapped_at_creation: false,
       })
     };
-    let layout = pipeline::bind_group_layout(device);
+    let (pipeline, layout) = pipeline::pipeline(device);
     Self {
       constants: [
         uniform("Screenwide mark blur canvas", size_of::<Constants>()),
@@ -174,7 +174,7 @@ impl MarkBlur {
         uniform("Screenwide mark blur rows", size_of::<Axis>()),
         uniform("Screenwide mark blur columns", size_of::<Axis>()),
       ],
-      pipeline: pipeline::pipeline(device, &layout),
+      pipeline,
       layout,
       targets: Mutex::new(None),
     }

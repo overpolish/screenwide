@@ -6,7 +6,10 @@
 //! against every pixel otherwise, and on a large canvas that, not drawing
 //! them, is what an annotated frame spends its time on.
 
-use super::Gpu;
+use screenwide_gpu::Shader;
+
+use super::{Gpu, SHADER};
+use crate::precompiled_shaders::TILES;
 
 /// A tile's side in canvas pixels: small enough that a stroke's box leaves
 /// most of the canvas out, large enough that binning is a few thousand
@@ -16,8 +19,7 @@ const TILE_SIDE: u32 = 32;
 const WORKGROUP: u32 = 8;
 
 pub(super) struct AnnotationTiles {
-  inputs: wgpu::BindGroupLayout,
-  output: wgpu::BindGroupLayout,
+  shader: Shader,
   pipeline: wgpu::ComputePipeline,
   /// Every tile's set, rewritten by each draw that shows an annotation.
   masks: std::sync::Mutex<wgpu::Buffer>,
@@ -38,56 +40,20 @@ pub(super) fn grid(size: (u32, u32), total: u32) -> [u32; 4] {
 }
 
 impl AnnotationTiles {
-  pub(super) fn new(gpu: &Gpu, module: &wgpu::ShaderModule) -> Self {
-    let device = &gpu.device;
-    let entry = |binding, ty| wgpu::BindGroupLayoutEntry {
-      binding,
-      visibility: wgpu::ShaderStages::COMPUTE,
-      ty,
-      count: None,
-    };
-    let storage = |read_only| wgpu::BindingType::Buffer {
-      ty: wgpu::BufferBindingType::Storage { read_only },
-      has_dynamic_offset: false,
-      min_binding_size: None,
-    };
-    let inputs = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-      label: Some("Screenwide annotation tile inputs"),
-      entries: &[
-        entry(
-          0,
-          wgpu::BindingType::Buffer {
-            ty: wgpu::BufferBindingType::Uniform,
-            has_dynamic_offset: false,
-            min_binding_size: None,
-          },
-        ),
-        entry(7, storage(true)),
-        entry(8, storage(true)),
-        entry(10, storage(true)),
-      ],
-    });
-    let output = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-      label: Some("Screenwide annotation tile output"),
-      entries: &[entry(0, storage(false))],
-    });
-    let layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-      label: Some("Screenwide annotation tile layout"),
-      bind_group_layouts: &[Some(&inputs), Some(&output)],
-      immediate_size: 0,
-    });
-    let pipeline = device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
-      label: Some("Screenwide annotation tiles"),
-      layout: Some(&layout),
-      module,
-      entry_point: Some("bin_annotations"),
-      compilation_options: Default::default(),
-      cache: None,
-    });
+  /// Binning is an entry point of the canvas shader as written, which needs
+  /// every kind's reach; the build compiles it alone.
+  pub(super) fn new(gpu: &Gpu) -> Self {
+    let shader = Shader::new(
+      &gpu.device,
+      "Screenwide annotation tiles",
+      &crate::shader_layouts::TILES,
+      SHADER,
+      TILES,
+    );
+    let pipeline = shader.compute_pipeline("Screenwide annotation tiles", "bin_annotations");
     Self {
       masks: std::sync::Mutex::new(masks_buffer(gpu, 4)),
-      inputs,
-      output,
+      shader,
       pipeline,
     }
   }
@@ -127,7 +93,7 @@ impl AnnotationTiles {
     }
     let inputs = gpu.device.create_bind_group(&wgpu::BindGroupDescriptor {
       label: Some("Screenwide annotation tile inputs"),
-      layout: &self.inputs,
+      layout: self.shader.bind_group_layout(0),
       entries: &[
         bound(0, constants),
         bound(7, arrows),
@@ -137,7 +103,7 @@ impl AnnotationTiles {
     });
     let output = gpu.device.create_bind_group(&wgpu::BindGroupDescriptor {
       label: Some("Screenwide annotation tile output"),
-      layout: &self.output,
+      layout: self.shader.bind_group_layout(1),
       entries: &[bound(0, &masks)],
     });
     let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {

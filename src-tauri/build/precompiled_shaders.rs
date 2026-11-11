@@ -1,41 +1,39 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! The annotate overlay's shader compiled ahead of time
+//! The app crate's shaders compiled ahead of time
 //! (`screenwide_wgsl::precompile`) into `OUT_DIR/precompiled_shaders.rs`,
-//! which `src/annotate/overlay/pipeline.rs` includes.
+//! which `src/lib.rs` includes.
 
-use screenwide_wgsl::{Binding, Precompiled};
+use screenwide_wgsl::{assembled, Precompiled};
 
-#[path = "../src/annotate/overlay/overlay_bindings.rs"]
-mod overlay_bindings;
-
-use overlay_bindings::{OverlayBinding, OVERLAY_BINDINGS};
+#[path = "../src/annotate/overlay/overlay_layout.rs"]
+mod overlay_layout;
+#[path = "../src/editor/preview_platform/audio_ribbon/ribbon_layout.rs"]
+mod ribbon_layout;
 
 pub(crate) fn precompile() {
-  println!("cargo:rerun-if-changed=src/annotate/overlay/overlay_bindings.rs");
-  let out_dir = std::env::var_os("OUT_DIR").expect("Cargo supplied OUT_DIR");
-  let source =
-    std::fs::read_to_string(std::path::Path::new(&out_dir).join("annotate_overlay.wgsl"))
-      .unwrap_or_else(|error| panic!("read the assembled annotate overlay shader: {error}"));
-  let bindings = OVERLAY_BINDINGS
-    .iter()
-    .map(|&(binding, kind)| {
-      let kind = match kind {
-        OverlayBinding::Uniform => Binding::Uniform,
-        OverlayBinding::Storage => Binding::Storage,
-        OverlayBinding::Texture => Binding::Texture,
-        OverlayBinding::Sampler => Binding::Sampler,
-      };
-      (binding, kind)
-    })
-    .collect();
+  println!("cargo:rerun-if-changed=src/annotate/overlay/overlay_layout.rs");
+  println!("cargo:rerun-if-changed=src/editor/preview_platform/audio_ribbon/ribbon_layout.rs");
+  let drawing = |name, source, layout| Precompiled {
+    name,
+    source,
+    layout,
+    entry_points: &["vs_main", "fs_main"],
+  };
   screenwide_wgsl::precompile(
     "precompiled_shaders.rs",
-    &[Precompiled {
-      name: "ANNOTATE_OVERLAY",
-      source,
-      bindings,
-    }],
+    &[
+      drawing(
+        "ANNOTATE_OVERLAY",
+        assembled("annotate_overlay"),
+        &overlay_layout::ANNOTATE_OVERLAY,
+      ),
+      drawing(
+        "AUDIO_RIBBON",
+        assembled("audio_ribbon"),
+        &ribbon_layout::AUDIO_RIBBON,
+      ),
+    ],
   );
 }

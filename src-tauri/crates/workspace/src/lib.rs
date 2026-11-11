@@ -8,6 +8,10 @@
 pub mod backdrop;
 pub mod editing;
 pub mod scene;
+mod precompiled_shaders {
+  include!(concat!(env!("OUT_DIR"), "/precompiled_shaders.rs"));
+}
+mod shader_layouts;
 
 /// The layer id of the keyboard shortcuts drawn over the picture.
 pub const KEYBOARD_LAYER_ID: u32 = u32::MAX - 1;

@@ -1,19 +1,19 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! DXIL for Windows. naga writes each stage as wgpu-hal 30 writes it for the
-//! shader's pipeline layout (`create_pipeline_layout` in its
-//! `dx12/device.rs`): the same registers and the same options, so the text is
-//! the text wgpu would compile. The bundled DXC then compiles it with the
-//! arguments wgpu passes. Each shader's tests draw with the result and with
-//! the shader compiled from WGSL, and require the same pixels.
+//! DXIL for Windows. naga writes each entry point as wgpu-hal 30 writes it
+//! for the shader's pipeline layout (`create_pipeline_layout` and
+//! `load_shader` in its `dx12/device.rs`): the same registers and the same
+//! options, so the text is the text wgpu would compile. The bundled DXC then
+//! compiles it with the arguments wgpu passes.
 
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
 use naga::back::hlsl;
+use screenwide_shader_layout::{Binding, ShaderLayout};
 
-use super::{cached, in_binding_order, parse, Binding, Precompiled, Stages};
+use super::{cached, entry_point, parse, Compiled, Precompiled};
 
 /// The oldest shader model DXC compiles for, which every GPU wgpu drives
 /// through DXC supports; nothing in the precompiled shaders needs a newer
@@ -52,22 +52,42 @@ impl Compiler {
     }
   }
 
-  pub(super) fn compile(&self, shader: &Precompiled, cache: &Path) -> Stages {
+  pub(super) fn compile(&self, shader: &Precompiled, cache: &Path) -> Vec<Compiled> {
     let (module, info) = parse(shader);
-    let options = options(&shader.bindings);
-    let stage = |stage, entry: &str, profile: &str| {
-      let text = hlsl_text(shader.name, &module, &info, stage, entry, &options);
-      cached(
-        cache,
-        (&text, entry, profile, ARGUMENTS, self.identity),
-        "dxil",
-        |output| self.run(shader.name, &text, entry, profile, output),
-      )
-    };
-    Stages {
-      vertex: stage(naga::ShaderStage::Vertex, "vs_main", "vs_6_0"),
-      fragment: stage(naga::ShaderStage::Fragment, "fs_main", "ps_6_0"),
-    }
+    let options = options(shader.layout);
+    let fragments = shader
+      .entry_points
+      .iter()
+      .copied()
+      .filter(|&name| entry_point(shader, &module, name).1.stage == naga::ShaderStage::Fragment)
+      .collect::<Vec<_>>();
+    shader
+      .entry_points
+      .iter()
+      .map(|&name| {
+        let (_, entry) = entry_point(shader, &module, name);
+        let text = |fragment: Option<&str>| {
+          hlsl_text(shader.name, &module, &info, entry, fragment, &options)
+        };
+        let (profile, text) = match entry.stage {
+          naga::ShaderStage::Vertex => ("vs_6_0", vertex_text(shader.name, name, &fragments, text)),
+          naga::ShaderStage::Fragment => ("ps_6_0", text(None)),
+          naga::ShaderStage::Compute => ("cs_6_0", text(None)),
+          other => panic!("{other:?} shaders are not precompiled"),
+        };
+        let code = cached(
+          cache,
+          (&text, name, profile, ARGUMENTS, self.identity),
+          "dxil",
+          |output| self.run(shader.name, &text, name, profile, output),
+        );
+        Compiled {
+          name: name.to_owned(),
+          workgroup_size: entry.workgroup_size,
+          code,
+        }
+      })
+      .collect()
   }
 
   fn run(&self, name: &str, text: &str, entry: &str, profile: &str, output: &Path) {
@@ -91,35 +111,61 @@ impl Compiler {
   }
 }
 
-/// `entry`'s HLSL as wgpu-hal writes it: overrides processed for that entry
-/// point, and a vertex stage trimmed to what the fragment stage reads.
+/// A vertex stage's HLSL. wgpu trims it to what the pipeline's fragment
+/// stage reads, so one compiled vertex stage serves every fragment stage only
+/// if each trims it alike.
+fn vertex_text(
+  shader: &str,
+  vertex: &str,
+  fragments: &[&str],
+  text: impl Fn(Option<&str>) -> String,
+) -> String {
+  let Some((first, rest)) = fragments.split_first() else {
+    return text(None);
+  };
+  let trimmed = text(Some(first));
+  for fragment in rest {
+    assert!(
+      text(Some(fragment)) == trimmed,
+      "the {shader} shader's {vertex} writes what {first} and {fragment} read differently, so \
+       one compiled vertex stage cannot serve both"
+    );
+  }
+  trimmed
+}
+
+/// An entry point's HLSL as wgpu-hal writes it: overrides processed for that
+/// entry point, and a vertex stage trimmed to what `fragment` reads.
 fn hlsl_text(
-  name: &str,
+  shader: &str,
   module: &naga::Module,
   info: &naga::valid::ModuleInfo,
-  stage: naga::ShaderStage,
-  entry: &str,
+  entry: &naga::EntryPoint,
+  fragment: Option<&str>,
   options: &hlsl::Options,
 ) -> String {
-  let fragment = (stage == naga::ShaderStage::Vertex)
-    .then(|| hlsl::FragmentEntryPoint::new(module, "fs_main").expect("fs_main exists"));
+  let name = &entry.name;
+  let fragment = fragment.map(|fragment| {
+    hlsl::FragmentEntryPoint::new(module, fragment)
+      .unwrap_or_else(|| panic!("the {shader} shader has no fragment stage {fragment}"))
+  });
   let (module, info) = naga::back::pipeline_constants::process_overrides(
     module,
     info,
-    Some((stage, entry)),
+    Some((entry.stage, name)),
     &Default::default(),
   )
-  .unwrap_or_else(|error| panic!("the {name} shader's overrides do not resolve: {error}"));
+  .unwrap_or_else(|error| panic!("the {shader} shader's overrides do not resolve: {error}"));
   let mut text = String::new();
   hlsl::Writer::new(
     &mut text,
     options,
     &hlsl::PipelineOptions {
-      entry_point: Some((stage, entry.to_owned())),
+      entry_point: Some((entry.stage, name.clone())),
     },
   )
   .write(&module, &info, fragment.as_ref())
-  .unwrap_or_else(|error| panic!("naga could not write the {name} shader's {entry}: {error}"));
+  .unwrap_or_else(|error| panic!("naga could not write the {shader} shader's {name}: {error}"));
   text
 }
 
@@ -133,36 +179,55 @@ fn target(space: u8, register: u32) -> hlsl::BindTarget {
   }
 }
 
-/// The options wgpu-hal 30 derives from a layout of one bind group, no
-/// immediates and no dynamic offsets. Uniforms take consecutive CBVs, and
-/// textures and storage buffers consecutive SRVs, in binding order; samplers
-/// index the sampler heap through a buffer in the SRV after them; the special
-/// constants every wgpu pipeline layout carries take the CBV after the
-/// uniforms.
-fn options(bindings: &[(u32, Binding)]) -> hlsl::Options {
+/// The options wgpu-hal 30 derives from a layout with no immediates. Each
+/// group takes, in binding order, consecutive CBVs for its uniforms, SRVs
+/// for its textures and read-only storage, and UAVs for what is written;
+/// then its samplers, which index the sampler heap through a buffer in the
+/// SRV after them; then a CBV for each dynamic uniform, a root descriptor of
+/// its own. The counts run on from one group to the next, and the special
+/// constants every wgpu pipeline layout carries take the CBV after them all.
+fn options(layout: &ShaderLayout) -> hlsl::Options {
   let mut binding_map = hlsl::BindingMap::default();
-  let (mut cbv, mut srv, mut sampler) = (0, 0, 0);
-  for (binding, kind) in in_binding_order(bindings) {
-    let resource = naga::ResourceBinding { group: 0, binding };
-    match kind {
-      Binding::Uniform => {
-        binding_map.insert(resource, target(0, cbv));
-        cbv += 1;
-      }
-      Binding::Storage | Binding::Texture | Binding::TextureArray => {
-        binding_map.insert(resource, target(0, srv));
-        srv += 1;
-      }
-      Binding::Sampler => {
-        // naga does not read a sampler's space.
-        binding_map.insert(resource, target(255, sampler));
-        sampler += 1;
-      }
-    }
-  }
   let mut sampler_buffer_binding_map = hlsl::SamplerIndexBufferBindingMap::default();
-  if sampler > 0 {
-    sampler_buffer_binding_map.insert(hlsl::SamplerIndexBufferKey { group: 0 }, target(0, srv));
+  let (mut cbv, mut srv, mut uav) = (0, 0, 0);
+  for (group, entries) in (0..).zip(layout.groups.iter()) {
+    let resource = |binding| naga::ResourceBinding { group, binding };
+    for entry in entries.iter() {
+      let register = match entry.kind {
+        Binding::Uniform => &mut cbv,
+        Binding::Storage { writable: false } | Binding::Texture { .. } => &mut srv,
+        Binding::Storage { writable: true } | Binding::StorageTexture { .. } => &mut uav,
+        Binding::DynamicUniform | Binding::Sampler { .. } => continue,
+      };
+      binding_map.insert(resource(entry.binding), target(0, *register));
+      *register += 1;
+    }
+    let samplers = entries
+      .iter()
+      .filter(|entry| matches!(entry.kind, Binding::Sampler { .. }));
+    let mut count = 0;
+    for entry in samplers {
+      // naga does not read a sampler's space.
+      binding_map.insert(resource(entry.binding), target(255, count));
+      count += 1;
+    }
+    if count > 0 {
+      sampler_buffer_binding_map.insert(hlsl::SamplerIndexBufferKey { group }, target(0, srv));
+      srv += 1;
+    }
+    let dynamic = entries
+      .iter()
+      .filter(|entry| entry.kind == Binding::DynamicUniform);
+    for entry in dynamic {
+      binding_map.insert(
+        resource(entry.binding),
+        hlsl::BindTarget {
+          restrict_indexing: true,
+          ..target(0, cbv)
+        },
+      );
+      cbv += 1;
+    }
   }
   hlsl::Options {
     shader_model: SHADER_MODEL,

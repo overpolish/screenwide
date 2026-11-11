@@ -18,6 +18,12 @@ mod host;
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 mod preview;
 #[cfg(any(target_os = "macos", target_os = "windows"))]
+mod precompiled_shaders {
+  include!(concat!(env!("OUT_DIR"), "/precompiled_shaders.rs"));
+}
+#[cfg(any(target_os = "macos", target_os = "windows"))]
+mod shader_layouts;
+#[cfg(any(target_os = "macos", target_os = "windows"))]
 mod worker;
 
 #[cfg(any(target_os = "macos", target_os = "windows"))]

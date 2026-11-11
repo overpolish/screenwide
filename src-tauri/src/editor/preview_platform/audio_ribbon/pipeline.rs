@@ -1,8 +1,9 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+use super::ribbon_layout::AUDIO_RIBBON;
 use super::Constants;
-use screenwide_gpu::Gpu;
+use screenwide_gpu::{Gpu, RenderStages, Shader};
 
 const SHADER: &str = include_str!(concat!(env!("OUT_DIR"), "/audio_ribbon.wgsl"));
 
@@ -15,65 +16,24 @@ pub(super) struct Painter {
 
 impl Painter {
   pub(super) fn new(device: &wgpu::Device) -> Self {
-    let module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
-      label: Some("Screenwide audio ribbon shader"),
-      source: wgpu::ShaderSource::Wgsl(SHADER.into()),
-    });
-    let layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-      label: Some("Screenwide audio ribbon bindings"),
-      entries: &[
-        wgpu::BindGroupLayoutEntry {
-          binding: 0,
-          visibility: wgpu::ShaderStages::FRAGMENT,
-          ty: wgpu::BindingType::Buffer {
-            ty: wgpu::BufferBindingType::Uniform,
-            has_dynamic_offset: false,
-            min_binding_size: None,
-          },
-          count: None,
-        },
-        wgpu::BindGroupLayoutEntry {
-          binding: 1,
-          visibility: wgpu::ShaderStages::FRAGMENT,
-          ty: wgpu::BindingType::Texture {
-            sample_type: wgpu::TextureSampleType::Float { filterable: false },
-            view_dimension: wgpu::TextureViewDimension::D2,
-            multisampled: false,
-          },
-          count: None,
-        },
-      ],
-    });
-    let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-      label: Some("Screenwide audio ribbon layout"),
-      bind_group_layouts: &[Some(&layout)],
-      immediate_size: 0,
-    });
+    let shader = Shader::new(
+      device,
+      "Screenwide audio ribbon",
+      &AUDIO_RIBBON,
+      SHADER,
+      crate::precompiled_shaders::AUDIO_RIBBON,
+    );
     // One draw over a cleared target, so it is written rather than blended.
-    let pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
-      label: Some("Screenwide audio ribbon pipeline"),
-      layout: Some(&pipeline_layout),
-      vertex: wgpu::VertexState {
-        module: &module,
-        entry_point: Some("vs_main"),
-        compilation_options: Default::default(),
-        buffers: &[],
-      },
-      fragment: Some(wgpu::FragmentState {
-        module: &module,
-        entry_point: Some("fs_main"),
-        compilation_options: Default::default(),
-        targets: &[Some(wgpu::ColorTargetState {
-          format: screenwide_gpu::surface::FORMAT,
-          blend: None,
-          write_mask: wgpu::ColorWrites::ALL,
-        })],
-      }),
+    let pipeline = shader.render_pipeline(&RenderStages {
+      label: "Screenwide audio ribbon pipeline",
+      vertex: "vs_main",
+      fragment: "fs_main",
+      targets: &[Some(wgpu::ColorTargetState {
+        format: screenwide_gpu::surface::FORMAT,
+        blend: None,
+        write_mask: wgpu::ColorWrites::ALL,
+      })],
       primitive: Default::default(),
-      depth_stencil: None,
-      multisample: Default::default(),
-      multiview_mask: None,
-      cache: None,
     });
     let constants = device.create_buffer(&wgpu::BufferDescriptor {
       label: Some("Screenwide audio ribbon constants"),
@@ -83,7 +43,7 @@ impl Painter {
     });
     Self {
       pipeline,
-      layout,
+      layout: shader.bind_group_layout(0).clone(),
       constants,
     }
   }

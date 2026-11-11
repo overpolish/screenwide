@@ -184,14 +184,14 @@ fn focus() -> screenwide_annotations::Annotation {
 /// WGSL draws: arrows, counters and a focus over the desktop.
 #[test]
 fn the_precompiled_shader_draws_what_wgsl_draws() {
-  let precompiled = Renderer::new().expect("the overlay renderer");
   if cfg!(any(target_os = "macos", target_os = "windows")) {
     assert!(
-      super::pipeline::precompiled_on(&precompiled.gpu().device),
-      "the build compiled no annotate overlay shader for this device"
+      super::pipeline::precompiled(),
+      "the build compiled no annotate overlay shader for this platform"
     );
   }
-  let compiled = Renderer::compiled_from_wgsl().expect("the overlay renderer");
+  let precompiled = Renderer::new().expect("the overlay renderer");
+  let compiled = screenwide_gpu::compiling_wgsl(Renderer::new).expect("the overlay renderer");
   let mut counter_style = style(48.0);
   counter_style.head = AnnotationHead::None;
   let annotations = [

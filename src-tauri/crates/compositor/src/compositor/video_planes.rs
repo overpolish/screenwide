@@ -4,13 +4,16 @@
 //! A video frame's luma and chroma planes made into the BGRA the canvas
 //! samples, and a drawn canvas split back into planes for the encoder.
 
+use screenwide_gpu::{RenderStages, Shader};
+
 use super::pipeline::sampler;
 use super::{Gpu, FORMAT};
+use crate::precompiled_shaders::VIDEO_PLANES;
 
 const SHADER: &str = include_str!(concat!(env!("OUT_DIR"), "/video_planes.wgsl"));
 
 pub struct VideoPlanes {
-  layout: wgpu::BindGroupLayout,
+  shader: Shader,
   from_planes: wgpu::RenderPipeline,
   luma: wgpu::RenderPipeline,
   chroma: wgpu::RenderPipeline,
@@ -20,59 +23,20 @@ pub struct VideoPlanes {
 impl VideoPlanes {
   pub fn new(gpu: &Gpu) -> Self {
     let device = &gpu.device;
-    let module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
-      label: Some("Screenwide video planes shader"),
-      source: wgpu::ShaderSource::Wgsl(SHADER.into()),
-    });
-    let texture = |binding| wgpu::BindGroupLayoutEntry {
-      binding,
-      visibility: wgpu::ShaderStages::FRAGMENT,
-      ty: wgpu::BindingType::Texture {
-        sample_type: wgpu::TextureSampleType::Float { filterable: true },
-        view_dimension: wgpu::TextureViewDimension::D2,
-        multisampled: false,
-      },
-      count: None,
-    };
-    let layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-      label: Some("Screenwide video planes bindings"),
-      entries: &[
-        texture(0),
-        texture(1),
-        wgpu::BindGroupLayoutEntry {
-          binding: 2,
-          visibility: wgpu::ShaderStages::FRAGMENT,
-          ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
-          count: None,
-        },
-      ],
-    });
-    let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-      label: Some("Screenwide video planes layout"),
-      bind_group_layouts: &[Some(&layout)],
-      immediate_size: 0,
-    });
-    let pipeline = |entry_point: &str, format: wgpu::TextureFormat| {
-      device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
-        label: Some(entry_point),
-        layout: Some(&pipeline_layout),
-        vertex: wgpu::VertexState {
-          module: &module,
-          entry_point: Some("vs_main"),
-          compilation_options: Default::default(),
-          buffers: &[],
-        },
-        fragment: Some(wgpu::FragmentState {
-          module: &module,
-          entry_point: Some(entry_point),
-          compilation_options: Default::default(),
-          targets: &[Some(format.into())],
-        }),
+    let shader = Shader::new(
+      device,
+      "Screenwide video planes",
+      &crate::shader_layouts::VIDEO_PLANES,
+      SHADER,
+      VIDEO_PLANES,
+    );
+    let pipeline = |fragment: &str, format: wgpu::TextureFormat| {
+      shader.render_pipeline(&RenderStages {
+        label: fragment,
+        vertex: "vs_main",
+        fragment,
+        targets: &[Some(format.into())],
         primitive: Default::default(),
-        depth_stencil: None,
-        multisample: Default::default(),
-        multiview_mask: None,
-        cache: None,
       })
     };
     Self {
@@ -80,7 +44,7 @@ impl VideoPlanes {
       luma: pipeline("fs_luma", wgpu::TextureFormat::R8Unorm),
       chroma: pipeline("fs_chroma", wgpu::TextureFormat::Rg8Unorm),
       sampler: sampler(device, wgpu::FilterMode::Linear),
-      layout,
+      shader,
     }
   }
 
@@ -121,7 +85,7 @@ impl VideoPlanes {
   ) -> wgpu::BindGroup {
     gpu.device.create_bind_group(&wgpu::BindGroupDescriptor {
       label: Some("Screenwide video planes bindings"),
-      layout: &self.layout,
+      layout: self.shader.bind_group_layout(0),
       entries: &[
         wgpu::BindGroupEntry {
           binding: 0,

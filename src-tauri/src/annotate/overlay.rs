@@ -10,7 +10,7 @@
 //! in hand, so there is no second copy of the document to keep in step.
 
 mod focus;
-mod overlay_bindings;
+mod overlay_layout;
 mod pipeline;
 mod renderer;
 #[cfg(test)]

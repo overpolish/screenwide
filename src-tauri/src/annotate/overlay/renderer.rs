@@ -10,7 +10,7 @@ use screenwide_compositor::annotation_gpu::{
 use screenwide_gpu::Gpu;
 
 use super::focus::{FocusChains, FocusFrame};
-use super::pipeline::{self, Source};
+use super::pipeline;
 
 /// The twin of `Overlay` in `annotate_overlay.wgsl`.
 #[repr(C)]
@@ -63,25 +63,13 @@ pub(in crate::annotate) struct Renderer {
 
 impl Renderer {
   pub(in crate::annotate) fn new() -> Result<Self, String> {
-    Self::with_shader(Source::Precompiled)
-  }
-
-  /// A renderer whose shader compiles from WGSL, which the precompiled
-  /// shader is checked against.
-  #[cfg(test)]
-  pub(in crate::annotate) fn compiled_from_wgsl() -> Result<Self, String> {
-    Self::with_shader(Source::Wgsl)
-  }
-
-  fn with_shader(source: Source) -> Result<Self, String> {
     let gpu = screenwide_gpu::shared()?;
     let device = &gpu.device;
-    let layout = pipeline::bind_group_layout(device);
-    let pipeline = pipeline::pipeline(device, &layout, source);
+    let shader = pipeline::shader(device);
     Ok(Self {
       gpu: std::sync::Arc::clone(&gpu),
-      pipeline,
-      layout,
+      pipeline: pipeline::pipeline(&shader),
+      layout: shader.bind_group_layout(0).clone(),
       constants: device.create_buffer(&wgpu::BufferDescriptor {
         label: Some("Screenwide annotate overlay constants"),
         size: size_of::<Constants>() as u64,

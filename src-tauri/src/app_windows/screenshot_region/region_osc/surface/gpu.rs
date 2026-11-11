@@ -11,9 +11,9 @@ impl Gpu {
   /// The pipeline and its resources on `shared`.
   pub(crate) fn on(shared: &Arc<screenwide_gpu::Gpu>) -> Result<Self, String> {
     let device = &shared.device;
-    let module = shader_module(device);
-    let layout = bind_group_layout(device);
-    let pipeline = pipeline(device, &layout, &module);
+    let shader = shader(device);
+    let layout = shader.bind_group_layout(0).clone();
+    let pipeline = pipeline(&shader);
     let placeholder = upload_rgba(shared, &[0_u8; 4], 1, 1);
     Ok(Self {
       shared: Arc::clone(shared),

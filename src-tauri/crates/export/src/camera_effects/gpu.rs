@@ -14,12 +14,12 @@ use std::sync::Mutex;
 
 use wgpu::util::DeviceExt;
 
-use self::resources::{bind_group_layout, cover, upload, Slot, Uniform};
+use self::resources::{cover, upload, Slot, Uniform};
 use super::live::LiveCameraEffects;
 use super::CameraBackground;
 use screenwide_annotations::pin::LumaFrame;
 use screenwide_compositor::compositor::{Compositor, SourceTexture, FORMAT};
-use screenwide_gpu::Gpu;
+use screenwide_gpu::{Gpu, RenderStages, Shader};
 
 const SHADER: &str = include_str!(concat!(env!("OUT_DIR"), "/camera_effects.wgsl"));
 
@@ -57,37 +57,20 @@ pub(crate) struct EffectsPass {
 impl EffectsPass {
   pub(crate) fn new(gpu: &std::sync::Arc<Gpu>) -> Self {
     let device = &gpu.device;
-    let module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
-      label: Some("Screenwide camera effects shader"),
-      source: wgpu::ShaderSource::Wgsl(SHADER.into()),
-    });
-    let layout = bind_group_layout(device);
-    let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-      label: Some("Screenwide camera effects layout"),
-      bind_group_layouts: &[Some(&layout)],
-      immediate_size: 0,
-    });
-    let pipeline = |entry_point: &str| {
-      device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
-        label: Some(entry_point),
-        layout: Some(&pipeline_layout),
-        vertex: wgpu::VertexState {
-          module: &module,
-          entry_point: Some("vs_main"),
-          compilation_options: Default::default(),
-          buffers: &[],
-        },
-        fragment: Some(wgpu::FragmentState {
-          module: &module,
-          entry_point: Some(entry_point),
-          compilation_options: Default::default(),
-          targets: &[Some(FORMAT.into())],
-        }),
+    let shader = Shader::new(
+      device,
+      "Screenwide camera effects",
+      &crate::shader_layouts::CAMERA_EFFECTS,
+      SHADER,
+      crate::precompiled_shaders::CAMERA_EFFECTS,
+    );
+    let pipeline = |fragment: &str| {
+      shader.render_pipeline(&RenderStages {
+        label: fragment,
+        vertex: "vs_main",
+        fragment,
+        targets: &[Some(FORMAT.into())],
         primitive: Default::default(),
-        depth_stencil: None,
-        multisample: Default::default(),
-        multiview_mask: None,
-        cache: None,
       })
     };
     let sampler = device.create_sampler(&wgpu::SamplerDescriptor {
@@ -107,7 +90,7 @@ impl EffectsPass {
     Self {
       gpu: std::sync::Arc::clone(gpu),
       effects: pipeline("fs_effects"),
-      layout,
+      layout: shader.bind_group_layout(0).clone(),
       sampler,
       blank,
       slots: Mutex::new(HashMap::new()),

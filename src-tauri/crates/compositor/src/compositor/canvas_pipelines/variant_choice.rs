@@ -47,14 +47,14 @@ impl Compositor {
       (Arc::clone(&every), Target::Layer),
       (every, Target::Delta),
     ];
-    let (device, layout) = (canvas.device.clone(), canvas.layout.clone());
+    let device = canvas.device.clone();
     // One thread, the variant with none first: a preview mostly draws with
     // it, and the one with every kind takes many times as long to compile.
     let _ = std::thread::Builder::new()
       .name("canvas-shader-warm".to_owned())
       .spawn(move || {
         for (variant, target) in warm {
-          variant.pipeline(&device, &layout, target);
+          variant.pipeline(&device, target);
         }
       });
   }

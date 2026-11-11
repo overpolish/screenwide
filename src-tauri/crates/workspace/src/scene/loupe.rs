@@ -4,7 +4,7 @@
 //! The crop tool's loupe, drawn into the workspace drawable over every layer
 //! from the picture the layer it magnifies was drawn from.
 
-use screenwide_gpu::Gpu;
+use screenwide_gpu::{Gpu, RenderStages, Shader};
 pub(super) use screenwide_osc::gpu::magnifier::NativeMagnifier;
 
 const SHADER: &str = include_str!(concat!(env!("OUT_DIR"), "/workspace_magnifier.wgsl"));
@@ -30,75 +30,28 @@ pub(super) struct Loupe {
 impl Loupe {
   pub(super) fn new(gpu: &Gpu) -> Self {
     let device = &gpu.device;
-    let module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
-      label: Some("Screenwide workspace loupe shader"),
-      source: wgpu::ShaderSource::Wgsl(SHADER.into()),
-    });
-    let entry = |binding, ty| wgpu::BindGroupLayoutEntry {
-      binding,
-      visibility: wgpu::ShaderStages::FRAGMENT,
-      ty,
-      count: None,
-    };
-    let layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-      label: Some("Screenwide workspace loupe bindings"),
-      entries: &[
-        entry(
-          0,
-          wgpu::BindingType::Buffer {
-            ty: wgpu::BufferBindingType::Uniform,
-            has_dynamic_offset: false,
-            min_binding_size: None,
-          },
-        ),
-        entry(
-          1,
-          wgpu::BindingType::Texture {
-            sample_type: wgpu::TextureSampleType::Float { filterable: true },
-            view_dimension: wgpu::TextureViewDimension::D2,
-            multisampled: false,
-          },
-        ),
-        entry(
-          2,
-          wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
-        ),
-      ],
-    });
-    let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-      label: Some("Screenwide workspace loupe layout"),
-      bind_group_layouts: &[Some(&layout)],
-      immediate_size: 0,
-    });
-    let pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
-      label: Some("Screenwide workspace loupe"),
-      layout: Some(&pipeline_layout),
-      vertex: wgpu::VertexState {
-        module: &module,
-        entry_point: Some("vs_main"),
-        compilation_options: Default::default(),
-        buffers: &[],
-      },
-      fragment: Some(wgpu::FragmentState {
-        module: &module,
-        entry_point: Some("fs_main"),
-        compilation_options: Default::default(),
-        // The lens replaces what the layers drew under it.
-        targets: &[Some(wgpu::ColorTargetState {
-          format: screenwide_gpu::surface::FORMAT,
-          blend: None,
-          write_mask: wgpu::ColorWrites::ALL,
-        })],
-      }),
+    let shader = Shader::new(
+      device,
+      "Screenwide workspace loupe",
+      &crate::shader_layouts::LOUPE,
+      SHADER,
+      crate::precompiled_shaders::LOUPE,
+    );
+    let pipeline = shader.render_pipeline(&RenderStages {
+      label: "Screenwide workspace loupe",
+      vertex: "vs_main",
+      fragment: "fs_main",
+      // The lens replaces what the layers drew under it.
+      targets: &[Some(wgpu::ColorTargetState {
+        format: screenwide_gpu::surface::FORMAT,
+        blend: None,
+        write_mask: wgpu::ColorWrites::ALL,
+      })],
       primitive: Default::default(),
-      depth_stencil: None,
-      multisample: Default::default(),
-      multiview_mask: None,
-      cache: None,
     });
     Self {
       pipeline,
-      layout,
+      layout: shader.bind_group_layout(0).clone(),
       constants: device.create_buffer(&wgpu::BufferDescriptor {
         label: Some("Screenwide workspace loupe constants"),
         size: size_of::<LensConstants>() as u64,

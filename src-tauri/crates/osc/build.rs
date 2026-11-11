@@ -1,7 +1,13 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+#[path = "src/shader_layouts.rs"]
+mod shader_layouts;
+
+use screenwide_wgsl::{assembled, Precompiled};
+
 fn main() {
+  println!("cargo:rerun-if-changed=src/shader_layouts.rs");
   screenwide_wgsl::assemble(&[(
     "osc",
     &[
@@ -12,6 +18,15 @@ fn main() {
       "../gpu/src/shaders/disc_blur.wgsl",
     ],
   )]);
+  screenwide_wgsl::precompile(
+    "precompiled_shaders.rs",
+    &[Precompiled {
+      name: "OSC",
+      source: assembled("osc"),
+      layout: &shader_layouts::OSC,
+      entry_points: &["vs_main", "fs_main"],
+    }],
+  );
   // Build scripts run on the host, so the target is read from Cargo rather
   // than `cfg!`: a Windows build from macOS must not compile Objective-C.
   if std::env::var("CARGO_CFG_TARGET_OS").as_deref() == Ok("macos") {

@@ -10,22 +10,9 @@
 //! frame left there.
 
 use screenwide_gpu::surface::FORMAT;
+use screenwide_gpu::{RenderStages, Shader};
 
-const SHADER: &str = r#"
-@group(0) @binding(0) var frame: texture_2d<f32>;
-
-@vertex
-fn vertex_main(@builtin(vertex_index) index: u32) -> @builtin(position) vec4<f32> {
-  let corner = vec2<f32>(f32((index << 1u) & 2u), f32(index & 2u));
-  return vec4<f32>(corner * 2.0 - 1.0, 0.0, 1.0);
-}
-
-@fragment
-fn fragment_main(@builtin(position) position: vec4<f32>) -> @location(0) vec4<f32> {
-  let last = vec2<i32>(textureDimensions(frame)) - vec2<i32>(1);
-  return textureLoad(frame, clamp(vec2<i32>(position.xy), vec2<i32>(0), last), 0);
-}
-"#;
+const SHADER: &str = include_str!(concat!(env!("OUT_DIR"), "/edge_fill.wgsl"));
 
 pub(crate) struct EdgeFill {
   layout: wgpu::BindGroupLayout,
@@ -34,54 +21,28 @@ pub(crate) struct EdgeFill {
 
 impl EdgeFill {
   pub(crate) fn new(device: &wgpu::Device) -> Self {
-    let module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
-      label: Some("Screenwide settings preview edge fill shader"),
-      source: wgpu::ShaderSource::Wgsl(SHADER.into()),
-    });
-    let layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-      label: Some("Screenwide settings preview edge fill bindings"),
-      entries: &[wgpu::BindGroupLayoutEntry {
-        binding: 0,
-        visibility: wgpu::ShaderStages::FRAGMENT,
-        ty: wgpu::BindingType::Texture {
-          sample_type: wgpu::TextureSampleType::Float { filterable: false },
-          view_dimension: wgpu::TextureViewDimension::D2,
-          multisampled: false,
-        },
-        count: None,
-      }],
-    });
-    let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-      label: Some("Screenwide settings preview edge fill layout"),
-      bind_group_layouts: &[Some(&layout)],
-      immediate_size: 0,
-    });
-    let pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
-      label: Some("Screenwide settings preview edge fill"),
-      layout: Some(&pipeline_layout),
-      vertex: wgpu::VertexState {
-        module: &module,
-        entry_point: Some("vertex_main"),
-        compilation_options: Default::default(),
-        buffers: &[],
-      },
-      fragment: Some(wgpu::FragmentState {
-        module: &module,
-        entry_point: Some("fragment_main"),
-        compilation_options: Default::default(),
-        targets: &[Some(wgpu::ColorTargetState {
-          format: FORMAT,
-          blend: None,
-          write_mask: wgpu::ColorWrites::ALL,
-        })],
-      }),
+    let shader = Shader::new(
+      device,
+      "Screenwide settings preview edge fill",
+      &crate::shader_layouts::EDGE_FILL,
+      SHADER,
+      crate::precompiled_shaders::EDGE_FILL,
+    );
+    let pipeline = shader.render_pipeline(&RenderStages {
+      label: "Screenwide settings preview edge fill",
+      vertex: "vertex_main",
+      fragment: "fragment_main",
+      targets: &[Some(wgpu::ColorTargetState {
+        format: FORMAT,
+        blend: None,
+        write_mask: wgpu::ColorWrites::ALL,
+      })],
       primitive: Default::default(),
-      depth_stencil: None,
-      multisample: Default::default(),
-      multiview_mask: None,
-      cache: None,
     });
-    Self { layout, pipeline }
+    Self {
+      layout: shader.bind_group_layout(0).clone(),
+      pipeline,
+    }
   }
 
   /// Draws `frame` over the whole of `target`.

@@ -6,8 +6,9 @@
 //! triangle every pass draws.
 
 use super::super::FORMAT;
-use super::plan::FocusConstants;
-use screenwide_gpu::Gpu;
+use crate::precompiled_shaders::{FOCUS_BLUR, FOCUS_COPY};
+use crate::shader_layouts::{FOCUS_GATHER, FOCUS_LEVEL};
+use screenwide_gpu::{Gpu, RenderStages, Shader};
 
 const GATHER_SHADER: &str = include_str!(concat!(env!("OUT_DIR"), "/focus_blur.wgsl"));
 const COPY_SHADER: &str = include_str!(concat!(env!("OUT_DIR"), "/focus_copy.wgsl"));
@@ -15,52 +16,17 @@ const COPY_SHADER: &str = include_str!(concat!(env!("OUT_DIR"), "/focus_copy.wgs
 /// The bindings a level is made with, a level above and a sampler, and the
 /// gather's, which adds its constants and its boxes.
 pub(super) fn layouts(device: &wgpu::Device) -> [wgpu::BindGroupLayout; 2] {
-  let entry = |binding, ty| wgpu::BindGroupLayoutEntry {
-    binding,
-    visibility: wgpu::ShaderStages::FRAGMENT,
-    ty,
-    count: None,
-  };
-  let texture = entry(
-    0,
-    wgpu::BindingType::Texture {
-      sample_type: wgpu::TextureSampleType::Float { filterable: true },
-      view_dimension: wgpu::TextureViewDimension::D2,
-      multisampled: false,
-    },
-  );
-  let sampler = entry(
-    1,
-    wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
-  );
   [
-    device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-      label: Some("Screenwide focus level bindings"),
-      entries: &[texture, sampler],
-    }),
-    device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-      label: Some("Screenwide focus gather bindings"),
-      entries: &[
-        texture,
-        sampler,
-        entry(
-          2,
-          wgpu::BindingType::Buffer {
-            ty: wgpu::BufferBindingType::Uniform,
-            has_dynamic_offset: false,
-            min_binding_size: wgpu::BufferSize::new(size_of::<FocusConstants>() as u64),
-          },
-        ),
-        entry(
-          3,
-          wgpu::BindingType::Buffer {
-            ty: wgpu::BufferBindingType::Storage { read_only: true },
-            has_dynamic_offset: false,
-            min_binding_size: None,
-          },
-        ),
-      ],
-    }),
+    screenwide_gpu::bind_group_layout(
+      device,
+      "Screenwide focus level bindings",
+      FOCUS_LEVEL.groups[0],
+    ),
+    screenwide_gpu::bind_group_layout(
+      device,
+      "Screenwide focus gather bindings",
+      FOCUS_GATHER.groups[0],
+    ),
   ]
 }
 
@@ -68,16 +34,21 @@ pub(super) fn layouts(device: &wgpu::Device) -> [wgpu::BindGroupLayout; 2] {
 /// whole canvas and over a layer.
 pub(super) fn pipelines(
   device: &wgpu::Device,
-  [level, gather]: &[wgpu::BindGroupLayout; 2],
 ) -> (wgpu::RenderPipeline, [wgpu::RenderPipeline; 2]) {
-  let module = |source: &str, label: &str| {
-    device.create_shader_module(wgpu::ShaderModuleDescriptor {
-      label: Some(label),
-      source: wgpu::ShaderSource::Wgsl(source.into()),
-    })
-  };
-  let copy = module(COPY_SHADER, "Screenwide focus level shader");
-  let blur = module(GATHER_SHADER, "Screenwide focus blur shader");
+  let copy = Shader::new(
+    device,
+    "Screenwide focus level",
+    &FOCUS_LEVEL,
+    COPY_SHADER,
+    FOCUS_COPY,
+  );
+  let blur = Shader::new(
+    device,
+    "Screenwide focus blur",
+    &FOCUS_GATHER,
+    GATHER_SHADER,
+    FOCUS_BLUR,
+  );
   // A layer's frame is premultiplied, so it lays over what is under it as
   // `source + destination * (1 - source alpha)`, as the canvas pass's does.
   let over = wgpu::BlendComponent {
@@ -85,49 +56,26 @@ pub(super) fn pipelines(
     dst_factor: wgpu::BlendFactor::OneMinusSrcAlpha,
     operation: wgpu::BlendOperation::Add,
   };
-  let pipeline = |module: &wgpu::ShaderModule,
-                  entry: &str,
-                  layout: &wgpu::BindGroupLayout,
-                  blend: Option<wgpu::BlendState>| {
-    let layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-      label: Some("Screenwide focus layout"),
-      bind_group_layouts: &[Some(layout)],
-      immediate_size: 0,
-    });
-    device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
-      label: Some("Screenwide focus pipeline"),
-      layout: Some(&layout),
-      vertex: wgpu::VertexState {
-        module,
-        entry_point: Some("vs_main"),
-        compilation_options: Default::default(),
-        buffers: &[],
-      },
-      fragment: Some(wgpu::FragmentState {
-        module,
-        entry_point: Some(entry),
-        compilation_options: Default::default(),
-        targets: &[Some(wgpu::ColorTargetState {
-          format: FORMAT,
-          blend,
-          write_mask: wgpu::ColorWrites::ALL,
-        })],
-      }),
+  let pipeline = |shader: &Shader, fragment, blend| {
+    shader.render_pipeline(&RenderStages {
+      label: "Screenwide focus pipeline",
+      vertex: "vs_main",
+      fragment,
+      targets: &[Some(wgpu::ColorTargetState {
+        format: FORMAT,
+        blend,
+        write_mask: wgpu::ColorWrites::ALL,
+      })],
       primitive: Default::default(),
-      depth_stencil: None,
-      multisample: Default::default(),
-      multiview_mask: None,
-      cache: None,
     })
   };
   (
-    pipeline(&copy, "fs_downsample", level, None),
+    pipeline(&copy, "fs_downsample", None),
     [
-      pipeline(&blur, "fs_main", gather, None),
+      pipeline(&blur, "fs_main", None),
       pipeline(
         &blur,
         "fs_main",
-        gather,
         Some(wgpu::BlendState {
           color: over,
           alpha: over,

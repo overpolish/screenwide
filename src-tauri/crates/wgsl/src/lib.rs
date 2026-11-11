@@ -10,7 +10,7 @@
 use std::path::Path;
 
 mod precompile;
-pub use precompile::{precompile, Binding, Precompiled};
+pub use precompile::{precompile, Precompiled};
 
 /// Joins and validates each of `modules`, a name and its parts relative to
 /// the crate being built, into `OUT_DIR`.
@@ -29,6 +29,13 @@ pub fn assemble(modules: &[(&str, &[&str])]) {
     std::fs::write(Path::new(&output).join(format!("{name}.wgsl")), source)
       .unwrap_or_else(|error| panic!("write the {name} shader: {error}"));
   }
+}
+
+/// The shader `name` as [`assemble`] wrote it, for [`precompile`].
+pub fn assembled(name: &str) -> String {
+  let output = std::env::var_os("OUT_DIR").expect("Cargo supplied OUT_DIR");
+  std::fs::read_to_string(Path::new(&output).join(format!("{name}.wgsl")))
+    .unwrap_or_else(|error| panic!("read the assembled {name} shader: {error}"))
 }
 
 fn validate(name: &str, source: &str) {

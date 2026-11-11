@@ -17,7 +17,7 @@ mod render;
 mod submit;
 mod textures;
 use screenwide_gpu::surface::Frame;
-use screenwide_osc::gpu::vertices::{bind_group_layout, pipeline, sampler, shader_module};
+use screenwide_osc::gpu::vertices::{pipeline, sampler, shader};
 pub(super) use textures::upload_rgba;
 use textures::{upload_rgba_with_levels, RGBA};
 

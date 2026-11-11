@@ -1,0 +1,16 @@
+# SPDX-FileCopyrightText: 2026 overpolish
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+[package]
+name = "screenwide-shader-layout"
+description = "A shader's bindings and vertex buffers, described once for the build that precompiles it and the renderer that draws with it"
+version.workspace = true
+authors.workspace = true
+license.workspace = true
+edition.workspace = true
+
+[lints]
+workspace = true
+
+[lib]
+doctest = false

@@ -6,7 +6,8 @@
 //! what it blurs; read from a level whose texels already average its width, a
 //! few samples make it smooth.
 
-use crate::Gpu;
+use crate::precompiled_shaders::MIPS;
+use crate::{Gpu, RenderStages, Shader};
 
 const SHADER: &str = include_str!(concat!(env!("OUT_DIR"), "/mips.wgsl"));
 
@@ -38,36 +39,26 @@ fn level(texture: &wgpu::Texture, level: u32) -> wgpu::TextureView {
 
 /// Makes the levels of textures in one format.
 pub struct Mips {
+  shader: Shader,
   pipeline: wgpu::RenderPipeline,
   sampler: wgpu::Sampler,
 }
 
 impl Mips {
   pub fn new(device: &wgpu::Device, format: wgpu::TextureFormat) -> Self {
-    let module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
-      label: Some("Screenwide mip levels shader"),
-      source: wgpu::ShaderSource::Wgsl(SHADER.into()),
-    });
-    let pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
-      label: Some("Screenwide mip levels"),
-      layout: None,
-      vertex: wgpu::VertexState {
-        module: &module,
-        entry_point: Some("vs_main"),
-        compilation_options: Default::default(),
-        buffers: &[],
-      },
-      fragment: Some(wgpu::FragmentState {
-        module: &module,
-        entry_point: Some("fs_main"),
-        compilation_options: Default::default(),
-        targets: &[Some(format.into())],
-      }),
+    let shader = Shader::new(
+      device,
+      "Screenwide mip levels",
+      &crate::shader_layouts::MIPS,
+      SHADER,
+      MIPS,
+    );
+    let pipeline = shader.render_pipeline(&RenderStages {
+      label: "Screenwide mip levels",
+      vertex: "vs_main",
+      fragment: "fs_main",
+      targets: &[Some(format.into())],
       primitive: Default::default(),
-      depth_stencil: None,
-      multisample: Default::default(),
-      multiview_mask: None,
-      cache: None,
     });
     let sampler = device.create_sampler(&wgpu::SamplerDescriptor {
       label: Some("Screenwide mip levels sampler"),
@@ -75,7 +66,11 @@ impl Mips {
       min_filter: wgpu::FilterMode::Linear,
       ..Default::default()
     });
-    Self { pipeline, sampler }
+    Self {
+      shader,
+      pipeline,
+      sampler,
+    }
   }
 
   /// Every level of `texture` after the first made again from the first.
@@ -89,7 +84,7 @@ impl Mips {
       let target = level(texture, at);
       let bindings = device.create_bind_group(&wgpu::BindGroupDescriptor {
         label: Some("Screenwide mip level bindings"),
-        layout: &self.pipeline.get_bind_group_layout(0),
+        layout: self.shader.bind_group_layout(0),
         entries: &[
           wgpu::BindGroupEntry {
             binding: 0,

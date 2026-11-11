@@ -25,6 +25,7 @@ screenwide-imaging.workspace = true
 screenwide-output.workspace = true
 screenwide-records.workspace = true
 screenwide-scenes.workspace = true
+screenwide-shader-layout.workspace = true
 serde.workspace = true
 ts-rs.workspace = true
 wgpu.workspace = true
@@ -46,3 +47,7 @@ windows = { workspace = true, features = [
 [dev-dependencies]
 image.workspace = true
 serde_json.workspace = true
+
+[build-dependencies]
+screenwide-shader-layout.workspace = true
+screenwide-wgsl.workspace = true

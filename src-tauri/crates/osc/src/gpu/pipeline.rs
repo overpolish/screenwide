@@ -9,6 +9,7 @@ use crate::style::{
   control_palette, ocr_palette, overlay_palette, picked_palette, ruler_palette, turn_palette,
 };
 use screenwide_gpu::surface::FORMAT;
+use screenwide_gpu::{RenderStages, Shader};
 
 const SHADER: &str = include_str!(concat!(env!("OUT_DIR"), "/osc.wgsl"));
 
@@ -25,6 +26,9 @@ pub struct Vertex {
 }
 
 const _: () = assert!(std::mem::size_of::<Vertex>() == 24);
+const _: () = assert!(
+  crate::shader_layouts::OSC.vertex_buffers[0].stride == std::mem::size_of::<Vertex>() as u64
+);
 
 /// The twin of `OscGpu` in `osc.wgsl`: every member is a 16-byte row, so the
 /// uniform layout needs no padding.
@@ -136,118 +140,46 @@ impl RenderConstants {
   }
 }
 
-pub fn shader_module(device: &wgpu::Device) -> wgpu::ShaderModule {
-  device.create_shader_module(wgpu::ShaderModuleDescriptor {
-    label: Some("Screenwide OSC shader"),
-    source: wgpu::ShaderSource::Wgsl(SHADER.into()),
-  })
-}
-
-/// The constants block, read at a dynamic offset one `RenderConstants` wide,
-/// then the label, secondary label, frozen desktop and magnifier source
-/// textures, then the linear and point samplers. Binding 3 is unassigned, so
-/// the bindings after it keep their numbers.
-pub fn bind_group_layout(device: &wgpu::Device) -> wgpu::BindGroupLayout {
-  let texture = |binding| wgpu::BindGroupLayoutEntry {
-    binding,
-    visibility: wgpu::ShaderStages::FRAGMENT,
-    ty: wgpu::BindingType::Texture {
-      sample_type: wgpu::TextureSampleType::Float { filterable: true },
-      view_dimension: wgpu::TextureViewDimension::D2,
-      multisampled: false,
-    },
-    count: None,
-  };
-  let sampler = |binding| wgpu::BindGroupLayoutEntry {
-    binding,
-    visibility: wgpu::ShaderStages::FRAGMENT,
-    ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
-    count: None,
-  };
-  device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-    label: Some("Screenwide OSC bindings"),
-    entries: &[
-      wgpu::BindGroupLayoutEntry {
-        binding: 0,
-        visibility: wgpu::ShaderStages::FRAGMENT,
-        ty: wgpu::BindingType::Buffer {
-          ty: wgpu::BufferBindingType::Uniform,
-          has_dynamic_offset: true,
-          min_binding_size: wgpu::BufferSize::new(size_of::<RenderConstants>() as u64),
-        },
-        count: None,
-      },
-      texture(1),
-      texture(2),
-      texture(4),
-      texture(5),
-      sampler(6),
-      sampler(7),
-    ],
-  })
+pub fn shader(device: &wgpu::Device) -> Shader {
+  Shader::new(
+    device,
+    "Screenwide OSC",
+    &crate::shader_layouts::OSC,
+    SHADER,
+    crate::precompiled_shaders::OSC,
+  )
 }
 
 /// Straight source-over: colour is premultiplied through its own alpha, and
 /// the alpha channel is laid over the destination's as it is, so the target
 /// holds premultiplied colour for the compositor to blend.
-pub fn pipeline(
-  device: &wgpu::Device,
-  layout: &wgpu::BindGroupLayout,
-  module: &wgpu::ShaderModule,
-) -> wgpu::RenderPipeline {
-  let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-    label: Some("Screenwide OSC layout"),
-    bind_group_layouts: &[Some(layout)],
-    immediate_size: 0,
-  });
-  device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
-    label: Some("Screenwide OSC pipeline"),
-    layout: Some(&pipeline_layout),
-    vertex: wgpu::VertexState {
-      module,
-      entry_point: Some("vs_main"),
-      compilation_options: Default::default(),
-      buffers: &[Some(wgpu::VertexBufferLayout {
-        array_stride: size_of::<Vertex>() as u64,
-        step_mode: wgpu::VertexStepMode::Vertex,
-        attributes: &wgpu::vertex_attr_array![
-          0 => Float32x2,
-          1 => Float32x2,
-          2 => Uint32,
-        ],
-      })],
-    },
-    fragment: Some(wgpu::FragmentState {
-      module,
-      entry_point: Some("fs_main"),
-      compilation_options: Default::default(),
-      targets: &[Some(wgpu::ColorTargetState {
-        format: FORMAT,
-        blend: Some(wgpu::BlendState {
-          color: wgpu::BlendComponent {
-            src_factor: wgpu::BlendFactor::SrcAlpha,
-            dst_factor: wgpu::BlendFactor::OneMinusSrcAlpha,
-            operation: wgpu::BlendOperation::Add,
-          },
-          alpha: wgpu::BlendComponent {
-            src_factor: wgpu::BlendFactor::One,
-            dst_factor: wgpu::BlendFactor::OneMinusSrcAlpha,
-            operation: wgpu::BlendOperation::Add,
-          },
-        }),
-        write_mask: wgpu::ColorWrites::ALL,
-      })],
-    }),
+pub fn pipeline(shader: &Shader) -> wgpu::RenderPipeline {
+  shader.render_pipeline(&RenderStages {
+    label: "Screenwide OSC pipeline",
+    vertex: "vs_main",
+    fragment: "fs_main",
+    targets: &[Some(wgpu::ColorTargetState {
+      format: FORMAT,
+      blend: Some(wgpu::BlendState {
+        color: wgpu::BlendComponent {
+          src_factor: wgpu::BlendFactor::SrcAlpha,
+          dst_factor: wgpu::BlendFactor::OneMinusSrcAlpha,
+          operation: wgpu::BlendOperation::Add,
+        },
+        alpha: wgpu::BlendComponent {
+          src_factor: wgpu::BlendFactor::One,
+          dst_factor: wgpu::BlendFactor::OneMinusSrcAlpha,
+          operation: wgpu::BlendOperation::Add,
+        },
+      }),
+      write_mask: wgpu::ColorWrites::ALL,
+    })],
     // Several OSC primitives are deliberately emitted in either winding
     // (notably line quads), so nothing is culled.
     primitive: wgpu::PrimitiveState {
       cull_mode: None,
       ..Default::default()
     },
-    depth_stencil: None,
-    multisample: Default::default(),
-    multiview_mask: None,
-    cache: None,
   })
 }
 

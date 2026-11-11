@@ -37,6 +37,9 @@ mod permissions;
 mod plugins;
 mod project_browser;
 mod projects_folder;
+mod precompiled_shaders {
+  include!(concat!(env!("OUT_DIR"), "/precompiled_shaders.rs"));
+}
 mod recording;
 mod recording_inputs;
 mod recording_sources;
