@@ -110,8 +110,8 @@ pub(super) fn stand_over(app: &AppHandle, overlay: &tauri::WebviewWindow) {
   app_windows::island_overlay::stand_over(app, Some(overlay));
 }
 
-/// An area was drawn: the island hangs by it while it is read, on the
-/// display that holds most of it.
+/// An area was drawn, in the anchor display's points: the island hangs by it
+/// while it is read, on the display that holds most of it.
 pub(super) fn reading(app: &AppHandle, binding: &DesktopBinding, region: Rect) {
   tell(app, Some(TextRecognitionIslandState::Reading));
   let Some((display, rect)) = local_box(binding, region) else {
@@ -120,9 +120,12 @@ pub(super) fn reading(app: &AppHandle, binding: &DesktopBinding, region: Rect) {
   place(app, IslandPlacement::ByBox { display, rect });
 }
 
-/// The part of `region` on the display that holds most of it, in that
-/// display's points.
+/// The part of `region`, in the anchor display's points, on the display that
+/// holds most of it, in that display's points. The displays' origins are on
+/// the desktop, which starts at its top start corner rather than at the
+/// anchor's.
 fn local_box(binding: &DesktopBinding, region: Rect) -> Option<(u32, LocalRect)> {
+  let region = binding.project_local(region)?;
   binding
     .displays
     .iter()
