@@ -85,6 +85,7 @@ describe("settings search", () => {
           onChangeBinding={() => undefined}
           onChangeGlide={() => undefined}
           onChangeOcr={() => undefined}
+          onChangeReplaceSystemKeys={() => undefined}
           onChangeRuler={() => undefined}
           ruler={ruler}
           savingAnnotate={false}
@@ -92,6 +93,7 @@ describe("settings search", () => {
           savingOcr={false}
           savingRuler={false}
           savingShortcut={null}
+          savingSystemKeys={false}
           shortcuts={shortcuts}
         />
       </SettingsApiContext>,

@@ -277,6 +277,18 @@ settings-shortcuts-refused-none = Every combination with { $key } is taken.
 settings-shortcuts-clash = Same keys as { $others }.
 settings-shortcuts-clash-remove = Remove from { $shortcut }
 
+## The system's own screenshot keys, such as Windows + Shift + S, which can
+## open Screenwide's tools in place of the system's.
+
+settings-shortcuts-system-keys = System keys
+settings-shortcuts-system-keys-replace = Use { $platform ->
+        [windows] Windows'
+       *[macos] macOS's
+    } screenshot keys
+settings-shortcuts-system-keys-replace-description = They open { -app-name }'s tools instead of the system's.
+# Said once on the island, the first time one of the system's keys opens a tool. $keys is the combination, drawn as keys.
+settings-system-keys-announce = { $keys } now opens { -app-name }. Turn this off in Settings, under Shortcuts.
+
 ## What the system or most apps use a combination for, so a shortcut that
 ## works anywhere would take it from them. Each is read after "for", as in
 ## "macOS uses Shift + Command + 3 for screenshots" or "Most apps use

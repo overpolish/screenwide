@@ -48,6 +48,7 @@ pub fn initialize(app: &AppHandle) {
       }
     }
   }
+  system_keys::sync(app, settings.replace_system_keys);
   *app
     .state::<ShortcutSettingsState>()
     .0

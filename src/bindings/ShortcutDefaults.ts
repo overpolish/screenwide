@@ -3,9 +3,11 @@ import type { GlideSettings } from "./GlideSettings";
 import type { OcrSettings } from "./OcrSettings";
 import type { RulerSettings } from "./RulerSettings";
 import type { ShortcutSettings } from "./ShortcutSettings";
+import type { SystemShortcut } from "./SystemShortcut";
 
 /**
- * Return the same defaults used when native settings are first initialized.
- * The UI never has to maintain a second set of platform-specific bindings.
+ * Return the same defaults used when native settings are first initialized,
+ * with the system's keys Screenwide can take on this platform. The UI never
+ * has to maintain a second set of platform-specific bindings.
  */
-export type ShortcutDefaults = { shortcuts: ShortcutSettings, glide: GlideSettings, ruler: RulerSettings, ocr: OcrSettings, };
+export type ShortcutDefaults = { shortcuts: ShortcutSettings, glide: GlideSettings, ruler: RulerSettings, ocr: OcrSettings, systemShortcuts: Array<SystemShortcut>, };

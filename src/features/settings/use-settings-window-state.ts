@@ -43,6 +43,7 @@ export function useSettingsWindowState() {
     setGeneralSettings,
     setGlideSettings,
     setOcrSettings,
+    setReplaceSystemKeys,
     setShortcutBinding,
   } = useSettingsApi();
   const [general, setGeneral] = useState<GeneralSettings | null>(null);
@@ -56,6 +57,7 @@ export function useSettingsWindowState() {
   const [savingShortcut, setSavingShortcut] = useState<ShortcutAction | null>(
     null,
   );
+  const [savingSystemKeys, setSavingSystemKeys] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { changeRuler, savingRuler } = useRulerSettingsSave(setRuler, setError);
   const onCaptureChange = useShortcutCapture(
@@ -169,6 +171,22 @@ export function useSettingsWindowState() {
     [getGeneralSettings, setGeneralSettings],
   );
 
+  const changeReplaceSystemKeys = useCallback(
+    (replace: boolean) => {
+      setSavingSystemKeys(true);
+      setError(null);
+      setReplaceSystemKeys(replace)
+        .then(setShortcuts)
+        .catch((reason: unknown) => {
+          setError(String(reason));
+        })
+        .finally(() => {
+          setSavingSystemKeys(false);
+        });
+    },
+    [setReplaceSystemKeys],
+  );
+
   return {
     annotate,
     defaults,
@@ -184,6 +202,7 @@ export function useSettingsWindowState() {
     onChangeGeneral: changeGeneral,
     onChangeGlide: changeGlide,
     onChangeOcr: changeOcr,
+    onChangeReplaceSystemKeys: changeReplaceSystemKeys,
     onChangeRuler: (next: RulerSettings) => {
       void changeRuler(next);
     },
@@ -195,6 +214,7 @@ export function useSettingsWindowState() {
     savingOcr,
     savingRuler,
     savingShortcut,
+    savingSystemKeys,
     shortcuts,
     transcription,
   };

@@ -23,6 +23,7 @@ import { clashes, conflictOf, type ShortcutScope } from "./shortcut-conflicts";
 import { shortcutEntries, type ShortcutSources } from "./shortcut-entries";
 import { ShortcutList } from "./shortcut-list";
 import { preferredModifiers } from "./shortcut-suggestions";
+import { SystemKeysGroup } from "./system-keys-group";
 
 import type { KeyDef } from "./keyboard-map/keyboard-layout";
 
@@ -208,10 +209,20 @@ export function ShortcutsPane({
         </div>
       }
     >
+      {scope === "anywhere" &&
+      (sources.defaults?.systemShortcuts.length ?? 0) > 0 ? (
+        <SystemKeysGroup
+          entries={shown.filter((entry) => entry.isSystem)}
+          isOn={sources.shortcuts?.replaceSystemKeys ?? false}
+          isSaving={!sources.shortcuts || sources.savingSystemKeys}
+          onChange={sources.onChangeReplaceSystemKeys}
+          onPoint={setPointedId}
+        />
+      ) : null}
       <ShortcutList
         clashes={clashing}
         conflictOf={conflictFor}
-        entries={shown}
+        entries={shown.filter((entry) => !entry.isSystem)}
         onCaptureChange={onCaptureChange}
         onPoint={setPointedId}
         onSelect={select}

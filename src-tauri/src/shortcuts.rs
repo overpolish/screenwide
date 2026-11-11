@@ -42,6 +42,12 @@ mod feature_availability;
 pub(crate) use feature_availability::{
   sync_annotate_enabled, sync_ocr_enabled, sync_replay_enabled, sync_ruler_enabled,
 };
+mod system_keys;
+pub use system_keys::set_replace_system_keys;
+pub use system_keys::{
+  __cmd__set_replace_system_keys, __tauri_command_name_set_replace_system_keys,
+};
+pub(crate) use system_keys::{system_shortcuts, SystemShortcut};
 
 const SHORTCUTS_FILE: &str = "shortcuts.json";
 const SHORTCUT_ACTION_EVENT: &str = "global-shortcut://action";
@@ -109,6 +115,16 @@ pub struct ShortcutBinding {
 #[ts(export)]
 pub struct ShortcutSettings {
   pub bindings: Vec<ShortcutBinding>,
+  /// Whether the system's own screenshot keys run Screenwide's tools.
+  #[serde(default = "replaces_system_keys")]
+  pub replace_system_keys: bool,
+  /// Whether the island has said once that those keys are now Screenwide's.
+  #[serde(default)]
+  pub system_keys_announced: bool,
+}
+
+const fn replaces_system_keys() -> bool {
+  true
 }
 
 #[derive(Default)]
@@ -223,6 +239,7 @@ pub fn set_shortcut_binding(
     .filter_map(|binding| binding.shortcut.as_deref())
     .filter_map(|value| value.parse::<Shortcut>().ok())
     .any(|value| Some(value.id()) == requested_id)
+    || requested_id.is_some_and(|id| system_keys::taken(&settings, id))
   {
     return Err(screenwide_i18n::t!("settings-error-shortcut-taken"));
   }

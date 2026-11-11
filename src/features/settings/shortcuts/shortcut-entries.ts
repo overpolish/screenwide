@@ -28,6 +28,8 @@ import {
 import { ocrShortcuts } from "../sections/ocr-shortcuts";
 import { rulerShortcuts } from "../sections/ruler-shortcuts";
 
+import { systemKeyEntries } from "./system-key-entries";
+
 import type { ConflictSubject } from "./shortcut-conflicts";
 import type { AnnotateSettings } from "../../../bindings/AnnotateSettings";
 import type { GlideSettings } from "../../../bindings/GlideSettings";
@@ -55,6 +57,8 @@ export type ShortcutEntry = ConflictSubject & {
   onChange: (value: string | null) => void;
   defaultValue?: string | null;
   description?: string;
+  /** One of the system's keys, taken for the tool it names. */
+  isSystem?: boolean;
 };
 
 export type ShortcutSources = {
@@ -65,6 +69,7 @@ export type ShortcutSources = {
   onChangeBinding: (action: ShortcutAction, shortcut: string | null) => void;
   onChangeGlide: (settings: GlideSettings) => void;
   onChangeOcr: (settings: OcrSettings) => void;
+  onChangeReplaceSystemKeys: (replace: boolean) => void;
   onChangeRuler: (settings: RulerSettings) => void;
   ruler: RulerSettings | null;
   savingAnnotate: boolean;
@@ -72,7 +77,9 @@ export type ShortcutSources = {
   savingOcr: boolean;
   savingRuler: boolean;
   savingShortcut: ShortcutAction | null;
+  savingSystemKeys: boolean;
   shortcuts: ShortcutSettings | null;
+  /** Includes the system's keys Screenwide can take on this platform. */
   defaults?: ShortcutDefaults | null;
 };
 
@@ -279,5 +286,5 @@ export function shortcutEntries(sources: ShortcutSources): ShortcutEntry[] {
     ),
   );
 
-  return entries;
+  return [...entries, ...systemKeyEntries(entries, sources)];
 }

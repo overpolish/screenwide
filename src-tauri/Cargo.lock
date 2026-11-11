@@ -5632,6 +5632,7 @@ dependencies = [
  "screenwide-shader-layout",
  "screenwide-sidecar",
  "screenwide-speech",
+ "screenwide-system-keys",
  "screenwide-text",
  "screenwide-timeline",
  "screenwide-timeline-edit",
@@ -6065,6 +6066,13 @@ dependencies = [
  "serde",
  "serde_json",
  "ts-rs",
+]
+
+[[package]]
+name = "screenwide-system-keys"
+version = "1.0.3"
+dependencies = [
+ "windows 0.62.2",
 ]
 
 [[package]]

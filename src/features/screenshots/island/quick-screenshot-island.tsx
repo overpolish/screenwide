@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { Clipboard, ImageDown, PictureInPicture2, X } from "lucide-react";
+import { type ReactNode } from "react";
 
 import { t } from "../../../i18n/i18n";
 import { IconButton } from "../../../primitives/button/icon-button";
@@ -27,6 +28,8 @@ export type QuickScreenshotIslandProps = Pick<
   destination: QuickScreenshotDestination;
   /** Ends the session without a screenshot, as Escape does. */
   onClose: () => void;
+  /** A hint under the row, such as which keys now open it. */
+  note?: ReactNode;
 };
 
 const TITLES: Record<QuickScreenshotDestination, () => string> = {
@@ -46,6 +49,7 @@ export function QuickScreenshotIsland({
   destination,
   isShown = true,
   notch,
+  note,
   onClose,
   onHidden,
   onShapeChange,
@@ -54,6 +58,7 @@ export function QuickScreenshotIsland({
   return (
     <Island
       aria-label={t("screenshots-quick-island")}
+      below={note}
       isShown={isShown}
       notch={notch}
       onHidden={onHidden}

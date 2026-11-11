@@ -3,6 +3,7 @@
 
 import { type ContextType, useState } from "react";
 
+import { isWindows } from "../../lib/platform";
 import { featureStage } from "../../storybook/feature-story-stage";
 
 import { SAMPLE_RUNNING_APPS } from "./capture/hidden-apps-fixtures";
@@ -27,6 +28,7 @@ import type { OcrSettings } from "../../bindings/OcrSettings";
 import type { RulerSettings } from "../../bindings/RulerSettings";
 import type { ShortcutDefaults } from "../../bindings/ShortcutDefaults";
 import type { ShortcutSettings } from "../../bindings/ShortcutSettings";
+import type { SystemShortcut } from "../../bindings/SystemShortcut";
 import type { Meta } from "@storybook/react-vite";
 
 // Whether a story named where the models start.
@@ -35,6 +37,13 @@ const isModelSeed = (value: unknown): value is TranscriptionPreviewSeed =>
   value !== null &&
   "status" in value &&
   "progress" in value;
+
+const WINDOWS_SYSTEM_SHORTCUTS: SystemShortcut[] = [
+  { action: "takeScreenshot", shortcut: "Super+Shift+KeyS" },
+  { action: "takeScreenshot", shortcut: "PrintScreen" },
+  { action: "toggleRecordingControls", shortcut: "Super+Shift+KeyR" },
+  { action: "recognizeText", shortcut: "Super+Shift+KeyT" },
+];
 
 export function createPreviewApi(
   modelSeed?: TranscriptionPreviewSeed,
@@ -96,7 +105,7 @@ export function createPreviewApi(
       { action: "saveReplay", shortcut: "CommandOrControl+Shift+Digit9" },
       {
         action: "recognizeText",
-        shortcut: "CommandOrControl+Shift+KeyT",
+        shortcut: "CommandOrControl+Shift+KeyE",
       },
       { action: "rulerOverlay", shortcut: "CommandOrControl+Shift+KeyR" },
       { action: "annotateOverlay", shortcut: "CommandOrControl+Shift+KeyA" },
@@ -104,8 +113,18 @@ export function createPreviewApi(
         action: "annotateClear",
         shortcut: "CommandOrControl+Shift+Backspace",
       },
-      { action: "takeScreenshot", shortcut: "CommandOrControl+Shift+KeyS" },
+      { action: "takeScreenshot", shortcut: "CommandOrControl+Shift+Digit2" },
+      {
+        action: "takeScreenshotToClipboard",
+        shortcut: "CommandOrControl+Shift+Digit1",
+      },
+      {
+        action: "takeReferenceScreenshot",
+        shortcut: "CommandOrControl+Shift+KeyD",
+      },
     ],
+    replaceSystemKeys: true,
+    systemKeysAnnounced: true,
   };
   let ruler: RulerSettings = {
     bindings: {
@@ -155,8 +174,11 @@ export function createPreviewApi(
     ocr: { bindings: { ...ocr.bindings }, enabled: ocr.enabled },
     ruler: { bindings: { ...ruler.bindings }, enabled: ruler.enabled },
     shortcuts: {
+      ...shortcuts,
       bindings: shortcuts.bindings.map((binding) => ({ ...binding })),
     },
+    // Only Windows' keys are taken so far.
+    systemShortcuts: isWindows() ? WINDOWS_SYSTEM_SHORTCUTS : [],
   };
   return {
     ...momentsPreviewApi(),
@@ -200,12 +222,17 @@ export function createPreviewApi(
       ocr = next;
       return Promise.resolve(next);
     },
+    setReplaceSystemKeys: (replace) => {
+      shortcuts = { ...shortcuts, replaceSystemKeys: replace };
+      return Promise.resolve(shortcuts);
+    },
     setRulerSettings: (next) => {
       ruler = next;
       return Promise.resolve(next);
     },
     setShortcutBinding: (action, shortcut) => {
       shortcuts = {
+        ...shortcuts,
         bindings: [
           ...shortcuts.bindings.filter((binding) => binding.action !== action),
           { action, shortcut },

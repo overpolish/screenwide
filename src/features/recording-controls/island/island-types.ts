@@ -133,6 +133,9 @@ export type RecordingIslandProps = {
   /** The notch of the screen the island is on, measured; none where the
    * screen has none. */
   notch?: IslandNotch | null;
+  /** A hint under the row before recording, such as which keys now open
+   * the island. */
+  note?: ReactNode;
   onCameraFlipChange?: (isFlipped: boolean) => void;
   onCancelCountdown?: () => void;
   onCancelStarting?: () => void;

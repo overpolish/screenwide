@@ -37,6 +37,9 @@ export const beginShortcutCapture = () =>
 
 export const endShortcutCapture = () => invoke<null>("end_shortcut_capture");
 
+export const setReplaceSystemKeys = (replace: boolean) =>
+  invoke<ShortcutSettings>("set_replace_system_keys", { replace });
+
 export const hideSettings = () => invoke<null>("hide_settings");
 
 export const getGeneralSettings = () =>

@@ -241,6 +241,7 @@ pub(crate) fn invoke_handler() -> impl Fn(tauri::ipc::Invoke) -> bool + Send + S
     shortcuts::begin_shortcut_capture,
     shortcuts::end_shortcut_capture,
     shortcuts::set_shortcut_binding,
+    shortcuts::set_replace_system_keys,
     shortcuts::take_pending_shortcut_action,
     app_accent::get_system_accent,
     app_locale::get_app_locale,

@@ -17,7 +17,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 
 const DEFAULT_SHORTCUT = "CommandOrControl+Shift+KeyR";
 
-// Another shortcut already on ⌘⇧S (Ctrl+Shift+S on Windows), as Take a
+// Another shortcut already on ⌘⇧2 (Ctrl+Shift+2 on Windows), as Take a
 // screenshot is by default, and the system's and apps' own combinations.
 const storyConflicts = (value: string) =>
   conflictOf({
@@ -28,7 +28,7 @@ const storyConflicts = (value: string) =>
         kind: "combo",
         label: "Take a screenshot",
         scope: "anywhere",
-        value: "CommandOrControl+Shift+KeyS",
+        value: "CommandOrControl+Shift+Digit2",
       },
     ],
     subject: { id: "story", scope: "anywhere" },

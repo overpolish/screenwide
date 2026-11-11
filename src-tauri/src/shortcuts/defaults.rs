@@ -27,19 +27,19 @@ impl Default for ShortcutSettings {
         },
         ShortcutBinding {
           action: ShortcutAction::TakeScreenshot,
-          shortcut: Some("CommandOrControl+Shift+Digit8".to_owned()),
+          shortcut: Some("CommandOrControl+Shift+Digit2".to_owned()),
         },
         ShortcutBinding {
           action: ShortcutAction::TakeScreenshotToClipboard,
-          shortcut: None,
+          shortcut: Some("CommandOrControl+Shift+Digit1".to_owned()),
         },
         ShortcutBinding {
           action: ShortcutAction::TakeReferenceScreenshot,
-          shortcut: Some("CommandOrControl+Shift+Digit7".to_owned()),
+          shortcut: Some("CommandOrControl+Shift+KeyD".to_owned()),
         },
         ShortcutBinding {
           action: ShortcutAction::RecognizeText,
-          shortcut: Some("CommandOrControl+Shift+KeyT".to_owned()),
+          shortcut: Some("CommandOrControl+Shift+KeyE".to_owned()),
         },
         ShortcutBinding {
           action: ShortcutAction::RulerOverlay,
@@ -58,29 +58,59 @@ impl Default for ShortcutSettings {
           shortcut: None,
         },
       ],
+      replace_system_keys: true,
+      system_keys_announced: false,
     }
   }
 }
 
+/// Defaults an action shipped with before its current one. The settings
+/// window saves the keys it records with their modifiers spelled out, so a
+/// saved binding still holding one of these verbatim was never changed.
+const RETIRED_DEFAULTS: &[(ShortcutAction, &str)] = &[
+  (
+    ShortcutAction::TakeScreenshot,
+    "CommandOrControl+Shift+Digit8",
+  ),
+  (
+    ShortcutAction::TakeReferenceScreenshot,
+    "CommandOrControl+Shift+Digit7",
+  ),
+  (ShortcutAction::RecognizeText, "CommandOrControl+Shift+KeyT"),
+];
+
+fn is_retired_default(action: ShortcutAction, shortcut: Option<&str>) -> bool {
+  RETIRED_DEFAULTS
+    .iter()
+    .any(|&(retired, keys)| retired == action && shortcut == Some(keys))
+}
+
 /// The saved bindings over the defaults. An action the saved file has never
 /// heard of keeps its default, so a shortcut introduced by an update reaches
-/// an existing install; one the user cleared is stored as null and stays
-/// cleared. A new default the user has already put to another use is left
-/// unbound rather than taking the keys from under them.
+/// an existing install, and one still on a default since retired moves to
+/// the current one. One the user changed stays, and one they cleared is
+/// stored as null and stays cleared. A default the user has already put to
+/// another use does not take the keys from under them: the action keeps
+/// what it had, or stays unbound if it is new.
 pub(super) fn merge(stored: Option<ShortcutSettings>) -> ShortcutSettings {
   let mut settings = ShortcutSettings::default();
   let Some(stored) = stored else {
     return settings;
   };
-  let mut introduced = Vec::new();
+  settings.replace_system_keys = stored.replace_system_keys;
+  settings.system_keys_announced = stored.system_keys_announced;
+  let mut arriving = Vec::new();
   for binding in &mut settings.bindings {
     match stored
       .bindings
       .iter()
       .find(|candidate| candidate.action == binding.action)
     {
+      Some(saved) if is_retired_default(binding.action, saved.shortcut.as_deref()) => {
+        arriving.push((binding.action, saved.shortcut.clone()));
+      }
       Some(saved) => binding.shortcut = saved.shortcut.clone(),
-      None => introduced.push(binding.action),
+      None => arriving.push((binding.action, None)),
     }
   }
   let keys = |shortcut: &Option<String>| {
@@ -88,7 +118,7 @@ pub(super) fn merge(stored: Option<ShortcutSettings>) -> ShortcutSettings {
       .as_deref()
       .and_then(|shortcut| shortcut.parse::<Shortcut>().ok())
   };
-  for action in introduced {
+  for (action, kept) in arriving {
     let default = settings
       .bindings
       .iter()
@@ -106,7 +136,7 @@ pub(super) fn merge(stored: Option<ShortcutSettings>) -> ShortcutSettings {
         .iter_mut()
         .find(|binding| binding.action == action)
       {
-        binding.shortcut = None;
+        binding.shortcut = kept;
       }
     }
   }

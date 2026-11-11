@@ -7,6 +7,7 @@ import { ISLAND } from "../../../primitives/island/island-geometry";
 import { featureStage } from "../../../storybook/feature-story-stage";
 import { PREVIEW_NOTCH } from "../../../storybook/preview-notch";
 import { StoryNotch } from "../../../storybook/story-notch";
+import { SystemKeysNote } from "../../island/system-keys-note";
 
 import { QuickScreenshotIsland } from "./quick-screenshot-island";
 
@@ -58,4 +59,8 @@ export const ToEditor: Story = {};
 
 export const ToClipboard: Story = {
   args: { destination: "clipboard" },
+};
+
+export const OpenedBySystemKeys: Story = {
+  args: { note: <SystemKeysNote keys="Super+Shift+KeyS" /> },
 };

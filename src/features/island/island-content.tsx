@@ -20,7 +20,9 @@ import { useTextRecognitionIsland } from "../text-recognition/island/use-text-re
 import { UpdateIsland } from "../updates/island/update-island";
 import { useUpdateIsland } from "../updates/island/use-update-island";
 
+import { SystemKeysNote } from "./system-keys-note";
 import { useIslandSwap } from "./use-island-swap";
+import { useSystemKeysAnnouncement } from "./use-system-keys-announcement";
 
 import type { IslandHost } from "./island-window";
 
@@ -66,6 +68,25 @@ export function IslandContent({ island }: { island: IslandHost }) {
                     : "recording",
     island,
   );
+  // The first time one of the system's keys opens a tool, the island it
+  // opens says so: Quick Screenshot's, Text Recognition's or the recording
+  // controls before a recording.
+  const sayer =
+    swap.kind === "quickScreenshot" ||
+    swap.kind === "textRecognition" ||
+    (swap.kind === "recording" && status === "idle" && !annotate);
+  const announcement = useSystemKeysAnnouncement(sayer && swap.host.isShown);
+  const note =
+    sayer && announcement.keys ? (
+      <SystemKeysNote keys={announcement.keys} />
+    ) : undefined;
+  const host = {
+    ...swap.host,
+    onHidden: () => {
+      swap.host.onHidden();
+      announcement.onHidden();
+    },
+  };
 
   if (swap.kind === "update") {
     return <UpdateIsland {...swap.host} {...update.props} />;
@@ -87,8 +108,9 @@ export function IslandContent({ island }: { island: IslandHost }) {
   if (swap.kind === "quickScreenshot" && quickScreenshot.destination) {
     return (
       <QuickScreenshotIsland
-        {...swap.host}
+        {...host}
         destination={quickScreenshot.destination}
+        note={note}
         onClose={quickScreenshot.onClose}
       />
     );
@@ -96,7 +118,8 @@ export function IslandContent({ island }: { island: IslandHost }) {
   if (swap.kind === "textRecognition" && textRecognition.state) {
     return (
       <TextRecognitionIsland
-        {...swap.host}
+        {...host}
+        note={note}
         onAction={textRecognition.onAction}
         onCopyQrCode={textRecognition.onCopyQrCode}
         onOpenQrCode={textRecognition.onOpenQrCode}
@@ -119,6 +142,10 @@ export function IslandContent({ island }: { island: IslandHost }) {
     );
   }
   return (
-    <RecordingIslandControls annotate={rows ?? undefined} island={swap.host} />
+    <RecordingIslandControls
+      annotate={rows ?? undefined}
+      island={host}
+      note={note}
+    />
   );
 }

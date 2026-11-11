@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { t } from "../../../i18n/i18n";
+import { platformArg, t } from "../../../i18n/i18n";
 import {
   antiFlickerToggle,
   autoZoomToggle,
@@ -209,6 +209,19 @@ export function settingsSearchEntries({
 
   // Shortcuts
   const shortcut = t("settings-search-keywords-shortcut");
+  // Only Windows' keys can be taken so far.
+  if (!isMac)
+    at("hotkeys", t("settings-shortcuts-system-keys"))(
+      [
+        row(
+          t("settings-shortcuts-system-keys-replace", {
+            platform: platformArg(),
+          }),
+          t("settings-shortcuts-system-keys-replace-description"),
+        ),
+      ],
+      shortcut,
+    );
   at("hotkeys", t("settings-recording"))(
     recordingShortcuts().map(shortcutRow),
     shortcut,

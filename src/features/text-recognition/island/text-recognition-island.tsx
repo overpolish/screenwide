@@ -41,6 +41,8 @@ export type TextRecognitionIslandProps = Pick<
   /** Opens a QR code's action; rejects when it could not. */
   onOpenQrCode: (url: string) => Promise<unknown>;
   state: TextRecognitionIslandState;
+  /** A hint under the row, such as which keys now open it. */
+  note?: ReactNode;
   /** Which coming-out this is (`IslandHost`). */
   showing?: number;
 };
@@ -198,6 +200,7 @@ function row({
 export function TextRecognitionIsland({
   isShown = true,
   notch,
+  note,
   onAction,
   onCopyQrCode,
   onHidden,
@@ -224,6 +227,7 @@ export function TextRecognitionIsland({
       // to the row's width as the black glides (`IslandSection`).
       anchor={qr ? "end" : "center"}
       aria-label={t("text-recognition-island")}
+      below={note}
       isShown={isShown}
       // A new island each time it moves between the top of the screen and an
       // area, so it comes out where it now is.

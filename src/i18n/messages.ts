@@ -1250,8 +1250,12 @@ export type Messages = {
   "settings-shortcuts-scope-anywhere": null;
   "settings-shortcuts-scope-ocr": null;
   "settings-shortcuts-scope-ruler": null;
+  "settings-shortcuts-system-keys": null;
+  "settings-shortcuts-system-keys-replace": { platform: string | number };
+  "settings-shortcuts-system-keys-replace-description": null;
   "settings-show-controls-on-launch": null;
   "settings-startup": null;
+  "settings-system-keys-announce": { keys: string | number };
   "settings-transcription-camera-background": null;
   "settings-transcription-camera-background-description": null;
   "settings-transcription-camera-objects": null;

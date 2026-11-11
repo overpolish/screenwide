@@ -123,6 +123,7 @@ export function RecordingIsland(props: RecordingIslandProps) {
       />
     );
     anchor = ANCHORS[panel];
+    below = props.note;
     section = (
       // What stops recording, or what just failed, is said above the
       // source. It takes the source's width rather than setting its own, so

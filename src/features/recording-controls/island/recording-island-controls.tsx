@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { convertFileSrc } from "@tauri-apps/api/core";
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
 
 import {
   openPermissionSettings,
@@ -78,9 +78,12 @@ const islandModeOf = (mode: RecordingMode): IslandMode =>
 export function RecordingIslandControls({
   annotate,
   island,
+  note,
 }: {
   island: IslandHost;
   annotate?: AnnotateRows;
+  /** A hint under the row before recording (`RecordingIsland`). */
+  note?: ReactNode;
 }) {
   const settings = useGeneralSettings();
   // The checks are on until the stored settings say otherwise.
@@ -206,6 +209,7 @@ export function RecordingIslandControls({
       mode={islandModeOf(recordingMode)}
       moment={moment}
       notch={island.notch}
+      note={note}
       onCancelCountdown={() => {
         cancelRecording().catch(report("cancel"));
       }}

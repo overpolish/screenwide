@@ -24,13 +24,17 @@ fn defaults_open_the_controls_save_replays_take_screenshots_and_recognize_text()
       (ShortcutAction::SaveReplay, "CommandOrControl+Shift+Digit9"),
       (
         ShortcutAction::TakeScreenshot,
-        "CommandOrControl+Shift+Digit8"
+        "CommandOrControl+Shift+Digit2"
+      ),
+      (
+        ShortcutAction::TakeScreenshotToClipboard,
+        "CommandOrControl+Shift+Digit1"
       ),
       (
         ShortcutAction::TakeReferenceScreenshot,
-        "CommandOrControl+Shift+Digit7"
+        "CommandOrControl+Shift+KeyD"
       ),
-      (ShortcutAction::RecognizeText, "CommandOrControl+Shift+KeyT"),
+      (ShortcutAction::RecognizeText, "CommandOrControl+Shift+KeyE"),
       (ShortcutAction::RulerOverlay, "CommandOrControl+Shift+KeyR"),
       (
         ShortcutAction::AnnotateOverlay,
@@ -42,11 +46,6 @@ fn defaults_open_the_controls_save_replays_take_screenshots_and_recognize_text()
       ),
     ]
   );
-  assert!(settings
-    .bindings
-    .iter()
-    .find(|binding| binding.action == ShortcutAction::TakeScreenshotToClipboard)
-    .is_some_and(|binding| binding.shortcut.is_none()));
 }
 
 #[test]
@@ -62,6 +61,7 @@ fn a_saved_file_that_predates_an_action_leaves_it_on_its_default() {
         shortcut: Some("Command+Shift+KeyR".to_owned()),
       },
     ],
+    ..ShortcutSettings::default()
   };
   let merged = merge(Some(stored));
   let shortcut = |action| {
@@ -100,6 +100,7 @@ fn a_new_default_on_keys_the_user_already_bound_is_left_unbound() {
       action: ShortcutAction::TakeScreenshotToClipboard,
       shortcut: Some(taken.clone()),
     }],
+    ..ShortcutSettings::default()
   };
   let merged = merge(Some(stored));
   let shortcut = |action| {
@@ -119,6 +120,88 @@ fn a_new_default_on_keys_the_user_already_bound_is_left_unbound() {
   assert_eq!(
     shortcut(ShortcutAction::AnnotateOverlay).as_deref(),
     Some("CommandOrControl+Shift+KeyA")
+  );
+}
+
+#[test]
+fn a_binding_left_on_a_retired_default_moves_and_a_chosen_one_stays() {
+  let stored = ShortcutSettings {
+    bindings: vec![
+      ShortcutBinding {
+        action: ShortcutAction::TakeScreenshot,
+        shortcut: Some("CommandOrControl+Shift+Digit8".to_owned()),
+      },
+      ShortcutBinding {
+        action: ShortcutAction::TakeScreenshotToClipboard,
+        shortcut: None,
+      },
+      // The old default's keys, recorded in the settings window.
+      ShortcutBinding {
+        action: ShortcutAction::TakeReferenceScreenshot,
+        shortcut: Some("Control+Shift+Digit7".to_owned()),
+      },
+      ShortcutBinding {
+        action: ShortcutAction::RecognizeText,
+        shortcut: None,
+      },
+    ],
+    ..ShortcutSettings::default()
+  };
+  let merged = merge(Some(stored));
+  let shortcut = |action| {
+    merged
+      .bindings
+      .iter()
+      .find(|binding| binding.action == action)
+      .and_then(|binding| binding.shortcut.clone())
+  };
+
+  assert_eq!(
+    shortcut(ShortcutAction::TakeScreenshot).as_deref(),
+    Some("CommandOrControl+Shift+Digit2")
+  );
+  assert_eq!(
+    shortcut(ShortcutAction::TakeReferenceScreenshot).as_deref(),
+    Some("Control+Shift+Digit7")
+  );
+  // Cleared, or never given keys: a saved null cannot tell which, so it
+  // stays unbound either way.
+  assert_eq!(shortcut(ShortcutAction::TakeScreenshotToClipboard), None);
+  assert_eq!(shortcut(ShortcutAction::RecognizeText), None);
+}
+
+#[test]
+fn a_retired_default_whose_new_keys_are_taken_keeps_its_old_ones() {
+  let modifier = if cfg!(target_os = "macos") {
+    "Super"
+  } else {
+    "Control"
+  };
+  let stored = ShortcutSettings {
+    bindings: vec![
+      ShortcutBinding {
+        action: ShortcutAction::RecognizeText,
+        shortcut: Some("CommandOrControl+Shift+KeyT".to_owned()),
+      },
+      ShortcutBinding {
+        action: ShortcutAction::AnnotateClear,
+        shortcut: Some(format!("{modifier}+Shift+KeyE")),
+      },
+    ],
+    ..ShortcutSettings::default()
+  };
+  let merged = merge(Some(stored));
+  let shortcut = |action| {
+    merged
+      .bindings
+      .iter()
+      .find(|binding| binding.action == action)
+      .and_then(|binding| binding.shortcut.clone())
+  };
+
+  assert_eq!(
+    shortcut(ShortcutAction::RecognizeText).as_deref(),
+    Some("CommandOrControl+Shift+KeyT")
   );
 }
 

@@ -30,11 +30,13 @@ export type SettingsPanesProps = Omit<ToolsPaneProps, "defaults"> & {
   onCaptureChange: (capturing: boolean) => Promise<void>;
   onChangeBinding: (action: ShortcutAction, shortcut: string | null) => void;
   onChangeGeneral: (settings: GeneralSettings) => void;
+  onChangeReplaceSystemKeys: (replace: boolean) => void;
   onError: (message: string) => void;
   /** Opens the Shortcuts pane on the row of the shortcut with this title. */
   onOpenShortcut: (title: string) => void;
   savingGeneral: boolean;
   savingShortcut: ShortcutAction | null;
+  savingSystemKeys: boolean;
   section: SettingsSection;
   shortcuts: ShortcutSettings | null;
   transcription: TranscriptionControls;
