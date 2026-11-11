@@ -28,6 +28,7 @@ pub(crate) mod recording_moments;
 pub(crate) mod recording_preview;
 pub(crate) mod recording_preview_player;
 mod recording_sidecar;
+pub(crate) mod resize_timing;
 pub(crate) mod save;
 pub(crate) mod screenshot_preview;
 pub(crate) mod speech;

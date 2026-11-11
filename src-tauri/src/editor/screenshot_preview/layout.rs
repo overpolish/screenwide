@@ -54,6 +54,8 @@ pub async fn layout_screenshot_preview_surface(
   // How round the viewport's corners are where it meets the chrome.
   viewport_corners: PreviewSurfaceCorners,
 ) -> Result<(), String> {
+  // TEMPORARY(#12)
+  let _timing = crate::editor::resize_timing::begin("screenshot", viewport.width, viewport.height);
   let scale = if scale.is_finite() && scale > 0.0 {
     scale
   } else {

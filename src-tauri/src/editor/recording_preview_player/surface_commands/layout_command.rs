@@ -30,6 +30,8 @@ pub async fn layout_recording_preview_surface(
     viewport_corners,
     keep_view,
   } = layout;
+  // TEMPORARY(#12)
+  let _timing = crate::editor::resize_timing::begin("recording", viewport.width, viewport.height);
   let mut manager = state
     .0
     .lock()

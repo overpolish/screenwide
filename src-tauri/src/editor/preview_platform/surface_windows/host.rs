@@ -52,10 +52,14 @@ impl Host for WindowsHost {
     magnifier: Option<&NativeMagnifier>,
     backdrop: BackdropStyle,
   ) -> Result<bool, String> {
-    self
+    // TEMPORARY(#12): timed for the resize log.
+    let began = std::time::Instant::now();
+    let drawn = self
       .gpu
       .workspace
-      .draw(frame, placements, magnifier, backdrop)
+      .draw(frame, placements, magnifier, backdrop);
+    crate::editor::resize_timing::record_draw(began.elapsed());
+    drawn
   }
 
   fn hide_workspace(&self) -> bool {
@@ -104,9 +108,12 @@ impl Host for WindowsHost {
   }
 
   fn commit(&self, wait: bool) {
+    // TEMPORARY(#12): timed for the resize log.
+    let began = std::time::Instant::now();
     if unsafe { self.gpu.composition.Commit() }.is_ok() && wait {
       let _ = unsafe { self.gpu.composition.WaitForCommitCompletion() };
     }
+    crate::editor::resize_timing::record_commit(began.elapsed());
   }
 
   fn set_cursor(&self, kind: CursorKind) {
