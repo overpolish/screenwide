@@ -16,6 +16,7 @@ import {
   useTweenedOutput,
 } from "../preview/use-tweened-output";
 import { useRecenterInsetControls } from "../recenter-inset-channel";
+import { screenshotChoices } from "../screenshot/screenshot-choices";
 import {
   columnMode,
   columnTool,
@@ -167,39 +168,18 @@ export function ScreenshotSection({
     ? pictureTool
     : undefined;
   const hasSelectedAnnotation = annotations.hasSelection;
-  // Select first, then nothing chosen: taken up, Select would bring back the
-  // annotations it held when it was put down (`useSelectToolMemory`). The
-  // layer goes too, whether chosen by hand or by the tool that took one up,
-  // since Select on a chosen layer is the Screenshot mode.
-  const backToSelect = () => {
-    setTool("select");
-    annotations.clearSelection();
-    onSelectedItemChange?.(null);
-  };
-  // A tool that draws on a layer takes one in hand, the newest where none
-  // is chosen.
-  const takeUp = (next: ScreenshotTool) => {
-    if (next !== "select" && next !== "canvas" && selectedItemId === null)
-      onSelectedItemChange?.(newestItemId);
-    setTool(next);
-  };
-  const toggle = (next: ScreenshotTool) => {
-    takeUp(tool === next ? "select" : next);
-  };
+  const { backToSelect, chooseMode, takeUp, toggle } = screenshotChoices({
+    clearAnnotations: annotations.clearSelection,
+    newestItemId,
+    onSelectedItemChange,
+    selectedItemId,
+    setTool,
+    tool,
+  });
   usePublishEditorModes({
     kind: "screenshot",
     mode,
-    onModeChange: (next) => {
-      if (next === null) backToSelect();
-      else if (next === "frame") takeUp("canvas");
-      else {
-        // The Screenshot mode is Select on a layer, the newest where none
-        // is chosen, with the annotations let go as any mode lets them go.
-        if (selectedItemId === null) onSelectedItemChange?.(newestItemId);
-        setTool("select");
-        annotations.clearSelection();
-      }
-    },
+    onModeChange: chooseMode,
     parts: NO_CAPTURE_PARTS,
     tracks: null,
   });
@@ -236,6 +216,9 @@ export function ScreenshotSection({
     onSelectTool: backToSelect,
     onToggleCrop: () => {
       toggle("crop");
+    },
+    onToggleScreenPanel: () => {
+      chooseMode(isScreenOpen ? null : "screen");
     },
     onTool: toggle,
     ownsEscape: tool !== "select" || hasSelectedAnnotation || isScreenOpen,

@@ -33,21 +33,29 @@ export type EditorToolKeys = {
   onSelectTool?: () => void;
   /** B: the strip's blade, in hand or put down. */
   onToggleBladeTool?: () => void;
+  /** Shift+M: the Camera mode, open or away. */
+  onToggleCameraPanel?: () => void;
   /** U: the Captions panel, on or away. */
   onToggleCaptionsPanel?: () => void;
   onToggleCrop?: () => void;
   /** Shift+C: the cursor panel, on or away. */
   onToggleCursorPanel?: () => void;
-  /** K: the keyboard panel, on or away. */
+  /** Shift+K: the keyboard panel, on or away. */
   onToggleKeyboardPanel?: () => void;
   onTogglePlayback?: () => void;
   /** Shift+R: the strip's range tool, in hand or put down. */
   onToggleRangeTool?: () => void;
-  /** Shift+S: timeline snapping, on or off. */
+  /** Shift+S: the Screen mode (a screenshot's Screenshot), open or away. */
+  onToggleScreenPanel?: () => void;
+  /** N: timeline snapping, on or off. */
   onToggleSnap?: () => void;
+  /** Shift+U: the Sound mode, open or away. */
+  onToggleSoundPanel?: () => void;
+  /** Shift+A: the Tracks island, out or away. */
+  onToggleTracks?: () => void;
   /** Shift+T: the Transcript panel, on or away. */
   onToggleTranscriptPanel?: () => void;
-  /** A drawing tool's letter, taking the tool up: A for the arrow, N for the
+  /** A drawing tool's letter, taking the tool up: A for the arrow, C for the
    * counter. One callback for every drawing tool, because taking one up is
    * the same act whichever shape it draws. */
   onTool?: (tool: AnnotationKind) => void;
@@ -79,7 +87,10 @@ const toolKeyAction = (id: EditorToolId, keys: EditorToolKeys) => {
 };
 
 /** What `code` does in this window, with Shift held when `shifted`, or null
- * where it does nothing. */
+ * where it does nothing. A letter only takes up its tool where this window
+ * answers that tool; anywhere else it falls through to the keys that belong
+ * to no tool, so a tool given one of their letters would show in tests
+ * rather than silently take it. */
 export const editorToolKeyAction = (
   code: string,
   keys: EditorToolKeys,
@@ -102,27 +113,29 @@ export const editorToolKeyAction = (
           onArrange(move);
         }
       : null;
-  if (shifted)
-    return (
-      {
-        KeyC: keys.onToggleCursorPanel,
-        KeyR: keys.onToggleRangeTool,
-        KeyS: keys.onToggleSnap,
-        KeyT: keys.onToggleTranscriptPanel,
-      }[code] ?? null
-    );
   const tool = code.startsWith("Key")
-    ? editorToolForShortcut(code.slice(3))
+    ? editorToolForShortcut(code.slice(3), shifted)
     : null;
-  if (tool !== null) return toolKeyAction(tool, keys) ?? null;
-  return (
-    {
-      KeyB: keys.onToggleBladeTool,
-      KeyK: keys.onToggleKeyboardPanel,
-      KeyP: keys.onTogglePlayback,
-      KeyU: keys.onToggleCaptionsPanel,
-    }[code] ?? null
-  );
+  const toolAction = tool === null ? undefined : toolKeyAction(tool, keys);
+  if (toolAction) return toolAction;
+  const table: Record<string, (() => void) | undefined> = shifted
+    ? {
+        KeyA: keys.onToggleTracks,
+        KeyC: keys.onToggleCursorPanel,
+        KeyK: keys.onToggleKeyboardPanel,
+        KeyM: keys.onToggleCameraPanel,
+        KeyR: keys.onToggleRangeTool,
+        KeyS: keys.onToggleScreenPanel,
+        KeyT: keys.onToggleTranscriptPanel,
+        KeyU: keys.onToggleSoundPanel,
+      }
+    : {
+        KeyB: keys.onToggleBladeTool,
+        KeyN: keys.onToggleSnap,
+        KeyP: keys.onTogglePlayback,
+        KeyU: keys.onToggleCaptionsPanel,
+      };
+  return table[code] ?? null;
 };
 
 /** The ⌘ or Ctrl letters a window answers, without Shift. */

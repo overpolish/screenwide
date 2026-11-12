@@ -3,6 +3,8 @@
 
 import { useEffect, useRef } from "react";
 
+import { isWindowsHost } from "../../../lib/platform";
+
 import {
   arrowDirections,
   editorCommandKeyAction,
@@ -12,6 +14,7 @@ import {
 } from "./editor-tool-keys";
 import { preserveEscapeFocus } from "./escape-focus";
 import { exportIslandOwnsKey } from "./export-island-keys";
+import { keepPointerShown } from "./keep-pointer-shown";
 import {
   editsText,
   ownsActivationKeys,
@@ -38,7 +41,6 @@ import {
 let escapeClaims = 0;
 
 export function useEditorWindowShortcuts({
-  onArrange,
   onConfirm,
   onCopy,
   onCutTimeline,
@@ -49,22 +51,11 @@ export function useEditorWindowShortcuts({
   onNudge,
   onPaste,
   onRedo,
-  onResizeCanvas,
-  onSceneTool,
-  onSelectTool,
+  onSeekEdge,
   onStep,
-  onToggleBladeTool,
-  onToggleCaptionsPanel,
-  onToggleCrop,
-  onToggleCursorPanel,
-  onToggleKeyboardPanel,
-  onTogglePlayback,
-  onToggleRangeTool,
-  onToggleSnap,
-  onToggleTranscriptPanel,
-  onTool,
   onUndo,
   ownsEscape = false,
+  ...toolKeys
 }: EditorToolKeys &
   EditorCommandKeys & {
     /** Enter: done with whatever this window is in the middle of. */
@@ -74,6 +65,8 @@ export function useEditorWindowShortcuts({
     /** Moves the selected layer by one arrow press; `coarse` is the Shift jump. */
     onNudge?: (directionX: number, directionY: number, coarse: boolean) => void;
     onRedo?: () => void;
+    /** Home and End: the playhead to the recording's start or end. */
+    onSeekEdge?: (edge: "end" | "start") => void;
     /** Moves the playhead by one arrow press; `coarse` is the Shift jump. */
     onStep?: (direction: -1 | 1, coarse: boolean) => void;
     onUndo?: () => void;
@@ -100,25 +93,10 @@ export function useEditorWindowShortcuts({
       // Other editor handlers on this window still receive the event.
       event.stopPropagation();
       consumedKeys.add(event.code);
+      keepPointerShown();
     };
     const onKeyUp = (event: KeyboardEvent) => {
       if (consumedKeys.delete(event.code)) event.stopPropagation();
-    };
-    const toolKeys: EditorToolKeys = {
-      onArrange,
-      onResizeCanvas,
-      onSceneTool,
-      onSelectTool,
-      onToggleBladeTool,
-      onToggleCaptionsPanel,
-      onToggleCrop,
-      onToggleCursorPanel,
-      onToggleKeyboardPanel,
-      onTogglePlayback,
-      onToggleRangeTool,
-      onToggleSnap,
-      onToggleTranscriptPanel,
-      onTool,
     };
     const onKeyDown = (event: KeyboardEvent) => {
       if (exportIslandOwnsKey(event, consume)) return;
@@ -189,12 +167,19 @@ export function useEditorWindowShortcuts({
       }
 
       const commandKey = event.ctrlKey || event.metaKey;
+      // Windows apps answer Ctrl+Y for redo as well as Ctrl+Shift+Z; on a Mac
+      // ⌘Y is not redo.
+      const isRedoY =
+        isWindowsHost &&
+        event.ctrlKey &&
+        !event.shiftKey &&
+        event.code === "KeyY";
       if (
         commandKey &&
-        event.code === "KeyZ" &&
+        (event.code === "KeyZ" || isRedoY) &&
         !ownsTextEditingKeys(event.target)
       ) {
-        const action = event.shiftKey ? onRedo : onUndo;
+        const action = event.shiftKey || isRedoY ? onRedo : onUndo;
         if (action) {
           consume(event);
           action();
@@ -225,6 +210,7 @@ export function useEditorWindowShortcuts({
 
       if (event.ctrlKey || event.metaKey || event.shiftKey) return;
 
+      const onTogglePlayback = toolKeys.onTogglePlayback;
       if (
         event.code === "Space" &&
         onTogglePlayback &&
@@ -239,6 +225,17 @@ export function useEditorWindowShortcuts({
         }
         consume(event);
         onTogglePlayback();
+        return;
+      }
+
+      if (
+        (event.code === "Home" || event.code === "End") &&
+        onSeekEdge &&
+        !ownsTextEditingKeys(event.target) &&
+        !ownsArrowKeys(event.target)
+      ) {
+        consume(event);
+        onSeekEdge(event.code === "Home" ? "start" : "end");
         return;
       }
 
@@ -270,27 +267,17 @@ export function useEditorWindowShortcuts({
     onDelete,
     onDeselect,
     onDeselectAll,
-    onArrange,
     onExport,
     onNudge,
     onPaste,
     onRedo,
-    onResizeCanvas,
-    onSceneTool,
-    onSelectTool,
+    onSeekEdge,
     onStep,
-    onToggleCrop,
-    onToggleCursorPanel,
-    onToggleKeyboardPanel,
-    onToggleBladeTool,
-    onToggleCaptionsPanel,
-    onTogglePlayback,
-    onToggleRangeTool,
-    onToggleSnap,
-    onToggleTranscriptPanel,
-    onTool,
     onUndo,
     ownsEscape,
+    // A new object each render: the handlers are remade with it, which only
+    // swaps the ref the window's one listener reads.
+    toolKeys,
   ]);
   useWindowKeyListeners(handlersRef, focusIntentRef);
 }

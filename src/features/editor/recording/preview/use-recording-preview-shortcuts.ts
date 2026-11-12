@@ -40,7 +40,6 @@ export function useRecordingPreviewShortcuts({
   step,
   toggleCrop,
   toggleMode,
-  toggleTool,
 }: {
   annotations: ReturnType<typeof useRecordingAnnotations>;
   /** Move the selected pane through the order of the custom scene under the
@@ -75,7 +74,6 @@ export function useRecordingPreviewShortcuts({
   /** C: the Crop tool taken up or put down. */
   toggleCrop: () => void;
   toggleMode: (mode: EditorMode) => void;
-  toggleTool: ReturnType<typeof useRecordingPreviewCanvasTool>["toggleTool"];
 }) {
   const isPlaying = player.isPlaying;
   const pause = player.pause;
@@ -115,6 +113,7 @@ export function useRecordingPreviewShortcuts({
       offered.has("scene") && hasVisiblePanes ? mode("scene") : undefined,
     onSelectTool: hasVisiblePanes ? backToSelect : undefined,
     onStep: !canNudgeActiveTrack && layout ? step : undefined,
+    onToggleCameraPanel: offered.has("camera") ? mode("camera") : undefined,
     onToggleCaptionsPanel:
       offered.has("captions") && hasVisiblePanes ? mode("captions") : undefined,
     onToggleCrop: hasVisiblePanes ? toggleCrop : undefined,
@@ -123,13 +122,19 @@ export function useRecordingPreviewShortcuts({
       ? mode("keyboard")
       : undefined,
     onTogglePlayback: layout ? togglePlayback : undefined,
+    onToggleScreenPanel: offered.has("screen") ? mode("screen") : undefined,
+    onToggleSoundPanel: offered.has("sound") ? mode("sound") : undefined,
     onToggleTranscriptPanel: offered.has("transcript")
       ? mode("transcript")
       : undefined,
+    // The pen in hand taken up again puts it down, as its button does:
+    // Select with nothing chosen, not Select on the track the pen took in
+    // hand, which would be the Screen mode.
     onTool:
       hasVisiblePanes && hasAnnotations
         ? (tool) => {
-            toggleTool[tool]();
+            if (canvasTool === tool) backToSelect();
+            else changeCanvasTool(tool);
           }
         : undefined,
     ownsEscape,

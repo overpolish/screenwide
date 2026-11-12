@@ -3,7 +3,8 @@
 
 import { t } from "../../../i18n/i18n";
 
-import type { ShortcutEntry, ShortcutSources } from "./shortcut-entries";
+import type { ShortcutSources } from "./shortcut-entries";
+import type { ShortcutEntry } from "./shortcut-entry";
 
 /** The system's keys, while they run Screenwide's tools, each named after
  * the tool among `tools` it opens: never offered to another shortcut, and

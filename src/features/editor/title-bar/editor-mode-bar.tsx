@@ -15,6 +15,7 @@ import {
   type EditorKind,
   type EditorMode,
   editorModeGroups,
+  TRACKS_SHORTCUT,
 } from "../toolbar/editor-modes";
 
 import {
@@ -106,6 +107,7 @@ export function EditorModeBar({
               isSelected={tracks.isOpen}
               label={t("editor-timeline-tracks")}
               onChange={tracks.onOpenChange}
+              shortcut={TRACKS_SHORTCUT}
             >
               <Layers />
             </ToolbarTool>

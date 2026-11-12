@@ -5,7 +5,7 @@ import { useEditorWindowShortcuts } from "../shortcuts/use-editor-window-shortcu
 import { EditorKind } from "../types";
 
 import { sendToolPanelRequest } from "./tool-panel-store";
-import { drawingToolShortcut } from "./tool-registry";
+import { drawingToolKey } from "./tool-registry";
 
 /** Sends a key to the editor that owns `workspace`, as if pressed there. */
 export const forwardToolPanelShortcut = (
@@ -73,6 +73,9 @@ export function usePanelShortcuts(workspace: EditorKind) {
     onResizeCanvas: () => {
       forward("KeyF");
     },
+    onSeekEdge: (edge) => {
+      forward(edge === "start" ? "Home" : "End");
+    },
     onSelectTool: () => {
       forward("KeyV");
     },
@@ -80,7 +83,7 @@ export function usePanelShortcuts(workspace: EditorKind) {
       forward("KeyB");
     },
     onToggleCrop: () => {
-      forward("KeyC");
+      forward("KeyK");
     },
     onTogglePlayback: () => {
       forward("KeyP");
@@ -89,10 +92,11 @@ export function usePanelShortcuts(workspace: EditorKind) {
       forward("KeyR", { shiftKey: true });
     },
     onToggleSnap: () => {
-      forward("KeyS", { shiftKey: true });
+      forward("KeyN");
     },
     onTool: (tool) => {
-      forward(`Key${drawingToolShortcut(tool)}`);
+      const { code, modifiers } = drawingToolKey(tool);
+      forward(code, modifiers);
     },
     onUndo: () => {
       forward("KeyZ", { ctrlKey: true, key: "z" });

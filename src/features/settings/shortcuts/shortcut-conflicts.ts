@@ -11,7 +11,13 @@ import { reservedUse } from "./reserved-shortcuts";
 // the ruler is open never meets one that works while text is showing.
 
 /** Where a shortcut works: anywhere, or only while a tool is open. */
-export type ShortcutScope = "anywhere" | "ocr" | "ruler";
+export type ShortcutScope =
+  "annotate" | "anywhere" | "editor" | "ocr" | "ruler";
+
+/** Whether a scope's keys are built in, shown but never set: the editor's
+ * and the live Annotate overlay's. */
+export const isFixedScope = (scope: ShortcutScope) =>
+  scope === "editor" || scope === "annotate";
 
 export type ShortcutConflict =
   /** Another of Screenwide's shortcuts has it; `label` names that one. */
@@ -28,6 +34,10 @@ export type ConflictSubject = {
   label: string;
   scope: ShortcutScope;
   value: string | null;
+  /** A key built into a tool. Such keys never clash: where two share one,
+   * what the tool has chosen decides between them, as the arrows nudge a
+   * chosen layer and otherwise step the playhead. */
+  isFixed?: boolean;
 };
 
 /** What taking `value` for `subject` would clash with, if anything: a
@@ -67,11 +77,13 @@ export function clashes<Subject extends ConflictSubject>(
 ): Map<string, Subject[]> {
   const found = new Map<string, Subject[]>();
   for (const shortcut of shortcuts) {
-    if (shortcut.kind !== "combo" || !shortcut.value) continue;
+    if (shortcut.kind !== "combo" || !shortcut.value || shortcut.isFixed)
+      continue;
     const others = shortcuts.filter(
       (other) =>
         other !== shortcut &&
         other.kind === "combo" &&
+        !other.isFixed &&
         other.scope === shortcut.scope &&
         hotkeysEqual(other.value, shortcut.value, isMac),
     );

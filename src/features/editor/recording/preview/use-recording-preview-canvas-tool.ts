@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { RefObject, useCallback, useEffect, useMemo, useRef } from "react";
+import { RefObject, useCallback, useEffect, useRef } from "react";
 
 import { useSelectToolMemory } from "../../annotations/use-select-tool-memory";
 import { toolDisagreesWithAnnotation } from "../../choice/editor-choice";
@@ -87,35 +87,10 @@ export function useRecordingPreviewCanvasTool({
     if (!hasVisiblePanes && canvasToolRef.current !== "select")
       setCanvasTool("select");
   }, [hasVisiblePanes, setCanvasTool]);
-  // One toggle apiece, built from one function: picking up the tool already in
-  // hand puts it down, which leaves Select in hand. A new canvas tool joins
-  // the record rather than copying the body a fifth time.
-  const toggleTool = useMemo(() => {
-    const toggle = (tool: RecordingCanvasTool) => () => {
-      changeCanvasTool(canvasToolRef.current === tool ? "select" : tool);
-    };
-    return {
-      arrow: toggle("arrow"),
-      canvas: toggle("canvas"),
-      counter: toggle("counter"),
-      crop: toggle("crop"),
-      draw: toggle("draw"),
-      focus: toggle("focus"),
-      highlight: toggle("highlight"),
-      image: toggle("image"),
-      magnify: toggle("magnify"),
-      redact: toggle("redact"),
-      scene: toggle("scene"),
-      select: toggle("select"),
-      shape: toggle("shape"),
-      spotlight: toggle("spotlight"),
-      text: toggle("text"),
-    };
-  }, [changeCanvasTool]);
   // The crop tool is the one tool you are "in": Enter accepts what is framed
   // and Escape backs out of it - the crop itself was committed as each handle
   // was released. While it is in hand that Escape outranks the timeline's own
   // deselects.
   const isCropping = canvasTool === "crop";
-  return { changeCanvasTool, isCropping, toggleTool };
+  return { changeCanvasTool, isCropping };
 }

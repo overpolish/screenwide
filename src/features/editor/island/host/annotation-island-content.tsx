@@ -4,7 +4,7 @@
 import { NEW_LENS_ZOOM } from "../../annotations/annotation-shape-parsers";
 import { browseAnnotationImage } from "../../images/image-api";
 import { shownTextLook } from "../../tools/annotation/text/text-look";
-import { drawingToolShortcut } from "../../tools/tool-registry";
+import { drawingToolKey } from "../../tools/tool-registry";
 import { forwardToolPanelShortcut } from "../../tools/use-panel-shortcuts";
 import { arrowIsland } from "../annotation/arrow/arrow-island";
 import { counterIsland } from "../annotation/counter/counter-island";
@@ -119,9 +119,10 @@ export function annotationIslandContent({
     // two are one pen with two looks.
     if (next.dims !== undefined) {
       const kind = next.dims ? "spotlight" : "focus";
-      if (isDraft)
-        forwardToolPanelShortcut(workspace, `Key${drawingToolShortcut(kind)}`);
-      else change({ annotationKind: kind });
+      if (isDraft) {
+        const { code, modifiers } = drawingToolKey(kind);
+        forwardToolPanelShortcut(workspace, code, modifiers);
+      } else change({ annotationKind: kind });
     }
     const patch = patchOf(next);
     if (Object.keys(patch).length > 0) change(patch);

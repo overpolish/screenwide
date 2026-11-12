@@ -9,10 +9,10 @@ use screenwide_annotations::AnnotationKind;
 #[cfg(target_os = "macos")]
 mod key_codes {
   pub(in super::super) const KEY_A: u16 = 0;
+  pub(in super::super) const KEY_C: u16 = 8;
   pub(in super::super) const KEY_D: u16 = 2;
   pub(in super::super) const KEY_H: u16 = 4;
   pub(in super::super) const KEY_Z: u16 = 6;
-  pub(in super::super) const KEY_N: u16 = 45;
   pub(in super::super) const KEY_O: u16 = 31;
   pub(in super::super) const KEY_S: u16 = 1;
   pub(in super::super) const KEY_BACKSPACE: u16 = 51;
@@ -24,10 +24,10 @@ mod key_codes {
 #[cfg(target_os = "windows")]
 mod key_codes {
   pub(in super::super) const KEY_A: u16 = 0x41;
+  pub(in super::super) const KEY_C: u16 = 0x43;
   pub(in super::super) const KEY_D: u16 = 0x44;
   pub(in super::super) const KEY_H: u16 = 0x48;
   pub(in super::super) const KEY_Z: u16 = 0x5A;
-  pub(in super::super) const KEY_N: u16 = 0x4E;
   pub(in super::super) const KEY_O: u16 = 0x4F;
   pub(in super::super) const KEY_S: u16 = 0x53;
   pub(in super::super) const KEY_BACKSPACE: u16 = 0x08;
@@ -35,18 +35,21 @@ mod key_codes {
 }
 
 #[cfg(any(target_os = "macos", target_os = "windows"))]
-use key_codes::{KEY_A, KEY_D, KEY_H, KEY_N, KEY_O, KEY_S};
+use key_codes::{KEY_A, KEY_C, KEY_D, KEY_H, KEY_O, KEY_S};
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 pub(super) use key_codes::{KEY_BACKSPACE, KEY_FORWARD_DELETE, KEY_Z};
 
 /// The tool each unmodified letter picks up, the twin of the island's tool
-/// buttons. A shape added to the overlay takes its letter here.
+/// buttons and the same letter the editor gives the tool (`EDITOR_TOOLS` in
+/// `src/features/editor/tools/tool-registry.ts`). A shape added to the overlay
+/// takes its letter here. O picks up the focus, which dims as a spotlight or
+/// not by its own setting.
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 pub(super) const TOOL_KEYS: &[(u16, AnnotationKind)] = &[
   (KEY_A, AnnotationKind::Arrow),
-  (KEY_N, AnnotationKind::Counter),
+  (KEY_C, AnnotationKind::Counter),
   (KEY_H, AnnotationKind::Highlight),
-  (KEY_O, AnnotationKind::Shape),
-  (KEY_S, AnnotationKind::Focus),
+  (KEY_S, AnnotationKind::Shape),
+  (KEY_O, AnnotationKind::Focus),
   (KEY_D, AnnotationKind::Draw),
 ];

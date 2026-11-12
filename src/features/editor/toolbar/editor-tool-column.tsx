@@ -15,7 +15,7 @@ import {
   annotationToolName,
 } from "../../annotations/annotation-text";
 import { EDITOR_LEFT_COLUMN } from "../editor-left-column";
-import { ANNOTATION_TOOLS } from "../tools/tool-registry";
+import { ANNOTATION_TOOLS, toolShortcut } from "../tools/tool-registry";
 
 import { annotationToolLayout } from "./annotation-tool-layout";
 import { type EditorKind } from "./editor-modes";
@@ -102,7 +102,7 @@ export function EditorToolColumn({
               onChange={() => {
                 onToolChange("select");
               }}
-              shortcut="V"
+              shortcut={toolShortcut("select")}
             >
               <MousePointer2 />
             </ToolbarTool>
@@ -113,7 +113,7 @@ export function EditorToolColumn({
               onChange={(isSelected) => {
                 onToolChange(isSelected ? "crop" : "select");
               }}
-              shortcut="C"
+              shortcut={toolShortcut("crop")}
             >
               <Crop />
             </ToolbarTool>

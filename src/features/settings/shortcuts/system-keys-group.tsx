@@ -8,7 +8,7 @@ import { Keyboard, Shortcut } from "../../../primitives/keyboard/keyboard";
 import { Switch } from "../../../primitives/switch/switch";
 import { SettingsGroup } from "../settings-group";
 
-import type { ShortcutEntry } from "./shortcut-entries";
+import type { ShortcutEntry } from "./shortcut-entry";
 
 // The system's own screenshot keys, which can run Screenwide's tools in
 // place of the system's: the switch, then each key the switch takes and the

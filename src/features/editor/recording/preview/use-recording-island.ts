@@ -23,6 +23,7 @@ import type { ToolPanelStripItem } from "../../tools/tool-panel-strip";
 
 export function useRecordingIsland({
   column,
+  hasTracks,
   strip,
 }: {
   column: {
@@ -30,6 +31,8 @@ export function useRecordingIsland({
     backToSelect: () => void;
     island: { island: EditorIslandKind; tool: string } | null;
   };
+  /** Whether the title bar offers Tracks, which its key opens. */
+  hasTracks: boolean;
   strip: {
     island: ToolPanelStripItem | null;
     select: (next: StripSelection | null) => void;
@@ -75,11 +78,23 @@ export function useRecordingIsland({
         setIsTracksOpen(false);
       }
     : undefined;
+  const openTracks = (isOpen: boolean) => {
+    if (isOpen) {
+      if (hasColumnIsland) column.backToSelect();
+      strip.select(null);
+    }
+    setIsTracksOpen(isOpen);
+  };
   useEditorWindowShortcuts({
     onDeselect: putTracksAway,
     // ⌘D reaches every choice at once, the open Tracks with the rest, as it
     // puts away an open mode.
     onDeselectAll: putTracksAway,
+    onToggleTracks: hasTracks
+      ? () => {
+          openTracks(!isTracksOpen);
+        }
+      : undefined,
     // Out in front of everything else, Tracks is what Escape puts away.
     ownsEscape: isTracksOpen,
   });
@@ -97,15 +112,6 @@ export function useRecordingIsland({
   });
   return {
     /** The title bar's Tracks button. */
-    tracks: {
-      isOpen: isTracksOpen,
-      onOpenChange: (isOpen: boolean) => {
-        if (isOpen) {
-          if (hasColumnIsland) column.backToSelect();
-          strip.select(null);
-        }
-        setIsTracksOpen(isOpen);
-      },
-    },
+    tracks: { isOpen: isTracksOpen, onOpenChange: openTracks },
   };
 }

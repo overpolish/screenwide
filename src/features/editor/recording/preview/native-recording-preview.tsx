@@ -168,18 +168,17 @@ export function NativeRecordingPreview(rawProps: ScrubPreviewProps) {
     },
     sceneCanvas.paneMenu,
   );
-  const { changeCanvasTool, isCropping, toggleTool } =
-    useRecordingPreviewCanvasTool({
-      activeVideoTrack,
-      annotations,
-      bakeCamera,
-      canvasTool,
-      clearAnnotationRef,
-      clearOverlaySelection: selection.clearOverlaySelection,
-      hasVisiblePanes,
-      onSelectedTrackChange,
-      setCanvasTool,
-    });
+  const { changeCanvasTool, isCropping } = useRecordingPreviewCanvasTool({
+    activeVideoTrack,
+    annotations,
+    bakeCamera,
+    canvasTool,
+    clearAnnotationRef,
+    clearOverlaySelection: selection.clearOverlaySelection,
+    hasVisiblePanes,
+    onSelectedTrackChange,
+    setCanvasTool,
+  });
   // One annotation chosen takes up its pen once the gesture has ended.
   useToolFollowsChoice({
     ...hold,
@@ -239,7 +238,6 @@ export function NativeRecordingPreview(rawProps: ScrubPreviewProps) {
     step: transport.timelineBlade.step,
     toggleCrop: column.toggleCrop,
     toggleMode: column.toggleMode,
-    toggleTool,
   });
   const band = useRecordingStripBand(props, {
     changeCanvasTool,
@@ -249,13 +247,14 @@ export function NativeRecordingPreview(rawProps: ScrubPreviewProps) {
     selection,
     transport,
   });
-  const island = useRecordingIsland({ column, strip: band });
+  const hasTracks = Boolean(layout) && hasTrackChoice;
+  const island = useRecordingIsland({ column, hasTracks, strip: band });
   usePublishEditorModes({
     kind,
     mode: column.mode,
     onModeChange: column.onModeChange,
     parts,
-    tracks: layout && hasTrackChoice ? island.tracks : null,
+    tracks: hasTracks ? island.tracks : null,
   });
   const { copyError } = useCopyRecordingFrame(props, {
     annotationClips: annotations.clips,

@@ -240,6 +240,41 @@ settings-shortcut-keep-awake-description = Keeps the computer awake and shows yo
 # The row of a moment's shortcut in the Shortcuts pane. $moment is the moment's name, which the user chooses.
 settings-shortcut-place-moment = Place { $moment }
 
+## The editor's and Annotate's own keys, built in: the Shortcuts pane shows
+## them in scopes of their own but does not set them.
+
+# The groups the editor's keys are shown in.
+settings-shortcuts-editor-tools = Tools
+settings-shortcuts-editor-modes = Modes
+settings-shortcuts-editor-editing = Editing
+settings-shortcuts-editor-timeline = Timeline
+# The mode for the recording's screen, or in a screenshot for the screenshot itself.
+settings-shortcut-editor-screen = Screen or screenshot
+settings-shortcut-editor-undo = Undo
+settings-shortcut-editor-redo = Redo
+settings-shortcut-editor-copy = Copy
+settings-shortcut-editor-paste = Paste an image
+settings-shortcut-editor-delete = Delete what is chosen
+# Escape puts the tool in hand down and lets go of what is chosen.
+settings-shortcut-editor-back-to-select = Back to Select
+settings-shortcut-editor-deselect-all = Let go of everything chosen
+settings-shortcut-editor-confirm-crop = Finish cropping
+settings-shortcut-editor-nudge = Nudge the chosen layer
+settings-shortcut-editor-nudge-further = Nudge the chosen layer further
+settings-shortcut-editor-play = Play or pause
+settings-shortcut-editor-step-back = Step back a frame
+settings-shortcut-editor-step-forward = Step forward a frame
+settings-shortcut-editor-jump-back = Step back a second
+settings-shortcut-editor-jump-forward = Step forward a second
+settings-shortcut-editor-start = Go to the start
+settings-shortcut-editor-end = Go to the end
+settings-shortcut-editor-split = Split at the playhead
+settings-shortcut-editor-snapping = Turn snapping on or off
+# Takes the last annotation drawn on the screen away.
+settings-shortcut-annotate-undo = Undo
+settings-shortcut-annotate-clear = Clear the screen
+settings-shortcut-annotate-leave = Stop drawing
+
 ## The Shortcuts pane's keyboard map: a keyboard with each key that does
 ## something raised. $shortcut and $action name a shortcut, such as Take a
 ## screenshot; $keys are a combination's keys, drawn as keys or named and
@@ -252,8 +287,12 @@ settings-shortcuts-scope = Where the shortcuts work
 settings-shortcuts-scope-anywhere = Anywhere
 settings-shortcuts-scope-ruler = In Ruler
 settings-shortcuts-scope-ocr = In OCR
+settings-shortcuts-scope-editor = In Editor
+settings-shortcuts-scope-annotate = In Annotate
 settings-shortcuts-hint = Raised keys do something. Choose a shortcut below, then click a key to give it.
 settings-shortcuts-hint-selected = Click a key to give it to “{ $shortcut }”, with the modifiers lit.
+# In the scopes whose keys are built in (the editor's and Annotate's), in place of the hints above.
+settings-shortcuts-hint-fixed = Raised keys do something. These keys are built in and can't be changed.
 # For a key held while dragging a window, such as Glide's.
 settings-shortcuts-hint-hold = Click the key to hold for “{ $shortcut }”.
 settings-shortcuts-hold = Hold for { $shortcut }

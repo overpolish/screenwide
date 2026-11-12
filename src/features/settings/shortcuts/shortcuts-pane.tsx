@@ -21,6 +21,7 @@ import { useHeldModifiers } from "./keyboard-map/use-held-modifiers";
 import { assignFromMap } from "./map-assignment";
 import { clashes, conflictOf, type ShortcutScope } from "./shortcut-conflicts";
 import { shortcutEntries, type ShortcutSources } from "./shortcut-entries";
+import { shortcutValues } from "./shortcut-entry";
 import { ShortcutList } from "./shortcut-list";
 import { preferredModifiers } from "./shortcut-suggestions";
 import { SystemKeysGroup } from "./system-keys-group";
@@ -95,15 +96,17 @@ export function ShortcutsPane({
   });
 
   const pressKey = (key: KeyDef) => {
-    if (!selected || selected.isDisabled) {
-      const bound = shown.find((entry) => {
-        const parsed = parseHotkey(entry.value, isMac);
-        return (
-          parsed?.code === key.code &&
-          parsed.modifiers.length === latched.size &&
-          parsed.modifiers.every((modifier) => latched.has(modifier))
-        );
-      });
+    if (!selected || selected.isFixed || selected.isDisabled) {
+      const bound = shown.find((entry) =>
+        shortcutValues(entry).some((value) => {
+          const parsed = parseHotkey(value, isMac);
+          return (
+            parsed?.code === key.code &&
+            parsed.modifiers.length === latched.size &&
+            parsed.modifiers.every((modifier) => latched.has(modifier))
+          );
+        }),
+      );
       select(bound?.id ?? null);
       return;
     }
@@ -166,6 +169,8 @@ export function ShortcutsPane({
             className="self-start"
             items={[
               { id: "anywhere", label: t("settings-shortcuts-scope-anywhere") },
+              { id: "editor", label: t("settings-shortcuts-scope-editor") },
+              { id: "annotate", label: t("settings-shortcuts-scope-annotate") },
               { id: "ruler", label: t("settings-shortcuts-scope-ruler") },
               { id: "ocr", label: t("settings-shortcuts-scope-ocr") },
             ]}

@@ -30,6 +30,7 @@ import {
 import { ocrShortcuts } from "../sections/ocr-shortcuts";
 import { rulerShortcuts } from "../sections/ruler-shortcuts";
 import { sectionTitle, type SettingsSection } from "../settings-sections";
+import { fixedShortcutGroups } from "../shortcuts/fixed-shortcut-entries";
 
 import type { TranscriptionModel } from "../../transcription/types";
 
@@ -253,6 +254,11 @@ export function settingsSearchEntries({
     keepAwakeShortcuts().map(shortcutRow),
     shortcut,
   );
+  for (const [group, labels] of fixedShortcutGroups())
+    at("hotkeys", group)(
+      labels.map((label) => row(label)),
+      shortcut,
+    );
 
   // Licences
   at("licences", t("settings-licences-keys"))(

@@ -19,6 +19,7 @@ mod export_picture;
 /// The pictures images show.
 pub(crate) mod images;
 mod naming;
+mod pointer;
 mod preferences;
 pub(crate) mod preview;
 pub(crate) mod preview_platform;

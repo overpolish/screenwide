@@ -249,6 +249,13 @@ export function useRecordingTimelineBlade({
             selection.clearSelection();
           }
         : undefined,
+    onSeekEdge: shortcutsEnabled
+      ? (edge) => {
+          const ratio = edge === "start" ? 0 : 1;
+          seek(ratio, "start");
+          seek(ratio, "end");
+        }
+      : undefined,
     onToggleSnap: shortcutsEnabled ? selection.toggleSnap : undefined,
   });
 

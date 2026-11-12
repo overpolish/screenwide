@@ -10,13 +10,13 @@ import {
   parseHotkey,
 } from "../../../../lib/hotkey";
 import { reservedUse } from "../reserved-shortcuts";
+import { shortcutValues, type ShortcutEntry } from "../shortcut-entry";
 
 import { KeyCap, type KeyState } from "./key-cap";
 import { type KeyDef, keyboardRows } from "./keyboard-layout";
 import { useSettledHover } from "./use-settled-hover";
 
 import type { ShortcutScope } from "../shortcut-conflicts";
-import type { ShortcutEntry } from "../shortcut-entries";
 
 // The keyboard, with the shortcuts of one scope on it, as in Final Cut
 // Pro's Command Editor: latch ⌘⇧ and the keys that do something with ⌘⇧
@@ -94,14 +94,17 @@ export function KeyboardMap({
   const stateOf = (def: KeyDef): KeyState => {
     const bound = def.modifier
       ? []
-      : entries.filter((entry) => {
-          const parsed =
-            entry.kind === "combo" ? parseHotkey(entry.value, isMac) : null;
-          return (
-            parsed?.code === def.code &&
-            sameModifiers(parsed.modifiers, latched)
-          );
-        });
+      : entries.filter(
+          (entry) =>
+            entry.kind === "combo" &&
+            shortcutValues(entry).some((value) => {
+              const parsed = parseHotkey(value, isMac);
+              return (
+                parsed?.code === def.code &&
+                sameModifiers(parsed.modifiers, latched)
+              );
+            }),
+        );
     const held = entries.filter(
       (entry) => entry.kind === "hold" && entry.value === def.code,
     );

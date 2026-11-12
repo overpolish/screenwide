@@ -35,6 +35,7 @@ export type EditorToolId =
 
 type ViewTool = {
   drawsOnLayer?: false;
+  isShifted?: never;
   /** The unmodified letter that takes the tool up. */
   shortcut?: string;
 };
@@ -46,6 +47,9 @@ type DrawingTool = {
   drawsOnLayer: true;
   icon: LucideIcon;
   shortcut: string;
+  /** The letter is taken with Shift: the tool is another pen's second look
+   * rather than a pen of its own, so it has no button or letter to itself. */
+  isShifted?: true;
 };
 
 /**
@@ -56,7 +60,11 @@ type DrawingTool = {
  * later states its behaviour in the same place as the rest. The glyph and the
  * wording are the live overlay's own for the same tool, so an annotation
  * reads the same whether it is drawn on a screenshot, on a recording or on
- * the desktop.
+ * the desktop. A drawing tool's letter is the overlay's too
+ * (`TOOL_KEYS` in `src-tauri/src/annotate/input/keys.rs`): the first letter
+ * of its name where that is free, else the likeliest guess in it, the tool
+ * used more often keeping a letter two want. None may be a mode's
+ * (`editor-modes.ts`) or one of `editorToolKeyAction`'s own.
  */
 const EDITOR_TOOLS: Record<AnnotationKind, DrawingTool> &
   Record<Exclude<EditorToolId, AnnotationKind>, ViewTool> = {
@@ -69,9 +77,9 @@ const EDITOR_TOOLS: Record<AnnotationKind, DrawingTool> &
   counter: {
     drawsOnLayer: true,
     icon: CounterToolIcon,
-    shortcut: "N",
+    shortcut: "C",
   },
-  crop: { shortcut: "C" },
+  crop: { shortcut: "K" },
   cursor: {},
   draw: {
     drawsOnLayer: true,
@@ -81,7 +89,7 @@ const EDITOR_TOOLS: Record<AnnotationKind, DrawingTool> &
   focus: {
     drawsOnLayer: true,
     icon: FocusToolIcon,
-    shortcut: "B",
+    shortcut: "O",
   },
   frame: { shortcut: "F" },
   highlight: {
@@ -110,12 +118,13 @@ const EDITOR_TOOLS: Record<AnnotationKind, DrawingTool> &
   shape: {
     drawsOnLayer: true,
     icon: ShapeToolIcon,
-    shortcut: "O",
+    shortcut: "S",
   },
   spotlight: {
     drawsOnLayer: true,
     icon: SpotlightToolIcon,
-    shortcut: "S",
+    isShifted: true,
+    shortcut: "O",
   },
   text: {
     drawsOnLayer: true,
@@ -170,18 +179,27 @@ export const isAnnotationTool = (
 ): tool is AnnotationKind | "select" =>
   tool === "select" || drawingToolKind(tool) !== null;
 
-/** The letter that takes up a drawing tool. */
-export const drawingToolShortcut = (id: AnnotationKind) =>
-  EDITOR_TOOLS[id].shortcut;
+/** The letter a tool's button shows in its tooltip. */
+export const toolShortcut = (id: EditorToolId) => EDITOR_TOOLS[id].shortcut;
 
-/** Each tool that has a letter of its own, and the letter. */
-export const EDITOR_TOOL_SHORTCUTS = editorToolIds().flatMap((id) => {
-  const { shortcut } = EDITOR_TOOLS[id];
-  return shortcut === undefined ? [] : [{ id, shortcut }];
+/** The key that takes up a drawing tool, as a key event names it, for a
+ * window that hands the press on to the editor. */
+export const drawingToolKey = (id: AnnotationKind) => ({
+  code: `Key${EDITOR_TOOLS[id].shortcut}`,
+  modifiers: EDITOR_TOOLS[id].isShifted ? { shiftKey: true } : {},
 });
 
-/** Which tool a plain letter takes up, or null where the letter is not a
- * tool's. The twin half of `editorToolKeyAction`, which owns the keys that
- * belong to no tool. */
-export const editorToolForShortcut = (shortcut: string) =>
-  EDITOR_TOOL_SHORTCUTS.find((tool) => tool.shortcut === shortcut)?.id ?? null;
+/** Each tool that has a letter of its own, the letter, and whether it takes
+ * Shift. */
+export const EDITOR_TOOL_SHORTCUTS = editorToolIds().flatMap((id) => {
+  const { isShifted = false, shortcut } = EDITOR_TOOLS[id];
+  return shortcut === undefined ? [] : [{ id, isShifted, shortcut }];
+});
+
+/** Which tool a letter takes up, with Shift held when `isShifted`, or null
+ * where the letter is not a tool's. The twin half of `editorToolKeyAction`,
+ * which owns the keys that belong to no tool. */
+export const editorToolForShortcut = (shortcut: string, isShifted = false) =>
+  EDITOR_TOOL_SHORTCUTS.find(
+    (tool) => tool.shortcut === shortcut && tool.isShifted === isShifted,
+  )?.id ?? null;

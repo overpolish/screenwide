@@ -48,4 +48,6 @@ pub fn initialize(app: &AppHandle) {
   if let Ok(data) = app.path().app_data_dir() {
     screenwide_images::store::initialize(&data);
   }
+  #[cfg(target_os = "macos")]
+  super::pointer::listen(app);
 }

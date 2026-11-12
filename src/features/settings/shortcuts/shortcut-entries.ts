@@ -28,9 +28,10 @@ import {
 import { ocrShortcuts } from "../sections/ocr-shortcuts";
 import { rulerShortcuts } from "../sections/ruler-shortcuts";
 
+import { fixedShortcutEntries } from "./fixed-shortcut-entries";
 import { systemKeyEntries } from "./system-key-entries";
 
-import type { ConflictSubject } from "./shortcut-conflicts";
+import type { SettableShortcutEntry, ShortcutEntry } from "./shortcut-entry";
 import type { AnnotateSettings } from "../../../bindings/AnnotateSettings";
 import type { GlideSettings } from "../../../bindings/GlideSettings";
 import type { OcrSettings } from "../../../bindings/OcrSettings";
@@ -38,28 +39,13 @@ import type { RulerSettings } from "../../../bindings/RulerSettings";
 import type { ShortcutAction } from "../../../bindings/ShortcutAction";
 import type { ShortcutDefaults } from "../../../bindings/ShortcutDefaults";
 import type { ShortcutSettings } from "../../../bindings/ShortcutSettings";
-import type { HotkeyCaptureMode } from "../../../lib/hotkey";
 import type { MomentSettingsState } from "../sections/use-moment-settings";
 
 // Every shortcut the app has, from wherever its setting is kept, as one
 // list the keyboard map, the rows and the clash check share. Groups follow
 // the sidebar: what a feature's key opens comes first in its group, then
-// the keys that work while it is open.
-
-export type ShortcutEntry = ConflictSubject & {
-  captureMode: HotkeyCaptureMode;
-  group: string;
-  icon: LucideIcon;
-  isClearable: boolean;
-  isDisabled: boolean;
-  /** Its feature is off, so the key does nothing for now. */
-  isOff: boolean;
-  onChange: (value: string | null) => void;
-  defaultValue?: string | null;
-  description?: string;
-  /** One of the system's keys, taken for the tool it names. */
-  isSystem?: boolean;
-};
+// the keys that work while it is open. The editor's and Annotate's built-in
+// keys come last, each in a scope of its own.
 
 export type ShortcutSources = {
   annotate: AnnotateSettings | null;
@@ -104,7 +90,7 @@ export function shortcutEntries(sources: ShortcutSources): ShortcutEntry[] {
     group: string;
     icon: LucideIcon;
     isOff?: boolean;
-  }): ShortcutEntry => ({
+  }): SettableShortcutEntry => ({
     captureMode: "shortcut",
     defaultValue: bindingOf(defaults?.shortcuts, action),
     description,
@@ -286,5 +272,9 @@ export function shortcutEntries(sources: ShortcutSources): ShortcutEntry[] {
     ),
   );
 
-  return [...entries, ...systemKeyEntries(entries, sources)];
+  return [
+    ...entries,
+    ...systemKeyEntries(entries, sources),
+    ...fixedShortcutEntries({ isAnnotateOff: annotateOff }),
+  ];
 }

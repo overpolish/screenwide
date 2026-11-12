@@ -45,6 +45,23 @@ type EditorModeButton = {
   shortcut?: string;
 };
 
+/** The key that opens each mode. The editor's key map
+ * (`editorToolKeyAction`) answers them, and the Shortcuts pane lists them. */
+export const MODE_SHORTCUTS = {
+  camera: "Shift+KeyM",
+  captions: "U",
+  cursor: "Shift+KeyC",
+  frame: "F",
+  keyboard: "Shift+KeyK",
+  scene: "L",
+  screen: "Shift+KeyS",
+  sound: "Shift+KeyU",
+  transcript: "Shift+KeyT",
+} satisfies Record<EditorMode, string>;
+
+/** The key that brings out the Tracks island beside the modes. */
+export const TRACKS_SHORTCUT = "Shift+KeyA";
+
 /** A group of modes the title bar sets apart, named for what it is of: the
  * picture, what was done while recording, and what was said and heard. */
 export type EditorModeGroup = {
@@ -164,10 +181,8 @@ export function editorModeGroups({
     icon: FrameToolIcon,
     id: "frame",
     label: t("editor-tool-frame"),
-    shortcut: "F",
+    shortcut: MODE_SHORTCUTS.frame,
   };
-  // C is the Crop tool's, in the column; the Screen mode keeps no key, as
-  // Camera and Sound keep none.
   const screen: EditorModeButton = {
     icon: Monitor,
     id: "screen",
@@ -175,6 +190,7 @@ export function editorModeGroups({
       kind === "screenshot"
         ? t("editor-island-screenshot")
         : t("editor-island-screen"),
+    shortcut: MODE_SHORTCUTS.screen,
   };
   if (kind === "screenshot") return [{ id: "picture", modes: [frame, screen] }];
   const hasPicture = parts.picture !== null || parts.camera;
@@ -191,6 +207,7 @@ export function editorModeGroups({
     icon: Video,
     id: "camera",
     label: t("editor-island-camera"),
+    shortcut: MODE_SHORTCUTS.camera,
   };
   const groups: {
     id: EditorModeGroup["id"];
@@ -208,7 +225,7 @@ export function editorModeGroups({
           icon: LayoutPanelLeft,
           id: "scene",
           label: t("editor-island-scene"),
-          shortcut: "L",
+          shortcut: MODE_SHORTCUTS.scene,
         },
       ],
     },
@@ -220,14 +237,14 @@ export function editorModeGroups({
             icon: MousePointerClick,
             id: "cursor",
             label: t("editor-island-cursor"),
-            shortcut: "Shift+KeyC",
+            shortcut: MODE_SHORTCUTS.cursor,
           },
         hasScreen &&
           parts.keyboard && {
             icon: Keyboard,
             id: "keyboard",
             label: t("editor-island-keyboard"),
-            shortcut: "K",
+            shortcut: MODE_SHORTCUTS.keyboard,
           },
       ],
     },
@@ -240,18 +257,19 @@ export function editorModeGroups({
             icon: Captions,
             id: "captions",
             label: t("editor-island-captions"),
-            shortcut: "U",
+            shortcut: MODE_SHORTCUTS.captions,
           },
         hasSpeech && {
           icon: ScrollText,
           id: "transcript",
           label: t("editor-toolbar-transcript"),
-          shortcut: "Shift+KeyT",
+          shortcut: MODE_SHORTCUTS.transcript,
         },
         parts.audio && {
           icon: Volume2,
           id: "sound",
           label: t("editor-island-sound"),
+          shortcut: MODE_SHORTCUTS.sound,
         },
       ],
     },

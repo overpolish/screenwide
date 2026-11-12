@@ -15,9 +15,8 @@ import {
 import { Keyboard, Shortcut } from "../../../../primitives/keyboard/keyboard";
 import { Text } from "../../../../primitives/text/text";
 import { type ReservedShortcut, reservedUse } from "../reserved-shortcuts";
-
-import type { ShortcutScope } from "../shortcut-conflicts";
-import type { ShortcutEntry } from "../shortcut-entries";
+import { isFixedScope, type ShortcutScope } from "../shortcut-conflicts";
+import { shortcutValues, type ShortcutEntry } from "../shortcut-entry";
 
 // The line under the map, saying in words what the map shows: everything
 // the key under the pointer does, under any modifiers; what a click on a
@@ -122,11 +121,11 @@ export function KeyDetail({
     !/^((Alt|Control|Meta|Shift)(Left|Right)|Fn|CapsLock)$/.test(hoveredKey);
   const value = hoveredKey ? hotkeyValue(hoveredKey, [...latched]) : null;
   const uses = entries.flatMap((entry) =>
-    entry.kind === "combo" &&
-    entry.value &&
-    parseHotkey(entry.value, isMac)?.code === hoveredKey
-      ? [{ label: entry.label, value: entry.value }]
-      : entry.kind === "hold" && hoveredKey && entry.value === hoveredKey
+    entry.kind === "combo"
+      ? shortcutValues(entry)
+          .filter((use) => parseHotkey(use, isMac)?.code === hoveredKey)
+          .map((use) => ({ label: entry.label, value: use }))
+      : hoveredKey && entry.value === hoveredKey
         ? [
             {
               label: t("settings-shortcuts-hold", { shortcut: entry.label }),
@@ -143,7 +142,7 @@ export function KeyDetail({
     return (
       <Line icon={infoIcon}>
         {uses.map((use) => (
-          <Use key={use.label} {...use} />
+          <Use key={`${use.label} ${use.value}`} {...use} />
         ))}
         {reserved ? <Reserved reserved={reserved} value={value} /> : null}
         {uses.length === 0 && !reserved ? (
@@ -176,13 +175,15 @@ export function KeyDetail({
   return (
     <Line icon={infoIcon}>
       <Text as="span" className="truncate" variant="caption">
-        {selected
-          ? selected.kind === "hold"
-            ? t("settings-shortcuts-hint-hold", { shortcut: selected.label })
-            : t("settings-shortcuts-hint-selected", {
-                shortcut: selected.label,
-              })
-          : t("settings-shortcuts-hint")}
+        {isFixedScope(scope)
+          ? t("settings-shortcuts-hint-fixed")
+          : selected
+            ? selected.kind === "hold"
+              ? t("settings-shortcuts-hint-hold", { shortcut: selected.label })
+              : t("settings-shortcuts-hint-selected", {
+                  shortcut: selected.label,
+                })
+            : t("settings-shortcuts-hint")}
       </Text>
     </Line>
   );
