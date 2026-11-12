@@ -44,7 +44,6 @@ export type FocusIslandProps = AnnotationPinProps & {
   /** Whether it can deepen in: a recording's annotations can, a
    * screenshot's, being one instant, cannot. */
   canAnimate: boolean;
-  id: string;
   onStyleChange: (style: Partial<FocusStyle>) => void;
   style: FocusStyle;
   /** Left out for the pen in hand with nothing chosen. */
@@ -52,7 +51,7 @@ export type FocusIslandProps = AnnotationPinProps & {
 };
 
 export function focusIsland(props: FocusIslandProps): EditorIslandContent {
-  const { canAnimate, id, onDelete, onStyleChange, style } = props;
+  const { canAnimate, onDelete, onStyleChange, style } = props;
   return {
     actions: (
       <>
@@ -69,7 +68,7 @@ export function focusIsland(props: FocusIslandProps): EditorIslandContent {
       </>
     ),
     anchor: "end",
-    key: `focus-${id}`,
+    key: "focus",
     section: (
       <div className="flex flex-col gap-separate">
         <AnnotationPinNote

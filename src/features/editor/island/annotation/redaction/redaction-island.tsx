@@ -67,7 +67,6 @@ export type RedactionIslandProps = AnnotationColorProps &
     /** Whether it can ramp in: a recording's annotations can, a
      * screenshot's, being one instant, cannot. */
     canAnimate: boolean;
-    id: string;
     /** Lays a pixelation's blocks out again, or nudges a blur's cells:
      * Pixelate or Blur pressed while it is already the mode. */
     onShuffle: () => void;
@@ -85,7 +84,7 @@ const isPixelated = (
 export function redactionIsland(
   props: RedactionIslandProps,
 ): EditorIslandContent {
-  const { canAnimate, id, onDelete, onShuffle, onStyleChange, style } = props;
+  const { canAnimate, onDelete, onShuffle, onStyleChange, style } = props;
   const { redaction } = style;
   const blockSizes = redactionSizePresets(redaction, annotationSizes("redact"));
   const isNotSecure =
@@ -108,7 +107,7 @@ export function redactionIsland(
       </>
     ),
     anchor: "end",
-    key: `redaction-${id}`,
+    key: "redaction",
     section: (
       <IslandParts className="flex flex-col gap-separate">
         {props.pin || props.placedInScene ? (

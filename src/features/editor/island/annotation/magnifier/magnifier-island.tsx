@@ -43,7 +43,6 @@ export type MagnifierIslandProps = AnnotationPinProps & {
   /** Whether it can grow in: a recording's annotations can, a
    * screenshot's, being one instant, cannot. */
   canAnimate: boolean;
-  id: string;
   onStyleChange: (style: Partial<MagnifierStyle>) => void;
   style: MagnifierStyle;
   /** Left out for the pen in hand with nothing chosen. */
@@ -53,7 +52,7 @@ export type MagnifierIslandProps = AnnotationPinProps & {
 export function magnifierIsland(
   props: MagnifierIslandProps,
 ): EditorIslandContent {
-  const { canAnimate, id, onDelete, onStyleChange, style } = props;
+  const { canAnimate, onDelete, onStyleChange, style } = props;
   return {
     actions: (
       <>
@@ -70,7 +69,7 @@ export function magnifierIsland(
       </>
     ),
     anchor: "end",
-    key: `magnifier-${id}`,
+    key: "magnifier",
     section: (
       <div className="flex flex-col gap-separate">
         <AnnotationPinNote

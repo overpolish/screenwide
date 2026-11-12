@@ -38,7 +38,6 @@ const meta = {
   ...editorIslandStoryMeta,
   args: {
     canAnimate: true,
-    id: "redaction",
     isShown: true,
     onDelete: fn(),
     onPinAction: fn(),

@@ -47,7 +47,6 @@ export type CounterIslandProps = AnnotationColorProps &
     /** Whether it can pop in: a recording's annotations can, a screenshot's,
      * being one instant, cannot. */
     canAnimate: boolean;
-    id: string;
     onStyleChange: (style: Partial<CounterStyle>) => void;
     style: CounterStyle;
     /** Left out for the pen in hand with nothing chosen. */
@@ -55,7 +54,7 @@ export type CounterIslandProps = AnnotationColorProps &
   };
 
 export function counterIsland(props: CounterIslandProps): EditorIslandContent {
-  const { canAnimate, id, onDelete, onStyleChange, style } = props;
+  const { canAnimate, onDelete, onStyleChange, style } = props;
   return {
     actions: (
       <>
@@ -72,7 +71,7 @@ export function counterIsland(props: CounterIslandProps): EditorIslandContent {
       </>
     ),
     anchor: "end",
-    key: `counter-${id}`,
+    key: "counter",
     section: (
       <div className="flex flex-col gap-separate">
         <AnnotationPinNote

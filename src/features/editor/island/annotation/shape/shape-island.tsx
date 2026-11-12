@@ -46,7 +46,6 @@ export type ShapeIslandProps = AnnotationColorProps &
     /** Whether it can draw itself in: a recording's annotations can, a
      * screenshot's, being one instant, cannot. */
     canAnimate: boolean;
-    id: string;
     onStyleChange: (style: Partial<ShapeStyle>) => void;
     style: ShapeStyle;
     /** Left out for the pen in hand with nothing chosen. */
@@ -54,7 +53,7 @@ export type ShapeIslandProps = AnnotationColorProps &
   };
 
 export function shapeIsland(props: ShapeIslandProps): EditorIslandContent {
-  const { canAnimate, id, onDelete, onStyleChange, style } = props;
+  const { canAnimate, onDelete, onStyleChange, style } = props;
   return {
     actions: (
       <>
@@ -71,7 +70,7 @@ export function shapeIsland(props: ShapeIslandProps): EditorIslandContent {
       </>
     ),
     anchor: "end",
-    key: `shape-${id}`,
+    key: "shape",
     section: (
       <div className="flex flex-col gap-separate">
         <AnnotationPinNote

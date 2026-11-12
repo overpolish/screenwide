@@ -73,6 +73,8 @@ annotation-sway-on = Sway
 annotation-playback-loop = Loop
 # A toggle: on, a highlight is one box over the area dragged; off, it fits the lines of text under it. Named for the look it turns on, as the live island's "highlight a box" hint words it.
 annotation-fit-box = Box
+# A toggle: on, a highlight lays its colour over what it covers as a marker would, the text staying as it was; off, it recolours the page under it, the surface in the highlight's colour and the text in ink that reads on it.
+annotation-highlight-tint = Tint
 # Which ends of an arrow carry a head.
 annotation-head = Head
 annotation-head-none = None

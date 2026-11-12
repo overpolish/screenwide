@@ -67,7 +67,6 @@ export type TextIslandProps = AnnotationColorProps &
     canAnimate: boolean;
     /** The words set apart, by the bytes they take in the text. */
     emphasis: TextSpan[];
-    id: string;
     look: TextStyle;
     onEmphasisChange: (emphasis: TextSpan[]) => void;
     onLookChange: (patch: Partial<TextStyle>) => void;
@@ -88,7 +87,7 @@ export type TextIslandProps = AnnotationColorProps &
   };
 
 export function textIsland(props: TextIslandProps): EditorIslandContent {
-  const { canAnimate, id, look, onLookChange, onStyleChange, style } = props;
+  const { canAnimate, look, onLookChange, onStyleChange, style } = props;
   const setsApart =
     setsWordsApart(look) && textWordLines(props.text).length > 0;
   const hasOutline = offersOutline(look);
@@ -117,7 +116,7 @@ export function textIsland(props: TextIslandProps): EditorIslandContent {
     ),
     // Hung from the row's start, so the pickers' column opens past its end.
     anchor: "start",
-    key: `text-${id}`,
+    key: "text",
     section: (
       <TextLookPickers
         families={props.families}

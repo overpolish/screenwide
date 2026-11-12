@@ -45,6 +45,7 @@ export type Messages = {
   "annotation-head-both": null;
   "annotation-head-end": null;
   "annotation-head-none": null;
+  "annotation-highlight-tint": null;
   "annotation-pixelation-classic-on": null;
   "annotation-playback-loop": null;
   "annotation-radius": null;

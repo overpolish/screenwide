@@ -29,7 +29,6 @@ const meta = {
   ...editorIslandStoryMeta,
   args: {
     canAnimate: true,
-    id: "highlight",
     isShown: true,
     onDelete: fn(),
     onPinAction: fn(),
@@ -43,6 +42,7 @@ const meta = {
       isAnimated: true,
       isHandDrawn: false,
       isManual: false,
+      isTinted: false,
     },
   },
   component: HighlightIsland,
@@ -91,6 +91,7 @@ export const HandDrawn: Story = {
       isAnimated: true,
       isHandDrawn: true,
       isManual: false,
+      isTinted: false,
     },
   },
 };

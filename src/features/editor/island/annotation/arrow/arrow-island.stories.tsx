@@ -34,7 +34,6 @@ const meta = {
   ...editorIslandStoryMeta,
   args: {
     canAnimate: true,
-    id: "arrow",
     isShown: true,
     onDelete: fn(),
     onPinAction: fn(),

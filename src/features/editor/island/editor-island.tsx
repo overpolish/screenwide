@@ -22,7 +22,9 @@ import { useHeldSection } from "./use-held-section";
 // reshapes, and the new ones come into focus.
 
 export type EditorIslandContent = {
-  /** Which thing is in hand; a new key brings in a new row and section. */
+  /** Which thing is in hand; a new key brings in a new row and section. An
+   * annotation's island is keyed by its pen, not the annotation, so placing
+   * or choosing another of the same kind changes the island in place. */
   key: string;
   title: ReactNode;
   actions?: ReactNode;

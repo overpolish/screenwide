@@ -27,7 +27,6 @@ const meta = {
   ...editorIslandStoryMeta,
   args: {
     canAnimate: true,
-    id: "image",
     isMoving: false,
     isShown: true,
     onDelete: fn(),

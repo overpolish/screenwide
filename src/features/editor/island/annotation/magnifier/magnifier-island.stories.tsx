@@ -29,7 +29,6 @@ const meta = {
   ...editorIslandStoryMeta,
   args: {
     canAnimate: true,
-    id: "magnifier",
     isShown: true,
     onDelete: fn(),
     onPinAction: fn(),

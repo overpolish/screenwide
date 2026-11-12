@@ -53,7 +53,6 @@ export type ImageIslandProps = AnnotationPinProps & {
   /** Whether it can pop in, sway and play: a recording's annotations can,
    * a screenshot's, being one instant, cannot. */
   canAnimate: boolean;
-  id: string;
   /** Whether the picture moves, as an animated GIF does. */
   isMoving: boolean;
   /** Mirrors the picture across its upright axis. */
@@ -67,7 +66,7 @@ export type ImageIslandProps = AnnotationPinProps & {
 };
 
 export function imageIsland(props: ImageIslandProps): EditorIslandContent {
-  const { canAnimate, id, isMoving, onDelete, onStyleChange, style } = props;
+  const { canAnimate, isMoving, onDelete, onStyleChange, style } = props;
   return {
     actions: (
       <>
@@ -84,7 +83,7 @@ export function imageIsland(props: ImageIslandProps): EditorIslandContent {
       </>
     ),
     anchor: "end",
-    key: `image-${id}`,
+    key: "image",
     section: (
       <div className="flex flex-col gap-separate">
         <AnnotationPinNote

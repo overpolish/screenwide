@@ -46,7 +46,6 @@ export type ArrowIslandProps = AnnotationColorProps &
     /** Whether it can draw itself in: a recording's annotations can, a
      * screenshot's, being one instant, cannot. */
     canAnimate: boolean;
-    id: string;
     /** Turns it round, so its head points the other way. */
     onReverse: () => void;
     onStyleChange: (style: Partial<ArrowStyle>) => void;
@@ -56,7 +55,7 @@ export type ArrowIslandProps = AnnotationColorProps &
   };
 
 export function arrowIsland(props: ArrowIslandProps): EditorIslandContent {
-  const { canAnimate, id, onDelete, onReverse, onStyleChange, style } = props;
+  const { canAnimate, onDelete, onReverse, onStyleChange, style } = props;
   return {
     actions: (
       <>
@@ -73,7 +72,7 @@ export function arrowIsland(props: ArrowIslandProps): EditorIslandContent {
       </>
     ),
     anchor: "end",
-    key: `arrow-${id}`,
+    key: "arrow",
     section: (
       <div className="flex flex-col gap-separate">
         <AnnotationPinNote

@@ -50,7 +50,6 @@ const meta = {
     canAnimate: true,
     emphasis: [],
     families: FAMILIES,
-    id: "text",
     isShown: true,
     look: titleLook("label"),
     onDelete: fn(),

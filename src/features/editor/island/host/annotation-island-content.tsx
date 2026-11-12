@@ -45,6 +45,7 @@ type IslandStyle = Partial<{
   isAnimated: boolean;
   isHandDrawn: boolean;
   isManual: boolean;
+  isTinted: boolean;
   loops: boolean;
   radius: number;
   redaction: AnnotationRedaction;
@@ -65,6 +66,7 @@ const patchOf = (style: IslandStyle): ToolPanelPatch => {
     isAnimated,
     isHandDrawn,
     isManual,
+    isTinted,
     loops,
     rotation,
     size,
@@ -77,6 +79,7 @@ const patchOf = (style: IslandStyle): ToolPanelPatch => {
     ...(hasShadow === undefined ? {} : { shadow: hasShadow }),
     ...(isHandDrawn === undefined ? {} : { handDrawn: isHandDrawn }),
     ...(isManual === undefined ? {} : { manual: isManual }),
+    ...(isTinted === undefined ? {} : { tint: isTinted }),
     ...(size === undefined ? {} : { width: size }),
   };
   return {
@@ -129,7 +132,6 @@ export function annotationIslandContent({
   };
   const shared = {
     canAnimate,
-    id: annotation.id,
     onPinAction: (action: AnnotationPinAction) => {
       change({ annotationPin: action });
     },
@@ -209,6 +211,7 @@ export function annotationIslandContent({
           isAnimated,
           isHandDrawn: style.handDrawn,
           isManual: style.manual,
+          isTinted: style.tint,
         },
       });
     case "image":
