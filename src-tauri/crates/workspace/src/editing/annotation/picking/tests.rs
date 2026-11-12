@@ -5,6 +5,7 @@
 //! these run without a D3D11 adapter.
 
 use super::*;
+use screenwide_annotations::gesture::MODE_DRAW;
 
 /// A 200x100 picture at the origin, so a normalised handle at (0.5, 0.5)
 /// lands on (100, 50) and display points are easy to read.
@@ -259,4 +260,42 @@ fn a_stroke_is_picked_on_its_line_and_never_by_its_box() {
   let in_box = crate::editing::turn::selected_layer_point(&state, (160.0, 20.0));
   assert_eq!(shaft_at_point(&state, on_line), Some(0));
   assert_eq!(shaft_at_point(&state, in_box), None);
+}
+
+#[test]
+fn the_pen_takes_hold_of_the_chosen_grips_alone() {
+  // A chosen straight stroke from (20, 10) to (180, 90) on the layer in hand,
+  // its box's corner grip at (180, 90). Select takes hold of its line and
+  // its grip; the pen draws over the line, and still resizes by the grip.
+  let mut state = layered(1, Some(1));
+  state.annotation.paths = vec![[0.1, 0.1], [0.5, 0.5], [0.9, 0.9]];
+  state.annotation.handles = vec![NativeAnnotationHandles {
+    kind: AnnotationKind::Draw.raw(),
+    layer_id: 1,
+    start_x: 0.1,
+    start_y: 0.1,
+    end_x: 0.9,
+    end_y: 0.9,
+    start_head: 0.0,
+    end_head: 3.0,
+    ..arrow()
+  }];
+  state.annotation.selected = 0;
+  let line = crate::editing::turn::selected_layer_point(&state, (100.0, 50.0));
+  let corner = crate::editing::turn::selected_layer_point(&state, (180.0, 90.0));
+  for mode in [MODE_SELECT, MODE_DRAW] {
+    state.annotation.mode = mode;
+    assert!(press_pick(&state, corner).0.is_some(), "mode {mode}");
+    assert_eq!(
+      cursor_for(&state, corner),
+      Some(CursorKind::ResizeNwse),
+      "mode {mode}"
+    );
+  }
+  state.annotation.mode = MODE_SELECT;
+  assert_eq!(press_pick(&state, line).1.map(|(index, _)| index), Some(0));
+  state.annotation.mode = MODE_DRAW;
+  let (grip, picked) = press_pick(&state, line);
+  assert!(grip.is_none() && picked.is_none());
+  assert_eq!(cursor_for(&state, line), Some(CursorKind::Crosshair));
 }

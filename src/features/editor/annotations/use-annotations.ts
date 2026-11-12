@@ -55,6 +55,7 @@ const anyGroupable = () => true;
 export function useAnnotations({
   annotations,
   groupable = anyGroupable,
+  onChoiceDeleted,
   onCommit: commit,
   pins,
   scenes,
@@ -65,6 +66,9 @@ export function useAnnotations({
   workspace: EditorKind;
   /** Whether an annotation may be chosen together with others. */
   groupable?: (id: string) => boolean;
+  /** A delete took away annotations that were chosen, which the editor
+   * may answer by letting go of the layer they sat on. */
+  onChoiceDeleted?: () => void;
   pins?: AnnotationPins;
   scenes?: AnnotationScenes;
 }) {
@@ -192,6 +196,7 @@ export function useAnnotations({
   const remove = (targets: ReadonlySet<string>) => {
     commit(annotations.filter((annotation) => !targets.has(annotation.id)));
     if (hoveredId !== null && targets.has(hoveredId)) setHoveredId(null);
+    if ([...targets].some((id) => selectedIds.has(id))) onChoiceDeleted?.();
   };
 
   const applyDelete = () => {

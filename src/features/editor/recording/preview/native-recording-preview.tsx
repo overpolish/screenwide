@@ -191,6 +191,7 @@ export function NativeRecordingPreview(rawProps: ScrubPreviewProps) {
     annotations,
     canvasTool,
     changeCanvasTool,
+    isHeld: hold.isHeld,
     onSelectedTrackChange,
     picture: props.recorded.picture,
   });

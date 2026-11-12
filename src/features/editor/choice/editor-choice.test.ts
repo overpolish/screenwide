@@ -3,7 +3,7 @@
 
 import { describe, expect, it } from "vitest";
 
-import { canHoldSelect, followedTool } from "./editor-choice";
+import { canHoldSelect, followedTool, shownTool } from "./editor-choice";
 
 describe("when ⌘ holds Select", () => {
   const hold = (tool: string, hasLayerInHand = false, isExportOpen = false) =>
@@ -54,5 +54,22 @@ describe("the tool following the choice", () => {
     expect(follow("select", null)).toBeNull();
     expect(follow("crop", "arrow")).toBeNull();
     expect(follow("scene", "arrow")).toBeNull();
+  });
+});
+
+describe("the tool shown for the choice", () => {
+  it("shows the pen of the one annotation chosen before the press ends", () => {
+    expect(shownTool({ isHeld: false, kind: "arrow", tool: "select" })).toBe(
+      "arrow",
+    );
+  });
+
+  it("shows the tool in hand while ⌘ holds Select or several are chosen", () => {
+    expect(shownTool({ isHeld: true, kind: "arrow", tool: "select" })).toBe(
+      "select",
+    );
+    expect(shownTool({ isHeld: false, kind: null, tool: "select" })).toBe(
+      "select",
+    );
   });
 });

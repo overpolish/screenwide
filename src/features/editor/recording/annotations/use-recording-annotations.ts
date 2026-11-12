@@ -49,6 +49,7 @@ export function useRecordingAnnotations({
   edit,
   frames,
   getPositionMs,
+  onChoiceDeleted,
   onEdit,
   onSelectTrack,
   playhead,
@@ -86,6 +87,7 @@ export function useRecordingAnnotations({
    * from the layout; here it only decides what the keyboard can delete. */
   tool: AnnotationTool | null;
   trackId: RecordingVideoTrackId | null;
+  onChoiceDeleted?: () => void;
   onSelectTrack?: (track: RecordingVideoTrackId) => void;
   /** The scene the playhead is in, if any: where an annotation is chosen
    * as it stands there, and an edit that moves it is that scene's. */
@@ -183,6 +185,7 @@ export function useRecordingAnnotations({
   const selection = useAnnotations({
     annotations: lane.clips.map((clip) => annotationInScene(clip, sceneId)),
     groupable: (id) => !pinned.has(id),
+    onChoiceDeleted,
     onCommit: (annotations) => {
       const shown = withShownAnnotations(clips, annotations, shownTracks);
       commitClips(

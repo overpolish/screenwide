@@ -142,6 +142,23 @@ pub(super) fn grip_pick(state: &SurfaceState, point: (f64, f64)) -> Option<(u32,
   )
 }
 
+/// What a press at `point` takes hold of: the chosen annotation's grip, or
+/// else the annotation drawn there, each with the lenses it is seen through.
+/// The pen takes hold of the chosen annotation's grips alone, which show
+/// as something to take hold of; anywhere else its press draws.
+pub(super) fn press_pick(state: &SurfaceState, point: (f64, f64)) -> PressPick {
+  if let Some(grip) = grip_pick(state, point) {
+    return (Some(grip), None);
+  }
+  let picked = picks_annotations(state.annotation.mode)
+    .then(|| pick_at_point(state, point))
+    .flatten();
+  (None, picked)
+}
+
+/// A grip and an annotation a press took hold of; at most one is set.
+pub(super) type PressPick = (Option<(u32, LensView)>, Option<(usize, LensView)>);
+
 /// A press read on the layer an annotation belongs to.
 mod item_layer;
 pub(super) use item_layer::display_on_item_layer;
@@ -157,9 +174,10 @@ use item_layer::{drawn_pictures, point_on_item_layer};
 /// lands in. An annotation a picture in front hides at the press is not
 /// seen there, so it is not picked: the press falls to the picture in front.
 ///
-/// Every tool picks every kind, the pen and its strokes included: a press on
+/// Every tool that picks (`picks_annotations`) picks every kind: a press on
 /// an annotation takes hold of it whatever is in hand, and only a press on
-/// nothing drawn draws. The twin of `annotation_shaft_at_point`.
+/// nothing drawn draws. The pen picks nothing, so its strokes always draw;
+/// a context menu still finds what is under it here, whatever the tool.
 pub(super) fn shaft_at_point(state: &SurfaceState, point: (f64, f64)) -> Option<usize> {
   pick_at_point(state, point).map(|(index, _)| index)
 }

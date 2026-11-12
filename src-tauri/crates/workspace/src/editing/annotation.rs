@@ -9,7 +9,7 @@ use super::*;
 /// What the pointer does over the picture, from the tool React has in hand,
 /// and which shape a drawing mode makes, declared once beside the gesture
 /// model.
-use screenwide_annotations::gesture::{drawing_kind, hovers_nothing, MODE_NONE, MODE_SELECT};
+use screenwide_annotations::gesture::{drawing_kind, picks_annotations, MODE_NONE, MODE_SELECT};
 use screenwide_annotations::handles::{
   NativeAnnotationHandles, NativeAnnotationSnap, NativeGapSpan, SNAP_FLAG_ANCHOR, SNAP_FLAG_GAP_X,
   SNAP_FLAG_GAP_Y, SNAP_FLAG_GUIDE_X, SNAP_FLAG_GUIDE_Y,
@@ -144,10 +144,10 @@ impl WorkspaceEditor {
     state.annotation.selected = selected_index;
     let changed = state.annotation.mode != mode;
     state.annotation.mode = mode;
-    // A new tool or list, or no tool: the halo goes, since the
-    // pointer may never move again to retire it, and a pulse still running
-    // must stop reporting it.
-    if changed || recounted || hovers_nothing(mode) {
+    // A new tool or list, or a tool that picks nothing: the halo goes, since
+    // the pointer may never move again to retire it, and a pulse still
+    // running must stop reporting it.
+    if changed || recounted || !picks_annotations(mode) {
       state.annotation.hovered = -1;
       state.annotation.hover_revision += 1;
     }
@@ -216,8 +216,8 @@ mod picking_chrome;
 /// How far a press is from each kind of annotation.
 mod picking_distance;
 use picking::{
-  display_on_item_layer, grip_pick, handle_at_point, image_frame, item_image_frame,
-  layer_selection, pick_at_point, selected_item, shaft_at_point,
+  display_on_item_layer, handle_at_point, image_frame, item_image_frame, layer_selection,
+  press_pick, selected_item, shaft_at_point,
 };
 pub(super) use picking::{drawing_pictures, take_drawing_layer};
 pub(super) use picking_chrome::{cursor_for, owns_chrome, selected_grips};

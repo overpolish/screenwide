@@ -56,6 +56,25 @@ export const followedTool = ({
 };
 
 /**
+ * The tool the column and the title bar show for `tool`: the pen the choice
+ * calls for as soon as the choice is made, though it is taken up only once
+ * the press ends (`followedTool`). A click on an annotation from Select or
+ * a layer's mode lights its pen at once, rather than passing through Select
+ * while the press lasts. While ⌘ holds Select it shows the tool in hand, as
+ * the hold does.
+ */
+export const shownTool = <Tool extends string>({
+  isHeld,
+  kind,
+  tool,
+}: {
+  isHeld: boolean;
+  kind: AnnotationKind | null;
+  tool: Tool;
+}): AnnotationKind | Tool =>
+  followedTool({ isHeld, isPicturePressed: false, kind, tool }) ?? tool;
+
+/**
  * Whether taking up `next` should let the annotation in hand go.
  *
  * Reaching for the tool that draws the other shape is a decision about what

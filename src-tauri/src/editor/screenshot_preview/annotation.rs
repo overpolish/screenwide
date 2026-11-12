@@ -12,7 +12,7 @@ use screenwide_annotations::{Annotation, AnnotationShape, AnnotationStyle};
 
 /// The tool modes and their mapping live with the gesture model, so the two
 /// workspaces take the tool in hand the same way.
-use screenwide_annotations::gesture::{annotation_mode, hovers_nothing};
+use screenwide_annotations::gesture::{annotation_mode, picks_annotations};
 
 /// Where the hover halo is, and how wide. The width is already in the layer's
 /// canvas pixels: the native side reports how big the picture is drawn, and
@@ -71,7 +71,7 @@ pub(super) fn apply_annotation_layout(
   manager.annotation_mode = mode;
   manager.annotation_pane_index = pane_index;
   manager.annotation_selected = selected.to_vec();
-  let retired = changed || hovers_nothing(mode) || manager.hover_lost();
+  let retired = changed || !picks_annotations(mode) || manager.hover_lost();
   let hover_cleared = retired && manager.clear_annotation_hover();
   let layout = annotation_layout(manager, pane_index, mode, selected);
   (layout, hover_cleared)

@@ -138,7 +138,7 @@ pub(crate) fn refresh(inner: &Arc<SurfaceInner>, state: &mut SurfaceState) {
 /// the arrow it was drawn for, so resting on one halos that whole arrow,
 /// exactly as resting on its shaft does.
 fn hovered_at(state: &SurfaceState, point: (f64, f64), dragging: bool) -> i32 {
-  if dragging || state.annotation.mode == MODE_NONE {
+  if dragging || !picks_annotations(state.annotation.mode) {
     return -1;
   }
   if handle_at_point(state, point).is_some() {

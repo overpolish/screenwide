@@ -3,6 +3,7 @@
 
 import { useState } from "react";
 
+import { shownTool } from "../../choice/editor-choice";
 import {
   columnMode,
   columnTool,
@@ -34,6 +35,7 @@ export function useRecordingColumn({
   annotations,
   canvasTool,
   changeCanvasTool,
+  isHeld,
   onSelectedTrackChange,
   picture,
 }: {
@@ -46,6 +48,8 @@ export function useRecordingColumn({
   };
   canvasTool: RecordingCanvasTool;
   changeCanvasTool: (tool: RecordingCanvasTool) => void;
+  /** Whether ⌘ (Ctrl) holds Select over the tool. */
+  isHeld: boolean;
   /** What the recording's own picture is of, which names its mode. */
   picture: RecordingPicture;
   onSelectedTrackChange?: (trackId: RecordingTrackId | null) => void;
@@ -53,12 +57,20 @@ export function useRecordingColumn({
   const [panel, setPanel] = useState<RecordingPanelMode | null>(null);
   if (panel !== null && (canvasTool !== "select" || activeVideoTrack !== null))
     setPanel(null);
+  // The pen a click on an annotation calls for shows at once, though it is
+  // taken up only as the press ends, so the column and the title bar never
+  // pass through Select on the way to it.
+  const shown = shownTool({
+    isHeld,
+    kind: annotations.selectedKind,
+    tool: canvasTool,
+  });
   // A track's mode is Select on the track with no annotations chosen:
   // annotations chosen with Select's band show their own island instead.
   const mode = columnMode({
     panel,
     picture,
-    tool: canvasTool,
+    tool: shown,
     track: annotations.hasSelection ? null : activeVideoTrack,
   });
   const island = recordingIsland({
@@ -116,7 +128,7 @@ export function useRecordingColumn({
     column: {
       isModeOpen: mode !== null,
       onToolChange: takeUp,
-      tool: columnTool(canvasTool),
+      tool: columnTool(shown),
     },
     /** The island the pen, the chosen annotations or the open mode bring
      * out, and the tool that brought it. */

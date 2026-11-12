@@ -222,6 +222,11 @@ export function useRecordingPreviewTransport(
     edit: annotationEdit,
     frames: previewSourceDimensions,
     getPositionMs: player.getPositionMs,
+    // Deleting the annotations chosen with Select leaves nothing chosen:
+    // their track goes with them rather than opening its mode.
+    onChoiceDeleted: () => {
+      if (canvasTool === "select") onSelectedTrackChange?.(null);
+    },
     onEdit: (next) => onRecordingTimelineEditChange?.(next),
     onSelectTrack: (track) => {
       if (player.isPlaying) player.pause();

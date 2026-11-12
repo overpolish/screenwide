@@ -24,6 +24,7 @@ import { useScreenshotAnnotationMenu } from "./use-screenshot-annotation-menu";
  * past the end of a layer carries them into the next layer, which is then
  * the selected one. */
 export function useScreenshotAnnotations({
+  onChoiceDeleted,
   onOutputChange,
   onSelectedItemChange,
   onWorkspaceChange,
@@ -36,6 +37,7 @@ export function useScreenshotAnnotations({
   selectedOutput: ScreenshotOutputSettings | null;
   sourceWidths: ScreenshotSourceWidths;
   workspace: ScreenshotWorkspaceOutputSettings | undefined;
+  onChoiceDeleted?: () => void;
   onOutputChange?: (settings: ScreenshotOutputSettings, itemId: number) => void;
   onSelectedItemChange?: (itemId: number | null) => void;
   onWorkspaceChange?: (settings: ScreenshotWorkspaceOutputSettings) => void;
@@ -47,6 +49,7 @@ export function useScreenshotAnnotations({
   };
   const selection = useAnnotations({
     annotations,
+    onChoiceDeleted,
     onCommit,
     workspace: "screenshot",
   });

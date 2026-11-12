@@ -46,12 +46,8 @@ pub(crate) fn down(inner: &SurfaceInner, display: (f64, f64)) -> bool {
     let mut point = selected_layer_point(&state, display);
     // A grip or an annotation seen through lenses is taken where it shows,
     // and the press is read back through them from then on.
-    let grip = grip_pick(&state, point);
+    let (grip, picked) = press_pick(&state, point);
     let handle = grip.map(|(handle, _)| handle);
-    let picked = match grip {
-      Some(_) => None,
-      None => pick_at_point(&state, point),
-    };
     let shaft = picked.map(|(shaft, _)| shaft);
     // Read first: the arms take the state mutably, which a borrow held by the scrutinee forbids.
     let drawing = drawing_kind(state.annotation.mode);

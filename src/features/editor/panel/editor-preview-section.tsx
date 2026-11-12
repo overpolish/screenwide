@@ -5,6 +5,7 @@ import { useState } from "react";
 
 import { t } from "../../../i18n/i18n";
 import { useAnnotationDraft } from "../annotations/annotation-draft";
+import { shownTool } from "../choice/editor-choice";
 import { useSelectHold } from "../choice/use-select-hold";
 import { useToolFollowsChoice } from "../choice/use-tool-follows-choice";
 import { placeScreenshotImage } from "../images/image-api";
@@ -81,6 +82,11 @@ export function ScreenshotSection({
   // Which arrow the native handles are on, which one the halo is under, and
   // the edits that reach them.
   const annotations = useScreenshotAnnotations({
+    // Deleting the annotations chosen with Select leaves nothing chosen:
+    // their layer goes with them rather than opening the Screenshot mode.
+    onChoiceDeleted: () => {
+      if (tool === "select") onSelectedItemChange?.(null);
+    },
     onOutputChange,
     onSelectedItemChange,
     onWorkspaceChange: onCanvasResize,
@@ -97,6 +103,14 @@ export function ScreenshotSection({
     tool,
     selectedItem !== undefined && !annotations.hasSelection,
   );
+  // The pen a click on an annotation calls for shows at once, though it is
+  // taken up only as the press ends, so the column never passes through
+  // Select on the way to it.
+  const shown = shownTool({
+    isHeld: hold.isHeld,
+    kind: annotations.selectedKind,
+    tool,
+  });
   const isScreenOpen = mode === "screen";
   // What a pen's island shows while nothing is chosen: the dress its next
   // annotation is drawn in.
@@ -240,7 +254,7 @@ export function ScreenshotSection({
             if (next === "select") backToSelect();
             else takeUp(next);
           }}
-          tool={hold.isHeld ? "select" : columnTool(tool)}
+          tool={hold.isHeld ? "select" : columnTool(shown)}
         />
       </ChromeSetBack>
       {/* The picture meets the tool column and the title bar on a rounded

@@ -77,7 +77,15 @@ pub(crate) fn cursor_for(state: &SurfaceState, point: (f64, f64)) -> Option<Curs
   if let Some(cursor) = resize.and_then(super::redact_chrome::grip_cursor) {
     return Some(cursor);
   }
-  if handle.is_some() || shaft_at_point(state, point).is_some() {
+  if handle.is_some() {
+    return Some(CursorKind::Arrow);
+  }
+  // Past the chosen annotation's grips, the pen draws over whatever is under
+  // it.
+  if !picks_annotations(state.annotation.mode) {
+    return Some(CursorKind::Crosshair);
+  }
+  if shaft_at_point(state, point).is_some() {
     return Some(CursorKind::Arrow);
   }
   // Empty picture: the select tool takes hold of a group inside its box, the
