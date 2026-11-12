@@ -5,14 +5,18 @@
 //! Phrases louder than the speaker's usual level come down by two thirds of
 //! what they rise above it, the voice is then lifted or lowered to -16 LUFS,
 //! a loudness voices are commonly published at, and its peaks are held below
-//! -1 dB. It makes no file: it is a chain of FFmpeg filters played over
-//! whichever file the track is heard from, in the preview and the export
-//! alike, and the volume slider works on top of it. Each file is measured
-//! once, for where leveling starts and how far to lift, and the measure is
-//! kept beside the project.
+//! -1 dB. The system audio is always brought under the voice as it is heard
+//! (`under_voice`). It makes no file: it is a chain of FFmpeg filters played
+//! over whichever file the track is heard from, in the preview and the
+//! export alike, and the volume slider works on top of it. Each file is
+//! measured once, for where leveling starts and how far to lift, and the
+//! measure is kept beside the project.
 
 mod loudness;
 mod measures;
+mod under_voice;
+
+pub use under_voice::{is_system_unmeasured, measure_system, voice_lufs};
 
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
@@ -162,13 +166,19 @@ pub fn measure(
 }
 
 /// The Auto volume filters of each of the `streams` of the project in
-/// `project_folder`, for those with the switch on whose heard file has been
-/// measured and has a voice.
+/// `project_folder`: for a microphone with the switch on whose heard file has
+/// been measured and has a voice, and for system audio that has been
+/// measured, which is always levelled under the voice.
 pub fn heard_filters(project_folder: &Path, streams: &[usize]) -> Vec<(usize, String)> {
   streams
     .iter()
-    .filter(|&&stream| choice(project_folder, stream) == AutoVolume::On)
     .filter_map(|&stream| {
+      if let Some(leveling) = under_voice::system_leveling(project_folder, stream) {
+        return Some((stream, leveling.filters()));
+      }
+      if choice(project_folder, stream) != AutoVolume::On {
+        return None;
+      }
       let heard = heard::heard_file(project_folder, stream);
       measured(project_folder, stream, heard.as_deref())
         .flatten()
@@ -178,8 +188,15 @@ pub fn heard_filters(project_folder: &Path, streams: &[usize]) -> Vec<(usize, St
 }
 
 /// The leveling of each file the `stream`th track can be heard from that has
-/// been measured, the recording among them.
+/// been measured, the recording among them. System audio is levelled the
+/// same from whichever file it is heard.
 pub fn levelings(project_folder: &Path, stream: usize) -> Vec<(Processing, Leveling)> {
+  if let Some(leveling) = under_voice::system_leveling(project_folder, stream) {
+    return under_voice::SYSTEM_FILES
+      .into_iter()
+      .map(|processing| (processing, leveling))
+      .collect();
+  }
   let recording = (Processing::default(), None);
   let files = heard::files(project_folder, &[stream])
     .into_iter()

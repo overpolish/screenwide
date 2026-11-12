@@ -92,7 +92,11 @@ fn has_work(app: &AppHandle, source: &SpeechSource) -> bool {
   let unducked = source
     .system
     .is_some_and(|system| !duck::is_made_for(folder, system, stream));
+  let unmeasured_system = source
+    .system
+    .is_some_and(|system| auto_volume::is_system_unmeasured(folder, system, stream));
   (auto_volume::choice(folder, stream) == AutoVolume::On
     && auto_volume::is_unmeasured(folder, stream))
+    || unmeasured_system
     || (ducking && unducked)
 }

@@ -11,6 +11,7 @@ fn file(name: &str, duration_ms: u64) -> SoundFile {
     path: PathBuf::from(name),
     duration_ms,
     loudness_lufs: Some(-14.0),
+    levels: Vec::new(),
     separated: None,
   }
 }
@@ -44,7 +45,7 @@ fn laid_out(
         .map(|(_, file)| file)
     },
     timeline_ms,
-    (true, true),
+    (Some(-16.0), true),
   )
 }
 
@@ -69,7 +70,7 @@ fn songs_make_way_only_while_ducking_and_sound_effects_never() {
           .map(|(_, file)| file)
       },
       60_000,
-      (true, ducks),
+      (Some(-16.0), ducks),
     )
     .iter()
     .map(|piece| piece.makes_way)
@@ -232,23 +233,44 @@ fn a_clip_whose_sound_is_missing_is_silent() {
 }
 
 #[test]
-fn songs_sit_well_under_the_voice_and_at_its_level_without_one() {
+fn songs_sit_under_the_voice_as_heard_and_at_a_voice_level_without_one() {
+  // A voice heard at -20 LUFS: songs 6 dB under it, sound effects 3 dB.
   assert_eq!(
-    default_gain_db(AudioClipKind::Music, Some(-14.0), true),
-    -16.0
+    default_gain_db(AudioClipKind::Music, Some(-14.0), Some(-20.0)),
+    -12.0
   );
   assert_eq!(
-    default_gain_db(AudioClipKind::Effect, Some(-14.0), true),
-    -8.0
+    default_gain_db(AudioClipKind::Effect, Some(-14.0), Some(-20.0)),
+    -9.0
   );
   assert_eq!(
-    default_gain_db(AudioClipKind::Music, Some(-14.0), false),
+    default_gain_db(AudioClipKind::Music, Some(-14.0), None),
     -2.0
   );
+  // A near-silent sound is lifted 20 dB at most.
   assert_eq!(
-    default_gain_db(AudioClipKind::Music, Some(-60.0), false),
-    MOST_LIFT_DB
+    default_gain_db(AudioClipKind::Music, Some(-60.0), None),
+    20.0
   );
+}
+
+#[test]
+fn a_clip_is_levelled_by_the_stretch_it_plays() {
+  // Ten seconds quiet, then ten seconds 10 dB louder in power.
+  let quiet = 0.1_f32;
+  let loud = quiet * 10_f32.sqrt();
+  let mut sound = file("song", 20_000);
+  sound.levels = [vec![quiet; 100], vec![loud; 100]].concat();
+  let loudness = |offset_ms: u64| {
+    let mut clip = song("1", "song", 0, 10_000);
+    clip.offset_ms = offset_ms;
+    super::level::played_loudness(&clip, &sound).unwrap()
+  };
+  // The sound measures -14 LUFS as a whole; its quiet half plays under that
+  // and its loud half over it, 10 dB apart.
+  let (intro, chorus) = (loudness(0), loudness(10_000));
+  assert!(intro < -14.0 && chorus > -14.0, "{intro} {chorus}");
+  assert!((chorus - intro - 10.0).abs() < 0.01, "{intro} {chorus}");
 }
 
 #[test]

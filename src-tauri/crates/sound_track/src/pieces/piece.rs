@@ -14,6 +14,9 @@ pub struct SoundFile {
   pub duration_ms: u64,
   /// How loud it is over its whole length, in LUFS; none where it is silent.
   pub loudness_lufs: Option<f64>,
+  /// How loud it is from 0 to 1, as root mean square, ten a second, as the
+  /// library keeps it for its waveform; empty where it has none.
+  pub levels: Vec<f32>,
   /// Its singing and the rest of it, as far as they are separated, lined up
   /// with it from its start; none until any is, or without the model.
   pub separated: Option<Separated>,

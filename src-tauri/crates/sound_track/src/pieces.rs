@@ -12,8 +12,10 @@
 //! join where the files hold sound past it, and happens inside the clip on
 //! a side whose file ends there. Nothing is heard past the timeline's end.
 
+mod level;
 mod piece;
 
+pub use level::default_gain_db;
 pub use piece::{Curve, Fade, Parts, Piece, SoundFile};
 
 use crate::clip::{AudioClipKind, RecordingAudioClip};
@@ -22,14 +24,6 @@ use crate::clip::{AudioClipKind, RecordingAudioClip};
 pub const CROSSFADE_MS: u64 = 3_000;
 /// How long a looped clip's repeats crossfade for, at most, in ms.
 pub const LOOP_CROSSFADE_MS: u64 = 500;
-/// The loudness voices are brought to by Auto volume, in LUFS.
-const VOICE_LUFS: f64 = -16.0;
-/// How far under the voice a song plays by default, in dB.
-const SONG_UNDER_VOICE_DB: f64 = 14.0;
-/// How far under the voice a sound effect plays by default, in dB.
-const EFFECT_UNDER_VOICE_DB: f64 = 6.0;
-/// The most a quiet sound is lifted to reach its level, in dB.
-const MOST_LIFT_DB: f64 = 20.0;
 /// How far apart, in ms, a song's end and the next one's start may be and
 /// still touch: the editor works in whole milliseconds.
 const TOUCHING_MS: u64 = 1;
@@ -46,22 +40,6 @@ const EFFECT_FADE_OUT_MS: u64 = 100;
 /// How long every clip's edges fade at least, in ms, so none clicks.
 const EDGE_FADE_MS: u64 = 5;
 
-/// How much a sound measured at `loudness_lufs` is lifted or lowered to play
-/// at its kind's level: a song well under the voice, a sound effect a little
-/// under it, and either at the voice's own level where the recording has no
-/// microphone to play under.
-pub fn default_gain_db(kind: AudioClipKind, loudness_lufs: Option<f64>, has_voice: bool) -> f64 {
-  let Some(loudness) = loudness_lufs else {
-    return 0.0;
-  };
-  let under = match (has_voice, kind) {
-    (false, _) => 0.0,
-    (true, AudioClipKind::Music) => SONG_UNDER_VOICE_DB,
-    (true, AudioClipKind::Effect) => EFFECT_UNDER_VOICE_DB,
-  };
-  (VOICE_LUFS - under - loudness).min(MOST_LIFT_DB)
-}
-
 /// A clip as it is heard: where it plays on the timeline and its pieces.
 struct Laid<'a> {
   clip: &'a RecordingAudioClip,
@@ -72,13 +50,14 @@ struct Laid<'a> {
 }
 
 /// The pieces `clips` play on a timeline `timeline_ms` long, their sounds
-/// found by `files`, under a voice where `has_voice` says, the songs making
-/// way for it where `ducks` says. A clip whose sound is missing is silent.
+/// found by `files`, under a voice heard at `voice_lufs` where there is one,
+/// the songs making way for it where `ducks` says. A clip whose sound is
+/// missing is silent.
 pub fn pieces<'a>(
   clips: &'a [RecordingAudioClip],
   files: impl Fn(&str) -> Option<&'a SoundFile>,
   timeline_ms: u64,
-  (has_voice, ducks): (bool, bool),
+  (voice_lufs, ducks): (Option<f64>, bool),
 ) -> Vec<Piece> {
   let mut laid: Vec<Laid<'a>> = clips
     .iter()
@@ -88,8 +67,8 @@ pub fn pieces<'a>(
       if end_ms <= clip.start_ms {
         return None;
       }
-      let gain_db =
-        default_gain_db(clip.kind, file.loudness_lufs, has_voice) + f64::from(clip.volume_db);
+      let loudness = level::played_loudness(clip, file);
+      let gain_db = default_gain_db(clip.kind, loudness, voice_lufs) + f64::from(clip.volume_db);
       let mut pieces = if clip.is_looped {
         repeats(clip, file, end_ms, gain_db)
       } else {

@@ -18,14 +18,17 @@ pub use pieces::{pieces, Piece, SoundFile};
 /// What the export and the preview need to hear a timeline's clips: the
 /// clips, the kinds of clip left out (the Tracks island's Music and Sound
 /// effects switches), the files their sounds are in, the recorded stream of
-/// the voice they play under, if the recording has one, and whether the
-/// songs make way for it: Studio ducking on, and the voice heard.
+/// the voice they play under, if the recording has one, how loud that voice
+/// is heard, which the clips are levelled against, and whether the songs
+/// make way for it: Studio ducking on, and the voice heard.
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct SoundTrack {
   pub clips: Vec<RecordingAudioClip>,
   pub muted: Vec<AudioClipKind>,
   pub files: Vec<(String, SoundFile)>,
   pub voice: Option<usize>,
+  /// In LUFS.
+  pub voice_lufs: Option<f64>,
   pub ducks: bool,
 }
 
@@ -47,7 +50,7 @@ impl SoundTrack {
           .find_map(|(each, file)| (each == name).then_some(file))
       },
       timeline_ms,
-      (self.voice.is_some(), self.ducks),
+      (self.voice.and(self.voice_lufs), self.ducks),
     )
   }
 

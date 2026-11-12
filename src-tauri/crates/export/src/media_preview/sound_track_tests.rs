@@ -88,11 +88,12 @@ fn recording_with_a_song(folder: &Path, makes_way: bool) -> (PathBuf, TimelinePl
   .expect("a timeline with a song is an edit");
   // The quiet tone only stands for a voice where the song makes way for it,
   // so the plain tests hear the song at the level it has with no voice.
-  timeline.find_sounds((makes_way.then_some(0), makes_way), |_| {
+  timeline.find_sounds((makes_way.then_some(0), Some(-16.0), makes_way), |_| {
     Some(SoundFile {
       path: song.clone(),
       duration_ms: 2_000,
       loudness_lufs: Some(-21.0),
+      levels: Vec::new(),
       separated: None,
     })
   });

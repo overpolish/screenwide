@@ -81,18 +81,40 @@ pub(super) fn first_of(tracks: &[RecordingAudioTrack], kind: AudioTrackKind) -> 
     .map(|track| track.stream_index)
 }
 
-/// Readies Auto volume for the `microphone`th track of `movie`, where it is
-/// on: measures the voice as it is heard.
+/// Readies Auto volume for the `microphone`th track of `movie`: measures the
+/// voice as it is heard, where the switch is on, and the `system` audio, as
+/// recorded, which is always levelled under the voice.
 fn ready_auto_volume(
   project_folder: &Path,
-  microphone: usize,
+  (microphone, system): (usize, Option<usize>),
   (movie, duration_ms): (&Path, u64),
   progress: &mut dyn FnMut(f32),
 ) -> Result<(), String> {
-  if auto_volume::choice(project_folder, microphone) != auto_volume::AutoVolume::On {
-    return Ok(());
+  let levels_voice = auto_volume::choice(project_folder, microphone) == auto_volume::AutoVolume::On;
+  // The system audio is read once, as recorded, which is quick beside
+  // measuring the voice three times over.
+  let voice_share = if system.is_some() { 0.75 } else { 1.0 };
+  if levels_voice {
+    auto_volume::measure(
+      project_folder,
+      microphone,
+      movie,
+      duration_ms,
+      &mut |fraction| {
+        progress(fraction * voice_share);
+      },
+    )?;
   }
-  auto_volume::measure(project_folder, microphone, movie, duration_ms, progress)
+  let Some(system) = system else {
+    return Ok(());
+  };
+  auto_volume::measure_system(
+    project_folder,
+    (system, microphone),
+    movie,
+    duration_ms,
+    &mut |fraction| progress(voice_share + fraction * (1.0 - voice_share)),
+  )
 }
 
 /// Readies Studio ducking for the `microphone`th track of `movie`, where it
@@ -194,8 +216,8 @@ pub(crate) fn ready_for_export(
       voice: &mut |_| {},
     },
   )?;
-  ready_auto_volume(project_folder, microphone, recording, &mut |_| {})?;
   let system = first_of(&on, AudioTrackKind::SystemAudio);
+  ready_auto_volume(project_folder, (microphone, system), recording, &mut |_| {})?;
   ready_ducking(
     project_folder,
     (microphone, system),

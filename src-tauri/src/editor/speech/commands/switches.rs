@@ -95,7 +95,7 @@ fn ready(
   let recording = (source.movie.as_path(), source.duration_ms);
   ready_auto_volume(
     &source.project_folder,
-    source.microphone,
+    (source.microphone, source.system),
     recording,
     progress,
   )?;

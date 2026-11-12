@@ -19,8 +19,11 @@ use super::{EditorArtifact, EditorState};
 
 mod preview;
 mod singing;
+mod voice;
 
 pub(crate) use singing::{ready_for_export, separate_singing};
+pub(crate) use voice::ducks;
+use voice::microphone;
 
 const COMMANDS: [&str; 6] = [
   "browse_sounds",
@@ -232,12 +235,13 @@ fn file(project_sounds: Option<&Path>, name: &str) -> Option<SoundFile> {
     path,
     duration_ms: sound.duration_ms,
     loudness_lufs: sound.loudness_lufs,
+    levels: sound.levels,
   })
 }
 
 /// `clips` with the files they play, leaving out the kinds `muted`, under
-/// the recorded stream `voice` where there is one, the songs making way for
-/// it where `ducks` says.
+/// the recorded stream `voice` where there is one, levelled against it as
+/// it is heard, the songs making way for it where `ducks` says.
 pub(crate) fn sound_track(
   project: &Path,
   (clips, muted): (Vec<RecordingAudioClip>, Vec<AudioClipKind>),
@@ -248,35 +252,11 @@ pub(crate) fn sound_track(
     clips,
     muted,
     voice,
+    voice_lufs: voice.map(|microphone| voice::voice_lufs(project, microphone)),
     ducks,
     ..SoundTrack::default()
   }
   .with_files(|name| file(folder.as_deref(), name))
-}
-
-/// Whether the songs of the project whose manifest is `project` make way
-/// for its `microphone`th track: Studio ducking is on for it and has its
-/// model. Whether the microphone is heard is for the caller to say.
-pub(crate) fn ducks(app: &tauri::AppHandle, project: &Path, microphone: usize) -> bool {
-  let folder = project.parent().unwrap_or(Path::new("."));
-  crate::editor::speech::studio_ducking::wanted(app, folder, microphone).is_some()
-}
-
-/// The recorded stream of the microphone of the project whose manifest is
-/// `project`, if it has one: the voice its songs play under.
-fn microphone(project: &Path) -> Option<usize> {
-  screenwide_project::read(project)
-    .ok()
-    .and_then(|manifest| manifest.recording)
-    .and_then(|recording| {
-      super::artifact_present::recording_audio_tracks(
-        recording.has_system_audio,
-        recording.has_microphone,
-      )
-      .into_iter()
-      .find(|track| track.kind == screenwide_export::recording_model::AudioTrackKind::Microphone)
-    })
-    .map(|track| track.stream_index)
 }
 
 /// Finds the files `plan`'s clips play, from the project's copies first,
@@ -287,9 +267,12 @@ pub(crate) fn find_sounds(plan: &mut TimelinePlan, project: &Path, app: Option<&
     return;
   }
   let voice = microphone(project);
+  let heard_at = voice.map(|microphone| voice::voice_lufs(project, microphone));
   let ducking = voice
     .zip(app)
     .is_some_and(|(microphone, app)| ducks(app, project, microphone));
   let folder = project_sounds(project);
-  plan.find_sounds((voice, ducking), |name| file(folder.as_deref(), name));
+  plan.find_sounds((voice, heard_at, ducking), |name| {
+    file(folder.as_deref(), name)
+  });
 }
