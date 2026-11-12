@@ -265,6 +265,7 @@ export type Messages = {
   "editor-island-camera-background-none": null;
   "editor-island-camera-background-picture": null;
   "editor-island-camera-in-scene": null;
+  "editor-island-camera-in-video": null;
   "editor-island-camera-object-confirm-remove": null;
   "editor-island-camera-object-following": null;
   "editor-island-camera-object-kept": null;
@@ -275,6 +276,7 @@ export type Messages = {
   "editor-island-camera-objects-hint": { key: string | number };
   "editor-island-camera-objects-pick": null;
   "editor-island-camera-objects-working": null;
+  "editor-island-camera-separate": null;
   "editor-island-captions": null;
   "editor-island-captions-accent-size": null;
   "editor-island-captions-actions": null;

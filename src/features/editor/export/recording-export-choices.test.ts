@@ -125,7 +125,7 @@ describe("seededExportChoices", () => {
       screen,
     });
     expect(seeded).toMatchObject({
-      bakeCamera: false,
+      bakeCamera: true,
       cameraCompression: 2,
       cameraResolutionScalePercent: 100,
       collapseAudio: false,
@@ -152,8 +152,8 @@ describe("seededExportChoices", () => {
     expect(scaleFor(150, 100 / 150)).toBe(150);
   });
 
-  it("bakes only a recording that has a screen and a camera", () => {
-    const choices = { ...noChoices, bakeCamera: true };
+  it("draws in the camera of a recording with a screen and a camera", () => {
+    const choices = noChoices;
     expect(
       seededExportChoices({ artifact: recording(), choices, screen })
         .bakeCamera,

@@ -12,6 +12,7 @@ import {
 } from "../editor-island-story-meta";
 
 import { cameraIsland, type CameraIslandProps } from "./camera-island";
+import { separateCameraIsland } from "./camera-output";
 
 import type {
   ToolPanelCameraEffects,
@@ -52,11 +53,18 @@ const PICKS: ToolPanelCameraObjects["picks"] = [
   { followed: false, following: null, id: 3, keep: true, painted: true },
 ];
 
+// The story's own `isInVideo` stands in for the editor's camera output: off,
+// the island is the one a camera saved as its own file shows.
 function CameraIsland({
+  isInVideo,
   isShown,
   ...props
-}: EditorIslandStoryProps & CameraIslandProps) {
-  return <EditorIslandStage content={cameraIsland(props)} isShown={isShown} />;
+}: EditorIslandStoryProps & CameraIslandProps & { isInVideo: boolean }) {
+  const content =
+    isInVideo || !props.onInVideoChange
+      ? cameraIsland(props)
+      : separateCameraIsland({ onInVideoChange: props.onInVideoChange });
+  return <EditorIslandStage content={content} isShown={isShown} />;
 }
 
 const meta = {
@@ -68,6 +76,7 @@ const meta = {
     isAtDefaultPlacement: false,
     isFindingFace: false,
     isInScene: false,
+    isInVideo: true,
     isShown: true,
     onBackgroundChange: fn(),
     onChoosePicture: fn(),
@@ -75,6 +84,7 @@ const meta = {
     onDownloadObjectsModel: fn(),
     onEnhanceChange: fn(),
     onFollowFaceChange: fn(),
+    onInVideoChange: fn(),
     onPickObjects: fn(),
     onRadiusChange: fn(),
     onRemoveObject: fn(),
@@ -89,7 +99,9 @@ const meta = {
   // story cannot download a model or open a picker, so a download lands at
   // once and a picture is chosen as soon as it is asked for.
   render: function Render(args) {
-    const [, updateArgs] = useArgs<CameraIslandProps>();
+    const [, updateArgs] = useArgs<
+      CameraIslandProps & { isInVideo: boolean }
+    >();
     const { effects, picture } = args;
     const objects = effects.objects ?? NO_OBJECTS;
     const change = (next: Partial<ToolPanelCameraEffects>) => {
@@ -121,6 +133,10 @@ const meta = {
         onFollowFaceChange={(followFace) => {
           args.onFollowFaceChange(followFace);
           updateArgs({ followFace });
+        }}
+        onInVideoChange={(isInVideo) => {
+          args.onInVideoChange?.(isInVideo);
+          updateArgs({ isInVideo });
         }}
         onPickObjects={(isPicking) => {
           args.onPickObjects(isPicking);
@@ -181,6 +197,10 @@ export const Default: Story = {};
 // Over a scene, the corners, Follow face and Reset placement are the
 // scene's own; the note says so.
 export const InScene: Story = { args: { isInScene: true } };
+
+// Saved as a file of its own, the camera is out of the picture: the island
+// offers only drawing it back in.
+export const SavedSeparately: Story = { args: { isInVideo: false } };
 
 export const FindingFace: Story = {
   args: { followFace: true, isFindingFace: true },

@@ -434,6 +434,10 @@ editor-island-screen-recenter = Recenter
 editor-island-reset-placement = Reset placement
 # The island for the camera, for the whole recording: its effects, its corners, its shadow and whether it follows the face.
 editor-island-camera = Camera
+# The toggle at the end of the Camera island's row, named for assistive technology: on, the camera is drawn into the video; off, it is saved as a file of its own beside it, the Export island's "Save the camera as its own file".
+editor-island-camera-in-video = Camera in the video
+# The Camera island's note while the camera is saved as a file of its own, so it is not in the picture.
+editor-island-camera-separate = Saved as its own file beside the video.
 # Shown while picking objects on the preview, where a drag paints a line over an object. $key is the key held to remove instead, drawn as a keycap: Option on a Mac, Alt on Windows.
 editor-island-camera-objects-hint = Click or paint to keep. Hold { $key } to remove.
 # At the foot of the Screen island while the playhead is in a scene, which can pad, round, turn, recenter and place the screen its own way; also on the Camera island of a recording of the camera alone, whose camera is padded and turned as a screen is.

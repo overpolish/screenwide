@@ -25,6 +25,7 @@ import { ScreenInsetChoice } from "../screen/screen-inset-choice";
 
 import { CameraBackgroundLine } from "./camera-background-line";
 import { EnhanceGlyph, RemoveBackgroundGlyph } from "./camera-glyphs";
+import { CameraInVideoToggle } from "./camera-in-video-toggle";
 import { CameraObjectsLine } from "./camera-objects-line";
 
 import type { ToolPanelCameraEffects } from "../../tools/tool-panel-selection";
@@ -88,6 +89,10 @@ export type CameraIslandProps = {
   /** Percent of the camera's shorter side, the scene's own while
    * `isInScene`; half is a circle. */
   radius: number;
+  /** Draws the camera into the video, or saves it beside the video; absent
+   * where there is no such choice (a camera-only recording, or the screen
+   * left out of the export). */
+  onInVideoChange?: (isInVideo: boolean) => void;
   /** Where the recording is of the camera alone, the camera is its own
    * picture, padded, turned and recentred as a screen is; absent for a
    * camera beside the screen. Such a camera has no box of its own to follow
@@ -116,6 +121,9 @@ export function cameraIsland(props: CameraIslandProps): EditorIslandContent {
     objects?.isPicking === true ||
     objects?.working === true;
   return {
+    actions: props.onInVideoChange ? (
+      <CameraInVideoToggle isInVideo onChange={props.onInVideoChange} />
+    ) : undefined,
     key: "camera",
     section: (
       <IslandParts className="flex flex-col gap-separate">

@@ -7,10 +7,12 @@ import type { RememberedCameraOverlay } from "./RememberedCameraOverlay";
  *
  * `None` means the choice has never been offered by an exported recording,
  * so the editor keeps its own default. An export only overwrites the choices
- * it offered: exporting a recording without a camera must not forget whether
- * the camera was baked last time there was one.
+ * it offered: exporting a recording without a camera must not forget the
+ * camera's compression from last time there was one. Whether the camera is
+ * drawn into the video is not carried over: every recording starts with it
+ * drawn in, so a camera never seems to go missing from a new recording.
  */
-export type RecordingExportChoices = { bakeCamera: boolean | null, cameraCompression: number | null, cameraOverlay: RememberedCameraOverlay | null, cameraResolutionScalePercent: number | null, collapseAudio: boolean | null, compression: number | null, deleteProjectAfterExport: boolean | null, 
+export type RecordingExportChoices = { cameraCompression: number | null, cameraOverlay: RememberedCameraOverlay | null, cameraResolutionScalePercent: number | null, collapseAudio: boolean | null, compression: number | null, deleteProjectAfterExport: boolean | null, 
 /**
  * The output scale as a share of the "Original" scale, which is how the
  * choice is labelled. A raw percentage would pick a different size on a

@@ -83,7 +83,6 @@ export const initialEditorSnapshot = (
     size: "standard",
   },
   recordingExportChoices: {
-    bakeCamera: null,
     cameraCompression: null,
     cameraOverlay: null,
     cameraResolutionScalePercent: null,

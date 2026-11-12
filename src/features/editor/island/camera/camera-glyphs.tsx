@@ -153,3 +153,31 @@ export function BackgroundGlyph({
     </GlyphBox>
   );
 }
+
+/** The screen's frame with the camera inside it, drawn into the video;
+ * turned off, the camera slides out past the frame's edge and the frame
+ * narrows, two files side by side. */
+export function CameraInVideoGlyph({ isInVideo }: { isInVideo: boolean }) {
+  const motionOf = useGlyphMotion();
+  return (
+    <GlyphBox>
+      <motion.rect
+        animate={{ width: isInVideo ? 20 : 13 }}
+        height={15}
+        initial={false}
+        rx={2}
+        transition={motionOf.move}
+        x={2}
+        y={4}
+      />
+      {/* A transform, not the rect's `x`: motion reads `x` as a move. */}
+      <motion.g
+        animate={{ x: isInVideo ? 0 : 4 }}
+        initial={false}
+        transition={motionOf.move}
+      >
+        <rect fill="currentColor" height={5} rx={1.5} width={6} x={13} y={11} />
+      </motion.g>
+    </GlyphBox>
+  );
+}

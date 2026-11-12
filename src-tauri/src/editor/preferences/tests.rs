@@ -50,11 +50,12 @@ fn loads_preferences_written_before_screenshot_output_was_remembered() {
 }
 
 /// An export only speaks for the choices it offered. A recording without a
-/// camera says nothing about baking, so the next camera recording still bakes.
+/// camera says nothing about the camera's compression, so the next camera
+/// recording still has the one chosen last.
 #[test]
 fn an_export_that_did_not_offer_a_choice_keeps_the_one_remembered_before() {
   let earlier = RecordingExportChoices {
-    bake_camera: Some(true),
+    camera_compression: Some(3),
     camera_resolution_scale_percent: Some(75),
     compression: Some(3),
     ..Default::default()
@@ -67,12 +68,14 @@ fn an_export_that_did_not_offer_a_choice_keeps_the_one_remembered_before() {
 
   let merged = earlier.merged(without_camera);
 
-  assert_eq!(merged.bake_camera, Some(true));
+  assert_eq!(merged.camera_compression, Some(3));
   assert_eq!(merged.camera_resolution_scale_percent, Some(75));
   assert_eq!(merged.compression, Some(1));
   assert_eq!(merged.resolution_scale_ratio, Some(0.5));
 }
 
+/// The file is also one from before the camera's output stopped being
+/// remembered: it still loads, its `bakeCamera` left behind.
 #[test]
 fn a_damaged_file_seeds_no_choice_the_export_would_refuse() {
   let choices: RecordingExportChoices = serde_json::from_str(
@@ -83,7 +86,6 @@ fn a_damaged_file_seeds_no_choice_the_export_would_refuse() {
 
   let sanitized = choices.sanitized();
 
-  assert_eq!(sanitized.bake_camera, Some(true));
   assert_eq!(sanitized.camera_compression, None);
   assert_eq!(sanitized.camera_resolution_scale_percent, None);
   assert_eq!(sanitized.compression, Some(2));

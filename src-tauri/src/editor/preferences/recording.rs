@@ -24,13 +24,14 @@ pub struct RememberedCameraOverlay {
 ///
 /// `None` means the choice has never been offered by an exported recording,
 /// so the editor keeps its own default. An export only overwrites the choices
-/// it offered: exporting a recording without a camera must not forget whether
-/// the camera was baked last time there was one.
+/// it offered: exporting a recording without a camera must not forget the
+/// camera's compression from last time there was one. Whether the camera is
+/// drawn into the video is not carried over: every recording starts with it
+/// drawn in, so a camera never seems to go missing from a new recording.
 #[derive(Clone, Copy, Debug, Default, Deserialize, PartialEq, Serialize, TS)]
 #[serde(default, rename_all = "camelCase")]
 #[ts(export)]
 pub struct RecordingExportChoices {
-  pub bake_camera: Option<bool>,
   pub camera_compression: Option<u8>,
   pub camera_overlay: Option<RememberedCameraOverlay>,
   pub camera_resolution_scale_percent: Option<u16>,
@@ -68,8 +69,6 @@ impl RecordingExportChoices {
       _ => (*source_scale_percent).clamp(100, 400),
     };
     Self {
-      bake_camera: (camera.is_some() && options.include_primary_video && options.include_camera)
-        .then_some(options.bake_camera),
       camera_compression: (camera.is_some() && can_compress).then_some(options.camera_compression),
       camera_overlay: camera
         .filter(|_| has_picture)
@@ -94,7 +93,6 @@ impl RecordingExportChoices {
 
   pub(super) fn merged(self, newer: Self) -> Self {
     Self {
-      bake_camera: newer.bake_camera.or(self.bake_camera),
       camera_compression: newer.camera_compression.or(self.camera_compression),
       camera_overlay: newer.camera_overlay.or(self.camera_overlay),
       camera_resolution_scale_percent: newer

@@ -168,10 +168,9 @@ export const seededExportChoices = ({
       : null;
   const cameraResolution = choices.cameraResolutionScalePercent;
   return {
-    bakeCamera:
-      camera !== null &&
-      recording?.primaryKind === "screen" &&
-      (choices.bakeCamera ?? false),
+    // Never remembered: a recording with a screen and a camera starts with
+    // the camera drawn in, so it is never missing from the picture.
+    bakeCamera: camera !== null && recording?.primaryKind === "screen",
     cameraCompression: compressionFor(choices.cameraCompression),
     cameraOverlay: cameraOverlay ?? defaultCameraOverlay(artifact),
     cameraResolutionScalePercent:

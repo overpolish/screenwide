@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { cameraIsland } from "../camera/camera-island";
+import { separateCameraIsland } from "../camera/camera-output";
 import { cropIsland } from "../crop/crop-island";
 import { screenIsland } from "../screen/screen-island";
 
@@ -92,6 +93,16 @@ export function cameraIslandContent({
   isFindingFace: boolean;
 }): EditorIslandContent | null {
   const { scene, selection } = snapshot;
+  // Saved as a file of its own, the camera is not in the picture: the
+  // island offers only drawing it back in. Either way the choice is the
+  // Export island's, reached through its patch.
+  const onInVideoChange = (isInVideo: boolean) => {
+    change({
+      exportPatch: { cameraOutput: isInVideo ? "combined" : "separate" },
+    });
+  };
+  if (snapshot.cameraOutput === "separate")
+    return separateCameraIsland({ onInVideoChange });
   // Until the camera's track is in hand the selection is another layer's.
   // The camera's effects come with the recording's own track only where
   // the recording is of the camera alone, whose own picture it then is.
@@ -118,6 +129,7 @@ export function cameraIslandContent({
       : selection.isAtDefaultPlacement,
     isFindingFace: followFace && isFindingFace,
     isInScene: scenePane !== null,
+    ...(snapshot.cameraOutput === "combined" ? { onInVideoChange } : {}),
     onBackgroundChange: (background) => {
       change({ cameraEffects: { background } });
     },
