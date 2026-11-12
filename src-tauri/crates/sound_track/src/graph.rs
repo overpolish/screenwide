@@ -9,6 +9,7 @@
 use std::path::Path;
 
 use crate::pieces::{Curve, Fade, Piece};
+use crate::store::singing::PART_LEVEL;
 
 fn seconds(ms: u64) -> String {
   format!("{}.{:03}", ms / 1_000, ms % 1_000)
@@ -147,21 +148,35 @@ pub fn filter(
     .enumerate()
   {
     let label = format!("[sound{index}]");
-    graph.push_str(&format!("{}{label};", chain(piece, &piece.path, window)));
     let ducked = voice.is_some() && piece.makes_way;
-    match (&piece.singing, ducked) {
-      (Some(singing), true) => {
-        // The rest of the song is the song less its singing, so the two
-        // together are the song as it was while the voice is quiet.
+    let rest_bus = usize::from(ducked);
+    match &piece.parts {
+      // Separated, the song plays as its two parts: the rest, and the
+      // singing, which gets out of the voice's way entirely, or is left out
+      // of an instrumental song.
+      Some(parts) if ducked || piece.instrumental => {
+        // The parts are kept quieter than the song, to fit their files.
+        let made_up = Piece {
+          gain_db: piece.gain_db - 20.0 * f64::from(PART_LEVEL).log10(),
+          ..piece.clone()
+        };
         graph.push_str(&format!(
-          "{},asplit[sung{index}][unsung{index}];[unsung{index}]volume=-1[less{index}];{label}[less{index}]amix=inputs=2:normalize=0[rest{index}];",
-          chain(piece, singing, window)
+          "{}[rest{index}];",
+          chain(&made_up, &parts.rest, window)
         ));
-        buses[1].push(format!("[rest{index}]"));
-        buses[2].push(format!("[sung{index}]"));
+        buses[rest_bus].push(format!("[rest{index}]"));
+        if !piece.instrumental {
+          graph.push_str(&format!(
+            "{}[sung{index}];",
+            chain(&made_up, &parts.singing, window)
+          ));
+          buses[2].push(format!("[sung{index}]"));
+        }
       }
-      (_, true) => buses[1].push(label),
-      (_, false) => buses[0].push(label),
+      _ => {
+        graph.push_str(&format!("{}{label};", chain(piece, &piece.path, window)));
+        buses[rest_bus].push(label);
+      }
     }
   }
   if buses.iter().all(Vec::is_empty) {

@@ -218,7 +218,8 @@ fn the_sound_track_plays_as_one_channel_more_padded_to_the_tracks() {
     // Making way, it listens to the microphone, stream 1, split from its
     // channel.
     makes_way: true,
-    singing: None,
+    instrumental: false,
+    parts: None,
   }];
   let sound = PreviewSoundTrack::laid_out(pieces.to_vec(), (0, 1_000), Some(1));
   let config = StreamConfig {

@@ -44,19 +44,22 @@ const meta = {
   args: {
     clipMs: 10_000,
     id: "song",
+    isInstrumental: false,
     isLooped: false,
     isShown: true,
     isSong: true,
     levels: storyLevels(600),
-    makesWay: true,
+    model: { progress: 0, sizeBytes: 464_050_097, status: "downloaded" },
     offsetMs: 60_000,
     onChange: fn(),
+    onDownloadModel: fn(),
     preview: {
       isPlaying: false,
       lengthMs: 10_000,
       onTogglePlay: fn(),
       progress: 0,
     },
+    separating: null,
     soundMs: 600_000,
     title: "Habanera from Carmen (Georges Bizet) - Golden Hour Strings",
     volumeDb: 0,
@@ -94,6 +97,17 @@ export const Previewing: Story = {
       onTogglePlay: fn(),
       progress: 0.4,
     },
+  },
+};
+
+export const RemovingTheSinging: Story = {
+  args: { isInstrumental: true, separating: 0.4 },
+};
+
+export const InstrumentalWithoutTheModel: Story = {
+  args: {
+    isInstrumental: true,
+    model: { progress: 0, sizeBytes: 464_050_097, status: "available" },
   },
 };
 

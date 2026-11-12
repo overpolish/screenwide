@@ -29,6 +29,7 @@ struct Spent {
 }
 
 impl Spent {
+  #[cfg(windows)]
   fn add(&mut self, took: Duration) {
     self.count += 1;
     self.total += took;
@@ -83,16 +84,19 @@ pub(crate) fn begin(kind: &'static str, width: f64, height: f64) -> Option<Layou
 }
 
 /// One workspace draw: the swap chain matched to the viewport, the scene
-/// drawn into it and presented.
+/// drawn into it and presented. Only Windows's surface reports these.
+#[cfg(windows)]
 pub(crate) fn record_draw(took: Duration) {
   record(took, |state| &mut state.draw);
 }
 
 /// One compositor commit, with its wait when it waited.
+#[cfg(windows)]
 pub(crate) fn record_commit(took: Duration) {
   record(took, |state| &mut state.commit);
 }
 
+#[cfg(windows)]
 fn record(took: Duration, spent: impl FnOnce(&mut State) -> &mut Spent) {
   if let Ok(mut slot) = STATE.lock() {
     if let Some(state) = slot.as_mut().filter(|state| state.measuring) {

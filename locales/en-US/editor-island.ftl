@@ -56,8 +56,10 @@ editor-island-audio-fine-hint = Hold { $key } while dragging to move it finely.
 # Plays the clip from where it starts in its sound, in the island.
 editor-island-audio-preview = Play the clip
 editor-island-audio-stop-preview = Stop playing the clip
-# Whether the clip quietens while the microphone speaks, so the voice is heard over it.
-editor-island-audio-make-way = Make way for voice
+# A song played without its singing, which the music separation model takes out.
+editor-island-audio-instrumental = Instrumental
+# While the singing is being taken out of a song played as an instrumental.
+editor-island-audio-removing-singing = Removing the singing
 # Puts another song or sound effect in the clip's place, chosen from a file.
 editor-island-audio-replace = Replace
 editor-island-audio-delete = Delete the clip

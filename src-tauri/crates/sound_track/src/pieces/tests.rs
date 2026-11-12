@@ -1,16 +1,17 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use super::*;
+use crate::store::Separated;
 
 fn file(name: &str, duration_ms: u64) -> SoundFile {
   SoundFile {
     path: PathBuf::from(name),
     duration_ms,
     loudness_lufs: Some(-14.0),
-    singing: None,
+    separated: None,
   }
 }
 
@@ -25,7 +26,7 @@ fn song(id: &str, sound: &str, start_ms: u64, end_ms: u64) -> RecordingAudioClip
     offset_ms: 0,
     volume_db: 0,
     is_looped: false,
-    makes_way: true,
+    is_instrumental: false,
   }
 }
 
@@ -43,8 +44,62 @@ fn laid_out(
         .map(|(_, file)| file)
     },
     timeline_ms,
-    true,
+    (true, true),
   )
+}
+
+#[test]
+fn songs_make_way_only_while_ducking_and_sound_effects_never() {
+  let effect = RecordingAudioClip {
+    kind: AudioClipKind::Effect,
+    ..song("b", "click", 0, 1_000)
+  };
+  let clips = [song("a", "song", 0, 10_000), effect];
+  let files = [
+    ("song", file("song", 60_000)),
+    ("click", file("click", 1_000)),
+  ];
+  let making_way = |ducks: bool| -> Vec<bool> {
+    pieces(
+      &clips,
+      |name| {
+        files
+          .iter()
+          .find(|(each, _)| *each == name)
+          .map(|(_, file)| file)
+      },
+      60_000,
+      (true, ducks),
+    )
+    .iter()
+    .map(|piece| piece.makes_way)
+    .collect()
+  };
+  assert_eq!(making_way(true), [true, false]);
+  assert_eq!(making_way(false), [false, false]);
+}
+
+#[test]
+fn a_piece_reads_the_parts_only_where_all_it_plays_is_separated() {
+  let clip = song("a", "song", 0, 10_000);
+  let separated = |pieces: &[u64]| {
+    let mut song = file("song.mp3", 60_000);
+    song.separated = Some(Separated::with_pieces(
+      Path::new("song.mp3"),
+      pieces.iter().copied(),
+    ));
+    laid_out(std::slice::from_ref(&clip), &[("song", song)], 60_000)
+  };
+  // It plays the first 10 s: the first two 8 s pieces.
+  assert_eq!(separated(&[0])[0].parts, None);
+  assert_eq!(separated(&[1, 2])[0].parts, None);
+  assert_eq!(
+    separated(&[0, 1])[0].parts,
+    Some(Parts {
+      singing: PathBuf::from("song.singing.flac"),
+      rest: PathBuf::from("song.rest.flac"),
+    })
+  );
 }
 
 #[test]

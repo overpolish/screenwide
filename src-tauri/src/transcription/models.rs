@@ -125,3 +125,18 @@ pub(super) fn remove(app: &AppHandle, model: &Model) -> Result<(), String> {
   }
   Ok(())
 }
+
+/// Deletes the files of models the catalogue no longer has, so a model
+/// replaced by another takes no room once the app updates.
+pub(crate) fn remove_retired(app: &AppHandle) {
+  let Ok(directory) = directory(app) else {
+    return;
+  };
+  for name in catalogue::RETIRED_FILES {
+    match std::fs::remove_file(directory.join(name)) {
+      Ok(()) => {}
+      Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
+      Err(error) => eprintln!("Could not remove the retired model {name}: {error}"),
+    }
+  }
+}

@@ -23,7 +23,7 @@ use screenwide_export::recording_model::{AudioTrackKind, RecordingAudioTrack};
 struct SpeechSource {
   duration_ms: u64,
   microphone: usize,
-  /// The system audio, which Auto volume makes make way for the voice.
+  /// The system audio, which Studio ducking makes make way for the voice.
   system: Option<usize>,
   /// Every audio track of the recording.
   streams: Vec<usize>,
@@ -81,53 +81,42 @@ pub(super) fn first_of(tracks: &[RecordingAudioTrack], kind: AudioTrackKind) -> 
     .map(|track| track.stream_index)
 }
 
-/// How much of Auto volume's bar measuring the voice takes, when the system
-/// audio is made to make way for it after.
-const MEASURE_SHARE: f32 = 0.4;
-
 /// Readies Auto volume for the `microphone`th track of `movie`, where it is
-/// on: measures the voice as it is heard, and, with `system` and the voice
-/// activity model at `model`, makes the system audio make way for it. With
-/// `singing`, Studio ducking's separation model and where its own work is
-/// told, the singing in the system audio gets out of the way entirely.
+/// on: measures the voice as it is heard.
 fn ready_auto_volume(
   project_folder: &Path,
-  (microphone, system): (usize, Option<usize>),
+  microphone: usize,
   (movie, duration_ms): (&Path, u64),
-  model: Option<PathBuf>,
-  singing: Option<(PathBuf, &mut dyn FnMut(f32))>,
   progress: &mut dyn FnMut(f32),
 ) -> Result<(), String> {
   if auto_volume::choice(project_folder, microphone) != auto_volume::AutoVolume::On {
     return Ok(());
   }
-  let ducking = system.zip(model);
-  let share = if ducking.is_some() {
-    MEASURE_SHARE
-  } else {
-    1.0
+  auto_volume::measure(project_folder, microphone, movie, duration_ms, progress)
+}
+
+/// Readies Studio ducking for the `microphone`th track of `movie`, where it
+/// is on and has its `models`, the voice activity model and the separation
+/// model: makes the `system` audio make way for the voice, its singing out
+/// of the way entirely.
+fn ready_ducking(
+  project_folder: &Path,
+  (microphone, system): (usize, Option<usize>),
+  (movie, duration_ms): (&Path, u64),
+  models: Option<(PathBuf, PathBuf)>,
+  progress: &mut dyn FnMut(f32),
+) -> Result<(), String> {
+  let Some((system, models)) = system.zip(models) else {
+    return Ok(());
   };
-  auto_volume::measure(
-    project_folder,
-    microphone,
+  duck::prepare(
     movie,
+    (system, microphone),
+    project_folder,
+    models,
     duration_ms,
-    &mut |fraction| {
-      progress(fraction * share);
-    },
-  )?;
-  if let Some((system, model)) = ducking {
-    duck::prepare(
-      movie,
-      (system, microphone),
-      project_folder,
-      model,
-      duration_ms,
-      singing,
-      &mut |fraction| progress(share + fraction * (1.0 - share)),
-    )?;
-  }
-  Ok(())
+    progress,
+  )
 }
 
 /// Where the work [`ready_voice`] does is told: Studio sound's, Reduce
@@ -193,7 +182,7 @@ pub(crate) fn ready_for_export(
     return Ok(());
   };
   let model = vad_model(app).ok();
-  let singing = studio_ducking::wanted(app, project_folder, microphone);
+  let separation = studio_ducking::wanted(app, project_folder, microphone);
   ready_voice(
     app,
     project_folder,
@@ -205,14 +194,13 @@ pub(crate) fn ready_for_export(
       voice: &mut |_| {},
     },
   )?;
+  ready_auto_volume(project_folder, microphone, recording, &mut |_| {})?;
   let system = first_of(&on, AudioTrackKind::SystemAudio);
-  let quiet: &mut dyn FnMut(f32) = &mut |_| {};
-  ready_auto_volume(
+  ready_ducking(
     project_folder,
     (microphone, system),
     recording,
-    model,
-    singing.map(|singing| (singing, quiet)),
+    model.zip(separation),
     &mut |_| {},
   )
 }

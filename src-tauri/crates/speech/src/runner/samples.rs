@@ -72,6 +72,31 @@ pub(crate) fn decode_stereo_stream(
   decode_stream(source, stream, (2, rate))
 }
 
+/// Frames `from` to `to` of the first audio track of `source`, as
+/// [`decode_stereo_stream`] has it at `rate`, cut exactly on those frames,
+/// as separating a stretch of a song takes it. The frames are counted on
+/// the song's own timestamps, from zero, as the mix reads the song, rather
+/// than from its first sample: an MP3's starts a little after zero.
+pub(crate) fn decode_stereo_stretch(
+  source: &Path,
+  rate: u32,
+  (from, to): (u64, u64),
+) -> Result<Samples, String> {
+  decode_with(
+    source,
+    &[
+      "-copyts",
+      "-map",
+      "0:a:0",
+      "-af",
+      &format!(
+        "aresample=async=1:first_pts=0,aresample={rate},atrim=start_sample={from}:end_sample={to}"
+      ),
+    ],
+    (2, rate),
+  )
+}
+
 fn decode_stream(source: &Path, stream: usize, form: (u8, u32)) -> Result<Samples, String> {
   decode_with(
     source,

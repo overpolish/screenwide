@@ -7,20 +7,12 @@
 
 use std::path::{Path, PathBuf};
 
+use super::singing::copy_if_more;
 use super::{directory, is_name, read_kept, write_kept, Sound};
 
-/// Where the singing separated from the sound file `sound` is kept: beside
-/// it, named after it.
-pub fn singing_path(sound: &Path) -> PathBuf {
-  let stem = sound
-    .file_stem()
-    .map_or_else(String::new, |stem| stem.to_string_lossy().into_owned());
-  sound.with_file_name(format!("{stem}.singing.flac"))
-}
-
 /// Copies the sound `name` from the folder `from` into the folder `to`
-/// where `to` lacks it, and the singing separated from it where `from` has
-/// that and `to` does not.
+/// where `to` lacks it, and the singing separated from it where `from` holds
+/// more of that than `to`.
 fn copy_sound(from: &Path, to: &Path, name: &str) -> Result<(), String> {
   std::fs::create_dir_all(to).map_err(|error| error.to_string())?;
   if read_kept(to, name).is_none() {
@@ -30,11 +22,7 @@ fn copy_sound(from: &Path, to: &Path, name: &str) -> Result<(), String> {
     copy_whole(&from.join(name), &to.join(name))?;
     write_kept(to, &sound)?;
   }
-  let singing = singing_path(&from.join(name));
-  if singing.is_file() {
-    copy_whole(&singing, &singing_path(&to.join(name)))?;
-  }
-  Ok(())
+  copy_if_more(&from.join(name), &to.join(name), copy_over)
 }
 
 /// Copies each of `names`, and the singing separated from it, out of the
@@ -80,6 +68,11 @@ fn copy_whole(from: &Path, to: &Path) -> Result<(), String> {
   if to.is_file() {
     return Ok(());
   }
+  copy_over(from, to)
+}
+
+/// Copies `from` over `to`, which only ever holds a whole file.
+fn copy_over(from: &Path, to: &Path) -> Result<(), String> {
   let mut partial = to.as_os_str().to_owned();
   partial.push(".part");
   let partial = PathBuf::from(partial);

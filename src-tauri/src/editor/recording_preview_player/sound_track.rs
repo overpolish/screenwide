@@ -40,18 +40,24 @@ pub(super) struct PreviewSoundTrack {
 impl PreviewSoundTrack {
   /// `request`'s clips with their files found in the project whose manifest
   /// is `project`, at the levels they play at over `tracks`, making way for
-  /// its microphone.
+  /// its microphone where `ducks` says it does: Studio ducking on for it,
+  /// and the microphone among the tracks heard.
   pub(super) fn new(
     request: PreviewSoundTrackRequest,
     project: &Path,
     tracks: &[RecordingAudioTrack],
+    ducks: impl FnOnce(usize) -> bool,
   ) -> Self {
     let voice = tracks
       .iter()
       .find(|track| track.kind == AudioTrackKind::Microphone)
       .map(|track| track.stream_index);
-    let sound_track =
-      crate::editor::sound_library::sound_track(project, (request.clips, request.muted), voice);
+    let ducking = voice.is_some_and(ducks);
+    let sound_track = crate::editor::sound_library::sound_track(
+      project,
+      (request.clips, request.muted),
+      (voice, ducking),
+    );
     Self {
       pieces: sound_track.pieces(request.timeline_ms),
       start_ms: request.start_ms.min(request.timeline_ms),

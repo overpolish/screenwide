@@ -14,9 +14,15 @@ impl TimelinePlan {
   }
 
   /// Finds the files the audio clips play with `resolve`, and names the
-  /// recorded stream of the voice they play under, if there is one.
-  pub fn find_sounds(&mut self, voice: Option<usize>, resolve: impl Fn(&str) -> Option<SoundFile>) {
+  /// recorded stream of the voice they play under, if there is one, with
+  /// whether the songs make way for it.
+  pub fn find_sounds(
+    &mut self,
+    (voice, ducks): (Option<usize>, bool),
+    resolve: impl Fn(&str) -> Option<SoundFile>,
+  ) {
     self.sound_track = std::mem::take(&mut self.sound_track).with_files(resolve);
     self.sound_track.voice = voice;
+    self.sound_track.ducks = ducks;
   }
 }

@@ -14,7 +14,7 @@
 
 mod piece;
 
-pub use piece::{Curve, Fade, Piece, SoundFile};
+pub use piece::{Curve, Fade, Parts, Piece, SoundFile};
 
 use crate::clip::{AudioClipKind, RecordingAudioClip};
 
@@ -72,12 +72,13 @@ struct Laid<'a> {
 }
 
 /// The pieces `clips` play on a timeline `timeline_ms` long, their sounds
-/// found by `files`. A clip whose sound is missing is silent.
+/// found by `files`, under a voice where `has_voice` says, the songs making
+/// way for it where `ducks` says. A clip whose sound is missing is silent.
 pub fn pieces<'a>(
   clips: &'a [RecordingAudioClip],
   files: impl Fn(&str) -> Option<&'a SoundFile>,
   timeline_ms: u64,
-  has_voice: bool,
+  (has_voice, ducks): (bool, bool),
 ) -> Vec<Piece> {
   let mut laid: Vec<Laid<'a>> = clips
     .iter()
@@ -113,10 +114,23 @@ pub fn pieces<'a>(
   crossfade_songs(&mut laid);
   laid
     .into_iter()
-    .flat_map(|laid| laid.pieces)
-    .map(|mut piece| {
-      piece.fit_fades();
-      piece
+    .flat_map(|laid| {
+      let separated = laid.file.separated.as_ref();
+      let makes_way = ducks && laid.clip.kind == AudioClipKind::Music;
+      laid.pieces.into_iter().map(move |mut piece| {
+        piece.fit_fades();
+        piece.makes_way = makes_way;
+        // A piece reads the parts only where all it plays is separated;
+        // until then it plays, and makes way, as a whole.
+        let file_end_ms = piece.file_start_ms + piece.length_ms();
+        piece.parts = separated
+          .filter(|separated| separated.covers(piece.file_start_ms, file_end_ms))
+          .map(|separated| Parts {
+            singing: separated.singing.clone(),
+            rest: separated.rest.clone(),
+          });
+        piece
+      })
     })
     .collect()
 }
@@ -161,8 +175,9 @@ fn once(clip: &RecordingAudioClip, file: &SoundFile, end_ms: u64, gain_db: f64) 
     fade_in: Fade::NONE,
     fade_out: Fade::NONE,
     gain_db,
-    makes_way: clip.makes_way,
-    singing: file.singing.clone(),
+    makes_way: false,
+    instrumental: clip.is_instrumental && clip.kind == AudioClipKind::Music,
+    parts: None,
   }]
 }
 
@@ -194,8 +209,9 @@ fn repeats(clip: &RecordingAudioClip, file: &SoundFile, end_ms: u64, gain_db: f6
       fade_in,
       fade_out: Fade::NONE,
       gain_db,
-      makes_way: clip.makes_way,
-      singing: file.singing.clone(),
+      makes_way: false,
+      instrumental: clip.is_instrumental && clip.kind == AudioClipKind::Music,
+      parts: None,
     });
     if piece_end >= end_ms {
       break;

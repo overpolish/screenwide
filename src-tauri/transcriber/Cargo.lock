@@ -1165,7 +1165,6 @@ dependencies = [
  "deep_filter",
  "ndarray 0.15.6",
  "ort",
- "prost",
  "realfft",
  "serde",
  "serde_json",

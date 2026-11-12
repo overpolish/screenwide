@@ -6,6 +6,7 @@ use std::path::PathBuf;
 use std::process::Stdio;
 
 use super::*;
+use crate::pieces::Parts;
 
 const RATE: u64 = 8_000;
 
@@ -25,11 +26,28 @@ fn piece(path: &Path, file_start_ms: u64, start_ms: u64, end_ms: u64) -> Piece {
     },
     gain_db: 0.0,
     makes_way: false,
-    singing: None,
+    instrumental: false,
+    parts: None,
   }
 }
 
 fn tone(folder: &Path, name: &str, seconds: u32) -> PathBuf {
+  made(
+    folder,
+    name,
+    &format!("sine=frequency=440:duration={seconds}:sample_rate=8000"),
+  )
+}
+
+fn silence(folder: &Path, name: &str, seconds: u32) -> PathBuf {
+  made(
+    folder,
+    name,
+    &format!("anullsrc=sample_rate=8000:channel_layout=mono,atrim=duration={seconds}"),
+  )
+}
+
+fn made(folder: &Path, name: &str, source: &str) -> PathBuf {
   let path = folder.join(name);
   let status = screenwide_sidecar::ffmpeg_command()
     .args([
@@ -42,14 +60,23 @@ fn tone(folder: &Path, name: &str, seconds: u32) -> PathBuf {
       "lavfi",
       "-i",
     ])
-    .arg(format!(
-      "sine=frequency=440:duration={seconds}:sample_rate=8000"
-    ))
+    .arg(source)
     .arg(&path)
     .status()
     .unwrap();
   assert!(status.success());
   path
+}
+
+/// A song that is all singing, separated: its singing is all of it, and the
+/// rest silent.
+fn all_singing(folder: &Path) -> (PathBuf, Parts) {
+  let sung = tone(folder, "song.wav", 3);
+  let parts = Parts {
+    singing: sung.clone(),
+    rest: silence(folder, "song.rest.wav", 3),
+  };
+  (sung, parts)
 }
 
 /// The graph played to mono samples at `RATE`.
@@ -200,13 +227,33 @@ fn a_song_that_makes_way_comes_down_while_the_voice_speaks() {
 #[test]
 fn the_singing_in_a_song_gets_out_of_the_way_entirely() {
   let folder = scratch("singing");
-  // A song that is all singing: nothing of it should be left while the
-  // voice speaks.
-  let sung = tone(&folder, "song.wav", 3);
+  // Nothing of a song that is all singing should be left while the voice
+  // speaks.
+  let (sung, parts) = all_singing(&folder);
   let mut song = piece(&sung, 0, 0, 3_000);
   song.makes_way = true;
-  song.singing = Some(sung);
+  song.parts = Some(parts);
   let ratio = ducked(song, &folder);
   assert!(ratio < 0.15, "came down to {ratio}");
+  let _ = std::fs::remove_dir_all(&folder);
+}
+
+#[test]
+fn an_instrumental_song_plays_without_its_singing_once_that_is_separated() {
+  let folder = scratch("instrumental");
+  let (sung, parts) = all_singing(&folder);
+  let format = format!(",aresample={RATE},aformat=sample_fmts=flt:channel_layouts=mono");
+  let loudness = |song: Piece| {
+    let graph = filter(&[song], (0, 3_000), "out", &format, None).unwrap();
+    loudest(&played(&graph)[..(2 * RATE) as usize])
+  };
+  let mut song = piece(&sung, 0, 0, 3_000);
+  song.instrumental = true;
+  // Until its singing is separated it plays as it is.
+  let whole = loudness(song.clone());
+  assert!(whole > 0.1, "played at {whole}");
+  song.parts = Some(parts);
+  let without = loudness(song);
+  assert!(without < whole * 0.01, "{without} left of {whole}");
   let _ = std::fs::remove_dir_all(&folder);
 }

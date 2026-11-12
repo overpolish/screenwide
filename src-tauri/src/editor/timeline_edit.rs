@@ -54,24 +54,43 @@ pub fn export_edit(
 }
 
 /// The plan an export or its compare follows, made of [`export_edit`], with
-/// the files its songs and sound effects play found.
+/// the files its songs and sound effects play found, and, given `app`,
+/// whether the songs make way for the voice.
 pub fn export_plan(
   sent: Option<&RecordingTimelineEdit>,
   project: &Path,
-  artifact_id: u64,
-  duration_ms: u64,
+  (artifact_id, duration_ms): (u64, u64),
+  app: Option<&tauri::AppHandle>,
 ) -> Option<TimelinePlan> {
   let mut plan = export_edit(sent, project, artifact_id, duration_ms)
     .and_then(|edit| TimelinePlan::from_edit(&edit, duration_ms))?;
-  super::sound_library::find_sounds(&mut plan, project);
+  super::sound_library::find_sounds(&mut plan, project, app);
   Some(plan)
+}
+
+/// The edit and the plan an export follows, as [`export_edit`] and
+/// [`export_plan`] find them, with the singing in its songs separated first
+/// wherever the export needs it, as the preview has it once the work is
+/// done.
+pub fn for_export(
+  app: &tauri::AppHandle,
+  sent: Option<&RecordingTimelineEdit>,
+  project: &Path,
+  (artifact_id, duration_ms): (u64, u64),
+) -> Result<(Option<RecordingTimelineEdit>, Option<TimelinePlan>), String> {
+  let edit = export_edit(sent, project, artifact_id, duration_ms);
+  if let Some(edit) = &edit {
+    super::sound_library::ready_for_export(app, project, &edit.audio_clips)?;
+  }
+  let plan = export_plan(sent, project, (artifact_id, duration_ms), Some(app));
+  Ok((edit, plan))
 }
 
 /// How long the project whose manifest is `project` plays once edited: its
 /// recording's `duration_ms` with its cuts and speed changes applied. The
 /// recording's own length while it has no edit.
 pub fn edited_duration_ms(project: &Path, duration_ms: u64) -> u64 {
-  export_plan(None, project, 0, duration_ms).map_or(duration_ms, |plan| plan.duration_ms())
+  export_plan(None, project, (0, duration_ms), None).map_or(duration_ms, |plan| plan.duration_ms())
 }
 
 /// The camera's background ranges as the project whose manifest is

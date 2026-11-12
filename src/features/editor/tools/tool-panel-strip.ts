@@ -15,11 +15,11 @@ export type ToolPanelStripItem =
       /** How long it plays, in ms. */
       clipMs: number;
       id: string;
+      /** Whether a song plays without its singing. */
+      isInstrumental: boolean;
       isLooped: boolean;
       isSong: boolean;
       kind: "audioClip";
-      /** Whether it comes down while the microphone speaks. */
-      makesWay: boolean;
       /** How far into its sound it starts, in ms. */
       offsetMs: number;
       /** The sound it plays, by its name in the library. */

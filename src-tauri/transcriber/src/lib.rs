@@ -26,6 +26,12 @@ pub const CLEAN_SAMPLE_RATE: u32 = 48_000;
 /// is stereo, the two sides interleaved, unlike every other job's.
 pub const SEPARATE_SAMPLE_RATE: u32 = 44_100;
 
+/// How many frames the separation model hears at once: 8 s. Chunks follow
+/// each other from the start of the audio without overlapping, so a stretch
+/// of audio separated on its own from a multiple of this comes out as it
+/// does from the whole.
+pub const SEPARATE_CHUNK: usize = 352_800;
+
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Request {

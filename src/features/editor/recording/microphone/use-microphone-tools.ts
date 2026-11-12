@@ -109,9 +109,11 @@ export function useMicrophoneTools({
     recording?.audioTracks.some((track) => track.kind === "microphone") === true
       ? recording.id
       : null;
-  const hasSystemAudio =
+  // Studio ducking makes the system audio and the songs make way, so it is
+  // offered wherever there is either.
+  const canDuck =
     recording?.audioTracks.some((track) => track.kind === "system-audio") ===
-    true;
+      true || edit?.audioClips?.some((clip) => clip.kind === "music") === true;
   const noise = useMicrophoneSwitch({
     artifactId,
     name: "noise",
@@ -137,7 +139,7 @@ export function useMicrophoneTools({
     write: setRecordingStudioSound,
   });
   const ducking = useMicrophoneSwitch({
-    artifactId: hasSystemAudio ? artifactId : null,
+    artifactId: canDuck ? artifactId : null,
     name: "studio ducking",
     read: getRecordingStudioDucking,
     write: setRecordingStudioDucking,
@@ -229,7 +231,7 @@ export function useMicrophoneTools({
     microphone: {
       autoVolume: shown(autoVolume, progressNow.autoVolume),
       autoVolumeProgress: progressNow.autoVolume ?? 0,
-      ducking: hasSystemAudio
+      ducking: canDuck
         ? {
             model: duckingModel.shown,
             progress: progressNow.studioDucking ?? 0,

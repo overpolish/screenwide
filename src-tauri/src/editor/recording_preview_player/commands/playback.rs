@@ -5,6 +5,7 @@ use super::*;
 
 #[tauri::command]
 pub async fn play_recording_preview(
+  app: tauri::AppHandle,
   state: tauri::State<'_, RecordingPreviewPlayerState>,
   playback_end_ms: Option<u64>,
   playback_ranges: Option<Vec<RecordingPreviewPlaybackRange>>,
@@ -25,8 +26,17 @@ pub async fn play_recording_preview(
     let playback_ranges = playback_ranges.unwrap_or_default();
     validate_playback_ranges(&playback_ranges, duration_ms)?;
     if let Some(sources) = manager.sources.as_ref() {
+      let heard = &manager.audio_indices;
       let laid_out = sound_track.map_or_else(Default::default, |request| {
-        sound_track::PreviewSoundTrack::new(request, &sources.project, &sources.audio_tracks)
+        sound_track::PreviewSoundTrack::new(
+          request,
+          &sources.project,
+          &sources.audio_tracks,
+          |microphone| {
+            heard.contains(&microphone)
+              && crate::editor::sound_library::ducks(&app, &sources.project, microphone)
+          },
+        )
       });
       *sources
         .sound_track

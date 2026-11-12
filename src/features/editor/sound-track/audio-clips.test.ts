@@ -23,10 +23,10 @@ const clip = (
 ): RecordingAudioClip => ({
   endMs,
   id,
+  isInstrumental: false,
   isLooped: false,
   kind: "music",
   lane: 0,
-  makesWay: true,
   offsetMs: 0,
   sound: "0123456789abcdef0123456789abcdef.mp3",
   startMs,
@@ -146,12 +146,12 @@ describe("a clip placed from the library", () => {
     ).toBeNull();
   });
 
-  it("is a sound effect under ten seconds and makes no way for the voice", () => {
+  it("is a sound effect under ten seconds", () => {
     const placed = placedClip([], sound(4_000), {
       atMs: 0,
       timelineMs: 80_000,
     });
-    expect([placed?.kind, placed?.makesWay]).toEqual(["effect", false]);
+    expect(placed?.kind).toBe("effect");
   });
 });
 

@@ -31,6 +31,7 @@ volumeDb: number,
  */
 isLooped: boolean, 
 /**
- * Whether it comes down while the microphone speaks.
+ * Whether a song plays without its singing, once that is separated.
+ * Songs always make way for the voice; sound effects never do.
  */
-makesWay: boolean, };
+isInstrumental: boolean, };

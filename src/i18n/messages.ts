@@ -252,9 +252,10 @@ export type Messages = {
   "editor-island-audio-confirm-delete": null;
   "editor-island-audio-delete": null;
   "editor-island-audio-fine-hint": { key: string | number };
-  "editor-island-audio-make-way": null;
+  "editor-island-audio-instrumental": null;
   "editor-island-audio-plays-from": null;
   "editor-island-audio-preview": null;
+  "editor-island-audio-removing-singing": null;
   "editor-island-audio-replace": null;
   "editor-island-audio-reset-volume": null;
   "editor-island-audio-stop-preview": null;

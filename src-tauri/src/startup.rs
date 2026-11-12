@@ -39,6 +39,7 @@ pub(crate) fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Erro
   editor::initialize_cursor_artwork();
   crate::references::clear_leftovers(app.handle());
   crate::references::start_drop_watch(app.handle());
+  crate::transcription::models::remove_retired(app.handle());
   #[cfg(desktop)]
   crate::tray::initialize(app)?;
   crate::settings::initialize(app.handle());

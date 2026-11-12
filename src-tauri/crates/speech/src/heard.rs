@@ -5,7 +5,7 @@
 //! cleanup each make files of their own from the microphone, and the
 //! switches pick one: the recording itself, the track cleaned of noise, the
 //! cleaned-up file made from either, or, while Studio sound is on, its
-//! rebuilt voice in place of them all. Auto volume makes the system audio
+//! rebuilt voice in place of them all. Studio ducking makes the system audio
 //! make way for the voice (`duck`), heard while the microphone is on too. A
 //! switch whose file is not made yet is heard as off.
 

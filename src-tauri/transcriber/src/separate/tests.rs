@@ -1,7 +1,8 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-use super::{overlap_add, plausible, SEGMENT, SIDES, STRIDE};
+use super::spectrum::Spectrum;
+use super::{chunked, plausible, CHUNK, SIDES};
 
 /// Interleaved stereo frames, each side different and no two frames alike.
 fn audio(frames: usize) -> Vec<f32> {
@@ -11,22 +12,40 @@ fn audio(frames: usize) -> Vec<f32> {
 }
 
 #[test]
+fn a_chunk_comes_back_from_its_own_spectrum() {
+  // Planar: the left side, then the right, with sound up to both edges,
+  // where the frames reach past the chunk and reflect.
+  let planar: Vec<f32> = (0..SIDES * CHUNK)
+    .map(|index| ((index as f32) * 0.013).sin() * 0.7 + ((index as f32) * 0.000_91).cos() * 0.2)
+    .collect();
+  let mut spectrum = Spectrum::new();
+  let analysed = spectrum.analyse(&planar);
+  let back = spectrum.synthesise(&analysed);
+  let worst = back
+    .iter()
+    .zip(&planar)
+    .map(|(made, sample)| (made - sample).abs())
+    .fold(0.0_f32, f32::max);
+  assert!(worst < 1e-4, "off by {worst}");
+}
+
+#[test]
 fn a_model_giving_back_what_it_hears_gives_back_the_audio_at_any_length() {
-  for frames in [1, 1_000, SEGMENT - 1, SEGMENT, SEGMENT + 1, STRIDE * 3 + 17] {
+  for frames in [1, 1_000, CHUNK - 1, CHUNK, CHUNK + 1, CHUNK * 3 + 17] {
     let samples = audio(frames);
     let bytes: Vec<u8> = samples
       .iter()
       .flat_map(|sample| sample.to_le_bytes())
       .collect();
     let mut written = Vec::new();
-    let mut segments = 0;
+    let mut chunks = 0;
     let mut last_progress = 0.0;
-    overlap_add(
+    chunked(
       &mut bytes.as_slice(),
       &mut written,
       frames,
       &mut |planar| {
-        segments += 1;
+        chunks += 1;
         Ok(planar)
       },
       &mut |fraction| last_progress = fraction,
@@ -38,18 +57,8 @@ fn a_model_giving_back_what_it_hears_gives_back_the_audio_at_any_length() {
       .iter()
       .map(|&sample| f32::from_le_bytes(sample))
       .collect();
-    assert_eq!(out.len(), samples.len(), "{frames} frames");
-    let worst = out
-      .iter()
-      .zip(&samples)
-      .map(|(made, sample)| (made - sample).abs())
-      .fold(0.0_f32, f32::max);
-    assert!(worst < 1e-6, "{frames} frames: off by {worst}");
-    assert_eq!(
-      segments,
-      frames.saturating_sub(SEGMENT).div_ceil(STRIDE) + 1,
-      "{frames} frames"
-    );
+    assert_eq!(out, samples, "{frames} frames");
+    assert_eq!(chunks, frames.div_ceil(CHUNK), "{frames} frames");
     assert_eq!(last_progress, 1.0, "{frames} frames");
   }
 }

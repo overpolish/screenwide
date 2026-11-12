@@ -38,7 +38,6 @@ engine = [
   "dep:tract-hir",
   "dep:tract-onnx",
   "dep:tract-pulse",
-  "dep:prost",
 ]
 
 [dependencies]
@@ -59,13 +58,10 @@ tract-pulse = { version = "=0.21.4", optional = true }
 # for tract to run at a usable speed. Linked in statically from pyke's builds;
 # each platform adds its GPU backend below.
 ort = { version = "=2.0.0-rc.13", optional = true, default-features = false, features = ["std", "download-binaries", "tls-native", "api-24"] }
-# The restoration model's input features are computed here rather than by a
-# Python library: the same FFT the app uses.
+# The restoration model's input features and the separation model's spectrum
+# are computed here rather than by a Python library: the same FFT the app
+# uses.
 realfft = { version = "3.5.0", optional = true }
-# Reads and writes ONNX models, so Studio ducking can cut HT Demucs into
-# parts DirectML can run; tract-onnx brings the model's types, built with
-# this release.
-prost = { version = "0.11", optional = true }
 
 [target.'cfg(target_os = "macos")'.dependencies]
 whisper-rs = { version = "0.16.0", optional = true, features = ["metal"] }

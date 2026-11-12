@@ -20,7 +20,7 @@ use super::{EditorArtifact, EditorState};
 mod preview;
 mod singing;
 
-pub(crate) use singing::separate_singing;
+pub(crate) use singing::{ready_for_export, separate_singing};
 
 const COMMANDS: [&str; 6] = [
   "browse_sounds",
@@ -175,6 +175,35 @@ fn open_project(app: &tauri::AppHandle) -> Option<PathBuf> {
   }
 }
 
+/// Separates, in the background, what the songs of the recording open in
+/// the editor need now that Studio ducking is on, which wants every song's
+/// singing, not only the instrumental ones'.
+pub(crate) fn separate_open_songs(app: &tauri::AppHandle) {
+  let open = {
+    let state = app.state::<EditorState>();
+    let artifact = state
+      .recording
+      .artifact
+      .lock()
+      .unwrap_or_else(|poisoned| poisoned.into_inner());
+    match artifact.as_ref() {
+      Some(EditorArtifact::Recording {
+        id,
+        project,
+        duration_ms,
+        ..
+      }) => Some((project.clone(), *id, *duration_ms)),
+      _ => None,
+    }
+  };
+  let Some((project, id, duration_ms)) = open else {
+    return;
+  };
+  if let Some((_, edit)) = super::timeline_edit::for_project(&project, id, duration_ms) {
+    separate_singing(app, &project, &edit.audio_clips);
+  }
+}
+
 /// Where the project whose manifest is `project` keeps its sounds.
 fn project_sounds(project: &Path) -> Option<PathBuf> {
   screenwide_project::resolve(project, store::PROJECT_FOLDER).ok()
@@ -196,10 +225,10 @@ pub(crate) fn adopt(project: &Path) {
 }
 
 /// The file the sound `name` plays from, the project's own copy first, with
-/// the singing separated from it once that is done.
+/// the singing separated from it so far.
 fn file(project_sounds: Option<&Path>, name: &str) -> Option<SoundFile> {
   store::resolve(project_sounds, name).map(|(path, sound)| SoundFile {
-    singing: Some(store::singing_path(&path)).filter(|singing| singing.is_file()),
+    separated: store::Separated::read(&path),
     path,
     duration_ms: sound.duration_ms,
     loudness_lufs: sound.loudness_lufs,
@@ -207,29 +236,36 @@ fn file(project_sounds: Option<&Path>, name: &str) -> Option<SoundFile> {
 }
 
 /// `clips` with the files they play, leaving out the kinds `muted`, under
-/// the recorded stream `voice` where there is one.
+/// the recorded stream `voice` where there is one, the songs making way for
+/// it where `ducks` says.
 pub(crate) fn sound_track(
   project: &Path,
   (clips, muted): (Vec<RecordingAudioClip>, Vec<AudioClipKind>),
-  voice: Option<usize>,
+  (voice, ducks): (Option<usize>, bool),
 ) -> SoundTrack {
   let folder = project_sounds(project);
   SoundTrack {
     clips,
     muted,
     voice,
+    ducks,
     ..SoundTrack::default()
   }
   .with_files(|name| file(folder.as_deref(), name))
 }
 
-/// Finds the files `plan`'s clips play, from the project's copies first,
-/// and the microphone they play under.
-pub(crate) fn find_sounds(plan: &mut TimelinePlan, project: &Path) {
-  if plan.sound_track().clips.is_empty() {
-    return;
-  }
-  let voice = screenwide_project::read(project)
+/// Whether the songs of the project whose manifest is `project` make way
+/// for its `microphone`th track: Studio ducking is on for it and has its
+/// model. Whether the microphone is heard is for the caller to say.
+pub(crate) fn ducks(app: &tauri::AppHandle, project: &Path, microphone: usize) -> bool {
+  let folder = project.parent().unwrap_or(Path::new("."));
+  crate::editor::speech::studio_ducking::wanted(app, folder, microphone).is_some()
+}
+
+/// The recorded stream of the microphone of the project whose manifest is
+/// `project`, if it has one: the voice its songs play under.
+fn microphone(project: &Path) -> Option<usize> {
+  screenwide_project::read(project)
     .ok()
     .and_then(|manifest| manifest.recording)
     .and_then(|recording| {
@@ -240,7 +276,20 @@ pub(crate) fn find_sounds(plan: &mut TimelinePlan, project: &Path) {
       .into_iter()
       .find(|track| track.kind == screenwide_export::recording_model::AudioTrackKind::Microphone)
     })
-    .map(|track| track.stream_index);
+    .map(|track| track.stream_index)
+}
+
+/// Finds the files `plan`'s clips play, from the project's copies first,
+/// and the microphone they play under, which the songs make way for where
+/// `app` is given and says they do ([`ducks`]).
+pub(crate) fn find_sounds(plan: &mut TimelinePlan, project: &Path, app: Option<&tauri::AppHandle>) {
+  if plan.sound_track().clips.is_empty() {
+    return;
+  }
+  let voice = microphone(project);
+  let ducking = voice
+    .zip(app)
+    .is_some_and(|(microphone, app)| ducks(app, project, microphone));
   let folder = project_sounds(project);
-  plan.find_sounds(voice, |name| file(folder.as_deref(), name));
+  plan.find_sounds((voice, ducking), |name| file(folder.as_deref(), name));
 }

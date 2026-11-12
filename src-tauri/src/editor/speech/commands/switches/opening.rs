@@ -87,10 +87,12 @@ fn has_work(app: &AppHandle, source: &SpeechSource) -> bool {
       return true;
     }
   }
-  let separated = studio_ducking::wanted(app, folder, stream).is_some();
+  // Studio ducking makes the system audio make way only with its model.
+  let ducking = studio_ducking::wanted(app, folder, stream).is_some();
   let unducked = source
     .system
-    .is_some_and(|system| !duck::is_made_for(folder, system, stream, separated));
-  auto_volume::choice(folder, stream) == AutoVolume::On
-    && (auto_volume::is_unmeasured(folder, stream) || unducked)
+    .is_some_and(|system| !duck::is_made_for(folder, system, stream));
+  (auto_volume::choice(folder, stream) == AutoVolume::On
+    && auto_volume::is_unmeasured(folder, stream))
+    || (ducking && unducked)
 }

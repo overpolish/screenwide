@@ -52,8 +52,10 @@ pub struct RecordingAudioClip {
   /// Whether it repeats until its end rather than stopping where the sound
   /// ends.
   pub is_looped: bool,
-  /// Whether it comes down while the microphone speaks.
-  pub makes_way: bool,
+  /// Whether a song plays without its singing, once that is separated.
+  /// Songs always make way for the voice; sound effects never do.
+  #[serde(default)]
+  pub is_instrumental: bool,
 }
 
 /// Every clip has an id of its own, a sound named as the library names
@@ -102,7 +104,7 @@ mod tests {
       offset_ms: 0,
       volume_db: 0,
       is_looped: false,
-      makes_way: true,
+      is_instrumental: false,
     }
   }
 

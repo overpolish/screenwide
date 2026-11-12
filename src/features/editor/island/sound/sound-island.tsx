@@ -122,13 +122,12 @@ function microphoneParts(
 ): ReactNode[] {
   const hasStudio = isDownloaded(microphone.studioModel);
   const isStudio = hasStudio && microphone.studio !== "off";
-  // Ducking only where the recording has system audio to make way, while
-  // Auto volume is on, and once the app has said where its model is.
+  // Ducking only where the recording has system audio or songs to make way,
+  // and once the app has said where its model is.
   const { ducking } = microphone;
-  const shownDucking =
-    ducking?.model && microphone.autoVolume !== "off"
-      ? { ...ducking, model: ducking.model }
-      : null;
+  const shownDucking = ducking?.model
+    ? { ...ducking, model: ducking.model }
+    : null;
   const toggle = (
     tool: SoundTool,
     state: "cleaning" | "off" | "on",

@@ -171,8 +171,13 @@ impl ExportInputs {
     } else {
       AudioLayout::SeparateTracks
     };
-    let timeline =
-      timeline_edit::export_plan(timeline_model.as_ref(), &project, artifact_id, duration_ms);
+    // Pictures only: whether the songs make way does not matter here.
+    let timeline = timeline_edit::export_plan(
+      timeline_model.as_ref(),
+      &project,
+      (artifact_id, duration_ms),
+      None,
+    );
     let edit =
       timeline_edit::export_edit(timeline_model.as_ref(), &project, artifact_id, duration_ms);
     // The camera's effects over the edit's background ranges, and the

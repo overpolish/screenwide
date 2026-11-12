@@ -1,19 +1,20 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! The microphone's switches: Reduce noise, Vocal cleanup and Auto volume.
-//! Each does its work the first time it is turned a way, which can take a
-//! while on a long recording, and is instant after. Turning one can call for
-//! another's work too: Vocal cleanup is made again from what Reduce noise
-//! leaves, and Auto volume measures whatever is heard. Each kind of work
-//! fills its own switch's bar, whichever switch called for it.
+//! The microphone's switches: Reduce noise, Vocal cleanup, Auto volume and
+//! Studio ducking. Each does its work the first time it is turned a way,
+//! which can take a while on a long recording, and is instant after.
+//! Turning one can call for another's work too: Vocal cleanup is made again
+//! from what Reduce noise leaves, and Auto volume measures whatever is
+//! heard. Each kind of work fills its own switch's bar, whichever switch
+//! called for it.
 
 use std::path::PathBuf;
 
 use tauri::AppHandle;
 
 use super::super::studio_ducking;
-use super::super::{ready_auto_volume, vad_model, SpeechSource};
+use super::super::{ready_auto_volume, ready_ducking, vad_model, SpeechSource};
 use super::{reporter, MicrophoneTool};
 use crate::editor::recording_preview_player::{refresh_processing, PreviewProcessing};
 use screenwide_speech::auto_volume::{self, AutoVolume};
@@ -54,9 +55,9 @@ fn bar(app: &AppHandle, artifact_id: u64, tool: MicrophoneTool) -> Bar<impl FnMu
   }
 }
 
-/// Studio ducking's part in readying Auto volume for the recording `source`
-/// reads: its separation model, where the switch is on and the model is
-/// downloaded, and its own bar for separating the singing.
+/// Studio ducking's part in readying the recording `source` reads: its
+/// separation model, where the switch is on and the model is downloaded,
+/// and its own bar for making the system audio make way.
 struct Singing<F: FnMut(f32)> {
   model: Option<PathBuf>,
   bar: Bar<F>,
@@ -69,11 +70,11 @@ fn singing(app: &AppHandle, artifact_id: u64, source: &SpeechSource) -> Singing<
   }
 }
 
-/// Readies Auto volume for the track as it is heard now, where it is on:
-/// measures it, and makes the system audio make way for it with the voice
-/// activity model at `model`, with `singing` as Studio ducking has it. Work
-/// that fails leaves the track heard unleveled rather than undoing the
-/// switch that called for it.
+/// Readies Auto volume and Studio ducking for the track as it is heard now,
+/// where each is on: measures it, and makes the system audio make way for
+/// it with the voice activity model at `model` and `singing`'s separation
+/// model. Work that fails leaves the track heard unleveled rather than
+/// undoing the switch that called for it.
 fn level_heard(
   source: &SpeechSource,
   model: Option<PathBuf>,
@@ -91,15 +92,20 @@ fn ready(
   singing: &mut Singing<impl FnMut(f32)>,
   progress: &mut dyn FnMut(f32),
 ) -> Result<(), String> {
-  let bar = &mut singing.bar;
-  let tell: &mut dyn FnMut(f32) = &mut |fraction| bar.tell(fraction);
+  let recording = (source.movie.as_path(), source.duration_ms);
   ready_auto_volume(
     &source.project_folder,
-    (source.microphone, source.system),
-    (&source.movie, source.duration_ms),
-    model,
-    singing.model.clone().map(|separation| (separation, tell)),
+    source.microphone,
+    recording,
     progress,
+  )?;
+  let bar = &mut singing.bar;
+  ready_ducking(
+    &source.project_folder,
+    (source.microphone, source.system),
+    recording,
+    model.zip(singing.model.clone()),
+    &mut |fraction| bar.tell(fraction),
   )
 }
 
@@ -216,8 +222,8 @@ pub async fn set_recording_vocal_cleanup(
 /// Whether the microphone of the recording open in the editor is brought to
 /// a steady loudness, as its project says. A recording starts with it on, so
 /// the first time one opens, or whenever what is heard has not been
-/// measured or the system audio not made to make way, that work is done in
-/// the background, with its progress told.
+/// measured or the system audio not made to make way with Studio ducking
+/// on, that work is done in the background, with its progress told.
 #[tauri::command]
 pub fn get_recording_auto_volume(app: AppHandle, artifact_id: u64) -> Result<AutoVolume, String> {
   let source = SpeechSource::open(&app, artifact_id)?;
@@ -226,10 +232,9 @@ pub fn get_recording_auto_volume(app: AppHandle, artifact_id: u64) -> Result<Aut
   Ok(choice)
 }
 
-/// Brings the microphone to a steady loudness and makes the system audio
-/// make way for it, or plays both as they are. Turning it on the first time
-/// measures the voice and makes the system audio's file. Answers with what
-/// the project now says.
+/// Brings the microphone to a steady loudness, or plays it as it is.
+/// Turning it on the first time measures the voice. Answers with what the
+/// project now says.
 #[tauri::command]
 pub async fn set_recording_auto_volume(
   app: AppHandle,

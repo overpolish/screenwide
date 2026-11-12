@@ -4,6 +4,7 @@
 use std::path::{Path, PathBuf};
 
 use super::super::auto_volume::{self, AutoVolume};
+use super::super::duck;
 use super::super::noise::{self, NoiseReduction};
 use super::super::voice::{self, VocalCleanup};
 use super::{files, heard_files, Processing};
@@ -80,18 +81,25 @@ fn a_switch_whose_file_is_not_made_is_heard_as_off() {
 }
 
 #[test]
-fn system_audio_makes_way_only_while_auto_volume_and_its_microphone_are_on() {
+fn system_audio_makes_way_only_while_studio_ducking_and_its_microphone_are_on() {
   let folder = project("duck");
-  let ducked = make(super::super::duck::path(&folder, 0));
-  std::fs::write(
-    folder.join("duck-0.json"),
-    br#"{"version":1,"choice":{"microphone":1}}"#,
-  )
-  .unwrap();
-  // A recording starts with Auto volume on.
+  let ducked = make(duck::path(&folder, 0));
+  let made = |singing: bool| {
+    std::fs::write(
+      folder.join("duck-0.json"),
+      format!(r#"{{"version":1,"choice":{{"microphone":1,"singing":{singing}}}}}"#),
+    )
+    .unwrap();
+  };
+  // Made before Studio ducking separated singing: made again, not heard.
+  made(false);
+  assert_eq!(heard_files(&folder, &[0, 1]), []);
+  made(true);
+  // A recording starts with Studio ducking on; Auto volume plays no part.
+  auto_volume::keep(&folder, 1, AutoVolume::Off).unwrap();
   assert_eq!(heard_files(&folder, &[0, 1]), [(0, ducked)]);
   assert_eq!(heard_files(&folder, &[0]), []);
-  auto_volume::keep(&folder, 1, AutoVolume::Off).unwrap();
+  duck::keep(&folder, 1, duck::StudioDucking::Off).unwrap();
   assert_eq!(heard_files(&folder, &[0, 1]), []);
   let _ = std::fs::remove_dir_all(&folder);
 }

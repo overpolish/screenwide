@@ -32,7 +32,7 @@ const STUDIO_SOUND_MODEL: TranscriptionModel = {
 /** The Studio ducking model, at its real download size. */
 const STUDIO_DUCKING_MODEL: TranscriptionModel = {
   description: "Keeps your voice clear over other audio.",
-  id: "htdemucs-v4",
+  id: "mel-roformer-vocals",
   name: "Studio ducking",
   progress: null,
   purpose: "studioDucking",

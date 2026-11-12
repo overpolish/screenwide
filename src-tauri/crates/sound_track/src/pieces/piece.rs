@@ -5,6 +5,8 @@
 
 use std::path::PathBuf;
 
+use crate::store::Separated;
+
 /// A sound file a clip plays, as the mix needs it.
 #[derive(Clone, Debug, PartialEq)]
 pub struct SoundFile {
@@ -12,9 +14,17 @@ pub struct SoundFile {
   pub duration_ms: u64,
   /// How loud it is over its whole length, in LUFS; none where it is silent.
   pub loudness_lufs: Option<f64>,
-  /// The singing in it, separated once by Studio ducking's model, lined up
-  /// with it from its start; none until that is done, or without the model.
-  pub singing: Option<PathBuf>,
+  /// Its singing and the rest of it, as far as they are separated, lined up
+  /// with it from its start; none until any is, or without the model.
+  pub separated: Option<Separated>,
+}
+
+/// The two parts a song is separated into, read in its place where it
+/// plays without its singing or the singing gets out of the voice's way.
+#[derive(Clone, Debug, PartialEq)]
+pub struct Parts {
+  pub singing: PathBuf,
+  pub rest: PathBuf,
 }
 
 /// How a fade's level moves.
@@ -64,10 +74,15 @@ pub struct Piece {
   pub fade_in: Fade,
   pub fade_out: Fade,
   pub gain_db: f64,
-  /// Whether it comes down while the voice speaks.
+  /// Whether it comes down while the voice speaks: songs do.
   pub makes_way: bool,
-  /// The singing in the file, which gets out of the voice's way entirely.
-  pub singing: Option<PathBuf>,
+  /// Whether it plays without its singing: an instrumental song's piece,
+  /// once the stretch it plays is separated.
+  pub instrumental: bool,
+  /// Its file's singing and the rest of it, for the stretch it plays,
+  /// where every piece of that is separated: the singing gets out of the
+  /// voice's way entirely, or is left out of an instrumental song.
+  pub parts: Option<Parts>,
 }
 
 impl Piece {

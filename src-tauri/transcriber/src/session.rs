@@ -45,19 +45,6 @@ pub(crate) fn on_cpu(path: &Path, what: &str) -> Result<Session, String> {
     .map_err(|error| format!("Could not load the {what} model: {error}"))
 }
 
-/// The model in `bytes` on the CPU, for a model changed after it was read.
-#[cfg(windows)]
-pub(crate) fn cpu_from_memory(bytes: &[u8]) -> ort::Result<Session> {
-  Session::builder()?.commit_from_memory(bytes)
-}
-
-/// The model in `bytes` on the GPU through DirectML, for a model changed
-/// after it was read.
-#[cfg(windows)]
-pub(crate) fn directml_from_memory(bytes: &[u8]) -> ort::Result<Session> {
-  gpu_builder(ort::ep::DirectML::default().build())?.commit_from_memory(bytes)
-}
-
 /// The model at `path` for the feature named `what` on the CPU with
 /// `threads` of its own, for running several sessions side by side.
 pub(crate) fn on_cpu_threads(path: &Path, what: &str, threads: usize) -> Result<Session, String> {

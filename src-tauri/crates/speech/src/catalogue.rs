@@ -112,18 +112,17 @@ pub const MODELS: &[Model] = &[
     id: "sidon-v0.1",
     purpose: Purpose::StudioSound,
   },
-  // HT Demucs v4 from Meta (MIT), the single model rather than the
-  // fine-tuned four, exported to ONNX with its weights stored at half
-  // precision, at a fixed revision. It separates music into drums, bass,
-  // other instruments and vocals.
+  // Kimberley Jensen's Mel-Band RoFormer vocals model (MIT), as audiojs
+  // exported it to ONNX for the GPU with its weights stored at half
+  // precision, at a fixed revision. It takes the singing out of music.
   Model {
     files: &[ModelFile {
-      name: "htdemucs.onnx",
-      sha256: "d05c269d0178d2a72ad484b10b11dd370193fc923201c3b27a99f848745db70a",
-      size_bytes: 165_612_636,
-      url: "https://huggingface.co/adowu/htdemucs-onnx/resolve/e6b688a9a9f977e2efaba79d0f18b9b0cfc606ea/htdemucs_fp16weights.onnx",
+      name: "mel-roformer-vocals.onnx",
+      sha256: "adcbbb826f12453fbb86652b503242d565a9c81cdef1bca2fe0e54752eba91ef",
+      size_bytes: 464_050_097,
+      url: "https://huggingface.co/audiojs/mel-roformer/resolve/c1aba02c00a0bee852d6754fe6ede8164f90a4b3/mel-roformer.fp16.onnx",
     }],
-    id: "htdemucs-v4",
+    id: "mel-roformer-vocals",
     purpose: Purpose::StudioDucking,
   },
   // Robust Video Matting from ByteDance (GPL-3.0), its MobileNetV3 model as
@@ -183,6 +182,11 @@ pub const MODELS: &[Model] = &[
     purpose: Purpose::CameraObjects,
   },
 ];
+
+/// Files models no longer in the catalogue were kept in, removed so they do
+/// not take room for nothing: HT Demucs, which Studio ducking ran before,
+/// whose weights are licensed for research only.
+pub const RETIRED_FILES: &[&str] = &["htdemucs.onnx"];
 
 pub fn find(id: &str) -> Result<&'static Model, String> {
   MODELS

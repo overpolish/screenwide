@@ -38,7 +38,7 @@ fn save_recording_media(
     resolution_scale_percent,
     recording_format,
     mut recording_output,
-    timeline_edit: timeline_model,
+    timeline_edit: sent,
     ..
   } = options;
   let EditorArtifact::Recording {
@@ -88,6 +88,9 @@ fn save_recording_media(
     &enabled_stream_indices,
     (working, *duration_ms),
   )?;
+  // The edit and plan the export follows, its songs' singing separated first.
+  let (edit, timeline) =
+    timeline_edit::for_export(progress_app, sent.as_ref(), project, (*id, *duration_ms))?;
   let selection = crate::editor::speech::as_heard(
     track_selection::TrackSelection::with_volumes(
       audio_tracks,
@@ -102,7 +105,6 @@ fn save_recording_media(
   } else {
     track_selection::AudioLayout::SeparateTracks
   };
-  let timeline = timeline_edit::export_plan(timeline_model.as_ref(), project, *id, *duration_ms);
   // A scene can show the cursor where the recording hides it, so it is drawn
   // wherever any part of the video shows it.
   let baked_cursor = cursor
@@ -124,9 +126,6 @@ fn save_recording_media(
     *duration_ms,
     screenwide_timeline_edit::TimelinePlan::duration_ms,
   );
-  // The camera is exported with its effects as the preview draws them, over
-  // the background ranges of the edit the export follows.
-  let edit = timeline_edit::export_edit(timeline_model.as_ref(), project, *id, *duration_ms);
   let camera_effects = crate::editor::camera_effects::CameraRecording::of(artifact)
     .and_then(|camera| crate::editor::camera_effects::live::load(&camera, edit.as_ref()));
   let camera_is_primary = *primary_kind == PrimaryRecordingKind::Camera;

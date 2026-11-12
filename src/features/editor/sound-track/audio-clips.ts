@@ -70,10 +70,10 @@ export function placedClip(
   return {
     endMs: Math.min(startMs + lengthMs, timelineMs),
     id: crypto.randomUUID(),
+    isInstrumental: false,
     isLooped: false,
     kind,
     lane: 0,
-    makesWay: kind === "music",
     offsetMs: 0,
     sound: sound.name,
     startMs,

@@ -8,8 +8,10 @@
 
 mod measure;
 mod project;
+pub mod singing;
 
-pub use project::{adopt, carry, resolve, singing_path};
+pub use project::{adopt, carry, resolve};
+pub use singing::Separated;
 
 use std::path::{Path, PathBuf};
 use std::sync::OnceLock;
@@ -227,7 +229,8 @@ pub fn remove(name: &str) -> Result<(), String> {
   }
   let folder = directory()?;
   let sound = folder.join(name);
-  for path in [singing_path(&sound), kept_path(folder, name), sound] {
+  let [singing, rest, record] = singing::separated_files(&sound);
+  for path in [singing, rest, record, kept_path(folder, name), sound] {
     match std::fs::remove_file(&path) {
       Ok(()) => {}
       Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}

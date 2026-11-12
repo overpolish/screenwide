@@ -171,10 +171,10 @@ export function useRecordingStripAudio({
   const island: ToolPanelStripItem | null = chosen && {
     clipMs: Math.min(chosen.endMs, timelineMs) - chosen.startMs,
     id: chosen.id,
+    isInstrumental: chosen.isInstrumental,
     isLooped: chosen.isLooped,
     isSong: chosen.kind === "music",
     kind: "audioClip",
-    makesWay: chosen.makesWay,
     offsetMs: chosen.offsetMs,
     sound: chosen.sound,
     soundMs: durationOf(chosen),

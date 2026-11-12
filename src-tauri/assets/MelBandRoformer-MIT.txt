@@ -1,12 +1,14 @@
-Screenwide downloads the HT Demucs v4 music source separation model for Studio
-ducking, as the ONNX export with half-precision weights published at
-https://huggingface.co/adowu/htdemucs-onnx under the MIT licence. The export
-converts Meta's released htdemucs weights to ONNX; no weights were retrained.
-Demucs's notice follows.
+Screenwide downloads Kimberley Jensen's Mel-Band RoFormer vocals model for
+Studio ducking and instrumental songs, as the ONNX export with half-precision
+weights published at https://huggingface.co/audiojs/mel-roformer (revision
+c1aba02c00a0bee852d6754fe6ede8164f90a4b3) under the MIT licence. The export
+converts the checkpoint published at
+https://huggingface.co/KimberleyJSN/melbandroformer under the MIT licence; no
+weights were retrained. The model's notice follows.
 
 MIT License
 
-Copyright (c) Meta Platforms, Inc. and affiliates.
+Copyright (c) Kimberley Jensen
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal

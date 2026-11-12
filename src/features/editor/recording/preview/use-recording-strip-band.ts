@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { RefObject, useEffect, useRef } from "react";
+import { RefObject, useEffect } from "react";
 
 import { withAnnotationGlides } from "../../timeline/recording-strip/recording-strip-glides";
 import { recordingStripLanes } from "../../timeline/recording-strip/recording-strip-lanes";
@@ -28,6 +28,7 @@ import {
 import { RecordingCanvasTool } from "./recording-canvas-tool";
 import { useRecordingPreviewSelection } from "./use-recording-preview-selection";
 import { useRecordingPreviewTransport } from "./use-recording-preview-transport";
+import { useSoundTrackReplay } from "./use-sound-track-replay";
 
 import type { ResolvedScrubPreviewProps } from "./recording-preview-props";
 
@@ -133,19 +134,7 @@ export function useRecordingStripBand(
     time: strip.time,
     timelineMs: timelineBlade.timelineDurationMs,
   });
-  // A song or a sound effect changed, or left out, while the preview plays
-  // is heard at once: playback starts again where it is, with the change.
-  const heardRef = useRef([edit.audioClips, edit.mutedAudio]);
-  useEffect(() => {
-    const [clips, muted] = heardRef.current;
-    heardRef.current = [edit.audioClips, edit.mutedAudio];
-    if (
-      (clips !== edit.audioClips || muted !== edit.mutedAudio) &&
-      player.isPlaying
-    )
-      player.play();
-    // eslint-disable-next-line @eslint-react/exhaustive-deps -- only a change to what is heard plays again; `player` is remade each render.
-  }, [edit.audioClips, edit.mutedAudio]);
+  useSoundTrackReplay(edit, props.enabledStreamIndices, player);
   const stripProps: TimelineStripProps = {
     ...audio.strip,
     ...strip.strip({
