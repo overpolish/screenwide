@@ -25,6 +25,8 @@ fn piece(path: &Path, file_start_ms: u64, start_ms: u64, end_ms: u64) -> Piece {
       curve: Curve::Linear,
     },
     gain_db: 0.0,
+    tone: Tone::Whole,
+    speed: 1.0,
     makes_way: false,
     instrumental: false,
     parts: None,
@@ -255,5 +257,53 @@ fn an_instrumental_song_plays_without_its_singing_once_that_is_separated() {
   song.parts = Some(parts);
   let without = loudness(song);
   assert!(without < whole * 0.01, "{without} left of {whole}");
+  let _ = std::fs::remove_dir_all(&folder);
+}
+
+/// Where each burst starts in `samples` at `RATE`, in ms.
+fn bursts(samples: &[f32]) -> Vec<f64> {
+  let mut starts = Vec::new();
+  let mut quiet_for = usize::MAX;
+  for (index, sample) in samples.iter().enumerate() {
+    if sample.abs() > 0.3 {
+      if quiet_for > 400 {
+        starts.push(index as f64 * 1_000.0 / RATE as f64);
+      }
+      quiet_for = 0;
+    } else {
+      quiet_for = quiet_for.saturating_add(1);
+    }
+  }
+  starts
+}
+
+#[test]
+fn stretched_pieces_play_their_files_at_their_own_speeds() {
+  let folder = scratch("stretched");
+  // A 100 ms note every half second of the file over a steady tone, as
+  // music has no silence for `atempo` to fall in step with.
+  let path = made(
+    &folder,
+    "notes.wav",
+    "aevalsrc=exprs='0.15*sin(2*PI*220*t)+if(lt(mod(t\\,0.5)\\,0.1)\\,0.7*sin(2*PI*880*t)\\,0)':s=8000:d=8",
+  );
+  // From a second into the file: one a quarter faster, the other at 0.8,
+  // each note where its speed puts it.
+  let mut faster = piece(&path, 1_000, 0, 4_000);
+  faster.speed = 1.25;
+  let mut slower = piece(&path, 1_000, 5_000, 9_000);
+  slower.speed = 0.8;
+  let format = format!(",aresample={RATE},aformat=sample_fmts=flt:channel_layouts=mono");
+  let graph = filter(&[faster, slower], (0, 9_000), "out", &format, None).unwrap();
+  let heard = bursts(&played(&graph));
+  let mut expected: Vec<f64> = (0..10).map(|burst| f64::from(burst) * 400.0).collect();
+  expected.extend((0..7).map(|burst| 5_000.0 + f64::from(burst) * 625.0));
+  assert_eq!(heard.len(), expected.len(), "heard {heard:?}");
+  for (heard, expected) in heard.iter().zip(&expected) {
+    assert!(
+      (heard - expected).abs() < 15.0,
+      "heard {heard} for {expected}"
+    );
+  }
   let _ = std::fs::remove_dir_all(&folder);
 }

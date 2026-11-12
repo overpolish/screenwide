@@ -13,6 +13,7 @@ fn file(name: &str, duration_ms: u64) -> SoundFile {
     loudness_lufs: Some(-14.0),
     levels: Vec::new(),
     separated: None,
+    music: crate::store::music::Music::default(),
   }
 }
 

@@ -215,6 +215,8 @@ fn the_sound_track_plays_as_one_channel_more_padded_to_the_tracks() {
       curve: screenwide_sound_track::pieces::Curve::Linear,
     },
     gain_db: 0.0,
+    tone: screenwide_sound_track::pieces::Tone::Whole,
+    speed: 1.0,
     // Making way, it listens to the microphone, stream 1, split from its
     // channel.
     makes_way: true,

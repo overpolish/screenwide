@@ -8,19 +8,21 @@
 //! where it starts partway into its sound and out where it stops short of
 //! its end, and a sound effect cut short fades out quickly; every edge
 //! fades a little, so none clicks. Songs never overlap; those that touch
-//! crossfade into each other on their own: the crossfade is centred on the
-//! join where the files hold sound past it, and happens inside the clip on
-//! a side whose file ends there. Nothing is heard past the timeline's end.
+//! are joined by what the two are doing (`transition`): beat-matched and
+//! blended band by band where their tempos are close, crossfaded where they
+//! are not. Nothing is heard past the timeline's end.
 
 mod level;
 mod piece;
+mod transition;
 
 pub use level::default_gain_db;
-pub use piece::{Curve, Fade, Parts, Piece, SoundFile};
+pub use piece::{Curve, Fade, Parts, Piece, SoundFile, Tone};
 
 use crate::clip::{AudioClipKind, RecordingAudioClip};
 
-/// How long songs that touch crossfade for, at most, in ms.
+/// How long songs that touch crossfade for, at most, where they do not
+/// meet on a beat, in ms.
 pub const CROSSFADE_MS: u64 = 3_000;
 /// How long a looped clip's repeats crossfade for, at most, in ms.
 pub const LOOP_CROSSFADE_MS: u64 = 500;
@@ -40,13 +42,16 @@ const EFFECT_FADE_OUT_MS: u64 = 100;
 /// How long every clip's edges fade at least, in ms, so none clicks.
 const EDGE_FADE_MS: u64 = 5;
 
-/// A clip as it is heard: where it plays on the timeline and its pieces.
+/// A clip as it is heard: where it plays on the timeline and its pieces,
+/// in order, with those its joins to the songs either side add, such as an
+/// echo or a song coming in without its bass.
 struct Laid<'a> {
   clip: &'a RecordingAudioClip,
   file: &'a SoundFile,
   start_ms: u64,
   end_ms: u64,
   pieces: Vec<Piece>,
+  added: Vec<Piece>,
 }
 
 /// The pieces `clips` play on a timeline `timeline_ms` long, their sounds
@@ -87,29 +92,34 @@ pub fn pieces<'a>(
         start_ms: clip.start_ms,
         end_ms,
         pieces,
+        added: Vec::new(),
       })
     })
     .collect();
-  crossfade_songs(&mut laid);
+  transition::join_songs(&mut laid);
   laid
     .into_iter()
     .flat_map(|laid| {
       let separated = laid.file.separated.as_ref();
       let makes_way = ducks && laid.clip.kind == AudioClipKind::Music;
-      laid.pieces.into_iter().map(move |mut piece| {
-        piece.fit_fades();
-        piece.makes_way = makes_way;
-        // A piece reads the parts only where all it plays is separated;
-        // until then it plays, and makes way, as a whole.
-        let file_end_ms = piece.file_start_ms + piece.length_ms();
-        piece.parts = separated
-          .filter(|separated| separated.covers(piece.file_start_ms, file_end_ms))
-          .map(|separated| Parts {
-            singing: separated.singing.clone(),
-            rest: separated.rest.clone(),
-          });
-        piece
-      })
+      laid
+        .pieces
+        .into_iter()
+        .chain(laid.added)
+        .map(move |mut piece| {
+          piece.fit_fades();
+          piece.makes_way = makes_way;
+          // A piece reads the parts only where all it plays is separated;
+          // until then it plays, and makes way, as a whole.
+          let file_end_ms = piece.file_start_ms + piece.file_length_ms();
+          piece.parts = separated
+            .filter(|separated| separated.covers(piece.file_start_ms, file_end_ms))
+            .map(|separated| Parts {
+              singing: separated.singing.clone(),
+              rest: separated.rest.clone(),
+            });
+          piece
+        })
     })
     .collect()
 }
@@ -154,6 +164,8 @@ fn once(clip: &RecordingAudioClip, file: &SoundFile, end_ms: u64, gain_db: f64) 
     fade_in: Fade::NONE,
     fade_out: Fade::NONE,
     gain_db,
+    tone: Tone::Whole,
+    speed: 1.0,
     makes_way: false,
     instrumental: clip.is_instrumental && clip.kind == AudioClipKind::Music,
     parts: None,
@@ -188,6 +200,8 @@ fn repeats(clip: &RecordingAudioClip, file: &SoundFile, end_ms: u64, gain_db: f6
       fade_in,
       fade_out: Fade::NONE,
       gain_db,
+      tone: Tone::Whole,
+      speed: 1.0,
       makes_way: false,
       instrumental: clip.is_instrumental && clip.kind == AudioClipKind::Music,
       parts: None,
@@ -202,52 +216,6 @@ fn repeats(clip: &RecordingAudioClip, file: &SoundFile, end_ms: u64, gain_db: f6
     file_start_ms = 0;
   }
   pieces
-}
-
-/// Songs that touch crossfade: the earlier one plays on past the join and
-/// the later one starts before it, each by as much as its file holds, up to
-/// half the crossfade; a side that holds less leaves the rest to the other,
-/// and where neither holds enough the crossfade happens inside the clips.
-/// The crossfade takes the place of the two clips' own fades at the join.
-fn crossfade_songs(laid: &mut [Laid<'_>]) {
-  let mut songs: Vec<usize> = (0..laid.len())
-    .filter(|&index| laid[index].clip.kind == AudioClipKind::Music)
-    .collect();
-  songs.sort_by_key(|&index| laid[index].start_ms);
-  for pair in songs.windows(2) {
-    let (earlier, later) = (pair[0], pair[1]);
-    let join = laid[later].start_ms;
-    let heard_to = laid[earlier].pieces.last().map_or(0, |piece| piece.end_ms);
-    if laid[earlier].end_ms.abs_diff(join) > TOUCHING_MS || heard_to != laid[earlier].end_ms {
-      continue;
-    }
-    let length = |laid: &Laid<'_>| laid.end_ms - laid.start_ms;
-    let crossfade = CROSSFADE_MS
-      .min(length(&laid[earlier]) / 2)
-      .min(length(&laid[later]) / 2);
-    let after = laid[earlier].pieces.last().map_or(0, |piece| {
-      laid[earlier]
-        .file
-        .duration_ms
-        .saturating_sub(piece.file_start_ms + piece.length_ms())
-    });
-    let before = laid[later]
-      .pieces
-      .first()
-      .map_or(0, |piece| piece.file_start_ms);
-    let mut early = (crossfade / 2).min(before);
-    let late = (crossfade - early).min(after);
-    early = (crossfade - late).min(before);
-    if let Some(last) = laid[earlier].pieces.last_mut() {
-      last.end_ms = join + late;
-      last.fade_out = Fade::equal_power(crossfade);
-    }
-    if let Some(first) = laid[later].pieces.first_mut() {
-      first.start_ms = join - early;
-      first.file_start_ms -= early;
-      first.fade_in = Fade::equal_power(crossfade);
-    }
-  }
 }
 
 #[cfg(test)]

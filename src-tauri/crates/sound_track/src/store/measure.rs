@@ -3,7 +3,7 @@
 
 //! What the library keeps of a sound, read in one pass of FFmpeg: its
 //! loudness as EBU R128 measures it, its levels for the clip island's
-//! waveform, its length and its title tag.
+//! waveform, its length, its title tag, and its beat and key.
 
 use std::io::Read;
 use std::path::Path;
@@ -22,6 +22,7 @@ pub(super) struct Measured {
   pub loudness_lufs: Option<f64>,
   pub levels: Vec<f32>,
   pub title: Option<String>,
+  pub music: super::music::Music,
 }
 
 pub(super) fn measure(file: &Path) -> Result<Measured, String> {
@@ -61,7 +62,7 @@ pub(super) fn measure(file: &Path) -> Result<Measured, String> {
   let mut levels = Vec::new();
   let mut squares = 0.0_f32;
   let mut in_level = 0;
-  let mut samples = 0_usize;
+  let mut samples = Vec::new();
   if let Some(mut stdout) = child.stdout.take() {
     let mut bytes = vec![0_u8; 64 * 1_024];
     let mut carried = Vec::with_capacity(4);
@@ -73,9 +74,10 @@ pub(super) fn measure(file: &Path) -> Result<Measured, String> {
       carried.extend_from_slice(&bytes[..count]);
       let whole = carried.len() - carried.len() % 4;
       for chunk in carried[..whole].as_chunks::<4>().0 {
-        squares += f32::from_le_bytes(*chunk).powi(2);
+        let sample = f32::from_le_bytes(*chunk);
+        squares += sample.powi(2);
         in_level += 1;
-        samples += 1;
+        samples.push(sample);
         if in_level == per_level {
           levels.push(rounded((squares / in_level as f32).sqrt()));
           squares = 0.0;
@@ -92,14 +94,15 @@ pub(super) fn measure(file: &Path) -> Result<Measured, String> {
     .wait()
     .map_err(|error| format!("FFmpeg did not finish: {error}"))?;
   let said = said.join().unwrap_or_default();
-  if !status.success() || samples == 0 {
+  if !status.success() || samples.is_empty() {
     return Err("That file holds no sound Screenwide can play".to_owned());
   }
   Ok(Measured {
-    duration_ms: (samples as u64 * 1_000) / READ_RATE as u64,
+    duration_ms: (samples.len() as u64 * 1_000) / READ_RATE as u64,
     loudness_lufs: loudness(&said).filter(|lufs| *lufs > SILENT_LUFS),
     levels,
     title: title(&said),
+    music: super::music::analyse(&samples, READ_RATE),
   })
 }
 

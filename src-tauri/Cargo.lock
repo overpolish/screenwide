@@ -6061,6 +6061,7 @@ version = "1.0.3"
 name = "screenwide-sound-track"
 version = "1.0.3"
 dependencies = [
+ "realfft",
  "screenwide-sidecar",
  "serde",
  "serde_json",

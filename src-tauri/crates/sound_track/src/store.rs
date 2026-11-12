@@ -7,6 +7,7 @@
 //! carries a copy of each sound its clips play (`project`).
 
 mod measure;
+pub mod music;
 mod project;
 pub mod singing;
 
@@ -52,6 +53,11 @@ pub struct Sound {
   pub levels: Vec<f32>,
   /// When it was added, in milliseconds since the Unix epoch.
   pub added_ms: u64,
+  /// Its beat and key, which songs that touch are joined by; none where it
+  /// was kept before they were found.
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  #[ts(skip)]
+  pub music: Option<music::Music>,
 }
 
 #[derive(Deserialize, Serialize)]
@@ -121,12 +127,15 @@ fn read_kept(folder: &Path, name: &str) -> Option<Sound> {
   if kept.version != FORMAT_VERSION || kept.sound.name != name || !file.is_file() {
     return None;
   }
-  // A sound kept with no levels has none to draw its waveform from: it is
+  // A sound kept with no levels has none to draw its waveform from, and one
+  // kept before its beat and key were found has none to be joined by: it is
   // measured again, once, and kept with them.
-  if kept.sound.levels.is_empty() && kept.sound.duration_ms > 0 {
+  let unmeasured = kept.sound.levels.is_empty() || kept.sound.music.is_none();
+  if unmeasured && kept.sound.duration_ms > 0 {
     if let Ok(measured) = measure::measure(&file) {
       let sound = Sound {
         levels: measured.levels,
+        music: Some(measured.music),
         ..kept.sound
       };
       let _ = write_kept(folder, &sound);
@@ -197,6 +206,7 @@ pub fn import(file: &Path) -> Result<Sound, String> {
     added_ms: SystemTime::now()
       .duration_since(UNIX_EPOCH)
       .map_or(0, |since| since.as_millis() as u64),
+    music: Some(measured.music),
   };
   write_kept(folder, &sound)?;
   Ok(sound)

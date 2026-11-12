@@ -8,7 +8,7 @@
 
 use std::path::Path;
 
-use crate::pieces::{Curve, Fade, Piece};
+use crate::pieces::{Curve, Fade, Piece, Tone};
 use crate::store::singing::PART_LEVEL;
 
 fn seconds(ms: u64) -> String {
@@ -66,10 +66,14 @@ pub fn makes_way(pieces: &[Piece]) -> bool {
 /// `to_ms` of the timeline, the first moment heard at the start of the
 /// output: the piece's own file, or the singing separated from it.
 fn chain(piece: &Piece, path: &Path, (from_ms, to_ms): (u64, u64)) -> String {
+  let stretched = piece.is_stretched();
   // Where the window starts inside a fade, the piece is read from its
   // start so the fade keeps its shape; elsewhere, from the window, so a
-  // preview started late in a long song does not read all of it first.
+  // preview started late in a long song does not read all of it first. A
+  // stretched piece is short and its file runs at another speed than the
+  // timeline, so it is always read from its start.
   let reads_from = if from_ms <= piece.start_ms
+    || stretched
     || from_ms < piece.start_ms + piece.fade_in.ms
     || from_ms > piece.end_ms.saturating_sub(piece.fade_out.ms)
   {
@@ -79,12 +83,32 @@ fn chain(piece: &Piece, path: &Path, (from_ms, to_ms): (u64, u64)) -> String {
   };
   let seek = piece.file_start_ms + (reads_from - piece.start_ms);
   let length = piece.end_ms - reads_from;
+  let file_length = if stretched {
+    piece.file_length_ms()
+  } else {
+    length
+  };
   let mut chain = format!(
     "amovie={}:seek_point={seek_at},atrim=start={seek_at}:duration={},asetpts=PTS-STARTPTS",
     filter_path(path),
-    seconds(length),
+    seconds(file_length),
     seek_at = seconds(seek),
   );
+  if stretched {
+    chain.push_str(&format!(
+      ",atempo=tempo={:.6},atrim=duration={}",
+      piece.speed,
+      seconds(length)
+    ));
+  }
+  // Linkwitz-Riley crossovers, two second-order filters each, so the bands
+  // of one song add back up to it.
+  chain.push_str(match piece.tone {
+    Tone::Whole => "",
+    Tone::Bass => ",lowpass=f=200,lowpass=f=200",
+    Tone::Mids => ",highpass=f=200,highpass=f=200,lowpass=f=2000,lowpass=f=2000",
+    Tone::Highs => ",highpass=f=2000,highpass=f=2000",
+  });
   if piece.fade_in.ms > 0 && reads_from == piece.start_ms {
     chain.push_str(&fade("in", 0, piece.fade_in));
   }

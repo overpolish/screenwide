@@ -236,6 +236,7 @@ fn file(project_sounds: Option<&Path>, name: &str) -> Option<SoundFile> {
     duration_ms: sound.duration_ms,
     loudness_lufs: sound.loudness_lufs,
     levels: sound.levels,
+    music: sound.music.unwrap_or_default(),
   })
 }
 

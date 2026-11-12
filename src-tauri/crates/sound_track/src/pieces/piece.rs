@@ -5,6 +5,7 @@
 
 use std::path::PathBuf;
 
+use crate::store::music::Music;
 use crate::store::Separated;
 
 /// A sound file a clip plays, as the mix needs it.
@@ -20,6 +21,8 @@ pub struct SoundFile {
   /// Its singing and the rest of it, as far as they are separated, lined up
   /// with it from its start; none until any is, or without the model.
   pub separated: Option<Separated>,
+  /// Its beat and key, as far as the library found them.
+  pub music: Music,
 }
 
 /// The two parts a song is separated into, read in its place where it
@@ -66,6 +69,20 @@ impl Fade {
   }
 }
 
+/// Which of its sound a piece plays: all of it, or one band, as two songs
+/// blend band by band.
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+pub enum Tone {
+  #[default]
+  Whole,
+  /// Below 200 Hz.
+  Bass,
+  /// From 200 Hz to 2 kHz.
+  Mids,
+  /// Above 2 kHz.
+  Highs,
+}
+
 /// A stretch of one sound file placed on the timeline: the file from
 /// `file_start_ms` plays from `start_ms` to `end_ms` of the timeline.
 #[derive(Clone, Debug, PartialEq)]
@@ -77,6 +94,10 @@ pub struct Piece {
   pub fade_in: Fade,
   pub fade_out: Fade,
   pub gain_db: f64,
+  pub tone: Tone,
+  /// How much faster or slower than its file it plays, pitch kept: 1 plays
+  /// it as it is.
+  pub speed: f64,
   /// Whether it comes down while the voice speaks: songs do.
   pub makes_way: bool,
   /// Whether it plays without its singing: an instrumental song's piece,
@@ -91,6 +112,22 @@ pub struct Piece {
 impl Piece {
   pub(super) const fn length_ms(&self) -> u64 {
     self.end_ms.saturating_sub(self.start_ms)
+  }
+
+  /// Whether it plays faster or slower than its file.
+  pub fn is_stretched(&self) -> bool {
+    (self.speed - 1.0).abs() > f64::EPSILON
+  }
+
+  /// How much of its file it plays, in ms.
+  #[expect(
+    clippy::cast_possible_truncation,
+    clippy::cast_sign_loss,
+    clippy::cast_precision_loss,
+    reason = "a length in ms"
+  )]
+  pub fn file_length_ms(&self) -> u64 {
+    (self.length_ms() as f64 * self.speed).ceil() as u64
   }
 
   /// Its fades shortened together where they would overlap.

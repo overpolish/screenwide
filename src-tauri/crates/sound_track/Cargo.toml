@@ -13,6 +13,7 @@ edition.workspace = true
 doctest = false
 
 [dependencies]
+realfft.workspace = true
 screenwide-sidecar.workspace = true
 serde.workspace = true
 serde_json.workspace = true

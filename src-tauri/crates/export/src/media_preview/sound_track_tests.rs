@@ -95,6 +95,7 @@ fn recording_with_a_song(folder: &Path, makes_way: bool) -> (PathBuf, TimelinePl
       loudness_lufs: Some(-21.0),
       levels: Vec::new(),
       separated: None,
+      music: Default::default(),
     })
   });
   (recording, timeline)
