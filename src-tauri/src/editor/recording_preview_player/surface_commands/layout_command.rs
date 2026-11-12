@@ -25,6 +25,7 @@ pub async fn layout_recording_preview_surface(
     scale,
     selection,
     selection_targets,
+    select_held,
     session_id,
     viewport,
     viewport_corners,
@@ -225,6 +226,11 @@ pub async fn layout_recording_preview_surface(
   let chrome_batch = surface.present_batch();
   #[cfg(any(target_os = "macos", target_os = "windows"))]
   manager.publish_annotation_handles();
+  // After the annotations, whose choice the hold reads.
+  #[cfg(any(target_os = "macos", target_os = "windows"))]
+  surface.set_select_held(select_held);
+  #[cfg(not(any(target_os = "macos", target_os = "windows")))]
+  let _ = select_held;
   surface.set_selection_targets(selection_targets.as_deref(), picking);
   surface.set_selection(selection);
   drop(chrome_batch);

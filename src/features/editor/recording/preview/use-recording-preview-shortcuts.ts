@@ -108,7 +108,6 @@ export function useRecordingPreviewShortcuts({
     // annotations, the track and the mode here, and with the mode the
     // scenes; the strip and the lanes let go of their own.
     onDeselectAll: backToSelect,
-    onMarqueeTool: hasVisiblePanes ? toggleTool.marquee : undefined,
     onNudge: canNudgeActiveTrack ? nudgeActiveTrack : undefined,
     onResizeCanvas:
       canResizeActiveTrack && offered.has("frame") ? mode("frame") : undefined,

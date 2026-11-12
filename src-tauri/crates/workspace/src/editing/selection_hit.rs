@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use super::*;
+use screenwide_annotations::gesture::MODE_SELECT;
 
 pub(super) fn shared_selection_hit(
   inner: &SurfaceInner,
@@ -46,7 +47,9 @@ pub(super) fn shared_selection_hit(
             height: rect.height,
           },
           z_order: index as i32,
-          selected: u8::from(selected),
+          // While ⌘ holds Select the chosen layer's grips are down, so it is
+          // hit by its body alone, as any other layer is.
+          selected: u8::from(selected && !state.select_held),
           visible: 1,
         },
       ))
@@ -208,7 +211,10 @@ pub(super) fn cursor_for_state(
   let Some((selection, handle)) = hit else {
     return CursorKind::Arrow;
   };
-  if handle == 0 && selection.layer_id == FRAME_LAYER_ID {
+  // The pointer stays the arrow over a body with Select in hand, a layer it
+  // would move included, as most tools have it; the frame's body under the
+  // Frame tool moves nothing.
+  if handle == 0 && (selection.layer_id == FRAME_LAYER_ID || state.annotation.mode == MODE_SELECT) {
     return CursorKind::Arrow;
   }
   let edges = shared_handle_edges(handle);

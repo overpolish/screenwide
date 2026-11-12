@@ -29,7 +29,6 @@ type NativeRecordingWorkspaceViewportProps = {
    * rather than through a pane canvas.
    */
   audioOnly?: boolean;
-  isSelecting?: boolean;
 };
 
 /** What a recording arrangement hands the viewport: its marker panes and the
@@ -52,7 +51,6 @@ export function NativeRecordingWorkspaceViewport({
   ariaLabel,
   audioOnly = false,
   isBusy,
-  isSelecting = false,
   panes,
   workspaceHeight,
   workspaceWidth,
@@ -98,7 +96,7 @@ export function NativeRecordingWorkspaceViewport({
   return (
     <div
       aria-label={ariaLabel}
-      className={`relative flex min-h-0 grow overflow-hidden rounded-[inherit] ${isSelecting ? "cursor-move" : ""}`}
+      className="relative flex min-h-0 grow overflow-hidden rounded-[inherit]"
       data-audio-ribbon-viewport={audioOnly ? "" : undefined}
       data-recording-preview-viewport
       dir="ltr"

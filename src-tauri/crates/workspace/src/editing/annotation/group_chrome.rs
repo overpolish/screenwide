@@ -3,7 +3,7 @@
 
 //! Several annotations chosen together, and the marquee that chooses them:
 //! the boxes drawn round a group, where a press lands on one, and the band
-//! drawn over empty picture.
+//! Select draws.
 
 use super::picking::layer_image_rect;
 use super::*;
@@ -76,16 +76,38 @@ pub(super) fn group_layer_at_point(state: &SurfaceState, point: (f64, f64)) -> O
     .map(|group_box| group_box.layer_id)
 }
 
-/// The layer a marquee pressed at `point` is drawn over: the laid-out layer
-/// under it, or the selected one where no layer is.
+/// The layer a band pressed at `point` is drawn over: the laid-out layer under
+/// it, else the selected one, else the laid-out layer nearest it, so a band
+/// begun in the margin round the canvas still chooses on a layer.
 pub(super) fn marquee_layer_at_point(state: &SurfaceState, point: (f64, f64)) -> Option<i32> {
-  state
-    .selection
-    .iter()
-    .chain(state.selection_targets.iter())
-    .map(|layer| layer.layer_id as i32)
-    .find(|layer| layer_image_rect(state, *layer).is_some_and(|rect| contains(rect, point)))
+  let laid_out = || {
+    state
+      .selection
+      .iter()
+      .chain(state.selection_targets.iter())
+      .filter_map(|layer| {
+        let layer = layer.layer_id as i32;
+        layer_image_rect(state, layer).map(|rect| (layer, rect))
+      })
+  };
+  let distance = |rect: PreviewSurfaceRect| {
+    let dx = (rect.x - point.0)
+      .max(point.0 - rect.x - rect.width)
+      .max(0.0);
+    let dy = (rect.y - point.1)
+      .max(point.1 - rect.y - rect.height)
+      .max(0.0);
+    dx.hypot(dy)
+  };
+  laid_out()
+    .find(|(_, rect)| contains(*rect, point))
+    .map(|(layer, _)| layer)
     .or_else(|| state.selection.map(|selection| selection.layer_id as i32))
+    .or_else(|| {
+      laid_out()
+        .min_by(|a, b| distance(a.1).total_cmp(&distance(b.1)))
+        .map(|(layer, _)| layer)
+    })
 }
 
 /// The group's boxes in device pixels, for the overlay to draw as the layer

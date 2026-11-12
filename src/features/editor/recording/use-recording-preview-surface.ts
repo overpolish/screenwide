@@ -16,6 +16,7 @@ import { CameraOverlaySettings } from "../types";
 
 import { createRecordingLayoutQueue } from "./recording-preview-layout";
 
+import type { RecordingPreviewChrome } from "./recording-preview-layout";
 import type { SceneRotation } from "./scenes/recording-scenes";
 
 export {
@@ -76,10 +77,10 @@ export type RecordingPreviewSelection = {
 };
 
 export function useRecordingPreviewSurface({
-  annotationTool,
   bakeCamera,
   cameraCanvasRef,
   cameraOverlay,
+  chrome,
   isEditorSuspended = false,
   isEnabled,
   isPlaying = false,
@@ -99,6 +100,7 @@ export function useRecordingPreviewSurface({
   bakeCamera: boolean;
   cameraCanvasRef: RefObject<HTMLCanvasElement | null>;
   cameraOverlay: CameraOverlaySettings;
+  chrome: RecordingPreviewChrome;
   isEnabled: boolean;
   nativeLayoutHasPanes: boolean;
   nativeLayoutKey: string;
@@ -107,10 +109,6 @@ export function useRecordingPreviewSurface({
   screenCanvasRef: RefObject<HTMLCanvasElement | null>;
   sessionIdRef: RefObject<number>;
   startedRef: RefObject<boolean>;
-  /** The annotation tool in hand, when one is. It travels with the layout
-   * beside the selection its chrome has to agree with. */
-  annotationTool?:
-    import("../annotations/annotation-defaults").AnnotationTool | null;
   /**
    * Temporarily hands input back to the webview without giving up ownership
    * of the layout: the native interaction view sits above the webview, so
@@ -132,8 +130,8 @@ export function useRecordingPreviewSurface({
   selectionRef.current = isPlaying ? null : selection;
   const selectionTargetsRef = useRef(selectionTargets);
   selectionTargetsRef.current = isPlaying ? null : selectionTargets;
-  const annotationToolRef = useRef(annotationTool);
-  annotationToolRef.current = isPlaying ? null : annotationTool;
+  const chromeRef = useRef(chrome);
+  chromeRef.current = isPlaying ? {} : chrome;
   const onSelectionChangeRef = useRef(onSelectionChange);
   onSelectionChangeRef.current = onSelectionChange;
   const onSelectionGestureRef = useRef(onSelectionGesture);
@@ -282,7 +280,7 @@ export function useRecordingPreviewSurface({
         if (connected.length === 0 && !ribbonViewport) {
           clearBackdropMasks();
           queueLayout({
-            annotationTool: annotationToolRef.current,
+            ...chromeRef.current,
             backdrop: effectiveBackdrop(),
             ...compositionRef.current,
             nativeEditor: nativeEditorActive,
@@ -340,7 +338,7 @@ export function useRecordingPreviewSurface({
           // positions are replaced by the newest one, and the Rust side also
           // rejects an older request if IPC completion order ever differs.
           queueLayout({
-            annotationTool: annotationToolRef.current,
+            ...chromeRef.current,
             backdrop: effectiveBackdrop(),
             ...compositionRef.current,
             nativeEditor: nativeEditorActive,
@@ -474,9 +472,10 @@ export function useRecordingPreviewSurface({
   useEffect(() => {
     if (!selectionGestureActiveRef.current) measureRef.current();
   }, [
-    annotationTool,
     bakeCamera,
     cameraOverlay,
+    chrome.annotationTool,
+    chrome.selectHeld,
     isPlaying,
     recordingOutput,
     selection,

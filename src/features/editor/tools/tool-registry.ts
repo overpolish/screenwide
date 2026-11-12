@@ -29,7 +29,6 @@ export type EditorToolId =
   | "cursor"
   | "frame"
   | "keyboard"
-  | "marquee"
   | "scene"
   | "select"
   | "transcript";
@@ -101,7 +100,6 @@ const EDITOR_TOOLS: Record<AnnotationKind, DrawingTool> &
     icon: MagnifyToolIcon,
     shortcut: "M",
   },
-  marquee: { shortcut: "G" },
   redact: {
     drawsOnLayer: true,
     icon: RedactToolIcon,
@@ -164,13 +162,13 @@ export type AnnotationTool = (typeof ANNOTATION_TOOLS)[number];
 export const drawingToolKind = (tool: string | null | undefined) =>
   ANNOTATION_TOOLS.find((item) => item.id === tool)?.id ?? null;
 
-/** Whether the annotation chrome answers to `tool`: a drawing tool, the
- * select tool, which hit-tests the annotations without making any, or the
- * marquee, which also draws a band that chooses them. */
+/** Whether the annotation chrome answers to `tool`: a drawing tool, or the
+ * select tool, which hit-tests the annotations without making any and draws
+ * a band that chooses them. */
 export const isAnnotationTool = (
   tool: string | null | undefined,
-): tool is AnnotationKind | "marquee" | "select" =>
-  tool === "select" || tool === "marquee" || drawingToolKind(tool) !== null;
+): tool is AnnotationKind | "select" =>
+  tool === "select" || drawingToolKind(tool) !== null;
 
 /** The letter that takes up a drawing tool. */
 export const drawingToolShortcut = (id: AnnotationKind) =>

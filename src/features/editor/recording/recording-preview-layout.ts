@@ -42,15 +42,27 @@ export type RecordingPreviewLayout = {
   /** The picture stays where it is on screen as the viewport changes: only
    * its bottom edge moved, as the strip under it grew or shrank. */
   keepView?: boolean;
+  /** Whether ⌘ (Ctrl) holds Select over the tool: the chosen layer's chrome
+   * stands down and a press on it draws a band. */
+  selectHeld?: boolean;
   selection?: PreviewSelectionLayout | null;
   selectionTargets?: PreviewSelectionLayout[] | null;
 };
+
+/** What decides which chrome owns the picture: the annotation tool in hand
+ * and whether ⌘ holds Select over it. Both ride with the layout, beside the
+ * selection their chrome has to agree with. */
+export type RecordingPreviewChrome = Pick<
+  RecordingPreviewLayout,
+  "annotationTool" | "selectHeld"
+>;
 
 const layoutRecordingPreviewSurface = ({
   annotationTool,
   cameraOverlay,
   keepView,
   recordingOutput,
+  selectHeld,
   selection,
   selectionTargets,
   ...layout
@@ -68,6 +80,7 @@ const layoutRecordingPreviewSurface = ({
         camera: normalizedScreenshotOutput(recordingOutput.camera),
         primary: normalizedScreenshotOutput(recordingOutput.primary),
       },
+      selectHeld: selectHeld ?? false,
       selection: selection ?? null,
       selectionTargets: selectionTargets ?? null,
     },

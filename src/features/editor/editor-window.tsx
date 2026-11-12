@@ -12,6 +12,10 @@ import {
   setExportDirectory,
 } from "./api";
 import {
+  NATIVE_POINTER_EVENT,
+  type NativePointerEvent,
+} from "./choice/use-select-hold";
+import {
   closeEditorWindow,
   minimizeEditorWindow,
   toggleEditorWindowMaximized,
@@ -62,10 +66,6 @@ import {
   seedScreenshotWorkspace,
 } from "./screenshot/screenshot-seed";
 import { useScreenshotProject } from "./screenshot/use-screenshot-project";
-import {
-  NATIVE_POINTER_EVENT,
-  type NativePointerEvent,
-} from "./shortcuts/use-select-hold";
 import {
   selectArtifact,
   selectDirectory,

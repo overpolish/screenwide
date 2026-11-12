@@ -22,8 +22,9 @@ use screenwide_annotations::magnify::lens::LensView;
 mod sample;
 use sample::{report, resolve, Sample};
 
-/// Presses that change the choice: a group carry, a toggle and a marquee.
+/// Presses that change the choice: a group carry, a toggle and a band.
 mod group;
+pub(crate) use group::{arm_band, band_click, bands_over, press_changes_choice};
 
 /// Choosing an annotation, by a press or before a menu.
 mod choose;
@@ -72,35 +73,11 @@ pub(crate) fn down(inner: &SurfaceInner, display: (f64, f64)) -> bool {
     match (handle, shaft) {
       (None, None) if drawing.is_none() && group::arm_empty(&mut state, point) => true,
       (None, None) => match drawing {
-        None => {
-          // Empty picture with only the select tool in hand: the arrow chrome
-          // lets go, and the press carries on to the layer underneath. A
-          // still's annotation - one on the selected layer, with no layer of
-          // its own - has its choice cleared first, and so has a group of them.
-          let still = match selected_item(&state) {
-            Some(item) => item.layer_id < 0,
-            None => {
-              has_group(&state)
-                && state
-                  .annotation
-                  .handles
-                  .iter()
-                  .any(|item| item.layer_id < 0 && item.flags & HANDLE_FLAG_GROUPED != 0)
-            }
-          };
-          if still {
-            state.annotation.selected = -1;
-            samples.extend(resolve(
-              &state,
-              SelectionGesturePhase::Begin,
-              TARGET_NONE,
-              0,
-              HANDLE_BODY,
-              point,
-            ));
-          }
-          false
-        }
+        // Empty picture with only the select tool in hand: the arrow chrome
+        // lets go, and the press carries on to the layers. With annotations
+        // chosen it draws Select's band, and a click lets them go before any
+        // layer is chosen (`band_click`), a still's as well as a recording's.
+        None => false,
         Some(AnnotationKind::Counter | AnnotationKind::Text | AnnotationKind::Image) => {
           // Empty picture under the counter, text or image tool: the
           // annotation is dropped whole where the press lands, so it begins

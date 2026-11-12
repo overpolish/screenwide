@@ -50,6 +50,10 @@ pub struct RecordingPreviewSurfaceLayout {
   scale: f64,
   selection: Option<RecordingPreviewSelection>,
   selection_targets: Option<Vec<RecordingPreviewSelection>>,
+  /// Whether ⌘ (Ctrl) holds Select over the tool, as the editor's choice
+  /// model has it.
+  #[serde(default)]
+  select_held: bool,
   session_id: u64,
   viewport: PreviewSurfaceRect,
   /// How round the viewport's corners are where it meets the chrome.

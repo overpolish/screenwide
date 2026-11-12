@@ -9,8 +9,9 @@ use crate::AnnotationKind;
 
 /// What the pointer does over the picture while a tool is in hand. The select
 /// tool hit-tests the annotations already there and lets every other press fall
-/// through to the layer; a drawing tool also makes a new annotation on empty
-/// picture. The values are the native `ScreenwideAnnotationMode`.
+/// through to the layer, which may draw a band that chooses annotations; a
+/// drawing tool also makes a new annotation on empty picture. The values are
+/// the native `ScreenwideAnnotationMode`.
 pub const MODE_NONE: u32 = 0;
 pub const MODE_SELECT: u32 = 1;
 pub(crate) const MODE_ARROW: u32 = 2;
@@ -22,9 +23,6 @@ pub(crate) const MODE_SHAPE: u32 = 7;
 pub(crate) const MODE_SPOTLIGHT: u32 = 8;
 pub const MODE_DRAW: u32 = 9;
 pub(crate) const MODE_MAGNIFY: u32 = 10;
-/// The marquee: it picks annotations up as the select tool does, and a drag
-/// over empty picture draws a band that chooses everything it touches.
-pub const MODE_MARQUEE: u32 = 11;
 pub const MODE_IMAGE: u32 = 12;
 pub(crate) const MODE_FOCUS: u32 = 13;
 
@@ -43,7 +41,6 @@ pub fn annotation_mode(tool: Option<&str>) -> u32 {
     Some("image") => MODE_IMAGE,
     Some("focus") => MODE_FOCUS,
     Some("select") => MODE_SELECT,
-    Some("marquee") => MODE_MARQUEE,
     _ => MODE_NONE,
   }
 }

@@ -4,20 +4,19 @@
 import { useEffect, useRef, useState } from "react";
 
 import { useAnnotationDraft } from "../../annotations/annotation-draft";
-import { useToolFollowsAnnotation } from "../../annotations/use-tool-follows-annotation";
+import { useSelectHold } from "../../choice/use-select-hold";
+import { useToolFollowsChoice } from "../../choice/use-tool-follows-choice";
 import { ChromeSetBack } from "../../panel/chrome-set-back";
 import {
   RecordingOutputSettings,
   ScreenshotOutputSettings,
   defaultRecordingOutput,
 } from "../../screenshot/screenshot-output";
-import { useSelectHold } from "../../shortcuts/use-select-hold";
 import { RecordingStripBand } from "../../timeline/recording-strip/recording-strip-band";
 import { createPlayhead } from "../../timeline/scrub-playhead";
 import { useRecordingPreviewTracks } from "../../timeline/tracks/use-recording-preview-tracks";
 import { usePublishEditorModes } from "../../title-bar/editor-title-modes";
 import { EditorToolColumn } from "../../toolbar/editor-tool-column";
-import { drawingToolKind } from "../../tools/tool-registry";
 import { useEditorEditGesture } from "../../use-editor-edit-history";
 import { useCopyRecordingFrame } from "../use-copy-recording-frame";
 import { useProjectStill } from "../use-project-still";
@@ -67,15 +66,20 @@ export function NativeRecordingPreview(rawProps: ScrubPreviewProps) {
   const pressOverlayRef = useRef((_layerId: OverlayLayerId) => undefined);
   const [playhead] = useState(createPlayhead);
   const [canvasTool, setCanvasTool] = useState<RecordingCanvasTool>("select");
-  // ⌘ (Ctrl) held over a pen puts Select on the picture until it is let go;
-  // a press under it that takes hold of something puts Select in hand.
-  const isSelectHeld = useSelectHold({
-    canHold: drawingToolKind(canvasTool) !== null && !isExportOpen,
+  const activeVideoTrack =
+    selectedTrack === "primary" || selectedTrack === "camera"
+      ? selectedTrack
+      : null;
+  // ⌘ (Ctrl) held over a pen or a chosen track holds Select (`canHoldSelect`).
+  const hold = useSelectHold({
+    hasLayerInHand: activeVideoTrack !== null,
+    isExportOpen,
     onTook: () => {
       setCanvasTool("select");
     },
+    tool: canvasTool,
   });
-  const pictureTool = isSelectHeld ? "select" : canvasTool;
+  const pictureTool = hold.isHeld ? "select" : canvasTool;
   // A canvas resize runs at pointer rate; committing every move to the export
   // window's state re-renders the inspector, lanes and timeline and starves
   // the native pane's layout loop. The gesture renders from this draft and
@@ -84,10 +88,6 @@ export function NativeRecordingPreview(rawProps: ScrubPreviewProps) {
     useState<RecordingOutputSettings | null>(null);
   const [previewPositionMs, setPreviewPositionMs] = useState(0);
   const previewPlayingRef = useRef(false);
-  const activeVideoTrack =
-    selectedTrack === "primary" || selectedTrack === "camera"
-      ? selectedTrack
-      : null;
   const activeRecordingOutput =
     (canvasTool === "canvas" ? canvasResizeDraft : null) ?? recordingOutput;
   const effectiveRecordingOutput =
@@ -124,6 +124,7 @@ export function NativeRecordingPreview(rawProps: ScrubPreviewProps) {
     canvasTool: pictureTool,
     composedVideoTracks,
     effectiveRecordingOutput,
+    isSelectHeld: hold.isHeld,
     playhead,
     pressOverlayRef,
     previewPlayingRef,
@@ -179,13 +180,13 @@ export function NativeRecordingPreview(rawProps: ScrubPreviewProps) {
       onSelectedTrackChange,
       setCanvasTool,
     });
-  // Choosing an annotation, with a pen or with Select, takes up its pen,
-  // whose island shows it.
-  useToolFollowsAnnotation(
-    annotations.selectedKind,
-    canvasTool,
-    changeCanvasTool,
-  );
+  // One annotation chosen takes up its pen once the gesture has ended.
+  useToolFollowsChoice({
+    ...hold,
+    kind: annotations.selectedKind,
+    setTool: changeCanvasTool,
+    tool: canvasTool,
+  });
   const column = useRecordingColumn({
     activeVideoTrack,
     annotations,
@@ -272,7 +273,7 @@ export function NativeRecordingPreview(rawProps: ScrubPreviewProps) {
           <EditorToolColumn
             {...column.column}
             kind={kind}
-            tool={isSelectHeld ? "select" : column.column.tool}
+            tool={hold.isHeld ? "select" : column.column.tool}
           />
         </ChromeSetBack>
         <RecordingPreviewStage
@@ -281,7 +282,6 @@ export function NativeRecordingPreview(rawProps: ScrubPreviewProps) {
           activeRecordingOutput={activeRecordingOutput}
           audioVolumeByStream={audioVolumeByStream}
           canPreviewBakedCamera={canPreviewBakedCamera}
-          canvasTool={pictureTool}
           copyError={copyError}
           enabledTracks={enabledTracks}
           screenCanvasRef={screenCanvasRef}

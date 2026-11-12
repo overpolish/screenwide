@@ -13,8 +13,9 @@ pub type PointerPressCallback = Box<dyn FnMut(PointerPress) + Send + 'static>;
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum PointerPress {
   /// A button went down. `took` says whether the press took hold of
-  /// something already there (a layer, an annotation, a grip or a ring)
-  /// rather than drawing, panning or drawing a band.
+  /// something already there (a layer, an annotation, a grip or a ring) or
+  /// began Select's band, rather than drawing or panning: either is Select's
+  /// own work, which keeps Select in hand after the ⌘ hold.
   Down { took: bool },
   /// The press was let go or cancelled.
   Up,

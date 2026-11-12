@@ -6,7 +6,7 @@
 
 use super::picking::item_grips;
 use super::*;
-use screenwide_annotations::gesture::{MODE_HIGHLIGHT, MODE_MARQUEE, MODE_TEXT};
+use screenwide_annotations::gesture::{MODE_HIGHLIGHT, MODE_TEXT};
 
 /// The chosen arrow's grips, in device pixels, where they show through the
 /// lenses over it, for the chrome to draw. Empty when no arrow is chosen or
@@ -34,16 +34,17 @@ pub(crate) fn selected_grips(state: &SurfaceState, scale: f64) -> Vec<[f32; 2]> 
     .collect()
 }
 
-/// Whether the arrow chrome is what is on screen. A drawing tool and the
-/// marquee always draw their own chrome; the select tool only once it is
-/// holding an arrow or a group, so an ordinary layer selection is untouched,
-/// or while it is held under the shortcut modifier and nothing is pressed
-/// yet. The twin of `annotation_owns_chrome`.
+/// Whether the arrow chrome is what is on screen. A drawing tool always draws
+/// its own chrome; the select tool only once it is holding an arrow or a
+/// group, so an ordinary layer selection is untouched, while it draws a band,
+/// or while it is held under the shortcut modifier.
 pub(crate) fn owns_chrome(state: &SurfaceState) -> bool {
   drawing_kind(state.annotation.mode).is_some()
-    || state.annotation.mode == MODE_MARQUEE
     || (state.annotation.mode != MODE_NONE
-      && (state.annotation.selected >= 0 || has_group(state) || state.select_held))
+      && (state.annotation.selected >= 0
+        || has_group(state)
+        || state.annotation.marquee.is_some()
+        || state.select_held))
 }
 
 /// The cursor the arrow tool asks for over `point`, or `None` when the
@@ -51,6 +52,14 @@ pub(crate) fn owns_chrome(state: &SurfaceState) -> bool {
 pub(crate) fn cursor_for(state: &SurfaceState, point: (f64, f64)) -> Option<CursorKind> {
   if state.annotation.mode == MODE_NONE {
     return None;
+  }
+  // A band under way keeps the pointer whatever it passes over.
+  if state
+    .annotation
+    .drag
+    .is_some_and(|drag| drag.target_kind == TARGET_MARQUEE)
+  {
+    return Some(CursorKind::Arrow);
   }
   if super::typing::over_box(state, point) {
     return Some(CursorKind::IBeam);
@@ -73,13 +82,14 @@ pub(crate) fn cursor_for(state: &SurfaceState, point: (f64, f64)) -> Option<Curs
   }
   // Empty picture: the select tool takes hold of a group inside its box, the
   // text tool takes typing and the highlight selects the text it covers, and
-  // a drawing tool or the marquee draws.
+  // a drawing tool draws.
   if group_layer_at_point(state, point).is_some() {
     return Some(CursorKind::Arrow);
   }
   if matches!(state.annotation.mode, MODE_TEXT | MODE_HIGHLIGHT) {
     return Some(CursorKind::IBeam);
   }
-  (drawing_kind(state.annotation.mode).is_some() || state.annotation.mode == MODE_MARQUEE)
+  drawing_kind(state.annotation.mode)
+    .is_some()
     .then_some(CursorKind::Crosshair)
 }

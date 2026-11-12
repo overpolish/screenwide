@@ -1,12 +1,12 @@
 {
-  "src/features/editor/api.ts": 391,
-  "src/features/editor/preview/preview-viewport.tsx": 448,
+  "src/features/editor/api.ts": 382,
+  "src/features/editor/preview/preview-viewport.tsx": 445,
   "src/features/editor/editor-window.tsx": 710,
   "src/features/editor/timeline/editing/recording-timeline-edit.test.ts": 363,
   "src/features/editor/timeline/editing/recording-timeline-edit.ts": 333,
   "src/features/editor/screenshot/screenshot-output.ts": 431,
-  "src/features/editor/recording/use-recording-preview-player.ts": 504,
-  "src/features/editor/recording/use-recording-preview-surface.ts": 486,
-  "src/features/editor/screenshot/use-screenshot-preview-surface.ts": 368,
+  "src/features/editor/recording/use-recording-preview-player.ts": 503,
+  "src/features/editor/recording/use-recording-preview-surface.ts": 485,
+  "src/features/editor/screenshot/use-screenshot-preview-surface.ts": 352,
   "src-tauri/src/invoke_handler.rs": 301
 }

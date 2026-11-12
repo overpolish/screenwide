@@ -104,7 +104,7 @@ export const modeTool = (
 
 /** Which island the tool in hand brings out, and the tool that brought
  * it, which tells one pen's island from another's: a pen's own, or the
- * annotations chosen with it or with the marquee; the crop's; else the open
+ * annotations chosen with it or with Select's band; the crop's; else the open
  * mode's. Nothing in hand with Select brings out nothing. */
 export const recordingIsland = ({
   annotationCount,

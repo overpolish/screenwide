@@ -4,7 +4,7 @@
 import { useRef, useState } from "react";
 
 import { useAnnotationDefaults } from "../annotations/annotation-defaults";
-import { isTurned, withShareOfTurn } from "../layer-rotation";
+import { isTurned } from "../layer-rotation";
 import {
   croppingScreenshotWorkspace,
   isCropOperation,
@@ -16,14 +16,12 @@ import {
   ScreenshotWorkspaceOutputSettings,
   fitScreenshotWorkspaceToItems,
   resizeScreenshotWorkspaceCanvasEdges,
-  screenshotLayout,
   screenshotWorkspaceItemOutput,
   screenshotOutputDimensions,
 } from "../screenshot/screenshot-output";
 import { screenshotAnnotationOutput } from "../screenshot/screenshot-preview-events";
 import {
-  normalizedScreenshotSelection,
-  screenshotLayerTurn,
+  screenshotItemSelection,
   screenshotSelectionTargets,
 } from "../screenshot/screenshot-selection";
 import {
@@ -57,6 +55,9 @@ type PreviewViewportProps = {
    * under it, open, exporting or done. */
   isExportOpen?: boolean;
   isResizingCanvas?: boolean;
+  /** ⌘ (Ctrl) holds Select over the tool: the chosen layer's chrome stands
+   * down and a press on it draws a band. */
+  isSelectHeld?: boolean;
   isSelecting?: boolean;
   onAnnotationHover?: (annotationId: string | null) => void;
   onCanvasResize?: (settings: ScreenshotWorkspaceOutputSettings) => void;
@@ -84,6 +85,7 @@ export function PreviewViewport({
   isEditing = false,
   isExportOpen = false,
   isResizingCanvas = false,
+  isSelectHeld = false,
   isSelecting = false,
   items,
   naturalHeight,
@@ -373,21 +375,15 @@ export function PreviewViewport({
           selectedItemIndex >= 0 &&
           selectedItem &&
           selectedItemOutput
-        ? {
-            cropKeepsShape: isCropShown && cropKeepsShape,
+        ? screenshotItemSelection({
+            cropKeepsShape,
             cropMode: isCropShown,
+            item: selectedItem,
+            itemOutput: selectedItemOutput,
             paneIndex: selectedItemIndex,
-            radiusPercent: selectedItemOutput.radiusPercent,
-            ...screenshotLayerTurn(
-              withShareOfTurn(selectedItemOutput, cropTurn.share),
-              isCropShown,
-            ),
-            ...normalizedScreenshotSelection(
-              screenshotLayout(selectedItem, selectedItemOutput),
-              output,
-              isCropShown ? "crop" : "select",
-            ),
-          }
+            target: output,
+            turnShare: cropTurn.share,
+          })
         : null;
   const selectionTargets =
     (isSelecting || isEditing || isDrawingArrows) && workspaceOutput
@@ -420,6 +416,7 @@ export function PreviewViewport({
     onSelectionGesture: selectionGesture,
     output: previewOutput,
     paneCount: orderedItems.length,
+    selectHeld: isSelectHeld,
     selectedAnnotationIds,
     selection: selectionOverlay,
     selectionTargets,
@@ -431,7 +428,7 @@ export function PreviewViewport({
   return (
     <div
       aria-label={alt}
-      className={`relative flex min-h-0 grow overflow-hidden rounded-[inherit] ${isDrawingArrows ? "cursor-crosshair" : isSelecting ? "cursor-move" : "cursor-grab"}`}
+      className={`relative flex min-h-0 grow overflow-hidden rounded-[inherit] ${isDrawingArrows ? "cursor-crosshair" : isSelecting ? "" : "cursor-grab"}`}
       data-recording-preview-viewport
       dir="ltr"
       ref={nativeFrameRef}

@@ -29,7 +29,7 @@ import type { AnnotationPinAction } from "../annotation/annotation-pin";
 import type { EditorIslandContent } from "../editor-island";
 
 // The annotation in hand on its pen's island, or the pen's next one with
-// nothing chosen, or how many the marquee chose. The islands speak of an
+// nothing chosen, or how many Select's band chose. The islands speak of an
 // annotation as it looks (`isHandDrawn`, `size`); the editor dresses one
 // through the fields of a `ToolPanelPatch`, so each change is put in those
 // words here.

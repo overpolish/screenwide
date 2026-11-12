@@ -8,7 +8,7 @@
 //! it: `image_chrome`.
 
 use super::*;
-use screenwide_annotations::gesture::{BOX_HANDLES, MODE_MARQUEE, MODE_SELECT};
+use screenwide_annotations::gesture::{BOX_HANDLES, MODE_SELECT};
 use screenwide_annotations::magnify::lens::LensView;
 use screenwide_annotations::outline::geometry::{prepare_shape, shape_distance};
 use screenwide_annotations::redact::geometry::{prepare_redact, redact_distance};
@@ -173,8 +173,7 @@ pub(super) fn grabs_inside(
   item: &NativeAnnotationHandles,
 ) -> bool {
   item.shape_kind() == AnnotationKind::Shape
-    && (matches!(state.annotation.mode, MODE_SELECT | MODE_MARQUEE)
-      || state.annotation.selected == index as i32)
+    && (state.annotation.mode == MODE_SELECT || state.annotation.selected == index as i32)
 }
 
 /// The resize cursor a box's grip shows: its sides say which way.

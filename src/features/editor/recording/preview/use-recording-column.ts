@@ -53,11 +53,13 @@ export function useRecordingColumn({
   const [panel, setPanel] = useState<RecordingPanelMode | null>(null);
   if (panel !== null && (canvasTool !== "select" || activeVideoTrack !== null))
     setPanel(null);
+  // A track's mode is Select on the track with no annotations chosen:
+  // annotations chosen with Select's band show their own island instead.
   const mode = columnMode({
     panel,
     picture,
     tool: canvasTool,
-    track: activeVideoTrack,
+    track: annotations.hasSelection ? null : activeVideoTrack,
   });
   const island = recordingIsland({
     annotationCount: annotations.selectedIds.size,

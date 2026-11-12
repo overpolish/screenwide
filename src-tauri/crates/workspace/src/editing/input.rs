@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use super::*;
+mod band;
 mod cancel;
 mod context_menu;
 mod crop_draw;
@@ -17,13 +18,10 @@ mod view_motion;
 pub(super) fn handle_editor_input(inner: &Arc<SurfaceInner>, input: PointerInput) {
   // Gestures read the modifiers as of the event being handled, so either can
   // be taken and let go part way through a drag. A shortcut modifier spent on
-  // holding Select reads as up until it is let go, and a press under the hold
-  // brings the layer's chrome back.
+  // holding Select reads as up until it is let go.
   let mut modifiers = inner.host.modifiers();
-  let pressing = matches!(input, PointerInput::Down { .. });
   let (scale, spent) = inner.state.lock().ok().map_or((1.0, false), |mut state| {
     state.shortcut_spent &= modifiers.shortcut;
-    state.select_held &= !pressing;
     let spent = state.shortcut_spent;
     modifiers.shortcut &= !spent;
     state.modifiers = modifiers;
@@ -228,6 +226,10 @@ fn release(inner: &Arc<SurfaceInner>, scale: f64, x: f64, y: f64) {
   // the last sample on the layer put it.
   let layer = turn::layer_reading(inner, point)
     .unwrap_or_else(|| inner.state.lock().map_or(point, |state| state.drag_reading));
+  // A band that never travelled is the layer press it stood in for.
+  if band::released(inner, point) {
+    return;
+  }
   if annotation::typing_up(inner) || annotation::up(inner, layer) {
     if let Ok(mut state) = inner.state.lock() {
       state.last_pointer = point;

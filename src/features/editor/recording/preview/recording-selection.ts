@@ -20,7 +20,7 @@ import type { RecordingPreviewSelection } from "../use-recording-preview-surface
 
 type SelectionTool = Exclude<
   RecordingCanvasTool,
-  AnnotationKind | "canvas" | "marquee" | "scene"
+  AnnotationKind | "canvas" | "scene"
 >;
 
 /** Build the native OSC payload for an ordinary screen/camera output pane. */

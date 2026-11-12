@@ -5,7 +5,8 @@ import { useState } from "react";
 
 import { t } from "../../../i18n/i18n";
 import { useAnnotationDraft } from "../annotations/annotation-draft";
-import { useToolFollowsAnnotation } from "../annotations/use-tool-follows-annotation";
+import { useSelectHold } from "../choice/use-select-hold";
+import { useToolFollowsChoice } from "../choice/use-tool-follows-choice";
 import { placeScreenshotImage } from "../images/image-api";
 import { useIncomingImages } from "../images/use-incoming-images";
 import { useEditorIslandWindow } from "../island/host/use-editor-island-window";
@@ -28,7 +29,6 @@ import { useScreenshotNudge } from "../screenshot/use-screenshot-nudge";
 import { useScreenshotRecenter } from "../screenshot/use-screenshot-recenter";
 import { useScreenshotTool } from "../screenshot/use-screenshot-tool";
 import { useEditorWindowShortcuts } from "../shortcuts/use-editor-window-shortcuts";
-import { useSelectHold } from "../shortcuts/use-select-hold";
 import { usePublishEditorModes } from "../title-bar/editor-title-modes";
 import { NO_CAPTURE_PARTS } from "../toolbar/editor-modes";
 import { EditorToolColumn } from "../toolbar/editor-tool-column";
@@ -60,23 +60,19 @@ export function ScreenshotSection({
   const [activeTool, setActiveTool] =
     useState<Exclude<ScreenshotTool, null>>("select");
   const tool = activeTool;
-  // ⌘ (Ctrl) held over a pen puts Select on the picture until it is let go;
-  // a press under it that takes hold of something puts Select in hand.
-  const isSelectHeld = useSelectHold({
-    canHold: drawingToolKind(tool) !== null && !isExportOpen,
+  // ⌘ (Ctrl) held over a pen or a chosen layer holds Select (`canHoldSelect`).
+  const hold = useSelectHold({
+    hasLayerInHand: selectedItemId !== null,
+    isExportOpen,
     onTook: () => {
       setActiveTool("select");
     },
+    tool,
   });
-  const pictureTool = isSelectHeld ? "select" : tool;
+  const pictureTool = hold.isHeld ? "select" : tool;
   const selectedItem = artifact.items.find(
     (item) => item.id === selectedItemId,
   );
-  // The Screenshot mode is Select on a chosen layer, however it was chosen
-  // (`columnMode`): putting the layer down or taking up another tool puts
-  // it away.
-  const mode = columnMode(tool, selectedItem !== undefined);
-  const isScreenOpen = mode === "screen";
   const selectedOutput =
     screenshotOutput && selectedItem
       ? screenshotWorkspaceItemOutput(screenshotOutput, selectedItem.id)
@@ -92,6 +88,15 @@ export function ScreenshotSection({
     sourceWidths: new Map(artifact.items.map((item) => [item.id, item.width])),
     workspace: screenshotOutput,
   });
+  // The Screenshot mode is Select on a chosen layer, however it was chosen
+  // (`columnMode`), with no annotations chosen on it: putting the layer down
+  // or taking up another tool puts it away, and annotations chosen with
+  // Select's band show their own island instead.
+  const mode = columnMode(
+    tool,
+    selectedItem !== undefined && !annotations.hasSelection,
+  );
+  const isScreenOpen = mode === "screen";
   // What a pen's island shows while nothing is chosen: the dress its next
   // annotation is drawn in.
   useAnnotationDraft("screenshot", drawingToolKind(tool));
@@ -105,8 +110,13 @@ export function ScreenshotSection({
     },
     tool,
   });
-  // Choosing an annotation takes up its pen, whose island shows it.
-  useToolFollowsAnnotation(annotations.selectedKind, tool, setTool);
+  // One annotation chosen takes up its pen once the gesture has ended.
+  useToolFollowsChoice({
+    ...hold,
+    kind: annotations.selectedKind,
+    setTool,
+    tool,
+  });
   const island = screenshotIsland({
     annotationCount: annotations.selectedIds.size,
     hasSelectedLayer: selectedItem !== undefined,
@@ -152,8 +162,7 @@ export function ScreenshotSection({
   // and puts it down, the crop itself committed as each handle was released.
   const isCropping = tool === "crop";
   // Every one of these hit-tests the annotations on the layer; only a pen
-  // makes a new one, and only it takes every press over the picture. The
-  // marquee draws a band over the picture instead.
+  // makes a new one, and only it takes every press over the picture.
   const annotationTool = isAnnotationTool(pictureTool)
     ? pictureTool
     : undefined;
@@ -217,9 +226,6 @@ export function ScreenshotSection({
     // ⌘D lets go of everything chosen, the layer as well, with Select in
     // hand.
     onDeselectAll: backToSelect,
-    onMarqueeTool: () => {
-      toggle("marquee");
-    },
     onNudge:
       tool === "select" && selectedItem && selectedOutput
         ? nudgeSelectedLayer
@@ -251,7 +257,7 @@ export function ScreenshotSection({
             if (next === "select") backToSelect();
             else takeUp(next);
           }}
-          tool={isSelectHeld ? "select" : columnTool(tool)}
+          tool={hold.isHeld ? "select" : columnTool(tool)}
         />
       </ChromeSetBack>
       {/* The picture meets the tool column and the title bar on a rounded
@@ -266,6 +272,7 @@ export function ScreenshotSection({
           isEditing={isCropping}
           isExportOpen={isExportOpen}
           isResizingCanvas={tool === "canvas"}
+          isSelectHeld={hold.isHeld}
           isSelecting={pictureTool === "select"}
           items={artifact.items}
           naturalHeight={artifact.height}
@@ -273,7 +280,13 @@ export function ScreenshotSection({
           onAnnotationHover={annotations.onHoverChange}
           onCanvasResize={onCanvasResize}
           onCropChangeEnd={recenter.refresh}
-          onItemSelect={onSelectedItemChange}
+          onItemSelect={(itemId) => {
+            // A layer chosen on the picture, or nothing, is the whole choice:
+            // the annotations go in the same step, so the layer never shows
+            // chosen beside them.
+            annotations.clearSelection();
+            onSelectedItemChange?.(itemId);
+          }}
           onOutputChange={onOutputChange}
           onSelectedAnnotationsChange={annotations.onSelectedIdsChange}
           screenshotOutput={drawnOutput}

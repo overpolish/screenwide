@@ -64,6 +64,7 @@ export function useScreenshotPreviewSurface({
   onSelectionGesture,
   output,
   paneCount = 1,
+  selectHeld = false,
   selectedAnnotationIds,
   selection,
   selectionTargets,
@@ -100,6 +101,8 @@ export function useScreenshotPreviewSurface({
   onSelectionGesture?: (event: ScreenshotSelectionGestureEvent) => void;
   output?: ScreenshotWorkspaceOutputSettings;
   paneCount?: number;
+  /** Whether ⌘ (Ctrl) holds Select over the tool. */
+  selectHeld?: boolean;
   selectedAnnotationIds?: readonly string[];
   selection?: Parameters<typeof layoutScreenshotPreviewSurface>[0]["selection"];
   selectionTargets?: Parameters<
@@ -127,6 +130,8 @@ export function useScreenshotPreviewSurface({
   onAnnotationHoverRef.current = onAnnotationHover;
   const annotationToolRef = useRef(annotationTool);
   annotationToolRef.current = annotationTool;
+  const selectHeldRef = useRef(selectHeld);
+  selectHeldRef.current = selectHeld;
   const annotationDefaultsRef = useRef(annotationDefaults);
   annotationDefaultsRef.current = annotationDefaults;
   const annotationCounterAngle = useAnnotationAngleDefault();
@@ -254,63 +259,41 @@ export function useScreenshotPreviewSurface({
             x: viewportRect.left,
             y: viewportRect.top,
           };
-          const backdrop = effectiveBackdrop();
-          // A fresh capture with the same dimensions and default layout
-          // produces the same geometry as the last one sent, but the native
-          // session behind it is new and holds no selection yet. Keying the
-          // dedupe on the session makes the first layout of every session
-          // reach the surface.
-          const nextLayout = JSON.stringify({
+          const layout = {
             annotationCounterAngle: annotationAngleRef.current,
             annotationDefaults: annotationDefaultsRef.current,
             annotationImage: annotationImageRef.current,
             annotationTextLook: annotationTextLookRef.current,
             annotationTool: annotationToolRef.current,
             annotationZoom: annotationZoomRef.current,
-            backdrop,
-            // A suspended editor stays enabled and keeps its transform;
-            // only its input and chrome go away, and the suspend command
-            // owns that.
-            interactionOutput: interactionOutputRef.current,
+            backdrop: effectiveBackdrop(),
+            interactionOutput: interactionOutputRef.current ?? currentOutput,
+            // A suspended editor stays enabled and keeps its transform; only
+            // its input and chrome go away, and the suspend command owns that.
             nativeEditor: true,
             output: currentOutput,
-            pane,
+            panes: Array.from({ length: paneCountRef.current }, (_, index) => ({
+              index,
+              rect: pane,
+            })),
             scale,
+            selectHeld: selectHeldRef.current,
             selectedAnnotationIds: selectedAnnotationIdsRef.current,
             selection: selectionRef.current,
             selectionTargets: selectionTargetsRef.current,
             sessionId: sessionIdRef.current,
+            viewport: viewportSurface,
             viewportCorners: corners,
-            viewportSurface,
-          });
+          };
+          // A fresh capture with the same dimensions and default layout
+          // produces the same geometry as the last one sent, but the native
+          // session behind it is new and holds no selection yet. Keying the
+          // dedupe on the session makes the first layout of every session
+          // reach the surface.
+          const nextLayout = JSON.stringify(layout);
           if (nextLayout !== lastLayout) {
             lastLayout = nextLayout;
-            pendingLayout = {
-              annotationCounterAngle: annotationAngleRef.current,
-              annotationDefaults: annotationDefaultsRef.current,
-              annotationImage: annotationImageRef.current,
-              annotationTextLook: annotationTextLookRef.current,
-              annotationTool: annotationToolRef.current,
-              annotationZoom: annotationZoomRef.current,
-              backdrop,
-              interactionOutput: interactionOutputRef.current ?? currentOutput,
-              nativeEditor: true,
-              output: currentOutput,
-              panes: Array.from(
-                { length: paneCountRef.current },
-                (_, index) => ({
-                  index,
-                  rect: pane,
-                }),
-              ),
-              scale,
-              selectedAnnotationIds: selectedAnnotationIdsRef.current,
-              selection: selectionRef.current,
-              selectionTargets: selectionTargetsRef.current,
-              sessionId: sessionIdRef.current,
-              viewport: viewportSurface,
-              viewportCorners: corners,
-            };
+            pendingLayout = layout;
             flush();
           }
         }
@@ -340,6 +323,7 @@ export function useScreenshotPreviewSurface({
     outputKey,
     paneCount,
     selectedAnnotationKey,
+    selectHeld,
     selection,
     selectionTargets,
   ]);

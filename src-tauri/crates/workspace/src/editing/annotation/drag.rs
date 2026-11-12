@@ -4,6 +4,7 @@
 //! A press the annotation chrome has taken, before and after it becomes a
 //! drag.
 
+use crate::editing::PreviewSelection;
 use screenwide_annotations::magnify::lens::LensView;
 
 /// A press has to travel this far before it draws an arrow rather than
@@ -12,7 +13,7 @@ use screenwide_annotations::magnify::lens::LensView;
 pub(super) const DRAG_SLOP: f64 = 3.0;
 
 /// What a press does if it never travels, and what it becomes if it does.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub(super) enum Press {
   Ordinary,
   /// A press with the toggle modifier on an annotation: a click adds it to
@@ -21,11 +22,21 @@ pub(super) enum Press {
   /// A press on one of several chosen together, or inside their box: a drag
   /// carries them all, measured on `layer`.
   Group,
-  /// A marquee band over `layer`; `additive` when the toggle modifier was held
-  /// at the press.
+  /// A band over `layer`. A click is the press on the layers it stood in
+  /// for.
   Marquee {
-    additive: bool,
+    click: BandClick,
   },
+}
+
+/// What a press that would draw a band does if it never travels: what a click
+/// there does to the layers.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub(crate) enum BandClick {
+  /// A click on empty picture, which lets the chosen layer go.
+  ChoosesNothing,
+  /// A click on a layer not chosen, which chooses it.
+  Chooses(PreviewSelection),
 }
 
 #[derive(Clone, Copy)]

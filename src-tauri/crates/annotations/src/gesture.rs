@@ -87,9 +87,9 @@ pub enum AnnotationGestureTarget {
   /// A click with the toggle modifier on the annotation at `index`: it is
   /// added to the choice, or taken out of it.
   Toggle { index: usize },
-  /// A band drawn over empty picture with the marquee in hand: its begin
-  /// carries the corner it was pressed at and its end the corner it was let
-  /// go at, and it chooses every annotation it touches.
+  /// A band drawn with Select in hand, from empty picture or a layer not
+  /// chosen: its begin carries the corner it was pressed at and its end the
+  /// corner it was let go at, and it chooses every annotation it touches.
   Marquee,
   /// A drag of the rotation gizmo's rings round the image at `index`: each
   /// sample carries the turn the rings reached rather than a point.

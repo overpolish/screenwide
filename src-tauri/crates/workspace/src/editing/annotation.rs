@@ -144,14 +144,6 @@ impl WorkspaceEditor {
     state.annotation.selected = selected_index;
     let changed = state.annotation.mode != mode;
     state.annotation.mode = mode;
-    // Select taken up while the shortcut modifier is down is that modifier's
-    // hold: it is no toggle or snap for the presses under it, and the layer's
-    // chrome waits for a press.
-    if changed {
-      let held = mode == MODE_SELECT && self.inner.host.modifiers().shortcut;
-      state.shortcut_spent = held;
-      state.select_held = held;
-    }
     // A new tool or list, or no tool: the halo goes, since the
     // pointer may never move again to retire it, and a pulse still running
     // must stop reporting it.
@@ -168,11 +160,34 @@ impl WorkspaceEditor {
     // and what stands the layer's own chrome up or down.
     draw_selection(&self.inner, &state);
     // A new tool shows its own cursor and halo over what the pointer rests
-    // on without waiting for it to move: holding the shortcut modifier for
-    // Select changes the tool under a still pointer.
+    // on without waiting for it to move.
     if changed {
       self.inner.host.hover_again();
     }
+  }
+
+  /// Publishes whether ⌘ (Ctrl) is holding Select over the tool, as the
+  /// editor's choice model has it. While held, a chosen layer's chrome stands
+  /// down and a press on it draws a band as on any other layer. With nothing
+  /// chosen as the hold begins, the modifier is spent on it: no toggle or
+  /// snap for the presses under it, so a ⌘-click chooses alone; with
+  /// annotations chosen it keeps its meaning, so a ⌘-click or ⌘-band adds to
+  /// them. Publish it after the annotations, whose choice it reads.
+  pub fn set_select_held(&self, held: bool) {
+    let Ok(mut state) = self.inner.state.lock() else {
+      return;
+    };
+    if state.select_held == held {
+      return;
+    }
+    state.select_held = held;
+    if held {
+      state.shortcut_spent =
+        self.inner.host.modifiers().shortcut && state.annotation.selected < 0 && !has_group(&state);
+    }
+    draw_selection(&self.inner, &state);
+    drop(state);
+    self.inner.host.hover_again();
   }
 
   pub fn set_annotation_gesture_callback(&self, callback: AnnotationGestureCallback) {
@@ -190,6 +205,7 @@ impl WorkspaceEditor {
 
 /// A press the chrome has taken, before and after it becomes a drag.
 mod drag;
+pub(super) use drag::BandClick;
 use drag::Drag;
 
 /// Resolving the picture an annotation is drawn in, and picking the grip or
@@ -243,7 +259,9 @@ pub(crate) use hover::{refresh as refresh_hover, update as update_hover};
 
 /// The gesture the press becomes, and the samples it reports.
 mod gesture;
-pub(super) use gesture::{cancel, choose_at, down, pointer_move, up};
+pub(super) use gesture::{
+  arm_band, band_click, bands_over, cancel, choose_at, down, pointer_move, press_changes_choice, up,
+};
 
 /// Typing into a text box: the keyboard, the caret and the presses around it.
 mod typing;

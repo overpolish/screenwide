@@ -13,7 +13,6 @@ import { NativeAudioRibbon } from "../../timeline/audio/native-audio-ribbon";
 import { useRecordingPreviewTracks } from "../../timeline/tracks/use-recording-preview-tracks";
 
 import { NativeRecordingWorkspaceViewport } from "./native-recording-workspace-viewport";
-import { RecordingCanvasTool } from "./recording-canvas-tool";
 import {
   bakedCameraWorkspace,
   recordingLayoutWorkspace,
@@ -43,7 +42,6 @@ export function RecordingPreviewStage({
   audioVolumeByStream,
   cameraPane,
   canPreviewBakedCamera,
-  canvasTool,
   copyError,
   enabledTracks,
   isPreparingPreview,
@@ -78,14 +76,12 @@ export function RecordingPreviewStage({
     "audioVolumeByStream" | "enabledTracks"
   > & {
     canPreviewBakedCamera: boolean;
-    canvasTool: RecordingCanvasTool;
     screenCanvasRef: RefObject<HTMLCanvasElement | null>;
     activeRecordingOutput?: RecordingOutputSettings;
     copyError?: string | null;
   }) {
   const isPreparing =
     previewLayout === undefined && (player.isPreparing || isPreparingPreview);
-  const isSelecting = canvasTool === "select";
   const shownLayout =
     visibleLayout && visibleLayout.panes.length > 0 ? visibleLayout : null;
   // Every arrangement, the audio ribbon too, shares one viewport element.
@@ -105,7 +101,6 @@ export function RecordingPreviewStage({
             screenCanvasRef,
           ),
           isBusy: isPreparing,
-          isSelecting,
         }
       : shownLayout && activeRecordingOutput
         ? {
@@ -114,13 +109,11 @@ export function RecordingPreviewStage({
               activeRecordingOutput,
             ),
             isBusy: false,
-            isSelecting,
           }
         : shownLayout
           ? {
               ...recordingLayoutWorkspace(shownLayout, visibleCanvasRefs),
               isBusy: isPreparing,
-              isSelecting: false,
             }
           : null;
   return (

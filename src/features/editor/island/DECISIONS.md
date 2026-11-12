@@ -5,6 +5,62 @@
 
 How the editor's islands, its tool column and the title bar's modes work together, and why.
 
+## The choice model
+
+What is in hand and what is chosen is one small state per editor, the same for a recording and a screenshot, changed only by the actions in the tables below. Everything else the editor shows is worked out from it, never stored beside it, and the tool follows the choice only once a gesture has ended, so no rule reacts to another part way through.
+
+### The state
+
+- **Tool:** Select, a pen, Crop, Frame or Scene: what the column or the title bar shows pressed. A recording's island-only modes (Cursor, Keyboard, Captions, Transcript, Sound) are not tools; Select stays in hand under them.
+- **Held:** whether ⌘ (Ctrl on Windows) is holding Select over the tool.
+- **Choice:** nothing, one layer, or some annotations; never a layer and annotations at once. Annotations chosen still belong to a layer, the one they are drawn on, which tells the engine where they are, but that layer is not chosen: it opens no mode and shows no handles. The strip's own choices (beats, lulls, ranges, scenes, captions) stay outside this model.
+
+### Worked out from it
+
+- **What the picture acts as:** Select while held, else the tool.
+- **The mode lit in the title bar:** Frame or Scene when that is the tool; with Select in hand and a layer chosen, that layer's mode (Screen, Camera, a screenshot's Screenshot). Screen and Camera are Select on their layer, not tools of their own.
+- **The island:** several annotations chosen show how many (the Marquee island); one shows its own pen's island, that pen being the tool; a pen with nothing chosen shows the style its next annotation is drawn in; Crop, Frame and Scene show their own; Select with a layer chosen shows that layer's mode. While held, the island stays whatever it was before ⌘ went down.
+- **The chrome on the picture:** a chosen layer's handles show only with Select in hand and not held; annotations chosen show their own chrome instead.
+- **The pointer:** the arrow everywhere with Select in hand or held, a layer being dragged included, as most tools do. A grip shows the way it resizes and a text box the text cursor. A pen shows the crosshair over empty picture.
+
+### What each action does
+
+With Select in hand or held:
+
+| Action | Result |
+| --- | --- |
+| Click an annotation | Choose it alone; once the press ends, its pen is the tool |
+| Drag an annotation | Carry it, or every annotation chosen with it |
+| ⌘-click an annotation | Add it to the choice or take it out; once the press ends, one left takes up its pen, several or none leave Select |
+| Drag from anywhere else but the chosen layer | Draw a band: it chooses the annotations it touches, ⌘ at the press adding them to the choice; once it ends, one chosen takes up its pen, several or none leave Select |
+| Click anywhere off the annotations while some are chosen | Choose nothing, ⌘ or not, as one change: the annotations and any layer go together |
+| Click a layer while no annotations are chosen | Choose the layer, which opens its mode |
+| Click empty picture while no annotations are chosen | Choose nothing, which puts an open layer mode away |
+| Drag the chosen layer, when it is the whole choice and ⌘ is not holding Select | Move it; while held, its handles are down and a drag on it draws a band as on any other layer |
+| Scroll on a trackpad, or drag with the middle button | Pan the picture; Space stays play and pause |
+
+With a pen in hand, not held, a press on empty picture or on a layer draws, and a press on any annotation chooses or carries it as Select would, taking up its pen once the press ends.
+
+Anywhere:
+
+| Action | Result |
+| --- | --- |
+| ⌘ goes down with nothing pressed, a pen in hand or a layer in hand under Select | Held: the column shows Select, a chosen layer's handles stand down, the island stays |
+| ⌘ goes down under Crop, Frame or Scene | Nothing: those draw their own chrome on the picture, which a hold would take away and bring back on every ⌘ |
+| ⌘ comes up after a press that took hold of something or began a band | No longer held; Select stays in hand, or the pen the choice now calls for |
+| ⌘ comes up with nothing taken | No longer held; the tool and the choice are as they were, so a pen or a layer's mode comes back |
+| Another key with ⌘, or the window losing focus | No longer held, at once |
+| A pen taken up from the column or by its letter | That pen is the tool; annotations of another kind are let go |
+| Crop, Frame or Scene taken up | That is the tool; the annotations chosen are let go for good |
+| Select pressed, Escape, ⌘D | Select is the tool and nothing is chosen |
+
+What ⌘ means under the hold: with annotations chosen it keeps its meaning, so a ⌘-click or a ⌘-band adds to them and a drag under it snaps; with none chosen it is spent on the hold, so a ⌘-click chooses the annotation alone and nothing snaps. A ⌘ pressed mid-press keeps its meaning (snapping) and holds nothing.
+
+### Who decides what
+
+- **The editor (React)** owns the tool, the hold and the choice. The choice stays with what holds it, the annotations' own state and the layer or track chosen, and every change to it is made whole in one step: a layer chosen, or nothing, lets the annotations go in the same step. The rules both editors share live in `src/features/editor/choice/`: when ⌘ may hold Select (`canHoldSelect`), the hold itself (`select-hold.ts`, `useSelectHold`), and the pen the choice calls for once the gesture has ended (`followedTool`, `useToolFollowsChoice`), with tests on each. The tool, the hold (`selectHeld`) and the choice reach the engine together, in the layout.
+- **The engine** decides at the press what a press is, since that cannot wait for React: carrying an annotation, moving the chosen layer, drawing, or a band. It reads the choice and the hold React published (`WorkspaceEditor::set_select_held`) to tell the chosen layer from any other, and reports each gesture as at most one change of choice when it ends, never a pair (annotations let go, then a layer let go) that React would draw a frame of in between (`input/band.rs`). A press that took hold of something or began a band says so as it goes down (`PointerPress::Down { took }`), for the hold.
+
 ## Choosing something takes up its tool
 
 The Select tool has no island of its own. Choosing something takes up the tool it belongs to, and that tool's island shows it.
@@ -12,18 +68,17 @@ The Select tool has no island of its own. Choosing something takes up the tool i
 - **Annotations:** choosing one, on the picture or on the strip, takes up its pen. The toolbar shows that pen pressed, and the pen's island edits the chosen annotation alone.
 - **The pen stays in hand:** each click or drag on the picture places another annotation, even while one is chosen, and the new one becomes the chosen one. There is no click to let the chosen one go first: placing several text boxes in a row should take one click each, as in Shottr.
 - **Every pen takes hold of every annotation:** with any pen in hand, the pen for strokes included, an annotation of any kind under the pointer halos and shows the pointer; a click chooses it (taking up its own pen, as above), a drag carries it, and only a press on nothing drawn (or on the screen, camera or an image) draws. A stroke chosen this way stays chosen under the pen, whose island edits it: a chosen annotation is let go only when a pen for another kind is taken up (`toolDisagreesWithAnnotation`). A fresh stroke is still let go as it is drawn, so the next press draws again.
-- **Holding ⌘ (Ctrl on Windows) holds Select:** with a pen in hand, the modifier going down with nothing pressed, in the page or on the picture, puts Select on the picture for as long as it is held (`useSelectHold`, `select-hold.ts`): its cursors, and a click or drag chooses or carries a layer, the camera, an image or an annotation. Only the cursor and the column's Select change; the island stays the pen's, and the layer's own chrome stays down until a press (`select_held` in the engine), so ⌘Z, ⌘D or ⌘C flash nothing. A press that takes hold of something (`PointerPress::Down { took }`, `preview://native-pointer`) puts Select in hand for good, so letting go leaves it there; an annotation chosen takes up its pen as ever. Let go with nothing taken, the pen comes back. Any other key with the modifier, or the window losing focus, ends the hold at once. The modifier that brings Select is spent on it: presses under it are neither the ⌘-click toggle nor a ⌘ snap (`shortcut_spent`), so a ⌘-click chooses the annotation alone. A ⌘ pressed mid-press keeps its meaning (snapping) and holds nothing.
-- **Where the hold does not apply:** only pens hold Select. The marquee keeps ⌘ for its additive band, which needs ⌘ before the press; the modes (Frame, Scene) and the Crop tool draw their own chrome on the picture, which a hold would swap out: the crop shows the whole capture as a ghost under its handles, and Select held would take the ghost and the handles away and bring them back on every ⌘. The ⌘ snapping added for drawing scenes lives on the strip's scene rail, not the picture, so it is untouched. The Shortcuts pane lists only rebindable app shortcuts and shows no fixed editor ones (⌘D is not there either), so the hold is not listed; it belongs with the editor's other fixed keys if that pane ever gains them.
+- **Holding ⌘ (Ctrl on Windows) holds Select** over a pen or an open layer mode: see the choice model above.
 - **Letting go:** pressing Select, pressing the pressed pen again, or Escape puts Select back in hand with nothing chosen.
 - **⌘D (Ctrl+D) lets go of everything chosen, in both editors:** annotations, the chosen layer or track, the open mode and the scenes with it, the strip's beats, lulls, ranges, moments, shortcuts and groups, captions and shortcut picks, Select back in hand. Unlike Escape it does not stop at whatever owns Escape first; it reaches every choice at once. The island window forwards it as it forwards the other keys; a text field keeps it. The Shortcuts pane lists only the app's global shortcuts, so it is not listed there.
-- **A mode lets go of the annotations for good:** taking up a mode (Frame, Screen, Camera, Scene; a screenshot's Frame and Screenshot) or the Crop tool lets the chosen annotations go, and putting it away brings none back (`useSelectToolMemory` forgets them); only Select put down and taken up again, through pens or the marquee, gets them back. In a recording, putting a mode away by its button leaves nothing chosen at all, the track included, as Select does (`backToSelect`); in a screenshot, Crop and Frame put away leave the layer chosen, as they work on it, so the Screenshot mode stands open on it after them, and the Screenshot mode put away lets its layer go, so its island leaves.
+- **A mode lets go of the annotations for good:** taking up a mode (Frame, Screen, Camera, Scene; a screenshot's Frame and Screenshot) or the Crop tool lets the chosen annotations go, and putting it away brings none back (`useSelectToolMemory` forgets them); only Select put down and taken up again, through pens, gets them back. In a recording, putting a mode away by its button leaves nothing chosen at all, the track included, as Select does (`backToSelect`); in a screenshot, Crop and Frame put away leave the layer chosen, as they work on it, so the Screenshot mode stands open on it after them, and the Screenshot mode put away lets its layer go, so its island leaves.
 - **Hand-drawn draws a fresh seed each time it is turned on:** every press that turns Hand-drawn on, on the Highlight or Shape island, redraws the stroke from a fresh seed (`applyStyle`), so turning it off and on again rerolls the wobble; a press while it is on turns it off.
 - **The next annotation follows the last:** restyling the chosen annotation is also the pen's style from then on, so the next one placed looks the same. A pen taken up with nothing chosen shows that style, with no Delete: the annotation islands take `onDelete` as optional, and leave it out for that.
-- **Several annotations chosen with the marquee:** the Marquee island says how many and deletes them all, asking twice. They are of different kinds as often as not, so it offers nothing of their look; one alone is shown on its own pen's island.
-- **No Clear drawings:** the drawing pen has no action that takes every stroke away; the marquee chooses several and deletes them, as it does any annotations.
+- **Several annotations chosen:** the Marquee island says how many and deletes them all, asking twice. They are of different kinds as often as not, so it offers nothing of their look; one alone is shown on its own pen's island.
+- **No Clear drawings:** the drawing pen has no action that takes every stroke away; Select's band chooses several and deletes them, as it does any annotations.
 - **A layer chosen with Select opens its mode, in both editors:** Screen and Camera (a screenshot's Screenshot) are not an island over Select but Select on their layer.
-  - **Opening:** however the layer comes to be chosen with Select in hand, by a click or drag on the picture, by its button, or by Select coming back over a layer still chosen, the mode's button is lit and its island out, exactly as opening it from the title bar does; on-picture handles never stand on a layer with no island beside them. The mode is worked out from the layer chosen (`columnMode` in `recording-column.ts` and `screenshot-column.ts`), so the button and the island cannot disagree with the handles.
-  - **Switching and closing:** choosing the other layer switches modes; choosing nothing (a click on empty picture, which `up.rs` reports as a choice of nothing, while a drag from there still pans), Escape or ⌘D puts it away with the layer let go. Inside a scene too.
+  - **Opening:** however the layer comes to be chosen with Select in hand, by a click on the picture, by its button, or by Select coming back over a layer still chosen, the mode's button is lit and its island out, exactly as opening it from the title bar does; on-picture handles never stand on a layer with no island beside them. The mode is worked out from the layer chosen (`columnMode` in `recording-column.ts` and `screenshot-column.ts`), so the button and the island cannot disagree with the handles.
+  - **Switching and closing:** choosing the other layer switches modes; choosing nothing (a click on empty picture, which the engine reports as a choice of nothing, while a drag from there draws a band), Escape or ⌘D puts it away with the layer let go. Inside a scene too.
   - **With the island-only modes:** in a recording a chosen layer takes over an island-only mode (Cursor, Keyboard, Captions, Transcript, Sound), and opening one of those lets the layer go. Select stays in hand, so the layer is still moved by dragging it.
   - **With nothing chosen:** the Screenshot mode opened by its button takes the newest layer; the Crop tool crops the chosen layer, the newest where none is.
 - **Focus and spotlight are one pen:** the Focus island's dim toggle turns a chosen focus into a spotlight and back (`annotationKind`), keeping its box and corners; with the pen in hand and nothing chosen it takes up the other tool instead. The column shows the focus pen pressed for either.
@@ -51,7 +106,7 @@ The picture is drawn natively under the page, and a native view over it takes ev
 
 The window lets clicks through everywhere but the island's parts, which the island reports as it changes shape (`set_standalone_listbox_hit_area`), as the recording island's window does, so the picture, strip and columns under it hover, scroll and drag as ever. It reads what the editor publishes to its panels (`ToolPanelSnapshot`) and sends back the same asks (`ToolPanelPatch`), so the editor has one way to be read and changed.
 
-**Every island opens in the picture's top end corner** (the top right, the top left in a right-to-left language), fixed, whatever brought it out: a pen, a mode, a chosen layer or annotation, the marquee's choice, Tracks. It is always found in one place, and never lines up with a button that may sit far from it. The exceptions are a strip item's island, which stands over the item (below), and the Script island, which stands in the top start corner (above).
+**Every island opens in the picture's top end corner** (the top right, the top left in a right-to-left language), fixed, whatever brought it out: a pen, a mode, a chosen layer or annotation, several annotations chosen, Tracks. It is always found in one place, and never lines up with a button that may sit far from it. The exceptions are a strip item's island, which stands over the item (below), and the Script island, which stands in the top start corner (above).
 
 ## How the island changes what it holds
 

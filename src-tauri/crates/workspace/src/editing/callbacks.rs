@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use super::*;
+use screenwide_annotations::gesture::MODE_SELECT;
 
 pub(super) fn emit_selection(inner: &SurfaceInner, selection: Option<u32>) {
   if let Ok(mut callbacks) = inner.callbacks.lock() {
@@ -53,13 +54,19 @@ pub(super) fn refresh_cursor_for(inner: &SurfaceInner) {
     .ok()
     .map(|state| match state.gesture {
       Some(ActiveGesture::Pan { .. }) => CursorKind::Move,
+      // A layer moved with Select in hand keeps the arrow, as most tools
+      // have it; the crop tool's move shows the hand.
       Some(ActiveGesture::Selection(gesture))
         if matches!(
           gesture.operation,
           SelectionGestureOperation::Move | SelectionGestureOperation::CropMove
         ) =>
       {
-        CursorKind::Move
+        if state.annotation.mode == MODE_SELECT {
+          CursorKind::Arrow
+        } else {
+          CursorKind::Move
+        }
       }
       Some(ActiveGesture::Selection(gesture))
         if gesture.operation == SelectionGestureOperation::CropDraw && gesture.edges == 0 =>

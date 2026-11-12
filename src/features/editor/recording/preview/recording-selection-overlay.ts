@@ -86,13 +86,11 @@ function bakedCameraSelection({
  * handle under the Frame tool, the baked camera's own rect when the camera is
  * composited into the screen output, or the selected pane's own rect.
  */
-/** Only the crop tool draws its own layer chrome. A drawing tool and the
- * marquee leave it in the select tool's hands: the annotations are drawn over
- * the picture, and the layer underneath is still the thing a press outside
- * one acts on. */
-const selectionChromeTool = (
-  tool: AnnotationKind | "crop" | "marquee" | "select",
-) => (tool === "crop" ? "crop" : "select");
+/** Only the crop tool draws its own layer chrome. A drawing tool leaves it in
+ * the select tool's hands: the annotations are drawn over the picture, and
+ * the layer underneath is still the thing a press outside one acts on. */
+const selectionChromeTool = (tool: AnnotationKind | "crop" | "select") =>
+  tool === "crop" ? "crop" : "select";
 
 export function recordingVideoSelectionOverlay({
   activeVideoTrack,
@@ -217,8 +215,8 @@ export function recordingVideoSelectionTargets({
           ]
         : [],
     );
-  // The marquee and the drawing tools reach every pane as the select tool
-  // does: a band may be drawn over whichever picture it starts on, a fresh
+  // The drawing tools reach every pane as the select tool does: Select's
+  // band may be drawn over whichever picture it starts on, a fresh
   // annotation starts on the picture under the press or, on the frame, the
   // nearest one, and an annotation is measured against its own picture
   // whichever layer is in hand. A drawing tool picks no layer up; the native
@@ -226,9 +224,7 @@ export function recordingVideoSelectionTargets({
   const mode =
     canvasTool === "crop"
       ? "crop"
-      : canvasTool === "select" ||
-          canvasTool === "marquee" ||
-          drawingToolKind(canvasTool) !== null
+      : canvasTool === "select" || drawingToolKind(canvasTool) !== null
         ? "select"
         : null;
   if (mode === null) return null;

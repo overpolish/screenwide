@@ -40,15 +40,17 @@ import {
   type RecordingSelectionGestureEvent,
   useRecordingPreviewSurface,
 } from "./use-recording-preview-surface";
+
+import type { RecordingPreviewChrome } from "./recording-preview-layout";
 let sessionSequence = 0;
 type PreviewTiming = [durationMs: number, framesPerSecond: number | null];
 export function useRecordingPreviewPlayer({
-  annotationTool,
   artifactId,
   audioTrackVolumes,
   bakeCamera,
   cameraCanvasRef,
   cameraOverlay,
+  chrome,
   cursorEffects,
   enabledStreamIndices,
   isEditorSuspended,
@@ -72,6 +74,7 @@ export function useRecordingPreviewPlayer({
   bakeCamera: boolean;
   cameraCanvasRef: RefObject<HTMLCanvasElement | null>;
   cameraOverlay: import("../types").CameraOverlaySettings;
+  chrome: RecordingPreviewChrome;
   cursorEffects: CursorEffectSettings;
   enabledStreamIndices: number[];
   isEditorSuspended: boolean;
@@ -84,10 +87,6 @@ export function useRecordingPreviewPlayer({
   recordingOutput: import("../screenshot/screenshot-output").RecordingOutputSettings;
   screenCanvasRef: RefObject<HTMLCanvasElement | null>;
   sourceDurationMs: number;
-  /** The annotation tool in hand, when one is. It reaches the native chrome
-   * with the layout that carries the selection it has to agree with. */
-  annotationTool?:
-    import("../annotations/annotation-defaults").AnnotationTool | null;
   onSelectionChange?: (paneIndex: number | null) => void;
   onSelectionGesture?: (event: RecordingSelectionGestureEvent) => void;
   selection?: RecordingPreviewSelection | null;
@@ -169,10 +168,10 @@ export function useRecordingPreviewPlayer({
     startedRef,
   });
   useRecordingPreviewSurface({
-    annotationTool,
     bakeCamera,
     cameraCanvasRef,
     cameraOverlay,
+    chrome,
     isEditorSuspended,
     isEnabled,
     isPlaying: playbackStatus.isPlaying,

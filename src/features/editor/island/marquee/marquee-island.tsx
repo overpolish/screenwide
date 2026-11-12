@@ -9,7 +9,7 @@ import { IslandRowTitle } from "../../../../primitives/island/row-title/island-r
 
 import type { EditorIslandContent } from "../editor-island";
 
-// Several annotations chosen at once with the marquee: how many, and
+// Several annotations chosen at once with Select's band: how many, and
 // deleting them all, which asks twice as every delete on the island does.
 // They are of different kinds as often as not, so nothing of their look is
 // offered; one alone is shown on its own pen's island instead.

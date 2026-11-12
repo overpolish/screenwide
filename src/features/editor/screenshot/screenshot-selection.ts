@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { UPRIGHT_ROTATION } from "../layer-rotation";
+import { UPRIGHT_ROTATION, withShareOfTurn } from "../layer-rotation";
 
 import {
   ScreenshotLayout,
@@ -43,6 +43,38 @@ export const screenshotLayerTurn = (
   output: ScreenshotOutputSettings,
   cropMode: boolean,
 ) => (cropMode ? {} : { rotation: output.rotation ?? UPRIGHT_ROTATION });
+
+/** The selection the native overlay draws round the chosen layer: its frame,
+ * or its crop while the crop tool shows it, turned as far as the crop's ease
+ * (`turnShare`) has brought it. */
+export const screenshotItemSelection = ({
+  cropKeepsShape,
+  cropMode,
+  item,
+  itemOutput,
+  paneIndex,
+  target,
+  turnShare,
+}: {
+  cropKeepsShape: boolean;
+  cropMode: boolean;
+  item: { height: number; width: number };
+  itemOutput: ScreenshotOutputSettings;
+  paneIndex: number;
+  target: { height: number; width: number };
+  turnShare: number;
+}) => ({
+  cropKeepsShape: cropMode && cropKeepsShape,
+  cropMode,
+  paneIndex,
+  radiusPercent: itemOutput.radiusPercent,
+  ...screenshotLayerTurn(withShareOfTurn(itemOutput, turnShare), cropMode),
+  ...normalizedScreenshotSelection(
+    screenshotLayout(item, itemOutput),
+    target,
+    cropMode ? "crop" : "select",
+  ),
+});
 
 /** One selectable target per workspace pane, in pane order, for the native
  * select and crop overlays to hit-test. Panes whose item is gone are skipped. */

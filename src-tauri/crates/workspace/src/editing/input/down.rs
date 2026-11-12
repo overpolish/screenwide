@@ -4,7 +4,8 @@
 use super::*;
 
 /// A press the layers get. Answers whether it took hold of something: a
-/// layer or one of its grips, rather than drawing a crop or panning.
+/// layer or one of its grips, or Select's band, rather than drawing a crop or
+/// panning.
 pub(super) fn down(inner: &std::sync::Arc<SurfaceInner>, scale: f64, x: f64, y: f64) -> bool {
   let point = (x / scale, y / scale);
   let mut selected = None;
@@ -116,11 +117,7 @@ pub(super) fn down(inner: &std::sync::Arc<SurfaceInner>, scale: f64, x: f64, y: 
       let layer_changed = state.selection.is_none_or(|current| {
         current.pane_index != target.pane_index || current.layer_id != target.layer_id
       });
-      // A held arrow, or a group held together, counts as a change even on
-      // the same layer, exactly as the macOS view's `changed` does: the press
-      // lets it go, and React has to hear about it to clear its own choice.
-      let changed =
-        layer_changed || state.annotation.selected != -1 || annotation::has_group(&state);
+      let changed = annotation::press_changes_choice(&state, target);
       // React updates target hit regions asynchronously. When this is already
       // the selected pane, its native selection is the freshest geometry (for
       // example immediately after a resize), so a stale target rectangle
@@ -130,58 +127,37 @@ pub(super) fn down(inner: &std::sync::Arc<SurfaceInner>, scale: f64, x: f64, y: 
       } else {
         state.selection.unwrap_or(target)
       };
-      state.selection = Some(selection);
-      state.annotation.selected = -1;
-      let gesture = EditorGesture {
-        edges: 0,
-        last_delta: (0.0, 0.0),
-        last_scale: 1.0,
-        operation: if selection.crop_mode != 0 {
-          SelectionGestureOperation::CropMove
-        } else {
-          SelectionGestureOperation::Move
-        },
-        pane_start: selection_pane_rect(&state, selection),
-        pointer_start: point,
-        selection_start: selection,
-        start_turn: None,
-        follows_frame: false,
+      // Only the layer that is the whole choice moves under Select. A press
+      // on any other draws a band once it travels. Let go first, it chooses
+      // the layer, or, with annotations chosen, lets them go as a click
+      // beside them does.
+      let holds_annotations = state.annotation.selected != -1 || annotation::has_group(&state);
+      let click = if holds_annotations {
+        annotation::BandClick::ChoosesNothing
+      } else {
+        annotation::BandClick::Chooses(selection)
       };
-      // A pane a scene places never grows the canvas: the scene owns where it
-      // sits on a canvas of a fixed size.
-      state.move_auto_fit = (gesture.operation == SelectionGestureOperation::Move
-        && selection.framed == 0)
-        .then(|| MoveAutoFit {
-          active: false,
-          last_bounds: None,
-          natural_size: state
-            .panes
-            .get(selection.pane_index as usize)
-            .and_then(Option::as_ref)
-            .and_then(|pane| pane.settings.as_ref())
-            .map(|settings| (f64::from(settings.width), f64::from(settings.height)))
-            .or_else(|| {
-              state
-                .workspace_natural_size
-                .map(|(width, height)| (f64::from(width), f64::from(height)))
-            }),
-          targets_start: state.selection_targets.clone(),
-        });
-      state.gesture = Some(ActiveGesture::Selection(gesture));
-      if changed {
-        selected = Some(Some(if target.layer_id == FRAME_LAYER_ID {
-          target.pane_index
-        } else {
-          target.layer_id
-        }));
+      if annotation::bands_over(&state, target) && annotation::arm_band(&mut state, point, click) {
+        // A band is Select's own work, so the press counts as taken: under
+        // the ⌘ hold it keeps Select in hand once ⌘ is let go.
+        state.gesture = None;
+      } else {
+        began = Some(start_move(&mut state, selection, point));
+        if changed {
+          selected = Some(Some(target.layer_id));
+        }
       }
-      began = Some(gesture);
       draw_selection(inner, &state);
     } else if let Some(gesture) = super::crop_draw::start(&mut state, point) {
       // A press on nothing while cropping draws a new crop window. It
       // begins only once the press becomes a drag, from `pointer_move`.
       state.gesture = Some(ActiveGesture::Selection(gesture));
       took = false;
+    } else if annotation::arm_band(&mut state, point, annotation::BandClick::ChoosesNothing) {
+      // Empty picture under Select draws a band once the press travels; a
+      // click there still chooses nothing. Taken, as a band on a layer is.
+      state.gesture = None;
+      draw_selection(inner, &state);
     } else {
       state.gesture = Some(ActiveGesture::Pan {
         pointer_start: point,
@@ -199,4 +175,51 @@ pub(super) fn down(inner: &std::sync::Arc<SurfaceInner>, scale: f64, x: f64, y: 
   }
   refresh_cursor_for(inner);
   took
+}
+
+/// Starts moving `selection`, the layer a press took hold of, from `point`.
+fn start_move(
+  state: &mut SurfaceState,
+  selection: PreviewSelection,
+  point: (f64, f64),
+) -> EditorGesture {
+  state.selection = Some(selection);
+  state.annotation.selected = -1;
+  let gesture = EditorGesture {
+    edges: 0,
+    last_delta: (0.0, 0.0),
+    last_scale: 1.0,
+    operation: if selection.crop_mode != 0 {
+      SelectionGestureOperation::CropMove
+    } else {
+      SelectionGestureOperation::Move
+    },
+    pane_start: selection_pane_rect(state, selection),
+    pointer_start: point,
+    selection_start: selection,
+    start_turn: None,
+    follows_frame: false,
+  };
+  // A pane a scene places never grows the canvas: the scene owns where it
+  // sits on a canvas of a fixed size.
+  state.move_auto_fit = (gesture.operation == SelectionGestureOperation::Move
+    && selection.framed == 0)
+    .then(|| MoveAutoFit {
+      active: false,
+      last_bounds: None,
+      natural_size: state
+        .panes
+        .get(selection.pane_index as usize)
+        .and_then(Option::as_ref)
+        .and_then(|pane| pane.settings.as_ref())
+        .map(|settings| (f64::from(settings.width), f64::from(settings.height)))
+        .or_else(|| {
+          state
+            .workspace_natural_size
+            .map(|(width, height)| (f64::from(width), f64::from(height)))
+        }),
+      targets_start: state.selection_targets.clone(),
+    });
+  state.gesture = Some(ActiveGesture::Selection(gesture));
+  gesture
 }

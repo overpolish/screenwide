@@ -46,7 +46,6 @@ export function useEditorWindowShortcuts({
   onDeselect,
   onDeselectAll,
   onExport,
-  onMarqueeTool,
   onNudge,
   onPaste,
   onRedo,
@@ -107,7 +106,6 @@ export function useEditorWindowShortcuts({
     };
     const toolKeys: EditorToolKeys = {
       onArrange,
-      onMarqueeTool,
       onResizeCanvas,
       onSceneTool,
       onSelectTool,
@@ -274,7 +272,6 @@ export function useEditorWindowShortcuts({
     onDeselectAll,
     onArrange,
     onExport,
-    onMarqueeTool,
     onNudge,
     onPaste,
     onRedo,

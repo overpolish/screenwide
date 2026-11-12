@@ -44,6 +44,7 @@ export function useRecordingPreviewTransport(
     canvasTool,
     composedVideoTracks,
     effectiveRecordingOutput,
+    isSelectHeld,
     playhead,
     pressOverlayRef,
     previewPlayingRef,
@@ -62,6 +63,7 @@ export function useRecordingPreviewTransport(
      * as a separate file. */
     composedVideoTracks: Set<RecordingVideoTrackId>;
     effectiveRecordingOutput: RecordingOutputSettings;
+    isSelectHeld: boolean;
     playhead: Playhead;
     /** What a press on an overlay does, set by the lanes, which know it. */
     pressOverlayRef: RefObject<(layerId: OverlayLayerId) => void>;
@@ -147,12 +149,12 @@ export function useRecordingPreviewTransport(
   const composedTrackList = [...composedVideoTracks];
   const clearAnnotationRef = useRef(() => {});
   const player = useRecordingPreviewPlayer({
-    annotationTool,
     artifactId,
     audioTrackVolumes,
     bakeCamera,
     cameraCanvasRef,
     cameraOverlay: drawn.cameraOverlay,
+    chrome: { annotationTool, selectHeld: isSelectHeld },
     cursorEffects,
     enabledStreamIndices: selectedStreamIndices,
     isEditorSuspended,
@@ -166,11 +168,14 @@ export function useRecordingPreviewTransport(
       if (!previewPlayingRef.current) setPreviewPositionMs(positionMs);
     },
     onSelectionChange: (paneIndex) => {
-      // A click on nothing with Select in hand lets the track go, and with it
-      // the Screen or Camera mode it opened.
+      // Nothing chosen with Select in hand lets go of everything at once:
+      // the annotations, the track, and with it the Screen or Camera mode
+      // it opened. The engine reports it as one change, so the editor never
+      // draws the track chosen without its annotations in between.
       if (paneIndex === null) {
-        if (canvasTool === "select" && activeVideoTrack !== null)
-          onSelectedTrackChange?.(null);
+        if (canvasTool !== "select") return;
+        clearAnnotationRef.current();
+        if (activeVideoTrack !== null) onSelectedTrackChange?.(null);
         return;
       }
       // An overlay takes its size and place from its tool, so a press on it

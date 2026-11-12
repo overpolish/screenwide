@@ -8,10 +8,10 @@ import type { EditorIslandKind } from "../island/host/editor-island-kind";
 import type { EditorMode } from "../toolbar/editor-modes";
 import type { EditorTool } from "../toolbar/editor-tool-column";
 
-/** What a press on the screenshot does: Select, a pen, the marquee, the
- * crop, or the frame's own drag (`canvas`). */
+/** What a press on the screenshot does: Select, a pen, the crop, or the
+ * frame's own drag (`canvas`). */
 export type ScreenshotTool =
-  AnnotationKind | "canvas" | "crop" | "marquee" | "select" | null;
+  AnnotationKind | "canvas" | "crop" | "select" | null;
 
 // The screenshot's tools as the tool column and the title bar show them,
 // and the island each brings out. The frame's drag keeps its name
@@ -42,7 +42,7 @@ export const columnMode = (
       : null;
 
 /** Which island the tool in hand brings out: a pen's own, or the
- * annotations chosen with it or with the marquee; the crop's; the frame's;
+ * annotations chosen with it or with Select's band; the crop's; the frame's;
  * and a layer chosen with Select, which the Screenshot island holds.
  * Nothing in hand with Select brings out nothing. */
 export const screenshotIsland = ({

@@ -36,8 +36,8 @@ it("chooses the annotations again when select is put down and taken back up", ()
 
 it("keeps them through other tools taken up in between", () => {
   Rendered("a")("select", "pen");
-  Rendered()("pen", "marquee");
-  Rendered()("marquee", "select");
+  Rendered()("pen", "arrow");
+  Rendered()("arrow", "select");
   expect(choose).toHaveBeenCalledExactlyOnceWith(["a"]);
 });
 

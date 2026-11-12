@@ -14,7 +14,7 @@ import { AnnotationStyle, ImageArt } from "./annotations";
 import type { TextStyle } from "../../../bindings/TextStyle";
 import type { AnnotationKind } from "../../annotations/types";
 
-export type AnnotationTool = AnnotationKind | "marquee" | "select";
+export type AnnotationTool = AnnotationKind | "select";
 
 /**
  * The dress the next annotation is drawn in: whatever the last one was changed

@@ -25,13 +25,14 @@ pub struct SurfaceState {
   pub drag_reading: (f64, f64),
   /// The modifiers held as of the pointer event being handled.
   pub modifiers: Modifiers,
-  /// The shortcut modifier (Command, Ctrl on Windows) was held as Select came
-  /// into hand, so it is the editor's hold for Select rather than a toggle or
-  /// a snap: presses read it as up until it is let go.
+  /// The shortcut modifier (Command, Ctrl on Windows) is spent on holding
+  /// Select, which began with nothing chosen: presses read it as up, neither
+  /// a toggle nor a snap, until it is let go.
   pub(super) shortcut_spent: bool,
-  /// Select came into hand with the shortcut modifier down: the editor's hold
-  /// for Select. The layer's own chrome stays down until a press, so a
-  /// shortcut typed with the modifier (⌘Z) flashes nothing on the picture.
+  /// The editor holds Select under the shortcut modifier
+  /// (`WorkspaceEditor::set_select_held`): the chosen layer's chrome stays
+  /// down for as long as it is held, so a shortcut typed with the modifier
+  /// (⌘Z) flashes nothing, and a press on that layer draws a band.
   pub(super) select_held: bool,
   /// A live layer Move that may grow its canvas under Alt (the Metal
   /// backend's `selectionMoveTargetsStart` / `selectionMoveAutoFitActive`).

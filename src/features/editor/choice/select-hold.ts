@@ -8,8 +8,9 @@ import type { Platform } from "../../../lib/platform";
  * as Photoshop and Illustrator spring-load their selection tools.
  *
  * - `idle`: the modifier is up.
- * - `held`: the modifier went down with a pen in hand and nothing pressed, so
- *   the picture acts as Select until it is let go.
+ * - `held`: the modifier went down with nothing pressed, over a pen or a
+ *   chosen layer (`canHoldSelect`), so the picture acts as Select until it
+ *   is let go.
  * - `spent`: the modifier is down but holds nothing: it went down mid-press,
  *   under a tool that keeps its own meaning for it, or another key joined it
  *   to make a shortcut (⌘Z, ⌘D). It means nothing more until it is let go.

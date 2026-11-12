@@ -47,6 +47,9 @@ pub async fn layout_screenshot_preview_surface(
   panes: Vec<ScreenshotSurfacePane>,
   scale: f64,
   selected_annotation_ids: Vec<String>,
+  // Whether ⌘ (Ctrl) holds Select over the tool, as the editor's choice
+  // model has it.
+  select_held: bool,
   selection: Option<ScreenshotSelectionOverlay>,
   selection_targets: Option<Vec<ScreenshotSelectionOverlay>>,
   session_id: u64,
@@ -70,6 +73,7 @@ pub async fn layout_screenshot_preview_surface(
     &annotation_zoom,
     &annotation_tool,
     &selected_annotation_ids,
+    &select_held,
   );
   let (surface, will_present, natural_size, annotation_layout, hover_cleared) = {
     let mut manager = state
@@ -196,6 +200,9 @@ pub async fn layout_screenshot_preview_surface(
   );
   #[cfg(any(target_os = "macos", target_os = "windows"))]
   surface.set_annotation_group(&annotation_layout.group);
+  // After the annotations, whose choice the hold reads.
+  #[cfg(any(target_os = "macos", target_os = "windows"))]
+  surface.set_select_held(select_held);
   #[cfg(not(any(target_os = "macos", target_os = "windows")))]
   let _ = annotation_layout;
   surface.set_selection(selection);

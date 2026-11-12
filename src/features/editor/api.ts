@@ -202,18 +202,12 @@ export const layoutScreenshotPreviewSurface = ({
   annotationTextLook,
   annotationTool,
   annotationZoom,
-  backdrop,
   interactionOutput,
-  nativeEditor,
   output,
-  panes,
-  scale,
   selectedAnnotationIds = [],
   selection,
   selectionTargets,
-  sessionId,
-  viewport,
-  viewportCorners,
+  ...layout
 }: {
   backdrop: [number, number, number, number];
   interactionOutput: ScreenshotWorkspaceOutputSettings;
@@ -224,6 +218,9 @@ export const layoutScreenshotPreviewSurface = ({
     rect: { height: number; width: number; x: number; y: number };
   }[];
   scale: number;
+  /** Whether ⌘ (Ctrl) holds Select over the tool: the chosen layer's chrome
+   * stands down and a press on it draws a band. */
+  selectHeld: boolean;
   sessionId: number;
   viewport: { height: number; width: number; x: number; y: number };
   /** How round the viewport's corners are where it meets the chrome. */
@@ -252,24 +249,18 @@ export const layoutScreenshotPreviewSurface = ({
   selectionTargets?: PreviewSelectionLayout[] | null;
 }) =>
   invoke<null>("layout_screenshot_preview_surface", {
+    ...layout,
     annotationCounterAngle: annotationCounterAngle ?? null,
     annotationDefaults: annotationDefaults ?? null,
     annotationImage: annotationImage ?? null,
     annotationTextLook: annotationTextLook ?? null,
     annotationTool: annotationTool ?? null,
     annotationZoom: annotationZoom ?? null,
-    backdrop,
     interactionOutput: normalizedScreenshotWorkspaceOutput(interactionOutput),
-    nativeEditor,
     output: normalizedScreenshotWorkspaceOutput(output),
-    panes,
-    scale,
     selectedAnnotationIds,
     selection: selection ?? null,
     selectionTargets: selectionTargets ?? null,
-    sessionId,
-    viewport,
-    viewportCorners,
   });
 
 export const refreshScreenshotPreviewSources = (

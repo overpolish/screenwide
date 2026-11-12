@@ -5,8 +5,8 @@ import type { EditorKind } from "../../types";
 
 // Which island the editor asks its island window for. What it holds comes
 // from the tool panel snapshot the editor publishes: an annotation island
-// shows the annotation in hand, or the pen's next one, or how many the
-// marquee chose; the Crop tool's shows the crop of the layer in hand; each
+// shows the annotation in hand, or the pen's next one, or how many Select's
+// band chose; the Crop tool's shows the crop of the layer in hand; each
 // of the title bar's modes opens its own. Captions
 // opens the Captions island with the Script island at the opposite corner,
 // and Transcript the Script island alone, in the same place. A beat, lull,

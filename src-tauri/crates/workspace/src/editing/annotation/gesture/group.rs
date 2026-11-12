@@ -2,37 +2,74 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 //! The presses that change the choice rather than one annotation: a carry of
-//! several chosen together, a click with the toggle modifier, and a marquee
-//! band. Like the rest of the gesture, everything here resolves under the surface lock and hands its
+//! several chosen together, a click with the toggle modifier, and a band
+//! drawn with Select. Like the rest of the gesture, everything here resolves under the surface lock and hands its
 //! samples back to be reported without it.
 
-use super::drag::Press;
+use super::drag::{BandClick, Press};
 use super::sample::{press_toggles, resolve, resolve_layer, Sample};
 use super::*;
-use screenwide_annotations::gesture::MODE_MARQUEE;
 use screenwide_annotations::handles::HANDLE_FLAG_GROUPED;
 
-/// Arms a press on empty picture that the choice owns: a marquee band under
-/// the marquee, or a carry of the group inside its box under the select tool.
-/// `false` when the press is neither.
+/// Arms a press on empty picture that the choice owns: a carry of the group
+/// inside its box under the select tool. `false` when it is not one.
 pub(super) fn arm_empty(state: &mut SurfaceState, point: (f64, f64)) -> bool {
-  let toggles = press_toggles(state);
-  if state.annotation.mode == MODE_MARQUEE {
-    let Some(layer) = marquee_layer_at_point(state, point) else {
-      return false;
-    };
-    state.annotation.drag = Some(
-      Drag::pending(TARGET_MARQUEE, 0, HANDLE_BODY, point)
-        .with_press(Press::Marquee { additive: toggles }, layer),
-    );
-    return true;
-  }
-  let Some(layer) = group_layer_at_point(state, point).filter(|_| !toggles) else {
+  let Some(layer) = group_layer_at_point(state, point).filter(|_| !press_toggles(state)) else {
     return false;
   };
   state.annotation.drag =
     Some(Drag::pending(TARGET_GROUP, u32::MAX, HANDLE_BODY, point).with_press(Press::Group, layer));
   true
+}
+
+/// Arms a band at `display` in place of the layer press Select would make
+/// there, which `click` describes and which a press that never travels still
+/// makes. The toggle modifier held at the press adds what the band touches to
+/// the choice; the manager reads it from the band's first sample. `false`
+/// when Select is not in hand or no layer is laid out to draw the band over.
+pub(crate) fn arm_band(state: &mut SurfaceState, display: (f64, f64), click: BandClick) -> bool {
+  if state.annotation.mode != MODE_SELECT {
+    return false;
+  }
+  let point = selected_layer_point(state, display);
+  let Some(layer) = marquee_layer_at_point(state, point) else {
+    return false;
+  };
+  state.annotation.drag = Some(
+    Drag::pending(TARGET_MARQUEE, 0, HANDLE_BODY, point)
+      .with_press(Press::Marquee { click }, layer),
+  );
+  true
+}
+
+/// Takes a band let go before it travelled, answering the layer press it
+/// stood in for; `None` when no such band is in hand.
+pub(crate) fn band_click(state: &mut SurfaceState) -> Option<BandClick> {
+  let drag = state.annotation.drag.filter(|drag| !drag.begun)?;
+  let Press::Marquee { click } = drag.press else {
+    return None;
+  };
+  state.annotation.drag = None;
+  Some(click)
+}
+
+/// Whether a press on `target`'s body changes the choice rather than leaving
+/// the layer the whole of it: the layer is not chosen, or an annotation or a
+/// group is held with it, which the press lets go, exactly as the macOS
+/// view's `changed` does, and React has to hear about it to clear its own
+/// choice.
+pub(crate) fn press_changes_choice(state: &SurfaceState, target: PreviewSelection) -> bool {
+  state.selection.is_none_or(|current| {
+    current.pane_index != target.pane_index || current.layer_id != target.layer_id
+  }) || state.annotation.selected != -1
+    || has_group(state)
+}
+
+/// Whether Select's drag on `target`'s body draws a band rather than moving
+/// the layer: only the layer that is the whole choice moves, and not even it
+/// while ⌘ holds Select, which stands its chrome down.
+pub(crate) fn bands_over(state: &SurfaceState, target: PreviewSelection) -> bool {
+  state.annotation.mode == MODE_SELECT && (state.select_held || press_changes_choice(state, target))
 }
 
 /// Arms a press on the annotation at `shaft` that the choice owns: one of a
@@ -110,8 +147,7 @@ pub(super) fn layer_sample(
 /// What a press that never travelled does on release: a toggle adds its
 /// annotation to the choice or takes it out; a click on one of a group
 /// chooses it alone, and one inside the group's box but on no member lets the
-/// group go; a click with the marquee lets the choice go unless the toggle
-/// modifier is held at either end.
+/// group go. A band's click is the layers', taken by `take_band_click` first.
 pub(super) fn clicked(state: &mut SurfaceState, drag: Drag, point: (f64, f64)) -> Vec<Sample> {
   let clear = |state: &SurfaceState| {
     resolve(
@@ -138,9 +174,6 @@ pub(super) fn clicked(state: &mut SurfaceState, drag: Drag, point: (f64, f64)) -
       .into_iter()
       .collect(),
     Press::Group => clear(state).into_iter().collect(),
-    Press::Marquee { additive } if !additive && !press_toggles(state) => {
-      clear(state).into_iter().collect()
-    }
     Press::Marquee { .. } | Press::Ordinary => Vec::new(),
   }
 }

@@ -4,7 +4,7 @@
 import { RefObject, useCallback, useEffect, useMemo, useRef } from "react";
 
 import { useSelectToolMemory } from "../../annotations/use-select-tool-memory";
-import { toolDisagreesWithAnnotation } from "../../annotations/use-tool-follows-annotation";
+import { toolDisagreesWithAnnotation } from "../../choice/editor-choice";
 import { drawingToolKind } from "../../tools/tool-registry";
 import { RecordingTrackId, RecordingVideoTrackId } from "../../types";
 
@@ -55,10 +55,7 @@ export function useRecordingPreviewCanvasTool({
     (next: RecordingCanvasTool) => {
       // A mode (crop, frame, scene) lets the annotations in hand go, and
       // putting it away does not bring them back.
-      const isMode =
-        drawingToolKind(next) === null &&
-        next !== "select" &&
-        next !== "marquee";
+      const isMode = drawingToolKind(next) === null && next !== "select";
       if (drawingToolKind(next) !== null) {
         if (toolDisagreesWithAnnotation(next, selectedKindRef.current))
           clearAnnotationRef.current();
@@ -66,8 +63,7 @@ export function useRecordingPreviewCanvasTool({
         onSelectedTrackChange?.(
           bakeCamera ? "primary" : (activeVideoTrack ?? "primary"),
         );
-      } else if (next !== "select" && next !== "marquee")
-        clearAnnotationRef.current();
+      } else if (next !== "select") clearAnnotationRef.current();
       setCanvasTool(next);
       rememberSelection(canvasToolRef.current, next, isMode);
     },
@@ -108,7 +104,6 @@ export function useRecordingPreviewCanvasTool({
       highlight: toggle("highlight"),
       image: toggle("image"),
       magnify: toggle("magnify"),
-      marquee: toggle("marquee"),
       redact: toggle("redact"),
       scene: toggle("scene"),
       select: toggle("select"),
