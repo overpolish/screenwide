@@ -120,7 +120,13 @@ pub(super) fn spawn(
 ) -> Result<AudioPlayback, String> {
   let queue = Arc::new(Mutex::new(VecDeque::new()));
   let channels = channels(sources);
-  let track_count = channels.len();
+  let sound_track = sources
+    .sound_track
+    .read()
+    .unwrap_or_else(|poisoned| poisoned.into_inner())
+    .clone();
+  let sound = sound_track.is_heard().then_some(&sound_track);
+  let track_count = channels.len() + usize::from(sound.is_some());
   let (stream, clock, config) = output_stream(
     Arc::clone(&queue),
     Mix {
@@ -128,11 +134,12 @@ pub(super) fn spawn(
       channels: channels.clone(),
       processing: Arc::clone(&sources.processing),
       selected_audio: Arc::clone(&selected_audio),
+      sound: sound.is_some(),
     },
   )?;
   let mut process = screenwide_sidecar::ffmpeg_command();
   process
-    .args(args(sources, &channels, ranges, &config))
+    .args(args(sources, &channels, sound, ranges, &config))
     .stdout(Stdio::piped())
     .stderr(Stdio::null());
   let mut process = process

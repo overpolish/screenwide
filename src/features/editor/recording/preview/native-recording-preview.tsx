@@ -248,7 +248,7 @@ export function NativeRecordingPreview(rawProps: ScrubPreviewProps) {
     selection,
     transport,
   });
-  const hasTracks = Boolean(layout) && hasTrackChoice;
+  const hasTracks = Boolean(layout) && (hasTrackChoice || band.hasSounds);
   const island = useRecordingIsland({ column, hasTracks, strip: band });
   usePublishEditorModes({
     kind,

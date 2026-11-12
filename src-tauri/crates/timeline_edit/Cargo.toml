@@ -15,6 +15,7 @@ doctest = false
 [dependencies]
 screenwide-annotations.workspace = true
 screenwide-scenes.workspace = true
+screenwide-sound-track.workspace = true
 screenwide-text.workspace = true
 screenwide-timeline.workspace = true
 serde.workspace = true

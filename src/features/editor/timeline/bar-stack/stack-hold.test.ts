@@ -3,16 +3,14 @@
 
 import { describe, expect, it } from "vitest";
 
-import { ANNOTATION_BAR_PX } from "./annotation-bar";
-import { carryScrollSpeed, heldLanes, holdStep } from "./annotation-hold";
-import { type TimelineAnnotation } from "./annotation-lane";
-import { packLanes } from "./annotation-lanes";
+import { carryScrollSpeed, heldLanes, holdStep } from "./stack-hold";
+import { BAR_PX, packLanes, type StackedBar } from "./stack-lanes";
 
 const at = (
   id: string,
   lane: number,
   [start, end]: [number, number],
-): TimelineAnnotation => ({ end, id, kind: "arrow", lane, start });
+): StackedBar => ({ end, id, lane, start });
 
 // Arrow and Highlight share the top lane; Focus sits under Highlight.
 const STACK = [
@@ -26,7 +24,7 @@ const hold = (heights: number[], span = { end: 56, start: 40 }) =>
   heights.reduce<ReturnType<typeof holdStep> | null>(
     (current, y) =>
       holdStep({
-        annotations: STACK,
+        bars: STACK,
         current,
         hold: { guide: null, isLifted: true, span, startY: 0, y },
         id: "arrow",
@@ -39,7 +37,7 @@ describe("holding a bar", () => {
   it("goes between two lanes without moving the lane above", () => {
     // Over Highlight's time, let go at the line between Highlight and Focus:
     // the bar's middle half a lane down from where it was.
-    const held = hold([ANNOTATION_BAR_PX / 4, ANNOTATION_BAR_PX / 2]);
+    const held = hold([BAR_PX / 4, BAR_PX / 2]);
     expect(held && heldLanes(STACK, held)).toEqual({
       arrow: 1,
       focus: 2,
@@ -61,11 +59,11 @@ describe("holding a bar", () => {
 });
 
 describe("carrying a bar to the edge of the lanes shown", () => {
-  const shown = 4 * ANNOTATION_BAR_PX;
+  const shown = 4 * BAR_PX;
 
   it("keeps still with the pointer in the first or last lane's middle", () => {
-    expect(carryScrollSpeed(ANNOTATION_BAR_PX / 2, shown)).toBe(0);
-    expect(carryScrollSpeed(shown - ANNOTATION_BAR_PX / 2, shown)).toBe(0);
+    expect(carryScrollSpeed(BAR_PX / 2, shown)).toBe(0);
+    expect(carryScrollSpeed(shown - BAR_PX / 2, shown)).toBe(0);
   });
 
   it("scrolls toward the edge, faster nearer it, up to a top speed", () => {

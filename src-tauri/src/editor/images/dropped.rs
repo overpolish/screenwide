@@ -76,16 +76,38 @@ fn keep(picture: DroppedPicture) -> Result<ImageArt, String> {
   }
 }
 
+/// The editor event a song or sound effect dropped on a recording's picture
+/// is announced with, for the timeline to lay it on
+/// (`use-sound-adding.ts`).
+const SOUND_DROP_EVENT: &str = "editor://sound-drop";
+
+#[derive(Clone, Serialize)]
+struct SoundDropEvent {
+  paths: Vec<PathBuf>,
+}
+
 /// Keeps `picture` and tells the `workspace` editor to place it `at` the
 /// point it landed on, or in the middle of the layer in hand where no picture
-/// was laid out. Returns at once: decoding a large picture is no work for the
-/// thread a drop arrives on.
+/// was laid out. A sound file dropped on a recording is no picture: it goes
+/// to the timeline instead. Returns at once: decoding a large picture is no
+/// work for the thread a drop arrives on.
 pub(crate) fn deliver(
   app: &AppHandle,
   workspace: &'static str,
   picture: DroppedPicture,
   at: Option<ImagePoint>,
 ) {
+  if let DroppedPicture::File(path) = &picture {
+    if workspace == "recording" && screenwide_sound_track::store::is_sound_file(path) {
+      let _ = app.emit(
+        SOUND_DROP_EVENT,
+        SoundDropEvent {
+          paths: vec![path.clone()],
+        },
+      );
+      return;
+    }
+  }
   let app = app.clone();
   tauri::async_runtime::spawn_blocking(move || match keep(picture) {
     Ok(art) => {

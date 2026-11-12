@@ -12,10 +12,7 @@ import {
 } from "../api";
 import { RecordingTimelineEdit } from "../timeline/editing/recording-timeline-edit";
 import { recordingPreviewKeyboardDeletions as keyboardDeletionsFor } from "../timeline/keyboard/recording-keyboard-timeline-api";
-import {
-  recordingTimelinePlaybackPosition,
-  recordingTimelinePlaybackRangesFrom,
-} from "../timeline/recording-timeline-playback";
+import { recordingTimelinePlaybackPosition } from "../timeline/recording-timeline-playback";
 import { SeekHandler } from "../timeline/timeline-seek";
 import {
   AudioTrackVolume,
@@ -154,10 +151,8 @@ export function useRecordingPreviewPlayer({
     keyboardEffects: keyboardEffectsRef.current,
     recordingOutput: compositionRef.current.recordingOutput,
   });
-  const { playbackRangeFrom, playbackRanges } = useRecordingPreviewRanges({
-    timelineEditRef,
-    timingRef,
-  });
+  const { playFrom, playbackRangeFrom, playbackRanges } =
+    useRecordingPreviewRanges({ timelineEditRef, timingRef });
   // The same snapshot a session starts from: the refs hold this render's
   // props by now.
   useRecordingPreviewSettings({
@@ -239,10 +234,7 @@ export function useRecordingPreviewPlayer({
           sessionIdRef.current,
           Math.round(next.sourceEndMs),
           {
-            playbackRanges: recordingTimelinePlaybackRangesFrom(
-              ranges,
-              next.sourceStartMs,
-            ),
+            ...playFrom(next.sourceStartMs),
             startPositionMs: Math.round(next.sourceStartMs),
           },
         ).catch((cause: unknown) => {
@@ -267,12 +259,7 @@ export function useRecordingPreviewPlayer({
           void playRecordingPreview(
             sessionIdRef.current,
             Math.round(ranges[index]?.sourceEndMs ?? timingRef.current[0]),
-            {
-              playbackRanges: recordingTimelinePlaybackRangesFrom(
-                playbackRanges(),
-                event.data.positionMs,
-              ),
-            },
+            playFrom(event.data.positionMs),
           ).catch((cause: unknown) => {
             wantsPlaybackRef.current = false;
             updatePlaying(false);
@@ -388,12 +375,7 @@ export function useRecordingPreviewPlayer({
         await playRecordingPreview(
           sessionIdRef.current,
           Math.round(range.sourceEndMs),
-          {
-            playbackRanges: recordingTimelinePlaybackRangesFrom(
-              playbackRanges(),
-              positionRef.current,
-            ),
-          },
+          playFrom(positionRef.current),
         );
       } catch (cause) {
         wantsPlaybackRef.current = false;
@@ -401,7 +383,7 @@ export function useRecordingPreviewPlayer({
         setError(String(cause));
       }
     })();
-  }, [isEnabled, playbackRangeFrom, playbackRanges, updatePlaying]);
+  }, [isEnabled, playbackRangeFrom, playFrom, updatePlaying]);
   const pauseSettled = useCallback(async () => {
     if (!isEnabled) return;
     resumeAfterSeekRef.current = false;

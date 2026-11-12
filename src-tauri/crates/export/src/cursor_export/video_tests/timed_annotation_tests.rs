@@ -92,6 +92,8 @@ fn exports_timed_arrows_across_a_cut_and_speed_change() {
   arrow.style.width = 16.0;
   let timeline = TimelinePlan::from_edit(
     &RecordingTimelineEdit {
+      audio_clips: Vec::new(),
+      muted_audio: Vec::new(),
       artifact_id: 1,
       next_segment_id: 2,
       keyboard_deletions: Box::default(),

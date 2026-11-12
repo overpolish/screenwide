@@ -87,6 +87,8 @@ pub(super) fn timeline(scene: serde_json::Value) -> TimelinePlan {
   let scene: RecordingSceneClip = serde_json::from_value(scene).unwrap();
   TimelinePlan::from_edit(
     &RecordingTimelineEdit {
+      audio_clips: Vec::new(),
+      muted_audio: Vec::new(),
       annotation_clips: Vec::new(),
       artifact_id: 1,
       keyboard_deletions: Box::default(),

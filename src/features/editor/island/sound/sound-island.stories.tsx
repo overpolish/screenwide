@@ -87,6 +87,7 @@ const meta = {
   ...editorIslandStoryMeta,
   args: {
     isShown: true,
+    onAddSound: fn(),
     onDownloadStudioDucking: fn(),
     onDownloadStudioSound: fn(),
     onToolChange: fn(),

@@ -42,7 +42,9 @@ fn manager() -> PreviewPlayerManager {
     camera_picking: Default::default(),
     processing: Default::default(),
     primary_kind: PrimaryRecordingKind::Screen,
+    project: "/tmp/annotation-test.screenwide".into(),
     screen_path: "/tmp/annotation-test.mov".into(),
+    sound_track: Default::default(),
   };
   let mut manager = PreviewPlayerManager {
     sources: Some(sources),

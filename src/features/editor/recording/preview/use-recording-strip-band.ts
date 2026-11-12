@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { RefObject, useEffect } from "react";
+import { RefObject, useEffect, useRef } from "react";
 
 import { withAnnotationGlides } from "../../timeline/recording-strip/recording-strip-glides";
 import { recordingStripLanes } from "../../timeline/recording-strip/recording-strip-lanes";
@@ -13,6 +13,7 @@ import {
   stripIslandItem,
 } from "../../timeline/recording-strip/strip-island-item";
 import { useRecordingStrip } from "../../timeline/recording-strip/use-recording-strip";
+import { useRecordingStripAudio } from "../../timeline/recording-strip/use-recording-strip-audio";
 import { useRecordingStripServices } from "../../timeline/recording-strip/use-recording-strip-services";
 import { type Playhead } from "../../timeline/scrub-playhead";
 import { baseOf } from "../../timeline/strip/strip-part";
@@ -123,7 +124,30 @@ export function useRecordingStripBand(
     // eslint-disable-next-line @eslint-react/exhaustive-deps -- `select` is remade each render; only a new lane choice lets go.
   }, [hasLaneChoice]);
   const stripSelection: StripSelection | null = laneChoice ?? strip.selection;
+  const audio = useRecordingStripAudio({
+    edit,
+    playhead,
+    select: strip.select,
+    selection: strip.selection,
+    steps: strip.steps,
+    time: strip.time,
+    timelineMs: timelineBlade.timelineDurationMs,
+  });
+  // A song or a sound effect changed, or left out, while the preview plays
+  // is heard at once: playback starts again where it is, with the change.
+  const heardRef = useRef([edit.audioClips, edit.mutedAudio]);
+  useEffect(() => {
+    const [clips, muted] = heardRef.current;
+    heardRef.current = [edit.audioClips, edit.mutedAudio];
+    if (
+      (clips !== edit.audioClips || muted !== edit.mutedAudio) &&
+      player.isPlaying
+    )
+      player.play();
+    // eslint-disable-next-line @eslint-react/exhaustive-deps -- only a change to what is heard plays again; `player` is remade each render.
+  }, [edit.audioClips, edit.mutedAudio]);
   const stripProps: TimelineStripProps = {
+    ...audio.strip,
     ...strip.strip({
       ...lanes.lanes,
       annotations: withAnnotationGlides(
@@ -156,17 +180,24 @@ export function useRecordingStripBand(
   // asks do to it.
   const island =
     laneChoice === null
-      ? stripIslandItem({
+      ? (audio.island ??
+        stripIslandItem({
           artifactId,
           beats: strip.beats,
           lulls: strip.lulls,
           map: strip.time.map,
           moments: services.moments,
           selection: strip.selection,
-        })
+        }))
       : null;
-  const chosen = { item: island, shortcuts: chosenShortcuts.length };
+  const chosen = {
+    item: island,
+    shortcuts: chosenShortcuts.length,
+    sounds: audio.sounds,
+  };
   usePublishStripIsland("recording", chosen, {
+    addSound: audio.addSound,
+    changeAudioClip: audio.changeAudioClip,
     cut: strip.cutChosen,
     deleteShortcuts: () => {
       if (chosenShortcuts.length === 0) return;
@@ -176,6 +207,7 @@ export function useRecordingStripBand(
     deselect: () => {
       strip.select(null);
     },
+    hearSounds: audio.hearSounds,
     playLull: (play) => {
       if (island?.kind === "lull")
         stripProps.onLullPlayChange(island.id, { kind: play });
@@ -191,6 +223,9 @@ export function useRecordingStripBand(
     },
   });
   return {
+    /** Whether songs or sound effects are laid under the recording, which
+     * the Tracks island then switches. */
+    hasSounds: audio.sounds.length > 0,
     island,
     select: strip.select,
     selection: strip.selection,

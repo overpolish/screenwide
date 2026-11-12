@@ -25,7 +25,9 @@ import { TranscriptRequest } from "./tool-panel-transcript";
 import type { ToolPanelExportPatch } from "./tool-panel-export";
 import type { TextStyle } from "../../../bindings/TextStyle";
 import type { AnnotationPinAction } from "../island/annotation/annotation-pin";
+import type { AudioClipChange } from "../island/audio-clip/audio-clip-island";
 import type { CropAspect } from "../island/crop-aspect-choice";
+import type { SoundAddition } from "../island/sound/sound-library-list";
 
 /**
  * What a tool panel can ask for. Each one is an editor handler that already
@@ -75,6 +77,9 @@ export type ToolPanelHandlers = {
   onAnnotationZoomChange?: (zoom: number) => void;
   /** Delete every chosen annotation, in one edit. */
   onAnnotationsDelete?: () => void;
+  /** Change the song or sound effect chosen on the strip, delete it or give
+   * it another sound. */
+  onAudioClipChange?: (change: AudioClipChange) => void;
   /** Bring the selected microphone to a steady loudness, or play it as
    * recorded. */
   onAutoVolumeChange?: (enabled: boolean) => void;
@@ -188,6 +193,9 @@ export type ToolPanelHandlers = {
   onSelectionRecenter?: () => void;
   /** Turn the selected layer in depth, a field at a time. */
   onSelectionRotationChange?: (rotation: Partial<SceneRotation>) => void;
+  /** Add a song or sound effect to the timeline, from the library or a
+   * file. */
+  onSoundAdd?: (addition: SoundAddition) => void;
   /** Cut what is chosen on the strip, and its time with it. */
   onStripItemCut?: () => void;
   /** Let go of what is chosen on the strip. */

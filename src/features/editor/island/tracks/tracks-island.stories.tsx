@@ -70,3 +70,26 @@ export const LastTrack: Story = {
     ],
   },
 };
+
+// Songs and sound effects laid under the recording, the effects left out;
+// the last recorded track still cannot be switched off.
+export const WithSoundTrack: Story = {
+  args: {
+    tracks: [
+      { id: "primary", isEnabled: true, label: "Screen" },
+      { id: "audio:1", isEnabled: false, label: "Microphone" },
+      {
+        id: "sounds:music",
+        isEnabled: true,
+        isLaidUnder: true,
+        label: "Music",
+      },
+      {
+        id: "sounds:effect",
+        isEnabled: false,
+        isLaidUnder: true,
+        label: "Sound effects",
+      },
+    ],
+  },
+};

@@ -53,15 +53,18 @@ pub fn export_edit(
   }
 }
 
-/// The plan an export or its compare follows, made of [`export_edit`].
+/// The plan an export or its compare follows, made of [`export_edit`], with
+/// the files its songs and sound effects play found.
 pub fn export_plan(
   sent: Option<&RecordingTimelineEdit>,
   project: &Path,
   artifact_id: u64,
   duration_ms: u64,
 ) -> Option<TimelinePlan> {
-  export_edit(sent, project, artifact_id, duration_ms)
-    .and_then(|edit| TimelinePlan::from_edit(&edit, duration_ms))
+  let mut plan = export_edit(sent, project, artifact_id, duration_ms)
+    .and_then(|edit| TimelinePlan::from_edit(&edit, duration_ms))?;
+  super::sound_library::find_sounds(&mut plan, project);
+  Some(plan)
 }
 
 /// How long the project whose manifest is `project` plays once edited: its

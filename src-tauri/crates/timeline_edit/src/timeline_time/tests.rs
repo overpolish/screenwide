@@ -40,6 +40,8 @@ fn segment(id: u64, source_start: f64, source_end: f64) -> RecordingTimelineSegm
 /// A 10 s recording: `segments`, with clips in recording time.
 fn edit(segments: Vec<RecordingTimelineSegment>) -> RecordingTimelineEdit {
   RecordingTimelineEdit {
+    audio_clips: Vec::new(),
+    muted_audio: Vec::new(),
     annotation_clips: vec![annotation("a", 3_000, 7_000)],
     artifact_id: 1,
     keyboard_deletions: Box::default(),

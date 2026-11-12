@@ -62,6 +62,7 @@ screenwide-scenes = { path = "crates/scenes" }
 screenwide-settings-preview = { path = "crates/settings_preview" }
 screenwide-shader-layout = { path = "crates/shader_layout" }
 screenwide-sidecar = { path = "crates/sidecar" }
+screenwide-sound-track = { path = "crates/sound_track" }
 screenwide-speech = { path = "crates/speech" }
 screenwide-system-keys = { path = "crates/system_keys" }
 screenwide-text = { path = "crates/text" }
@@ -224,6 +225,7 @@ screenwide-scenes.workspace = true
 screenwide-settings-preview.workspace = true
 screenwide-shader-layout.workspace = true
 screenwide-sidecar.workspace = true
+screenwide-sound-track.workspace = true
 screenwide-speech.workspace = true
 screenwide-system-keys.workspace = true
 screenwide-text.workspace = true

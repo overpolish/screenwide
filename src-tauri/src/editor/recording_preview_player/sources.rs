@@ -54,7 +54,11 @@ pub(super) struct PlayerSources {
   /// The files made of the microphone tracks, and which of them is heard.
   pub(super) processing: Arc<RwLock<super::PreviewProcessing>>,
   pub(super) primary_kind: PrimaryRecordingKind,
+  /// The project's manifest, whose copies of the sounds the clips play.
+  pub(super) project: PathBuf,
   pub(super) screen_path: PathBuf,
+  /// The songs and sound effects laid out for the playback under way.
+  pub(super) sound_track: Arc<RwLock<super::sound_track::PreviewSoundTrack>>,
 }
 
 impl PlayerSources {
@@ -281,6 +285,8 @@ pub(super) fn sources_with_surface(
     preview_surface,
     processing: Arc::new(RwLock::new(processing)),
     primary_kind,
+    project,
     screen_path: path,
+    sound_track: Arc::default(),
   })
 }

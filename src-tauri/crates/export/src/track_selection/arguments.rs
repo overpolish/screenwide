@@ -3,8 +3,6 @@
 
 //! The FFmpeg arguments that put a [`TrackSelection`] into a file.
 
-use std::path::Path;
-
 use super::{AudioEncoding, AudioLayout, TrackSelection};
 
 impl TrackSelection {
@@ -120,21 +118,4 @@ impl TrackSelection {
       }
     }
   }
-}
-
-/// `path` written as a value inside a filter graph. It is escaped twice, as
-/// FFmpeg reads it twice: once as the graph, then as the filter's options.
-pub(super) fn filter_path(path: &Path) -> String {
-  let escape = |text: &str, special: &[char]| {
-    let mut escaped = String::with_capacity(text.len());
-    for character in text.chars() {
-      if special.contains(&character) {
-        escaped.push('\\');
-      }
-      escaped.push(character);
-    }
-    escaped
-  };
-  let option = escape(&path.to_string_lossy(), &['\\', '\'', ':']);
-  escape(&option, &['\\', '\'', '[', ']', ',', ';'])
 }

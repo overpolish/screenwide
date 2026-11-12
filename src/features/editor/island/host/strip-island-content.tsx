@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import { audioClipIsland } from "../audio-clip/audio-clip-island";
 import { beatIsland } from "../beat/beat-island";
 import { lullIsland } from "../lull/lull-island";
 import { momentIsland } from "../moment/moment-island";
@@ -11,6 +12,7 @@ import type { ToolPanelPatch } from "../../tools/tool-panel-patch";
 import type { ToolPanelStripItem } from "../../tools/tool-panel-strip";
 import type { EditorIslandContent } from "../editor-island";
 import type { EditorIslandKind } from "./editor-island-kind";
+import type { AudioClipPreviewState } from "./use-audio-clip-preview";
 import type { MomentNoteState } from "./use-moment-note";
 
 // The islands of what is chosen on the strip, each from what the editor
@@ -20,6 +22,7 @@ import type { MomentNoteState } from "./use-moment-note";
 // their cut. Every cut is the strip's own, as Delete makes it.
 
 type Inputs = {
+  audioClip: AudioClipPreviewState;
   change: (values: ToolPanelPatch) => void;
   /** The island asked for, which the published choice must still be. */
   island: EditorIslandKind;
@@ -28,6 +31,7 @@ type Inputs = {
 };
 
 export function stripIslandContent({
+  audioClip,
   change,
   island,
   item,
@@ -38,6 +42,14 @@ export function stripIslandContent({
     change({ cutStripItem: true });
   };
   switch (item.kind) {
+    case "audioClip":
+      return audioClipIsland({
+        ...item,
+        ...audioClip,
+        onChange: (audioClip) => {
+          change({ audioClip });
+        },
+      });
     case "beat":
       return beatIsland({ beat: item.beat, id: item.id, onCut });
     case "lull":

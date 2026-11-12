@@ -10,7 +10,10 @@ export type StripItem = { id: string; kind: "beat" | "lull" };
  * gathered with Shift, shortcuts, one or gathered, or a range the range
  * tool drew, in recorded seconds. */
 export type StripSelection =
-  | { id: string; kind: "annotation" | "beat" | "lull" | "scene" }
+  | {
+      id: string;
+      kind: "annotation" | "audioClip" | "beat" | "lull" | "scene";
+    }
   | { ids: string[]; kind: "shortcuts" }
   | { items: StripItem[]; kind: "items" }
   | (Span & { kind: "range" });

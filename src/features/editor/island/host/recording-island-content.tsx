@@ -80,9 +80,13 @@ export function soundIslandContent({
   change,
   snapshot,
 }: Inputs): EditorIslandContent | null {
-  const tracks = snapshot.soundTracks ?? [];
-  if (tracks.length === 0) return null;
+  // A recording with no sound of its own still has the library to add from.
+  const tracks = snapshot.soundTracks;
+  if (!tracks) return null;
   return soundIsland({
+    onAddSound: (soundAddition) => {
+      change({ soundAddition });
+    },
     onDownloadStudioDucking: () => {
       change({ downloadStudioDucking: true });
     },

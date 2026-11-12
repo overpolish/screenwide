@@ -11,12 +11,17 @@ export const stripPanelHandlers = (
   workspace: EditorKind,
 ): Pick<
   ToolPanelHandlers,
+  | "onAudioClipChange"
   | "onChosenShortcutsDelete"
   | "onLullPlayChange"
   | "onLullTrimToBreath"
+  | "onSoundAdd"
   | "onStripItemCut"
   | "onStripItemDeselect"
 > => ({
+  onAudioClipChange: (change) => {
+    stripIslandControls(workspace)?.changeAudioClip(change);
+  },
   onChosenShortcutsDelete: () => {
     stripIslandControls(workspace)?.deleteShortcuts();
   },
@@ -25,6 +30,9 @@ export const stripPanelHandlers = (
   },
   onLullTrimToBreath: () => {
     stripIslandControls(workspace)?.trimLullToBreath();
+  },
+  onSoundAdd: (addition) => {
+    stripIslandControls(workspace)?.addSound(addition);
   },
   onStripItemCut: () => {
     stripIslandControls(workspace)?.cut();

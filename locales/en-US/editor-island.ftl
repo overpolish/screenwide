@@ -33,11 +33,44 @@ editor-island-sound = Sound
 editor-island-sound-volume = { $track } volume
 # Puts a track back at the level it was recorded at. $track is the track's name, such as Microphone.
 editor-island-sound-reset-volume = Reset { $track } volume
+# The library of songs and sound effects added to any recording, under the tracks on the Sound island.
+editor-island-sound-library = Music and sound effects
+editor-island-sound-library-empty = Songs and sound effects you add are kept here, for any recording.
+# Adds the song or sound effect chosen in the library to the timeline.
+editor-island-sound-add = Add
+# Chooses songs or sound effects from files and adds them to the timeline and the library.
+editor-island-sound-add-from-file = Add from a file
+# Takes the chosen song or sound effect out of the library; projects that use it keep their own copy.
+editor-island-sound-remove = Remove from the library
+editor-island-sound-confirm-remove = Confirm removing
+
+## A song or sound effect on the strip, laid under the recording
+
+editor-island-audio-volume = Volume
+# Puts the clip back at the level it plays at by default: under the voice for a song, a little under it for a sound effect.
+editor-island-audio-reset-volume = Reset volume
+# The clip's stretch over its sound's waveform, dragged to choose where in the sound the clip starts playing.
+editor-island-audio-plays-from = Plays from
+# Always under the clip's waveform, whose window is dragged to choose where the clip starts. $key is the key held, ⌘ on a Mac and Ctrl on Windows.
+editor-island-audio-fine-hint = Hold { $key } while dragging to move it finely.
+# Plays the clip from where it starts in its sound, in the island.
+editor-island-audio-preview = Play the clip
+editor-island-audio-stop-preview = Stop playing the clip
+# Whether the clip quietens while the microphone speaks, so the voice is heard over it.
+editor-island-audio-make-way = Make way for voice
+# Puts another song or sound effect in the clip's place, chosen from a file.
+editor-island-audio-replace = Replace
+editor-island-audio-delete = Delete the clip
+editor-island-audio-confirm-delete = Confirm deleting
 
 ## The recording's tracks, each held in the export and the preview or left out
 
 # The island the transport's Tracks button brings out: a switch for each recorded track.
 editor-island-tracks = Tracks
+# The switch for every song laid under the recording, which keeps them in the export and the preview or leaves them out.
+editor-island-tracks-music = Music
+# The switch for every sound effect laid under the recording.
+editor-island-tracks-effects = Sound effects
 
 ## The recording's shortcuts, every one at once
 

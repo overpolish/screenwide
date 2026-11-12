@@ -5631,6 +5631,7 @@ dependencies = [
  "screenwide-settings-preview",
  "screenwide-shader-layout",
  "screenwide-sidecar",
+ "screenwide-sound-track",
  "screenwide-speech",
  "screenwide-system-keys",
  "screenwide-text",
@@ -5815,6 +5816,7 @@ dependencies = [
  "screenwide-scenes",
  "screenwide-shader-layout",
  "screenwide-sidecar",
+ "screenwide-sound-track",
  "screenwide-text",
  "screenwide-timeline",
  "screenwide-timeline-edit",
@@ -6056,6 +6058,16 @@ name = "screenwide-sidecar"
 version = "1.0.3"
 
 [[package]]
+name = "screenwide-sound-track"
+version = "1.0.3"
+dependencies = [
+ "screenwide-sidecar",
+ "serde",
+ "serde_json",
+ "ts-rs",
+]
+
+[[package]]
 name = "screenwide-speech"
 version = "1.0.3"
 dependencies = [
@@ -6105,6 +6117,7 @@ version = "1.0.3"
 dependencies = [
  "screenwide-annotations",
  "screenwide-scenes",
+ "screenwide-sound-track",
  "screenwide-text",
  "screenwide-timeline",
  "serde",

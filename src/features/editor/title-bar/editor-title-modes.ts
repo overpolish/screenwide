@@ -46,8 +46,7 @@ export function usePublishEditorModes({
   useLayoutEffect(() => {
     changeRef.current = { onModeChange, tracks };
   });
-  const { audio, camera, cursor, keyboard, microphone, picture, transcript } =
-    parts;
+  const { camera, cursor, keyboard, microphone, picture, transcript } = parts;
   const hasTracks = tracks !== null;
   const isTracksOpen = tracks?.isOpen ?? false;
   useEffect(() => {
@@ -59,7 +58,6 @@ export function usePublishEditorModes({
           changeRef.current.onModeChange(next);
         },
         parts: {
-          audio,
           camera,
           cursor,
           keyboard,
@@ -78,7 +76,6 @@ export function usePublishEditorModes({
       },
     });
   }, [
-    audio,
     camera,
     cursor,
     hasTracks,

@@ -10,12 +10,15 @@ import {
   RecordingVideoTrackId,
 } from "../../types";
 import { type ToolPanelHandlers } from "../tool-panel-handlers";
-import { type ToolPanelTrack } from "../tool-panel-strip";
+import { type ToolPanelSounds, type ToolPanelTrack } from "../tool-panel-strip";
 
-// The recorded tracks the Tracks island switches, read from what the editor
-// holds in the export: the screen or camera the recording was made of, a
-// camera beside it, then each audio stream. Something has to be left to
-// export, so the last track still in is never left out.
+import type { AudioClipKind } from "../../../../bindings/AudioClipKind";
+
+// The tracks the Tracks island switches, read from what the editor holds
+// in the export: the screen or camera the recording was made of, a camera
+// beside it, each audio stream, then the songs and the sound effects laid
+// under the recording, where there are any. Something recorded has to be
+// left to export, so the last recorded track still in is never left out.
 
 /** Which audio streams the export holds, and how to change which tracks
  * it holds. */
@@ -29,12 +32,20 @@ export type TrackInclusion = {
 export type EditorTracksInputs = TrackInclusion & {
   artifact: EditorArtifact | null;
   enabledVideoTracks: RecordingVideoTrackId[];
+  /** The songs and the sound effects on the strip. */
+  sounds: ToolPanelSounds[];
+  /** Hears the songs or the sound effects, or leaves them out. */
+  onSoundsHeard?: (kind: AudioClipKind, isHeard: boolean) => void;
 };
+
+/** The track id the songs or the sound effects are switched by. */
+const soundsId = (kind: AudioClipKind) => `sounds:${kind}`;
 
 export function editorTracks({
   artifact,
   enabledStreamIndices,
   enabledVideoTracks,
+  sounds,
 }: EditorTracksInputs): ToolPanelTrack[] {
   if (artifact?.kind !== "recording") return [];
   const audio =
@@ -63,6 +74,15 @@ export function editorTracks({
       isEnabled: audio.includes(track.streamIndex),
       label: track.label || t("editor-island-audio"),
     })),
+    ...sounds.map(({ isHeard, kind }) => ({
+      id: soundsId(kind),
+      isEnabled: isHeard,
+      isLaidUnder: true,
+      label:
+        kind === "music"
+          ? t("editor-island-tracks-music")
+          : t("editor-island-tracks-effects"),
+    })),
   ];
 }
 
@@ -72,8 +92,16 @@ export const tracksPanelHandlers = (
   inputs: EditorTracksInputs,
 ): Pick<ToolPanelHandlers, "onTrackEnabledChange"> => ({
   onTrackEnabledChange: (trackId, isEnabled) => {
+    const sounds = inputs.sounds.find(({ kind }) => soundsId(kind) === trackId);
+    if (sounds) {
+      inputs.onSoundsHeard?.(sounds.kind, isEnabled);
+      return;
+    }
     const enabled = editorTracks(inputs)
-      .filter((track) => track.isEnabled && track.id !== trackId)
+      .filter(
+        (track) =>
+          track.isEnabled && !track.isLaidUnder && track.id !== trackId,
+      )
       .map(({ id }) => id as RecordingTrackId);
     if (!isEnabled && enabled.length === 0) return;
     const next = isEnabled

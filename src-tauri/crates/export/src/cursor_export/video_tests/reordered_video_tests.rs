@@ -28,6 +28,8 @@ fn exports_reordered_segments_in_the_order_they_play() {
   };
   let timeline = TimelinePlan::from_edit(
     &RecordingTimelineEdit {
+      audio_clips: Vec::new(),
+      muted_audio: Vec::new(),
       annotation_clips: Vec::new(),
       artifact_id: 1,
       keyboard_deletions: Box::default(),
@@ -103,6 +105,8 @@ fn exports_the_stretch_after_a_long_cut() {
   };
   let timeline = TimelinePlan::from_edit(
     &RecordingTimelineEdit {
+      audio_clips: Vec::new(),
+      muted_audio: Vec::new(),
       annotation_clips: Vec::new(),
       artifact_id: 1,
       keyboard_deletions: Box::default(),

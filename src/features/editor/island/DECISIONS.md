@@ -183,7 +183,7 @@ A mode is in the title bar only while it has something to act on in what the exp
 | Keyboard | key presses were recorded and the screen is in | no key presses; the screen switched off; a camera-only recording |
 | Captions | a picture is in, the microphone is in, and the transcript is not made-with-nothing-heard | no picture; no microphone or it switched off; transcribed and no words heard |
 | Transcript | the microphone is in, and the transcript is not made-with-nothing-heard | no microphone or it switched off; transcribed and no words heard |
-| Sound | any audio track is in the export | no audio; every audio track switched off |
+| Sound | always: it holds the songs and sound effects and their library, besides any audio track's volume and the microphone's tools | never |
 | Tracks | the recording has two tracks or more to switch (picture, camera, each audio stream) | one track: there is nothing to choose, and the last track in is never left out |
 
 - **The transcript still to make shows its modes:** with no model, while transcribing, after a failure, or before it is begun, Captions and Transcript are offered, since the Script island is where the model is fetched and the progress shown. Once made with no words, both go; there is no island saying nothing was heard.
@@ -240,9 +240,9 @@ The recording editor has the tool column beside its picture and its modes in the
 
 ## The strip's islands and the Tracks island
 
-- **Where a strip item's island stands:** a beat, lull, moment or range chosen on the strip brings out its island at the picture's foot, centred over the item's x (kept over the picture), following the strip as it scrolls. The chosen item's element carries `data-strip-island`; where several carry it (gathered items, or one item's parts either side of a jump) the island centres over them all.
+- **Where a strip item's island stands:** a beat, lull, moment, range, song or sound effect chosen on the strip brings out its island at the picture's foot, centred over the item's x (kept over the picture), following the strip as it scrolls. The chosen item's element carries `data-strip-island`; where several carry it (gathered items, or one item's parts either side of a jump) the island centres over them all.
 - **One island at a time:** `recording/preview/use-recording-island.ts` decides between the island of the column's tool or the title bar's mode, the strip item's and the Tracks island; whichever was taken up last is out, the others put away. Escape lets go of the strip choice (the strip's own deselect) or the Tracks island.
-- **What travels:** the preview publishes the strip choice through `strip-island-channel.ts` (`ToolPanelSnapshot.stripItem`, and `chosenShortcuts` for the shortcut lane) and the asks come back as `cutStripItem`, `lullPlay`, `trimLullToBreath`, `deleteChosenShortcuts`; tracks as `ToolPanelSnapshot.tracks` and `trackEnabled`.
+- **What travels:** the preview publishes the strip choice through `strip-island-channel.ts` (`ToolPanelSnapshot.stripItem`, and `chosenShortcuts` for the shortcut lane) and the asks come back as `cutStripItem`, `lullPlay`, `trimLullToBreath`, `deleteChosenShortcuts`, and `audioClip` for a song or sound effect (its volume, where in its sound it plays from, loop, making way for the voice, deleting it, or giving it another sound); tracks as `ToolPanelSnapshot.tracks` and `trackEnabled`, the songs and the sound effects among them as switches of their own, which the preview's edit holds (`mutedAudio`) and the channel's `hearSounds` changes.
 - **Several beats and lulls gathered with Shift** bring out the strip group's island (`stripGroup`, `island/strip-group/`), as the Marquee island does for annotations: how many, and Cut, asking twice, which cuts them all as Delete does. One alone shows its own island.
 - **Voice notes play in the island window** (`host/use-moment-note.ts`), and the Transcripts model is downloaded from there, not through a patch: neither is editor state.
 - **Tracks island** opens from the title bar's Tracks button and stands in the picture's top end corner, as every other island does.

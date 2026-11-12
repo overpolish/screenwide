@@ -93,7 +93,9 @@ pub fn run() {
     .manage(shortcuts::ShortcutSettingsState::default())
     .manage(text_recognition::TextRecognitionState::default())
     .manage(tooltip_window::TooltipState::default())
-    .invoke_handler(invoke_handler::invoke_handler())
+    .invoke_handler(editor::sound_library::with_commands(
+      invoke_handler::invoke_handler(),
+    ))
     .setup(startup::setup)
     .build(context)
     .expect("error while running tauri application");

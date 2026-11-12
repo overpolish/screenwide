@@ -9,6 +9,8 @@ dialog-choose-folder = Choose a folder
 dialog-choose-background = Choose a background picture
 dialog-choose-image = Choose an image
 dialog-pictures-filter = Pictures
+dialog-choose-sounds = Choose music or sound effects
+dialog-sounds-filter = Sounds
 # Importing takes a template's zip, or the template.json in its folder.
 dialog-import-template = Import a template
 dialog-export-template = Export template

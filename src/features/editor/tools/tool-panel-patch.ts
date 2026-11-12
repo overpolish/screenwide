@@ -26,7 +26,9 @@ import { TranscriptRequest } from "./tool-panel-transcript";
 import type { ToolPanelSnapshot } from "./tool-panel-store";
 import type { TextStyle } from "../../../bindings/TextStyle";
 import type { AnnotationPinAction } from "../island/annotation/annotation-pin";
+import type { AudioClipChange } from "../island/audio-clip/audio-clip-island";
 import type { CropAspect } from "../island/crop-aspect-choice";
+import type { SoundAddition } from "../island/sound/sound-library-list";
 
 /** The settings a panel may ask the editor to change. */
 export type ToolPanelPatch = Partial<
@@ -77,6 +79,9 @@ export type ToolPanelPatch = Partial<
    * zoom is the lens's own shape rather than its dress, and the next lens is
    * drawn at it too. */
   annotationZoom?: number;
+  /** Change the song or sound effect chosen on the strip, delete it or give
+   * it another sound. */
+  audioClip?: AudioClipChange;
   /** Bring the selected microphone to a steady loudness, or play it as
    * recorded. */
   autoVolume?: boolean;
@@ -214,6 +219,9 @@ export type ToolPanelPatch = Partial<
   /** Lay the chosen redaction's blocks out again, or draw the chosen
    * hand-drawn highlight's stroke again, from a fresh seed. */
   shuffleAnnotation?: true;
+  /** Add a song or sound effect to the timeline, from the library or a
+   * file. */
+  soundAddition?: SoundAddition;
   /** Move the singing in the selected microphone's system audio out of its
    * way while it speaks, or let the system audio make way as a whole. */
   studioDucking?: boolean;

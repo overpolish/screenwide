@@ -1,20 +1,19 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { ANNOTATION_BAR_PX } from "./annotation-bar";
 import {
+  BAR_PX,
   fitsIn,
   laneCountOf,
   type LaneSlot,
   packLanes,
   restack,
+  type StackedBar,
   steadySlot,
-} from "./annotation-lanes";
-import { type BarHold } from "./use-annotation-bar-drag";
+} from "./stack-lanes";
+import { type BarHold } from "./use-stack-bar-drag";
 
-import type { TimelineAnnotation } from "./annotation-lane";
-
-// A bar held on the lane, and where every bar goes if it is let go now.
+// A bar held on the stack, and where every bar goes if it is let go now.
 // Where the held bar lands is measured against the lanes as they stood when
 // it was picked up, never against the lanes it is reshaping as it moves, so
 // the slots under the pointer stay put; and a slot, once taken, is kept
@@ -26,7 +25,7 @@ import type { TimelineAnnotation } from "./annotation-lane";
  * scroll them, inside it, and reaches full speed, past it: half a lane, so
  * the pointer held in the middle of the first or last lane shown keeps
  * still, and the margin past the lanes leaves room to speed up. */
-const CARRY_EDGE_PX = ANNOTATION_BAR_PX / 2;
+const CARRY_EDGE_PX = BAR_PX / 2;
 /** How fast, in px a millisecond, a carried bar scrolls the lanes at its
  * fastest. */
 const CARRY_SCROLL_MAX = 0.5;
@@ -45,25 +44,25 @@ export type Held = BarHold & {
 /** The bars with the lanes they had when `held` was picked up, the held
  * one where it is now going in time. */
 const frozen = (
-  annotations: TimelineAnnotation[],
+  bars: StackedBar[],
   held: Pick<Held, "fromLanes" | "id" | "span">,
 ) =>
-  annotations.map((annotation) => ({
-    ...annotation,
-    ...(annotation.id === held.id ? held.span : null),
-    lane: held.fromLanes[annotation.id] ?? 0,
+  bars.map((bar) => ({
+    ...bar,
+    ...(bar.id === held.id ? held.span : null),
+    lane: held.fromLanes[bar.id] ?? 0,
   }));
 
 /** The next step of holding the bar `id`, from the step before, if it was
  * the same bar, and the lanes the strip shows now. */
 export function holdStep({
-  annotations,
+  bars,
   current,
   hold,
   id,
   shown,
 }: {
-  annotations: TimelineAnnotation[];
+  bars: StackedBar[];
   current: Held | null;
   hold: BarHold;
   id: string;
@@ -72,16 +71,16 @@ export function holdStep({
   const before = current?.id === id ? current : null;
   const fromLanes = before ? before.fromLanes : shown;
   const fromLane = fromLanes[id] ?? 0;
-  const base = frozen(annotations, { fromLanes, id, span: hold.span });
+  const base = frozen(bars, { fromLanes, id, span: hold.span });
   const moved = hold.y - hold.startY;
   if (hold.isLifted) {
     const count = Math.max(1, laneCountOf(base));
     const liftedTop = Math.min(
-      Math.max(fromLane * ANNOTATION_BAR_PX + moved, -ANNOTATION_BAR_PX / 2),
-      (count - 0.5) * ANNOTATION_BAR_PX,
+      Math.max(fromLane * BAR_PX + moved, -BAR_PX / 2),
+      (count - 0.5) * BAR_PX,
     );
     const slot = steadySlot(base, id, {
-      centre: liftedTop / ANNOTATION_BAR_PX + 0.5,
+      centre: liftedTop / BAR_PX + 0.5,
       // Picked up, it starts in its own lane, so the first few pixels of a
       // drag never take it out.
       previous: before?.slot ?? { isNew: false, lane: fromLane },
@@ -100,8 +99,8 @@ export function holdStep({
 }
 
 /** Every bar's lane if the held one is let go now. */
-export function heldLanes(annotations: TimelineAnnotation[], held: Held) {
-  const base = frozen(annotations, held);
+export function heldLanes(bars: StackedBar[], held: Held) {
+  const base = frozen(bars, held);
   return held.slot ? restack(base, held.id, held.slot) : packLanes(base);
 }
 

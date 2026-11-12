@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { type Snap } from "../annotation-lane/use-annotation-bar-drag";
+import { type Snap } from "../bar-stack/use-stack-bar-drag";
 import { type Span, type TimelineScale } from "../timeline-scale";
 
 import { baseOf } from "./strip-part";

@@ -3,6 +3,7 @@
 
 use cpal::StreamConfig;
 
+use super::super::sound_track::PreviewSoundTrack;
 use super::super::{PlayerSources, RecordingPreviewPlaybackRange};
 use super::Channel;
 
@@ -46,12 +47,25 @@ fn cut_fades(range: RecordingPreviewPlaybackRange, index: usize, count: usize) -
   fades
 }
 
+/// The FFmpeg command that decodes `channels` over `ranges`, then `sound`,
+/// the songs and sound effects mixed from where playback starts, as one
+/// channel more. Those that make way listen to the microphone as recorded.
 pub(super) fn args(
   sources: &PlayerSources,
   channels: &[Channel],
+  sound: Option<&PreviewSoundTrack>,
   ranges: &[RecordingPreviewPlaybackRange],
   config: &StreamConfig,
 ) -> Vec<String> {
+  // The microphone as recorded, which the clips that make way listen to,
+  // split from its channel only where the clips are heard.
+  let voice_track = sound.and_then(PreviewSoundTrack::voice).and_then(|stream| {
+    channels.iter().position(|channel| {
+      channel.stream_index == stream && channel.processed.is_none() && channel.leveling.is_none()
+    })
+  });
+  let sound = sound.and_then(|sound| sound.filter(voice_track.map(|_| "[soundvoice]")));
+  let voice_track = voice_track.filter(|_| sound.is_some());
   // Every range is trimmed from one decode of the source, which therefore
   // starts at the range earliest in it: on a reordered timeline that need
   // not be the first one played.
@@ -138,20 +152,38 @@ pub(super) fn args(
       ));
       range_inputs.push_str(&format!("[track{track_position}range{range_index}]"));
     }
+    let heard = if voice_track == Some(track_position) {
+      format!("[track{track_position}heard]")
+    } else {
+      format!("[track{track_position}]")
+    };
     filter.push_str(&format!(
-      "{range_inputs}concat=n={}:v=0:a=1,aresample={},aformat=sample_fmts=flt:channel_layouts=mono,apad=whole_dur={retained}[track{track_position}];",
+      "{range_inputs}concat=n={}:v=0:a=1,aresample={},aformat=sample_fmts=flt:channel_layouts=mono,apad=whole_dur={retained}{heard};",
       ranges.len(), config.sample_rate,
     ));
+    if voice_track == Some(track_position) {
+      filter.push_str(&format!(
+        "{heard}asplit=2[track{track_position}][soundvoice];"
+      ));
+    }
     merged_inputs.push_str(&format!("[track{track_position}]"));
   }
-  let output = if labels.len() == 1 {
+  // The songs and sound effects, already mixed and timed from where playback
+  // starts on the timeline, are one more channel after the tracks.
+  let mut count = labels.len();
+  if let Some(sound) = &sound {
+    filter.push_str(&format!(
+      "{sound};[soundmix]aresample={},aformat=sample_fmts=flt:channel_layouts=mono,apad=whole_dur={retained}[track{count}];",
+      config.sample_rate,
+    ));
+    merged_inputs.push_str(&format!("[track{count}]"));
+    count += 1;
+  }
+  let output = if count == 1 {
     filter.pop();
     "[track0]".to_owned()
   } else {
-    filter.push_str(&format!(
-      "{merged_inputs}amerge=inputs={}[tracks]",
-      labels.len()
-    ));
+    filter.push_str(&format!("{merged_inputs}amerge=inputs={count}[tracks]"));
     "[tracks]".to_owned()
   };
   args.extend([
@@ -161,7 +193,7 @@ pub(super) fn args(
     output,
     "-vn".to_owned(),
     "-ac".to_owned(),
-    labels.len().to_string(),
+    count.to_string(),
     "-ar".to_owned(),
     config.sample_rate.to_string(),
     "-t".to_owned(),

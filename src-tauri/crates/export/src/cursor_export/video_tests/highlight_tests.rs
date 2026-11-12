@@ -422,6 +422,8 @@ fn an_exported_video_carries_the_highlight_on_both_planes() {
   let destination = directory.join("highlighted.mp4");
   let timeline = TimelinePlan::from_edit(
     &RecordingTimelineEdit {
+      audio_clips: Vec::new(),
+      muted_audio: Vec::new(),
       artifact_id: 1,
       next_segment_id: 1,
       keyboard_deletions: Box::default(),

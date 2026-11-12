@@ -2,13 +2,14 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 //! A recording's edit: the segments its timeline keeps and their speeds, the
-//! annotation and scene clips laid over it, where the camera's background is
-//! taken away, the captions asked of its transcript, and what Remove
-//! silences, the Transcript panel and keyboard deletions cut. A project file
-//! keeps it; the plan an export or the preview follows is made from it.
-//! Annotation and scene clips and background ranges are timed on the
-//! timeline; the edits that change the segments re-time them as they are
-//! made.
+//! annotation and scene clips laid over it, the songs and sound effects
+//! laid under it, where the camera's background is taken away, the captions
+//! asked of its transcript, and what Remove silences, the Transcript panel
+//! and keyboard deletions cut. A project file keeps it; the plan an export
+//! or the preview follows is made from it. Annotation, scene and audio clips
+//! and background ranges are timed on the timeline; the edits that change
+//! the segments re-time the annotation and scene clips as they are made,
+//! and leave the audio clips where they are.
 
 use screenwide_timeline::{output_at_us, source_to_output_us, TimelineRange};
 mod validation;
@@ -25,9 +26,9 @@ use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
 /// Annotations are drawn in document order, segments play in list order,
-/// which need not be source order, and annotation and scene clips are times
-/// on the timeline.
-pub const FORMAT_VERSION: u16 = 4;
+/// which need not be source order, annotation and scene clips are times on
+/// the timeline, and audio clips may be laid under it.
+pub const FORMAT_VERSION: u16 = 5;
 /// Version 2 edits always kept segments in source order, which later
 /// versions still read the same way.
 const OLDEST_READABLE_VERSION: u16 = 2;
@@ -35,6 +36,7 @@ const OLDEST_READABLE_VERSION: u16 = 2;
 /// rather than recording times.
 const TIMELINE_CLIPS_VERSION: u16 = 4;
 
+mod sound;
 mod timeline_time;
 
 const MAX_SEGMENTS: usize = 100_000;
@@ -86,6 +88,18 @@ pub struct RecordingTimelineEdit {
     optional
   )]
   pub annotation_clips: Vec<screenwide_annotations::timing::RecordingAnnotationClip>,
+  /// Songs and sound effects, timed on the timeline; see
+  /// [`screenwide_sound_track`].
+  #[serde(default, skip_serializing_if = "Vec::is_empty")]
+  #[ts(
+    optional,
+    as = "Option<Vec<screenwide_sound_track::RecordingAudioClip>>"
+  )]
+  pub audio_clips: Vec<screenwide_sound_track::RecordingAudioClip>,
+  /// The kinds of audio clip left out of the preview and the export.
+  #[serde(default, skip_serializing_if = "Vec::is_empty")]
+  #[ts(optional, as = "Option<Vec<screenwide_sound_track::AudioClipKind>>")]
+  pub muted_audio: Vec<screenwide_sound_track::AudioClipKind>,
   #[serde(flatten)]
   pub keyboard_deletions: Box<RecordingTimelineKeyboardDeletions>,
   /// Sorted by start, never overlapping; see [`super::scenes`].
@@ -126,6 +140,9 @@ pub struct TimelinePlan {
   deleted_keyboard_shortcut_ranges: Vec<DeletedKeyboardShortcutRange>,
   /// Read by the export, which arranges each frame as they have it.
   pub scene_clips: Vec<screenwide_scenes::RecordingSceneClip>,
+  /// The songs and sound effects, with their files once the app has found
+  /// them ([`Self::find_sounds`]).
+  sound_track: screenwide_sound_track::SoundTrack,
   duration_us: u64,
   ranges: Vec<TimelineRange>,
 }
@@ -175,10 +192,16 @@ impl TimelinePlan {
       ),
       duration_us,
       scene_clips: edit.scene_clips.clone(),
+      sound_track: screenwide_sound_track::SoundTrack {
+        clips: edit.audio_clips.clone(),
+        muted: edit.muted_audio.clone(),
+        ..Default::default()
+      },
       ranges,
     };
     (!plan.annotation_clips.is_empty()
       || !plan.scene_clips.is_empty()
+      || !plan.sound_track.clips.is_empty()
       || !plan.is_identity(source_duration_us)
       || !plan.deleted_keyboard_shortcut_ids.is_empty()
       || !plan.deleted_keyboard_shortcut_ranges.is_empty())

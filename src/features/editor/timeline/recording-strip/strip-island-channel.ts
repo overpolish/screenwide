@@ -3,8 +3,15 @@
 
 import { useEffect, useRef, useSyncExternalStore } from "react";
 
-import { type ToolPanelStripItem } from "../../tools/tool-panel-strip";
+import {
+  type ToolPanelSounds,
+  type ToolPanelStripItem,
+} from "../../tools/tool-panel-strip";
 import { type EditorKind } from "../../types";
+
+import type { AudioClipKind } from "../../../../bindings/AudioClipKind";
+import type { AudioClipChange } from "../../island/audio-clip/audio-clip-island";
+import type { SoundAddition } from "../../island/sound/sound-library-list";
 
 /**
  * What is chosen on the recording's strip, and what its island can do to
@@ -16,12 +23,21 @@ import { type EditorKind } from "../../types";
  * says how many and deletes them.
  */
 export type StripIslandControls = {
+  /** Adds a song or sound effect to the timeline, from the library or a
+   * file, as the Sound island asks. */
+  addSound: (addition: SoundAddition) => void;
+  /** Changes the song or sound effect chosen, deletes it or gives it
+   * another sound. */
+  changeAudioClip: (change: AudioClipChange) => void;
   /** Cuts what is chosen, and its time with it. */
   cut: () => void;
   /** Deletes the shortcuts chosen in their lane. */
   deleteShortcuts: () => void;
   /** Lets go of what is chosen, as ⌘D does. */
   deselect: () => void;
+  /** Hears the songs or the sound effects, or leaves them out, as the
+   * Tracks island asks. */
+  hearSounds: (kind: AudioClipKind, isHeard: boolean) => void;
   /** Squeezes the chosen lull with the rest, or keeps it as recorded. */
   playLull: (play: "keep" | "squeeze") => void;
   /** Trims the chosen lull to a breath. */
@@ -34,13 +50,19 @@ export type StripIslandChoice = {
   item: ToolPanelStripItem | null;
   /** How many shortcuts are chosen in their lane. */
   shortcuts: number;
+  /** The songs and the sound effects on the strip, kind by kind. */
+  sounds: ToolPanelSounds[];
 };
 
 type PublishedStripItem = StripIslandChoice & {
   controls: StripIslandControls;
 };
 
-const NOTHING_CHOSEN: StripIslandChoice = { item: null, shortcuts: 0 };
+const NOTHING_CHOSEN: StripIslandChoice = {
+  item: null,
+  shortcuts: 0,
+  sounds: [],
+};
 
 const workspaces = new Map<EditorKind, PublishedStripItem>();
 const listeners = new Set<() => void>();
@@ -74,6 +96,12 @@ export function usePublishStripIsland(
       // Read through the ref when called, so the bridge reaches the
       // preview's current edit.
       controls: {
+        addSound: (addition) => {
+          controlsRef.current.addSound(addition);
+        },
+        changeAudioClip: (change) => {
+          controlsRef.current.changeAudioClip(change);
+        },
         cut: () => {
           controlsRef.current.cut();
         },
@@ -82,6 +110,9 @@ export function usePublishStripIsland(
         },
         deselect: () => {
           controlsRef.current.deselect();
+        },
+        hearSounds: (kind, isHeard) => {
+          controlsRef.current.hearSounds(kind, isHeard);
         },
         playLull: (play) => {
           controlsRef.current.playLull(play);

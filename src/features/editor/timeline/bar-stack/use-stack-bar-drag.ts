@@ -6,7 +6,7 @@ import { flushSync } from "react-dom";
 
 import { type Span, type TimelineScale } from "../timeline-scale";
 
-// What holding an annotation's bar does. A press chooses it and takes hold
+// What holding a bar in a stack does. A press chooses it and takes hold
 // at once. Dragged, the bar moves in time and, where it sits in a lane, up
 // and down through the lanes too, which the lane follows (`onHold`); a
 // chosen bar's end moves one side in time only. Up and down is measured in
@@ -23,7 +23,7 @@ import { type Span, type TimelineScale } from "../timeline-scale";
 const DRAG_PX = 3;
 
 /** What a press takes hold of: the whole bar, or a chosen bar's end. */
-export type AnnotationBarPart = "body" | "end" | "start";
+export type BarPart = "body" | "end" | "start";
 
 /** Where a dragged end settles: on something within reach, or where it was
  * let go. */
@@ -55,7 +55,7 @@ type Hold = Span & {
   /** Where the pointer last was, on screen, and the keys then held, for a
    * key or a scroll to apply to between moves. */
   last: { keys: DragKeys; x: number; y: number };
-  part: AnnotationBarPart;
+  part: BarPart;
   release: () => void;
   /** Where it was pressed: `x` on screen, `y` in the lanes. */
   x: number;
@@ -80,8 +80,9 @@ export type BarHold = {
 const laneY = (clientY: number, bar: Element) =>
   clientY - (bar.parentElement?.getBoundingClientRect().top ?? 0);
 
-export function useAnnotationBarDrag({
+export function useStackBarDrag({
   isSelected,
+  movesInTimeOnly = false,
   onHold,
   onRetime,
   onSelect,
@@ -93,11 +94,16 @@ export function useAnnotationBarDrag({
   /** Told each move of a drag, and null when it is let go; without it,
    * the bar only moves in time. */
   onHold: ((hold: BarHold | null) => void) | undefined;
-  onRetime: (start: number, end: number) => void;
+  /** Told the bar's new span, and what of it was held: the whole bar or
+   * one end. */
+  onRetime: (start: number, end: number, part: BarPart) => void;
   onSelect: () => void;
   scale: TimelineScale;
   snap: Snap | undefined;
   span: Span;
+  /** Never carried up and down, where its lanes only keep what overlaps
+   * apart and its order means nothing. */
+  movesInTimeOnly?: boolean;
 }) {
   const holdRef = useRef<Hold | null>(null);
 
@@ -110,9 +116,9 @@ export function useAnnotationBarDrag({
   };
   // Held on a snapped edge, the pointer keeps moving while the bar stays
   // put; only a change is told.
-  const retime = (start: number, end: number) => {
+  const retime = (start: number, end: number, part: BarPart) => {
     if (start === span.start && end === span.end) return;
-    onRetime(start, end);
+    onRetime(start, end, part);
   };
 
   /** Moves the held bar for the pointer at `x`, `y`, as the keys held say. */
@@ -128,7 +134,7 @@ export function useAnnotationBarDrag({
     held.isDragging = true;
     const pointer = secondsAt(x, held.bar);
     const lock =
-      held.part !== "body"
+      held.part !== "body" || movesInTimeOnly
         ? "time"
         : keys.isShift
           ? Math.abs(dx) >= Math.abs(dy)
@@ -146,7 +152,7 @@ export function useAnnotationBarDrag({
       startY: held.y,
       y: pointerY,
     });
-    retime(next.start, next.end);
+    retime(next.start, next.end, held.part);
   };
   // A key pressed or let go, or the lanes or the strip scrolled, between
   // moves applies through the latest render's handlers, as a move would.
@@ -158,7 +164,7 @@ export function useAnnotationBarDrag({
   const grab = (
     event: React.PointerEvent<HTMLElement>,
     bar: Element,
-    part: AnnotationBarPart,
+    part: BarPart,
   ) => {
     event.currentTarget.setPointerCapture(event.pointerId);
     if (!isSelected) onSelect();

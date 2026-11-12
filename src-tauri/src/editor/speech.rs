@@ -7,7 +7,7 @@
 
 pub(crate) mod commands;
 pub(crate) mod marks;
-mod studio_ducking;
+pub(crate) mod studio_ducking;
 pub(crate) mod transcript;
 
 use screenwide_export::track_selection;

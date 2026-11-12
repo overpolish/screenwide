@@ -28,6 +28,7 @@ import {
 } from "./recording-island-content";
 import { sceneIslandContent } from "./scene-island-content";
 import { stripIslandContent } from "./strip-island-content";
+import { useAudioClipPreview } from "./use-audio-clip-preview";
 import { useMomentNote } from "./use-moment-note";
 import { useScriptIsland } from "./use-script-island";
 
@@ -57,6 +58,7 @@ export function useSnapshotIsland(
   const [sceneGroup, setSceneGroup] = useState<SceneToolGroup>("layout");
   const script = useScriptIsland({ change, island, snapshot, workspace });
   const moment = useMomentNote(snapshot.stripItem);
+  const audioClip = useAudioClipPreview(snapshot.stripItem);
   // The Export island is what locks the editor, so it alone stays out. Out
   // or done, it holds the island's place itself (`useEditorIslandWindow`);
   // tucked away while it exports, every other island stays away too. That
@@ -70,12 +72,14 @@ export function useSnapshotIsland(
   const inputs = { change, snapshot };
   const corner = (): EditorIslandContent | null => {
     switch (island) {
+      case "audioClip":
       case "beat":
       case "lull":
       case "moment":
       case "range":
       case "stripGroup":
         return stripIslandContent({
+          audioClip,
           change,
           island,
           item: snapshot.stripItem,

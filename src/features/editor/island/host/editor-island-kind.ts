@@ -18,6 +18,7 @@ import type { EditorKind } from "../../types";
 
 export type EditorIslandKind =
   | "annotation"
+  | "audioClip"
   | "beat"
   | "camera"
   | "captions"
@@ -38,6 +39,7 @@ export type EditorIslandKind =
 
 /** The islands of something chosen on the strip, which stand over it. */
 const STRIP_ISLANDS: readonly EditorIslandKind[] = [
+  "audioClip",
   "beat",
   "lull",
   "moment",

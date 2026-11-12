@@ -23,7 +23,6 @@ import { EditorTitleBar } from "./editor-title-bar";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 
 const EVERY_PART: CaptureParts = {
-  audio: true,
   camera: true,
   cursor: true,
   keyboard: true,
@@ -121,12 +120,10 @@ const meta = {
         "keyboard",
         "microphone",
         "transcript",
-        "audio",
       ],
     },
   },
   render: ({
-    audio,
     camera,
     cursor,
     keyboard,
@@ -143,7 +140,6 @@ const meta = {
           kind="recording"
           onModeChange={onModeChange}
           parts={{
-            audio,
             camera,
             cursor,
             keyboard,

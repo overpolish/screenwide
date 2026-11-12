@@ -3,6 +3,7 @@
 
 use super::*;
 use crate::editor::recording_preview_player::layout::PreviewPaneKind;
+use crate::editor::recording_preview_player::sound_track::PreviewSoundTrack;
 use crate::editor::{AudioTrackKind, RecordingAudioTrack};
 use screenwide_project::PrimaryRecordingKind;
 
@@ -17,6 +18,7 @@ fn decodes_tracks_into_independent_pcm_channels() {
   let rendered = args(
     &sources,
     &channels(&sources),
+    None,
     &[RecordingPreviewPlaybackRange {
       source_start_ms: 250,
       source_end_ms: 1_000,
@@ -45,6 +47,7 @@ fn concatenates_retained_ranges_before_opening_the_output_stream() {
   let rendered = args(
     &sources,
     &channels(&sources),
+    None,
     &[
       RecordingPreviewPlaybackRange {
         source_start_ms: 250,
@@ -84,6 +87,7 @@ fn trims_reordered_ranges_from_the_earliest_source_start() {
   let rendered = args(
     &sources,
     &channels(&sources),
+    None,
     &[
       RecordingPreviewPlaybackRange {
         source_start_ms: 750,
@@ -117,6 +121,7 @@ fn applies_atempo_and_scales_audio_duration() {
   let rendered = args(
     &sources,
     &channels(&sources),
+    None,
     &[RecordingPreviewPlaybackRange {
       source_start_ms: 0,
       source_end_ms: 1_000,
@@ -151,10 +156,117 @@ fn scales_cut_fades_by_the_range_playback_rate() {
       playback_rate: 2.0,
     },
   ];
-  let rendered = args(&sources, &channels(&sources), &ranges, &config).join(" ");
+  let rendered = args(&sources, &channels(&sources), None, &ranges, &config).join(" ");
 
   assert!(rendered.contains("afade=t=out:st=0.122:d=0.003"));
   assert!(rendered.contains("apad=whole_dur=0.375"));
+}
+
+/// The preview's command for two recorded tracks and a song placed from
+/// 0.2 s on, run through FFmpeg: one channel more, as long as the tracks.
+#[test]
+fn the_sound_track_plays_as_one_channel_more_padded_to_the_tracks() {
+  let folder =
+    std::env::temp_dir().join(format!("screenwide-preview-sound-{}", std::process::id()));
+  let _ = std::fs::remove_dir_all(&folder);
+  std::fs::create_dir_all(&folder).unwrap();
+  let made = |args: &[&str], path: &std::path::Path| {
+    let status = screenwide_sidecar::ffmpeg_command()
+      .args(["-hide_banner", "-loglevel", "error", "-nostdin", "-y"])
+      .args(args)
+      .arg(path)
+      .status()
+      .unwrap();
+    assert!(status.success());
+  };
+  let mut sources = test_sources();
+  sources.screen_path = folder.join("recording.mov");
+  let tone = |frequency: u32| format!("sine=frequency={frequency}:duration=1");
+  made(
+    &[
+      "-f",
+      "lavfi",
+      "-i",
+      &tone(220),
+      "-f",
+      "lavfi",
+      "-i",
+      &tone(330),
+      "-map",
+      "0:a",
+      "-map",
+      "1:a",
+    ],
+    &sources.screen_path,
+  );
+  let song = folder.join("song.wav");
+  made(&["-f", "lavfi", "-i", &tone(880)], &song);
+  let pieces = [screenwide_sound_track::Piece {
+    path: song,
+    file_start_ms: 0,
+    start_ms: 200,
+    end_ms: 1_000,
+    fade_in: screenwide_sound_track::pieces::Fade {
+      ms: 0,
+      curve: screenwide_sound_track::pieces::Curve::Linear,
+    },
+    fade_out: screenwide_sound_track::pieces::Fade {
+      ms: 0,
+      curve: screenwide_sound_track::pieces::Curve::Linear,
+    },
+    gain_db: 0.0,
+    // Making way, it listens to the microphone, stream 1, split from its
+    // channel.
+    makes_way: true,
+    singing: None,
+  }];
+  let sound = PreviewSoundTrack::laid_out(pieces.to_vec(), (0, 1_000), Some(1));
+  let config = StreamConfig {
+    channels: 2,
+    sample_rate: 8_000,
+    buffer_size: cpal::BufferSize::Default,
+  };
+  let ranges = [RecordingPreviewPlaybackRange {
+    source_start_ms: 0,
+    source_end_ms: 500,
+    playback_rate: 1.0,
+  }];
+  let output = screenwide_sidecar::ffmpeg_command()
+    .args(args(
+      &sources,
+      &channels(&sources),
+      Some(&sound),
+      &ranges,
+      &config,
+    ))
+    .output()
+    .unwrap();
+  assert!(
+    output.status.success(),
+    "{}",
+    String::from_utf8_lossy(&output.stderr)
+  );
+  // Three channels of 0.5 s at 8 kHz, as 32-bit floats.
+  let samples: Vec<f32> = output
+    .stdout
+    .as_chunks::<4>()
+    .0
+    .iter()
+    .map(|chunk| f32::from_le_bytes(*chunk))
+    .collect();
+  assert_eq!(samples.len(), 3 * 4_000);
+  let song_channel = |from: usize, to: usize| {
+    samples[from * 3..to * 3]
+      .iter()
+      .skip(2)
+      .step_by(3)
+      .fold(0.0_f32, |most, sample| most.max(sample.abs()))
+  };
+  assert!(song_channel(0, 1_500) < 1e-3);
+  // Heard under the microphone, which speaks throughout, so it has come
+  // down, but it is there.
+  assert!(song_channel(1_700, 4_000) > 0.01);
+  let _ = std::fs::remove_dir_all(&folder);
 }
 
 pub(super) fn test_sources() -> PlayerSources {
@@ -198,7 +310,9 @@ pub(super) fn test_sources() -> PlayerSources {
     camera_effects: Default::default(),
     camera_picking: Default::default(),
     primary_kind: PrimaryRecordingKind::Screen,
+    project: "/tmp/recording.screenwide".into(),
     screen_path: "/tmp/recording.mov".into(),
+    sound_track: Default::default(),
     processing: Default::default(),
     video_muted: Default::default(),
   }

@@ -57,8 +57,10 @@ pub(super) fn keep(
   .map_err(|error| format!("Could not keep the Studio ducking choice: {error}"))
 }
 
-/// The separation model, where it is downloaded.
-pub(super) fn model(app: &AppHandle) -> Option<PathBuf> {
+/// The separation model, where it is downloaded: the system audio's
+/// singing is separated with it, and the singing in the songs laid under a
+/// recording (`sound_library::separate_singing`).
+pub(crate) fn model(app: &AppHandle) -> Option<PathBuf> {
   let model = catalogue::for_purpose(Purpose::StudioDucking)?;
   if !models::is_downloaded(app, model) {
     return None;

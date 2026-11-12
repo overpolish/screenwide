@@ -72,6 +72,8 @@ fn exported(name: &str, camera: Vec<Annotation>) -> impl Fn(u32, u32) -> [u8; 3]
   movie(&camera_path, "red", (CAMERA.2, CAMERA.3));
   let timeline = TimelinePlan::from_edit(
     &RecordingTimelineEdit {
+      audio_clips: Vec::new(),
+      muted_audio: Vec::new(),
       artifact_id: 1,
       next_segment_id: 1,
       keyboard_deletions: Box::default(),

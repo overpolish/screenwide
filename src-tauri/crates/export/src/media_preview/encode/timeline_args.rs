@@ -15,6 +15,44 @@ use screenwide_timeline::TimelineRange;
 use screenwide_timeline_edit::TimelinePlan;
 
 const CUT_FADE_US: u64 = 3_000;
+/// Where the Mixdown's peaks are held once songs and sound effects are
+/// summed with the recorded tracks, which could otherwise clip.
+const MIX_LIMITER: &str = "alimiter=limit=-1dB:attack=5:release=50:level=0:latency=1";
+
+/// The timeline's songs and sound effects mixed into `[sound]`, if any are
+/// heard. Those that make way listen to the microphone as exported, which
+/// `outputs` hold one track each of, in `selection`'s order: it is split, so
+/// it is still exported as it was.
+fn sound_track_filter(
+  timeline: &TimelinePlan,
+  selection: &TrackSelection,
+  (filters, outputs): (&mut Vec<String>, &mut [String]),
+) -> Option<String> {
+  let sound_track = timeline.sound_track();
+  if sound_track.clips.is_empty() {
+    return None;
+  }
+  let timeline_ms = timeline.duration_ms();
+  let pieces = sound_track.pieces(timeline_ms);
+  let voice = sound_track
+    .voice
+    .filter(|_| screenwide_sound_track::graph::makes_way(&pieces))
+    .and_then(|stream| {
+      selection
+        .stream_indices()
+        .iter()
+        .position(|each| *each == stream)
+    })
+    .map(|track| {
+      filters.push(format!(
+        "{}asplit=2[at{track}out][soundvoice]",
+        outputs[track]
+      ));
+      outputs[track] = format!("[at{track}out]");
+      "[soundvoice]"
+    });
+  screenwide_sound_track::graph::filter(&pieces, (0, timeline_ms), "sound", "", voice)
+}
 
 fn seconds(microseconds: u64) -> String {
   format!("{:.6}", microseconds as f64 / 1_000_000.0)
@@ -170,19 +208,38 @@ fn append_audio_filters(
     ));
     outputs.push(format!("[at{track}]"));
   }
-  if layout == AudioLayout::Mixdown && outputs.len() > 1 {
-    filters.push(format!(
-      "{}amix=inputs={}:normalize=0[aout]",
-      outputs.concat(),
-      outputs.len()
-    ));
-    args.extend([OsString::from("-map"), OsString::from("[aout]")]);
-  } else {
-    for output in outputs {
-      args.extend([OsString::from("-map"), OsString::from(output)]);
+  let sound = sound_track_filter(timeline, selection, (filters, &mut outputs));
+  if let Some(graph) = &sound {
+    filters.push(graph.clone());
+  }
+  let sound_output = sound.as_ref().map(|_| "[sound]".to_owned());
+  match layout {
+    AudioLayout::Mixdown if outputs.len() + usize::from(sound.is_some()) > 1 => {
+      let inputs: String = outputs
+        .iter()
+        .chain(&sound_output)
+        .map(String::as_str)
+        .collect();
+      let count = outputs.len() + usize::from(sound.is_some());
+      let limiter = if sound.is_some() {
+        format!(",{MIX_LIMITER}")
+      } else {
+        String::new()
+      };
+      filters.push(format!(
+        "{inputs}amix=inputs={count}:normalize=0{limiter}[aout]"
+      ));
+      args.extend([OsString::from("-map"), OsString::from("[aout]")]);
+    }
+    _ => {
+      // Kept apart, the songs and sound effects are one stream of their own
+      // after the recorded tracks.
+      for output in outputs.into_iter().chain(sound_output) {
+        args.extend([OsString::from("-map"), OsString::from(output)]);
+      }
     }
   }
-  if !selection.stream_indices().is_empty() {
+  if !selection.stream_indices().is_empty() || sound.is_some() {
     args.extend(encoding.codec_args(false).into_iter().map(OsString::from));
   }
 }

@@ -16,7 +16,10 @@ import {
 } from "../recording/scenes/recording-scene-channel";
 import { useTranscriptTools } from "../recording/transcript/use-transcript-tools";
 import { useRestoreRecordingKeyboardShortcuts } from "../timeline/keyboard/use-restore-recording-keyboard-shortcuts";
-import { useStripIslandChoice } from "../timeline/recording-strip/strip-island-channel";
+import {
+  stripIslandControls,
+  useStripIslandChoice,
+} from "../timeline/recording-strip/strip-island-channel";
 import { recordingAudioStreamIndex, RecordingTrackId } from "../types";
 
 import { useCropAspectStore } from "./crop/crop-aspect-store";
@@ -33,6 +36,8 @@ import { useLayerSelectionTarget } from "./selection/use-layer-selection-target"
 import { useToolPanelBridge } from "./tool-panel-bridge";
 import { DEFAULT_TOOL_PANEL_SNAPSHOT } from "./tool-panel-store";
 import { editorTracks } from "./tracks/editor-tracks";
+
+import type { AudioClipKind } from "../../../bindings/AudioClipKind";
 
 /**
  * What the editor shows the tool panels, and what it lets them change.
@@ -153,7 +158,15 @@ export function useEditorToolPanels({
   const annotation = useAnnotationSelection(workspace);
   const annotationCount = useAnnotationSelectionCount(workspace);
   const strip = useStripIslandChoice(workspace);
-  const tracks = { ...trackInclusion, artifact, enabledVideoTracks };
+  const tracks = {
+    ...trackInclusion,
+    artifact,
+    enabledVideoTracks,
+    onSoundsHeard: (kind: AudioClipKind, isHeard: boolean) => {
+      stripIslandControls(workspace)?.hearSounds(kind, isHeard);
+    },
+    sounds: strip.sounds,
+  };
   // Restoring every shortcut is an edit to the timeline the editor already
   // owns, so the panel asks for it here rather than through the preview.
   const shortcuts = useRestoreRecordingKeyboardShortcuts(

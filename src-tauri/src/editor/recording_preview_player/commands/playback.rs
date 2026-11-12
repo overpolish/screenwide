@@ -9,6 +9,7 @@ pub async fn play_recording_preview(
   playback_end_ms: Option<u64>,
   playback_ranges: Option<Vec<RecordingPreviewPlaybackRange>>,
   session_id: u64,
+  sound_track: Option<sound_track::PreviewSoundTrackRequest>,
   start_position_ms: Option<u64>,
 ) -> Result<(), String> {
   let worker = {
@@ -23,6 +24,15 @@ pub async fn play_recording_preview(
       .map_or(0, |sources| sources.duration_ms);
     let playback_ranges = playback_ranges.unwrap_or_default();
     validate_playback_ranges(&playback_ranges, duration_ms)?;
+    if let Some(sources) = manager.sources.as_ref() {
+      let laid_out = sound_track.map_or_else(Default::default, |request| {
+        sound_track::PreviewSoundTrack::new(request, &sources.project, &sources.audio_tracks)
+      });
+      *sources
+        .sound_track
+        .write()
+        .unwrap_or_else(|poisoned| poisoned.into_inner()) = laid_out;
+    }
     manager.is_playing = true;
     manager.playback_end_ms = playback_end_ms;
     manager.playback_ranges = playback_ranges;

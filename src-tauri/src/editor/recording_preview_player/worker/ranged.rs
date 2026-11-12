@@ -77,7 +77,14 @@ fn start(
   ranges: &[RecordingPreviewPlaybackRange],
 ) -> Option<(VideoPlayback, Option<AudioPlayback>)> {
   let first_video = video.prepare(ranges[0]);
-  let audio = if context.sources.audio_tracks.is_empty() {
+  let heard = !context.sources.audio_tracks.is_empty()
+    || context
+      .sources
+      .sound_track
+      .read()
+      .unwrap_or_else(|poisoned| poisoned.into_inner())
+      .is_heard();
+  let audio = if !heard {
     Ok(None)
   } else {
     audio::spawn(

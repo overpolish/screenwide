@@ -144,6 +144,57 @@ export const AnnotationSelected: Story = {
   args: { selection: { id: "text", kind: "annotation" } },
 };
 
+// Two songs laid over each other, which crossfade there, the second
+// looping, and two sound effects that overlap, each in a lane of its own;
+// the second song is chosen.
+export const SoundTrack: Story = {
+  args: {
+    audio: {
+      clips: [
+        {
+          end: 44,
+          id: "intro",
+          isLooped: false,
+          kind: "music",
+          lane: 0,
+          start: 0,
+          title: "Habanera from Carmen (Georges Bizet) - Golden Hour Strings",
+        },
+        {
+          end: 90,
+          id: "theme",
+          isLooped: true,
+          kind: "music",
+          lane: 1,
+          start: 40,
+          title: "Long Theme",
+        },
+        {
+          end: 14,
+          id: "whoosh",
+          isLooped: false,
+          kind: "effect",
+          lane: 1,
+          start: 12,
+          title: "Whoosh",
+        },
+        {
+          end: 15,
+          id: "click",
+          isLooped: false,
+          kind: "effect",
+          lane: 2,
+          start: 13,
+          title: "Click",
+        },
+      ],
+      onRestack: fn(),
+      onRetime: fn(),
+    },
+    selection: { id: "theme", kind: "audioClip" },
+  },
+};
+
 // A stretch drawn across a lull and into the beat after it.
 export const RangeSelected: Story = {
   args: {

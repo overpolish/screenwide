@@ -188,6 +188,22 @@ if (!isNativePreview) {
             pending: [],
             pictures: [],
           };
+        // A library of three sounds, none carried by the story's project.
+        case "get_sound_library":
+          return [
+            ["Morning Light", 184_000],
+            ["Long Theme", 236_000],
+            ["Whoosh", 1_200],
+          ].map(([title, durationMs], index) => ({
+            addedMs: 0,
+            durationMs,
+            levels: [],
+            loudnessLufs: -18,
+            name: `${String(index).repeat(32)}.mp3`,
+            title,
+          }));
+        case "get_project_sounds":
+          return [];
         // No transcription model set up, as on a fresh install.
         case "get_transcription_state":
           return { language: "system", models: [], systemLanguage: "en" };

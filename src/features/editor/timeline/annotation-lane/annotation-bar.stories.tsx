@@ -8,13 +8,10 @@ import { featureStage } from "../../../../storybook/feature-story-stage";
 import { StoryGrid, StoryGridRow } from "../../../../storybook/story-grid";
 import { useRestingAction } from "../../../../storybook/use-resting-action";
 import { ANNOTATION_TOOLS } from "../../tools/tool-registry";
+import { BAR_PX } from "../bar-stack/stack-lanes";
 import { recordedTime, timelineScale } from "../timeline-scale";
 
-import {
-  ANNOTATION_BAR_PX,
-  AnnotationBar,
-  type AnnotationBarProps,
-} from "./annotation-bar";
+import { AnnotationBar, type AnnotationBarProps } from "./annotation-bar";
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 
@@ -30,7 +27,7 @@ function Strip({
   const width = seconds * PX_PER_S;
   return (
     <div className="px-6" dir="ltr">
-      <div className="relative" style={{ height: ANNOTATION_BAR_PX, width }}>
+      <div className="relative" style={{ height: BAR_PX, width }}>
         <AnnotationBar
           {...props}
           scale={timelineScale(recordedTime(seconds))}
@@ -63,8 +60,8 @@ function LiveBar(props: Omit<AnnotationBarProps, "scale" | "width">) {
     <Strip
       {...props}
       isSelected={isSelected}
-      onRetime={(start, end) => {
-        logRetime(start, end);
+      onRetime={(start, end, part) => {
+        logRetime(start, end, part);
         setSpan({ end, start });
       }}
       onSelect={() => {
@@ -79,12 +76,15 @@ function LiveBar(props: Omit<AnnotationBarProps, "scale" | "width">) {
 
 const meta = {
   args: {
+    isLifted: false,
     isSelected: false,
     kind: "arrow",
+    onHold: fn(),
     onRetime: fn(),
     onSelect: fn(),
     scale: timelineScale(recordedTime(STRIP_S)),
     span: { end: 27, start: 13 },
+    top: 0,
     width: STRIP_S * PX_PER_S,
   },
   component: AnnotationBar,

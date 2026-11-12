@@ -7,6 +7,7 @@ import { motionDurationCss } from "../../../../lib/motion";
 import { cn } from "../../../../lib/styling";
 import { ScrollArea } from "../../../../primitives/scroll-area/scroll-area";
 import { AnnotationLane } from "../annotation-lane/annotation-lane";
+import { AudioStack } from "../audio-lane/audio-stack";
 import { CaptionLane } from "../caption-lane/caption-lane";
 import { Minimap } from "../minimap/minimap";
 import { CutBlade } from "../range-cut/cut-blade";
@@ -17,19 +18,15 @@ import { at, timelineScale } from "../timeline-scale";
 
 import { SnapGuide } from "./snap-guide";
 import { StripBeats } from "./strip-beats";
+import { stripChoice } from "./strip-choice";
 import { GLIDE, GlideCue } from "./strip-glide";
 import { StripLane } from "./strip-lane";
-import { baseOf } from "./strip-part";
 import { StripScrubBand } from "./strip-scrub-band";
-import {
-  isPlayheadOutside,
-  selectionSpan,
-  type StripSelection,
-} from "./strip-selection";
 import { stripSnap } from "./strip-snap";
 import { splitParts } from "./strip-split";
 import { takenOut, takenTotal } from "./taken-out";
 import { type TimelineStripProps } from "./timeline-strip-props";
+import { useAudioDrop } from "./use-audio-drop";
 import { useRangeCut } from "./use-range-cut";
 import { useStripReorder } from "./use-strip-reorder";
 import { useStripReshape } from "./use-strip-reshape";
@@ -41,9 +38,10 @@ import { useWidth } from "./use-width";
 // the recording in view; the minimap under it shows the whole. Along its
 // top are the scenes, under them the annotations and the shortcuts pressed,
 // then what was done, each beat as the screen at that moment with the
-// lulls between as springs, and under the beats the voice's captions. The
-// playhead crosses them all; past the end, a band accounts for what was taken
-// out, so the strip stays as long as the recording, then the squeeze grip.
+// lulls between as springs, under the beats the voice's captions, and
+// under them the songs and sound effects. The playhead crosses them all;
+// past the end, a band accounts for what was taken out, so the strip stays
+// as long as the recording, then the squeeze grip.
 //
 // Pressing a part selects it, and moves the playhead to its start only
 // where the playhead is outside it, so the picture shows what was chosen;
@@ -61,26 +59,8 @@ export function TimelineStrip(props: TimelineStripProps) {
   const [sceneGuide, setSceneGuide] = useState<number | null>(null);
   const share = (seconds: number, isEnd?: boolean) =>
     map.toPlayed(seconds, isEnd) / Math.max(map.duration, 1e-6);
-  const parts = {
-    annotation: props.annotations.map((each) => ({ id: each.id, span: each })),
-    beat: props.beats,
-    lull: props.lulls,
-    scene: props.scenes.map((each) => ({ id: each.id, span: each })),
-  };
-  const chosen = selectionSpan(selection, parts);
+  const { choose, chosen, chosenId } = stripChoice(props);
   const taken = takenOut(props.cuts, map.duration, props.recorded);
-  /** Chooses `next`, bringing the playhead to where it lands where it
-   * stands outside it; what Shift gathers leaves the playhead alone, as
-   * does a drawn range, whose drag brought the playhead along its edge. */
-  const choose = (next: StripSelection | null, isGathered = false) => {
-    props.onSelect(next);
-    if (isGathered || next === null) return;
-    if (next.kind === "shortcuts" || next.kind === "range") return;
-    const span = selectionSpan(next, parts);
-    if (!span) return;
-    const at = map.toRecorded(props.playhead.ratio() * map.duration);
-    if (isPlayheadOutside(at, span)) props.onSeek(span.landsAt ?? span.start);
-  };
   const view = useStripView({
     duration: map.duration,
     focus:
@@ -142,8 +122,13 @@ export function TimelineStrip(props: TimelineStripProps) {
     scale,
     width,
   });
-  const chosenId = (kind: "annotation" | "scene") =>
-    selection?.kind === kind ? baseOf(selection.id) : undefined;
+  const dropsAt = useAudioDrop({
+    onDrop: props.onAudioDrop,
+    scale: shown,
+    trackRef: scrub.trackRef,
+  });
+  /** Where a scene's end snapped, or sounds carried over the strip land. */
+  const guide = sceneGuide ?? (dropsAt && shown.map.toRecorded(dropsAt));
   const chosenShortcuts = selection?.kind === "shortcuts" ? selection.ids : [];
 
   return (
@@ -258,6 +243,20 @@ export function TimelineStrip(props: TimelineStripProps) {
                     />
                   ) : null}
                 </StripLane>
+                <StripLane>
+                  {props.audio?.clips.length ? (
+                    <AudioStack
+                      {...props.audio}
+                      onSelect={(id) => {
+                        choose({ id, kind: "audioClip" });
+                      }}
+                      scale={shown}
+                      selected={chosenId("audioClip")}
+                      snap={snap}
+                      width={width}
+                    />
+                  ) : null}
+                </StripLane>
               </div>
               {/* Over every lane; carried, its row draws it (`RangeBand`). */}
               {shownRange && reorder.lifted === null ? (
@@ -267,10 +266,10 @@ export function TimelineStrip(props: TimelineStripProps) {
                   span={shownRange}
                 />
               ) : null}
-              {sceneGuide === null ? null : (
+              {guide === null ? null : (
                 <SnapGuide
                   className="top-8 bottom-0"
-                  style={at(shown, sceneGuide)}
+                  style={at(shown, guide)}
                 />
               )}
               {range.bladeX === null ? null : <CutBlade x={range.bladeX} />}

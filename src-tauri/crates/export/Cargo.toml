@@ -30,6 +30,7 @@ screenwide-records.workspace = true
 screenwide-scenes.workspace = true
 screenwide-shader-layout.workspace = true
 screenwide-sidecar.workspace = true
+screenwide-sound-track.workspace = true
 screenwide-text.workspace = true
 screenwide-timeline.workspace = true
 screenwide-timeline-edit.workspace = true

@@ -5,7 +5,9 @@
 
 use tauri::{AppHandle, Manager};
 
-use crate::editor::{camera_effects, project_look, timeline_edit, EditorArtifact, EditorState};
+use crate::editor::{
+  camera_effects, project_look, sound_library, timeline_edit, EditorArtifact, EditorState,
+};
 
 /// Saves the recording's timeline edit into its project, off the main
 /// thread: writing the project takes milliseconds, and the main thread draws
@@ -39,9 +41,12 @@ pub async fn set_recording_timeline_edit(
     (project.clone(), *duration_ms)
   };
   tauri::async_runtime::spawn_blocking(move || {
-    // The pictures the edit's images show go into the project with it, so
-    // it shows them on another computer.
+    // The pictures the edit's images show and the sounds its clips play go
+    // into the project with it, so it shows and plays them on another
+    // computer.
     project_look::carry_pictures(&project, &edit.annotation_clips);
+    sound_library::carry(&project, &edit.audio_clips);
+    sound_library::separate_singing(&app, &project, &edit.audio_clips);
     let before = timeline_edit::for_project(&project, artifact_id, duration_ms);
     let ranges = edit.camera_background_ranges.clone();
     let segments = edit.segments.clone();

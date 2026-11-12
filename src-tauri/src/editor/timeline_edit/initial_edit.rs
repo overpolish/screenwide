@@ -36,6 +36,8 @@ pub(in crate::editor) fn persist_initial_edit(
 /// at full rate.
 pub(in crate::editor) fn untouched(artifact_id: u64) -> RecordingTimelineEdit {
   RecordingTimelineEdit {
+    audio_clips: Vec::new(),
+    muted_audio: Vec::new(),
     annotation_clips: Vec::new(),
     artifact_id,
     keyboard_deletions: Box::default(),

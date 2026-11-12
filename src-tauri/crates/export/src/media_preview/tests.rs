@@ -343,6 +343,8 @@ fn compresses_a_real_movie_when_x264_is_available() {
   let timeline_destination = directory.join("timeline.mp4");
   let timeline = screenwide_timeline_edit::TimelinePlan::from_edit(
     &screenwide_timeline_edit::RecordingTimelineEdit {
+      audio_clips: Vec::new(),
+      muted_audio: Vec::new(),
       annotation_clips: Vec::new(),
       artifact_id: 1,
       keyboard_deletions: Box::default(),
@@ -396,6 +398,8 @@ fn compresses_a_real_movie_when_x264_is_available() {
   let single_range_destination = directory.join("timeline-single-range.mp4");
   let single_range = screenwide_timeline_edit::TimelinePlan::from_edit(
     &screenwide_timeline_edit::RecordingTimelineEdit {
+      audio_clips: Vec::new(),
+      muted_audio: Vec::new(),
       annotation_clips: Vec::new(),
       artifact_id: 1,
       keyboard_deletions: Box::default(),

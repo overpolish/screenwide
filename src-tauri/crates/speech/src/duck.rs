@@ -96,6 +96,36 @@ pub fn ducked_by(project_folder: &Path, streams: &[usize]) -> Vec<(usize, usize)
     .collect()
 }
 
+/// Separates the singing in `sound`, a song from the sound library, with
+/// Studio ducking's model at `model`, into a FLAC at `destination`, lined up
+/// with the song from its start, telling `progress` how far it has got. The
+/// file is written beside `destination` and moved over it whole.
+pub fn separate_singing(
+  sound: &Path,
+  model: PathBuf,
+  destination: &Path,
+  progress: &mut dyn FnMut(f32),
+) -> Result<(), String> {
+  let singing = singing::separate(sound, 0, model, progress)?;
+  let partial = destination.with_extension("partial.flac");
+  let status = screenwide_sidecar::ffmpeg_command()
+    .args(["-hide_banner", "-loglevel", "error", "-nostdin", "-y"])
+    .args(["-f", "f32le", "-ar"])
+    .arg(screenwide_transcriber::SEPARATE_SAMPLE_RATE.to_string())
+    .args(["-ac", "2", "-i"])
+    .arg(singing.path())
+    .args(["-c:a", "flac"])
+    .arg(&partial)
+    .status()
+    .map_err(|error| format!("Could not start FFmpeg: {error}"))?;
+  if !status.success() {
+    let _ = std::fs::remove_file(&partial);
+    return Err("Could not keep the singing separated from the song".to_owned());
+  }
+  std::fs::rename(&partial, destination)
+    .map_err(|error| format!("Could not keep the singing separated from the song: {error}"))
+}
+
 /// One file made at a time, so the editor opening a recording and an export
 /// started meanwhile do not both write it.
 static MAKING: Mutex<()> = Mutex::new(());

@@ -6,8 +6,8 @@ import { useEffect, useRef, useState } from "react";
 
 import { getRecordingMomentNote } from "./recording-moments";
 
-/** Told to the editor when a note starts, so the timeline stops playing
- * under it. */
+/** Told to the editor when a note, or a sound previewed in a clip's island,
+ * starts, so the timeline stops playing under it. */
 const MOMENT_NOTE_PLAYING_EVENT = "moments://note-playing";
 
 /** Pauses the timeline whenever a voice note starts playing, so the two are
@@ -57,9 +57,23 @@ const heardAt = (context: AudioContext) => {
  * kept against the note they are for, so moving on to another note starts
  * it from its beginning, not playing.
  */
-export function useNotePlayback(artifactId: number, moment: number | null) {
-  const key =
-    moment === null ? null : `${String(artifactId)}:${String(moment)}`;
+export const useNotePlayback = (artifactId: number, moment: number | null) =>
+  useIslandSoundPlayback(
+    moment === null ? null : `${String(artifactId)}:${String(moment)}`,
+    () => getRecordingMomentNote(artifactId, moment ?? 0),
+  );
+
+/**
+ * Plays the sound `load` reads, once there is a `key` naming it, as
+ * `useNotePlayback` plays a note: a new key loads and plays its own sound
+ * from its beginning.
+ */
+export function useIslandSoundPlayback(
+  key: string | null,
+  load: () => Promise<ArrayBuffer>,
+) {
+  const loadRef = useRef(load);
+  loadRef.current = load;
   const contextRef = useRef<AudioContext | null>(null);
   const bufferRef = useRef<AudioBuffer | null>(null);
   const playingRef = useRef<Playing | null>(null);
@@ -72,17 +86,18 @@ export function useNotePlayback(artifactId: number, moment: number | null) {
   const progress = heard?.key === key ? heard.progress : 0;
 
   useEffect(() => {
-    if (moment === null) return;
+    if (key === null) return;
     let cancelled = false;
     const context = new AudioContext();
     contextRef.current = context;
-    void getRecordingMomentNote(artifactId, moment)
+    void loadRef
+      .current()
       .then((bytes) => context.decodeAudioData(bytes))
       .then((buffer) => {
         if (!cancelled) bufferRef.current = buffer;
       })
       .catch((error: unknown) => {
-        console.error("Could not load the voice note", error);
+        console.error("Could not load the sound to play", error);
       });
     return () => {
       cancelled = true;
@@ -93,7 +108,7 @@ export function useNotePlayback(artifactId: number, moment: number | null) {
       contextRef.current = null;
       void context.close();
     };
-  }, [artifactId, moment]);
+  }, [key]);
 
   useEffect(() => {
     if (!playing) return;

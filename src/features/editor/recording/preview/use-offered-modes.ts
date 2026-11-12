@@ -21,7 +21,8 @@ import type { RecordingVideoTrackId } from "../../types";
  * stands: a track switched off, or a transcript that heard nothing, takes
  * its modes with it, and the mode open among them is put away as its
  * button would (`backToSelect`). Tracks is offered where there are two
- * tracks or more to choose from.
+ * recorded tracks or more to choose from, and by the preview where songs
+ * or sound effects are laid under the recording, each kind a switch there.
  */
 export function useOfferedModes(
   { artifactId, hasAnnotations, recorded }: ResolvedScrubPreviewProps,

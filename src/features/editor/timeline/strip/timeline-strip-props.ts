@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { type TimelineAnnotation } from "../annotation-lane/annotation-lane";
+import { type StripAudio } from "../audio-lane/audio-stack";
 import { type TimelineCaption } from "../caption-lane/caption-line";
 import { type TimelineScene } from "../scene-rail/scene-clip";
 import { type Playhead } from "../scrub-playhead";
@@ -90,6 +91,8 @@ export type TimelineStripProps = Pick<
   splits: number[];
   /** How many seconds the lulls are squeezed by now. */
   squeeze: number;
+  /** The songs and sound effects, where the strip shows them. */
+  audio?: StripAudio;
   /** Locked but for the range tool, which stays in hand: the Export island
    * is making a GIF of the range, which is at most this many seconds of
    * the edited recording. */
@@ -97,4 +100,8 @@ export type TimelineStripProps = Pick<
   /** Nothing on the strip is edited or chosen, while the Export island
    * stands over the editor: only the playhead still scrubs. */
   isLocked?: boolean;
+  /** Told songs or sound effects dropped in from the system, by path, and
+   * where on the strip, in seconds of the edited video, if on it. Without
+   * it the strip takes no drops. */
+  onAudioDrop?: (paths: string[], at: number | null) => void;
 };

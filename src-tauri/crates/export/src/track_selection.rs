@@ -12,7 +12,7 @@
 use std::path::PathBuf;
 
 use crate::recording_model::{AudioTrackVolume, RecordingAudioTrack};
-use arguments::filter_path;
+use screenwide_sound_track::graph::filter_path;
 
 /// The bitrate the mixdown is encoded at. Summing tracks means decoding them,
 /// so this is the one place in the app that re-encodes audio; generous enough

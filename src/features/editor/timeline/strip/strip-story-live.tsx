@@ -34,6 +34,7 @@ const DEAD_AIR_S = 3;
 
 export type LiveStripProps = Pick<
   TimelineStripProps,
+  | "audio"
   | "onAnnotationRestack"
   | "onAnnotationRetime"
   | "onCaptionPress"
@@ -124,6 +125,7 @@ export function LiveStrip(props: LiveStripProps) {
   cutRef.current = () => {
     const span = selectionSpan(selection, {
       annotation: [],
+      audioClip: [],
       beat: content.beats,
       lull: lulls,
       scene: [],
@@ -179,6 +181,7 @@ export function LiveStrip(props: LiveStripProps) {
           ? []
           : content.annotations
       }
+      audio={props.audio}
       isAltHeld={props.isAltHeld || altKey}
       isCaptionsHidden={props.isCaptionsHidden}
       isCutting={props.isCutting}

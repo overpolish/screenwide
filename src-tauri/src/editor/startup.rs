@@ -47,6 +47,7 @@ pub fn initialize(app: &AppHandle) {
   tauri::async_runtime::spawn_blocking(move || screenwide_project::expire(&expiring));
   if let Ok(data) = app.path().app_data_dir() {
     screenwide_images::store::initialize(&data);
+    screenwide_sound_track::store::initialize(&data);
   }
   #[cfg(target_os = "macos")]
   super::pointer::listen(app);

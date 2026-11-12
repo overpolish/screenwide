@@ -49,6 +49,7 @@ pub(crate) mod scene_reframe;
 mod scene_selection;
 mod selection_gesture;
 mod selection_preview;
+pub(crate) mod sound_track;
 mod sources;
 pub(crate) use camera_effects::{position_ms, set_camera_effects};
 pub(crate) use camera_picking::{

@@ -6,13 +6,15 @@ use crate::editor::recording_preview_player::PreviewProcessing;
 
 /// What the output mixes FFmpeg's channels by: which tracks are on, how loud
 /// each is, and which of each track's files is heard. All three change
-/// while the preview plays.
+/// while the preview plays. The songs and sound effects, where there are
+/// any (`sound`), are one channel more after the tracks', always heard.
 #[derive(Clone)]
 pub(super) struct Mix {
   pub audio_volumes: Arc<RwLock<Vec<AudioTrackVolume>>>,
   pub channels: Vec<Channel>,
   pub processing: Arc<RwLock<PreviewProcessing>>,
   pub selected_audio: Arc<RwLock<Vec<usize>>>,
+  pub sound: bool,
 }
 
 impl Mix {
@@ -108,6 +110,9 @@ where
             if let Some(gain) = gain {
               mixed += sample * gain;
             }
+          }
+          if mix.sound {
+            mixed += queue.pop_front().unwrap_or(0.0);
           }
           let mixed = mixed.clamp(-1.0, 1.0);
           for sample in frame {

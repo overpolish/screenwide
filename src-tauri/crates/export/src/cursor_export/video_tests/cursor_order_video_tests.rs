@@ -113,6 +113,8 @@ fn brightest_cursor(
   let destination = directory.join(name);
   let timeline = TimelinePlan::from_edit(
     &RecordingTimelineEdit {
+      audio_clips: Vec::new(),
+      muted_audio: Vec::new(),
       artifact_id: 1,
       next_segment_id: 1,
       keyboard_deletions: Box::default(),

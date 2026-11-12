@@ -32,6 +32,7 @@ mod recording_sidecar;
 pub(crate) mod resize_timing;
 pub(crate) mod save;
 pub(crate) mod screenshot_preview;
+pub(crate) mod sound_library;
 pub(crate) mod speech;
 mod startup;
 /// Each template's preview, drawn and kept for the template tiles.

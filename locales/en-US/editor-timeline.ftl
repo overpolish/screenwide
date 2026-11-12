@@ -43,6 +43,10 @@ editor-timeline-scene-new = New scene
 editor-timeline-annotation = { $tool } annotation
 # A bar for an annotation pinned to the content under it, which follows that content as the recording moves. $tool names the annotation's tool, such as Arrow.
 editor-timeline-annotation-pinned = { $tool } annotation, pinned to content
+# A song on the timeline, under the beats. $title is the song's title, or the name of its file.
+editor-timeline-audio-song = Song, { $title }
+# A sound effect on the timeline, under the beats. $title is its title, or the name of its file.
+editor-timeline-audio-effect = Sound effect, { $title }
 # The window on the overview round the part of the recording the strip shows.
 editor-timeline-view = Part in view
 # The handle at the end of the overview, past the time already squeezed, dragged in to play every lull faster.

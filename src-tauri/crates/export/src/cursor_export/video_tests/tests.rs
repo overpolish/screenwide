@@ -264,6 +264,8 @@ fn exports_composited_cursor_pixels_into_a_real_movie() {
   };
   let timeline = screenwide_timeline_edit::TimelinePlan::from_edit(
     &screenwide_timeline_edit::RecordingTimelineEdit {
+      audio_clips: Vec::new(),
+      muted_audio: Vec::new(),
       annotation_clips: Vec::new(),
       artifact_id: 1,
       keyboard_deletions: Box::default(),

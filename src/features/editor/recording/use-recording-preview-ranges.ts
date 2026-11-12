@@ -7,10 +7,23 @@ import { RecordingTimelineEdit } from "../timeline/editing/recording-timeline-ed
 import {
   recordingTimelinePlaybackRangeFrom,
   recordingTimelinePlaybackRanges,
+  recordingTimelinePlaybackRangesFrom,
+  type RecordingTimelinePlaybackRange,
 } from "../timeline/recording-timeline-playback";
 
-/** The stretches of the recording the preview plays, as edited, and the one
- * a source position falls in. */
+import type { PreviewSoundTrack } from "./recording-preview-playback-api";
+
+const playedMs = (ranges: RecordingTimelinePlaybackRange[]) =>
+  ranges.reduce(
+    (total, range) =>
+      total + (range.sourceEndMs - range.sourceStartMs) / range.playbackRate,
+    0,
+  );
+
+/** The stretches of the recording the preview plays, as edited, the one a
+ * source position falls in, and what a play from a source position sends:
+ * the stretches from there on, and the songs and sound effects with where
+ * on the timeline playback starts. */
 export function useRecordingPreviewRanges({
   timelineEditRef,
   timingRef,
@@ -31,5 +44,25 @@ export function useRecordingPreviewRanges({
       recordingTimelinePlaybackRangeFrom(playbackRanges(), sourcePositionMs),
     [playbackRanges],
   );
-  return { playbackRangeFrom, playbackRanges };
+  const playFrom = useCallback(
+    (sourcePositionMs: number) => {
+      const all = playbackRanges();
+      const ranges = recordingTimelinePlaybackRangesFrom(all, sourcePositionMs);
+      const edit = timelineEditRef.current;
+      const clips = edit?.audioClips ?? [];
+      const timelineMs = Math.round(playedMs(all));
+      const soundTrack: PreviewSoundTrack | undefined =
+        clips.length > 0
+          ? {
+              clips,
+              muted: edit?.mutedAudio,
+              startMs: Math.max(0, timelineMs - Math.round(playedMs(ranges))),
+              timelineMs,
+            }
+          : undefined;
+      return { playbackRanges: ranges, soundTrack };
+    },
+    [playbackRanges, timelineEditRef],
+  );
+  return { playFrom, playbackRangeFrom, playbackRanges };
 }

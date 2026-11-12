@@ -11,18 +11,21 @@ import { Switch } from "../../../../primitives/switch/switch";
 import type { EditorIslandContent } from "../editor-island";
 
 // The tracks the recording holds, each with a switch that keeps it in the
-// export and the preview or leaves it out. Something has to be left to
-// export, so the last track still in cannot be switched off. The island
-// stands at the picture's top end corner, as every editor island does. The
-// section is a list of switches and nothing else, so no fill holds the
-// section's edge: the switches come in to the text column the names start
-// on, and the list sits evenly between the island's sides.
+// export and the preview or leaves it out, then the songs and the sound
+// effects laid under it, where there are any. Something recorded has to be
+// left to export, so the last recorded track still in cannot be switched
+// off. The island stands at the picture's top end corner, as every editor
+// island does. The section is a list of switches and nothing else, so no
+// fill holds the section's edge: the switches come in to the text column
+// the names start on, and the list sits evenly between the island's sides.
 
 type TracksIslandTrack = {
   id: string;
   isEnabled: boolean;
   /** Its own name, such as Screen or Microphone. */
   label: string;
+  /** Laid under the recording rather than recorded. */
+  isLaidUnder?: boolean;
 };
 
 export type TracksIslandProps = {
@@ -35,7 +38,9 @@ export function tracksIsland({
   onEnabledChange,
   tracks,
 }: TracksIslandProps): EditorIslandContent {
-  const enabledCount = tracks.filter(({ isEnabled }) => isEnabled).length;
+  const enabledCount = tracks.filter(
+    ({ isEnabled, isLaidUnder }) => isEnabled && !isLaidUnder,
+  ).length;
   return {
     key: "tracks",
     section: (
@@ -45,7 +50,9 @@ export function tracksIsland({
             {(controlProps) => (
               <Switch
                 {...controlProps}
-                isDisabled={track.isEnabled && enabledCount === 1}
+                isDisabled={
+                  track.isEnabled && !track.isLaidUnder && enabledCount === 1
+                }
                 isSelected={track.isEnabled}
                 onChange={(isEnabled) => {
                   onEnabledChange(track.id, isEnabled);

@@ -105,14 +105,6 @@ fn ignores_a_cleaned_file_for_a_track_left_out() {
 }
 
 #[test]
-fn escapes_a_path_for_both_readings_of_a_filter_graph() {
-  assert_eq!(
-    arguments::filter_path(std::path::Path::new("/a b/it's, [x];y:z.flac")),
-    r"/a b/it\\\'s\, \[x\]\;y\\:z.flac"
-  );
-}
-
-#[test]
 fn rejects_volume_outside_the_inspector_range() {
   assert_eq!(
     TrackSelection::with_volumes(

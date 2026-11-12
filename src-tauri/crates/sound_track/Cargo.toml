@@ -1,0 +1,19 @@
+# SPDX-FileCopyrightText: 2026 overpolish
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+[package]
+name = "screenwide-sound-track"
+description = "Music and sound effects laid on a recording's timeline: their library and how they are mixed"
+version.workspace = true
+authors.workspace = true
+license.workspace = true
+edition.workspace = true
+
+[lib]
+doctest = false
+
+[dependencies]
+screenwide-sidecar.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+ts-rs.workspace = true

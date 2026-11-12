@@ -16,6 +16,9 @@
 //!   media/               the movie, camera, cursor and keyboard tracks
 //!     pictures/          the background picture and the images' pictures,
 //!                        each named by its contents
+//!     audio/             the songs and sound effects its clips play, each
+//!                        named by its contents, with what was measured of
+//!                        it beside it
 //! ```
 //!
 //! Media is named relative to the folder, so renaming or moving the folder

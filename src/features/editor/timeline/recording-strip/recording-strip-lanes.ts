@@ -19,7 +19,7 @@ import {
 } from "../strip/strip-selection";
 import { type Span, type TimeMap } from "../timeline-scale";
 
-import { playedMs, recordedParts } from "./recording-strip-time";
+import { playedMs, recordedParts, retimedParts } from "./recording-strip-time";
 import { type RecordingStripSteps } from "./use-recording-strip-edits";
 
 import type { RecordingStripLanes } from "./use-recording-strip";
@@ -98,30 +98,6 @@ export function recordingStripLanes(source: RecordingStripLaneSource) {
   const { annotations, map, runs, scenes, steps } = source;
   const partsOf = (clip: { endMs: number; startMs: number }) =>
     recordedParts(map, runs, clip);
-  /** `clip`'s times once its part `id` is pulled to `start` and `end`.
-   * Only the clip's own ends move, the first part's start and the last
-   * part's end; where a part meets a jump it ends with the run, not by
-   * choice. */
-  const retimed = (
-    clip: { endMs: number; startMs: number },
-    id: string,
-    { end, start }: Span,
-  ) => {
-    const parts = partsOf(clip);
-    const index = parts.findIndex((_, each) => partId(baseOf(id), each) === id);
-    if (index < 0) return clip;
-    const part = parts[index];
-    return {
-      endMs:
-        index === parts.length - 1 && end !== part.end
-          ? playedMs(map, end, true)
-          : clip.endMs,
-      startMs:
-        index === 0 && start !== part.start
-          ? playedMs(map, start)
-          : clip.startMs,
-    };
-  };
   // Later clips are drawn in front, on the top lane.
   const laneOfClip = (index: number) => annotations.clips.length - 1 - index;
   const timelineAnnotations: TimelineAnnotation[] = annotations.clips.flatMap(
@@ -176,7 +152,7 @@ export function recordingStripLanes(source: RecordingStripLaneSource) {
         clip.annotation.id === baseOf(id)
           ? {
               ...clip,
-              ...retimed(clip, id, { end, start }),
+              ...retimedParts({ map, runs }, clip, { end, id, start }),
             }
           : clip,
       );
@@ -226,7 +202,7 @@ export function recordingStripLanes(source: RecordingStripLaneSource) {
         (own.startMs + own.endMs) / 2,
         own.id,
       );
-      const pulled = retimed(own, id, { end, start });
+      const pulled = retimedParts({ map, runs }, own, { end, id, start });
       const startMs = Math.max(pulled.startMs, room.from);
       const endMs = Math.max(
         Math.min(pulled.endMs, room.to),

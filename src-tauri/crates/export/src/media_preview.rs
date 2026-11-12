@@ -143,4 +143,6 @@ pub enum ExportRunResult {
 }
 
 #[cfg(test)]
+mod sound_track_tests;
+#[cfg(test)]
 mod tests;

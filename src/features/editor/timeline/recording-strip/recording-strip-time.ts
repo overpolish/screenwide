@@ -11,6 +11,7 @@ import {
   type RecordingTimelineEdit,
   recordingTimelineRetainedDuration,
 } from "../editing/recording-timeline-edit";
+import { baseOf, partId } from "../strip/strip-part";
 import { SLIVER_S } from "../strip/strip-split";
 import { type Span, type TimeMap } from "../timeline-scale";
 
@@ -208,3 +209,26 @@ export function recordedParts(
 /** Where a recorded moment plays, in edited ms. */
 export const playedMs = (map: TimeMap, seconds: number, isEnd?: boolean) =>
   Math.round(map.toPlayed(seconds, isEnd) * 1000);
+
+/** `clip`'s times once its part `id` is pulled to `start`–`end`, in
+ * recorded seconds. Only the clip's own ends move, the first part's start
+ * and the last part's end; where a part meets a jump it ends with the run,
+ * not by choice. */
+export function retimedParts(
+  { map, runs }: { map: TimeMap; runs: Span[] },
+  clip: { endMs: number; startMs: number },
+  { end, id, start }: Span & { id: string },
+) {
+  const parts = recordedParts(map, runs, clip);
+  const index = parts.findIndex((_, each) => partId(baseOf(id), each) === id);
+  if (index < 0) return { endMs: clip.endMs, startMs: clip.startMs };
+  const part = parts[index];
+  return {
+    endMs:
+      index === parts.length - 1 && end !== part.end
+        ? playedMs(map, end, true)
+        : clip.endMs,
+    startMs:
+      index === 0 && start !== part.start ? playedMs(map, start) : clip.startMs,
+  };
+}

@@ -17,7 +17,6 @@ import {
 import type { RecordingVideoTrackId } from "../types";
 
 const EVERYTHING: CaptureParts = {
-  audio: true,
   camera: true,
   cursor: true,
   keyboard: true,
@@ -91,12 +90,6 @@ describe("editorModeGroups", () => {
     expect(offered({ microphone: false })[2]).toBe("heard: sound");
   });
 
-  it("takes Sound away with no audio in the export", () => {
-    expect(
-      offered({ audio: false, microphone: false, transcript: "pending" }),
-    ).toEqual(["picture: frame screen camera scene", "done: cursor keyboard"]);
-  });
-
   it("offers no picture's modes, nor Captions, without a picture", () => {
     const audio = { camera: false, picture: null };
     expect(offered(audio, "audio")).toEqual(["heard: transcript sound"]);
@@ -145,13 +138,11 @@ describe("captureParts", () => {
 
   it("leaves out the tracks switched off", () => {
     expect(inExport([2], ["camera"])).toMatchObject({
-      audio: true,
       camera: true,
       microphone: false,
       picture: null,
     });
     expect(inExport([], ["primary"])).toMatchObject({
-      audio: false,
       camera: false,
       microphone: false,
       picture: "screen",

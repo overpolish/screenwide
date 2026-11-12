@@ -48,6 +48,7 @@ fn plays_a_processed_track_from_its_own_file_at_the_same_place() {
   let rendered = args(
     &sources,
     &channels,
+    None,
     &[RecordingPreviewPlaybackRange {
       source_start_ms: 250,
       source_end_ms: 1_000,
@@ -73,6 +74,7 @@ fn plays_a_processed_track_from_its_own_file_at_the_same_place() {
     channels: channels.clone(),
     processing: Arc::clone(&sources.processing),
     selected_audio: Arc::new(RwLock::new(vec![0, 1])),
+    sound: false,
   };
   let heard = |heard: &[(usize, Processing)], leveled: &[usize]| {
     let processing = PreviewProcessing {
@@ -124,6 +126,7 @@ fn system_audio_makes_way_only_while_its_microphone_is_on() {
     channels: channels.clone(),
     processing: Arc::clone(&sources.processing),
     selected_audio: Default::default(),
+    sound: false,
   };
   let processing = sources.processing.read().unwrap().clone();
   let heard = |selected: &[usize]| {
