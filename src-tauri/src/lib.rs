@@ -94,7 +94,7 @@ pub fn run() {
     .manage(text_recognition::TextRecognitionState::default())
     .manage(tooltip_window::TooltipState::default())
     .invoke_handler(editor::sound_library::with_commands(
-      invoke_handler::invoke_handler(),
+      app_windows::commands::with_commands(invoke_handler::invoke_handler()),
     ))
     .setup(startup::setup)
     .build(context)

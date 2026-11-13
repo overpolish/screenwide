@@ -48,11 +48,18 @@ pub fn default_gain_db(
   (target - loudness).min(MOST_LIFT_DB)
 }
 
-/// How loud the stretch of its sound `clip` plays is, in LUFS: the sound's
-/// loudness, moved by how much louder or quieter its levels are there than
-/// along the whole sound.
+/// How loud the stretch of its sound `clip` plays is, in LUFS. A song is the
+/// sound's loudness over its whole length, moved by how much louder or
+/// quieter its levels are there than along the whole sound; a sound effect
+/// is heard at its peak, so it is the sound's loudest moment, moved by how
+/// much quieter the loudest level of the stretch is than the sound's.
 pub(super) fn played_loudness(clip: &RecordingAudioClip, file: &SoundFile) -> Option<f64> {
-  let loudness = file.loudness_lufs?;
+  let is_song = clip.kind == AudioClipKind::Music;
+  let loudness = if is_song {
+    file.loudness_lufs
+  } else {
+    file.loudest_lufs
+  }?;
   let offset = clip.offset_ms.min(file.duration_ms);
   let length = clip.end_ms.saturating_sub(clip.start_ms);
   // A looped clip that comes round again plays all of its sound.
@@ -62,12 +69,15 @@ pub(super) fn played_loudness(clip: &RecordingAudioClip, file: &SoundFile) -> Op
     (offset, (offset + length).min(file.duration_ms))
   };
   let power = |levels: &[f32]| {
-    let sum: f64 = levels.iter().map(|level| f64::from(*level).powi(2)).sum();
+    let powers = levels.iter().map(|level| f64::from(*level).powi(2));
     #[expect(clippy::cast_precision_loss, reason = "a count of levels")]
     let count = levels.len() as f64;
-    (count > 0.0)
-      .then(|| sum / count)
-      .filter(|power| *power > 0.0)
+    let power = if is_song {
+      powers.sum::<f64>() / count
+    } else {
+      powers.fold(0.0, f64::max)
+    };
+    (count > 0.0 && power > 0.0).then_some(power)
   };
   let at = |ms: u64| usize::try_from(ms * LEVELS_PER_SECOND / 1_000).unwrap_or(usize::MAX);
   let levels = &file.levels;

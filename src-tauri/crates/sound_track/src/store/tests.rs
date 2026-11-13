@@ -62,6 +62,40 @@ fn a_sound_is_kept_once_by_its_contents_and_measured() {
 }
 
 #[test]
+fn a_sound_effect_is_kept_with_its_dead_space_cut_and_found_again() {
+  let folder = scratch("trim");
+  // Half a second of tone between a second and a half of silence before
+  // and three seconds after, as sound effects are often shared.
+  let file = folder.join("Whoosh.wav");
+  let status = screenwide_sidecar::ffmpeg_command()
+    .args([
+      "-hide_banner",
+      "-loglevel",
+      "error",
+      "-nostdin",
+      "-y",
+      "-f",
+      "lavfi",
+      "-i",
+    ])
+    .arg("aevalsrc=exprs='if(between(t\\,1.5\\,2)\\,0.5*sin(2*PI*440*t)\\,0)':s=44100:d=5")
+    .arg(&file)
+    .status()
+    .unwrap();
+  assert!(status.success());
+  let sound = import(&file).unwrap();
+  assert!(sound.name.ends_with(".flac"), "kept as {}", sound.name);
+  // What is heard, with a little either side.
+  assert!(
+    (600..=760).contains(&sound.duration_ms),
+    "{} ms",
+    sound.duration_ms
+  );
+  assert!(directory().unwrap().join(&sound.name).is_file());
+  assert_eq!(import(&file).unwrap(), sound);
+}
+
+#[test]
 fn a_title_tag_names_the_sound() {
   let folder = scratch("title");
   let sound = import(&tone(&folder, "track01.m4a", 523, Some("Evening"))).unwrap();

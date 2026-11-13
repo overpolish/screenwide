@@ -29,6 +29,7 @@ impl EditorView {
       caret: Cell::new(NSPoint::new(0.0, 0.0)),
       blink: RefCell::new(None),
       drop_accepts: Cell::new(false),
+      drop_sound: Cell::new(false),
     });
     let frame = super::super::layers::rect(0.0, 0.0, 1.0, 1.0);
     // Safety: NSView's designated initialiser.

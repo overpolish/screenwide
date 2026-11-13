@@ -5,7 +5,8 @@
  */
 export type Sound = { 
 /**
- * Its name in the library: the hash of its contents and its extension.
+ * Its name in the library: the hash of the file it was added from and
+ * the extension of what is kept, which is a sound effect cut down.
  */
 name: string, 
 /**
@@ -13,9 +14,16 @@ name: string,
  */
 title: string, durationMs: number, 
 /**
- * How loud it is over its whole length, in LUFS; none where it is silent.
+ * How loud it is over its whole length, in LUFS, which a song is levelled
+ * by; none where it is silent.
  */
 loudnessLufs: number | null, 
+/**
+ * How loud it is at its loudest moment, in LUFS (EBU R128's momentary
+ * loudness over 400 ms), which a sound effect is levelled by, as that is
+ * how loud it is heard; none where it is silent.
+ */
+loudestLufs: number | null, 
 /**
  * How loud it is from 0 to 1, as root mean square, evenly along it, ten
  * a second, which the clip's island draws its waveform from.

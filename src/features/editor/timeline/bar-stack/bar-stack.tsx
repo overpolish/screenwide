@@ -53,13 +53,6 @@ export type BarStackProps<T extends StackedBar> = {
   scale: TimelineScale;
   /** The strip's width, in px. */
   width: number;
-  /** Lanes follow where the stack's owner places a held bar, rather than
-   * where the pointer has it, for bars their owner keeps from overlapping
-   * as they move: one pushed into another then never opens a lane. */
-  followsPlacement?: boolean;
-  /** Bars move only along in time, never carried up and down: lanes that
-   * only keep what overlaps apart, with no order to choose. */
-  movesInTimeOnly?: boolean;
   selected?: string;
   /** Where a dragged end settles while ⌘ is held, given its bar, whose own
    * edges are left out. */
@@ -68,9 +61,7 @@ export type BarStackProps<T extends StackedBar> = {
 
 export function BarStack<T extends StackedBar>({
   bars,
-  followsPlacement = false,
   guideTo,
-  movesInTimeOnly = false,
   onRestack,
   onRetime,
   onSelect,
@@ -93,13 +84,7 @@ export function BarStack<T extends StackedBar>({
   // The lanes risen, as the strip shows them with nothing held; held, where
   // every bar goes if it is let go now.
   const settled = packLanes(drawn);
-  const placed = (hold: Held) => {
-    const bar = drawn.find(({ id }) => id === hold.id);
-    return followsPlacement && bar
-      ? { ...hold, span: { end: bar.end, start: bar.start } }
-      : hold;
-  };
-  const lanes = held ? heldLanes(drawn, placed(held)) : settled;
+  const lanes = held ? heldLanes(drawn, held) : settled;
   const laneOf = (bar: T) => lanes[bar.id];
   const shownCount = Math.max(
     1,
@@ -221,7 +206,6 @@ export function BarStack<T extends StackedBar>({
                 {renderBar(bar, {
                   isLifted: liftedTop !== null,
                   isSelected: baseOf(bar.id) === selected,
-                  movesInTimeOnly,
                   onHold: (hold) => {
                     if (hold) {
                       pointerRef.current = hold.y - (viewport?.scrollTop ?? 0);
@@ -229,10 +213,11 @@ export function BarStack<T extends StackedBar>({
                         holdStep({
                           bars: drawn,
                           current,
-                          hold: {
-                            ...hold,
-                            span: drawnSpan(followsPlacement ? bar : hold.span),
-                          },
+                          // Where the bar is placed, not where the pointer
+                          // has it: its owner keeps it to its limits, such
+                          // as a sound's end, and lanes made for a span it
+                          // never takes would jump with every move.
+                          hold: { ...hold, span: drawnSpan(bar) },
                           id: bar.id,
                           shown: settled,
                         }),

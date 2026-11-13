@@ -23,19 +23,20 @@ import {
 } from "./use-stack-bar-drag";
 
 // One bar in a stack across the time it spans: a hairline with a badge in
-// its middle, however short it is, the line stopping short of the badge.
-// Chosen, the line thickens and grows a handle at each end. The hit area is
-// taller and wider than the line drawn, so a short bar is still easy to
-// take hold of. It is placed in a strip `width` px wide, which it measures
-// the pointer against while held (`use-stack-bar-drag.ts`), and glides to a
+// its middle, the line stopping short of the badge. A badge wider than the
+// bar is cut to it and fades out at both sides, as anything cut short on
+// the strip does. Chosen, the line thickens and grows a handle at each
+// end, always at the end, however short the bar. The hit area is taller
+// and wider than the line drawn, so a short bar is still easy to take hold
+// of. It is placed in a strip `width` px wide, which it measures the
+// pointer against while held (`use-stack-bar-drag.ts`), and glides to a
 // new `top` unless it is being carried there. What the badge holds, and
 // anything drawn along the line, is the stack's own.
 
 /** Room, in px, the line leaves either side of the badge. */
 const BADGE_AIR_PX = 3;
-/** How far past the badge's half, in px, a chosen bar's handles stand at
- * least, so a bar shorter than that still shows its badge. */
-const HANDLE_CLEAR_PX = 7;
+/** How far, in px, a badge cut to its bar fades out at each side. */
+const BADGE_CUT_FADE_PX = 6;
 /** How far, in px, the stack's owner has to move a carried bar away from
  * where the pointer has it for the bar to glide there. */
 const JUMP_PX = 8;
@@ -65,8 +66,6 @@ export type StackBarPlacement = {
   top: number;
   /** The strip's width, in px. */
   width: number;
-  /** Never carried up and down, only along in time. */
-  movesInTimeOnly?: boolean;
   /** Where a dragged end settles while ⌘ (Ctrl on Windows) is held. */
   snap?: Snap;
 };
@@ -115,7 +114,6 @@ export function StackBar({
   isSelected,
   label,
   line,
-  movesInTimeOnly,
   onHold,
   onRetime,
   onSelect,
@@ -131,14 +129,17 @@ export function StackBar({
   );
   const badgeWidth = useSize(badgeElement)?.width ?? 0;
   const reducedMotion = useReducedMotion() ?? false;
-  // Where the pointer has the bar while it is held, against which a move
-  // its owner made on its own shows.
+  // Where the pointer has the bar while it is held whole, against which a
+  // move its owner made on its own shows. A held end moves only that end,
+  // so its owner stopping it short, as at its sound's start, moves nothing
+  // else to glide.
   const pointerRef = useRef<Span | null>(null);
+  const partRef = useRef<BarPart>("body");
   const { drag, grab, release } = useStackBarDrag({
     isSelected,
-    movesInTimeOnly,
     onHold: (hold) => {
-      pointerRef.current = hold?.span ?? null;
+      pointerRef.current =
+        hold && partRef.current === "body" ? hold.span : null;
       onHold(hold);
     },
     onRetime,
@@ -148,10 +149,10 @@ export function StackBar({
     span,
   });
   const { pad, px, style } = reach(scale, span, width);
-  // Held, a bar its owner moves on its own, such as a song jumping past
-  // another, glides to where it lands rather than appearing there. Moves
-  // that follow the pointer keep the bar where the pointer has it, and
-  // never glide, so the bar never trails the pointer.
+  // Held, a bar its owner moves on its own, such as a sound effect stopped
+  // at the timeline's start, glides to where it lands rather than appearing
+  // there. Moves that follow the pointer keep the bar where the pointer has
+  // it, and never glide, so the bar never trails the pointer.
   const shift = useMotionValue(0);
   const pointer = pointerRef.current;
   const offset =
@@ -171,17 +172,18 @@ export function StackBar({
       ease: motionEasings.out,
     });
   }, [offset, reducedMotion, shift]);
-  const badgeHalf = badgeWidth / 2 + BADGE_AIR_PX;
+  const isCut = badgeWidth > px;
+  const badgeHalf = Math.min(badgeWidth, px) / 2 + BADGE_AIR_PX;
   const look: StackBarLook = {
     mask: gapUnderBadge(badgeHalf, badgeFade),
     pad,
     px,
   };
-  // Each handle at its end, or clear of the badge where the bar is shorter.
-  const handleReach = Math.max(px / 2, badgeHalf + HANDLE_CLEAR_PX);
+  const handleReach = px / 2;
   const take = (event: React.PointerEvent<HTMLElement>, part: BarPart) => {
     // Held by the bar, the press never reaches the strip under it.
     event.stopPropagation();
+    partRef.current = part;
     if (ref.current) grab(event, ref.current, part);
   };
   return (
@@ -215,10 +217,19 @@ export function StackBar({
       {line ? line(look) : <StackBarLine isSelected={isSelected} look={look} />}
       <span
         aria-hidden
-        className="absolute start-1/2 top-1/2 flex -translate-1/2"
-        ref={setBadgeElement}
+        className="absolute start-1/2 top-1/2 flex -translate-1/2 overflow-hidden"
+        style={
+          isCut
+            ? {
+                maskImage: `linear-gradient(to right, transparent, #000 ${String(BADGE_CUT_FADE_PX)}px, #000 calc(100% - ${String(BADGE_CUT_FADE_PX)}px), transparent)`,
+                maxWidth: px,
+              }
+            : undefined
+        }
       >
-        {badge(px)}
+        <span className="flex shrink-0" ref={setBadgeElement}>
+          {badge(px)}
+        </span>
       </span>
       {isSelected
         ? (["start", "end"] as const).map((part) => (

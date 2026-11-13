@@ -17,14 +17,8 @@ import type { Sound } from "../../../bindings/Sound";
 
 export type { AudioClipKind, RecordingAudioClip };
 
-/** A sound this long or longer is a song; a shorter one a sound effect, as
- * `screenwide_sound_track::clip::SONG_MS` has it. */
-export const SONG_MS = 10_000;
 /** The shortest a clip can be trimmed to. */
 export const LEAST_CLIP_MS = 100;
-
-export const kindOf = (sound: Pick<Sound, "durationMs">): AudioClipKind =>
-  sound.durationMs >= SONG_MS ? "music" : "effect";
 
 type Stretch = Pick<RecordingAudioClip, "endMs" | "startMs">;
 
@@ -52,15 +46,21 @@ export function songStart(
   return Math.max(...songs.map((song) => song.endMs));
 }
 
-/** A clip of all of `sound`, laid at `atMs` by its kind's rules, never past
- * `timelineMs`; null where it would start at or past it. It goes in the
- * top lane, drawn in front, and the stack settles round it. */
+/** A clip of all of `sound` as a song or a sound effect, laid at `atMs` by
+ * that kind's rules; null where it would start at or past `timelineMs`. A
+ * song stops at the timeline's end; a sound effect keeps its whole length,
+ * and only what lies inside the timeline is heard, so it can still be moved
+ * either way. It goes in the top lane, drawn in front, and the stack
+ * settles round it. */
 export function placedClip(
   clips: RecordingAudioClip[],
   sound: Sound,
-  { atMs, timelineMs }: { atMs: number; timelineMs: number },
+  {
+    atMs,
+    kind,
+    timelineMs,
+  }: { atMs: number; kind: AudioClipKind; timelineMs: number },
 ): RecordingAudioClip | null {
-  const kind = kindOf(sound);
   const lengthMs = sound.durationMs;
   const startMs =
     kind === "music"
@@ -68,7 +68,10 @@ export function placedClip(
       : Math.max(0, Math.round(atMs));
   if (startMs >= timelineMs) return null;
   return {
-    endMs: Math.min(startMs + lengthMs, timelineMs),
+    endMs:
+      kind === "music"
+        ? Math.min(startMs + lengthMs, timelineMs)
+        : startMs + lengthMs,
     id: crypto.randomUUID(),
     isInstrumental: false,
     isLooped: false,
@@ -107,18 +110,21 @@ export function songRoom(
   };
 }
 
-/** `clip` moved by `deltaMs`, as long as it was, kept inside the timeline.
- * A song never lands on another: where it would, it sits in the nearest
- * room beside the songs it lands on, so pushed into a neighbour it stops
- * against it, and pushed past its middle it jumps to its far side, which
- * is how songs are put in another order. */
+/** `clip` moved by `deltaMs`, as long as it was. A song stays inside the
+ * timeline and never lands on another: where it would, it sits in the
+ * nearest room beside the songs it lands on, so pushed into a neighbour it
+ * stops against it, and pushed past its middle it jumps to its far side,
+ * which is how songs are put in another order. A sound effect goes as late
+ * as leaves the least of it inside the timeline, its tail past the end
+ * unheard. */
 export function movedClip(
   clips: RecordingAudioClip[],
   clip: RecordingAudioClip,
   { deltaMs, timelineMs }: { deltaMs: number; timelineMs: number },
 ): RecordingAudioClip {
   const lengthMs = clip.endMs - clip.startMs;
-  const latest = timelineMs - lengthMs;
+  const isSong = clip.kind === "music";
+  const latest = isSong ? timelineMs - lengthMs : timelineMs - LEAST_CLIP_MS;
   if (latest < 0) return clip;
   const at = (startMs: number) => ({
     ...clip,
@@ -128,7 +134,7 @@ export function movedClip(
   const wanted = Math.round(
     Math.min(Math.max(clip.startMs + deltaMs, 0), latest),
   );
-  if (clip.kind !== "music") return at(wanted);
+  if (!isSong) return at(wanted);
   const songs = clips.filter(
     (other) => other.kind === "music" && other.id !== clip.id,
   );
@@ -225,5 +231,49 @@ export function loopedClip(
     ...clip,
     endMs: Math.min(clip.endMs, clip.startMs + durationMs - clip.offsetMs),
     isLooped,
+  };
+}
+
+/** `clip` playing `lengthMs` of its sound from `offsetMs` in, as a sound
+ * effect is trimmed in its island: never past its sound's end, never
+ * shorter than the least clip, and cut off where the timeline ends. */
+export function keptStretch(
+  clip: RecordingAudioClip,
+  { lengthMs, offsetMs }: { lengthMs: number; offsetMs: number },
+  { durationMs, timelineMs }: { durationMs: number; timelineMs: number },
+): RecordingAudioClip {
+  const offset = Math.round(
+    Math.min(Math.max(offsetMs, 0), Math.max(0, durationMs - LEAST_CLIP_MS)),
+  );
+  const length = Math.round(
+    Math.min(Math.max(lengthMs, LEAST_CLIP_MS), durationMs - offset),
+  );
+  return {
+    ...clip,
+    endMs: Math.min(clip.startMs + length, timelineMs),
+    offsetMs: offset,
+  };
+}
+
+/** `clip` made a song or a sound effect. A sound effect never loops and
+ * has no singing to leave out. A song never lands on another: where it
+ * would, it goes where the placing rules put a song (`songStart`), and
+ * where that is past the timeline's end it stays as it was. */
+export function retypedClip(
+  others: RecordingAudioClip[],
+  clip: RecordingAudioClip,
+  { kind, timelineMs }: { kind: AudioClipKind; timelineMs: number },
+): RecordingAudioClip {
+  if (kind === clip.kind) return clip;
+  if (kind === "effect")
+    return { ...clip, isInstrumental: false, isLooped: false, kind };
+  const lengthMs = clip.endMs - clip.startMs;
+  const startMs = songStart(others, { atMs: clip.startMs, lengthMs });
+  if (startMs >= timelineMs) return clip;
+  return {
+    ...clip,
+    endMs: Math.min(startMs + lengthMs, timelineMs),
+    kind,
+    startMs,
   };
 }

@@ -75,8 +75,8 @@ pub(super) fn install(
   surface.enable_editor();
   surface.set_selection_snapping(true);
   let drop_app = app.clone();
-  surface.set_image_drop_callback(Box::new(move |picture, at| {
-    crate::editor::images::dropped::deliver(&drop_app, "screenshot", picture, at);
+  surface.set_image_drop_callback(Box::new(move |carried| {
+    crate::editor::images::dropped::deliver(&drop_app, "screenshot", carried);
   }));
   let event_app = app.clone();
   surface.set_selection_callback(Box::new(move |pane_index| {

@@ -148,24 +148,37 @@ fn mixed(labels: &[String], then: &str, out: &str) -> String {
   )
 }
 
+/// The songs and sound effects as filters, and where the recorded tracks
+/// handed in are read from now.
+pub struct Mix {
+  /// The filters, without a closing `;`.
+  pub graph: String,
+  /// The recorded tracks handed in, by label in the same order: carved for
+  /// the sound effects where any is heard, as they were otherwise.
+  pub beside: Vec<String>,
+}
+
 /// The filters that play `pieces` from `from_ms` to `to_ms` of the
 /// timeline, the first moment heard at the start of the output, mixed into
-/// `[out]`, without a closing `;`. `then` follows the mix, such as a
-/// resample to the output's format. Given the voice, as a label the graph
-/// may read once, the pieces that make way come down while it speaks, and
-/// the singing separated from them gets out of its way entirely. `None`
-/// where nothing is heard then.
+/// `[out]`. `then` follows the mix, such as a resample to the output's
+/// format. Given the voice, as a label the graph may read once, the pieces
+/// that make way come down while it speaks, and the singing separated from
+/// them gets out of its way entirely. The songs, and `beside`, the recorded
+/// tracks other than the voice that the graph may read once each, make
+/// room for the sound effects band by band (`carve`). `None` where nothing
+/// is heard then, which leaves `beside` as it was.
 pub fn filter(
   pieces: &[Piece],
   window: (u64, u64),
-  out: &str,
-  then: &str,
+  (out, then): (&str, &str),
   voice: Option<&str>,
-) -> Option<String> {
+  beside: &[String],
+) -> Option<Mix> {
   let (from_ms, to_ms) = window;
   let mut graph = String::new();
-  // As heard, those making way, and the singing in those making way.
-  let mut buses: [Vec<String>; 3] = Default::default();
+  // As heard, those making way, the singing in those making way, and the
+  // sound effects.
+  let mut buses: [Vec<String>; 4] = Default::default();
   for (index, piece) in pieces
     .iter()
     .filter(|piece| piece.start_ms < to_ms && piece.end_ms > from_ms)
@@ -173,7 +186,11 @@ pub fn filter(
   {
     let label = format!("[sound{index}]");
     let ducked = voice.is_some() && piece.makes_way;
-    let rest_bus = usize::from(ducked);
+    let rest_bus = if piece.is_effect {
+      3
+    } else {
+      usize::from(ducked)
+    };
     match &piece.parts {
       // Separated, the song plays as its two parts: the rest, and the
       // singing, which gets out of the voice's way entirely, or is left out
@@ -206,11 +223,11 @@ pub fn filter(
   if buses.iter().all(Vec::is_empty) {
     return None;
   }
-  let mut heard = Vec::new();
+  let mut songs = Vec::new();
   if !buses[0].is_empty() {
     graph.push_str(&mixed(&buses[0], "", "soundplain"));
     graph.push(';');
-    heard.push("[soundplain]".to_owned());
+    songs.push("[soundplain]".to_owned());
   }
   let ducking: Vec<(&Vec<String>, &str, &str)> = [
     (&buses[1], "soundway", MAKE_WAY),
@@ -230,7 +247,7 @@ pub fn filter(
       for ((bus, name, comes_down), voice) in ducking.into_iter().zip(voices) {
         graph.push_str(&mixed(bus, "", name));
         graph.push_str(&format!(";[{name}]{voice}{comes_down}[{name}down];"));
-        heard.push(format!("[{name}down]"));
+        songs.push(format!("[{name}down]"));
       }
     }
     // Handed in but with nothing making way from here on, the voice still
@@ -238,9 +255,15 @@ pub fn filter(
     Some(voice) => graph.push_str(&format!("{voice}anullsink;")),
     None => {}
   }
-  graph.push_str(&mixed(&heard, then, out));
-  Some(graph)
+  let mut beside = beside.to_vec();
+  if !buses[3].is_empty() {
+    carve::make_room(&mut graph, &buses[3], &mut songs, &mut beside);
+  }
+  graph.push_str(&mixed(&songs, then, out));
+  Some(Mix { graph, beside })
 }
+
+mod carve;
 
 #[cfg(test)]
 mod tests;

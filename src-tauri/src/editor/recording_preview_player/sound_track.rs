@@ -95,16 +95,23 @@ impl PreviewSoundTrack {
     self.voice.filter(|_| graph::makes_way(&self.pieces))
   }
 
+  /// The recorded stream of the voice the clips play under, which never
+  /// makes room for the sound effects as the other streams do.
+  pub(super) fn voice_stream(&self) -> Option<usize> {
+    self.voice
+  }
+
   /// The clips mixed into `[soundmix]`, from where playback starts, or none
   /// where nothing is heard from there on, making way for `voice`, the
-  /// voice's label in the graph, when given.
-  pub(super) fn filter(&self, voice: Option<&str>) -> Option<String> {
+  /// voice's label in the graph, when given, with `beside`, the other
+  /// recorded tracks' labels, carved for the sound effects.
+  pub(super) fn filter(&self, voice: Option<&str>, beside: &[String]) -> Option<graph::Mix> {
     graph::filter(
       &self.pieces,
       (self.start_ms, self.timeline_ms),
-      "soundmix",
-      "",
+      ("soundmix", ""),
       voice,
+      beside,
     )
   }
 }

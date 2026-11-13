@@ -24,6 +24,7 @@ import { ToolPanelExportPatch } from "./tool-panel-export";
 import { TranscriptRequest } from "./tool-panel-transcript";
 
 import type { ToolPanelSnapshot } from "./tool-panel-store";
+import type { AudioClipKind } from "../../../bindings/AudioClipKind";
 import type { TextStyle } from "../../../bindings/TextStyle";
 import type { AnnotationPinAction } from "../island/annotation/annotation-pin";
 import type { AudioClipChange } from "../island/audio-clip/audio-clip-island";
@@ -222,6 +223,9 @@ export type ToolPanelPatch = Partial<
   /** Add a song or sound effect to the timeline, from the library or a
    * file. */
   soundAddition?: SoundAddition;
+  /** Lay the sounds on their way to the timeline down as songs or as sound
+   * effects, or, with none, leave them out. */
+  soundKind?: { kind: AudioClipKind | null };
   /** Move the singing in the selected microphone's system audio out of its
    * way while it speaks, or let the system audio make way as a whole. */
   studioDucking?: boolean;

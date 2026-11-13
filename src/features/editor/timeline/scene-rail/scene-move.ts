@@ -5,10 +5,6 @@ import { type Snap } from "../bar-stack/use-stack-bar-drag";
 import { baseOf } from "../strip/strip-part";
 import { type Span } from "../timeline-scale";
 
-/** How far, in px, a press on a chosen scene moves before it is a drag, so
- * a click that only chooses it never nudges it. */
-export const SCENE_DRAG_PX = 3;
-
 /** The room a scene at a moment can have: from the end of the one before
  * to the start of the one after, within the recording. */
 export function sceneRoom(scenes: Span[], duration: number, moment: number) {

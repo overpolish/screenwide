@@ -74,7 +74,8 @@ pub fn pieces<'a>(
       }
       let loudness = level::played_loudness(clip, file);
       let gain_db = default_gain_db(clip.kind, loudness, voice_lufs) + f64::from(clip.volume_db);
-      let mut pieces = if clip.is_looped {
+      // Only songs loop; a sound effect saved looped before plays once.
+      let mut pieces = if clip.is_looped && clip.kind == AudioClipKind::Music {
         repeats(clip, file, end_ms, gain_db)
       } else {
         once(clip, file, end_ms, gain_db)
@@ -102,6 +103,7 @@ pub fn pieces<'a>(
     .flat_map(|laid| {
       let separated = laid.file.separated.as_ref();
       let makes_way = ducks && laid.clip.kind == AudioClipKind::Music;
+      let is_effect = laid.clip.kind == AudioClipKind::Effect;
       laid
         .pieces
         .into_iter()
@@ -109,6 +111,7 @@ pub fn pieces<'a>(
         .map(move |mut piece| {
           piece.fit_fades();
           piece.makes_way = makes_way;
+          piece.is_effect = is_effect;
           // A piece reads the parts only where all it plays is separated;
           // until then it plays, and makes way, as a whole.
           let file_end_ms = piece.file_start_ms + piece.file_length_ms();
@@ -167,6 +170,7 @@ fn once(clip: &RecordingAudioClip, file: &SoundFile, end_ms: u64, gain_db: f64) 
     tone: Tone::Whole,
     speed: 1.0,
     makes_way: false,
+    is_effect: false,
     instrumental: clip.is_instrumental && clip.kind == AudioClipKind::Music,
     parts: None,
   }]
@@ -203,6 +207,7 @@ fn repeats(clip: &RecordingAudioClip, file: &SoundFile, end_ms: u64, gain_db: f6
       tone: Tone::Whole,
       speed: 1.0,
       makes_way: false,
+      is_effect: false,
       instrumental: clip.is_instrumental && clip.kind == AudioClipKind::Music,
       parts: None,
     });

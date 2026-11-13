@@ -46,11 +46,25 @@ editor-island-sound-confirm-remove = Confirm removing
 
 ## A song or sound effect on the strip, laid under the recording
 
+# Names the choice between the two kinds of clip, which sets how it plays and which lane it sits in.
+editor-island-audio-kind = Kind
+editor-island-audio-song = Song
+editor-island-audio-effect = Sound effect
+# Beside the Song and Sound effect choice for a few seconds after Song is pressed for a sound effect that would land on a song: songs never overlap, and there is no room for it among them.
+editor-island-audio-no-song-room = No room on the music track
+# Under the Sound effect island that sounds being added are dropped on or pressed to lay them down as sound effects: where they go on the timeline.
+editor-island-add-effect-where = At the playhead
+# Under the Song island that sounds being added are dropped on or pressed to lay them down as songs: where they go on the timeline.
+editor-island-add-song-where = After the last song
 editor-island-audio-volume = Volume
 # Puts the clip back at the level it plays at by default: under the voice for a song, a little under it for a sound effect.
 editor-island-audio-reset-volume = Reset volume
 # The clip's stretch over its sound's waveform, dragged to choose where in the sound the clip starts playing.
 editor-island-audio-plays-from = Plays from
+# A sound effect's stretch over its whole sound's waveform: dragged to move it, its ends dragged to trim it.
+editor-island-audio-plays = Plays
+# What the sound effect's stretch says to assistive technology. $from is where in the sound it starts, $length how long it plays, both as durations.
+editor-island-audio-plays-value = From { $from }, for { $length }
 # Always under the clip's waveform, whose window is dragged to choose where the clip starts. $key is the key held, ⌘ on a Mac and Ctrl on Windows.
 editor-island-audio-fine-hint = Hold { $key } while dragging to move it finely.
 # Plays the clip from where it starts in its sound, in the island.

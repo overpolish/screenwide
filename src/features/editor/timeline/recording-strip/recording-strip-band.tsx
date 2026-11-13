@@ -35,6 +35,8 @@ export function RecordingStripBand({
       // taken into the strip's top, so a press there scrubs
       // (`strip-scrub-band.tsx`); the transport keeps its place under it.
       className="-mt-separate flex shrink-0 gap-inline pb-inset"
+      // Sounds dragged in are dropped here (`use-sound-drag.ts`).
+      data-sound-drop-area
     >
       <div className="flex pt-separate">
         <EditorTransport {...transport} isLocked={isLocked} />

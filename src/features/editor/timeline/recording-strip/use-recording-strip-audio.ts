@@ -6,9 +6,11 @@ import { useRef } from "react";
 import { useEditorWindowShortcuts } from "../../shortcuts/use-editor-window-shortcuts";
 import {
   type AudioClipKind,
+  keptStretch,
   loopedClip,
   movedClip,
   type RecordingAudioClip,
+  retypedClip,
   startedFrom,
   trimBounds,
   trimmedClip,
@@ -93,13 +95,22 @@ export function useRecordingStripAudio({
       });
       return;
     }
-    const { isLooped, offsetMs, ...values } = change;
-    writer.update(chosen.id, (clip) => {
+    const { isLooped, kind, lengthMs, offsetMs, ...values } = change;
+    writer.update(chosen.id, (clip, others) => {
       let next = clip;
+      if (kind !== undefined)
+        next = retypedClip(others, next, { kind, timelineMs });
       if (isLooped !== undefined)
         next = loopedClip(next, isLooped, durationOf(next));
       if (offsetMs !== undefined)
-        next = startedFrom(next, offsetMs, durationOf(next));
+        next =
+          lengthMs === undefined
+            ? startedFrom(next, offsetMs, durationOf(next))
+            : keptStretch(
+                next,
+                { lengthMs, offsetMs },
+                { durationMs: durationOf(next), timelineMs },
+              );
       return { ...next, ...values };
     });
   };
@@ -126,7 +137,7 @@ export function useRecordingStripAudio({
       title: sounds.get(clip.sound)?.title ?? "",
     })),
   );
-  const strip: Pick<TimelineStripProps, "audio" | "onAudioDrop"> = {
+  const strip: Pick<TimelineStripProps, "audio"> = {
     audio: {
       clips: audioClips,
       onRestack: (laneOf) => {
@@ -140,36 +151,49 @@ export function useRecordingStripAudio({
             ...clip,
             lane: lanes.get(clip.id) ?? clip.lane,
           })),
+          { isDragged: true },
         );
       },
       onRetime: (id, { end, start }, part) => {
-        // Pulled, a clip left past a shorter timeline is kept to it.
-        writer.update(baseOf(id), (clip, others) => {
-          const shown = shownClip(clip);
-          if (part === "body") {
-            const was = audioClips.find((each) => each.id === id);
-            if (!was) return clip;
-            const deltaMs =
-              playedMs(time.map, start) - playedMs(time.map, was.start);
-            return movedClip(others, shown, { deltaMs, timelineMs });
-          }
-          const pulled = retimedParts(time, shown, { end, id, start });
-          return trimmedClip(shown, {
-            atMs: part === "start" ? pulled.startMs : pulled.endMs,
-            bounds: trimBounds(others, shown, {
-              durationMs: durationOf(clip),
+        // A drag tells every move, and they are one step of history
+        // together. Pulled, a clip left past a shorter timeline is kept to
+        // it; a sound effect moved whole keeps its length, its tail past the
+        // end unheard.
+        writer.update(
+          baseOf(id),
+          (clip, others) => {
+            const shown = shownClip(clip);
+            if (part === "body") {
+              const was = audioClips.find((each) => each.id === id);
+              if (!was) return clip;
+              const deltaMs =
+                playedMs(time.map, start) - playedMs(time.map, was.start);
+              return movedClip(others, clip.kind === "music" ? shown : clip, {
+                deltaMs,
+                timelineMs,
+              });
+            }
+            const pulled = retimedParts(time, shown, { end, id, start });
+            return trimmedClip(shown, {
+              atMs: part === "start" ? pulled.startMs : pulled.endMs,
+              bounds: trimBounds(others, shown, {
+                durationMs: durationOf(clip),
+                edge: part,
+                timelineMs,
+              }),
               edge: part,
-              timelineMs,
-            }),
-            edge: part,
-          });
-        });
+            });
+          },
+          { isDragged: true },
+        );
       },
     },
-    onAudioDrop: adding.onAudioDrop,
   };
   const island: ToolPanelStripItem | null = chosen && {
     clipMs: Math.min(chosen.endMs, timelineMs) - chosen.startMs,
+    hasSongRoom:
+      retypedClip(clips, chosen, { kind: "music", timelineMs }).kind ===
+      "music",
     id: chosen.id,
     isInstrumental: chosen.isInstrumental,
     isLooped: chosen.isLooped,
@@ -193,7 +217,9 @@ export function useRecordingStripAudio({
   };
   return {
     addSound: adding.addSound,
+    adding: adding.adding,
     changeAudioClip,
+    chooseSoundKind: adding.chooseSoundKind,
     hearSounds,
     island,
     sounds: soundKinds.map((kind) => ({

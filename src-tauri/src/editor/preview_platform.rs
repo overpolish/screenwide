@@ -119,17 +119,11 @@ pub(crate) fn pointer_press_callback(
 
 pub(crate) const NATIVE_CONTEXT_MENU_EVENT: &str = "preview://context-menu";
 
-/// A picture dropped on the workspace, and where it landed: the layer under
-/// it and the point in that layer's image-normalised space, or `None` off
-/// every picture.
+/// What a drop target hands the editor: a picture dropped on the workspace,
+/// and where it landed, or a sound carried over it.
 #[cfg(any(target_os = "macos", target_os = "windows"))]
-pub(crate) type ImageDropCallback = Box<
-  dyn FnMut(
-      crate::editor::images::dropped::DroppedPicture,
-      Option<crate::editor::images::dropped::ImagePoint>,
-    ) + Send
-    + 'static,
->;
+pub(crate) type ImageDropCallback =
+  Box<dyn FnMut(crate::editor::images::dropped::Carried) + Send + 'static>;
 
 /// Builds the comparatively expensive GPU pipeline while the editor webview is
 /// still hidden. The first recording review can then open with only its media

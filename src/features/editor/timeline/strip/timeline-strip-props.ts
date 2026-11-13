@@ -100,8 +100,4 @@ export type TimelineStripProps = Pick<
   /** Nothing on the strip is edited or chosen, while the Export island
    * stands over the editor: only the playhead still scrubs. */
   isLocked?: boolean;
-  /** Told songs or sound effects dropped in from the system, by path, and
-   * where on the strip, in seconds of the edited video, if on it. Without
-   * it the strip takes no drops. */
-  onAudioDrop?: (paths: string[], at: number | null) => void;
 };

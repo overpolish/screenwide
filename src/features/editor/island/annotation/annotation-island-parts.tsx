@@ -45,8 +45,9 @@ export function AnnotationLine({ children }: { children: ReactNode }) {
 /** A choice between looks named at the start of its row, its glyphs at the
  * end, as the rows round it name themselves: where a lone line of glyphs
  * would float between options that each show their name. A part that comes
- * and goes beside the choice, such as an action for the look chosen, comes
- * into focus or blurs away as the island's parts do (`IslandParts`). */
+ * and goes beside the choice, such as an action for the look chosen or a
+ * note saying why a look cannot be chosen, comes into focus or blurs away
+ * as the island's parts do (`IslandParts`). */
 export function AnnotationChoiceRow({
   children,
   title,

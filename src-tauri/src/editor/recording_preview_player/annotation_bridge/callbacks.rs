@@ -11,8 +11,8 @@ pub(crate) fn install(
 ) {
   let event_clips = Arc::clone(&clips);
   let drop_app = app.clone();
-  surface.set_image_drop_callback(Box::new(move |picture, at| {
-    crate::editor::images::dropped::deliver(&drop_app, "recording", picture, at);
+  surface.set_image_drop_callback(Box::new(move |carried| {
+    crate::editor::images::dropped::deliver(&drop_app, "recording", carried);
   }));
   let event_app = app.clone();
   surface.set_annotation_gesture_callback(Box::new(

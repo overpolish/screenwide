@@ -22,7 +22,9 @@ const MIX_LIMITER: &str = "alimiter=limit=-1dB:attack=5:release=50:level=0:laten
 /// The timeline's songs and sound effects mixed into `[sound]`, if any are
 /// heard. Those that make way listen to the microphone as exported, which
 /// `outputs` hold one track each of, in `selection`'s order: it is split, so
-/// it is still exported as it was.
+/// it is still exported as it was. The other tracks, the system audio, make
+/// room for the sound effects, and are read from the labels the sound track
+/// hands back.
 fn sound_track_filter(
   timeline: &TimelinePlan,
   selection: &TrackSelection,
@@ -34,15 +36,14 @@ fn sound_track_filter(
   }
   let timeline_ms = timeline.duration_ms();
   let pieces = sound_track.pieces(timeline_ms);
-  let voice = sound_track
-    .voice
+  let voice_track = sound_track.voice.and_then(|stream| {
+    selection
+      .stream_indices()
+      .iter()
+      .position(|each| *each == stream)
+  });
+  let voice = voice_track
     .filter(|_| screenwide_sound_track::graph::makes_way(&pieces))
-    .and_then(|stream| {
-      selection
-        .stream_indices()
-        .iter()
-        .position(|each| *each == stream)
-    })
     .map(|track| {
       filters.push(format!(
         "{}asplit=2[at{track}out][soundvoice]",
@@ -51,7 +52,21 @@ fn sound_track_filter(
       outputs[track] = format!("[at{track}out]");
       "[soundvoice]"
     });
-  screenwide_sound_track::graph::filter(&pieces, (0, timeline_ms), "sound", "", voice)
+  let others: Vec<usize> = (0..outputs.len())
+    .filter(|track| Some(*track) != voice_track)
+    .collect();
+  let beside: Vec<String> = others.iter().map(|track| outputs[*track].clone()).collect();
+  let mix = screenwide_sound_track::graph::filter(
+    &pieces,
+    (0, timeline_ms),
+    ("sound", ""),
+    voice,
+    &beside,
+  )?;
+  for (track, label) in others.into_iter().zip(mix.beside) {
+    outputs[track] = label;
+  }
+  Some(mix.graph)
 }
 
 fn seconds(microseconds: u64) -> String {

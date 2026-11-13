@@ -17,7 +17,7 @@ use super::super::mac;
 use objc2::DefinedClass;
 
 use super::EditorView;
-use crate::editor::images::dropped::{DroppedPicture, ImagePoint};
+use crate::editor::images::dropped::{Carried, DroppedPicture, ImagePoint, SoundDrag};
 
 /// Whether the view takes drops now: an editor showing, not covered by the
 /// frontend's own chrome, with somewhere to hand the picture.
@@ -67,9 +67,42 @@ pub(super) fn entered(
   view: &EditorView,
   info: &ProtocolObject<dyn NSDraggingInfo>,
 ) -> NSDragOperation {
-  let accepts = taking(view) && picture(&info.draggingPasteboard()).is_some();
-  view.ivars().drop_accepts.set(accepts);
+  let carried = picture(&info.draggingPasteboard()).filter(|_| taking(view));
+  // The picture takes no sound: songs and sound effects are dropped on the
+  // timeline, in the page, so a sound arriving here is only announced, for
+  // the editor to show where it goes. AppKit tells a view it refused of the
+  // drag being let go over it as if it had left.
+  match carried {
+    Some(DroppedPicture::File(path)) if screenwide_sound_track::store::is_sound_file(&path) => {
+      view.ivars().drop_accepts.set(false);
+      view.ivars().drop_sound.set(true);
+      hand(view, Carried::Sound(SoundDrag::Over(path)));
+    }
+    carried => view.ivars().drop_accepts.set(carried.is_some()),
+  }
   operation(view)
+}
+
+pub(super) fn exited(view: &EditorView) {
+  view.ivars().drop_accepts.set(false);
+  if view.ivars().drop_sound.replace(false) {
+    hand(view, Carried::Sound(SoundDrag::Left));
+  }
+}
+
+/// Hands what was carried to the editor's drop callback.
+fn hand(view: &EditorView, carried: Carried) -> bool {
+  let Some(engine) = view.engine() else {
+    return false;
+  };
+  let Ok(mut callback) = mac(&engine.inner).image_drop.lock() else {
+    return false;
+  };
+  let Some(callback) = callback.as_mut() else {
+    return false;
+  };
+  callback(carried);
+  true
 }
 
 pub(super) fn perform(view: &EditorView, info: &ProtocolObject<dyn NSDraggingInfo>) -> bool {
@@ -86,12 +119,5 @@ pub(super) fn perform(view: &EditorView, info: &ProtocolObject<dyn NSDraggingInf
   let at = engine
     .land_drop(point)
     .map(|(layer, x, y)| ImagePoint { layer, x, y });
-  let Ok(mut callback) = mac(&engine.inner).image_drop.lock() else {
-    return false;
-  };
-  let Some(callback) = callback.as_mut() else {
-    return false;
-  };
-  callback(picture, at);
-  true
+  hand(view, Carried::Picture(picture, at))
 }

@@ -27,7 +27,11 @@ import {
   ToolPanelSelection,
   ToolPanelSoundTrack,
 } from "./tool-panel-selection";
-import { ToolPanelStripItem, ToolPanelTrack } from "./tool-panel-strip";
+import {
+  ToolPanelAddingSounds,
+  ToolPanelStripItem,
+  ToolPanelTrack,
+} from "./tool-panel-strip";
 import { ToolPanelTranscript } from "./tool-panel-transcript";
 
 import type { RecordingCaptions } from "../../../bindings/RecordingCaptions";
@@ -100,6 +104,9 @@ export type ToolPanelSnapshot = {
   selection: ToolPanelSelection | null;
   /** Latest panel request committed with this snapshot. */
   acknowledgedSeq?: number;
+  /** Songs or sound effects on their way to the recording's timeline,
+   * waiting to be told which; absent or null otherwise. */
+  addingSounds?: ToolPanelAddingSounds | null;
   /** The recording's captions, with the defaults for whatever is unset,
    * where it has a microphone to caption; absent or null otherwise. */
   captions?: RecordingCaptions | null;

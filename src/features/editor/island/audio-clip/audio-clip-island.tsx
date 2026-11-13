@@ -16,19 +16,24 @@ import {
   InstrumentalNote,
   InstrumentalToggle,
 } from "./audio-clip-parts";
+import { ClipKindRow } from "./clip-kind-row";
 import { type SoundPreview, SoundStartPicker } from "./sound-start-picker";
+import { SoundTrimPicker } from "./sound-trim-picker";
 
+import type { AudioClipKind } from "../../../../bindings/AudioClipKind";
 import type { ToolPanelModel } from "../../tools/tool-panel-selection";
 import type { EditorIslandContent } from "../editor-island";
 
 // A song or sound effect chosen on the strip, in hand: its title, and
-// deleting it, on the row. Under it the sound's waveform, where the clip's
-// stretch is chosen and heard, how loud it plays, from the level its kind
-// plays at by default, whether it loops for as long as its clip runs and,
-// for a song, whether it plays without its singing; giving it another
-// sound is a one-shot action at the end. An instrumental song needs Studio
-// ducking's model, offered under its toggle, and says while its singing is
-// separated. Its fades are its kind's own, songs that touch crossfade, and
+// deleting it, on the row. Under it, first whether it is a song or a sound
+// effect, then the sound's waveform, where the clip's stretch is chosen and
+// heard: a song's start through a fisheye, a sound effect's start and end
+// on its whole sound. Then how loud it plays, from the level its kind plays
+// at by default, whether a song loops for as long as its clip runs and
+// whether it plays without its singing; giving it another sound is a
+// one-shot action at the end. An instrumental song needs Studio ducking's
+// model, offered under its toggle, and says while its singing is
+// separated. Its fades are its kind's own, songs that touch blend, and
 // songs make way for the voice.
 
 /** What the island asks of the clip in hand. */
@@ -36,6 +41,10 @@ export type AudioClipChange = {
   delete?: true;
   isInstrumental?: boolean;
   isLooped?: boolean;
+  /** Make it a song or a sound effect. */
+  kind?: AudioClipKind;
+  /** Play this long of its sound, in ms, from `offsetMs`. */
+  lengthMs?: number;
   /** Play its sound from this far in, in ms. */
   offsetMs?: number;
   replace?: true;
@@ -45,6 +54,8 @@ export type AudioClipChange = {
 export type AudioClipIslandProps = {
   /** How long the clip plays, in ms. */
   clipMs: number;
+  /** Whether the clip, made a song, would have room among the songs. */
+  hasSongRoom: boolean;
   id: string;
   /** Whether a song plays without its singing. */
   isInstrumental: boolean;
@@ -91,37 +102,57 @@ export function audioClipIsland(
     key: `audio-clip-${props.id}`,
     section: (
       <div className="flex flex-col gap-separate">
-        <SoundStartPicker
-          clipMs={props.clipMs}
-          // A looped clip may start anywhere; one that plays once has to
-          // fit in what is left of its sound.
-          latestMs={Math.max(
-            0,
-            props.soundMs - (props.isLooped ? LEAST_CLIP_MS : props.clipMs),
-          )}
-          levels={props.levels}
-          offsetMs={props.offsetMs}
-          onChange={(offsetMs) => {
-            onChange({ offsetMs });
+        <ClipKindRow
+          hasSongRoom={props.hasSongRoom}
+          kind={props.isSong ? "music" : "effect"}
+          onChange={(kind) => {
+            onChange({ kind });
           }}
-          preview={props.preview}
-          soundMs={props.soundMs}
         />
+        {props.isSong ? (
+          <SoundStartPicker
+            clipMs={props.clipMs}
+            // A looped clip may start anywhere; one that plays once has to
+            // fit in what is left of its sound.
+            latestMs={Math.max(
+              0,
+              props.soundMs - (props.isLooped ? LEAST_CLIP_MS : props.clipMs),
+            )}
+            levels={props.levels}
+            offsetMs={props.offsetMs}
+            onChange={(offsetMs) => {
+              onChange({ offsetMs });
+            }}
+            preview={props.preview}
+            soundMs={props.soundMs}
+          />
+        ) : (
+          <SoundTrimPicker
+            clipMs={props.clipMs}
+            levels={props.levels}
+            offsetMs={props.offsetMs}
+            onChange={({ lengthMs, offsetMs }) => {
+              onChange({ lengthMs, offsetMs });
+            }}
+            preview={props.preview}
+            soundMs={props.soundMs}
+          />
+        )}
         <AudioClipVolumeRow
           onChange={(volumeDb) => {
             onChange({ volumeDb });
           }}
           volumeDb={props.volumeDb}
         />
-        <AnnotationOptions>
-          <LoopToggle
-            key="loop"
-            loops={props.isLooped}
-            onChange={(isLooped) => {
-              onChange({ isLooped });
-            }}
-          />
-          {props.isSong ? (
+        {props.isSong ? (
+          <AnnotationOptions>
+            <LoopToggle
+              key="loop"
+              loops={props.isLooped}
+              onChange={(isLooped) => {
+                onChange({ isLooped });
+              }}
+            />
             <InstrumentalToggle
               isInstrumental={props.isInstrumental}
               key="instrumental"
@@ -129,8 +160,8 @@ export function audioClipIsland(
                 onChange({ isInstrumental });
               }}
             />
-          ) : null}
-        </AnnotationOptions>
+          </AnnotationOptions>
+        ) : null}
         <InstrumentalNote {...props} />
         <div className="flex justify-end">
           <Button

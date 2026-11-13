@@ -13,15 +13,18 @@ use crate::store::Separated;
 pub struct SoundFile {
   pub path: PathBuf,
   pub duration_ms: u64,
-  /// How loud it is over its whole length, in LUFS; none where it is silent.
+  /// How loud it is over its whole length, and at its loudest moment, in
+  /// LUFS; none where it is silent. A song is levelled by the first, a sound
+  /// effect by the second.
   pub loudness_lufs: Option<f64>,
+  pub loudest_lufs: Option<f64>,
   /// How loud it is from 0 to 1, as root mean square, ten a second, as the
   /// library keeps it for its waveform; empty where it has none.
   pub levels: Vec<f32>,
   /// Its singing and the rest of it, as far as they are separated, lined up
   /// with it from its start; none until any is, or without the model.
   pub separated: Option<Separated>,
-  /// Its beat and key, as far as the library found them.
+  /// Its beat, as far as the library found it.
   pub music: Music,
 }
 
@@ -100,6 +103,9 @@ pub struct Piece {
   pub speed: f64,
   /// Whether it comes down while the voice speaks: songs do.
   pub makes_way: bool,
+  /// Whether it is a sound effect, which the songs and the system audio
+  /// make room for, band by band (`graph/carve.rs`).
+  pub is_effect: bool,
   /// Whether it plays without its singing: an instrumental song's piece,
   /// once the stretch it plays is separated.
   pub instrumental: bool,

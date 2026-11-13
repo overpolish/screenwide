@@ -42,6 +42,8 @@ pub(super) struct EditorIvars {
   blink: RefCell<Option<Retained<NSTimer>>>,
   /// Whether the drag over the view holds a picture the workspace takes.
   drop_accepts: Cell<bool>,
+  /// Whether the drag over the view holds a sound, which it announced.
+  drop_sound: Cell<bool>,
 }
 
 define_class!(
@@ -189,7 +191,7 @@ define_class!(
 
     #[unsafe(method(draggingExited:))]
     fn dragging_exited(&self, _info: Option<&ProtocolObject<dyn NSDraggingInfo>>) {
-      self.ivars().drop_accepts.set(false);
+      drop::exited(self);
     }
 
     #[unsafe(method(performDragOperation:))]

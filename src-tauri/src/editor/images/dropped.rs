@@ -28,6 +28,31 @@ pub(crate) enum DroppedPicture {
   Data(Vec<u8>),
 }
 
+/// A sound file carried over the picture, which takes no sound: the
+/// editor's timeline does (`use-sound-drag.ts`), so the picture only tells
+/// the editor the drag is there, and when it has gone.
+pub(crate) enum SoundDrag {
+  Over(PathBuf),
+  Left,
+}
+
+/// What a drop target hands the editor.
+pub(crate) enum Carried {
+  /// A picture let go, and where it landed, or `None` off every picture.
+  Picture(DroppedPicture, Option<ImagePoint>),
+  Sound(SoundDrag),
+}
+
+/// The editor event a sound drag over a recording's picture is told with.
+const SOUND_DRAG_EVENT: &str = "editor://sound-drag";
+
+#[derive(Clone, Serialize)]
+#[serde(rename_all = "camelCase", tag = "type")]
+enum SoundDragEvent {
+  Over { paths: Vec<PathBuf> },
+  Left,
+}
+
 /// Where a drop landed: the layer under it, and the point in that layer's
 /// image-normalised space. The twin of `ImagePoint` in
 /// `src/features/editor/images/image-api.ts`.
@@ -76,38 +101,26 @@ fn keep(picture: DroppedPicture) -> Result<ImageArt, String> {
   }
 }
 
-/// The editor event a song or sound effect dropped on a recording's picture
-/// is announced with, for the timeline to lay it on
-/// (`use-sound-adding.ts`).
-const SOUND_DROP_EVENT: &str = "editor://sound-drop";
-
-#[derive(Clone, Serialize)]
-struct SoundDropEvent {
-  paths: Vec<PathBuf>,
-}
-
-/// Keeps `picture` and tells the `workspace` editor to place it `at` the
-/// point it landed on, or in the middle of the layer in hand where no picture
-/// was laid out. A sound file dropped on a recording is no picture: it goes
-/// to the timeline instead. Returns at once: decoding a large picture is no
-/// work for the thread a drop arrives on.
-pub(crate) fn deliver(
-  app: &AppHandle,
-  workspace: &'static str,
-  picture: DroppedPicture,
-  at: Option<ImagePoint>,
-) {
-  if let DroppedPicture::File(path) = &picture {
-    if workspace == "recording" && screenwide_sound_track::store::is_sound_file(path) {
-      let _ = app.emit(
-        SOUND_DROP_EVENT,
-        SoundDropEvent {
-          paths: vec![path.clone()],
-        },
-      );
+/// Keeps a picture let go and tells the `workspace` editor to place it at
+/// the point it landed on, or in the middle of the layer in hand where no
+/// picture was laid out. A sound carried over a recording's picture is told
+/// to its editor, which shows where songs and sound effects are dropped.
+/// Returns at once: decoding a large picture is no work for the thread a
+/// drop arrives on.
+pub(crate) fn deliver(app: &AppHandle, workspace: &'static str, carried: Carried) {
+  let (picture, at) = match carried {
+    Carried::Picture(picture, at) => (picture, at),
+    Carried::Sound(drag) => {
+      if workspace == "recording" {
+        let event = match drag {
+          SoundDrag::Over(path) => SoundDragEvent::Over { paths: vec![path] },
+          SoundDrag::Left => SoundDragEvent::Left,
+        };
+        let _ = app.emit(SOUND_DRAG_EVENT, event);
+      }
       return;
     }
-  }
+  };
   let app = app.clone();
   tauri::async_runtime::spawn_blocking(move || match keep(picture) {
     Ok(art) => {

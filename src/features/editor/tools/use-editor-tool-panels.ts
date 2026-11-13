@@ -194,6 +194,7 @@ export function useEditorToolPanels({
   useToolPanelBridge(
     workspace,
     {
+      addingSounds: strip.adding,
       annotation,
       annotationColors,
       annotationCount,

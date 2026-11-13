@@ -19,6 +19,7 @@ fn file(name: &str, beat: Option<Beat>) -> SoundFile {
     path: PathBuf::from(name),
     duration_ms: 60_000,
     loudness_lufs: Some(-14.0),
+    loudest_lufs: Some(-11.0),
     levels: Vec::new(),
     separated: None,
     music: Music { beat },

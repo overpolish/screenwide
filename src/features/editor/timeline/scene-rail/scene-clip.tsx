@@ -2,23 +2,14 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { t } from "../../../../i18n/i18n";
-import { cn } from "../../../../lib/styling";
 import { SceneLayoutGlyph } from "../../glyphs/scene-layout-glyph";
-import { reach, type Span, type TimelineScale } from "../timeline-scale";
+import { RailClip, type RailClipProps } from "../rail/rail-clip";
+import { type Span } from "../timeline-scale";
 
 import type { SceneDrawing } from "../../glyphs/scene-layout-drawing";
 
-// One scene over the stretch it frames. What it shows grows with its width,
-// as a beat's does: bare, then its layout, then its layout and name, cut
-// short where it runs out of room. Pressed, it is chosen and its body can be
-// dragged at once; chosen, it fills and grows a handle at each end. A scene
-// a few pixels wide is pressed across more than it is drawn.
-
-/** The narrowest a scene shows its layout at, in px: the glyph's widest
- * and the padding either side. */
-const GLYPH_PX = 30;
-/** The narrowest a scene shows its name beside its layout at, in px. */
-const NAME_PX = 72;
+// One scene over the stretch it frames (`rail-clip.tsx`), drawn as its
+// layout and named.
 
 export type TimelineScene = Span & {
   drawing: SceneDrawing;
@@ -30,80 +21,16 @@ export type TimelineScene = Span & {
   landsAt?: number;
 };
 
-export type SceneClipProps = {
-  isSelected: boolean;
-  // The moves and release that follow bubble up from what was grabbed.
-  /** A press on a scene's body, which chooses it and can move it. */
-  onGrabBody: (event: React.PointerEvent) => void;
-  /** A press on one of a chosen scene's ends. */
-  onGrabEdge: (event: React.PointerEvent, edge: "end" | "start") => void;
-  onPress: () => void;
-  scale: TimelineScale;
-  scene: TimelineScene;
-  /** The strip's width, in px. */
-  width: number;
-};
+export type SceneClipProps = RailClipProps & { scene: TimelineScene };
 
-export function SceneClip({
-  isSelected,
-  onGrabBody,
-  onGrabEdge,
-  onPress,
-  scale,
-  scene,
-  width,
-}: SceneClipProps) {
-  const { pad, px, style } = reach(scale, scene, width);
+export function SceneClip({ scene, ...clip }: SceneClipProps) {
   return (
-    <button
-      aria-label={t("editor-timeline-scene", { layout: scene.name })}
-      aria-pressed={isSelected}
-      className="group absolute inset-y-0 cursor-grab touch-none outline-none active:cursor-grabbing"
-      dir="ltr"
-      // A keyboard press; a pointer's is taken at the press, below.
-      onClick={onPress}
-      onPointerDown={(event) => {
-        event.stopPropagation();
-        event.currentTarget.setPointerCapture(event.pointerId);
-        onGrabBody(event);
-      }}
-      style={style}
-      type="button"
-    >
-      <span
-        className={cn(
-          "absolute inset-y-0.5 flex items-center gap-1 overflow-hidden rounded-part text-caption whitespace-nowrap transition-colors group-focus-visible:outline-2 group-focus-visible:outline-focus",
-          // Padding would hold a narrow scene wider than its time.
-          px >= GLYPH_PX && "px-1",
-          isSelected
-            ? "bg-primary text-on-primary"
-            : "bg-fill-strong text-fg-secondary group-hover:bg-fg-tertiary group-hover:text-fg",
-        )}
-        style={{ insetInlineEnd: pad, insetInlineStart: pad }}
-      >
-        {px >= GLYPH_PX ? <SceneLayoutGlyph drawing={scene.drawing} /> : null}
-        {px >= NAME_PX ? <span className="truncate">{scene.name}</span> : null}
-      </span>
-      {isSelected
-        ? (["start", "end"] as const).map((edge) => (
-            <span
-              aria-hidden
-              className="absolute inset-y-0 flex w-3 -translate-x-1/2 cursor-ew-resize items-center justify-center"
-              key={edge}
-              onPointerDown={(event) => {
-                event.stopPropagation();
-                event.currentTarget.setPointerCapture(event.pointerId);
-                onGrabEdge(event, edge);
-              }}
-              style={{
-                insetInlineStart:
-                  edge === "start" ? pad : `calc(100% - ${String(pad)}px)`,
-              }}
-            >
-              <span className="h-3.5 w-1 rounded-full bg-on-primary ring-2 ring-primary" />
-            </span>
-          ))
-        : null}
-    </button>
+    <RailClip
+      {...clip}
+      glyph={<SceneLayoutGlyph drawing={scene.drawing} />}
+      label={t("editor-timeline-scene", { layout: scene.name })}
+      name={scene.name}
+      span={scene}
+    />
   );
 }

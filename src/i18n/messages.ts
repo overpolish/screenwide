@@ -231,6 +231,8 @@ export type Messages = {
   "editor-export-title-recording": null;
   "editor-export-title-screenshot": null;
   "editor-export-try-again": null;
+  "editor-island-add-effect-where": null;
+  "editor-island-add-song-where": null;
   "editor-island-annotation-animate": null;
   "editor-island-annotation-confirm-delete": null;
   "editor-island-annotation-delete": null;
@@ -251,13 +253,22 @@ export type Messages = {
   "editor-island-audio": null;
   "editor-island-audio-confirm-delete": null;
   "editor-island-audio-delete": null;
+  "editor-island-audio-effect": null;
   "editor-island-audio-fine-hint": { key: string | number };
   "editor-island-audio-instrumental": null;
+  "editor-island-audio-kind": null;
+  "editor-island-audio-no-song-room": null;
+  "editor-island-audio-plays": null;
   "editor-island-audio-plays-from": null;
+  "editor-island-audio-plays-value": {
+    from: string | number;
+    length: string | number;
+  };
   "editor-island-audio-preview": null;
   "editor-island-audio-removing-singing": null;
   "editor-island-audio-replace": null;
   "editor-island-audio-reset-volume": null;
+  "editor-island-audio-song": null;
   "editor-island-audio-stop-preview": null;
   "editor-island-audio-volume": null;
   "editor-island-auto-volume": null;

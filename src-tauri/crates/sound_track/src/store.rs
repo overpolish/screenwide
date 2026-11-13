@@ -2,21 +2,24 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 //! The sound library: every song or sound effect someone has added, kept
-//! once in the app's data folder and named by a hash of its contents, with
-//! what was measured of it in a file of the same name beside it. A project
-//! carries a copy of each sound its clips play (`project`).
+//! once in the app's data folder and named by a hash of the file it was
+//! added from, with what was measured of it in a file of the same name
+//! beside it. A sound effect is kept with its dead space cut (`trim`). A
+//! project carries a copy of each sound its clips play (`project`).
 
+mod adding;
 mod measure;
 pub mod music;
 mod project;
 pub mod singing;
+mod trim;
 
+pub use adding::import;
 pub use project::{adopt, carry, resolve};
 pub use singing::Separated;
 
 use std::path::{Path, PathBuf};
 use std::sync::OnceLock;
-use std::time::{SystemTime, UNIX_EPOCH};
 
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
@@ -32,6 +35,12 @@ pub const EXTENSIONS: [&str; 12] = [
 const NAME_DIGITS: usize = 32;
 /// The make of the file kept beside each sound.
 const FORMAT_VERSION: u16 = 1;
+/// How a sound is measured, raised whenever what is measured changes: a
+/// sound measured before is measured again, once, when next read.
+const MEASURED: u16 = 3;
+/// The kind of file a sound effect cut down is kept as: lossless, so the
+/// cut costs nothing of it.
+const CUT_EXTENSION: &str = "flac";
 
 static DIRECTORY: OnceLock<PathBuf> = OnceLock::new();
 
@@ -40,24 +49,56 @@ static DIRECTORY: OnceLock<PathBuf> = OnceLock::new();
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
 pub struct Sound {
-  /// Its name in the library: the hash of its contents and its extension.
+  /// Its name in the library: the hash of the file it was added from and
+  /// the extension of what is kept, which is a sound effect cut down.
   pub name: String,
   /// Its title tag, or else the name of the file it was added from.
   pub title: String,
   pub duration_ms: u64,
-  /// How loud it is over its whole length, in LUFS; none where it is silent.
+  /// How loud it is over its whole length, in LUFS, which a song is levelled
+  /// by; none where it is silent.
   pub loudness_lufs: Option<f64>,
+  /// How loud it is at its loudest moment, in LUFS (EBU R128's momentary
+  /// loudness over 400 ms), which a sound effect is levelled by, as that is
+  /// how loud it is heard; none where it is silent.
+  #[serde(default)]
+  pub loudest_lufs: Option<f64>,
   /// How loud it is from 0 to 1, as root mean square, evenly along it, ten
   /// a second, which the clip's island draws its waveform from.
   #[serde(default)]
   pub levels: Vec<f32>,
   /// When it was added, in milliseconds since the Unix epoch.
   pub added_ms: u64,
-  /// Its beat and key, which songs that touch are joined by; none where it
-  /// was kept before they were found.
+  /// Its beat, which songs that touch are joined by.
   #[serde(default, skip_serializing_if = "Option::is_none")]
   #[ts(skip)]
   pub music: Option<music::Music>,
+  /// How it was measured (`MEASURED`); 0 for a sound kept before that was
+  /// told.
+  #[serde(default)]
+  #[ts(skip)]
+  pub measured: u16,
+}
+
+impl Sound {
+  fn from_measured(
+    name: String,
+    title: String,
+    added_ms: u64,
+    measured: measure::Measured,
+  ) -> Self {
+    Self {
+      name,
+      title,
+      duration_ms: measured.duration_ms,
+      loudness_lufs: measured.loudness_lufs,
+      loudest_lufs: measured.loudest_lufs,
+      levels: measured.levels,
+      added_ms,
+      music: Some(measured.music),
+      measured: MEASURED,
+    }
+  }
 }
 
 #[derive(Deserialize, Serialize)]
@@ -127,17 +168,16 @@ fn read_kept(folder: &Path, name: &str) -> Option<Sound> {
   if kept.version != FORMAT_VERSION || kept.sound.name != name || !file.is_file() {
     return None;
   }
-  // A sound kept with no levels has none to draw its waveform from, and one
-  // kept before its beat and key were found has none to be joined by: it is
-  // measured again, once, and kept with them.
-  let unmeasured = kept.sound.levels.is_empty() || kept.sound.music.is_none();
-  if unmeasured && kept.sound.duration_ms > 0 {
+  // A sound measured before what is measured last changed is measured
+  // again, once, and kept as measured now. Its length and name stay.
+  if kept.sound.measured < MEASURED && kept.sound.duration_ms > 0 {
     if let Ok(measured) = measure::measure(&file) {
-      let sound = Sound {
-        levels: measured.levels,
-        music: Some(measured.music),
-        ..kept.sound
-      };
+      let sound = Sound::from_measured(
+        kept.sound.name.clone(),
+        kept.sound.title.clone(),
+        kept.sound.added_ms,
+        measured,
+      );
       let _ = write_kept(folder, &sound);
       return Some(sound);
     }
@@ -166,50 +206,6 @@ fn write_kept(folder: &Path, sound: &Sound) -> Result<(), String> {
   };
   let bytes = serde_json::to_vec(&kept).map_err(|error| error.to_string())?;
   write_whole(&kept_path(folder, &sound.name), &bytes)
-}
-
-/// Adds the sound in `file` to the library, measuring it, and says what it
-/// is. A sound added before is found again by its contents, as it was.
-pub fn import(file: &Path) -> Result<Sound, String> {
-  let extension = extension(file).ok_or_else(|| "That is not a sound file".to_owned())?;
-  let bytes =
-    std::fs::read(file).map_err(|error| format!("The sound could not be read: {error}"))?;
-  let name = format!("{}.{extension}", content_hash(&bytes));
-  let folder = directory()?;
-  if let Some(sound) = read_kept(folder, &name) {
-    return Ok(sound);
-  }
-  std::fs::create_dir_all(folder)
-    .map_err(|error| format!("The sound library could not be made: {error}"))?;
-  let kept = folder.join(&name);
-  if !kept.is_file() {
-    write_whole(&kept, &bytes)?;
-  }
-  let fallback_title = file
-    .file_stem()
-    .and_then(|stem| stem.to_str())
-    .unwrap_or(&name)
-    .to_owned();
-  let measured = match measure::measure(&kept) {
-    Ok(measured) => measured,
-    Err(error) => {
-      let _ = std::fs::remove_file(&kept);
-      return Err(error);
-    }
-  };
-  let sound = Sound {
-    name,
-    title: measured.title.unwrap_or(fallback_title),
-    duration_ms: measured.duration_ms,
-    loudness_lufs: measured.loudness_lufs,
-    levels: measured.levels,
-    added_ms: SystemTime::now()
-      .duration_since(UNIX_EPOCH)
-      .map_or(0, |since| since.as_millis() as u64),
-    music: Some(measured.music),
-  };
-  write_kept(folder, &sound)?;
-  Ok(sound)
 }
 
 /// Every sound in the library, the most recently added first.

@@ -3,13 +3,14 @@
 
 import { useEffect, useRef, useState } from "react";
 
+import { RAIL_DRAG_PX } from "../rail/rail-clip";
 import { baseOf } from "../strip/strip-part";
 import { type SnapFor } from "../strip/strip-snap";
 import { type Span, type TimelineScale } from "../timeline-scale";
 
 import { SceneClip, type TimelineScene } from "./scene-clip";
 import { drawnSceneSpan, LEAST_DRAWN_S } from "./scene-draw";
-import { movedScene, SCENE_DRAG_PX, sceneRoom } from "./scene-move";
+import { movedScene, sceneRoom } from "./scene-move";
 import { SceneRailDraft } from "./scene-rail-draft";
 
 // The scenes along the top of the strip, each over the stretch it frames,
@@ -169,7 +170,7 @@ export function SceneRail({
     if (drag.kind === "move") {
       if (
         !drag.isDragging &&
-        Math.abs(event.clientX - drag.grabX) < SCENE_DRAG_PX
+        Math.abs(event.clientX - drag.grabX) < RAIL_DRAG_PX
       )
         return;
       drag.isDragging = true;

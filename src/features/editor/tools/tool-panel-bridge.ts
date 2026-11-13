@@ -66,6 +66,7 @@ const applyPatch = (values: ToolPanelPatch, on: ToolPanelHandlers) => {
     on.onAutoVolumeChange?.(values.autoVolume);
   if (values.audioClip) on.onAudioClipChange?.(values.audioClip);
   if (values.soundAddition) on.onSoundAdd?.(values.soundAddition);
+  if (values.soundKind) on.onSoundKind?.(values.soundKind.kind);
   if (values.studioSound !== undefined)
     on.onStudioSoundChange?.(values.studioSound);
   if (values.downloadStudioSound) on.onStudioSoundDownload?.();

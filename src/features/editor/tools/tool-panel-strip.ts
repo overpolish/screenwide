@@ -14,6 +14,8 @@ export type ToolPanelStripItem =
   | {
       /** How long it plays, in ms. */
       clipMs: number;
+      /** Whether it, made a song, would have room among the songs. */
+      hasSongRoom: boolean;
       id: string;
       /** Whether a song plays without its singing. */
       isInstrumental: boolean;
@@ -81,4 +83,22 @@ export type ToolPanelTrack = {
 export type ToolPanelSounds = {
   isHeard: boolean;
   kind: AudioClipKind;
+};
+
+/** Songs or sound effects on their way to the timeline, waiting to be told
+ * which they are. */
+export type ToolPanelAddingSounds = {
+  /** Where the timeline lies in the island window, in CSS px, which the
+   * islands stand over: its left half takes sound effects, its right half
+   * songs. Null where there is none. */
+  area: { height: number; left: number; top: number; width: number } | null;
+  /** How many sounds are on their way. */
+  count: number;
+  /** Whether songs would have room after the last song. */
+  hasSongRoom: boolean;
+  /** Carried in a drag from the system, whose drop chooses, rather than
+   * waiting for a press. */
+  isCarried: boolean;
+  /** The kind the drag is over, which a drop now would choose. */
+  over: AudioClipKind | null;
 };

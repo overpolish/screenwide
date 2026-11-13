@@ -22,7 +22,7 @@ use windows::Win32::System::Ole::{
 use windows::Win32::System::SystemServices::MODIFIERKEYS_FLAGS;
 
 use super::*;
-use crate::editor::images::dropped::ImagePoint;
+use crate::editor::images::dropped::{Carried, DroppedPicture, ImagePoint, SoundDrag};
 
 #[implement(IDropTarget)]
 struct ImageDropTarget {
@@ -30,6 +30,8 @@ struct ImageDropTarget {
   /// Whether the drag over the window now holds a picture the workspace can
   /// take, settled as it enters.
   accepts: Cell<bool>,
+  /// Whether the drag over the window holds a sound, which it announced.
+  sound: Cell<bool>,
 }
 
 /// Makes the editor window `hwnd` a drop target. A window that cannot be one
@@ -38,6 +40,7 @@ pub(super) fn register(hwnd: HWND) {
   let target: IDropTarget = ImageDropTarget {
     hwnd,
     accepts: Cell::new(false),
+    sound: Cell::new(false),
   }
   .into();
   if let Err(error) = unsafe { RegisterDragDrop(hwnd, &target) } {
@@ -70,6 +73,28 @@ impl ImageDropTarget {
       DROPEFFECT_NONE
     }
   }
+
+  /// Hands what was carried to the editor's drop callback.
+  fn hand(&self, carried: Carried) -> bool {
+    let Some(engine) = self.surface() else {
+      return false;
+    };
+    let Ok(mut callback) = windows(&engine.inner).image_drop.lock() else {
+      return false;
+    };
+    let Some(callback) = callback.as_mut() else {
+      return false;
+    };
+    callback(carried);
+    true
+  }
+
+  /// Tells the editor a sound announced over the window has gone.
+  fn sound_left(&self) {
+    if self.sound.replace(false) {
+      self.hand(Carried::Sound(SoundDrag::Left));
+    }
+  }
 }
 
 /// Writes `effect` through the pointer OLE hands over, which may be null.
@@ -88,8 +113,22 @@ impl IDropTarget_Impl for ImageDropTarget_Impl {
     _point: &POINTL,
     effect: *mut DROPEFFECT,
   ) -> ComResult<()> {
-    let accepts = self.surface().is_some() && data.as_ref().is_some_and(formats::holds_picture);
-    self.accepts.set(accepts);
+    // The picture takes no sound: songs and sound effects are dropped on the
+    // timeline, in the page, so a sound arriving here is only announced, for
+    // the editor to show where it goes. OLE tells a target that refused of
+    // the drag being let go over it as if it had left.
+    let carried = data
+      .as_ref()
+      .and_then(formats::picture)
+      .filter(|_| self.surface().is_some());
+    match carried {
+      Some(DroppedPicture::File(path)) if screenwide_sound_track::store::is_sound_file(&path) => {
+        self.accepts.set(false);
+        self.sound.set(true);
+        self.hand(Carried::Sound(SoundDrag::Over(path)));
+      }
+      carried => self.accepts.set(carried.is_some()),
+    }
     answer(effect, self.effect());
     Ok(())
   }
@@ -106,6 +145,7 @@ impl IDropTarget_Impl for ImageDropTarget_Impl {
 
   fn DragLeave(&self) -> ComResult<()> {
     self.accepts.set(false);
+    self.sound_left();
     Ok(())
   }
 
@@ -117,6 +157,7 @@ impl IDropTarget_Impl for ImageDropTarget_Impl {
     effect: *mut DROPEFFECT,
   ) -> ComResult<()> {
     answer(effect, DROPEFFECT_NONE);
+    self.sound_left();
     if !self.accepts.replace(false) {
       return Ok(());
     }
@@ -134,11 +175,8 @@ impl IDropTarget_Impl for ImageDropTarget_Impl {
     let at = engine
       .land_drop((f64::from(client.x), f64::from(client.y)))
       .map(|(layer, x, y)| ImagePoint { layer, x, y });
-    if let Ok(mut callback) = windows(&engine.inner).image_drop.lock() {
-      if let Some(callback) = callback.as_mut() {
-        callback(picture, at);
-        answer(effect, DROPEFFECT_COPY);
-      }
+    if self.hand(Carried::Picture(picture, at)) {
+      answer(effect, DROPEFFECT_COPY);
     }
     Ok(())
   }

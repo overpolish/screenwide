@@ -67,11 +67,13 @@ pub use capture_affinity::sync_capture_affinity;
 #[cfg(target_os = "windows")]
 pub(crate) use capture_affinity::{mark_capturing, Capture};
 pub(crate) mod color_panel;
+pub(crate) mod commands;
 mod dismissal;
 #[cfg(target_os = "macos")]
 mod dock_visibility;
 mod escape;
 pub(crate) mod geometry;
+pub(crate) mod inactive_cursor;
 mod lifecycle;
 pub(crate) mod monitor_capture;
 pub(crate) mod on_demand;

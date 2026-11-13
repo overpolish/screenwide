@@ -64,8 +64,34 @@ pub(super) fn args(
       channel.stream_index == stream && channel.processed.is_none() && channel.leveling.is_none()
     })
   });
-  let sound = sound.and_then(|sound| sound.filter(voice_track.map(|_| "[soundvoice]")));
+  // The tracks other than the microphone, the system audio, make room for
+  // the sound effects: each is handed to the songs and sound effects by its
+  // label, and heard from the label handed back.
+  let voice_stream = sound.and_then(PreviewSoundTrack::voice_stream);
+  let beside: Vec<usize> = channels
+    .iter()
+    .enumerate()
+    .filter(|(_, channel)| Some(channel.stream_index) != voice_stream)
+    .map(|(position, _)| position)
+    .collect();
+  let beside_labels: Vec<String> = beside
+    .iter()
+    .map(|position| format!("[track{position}]"))
+    .collect();
+  let sound =
+    sound.and_then(|sound| sound.filter(voice_track.map(|_| "[soundvoice]"), &beside_labels));
   let voice_track = voice_track.filter(|_| sound.is_some());
+  let heard_label = |position: usize| {
+    sound
+      .as_ref()
+      .and_then(|mix| {
+        beside
+          .iter()
+          .position(|each| *each == position)
+          .map(|index| mix.beside[index].clone())
+      })
+      .unwrap_or_else(|| format!("[track{position}]"))
+  };
   // Every range is trimmed from one decode of the source, which therefore
   // starts at the range earliest in it: on a reordered timeline that need
   // not be the first one played.
@@ -166,15 +192,15 @@ pub(super) fn args(
         "{heard}asplit=2[track{track_position}][soundvoice];"
       ));
     }
-    merged_inputs.push_str(&format!("[track{track_position}]"));
+    merged_inputs.push_str(&heard_label(track_position));
   }
   // The songs and sound effects, already mixed and timed from where playback
   // starts on the timeline, are one more channel after the tracks.
   let mut count = labels.len();
   if let Some(sound) = &sound {
     filter.push_str(&format!(
-      "{sound};[soundmix]aresample={},aformat=sample_fmts=flt:channel_layouts=mono,apad=whole_dur={retained}[track{count}];",
-      config.sample_rate,
+      "{};[soundmix]aresample={},aformat=sample_fmts=flt:channel_layouts=mono,apad=whole_dur={retained}[track{count}];",
+      sound.graph, config.sample_rate,
     ));
     merged_inputs.push_str(&format!("[track{count}]"));
     count += 1;

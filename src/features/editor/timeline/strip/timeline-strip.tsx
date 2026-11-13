@@ -7,7 +7,7 @@ import { motionDurationCss } from "../../../../lib/motion";
 import { cn } from "../../../../lib/styling";
 import { ScrollArea } from "../../../../primitives/scroll-area/scroll-area";
 import { AnnotationLane } from "../annotation-lane/annotation-lane";
-import { AudioStack } from "../audio-lane/audio-stack";
+import { AudioLanes } from "../audio-lane/audio-lanes";
 import { CaptionLane } from "../caption-lane/caption-lane";
 import { Minimap } from "../minimap/minimap";
 import { CutBlade } from "../range-cut/cut-blade";
@@ -26,7 +26,6 @@ import { stripSnap } from "./strip-snap";
 import { splitParts } from "./strip-split";
 import { takenOut, takenTotal } from "./taken-out";
 import { type TimelineStripProps } from "./timeline-strip-props";
-import { useAudioDrop } from "./use-audio-drop";
 import { useRangeCut } from "./use-range-cut";
 import { useStripReorder } from "./use-strip-reorder";
 import { useStripReshape } from "./use-strip-reshape";
@@ -55,8 +54,9 @@ import { useWidth } from "./use-width";
 export function TimelineStrip(props: TimelineStripProps) {
   const { map, selection } = props;
   const frame = useWidth();
-  /** Where a scene's end has snapped while drawn or dragged, if anywhere. */
-  const [sceneGuide, setSceneGuide] = useState<number | null>(null);
+  /** Where a scene's or song's end has snapped while drawn or dragged, if
+   * anywhere. */
+  const [guide, setGuide] = useState<number | null>(null);
   const share = (seconds: number, isEnd?: boolean) =>
     map.toPlayed(seconds, isEnd) / Math.max(map.duration, 1e-6);
   const { choose, chosen, chosenId } = stripChoice(props);
@@ -122,13 +122,6 @@ export function TimelineStrip(props: TimelineStripProps) {
     scale,
     width,
   });
-  const dropsAt = useAudioDrop({
-    onDrop: props.onAudioDrop,
-    scale: shown,
-    trackRef: scrub.trackRef,
-  });
-  /** Where a scene's end snapped, or sounds carried over the strip land. */
-  const guide = sceneGuide ?? (dropsAt && shown.map.toRecorded(dropsAt));
   const chosenShortcuts = selection?.kind === "shortcuts" ? selection.ids : [];
 
   return (
@@ -168,7 +161,7 @@ export function TimelineStrip(props: TimelineStripProps) {
                 <SceneRail
                   duration={props.recorded}
                   onDraw={props.onSceneDraw}
-                  onGuide={setSceneGuide}
+                  onGuide={setGuide}
                   onRetime={props.onSceneRetime}
                   onSelect={(id) => {
                     choose({ id, kind: "scene" });
@@ -243,20 +236,17 @@ export function TimelineStrip(props: TimelineStripProps) {
                     />
                   ) : null}
                 </StripLane>
-                <StripLane>
-                  {props.audio?.clips.length ? (
-                    <AudioStack
-                      {...props.audio}
-                      onSelect={(id) => {
-                        choose({ id, kind: "audioClip" });
-                      }}
-                      scale={shown}
-                      selected={chosenId("audioClip")}
-                      snap={snap}
-                      width={width}
-                    />
-                  ) : null}
-                </StripLane>
+                <AudioLanes
+                  audio={props.audio}
+                  onGuide={setGuide}
+                  onSelect={(id) => {
+                    choose({ id, kind: "audioClip" });
+                  }}
+                  scale={shown}
+                  selected={chosenId("audioClip")}
+                  snap={snap}
+                  width={width}
+                />
               </div>
               {/* Over every lane; carried, its row draws it (`RangeBand`). */}
               {shownRange && reorder.lifted === null ? (

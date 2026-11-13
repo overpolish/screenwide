@@ -180,6 +180,7 @@ export function useRecordingStripBand(
         }))
       : null;
   const chosen = {
+    adding: audio.adding,
     item: island,
     shortcuts: chosenShortcuts.length,
     sounds: audio.sounds,
@@ -187,6 +188,7 @@ export function useRecordingStripBand(
   usePublishStripIsland("recording", chosen, {
     addSound: audio.addSound,
     changeAudioClip: audio.changeAudioClip,
+    chooseSoundKind: audio.chooseSoundKind,
     cut: strip.cutChosen,
     deleteShortcuts: () => {
       if (chosenShortcuts.length === 0) return;

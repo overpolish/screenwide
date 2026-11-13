@@ -93,6 +93,7 @@ fn recording_with_a_song(folder: &Path, makes_way: bool) -> (PathBuf, TimelinePl
       path: song.clone(),
       duration_ms: 2_000,
       loudness_lufs: Some(-21.0),
+      loudest_lufs: Some(-18.0),
       levels: Vec::new(),
       separated: None,
       music: Default::default(),

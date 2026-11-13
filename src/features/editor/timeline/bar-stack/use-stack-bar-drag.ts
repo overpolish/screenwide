@@ -82,7 +82,6 @@ const laneY = (clientY: number, bar: Element) =>
 
 export function useStackBarDrag({
   isSelected,
-  movesInTimeOnly = false,
   onHold,
   onRetime,
   onSelect,
@@ -101,9 +100,6 @@ export function useStackBarDrag({
   scale: TimelineScale;
   snap: Snap | undefined;
   span: Span;
-  /** Never carried up and down, where its lanes only keep what overlaps
-   * apart and its order means nothing. */
-  movesInTimeOnly?: boolean;
 }) {
   const holdRef = useRef<Hold | null>(null);
 
@@ -134,7 +130,7 @@ export function useStackBarDrag({
     held.isDragging = true;
     const pointer = secondsAt(x, held.bar);
     const lock =
-      held.part !== "body" || movesInTimeOnly
+      held.part !== "body"
         ? "time"
         : keys.isShift
           ? Math.abs(dx) >= Math.abs(dy)
@@ -144,7 +140,10 @@ export function useStackBarDrag({
     const { guide, span: next } =
       lock === "lane"
         ? { guide: null, span: { end: held.end, start: held.start } }
-        : moveTo(held, pointer, keys.isSnap ? snap : NO_SNAP);
+        : moveTo(held, pointer, {
+            head: keys.isSnap ? snap : NO_SNAP,
+            tail: keys.isSnap ? snap : NO_SNAP,
+          });
     onHold?.({
       guide,
       isLifted: held.part === "body" && lock !== "time",
@@ -232,10 +231,15 @@ export function useStackBarDrag({
 
 /** Where the held bar goes in time with the pointer at `pointer` seconds,
  * and the event an end has snapped to, if any. Moved whole, whichever end
- * comes near an event snaps to it; held by an end, that end alone moves. */
-function moveTo(held: Hold, pointer: number, snap: Snap) {
+ * comes near an event snaps to it, as `head` and `tail` snap the start and
+ * the end; held by an end, that end alone moves. */
+function moveTo(
+  held: Hold,
+  pointer: number,
+  { head: snapHead, tail: snapTail }: { head: Snap; tail: Snap },
+) {
   if (held.part !== "body") {
-    const edge = snap(pointer);
+    const edge = (held.part === "start" ? snapHead : snapTail)(pointer);
     return {
       guide: edge.isSnapped ? edge.seconds : null,
       span:
@@ -246,8 +250,8 @@ function moveTo(held: Hold, pointer: number, snap: Snap) {
   }
   const length = held.end - held.start;
   const moved = held.start + pointer - held.grab;
-  const head = snap(moved);
-  const tail = snap(moved + length);
+  const head = snapHead(moved);
+  const tail = snapTail(moved + length);
   const start = head.isSnapped
     ? head.seconds
     : tail.isSnapped

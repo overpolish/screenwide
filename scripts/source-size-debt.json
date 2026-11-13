@@ -7,6 +7,5 @@
   "src/features/editor/screenshot/screenshot-output.ts": 431,
   "src/features/editor/recording/use-recording-preview-player.ts": 485,
   "src/features/editor/recording/use-recording-preview-surface.ts": 485,
-  "src/features/editor/screenshot/use-screenshot-preview-surface.ts": 352,
-  "src-tauri/src/invoke_handler.rs": 301
+  "src/features/editor/screenshot/use-screenshot-preview-surface.ts": 352
 }

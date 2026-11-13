@@ -144,15 +144,14 @@ export const AnnotationSelected: Story = {
   args: { selection: { id: "text", kind: "annotation" } },
 };
 
-// Two songs laid over each other, which crossfade there, the second
-// looping, and two sound effects that overlap, each in a lane of its own;
-// the second song is chosen.
+// Two songs end to end on their rail, the second looping and chosen, and
+// two sound effects that overlap, each in a lane of its own.
 export const SoundTrack: Story = {
   args: {
     audio: {
       clips: [
         {
-          end: 44,
+          end: 40,
           id: "intro",
           isLooped: false,
           kind: "music",
@@ -165,16 +164,16 @@ export const SoundTrack: Story = {
           id: "theme",
           isLooped: true,
           kind: "music",
-          lane: 1,
+          lane: 0,
           start: 40,
           title: "Long Theme",
         },
         {
-          end: 14,
+          end: 24,
           id: "whoosh",
           isLooped: false,
           kind: "effect",
-          lane: 1,
+          lane: 0,
           start: 12,
           title: "Whoosh",
         },
@@ -183,7 +182,7 @@ export const SoundTrack: Story = {
           id: "click",
           isLooped: false,
           kind: "effect",
-          lane: 2,
+          lane: 1,
           start: 13,
           title: "Click",
         },

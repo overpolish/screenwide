@@ -10,6 +10,12 @@ use crate::pieces::Parts;
 
 const RATE: u64 = 8_000;
 
+/// The songs and sound effects' filters, mixed into `[out]`, with no
+/// recorded tracks to make room in.
+fn sound(pieces: &[Piece], window: (u64, u64), then: &str, voice: Option<&str>) -> Option<String> {
+  filter(pieces, window, ("out", then), voice, &[]).map(|mix| mix.graph)
+}
+
 fn piece(path: &Path, file_start_ms: u64, start_ms: u64, end_ms: u64) -> Piece {
   Piece {
     path: path.to_path_buf(),
@@ -28,6 +34,7 @@ fn piece(path: &Path, file_start_ms: u64, start_ms: u64, end_ms: u64) -> Piece {
     tone: Tone::Whole,
     speed: 1.0,
     makes_way: false,
+    is_effect: false,
     instrumental: false,
     parts: None,
   }
@@ -139,14 +146,14 @@ fn escapes_a_path_for_both_readings_of_a_filter_graph() {
 #[test]
 fn a_window_that_starts_inside_a_long_piece_seeks_to_it() {
   let pieces = [piece(Path::new("/song.mp3"), 0, 0, 180_000)];
-  let graph = filter(&pieces, (90_000, 180_000), "out", "", None).unwrap();
+  let graph = sound(&pieces, (90_000, 180_000), "", None).unwrap();
   assert!(graph.contains("seek_point=90.000,atrim=start=90.000:duration=90.000"));
 }
 
 #[test]
 fn nothing_in_the_window_makes_no_graph() {
   let pieces = [piece(Path::new("/song.mp3"), 0, 0, 1_000)];
-  assert!(filter(&pieces, (1_000, 2_000), "out", "", None).is_none());
+  assert!(sound(&pieces, (1_000, 2_000), "", None).is_none());
 }
 
 #[test]
@@ -155,7 +162,7 @@ fn pieces_play_where_they_sit_on_the_timeline_from_the_window_on() {
   let a = tone(&folder, "a,'b [c].wav", 3);
   let pieces = [piece(&a, 0, 0, 1_000), piece(&a, 1_000, 2_000, 3_000)];
   let format = format!(",aresample={RATE},aformat=sample_fmts=flt:channel_layouts=mono");
-  let samples = played(&filter(&pieces, (500, 3_000), "out", &format, None).unwrap());
+  let samples = played(&sound(&pieces, (500, 3_000), &format, None).unwrap());
   let at = |ms: u64| (ms * RATE / 1_000) as usize;
   assert_eq!(samples.len(), at(2_500));
   // FFmpeg's sine is an eighth of full scale.
@@ -175,7 +182,7 @@ fn a_fade_out_reaches_silence_at_the_piece_end() {
     curve: Curve::Linear,
   };
   let format = format!(",aresample={RATE},aformat=sample_fmts=flt:channel_layouts=mono");
-  let samples = played(&filter(&[faded], (0, 2_000), "out", &format, None).unwrap());
+  let samples = played(&sound(&[faded], (0, 2_000), &format, None).unwrap());
   let at = |ms: u64| (ms * RATE / 1_000) as usize;
   assert!(loudest(&samples[at(0)..at(900)]) > 0.1);
   assert!(loudest(&samples[at(1_950)..]) < 0.01);
@@ -208,7 +215,7 @@ fn voice(folder: &Path) -> String {
 /// How loud the song is while the voice speaks, against once it has stopped.
 fn ducked(song: Piece, folder: &Path) -> f32 {
   let format = format!(",aresample={RATE},aformat=sample_fmts=flt:channel_layouts=mono");
-  let graph = filter(&[song], (0, 3_000), "out", &format, Some("[voice]")).unwrap();
+  let graph = sound(&[song], (0, 3_000), &format, Some("[voice]")).unwrap();
   let samples = played(&format!("{}{graph}", voice(folder)));
   let at = |ms: u64| (ms * RATE / 1_000) as usize;
   loudest(&samples[at(300)..at(900)]) / loudest(&samples[at(2_200)..at(2_900)])
@@ -246,7 +253,7 @@ fn an_instrumental_song_plays_without_its_singing_once_that_is_separated() {
   let (sung, parts) = all_singing(&folder);
   let format = format!(",aresample={RATE},aformat=sample_fmts=flt:channel_layouts=mono");
   let loudness = |song: Piece| {
-    let graph = filter(&[song], (0, 3_000), "out", &format, None).unwrap();
+    let graph = sound(&[song], (0, 3_000), &format, None).unwrap();
     loudest(&played(&graph)[..(2 * RATE) as usize])
   };
   let mut song = piece(&sung, 0, 0, 3_000);
@@ -294,7 +301,7 @@ fn stretched_pieces_play_their_files_at_their_own_speeds() {
   let mut slower = piece(&path, 1_000, 5_000, 9_000);
   slower.speed = 0.8;
   let format = format!(",aresample={RATE},aformat=sample_fmts=flt:channel_layouts=mono");
-  let graph = filter(&[faster, slower], (0, 9_000), "out", &format, None).unwrap();
+  let graph = sound(&[faster, slower], (0, 9_000), &format, None).unwrap();
   let heard = bursts(&played(&graph));
   let mut expected: Vec<f64> = (0..10).map(|burst| f64::from(burst) * 400.0).collect();
   expected.extend((0..7).map(|burst| 5_000.0 + f64::from(burst) * 625.0));
@@ -305,5 +312,47 @@ fn stretched_pieces_play_their_files_at_their_own_speeds() {
       "heard {heard} for {expected}"
     );
   }
+  let _ = std::fs::remove_dir_all(&folder);
+}
+
+#[test]
+fn system_audio_makes_room_only_in_the_bands_a_sound_effect_has() {
+  let folder = scratch("carve");
+  // A 2 kHz bed, handed in as system audio, under a second of an effect from
+  // 1 s: how far the bed comes down while the effect plays, in dB.
+  let dip = |effect_hz: u32| {
+    let effect = made(
+      &folder,
+      &format!("effect{effect_hz}.wav"),
+      &format!("sine=frequency={effect_hz}:duration=1:sample_rate=8000"),
+    );
+    let mut hit = piece(&effect, 0, 1_000, 2_000);
+    hit.is_effect = true;
+    let mix = filter(
+      &[hit],
+      (0, 3_000),
+      ("soundout", ""),
+      None,
+      &["[bed]".to_owned()],
+    )
+    .unwrap();
+    let graph = format!(
+      "sine=frequency=2000:duration=3:sample_rate=8000[bed];{};[soundout]anullsink;\
+       {}aresample={RATE},aformat=sample_fmts=flt:channel_layouts=mono[out]",
+      mix.graph, mix.beside[0]
+    );
+    let samples = played(&graph);
+    let rms = |from_ms: u64, to_ms: u64| {
+      let stretch = &samples[(from_ms * RATE / 1_000) as usize..(to_ms * RATE / 1_000) as usize];
+      (stretch.iter().map(|sample| sample * sample).sum::<f32>() / stretch.len() as f32).sqrt()
+    };
+    20.0 * (rms(1_300, 1_900) / rms(200, 800)).log10()
+  };
+  // An effect in the bed's band carves a few decibels out of it; one in the
+  // bass leaves it be.
+  let matching = dip(2_000);
+  let bass = dip(100);
+  assert!((-8.0..-3.0).contains(&matching), "came down {matching} dB");
+  assert!(bass > -1.0, "came down {bass} dB");
   let _ = std::fs::remove_dir_all(&folder);
 }

@@ -23,6 +23,7 @@ import { Background, BackgroundPreset } from "./frame/background/background";
 import { TranscriptRequest } from "./tool-panel-transcript";
 
 import type { ToolPanelExportPatch } from "./tool-panel-export";
+import type { AudioClipKind } from "../../../bindings/AudioClipKind";
 import type { TextStyle } from "../../../bindings/TextStyle";
 import type { AnnotationPinAction } from "../island/annotation/annotation-pin";
 import type { AudioClipChange } from "../island/audio-clip/audio-clip-island";
@@ -196,6 +197,9 @@ export type ToolPanelHandlers = {
   /** Add a song or sound effect to the timeline, from the library or a
    * file. */
   onSoundAdd?: (addition: SoundAddition) => void;
+  /** Lay the sounds on their way down as songs or sound effects, or, with
+   * none, leave them out. */
+  onSoundKind?: (kind: AudioClipKind | null) => void;
   /** Cut what is chosen on the strip, and its time with it. */
   onStripItemCut?: () => void;
   /** Let go of what is chosen on the strip. */

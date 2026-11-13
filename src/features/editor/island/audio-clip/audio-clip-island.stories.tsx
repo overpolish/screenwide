@@ -43,6 +43,7 @@ const meta = {
   ...editorIslandStoryMeta,
   args: {
     clipMs: 10_000,
+    hasSongRoom: true,
     id: "song",
     isInstrumental: false,
     isLooped: false,
@@ -113,11 +114,15 @@ export const InstrumentalWithoutTheModel: Story = {
 
 export const SoundEffect: Story = {
   args: {
-    clipMs: 1_200,
+    clipMs: 900,
     isSong: false,
     levels: storyLevels(2),
-    offsetMs: 0,
-    soundMs: 1_200,
+    offsetMs: 400,
+    soundMs: 2_400,
     title: "Click",
   },
+};
+
+export const SoundEffectWithNoSongRoom: Story = {
+  args: { ...SoundEffect.args, hasSongRoom: false },
 };

@@ -124,6 +124,7 @@ export function resolveToolPanelSnapshot(
     showCameraObject: _showCameraObject,
     shuffleAnnotation: _shuffleAnnotation,
     soundAddition: _soundAddition,
+    soundKind: _soundKind,
     studioDucking,
     studioSound,
     swapScenePanes: _swapScenePanes,

@@ -11,6 +11,7 @@ fn file(name: &str, duration_ms: u64) -> SoundFile {
     path: PathBuf::from(name),
     duration_ms,
     loudness_lufs: Some(-14.0),
+    loudest_lufs: Some(-11.0),
     levels: Vec::new(),
     separated: None,
     music: crate::store::music::Music::default(),
@@ -272,6 +273,31 @@ fn a_clip_is_levelled_by_the_stretch_it_plays() {
   let (intro, chorus) = (loudness(0), loudness(10_000));
   assert!(intro < -14.0 && chorus > -14.0, "{intro} {chorus}");
   assert!((chorus - intro - 10.0).abs() < 0.01, "{intro} {chorus}");
+}
+
+#[test]
+fn a_sound_effect_is_levelled_by_its_loudest_moment_and_a_song_by_its_whole() {
+  // A tenth of a second loud in two seconds of quiet tail: as a song it is
+  // the sound's loudness over its length, as a sound effect its peak.
+  let mut sound = file("hit", 2_000);
+  sound.levels = [vec![0.5_f32], vec![0.01; 19]].concat();
+  let loudness = |kind| {
+    let clip = RecordingAudioClip {
+      kind,
+      ..song("1", "hit", 0, 2_000)
+    };
+    super::level::played_loudness(&clip, &sound).unwrap()
+  };
+  assert_eq!(loudness(AudioClipKind::Music), -14.0);
+  assert_eq!(loudness(AudioClipKind::Effect), -11.0);
+  // Trimmed to its tail, a sound effect plays as far under its peak as the
+  // tail is, up to the most a stretch is moved.
+  let tail = RecordingAudioClip {
+    kind: AudioClipKind::Effect,
+    offset_ms: 500,
+    ..song("1", "hit", 0, 1_500)
+  };
+  assert_eq!(super::level::played_loudness(&tail, &sound), Some(-23.0));
 }
 
 #[test]
