@@ -113,22 +113,19 @@ impl IDropTarget_Impl for ImageDropTarget_Impl {
     _point: &POINTL,
     effect: *mut DROPEFFECT,
   ) -> ComResult<()> {
-    // The picture takes no sound: songs and sound effects are dropped on the
-    // timeline, in the page, so a sound arriving here is only announced, for
-    // the editor to show where it goes. OLE tells a target that refused of
-    // the drag being let go over it as if it had left.
+    // A sound arriving is told to the editor, which shows the timeline's
+    // lanes to carry it down to; let go here instead, it is handed over too.
     let carried = data
       .as_ref()
       .and_then(formats::picture)
       .filter(|_| self.surface().is_some());
-    match carried {
-      Some(DroppedPicture::File(path)) if screenwide_sound_track::store::is_sound_file(&path) => {
-        self.accepts.set(false);
+    if let Some(DroppedPicture::File(path)) = &carried {
+      if screenwide_sound_track::store::is_sound_file(path) {
         self.sound.set(true);
-        self.hand(Carried::Sound(SoundDrag::Over(path)));
+        self.hand(Carried::Sound(SoundDrag::Over(path.clone())));
       }
-      carried => self.accepts.set(carried.is_some()),
     }
+    self.accepts.set(carried.is_some());
     answer(effect, self.effect());
     Ok(())
   }
@@ -157,7 +154,7 @@ impl IDropTarget_Impl for ImageDropTarget_Impl {
     effect: *mut DROPEFFECT,
   ) -> ComResult<()> {
     answer(effect, DROPEFFECT_NONE);
-    self.sound_left();
+    let was_sound = self.sound.replace(false);
     if !self.accepts.replace(false) {
       return Ok(());
     }
@@ -167,6 +164,14 @@ impl IDropTarget_Impl for ImageDropTarget_Impl {
     let Some(picture) = data.as_ref().and_then(formats::picture) else {
       return Ok(());
     };
+    if was_sound {
+      if let DroppedPicture::File(path) = picture {
+        if self.hand(Carried::Sound(SoundDrag::Dropped(path))) {
+          answer(effect, DROPEFFECT_COPY);
+        }
+      }
+      return Ok(());
+    }
     let mut client = POINT {
       x: point.x,
       y: point.y,

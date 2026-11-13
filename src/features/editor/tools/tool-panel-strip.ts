@@ -89,16 +89,11 @@ export type ToolPanelSounds = {
  * which they are. */
 export type ToolPanelAddingSounds = {
   /** Where the timeline lies in the island window, in CSS px, which the
-   * islands stand over: its left half takes sound effects, its right half
-   * songs. Null where there is none. */
+   * islands stand over: its left half for sound effects, its right half
+   * for songs. Null where there is none. */
   area: { height: number; left: number; top: number; width: number } | null;
   /** How many sounds are on their way. */
   count: number;
   /** Whether songs would have room after the last song. */
   hasSongRoom: boolean;
-  /** Carried in a drag from the system, whose drop chooses, rather than
-   * waiting for a press. */
-  isCarried: boolean;
-  /** The kind the drag is over, which a drop now would choose. */
-  over: AudioClipKind | null;
 };

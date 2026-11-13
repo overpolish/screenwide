@@ -12,14 +12,14 @@ import { EditorIsland } from "../editor-island";
 
 import type { AudioClipKind } from "../../../../bindings/AudioClipKind";
 
-// Songs or sound effects on their way to the timeline, asking which they
-// are: the editor dims under two islands over the timeline, Sound effect
-// over its left half and Song over its right, each saying where its kind
-// lands. Dragged in, the editor follows the drag and says which half it is
-// over (`use-sound-drag.ts`), so the window lets the drag through; chosen in
-// the Sound island, the islands are pressed, and a press anywhere else, or
-// Escape, adds nothing. With no room after the last song, Song says so and
-// takes nothing.
+// Songs or sound effects on their way to the timeline from the Sound
+// island's library or a file, asking which they are: the editor dims under
+// two islands over the timeline, Sound effect over its left half and Song
+// over its right, each saying where its kind lands. An island pressed
+// chooses; a press anywhere else, or Escape, adds nothing. With no room
+// after the last song, Song says so and takes nothing. A drag from the
+// system needs no asking: the lane it is let go on says
+// (`use-sound-carry.ts`).
 
 const KINDS: readonly AudioClipKind[] = ["effect", "music"];
 
@@ -78,16 +78,7 @@ export function SoundKindChooser({
                   }}
                   type="button"
                 >
-                  <IslandFill
-                    isChosen={false}
-                    // A drag's island is the one under it, which the editor
-                    // follows; a pointer's is the one it hovers.
-                    isHovered={
-                      adding.isCarried
-                        ? adding.over === kind && isTaken
-                        : undefined
-                    }
-                  />
+                  <IslandFill isChosen={false} />
                   <Glyph aria-hidden className="size-icon-lg" />
                   {isSong
                     ? t("editor-island-audio-song")

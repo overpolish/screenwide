@@ -28,12 +28,14 @@ pub(crate) enum DroppedPicture {
   Data(Vec<u8>),
 }
 
-/// A sound file carried over the picture, which takes no sound: the
-/// editor's timeline does (`use-sound-drag.ts`), so the picture only tells
-/// the editor the drag is there, and when it has gone.
+/// A sound file carried over the picture: the editor's timeline is where
+/// songs and sound effects go (`use-sound-carry.ts`), so the picture tells
+/// the editor the drag is there, when it has gone, and, let go on it, hands
+/// the sound over for the editor to place by its length.
 pub(crate) enum SoundDrag {
   Over(PathBuf),
   Left,
+  Dropped(PathBuf),
 }
 
 /// What a drop target hands the editor.
@@ -51,6 +53,7 @@ const SOUND_DRAG_EVENT: &str = "editor://sound-drag";
 enum SoundDragEvent {
   Over { paths: Vec<PathBuf> },
   Left,
+  Dropped { paths: Vec<PathBuf> },
 }
 
 /// Where a drop landed: the layer under it, and the point in that layer's
@@ -103,8 +106,8 @@ fn keep(picture: DroppedPicture) -> Result<ImageArt, String> {
 
 /// Keeps a picture let go and tells the `workspace` editor to place it at
 /// the point it landed on, or in the middle of the layer in hand where no
-/// picture was laid out. A sound carried over a recording's picture is told
-/// to its editor, which shows where songs and sound effects are dropped.
+/// picture was laid out. A sound carried over a recording's picture, or let
+/// go on it, is told to its editor.
 /// Returns at once: decoding a large picture is no work for the thread a
 /// drop arrives on.
 pub(crate) fn deliver(app: &AppHandle, workspace: &'static str, carried: Carried) {
@@ -115,6 +118,7 @@ pub(crate) fn deliver(app: &AppHandle, workspace: &'static str, carried: Carried
         let event = match drag {
           SoundDrag::Over(path) => SoundDragEvent::Over { paths: vec![path] },
           SoundDrag::Left => SoundDragEvent::Left,
+          SoundDrag::Dropped(path) => SoundDragEvent::Dropped { paths: vec![path] },
         };
         let _ = app.emit(SOUND_DRAG_EVENT, event);
       }

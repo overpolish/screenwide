@@ -8,7 +8,7 @@
 use std::path::{Path, PathBuf};
 
 use super::singing::copy_if_more;
-use super::{directory, is_name, read_kept, write_kept, Sound};
+use super::{directory, is_name, is_stem, read_kept, write_kept, Sound};
 
 /// Copies the sound `name` from the folder `from` into the folder `to`
 /// where `to` lacks it, and the singing separated from it where `from` holds
@@ -39,6 +39,35 @@ pub fn carry<'a>(project_sounds: &Path, names: impl IntoIterator<Item = &'a str>
         "Could not keep a sound in {}: {error}",
         project_sounds.display()
       );
+    }
+  }
+}
+
+/// Takes out of the project in `project_sounds` every sound none of `used`
+/// names, with the files kept beside it: its record, the singing separated
+/// from it, and any copy left half made. Undo can bring a clip back only
+/// while the project is open, and the library keeps every sound, so this
+/// runs as the project is opened or closed. Anything that is not a sound's
+/// is left alone.
+pub fn prune<'a>(project_sounds: &Path, used: impl IntoIterator<Item = &'a str>) {
+  let kept: Vec<&str> = used
+    .into_iter()
+    .filter_map(|name| name.split_once('.').map(|(stem, _)| stem))
+    .collect();
+  let Ok(entries) = std::fs::read_dir(project_sounds) else {
+    return;
+  };
+  for entry in entries.flatten() {
+    let Ok(name) = entry.file_name().into_string() else {
+      continue;
+    };
+    let Some((stem, _)) = name.split_once('.') else {
+      continue;
+    };
+    if is_stem(stem) && !kept.contains(&stem) {
+      if let Err(error) = std::fs::remove_file(entry.path()) {
+        eprintln!("Could not take {name} out of the project: {error}");
+      }
     }
   }
 }

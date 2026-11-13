@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import { type AudioClipKind } from "../../../../bindings/AudioClipKind";
 import { BarStack } from "../bar-stack/bar-stack";
 import { type BarPart } from "../bar-stack/use-stack-bar-drag";
 import { baseOf } from "../strip/strip-part";
@@ -25,9 +26,13 @@ export type StripAudio = {
   onRestack: (lanes: Record<string, number>) => void;
   /** Told a clip moved whole or an end of it pulled, in recorded seconds. */
   onRetime: (id: string, span: Span, part: BarPart) => void;
+  /** Sounds dragged in from the system, while they are carried over the
+   * editor: the kind of the lane under the pointer, if any, and where they
+   * would land on it. */
+  carried?: { ghosts: TimelineAudioClip[]; kind: AudioClipKind | null } | null;
 };
 
-export type AudioStackProps = Omit<StripAudio, "clips"> & {
+export type AudioStackProps = Omit<StripAudio, "carried" | "clips"> & {
   /** The sound effects. */
   clips: TimelineAudioClip[];
   onSelect: (id: string) => void;

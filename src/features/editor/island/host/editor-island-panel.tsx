@@ -76,8 +76,6 @@ export function EditorIslandPanel({
   });
   // While sounds wait for a press to tell what they are, the chooser takes
   // the whole window, so a press off its islands reaches nothing beneath.
-  // While a drag carries them, the window takes nothing, so the drag goes
-  // on to the editor, which follows it (`use-sound-drag.ts`).
   const adding = useToolPanelStore(
     (state) => state.snapshots[content.workspace]?.addingSounds ?? null,
   );
@@ -85,21 +83,14 @@ export function EditorIslandPanel({
     corner: [],
     script: [],
   });
-  const takesRef = useRef<"whole" | "parts" | "none">("parts");
-  takesRef.current =
-    adding?.isCarried === true
-      ? "none"
-      : dismissesOnPress || adding !== null
-        ? "whole"
-        : "parts";
+  const takesWholeRef = useRef(false);
+  takesWholeRef.current = dismissesOnPress || adding !== null;
   const reportHitArea = () => {
     void setPopupPanelHitArea(
       label,
-      takesRef.current === "whole"
+      takesWholeRef.current
         ? [{ height: window.innerHeight, width: window.innerWidth, x: 0, y: 0 }]
-        : takesRef.current === "none"
-          ? []
-          : [...partsRef.current.corner, ...partsRef.current.script],
+        : [...partsRef.current.corner, ...partsRef.current.script],
     );
   };
   const reportOf =
@@ -107,8 +98,8 @@ export function EditorIslandPanel({
       partsRef.current[island] = parts;
       reportHitArea();
     };
-  // eslint-disable-next-line @eslint-react/exhaustive-deps -- reported again whenever what the window takes changes.
-  useEffect(reportHitArea, [takesRef.current]);
+  // eslint-disable-next-line @eslint-react/exhaustive-deps -- reported again whenever the window starts or stops taking every press.
+  useEffect(reportHitArea, [takesWholeRef.current]);
 
   // Showing something else in this window makes it an ordinary panel again.
   useEffect(

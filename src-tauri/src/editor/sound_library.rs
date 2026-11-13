@@ -17,10 +17,12 @@ use tauri::{Emitter, Manager};
 
 use super::{EditorArtifact, EditorState};
 
+mod cleanup;
 mod preview;
 mod singing;
 mod voice;
 
+pub(crate) use cleanup::clean;
 pub(crate) use singing::{ready_for_export, separate_singing};
 pub(crate) use voice::ducks;
 use voice::microphone;

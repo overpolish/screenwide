@@ -131,3 +131,39 @@ fn names_that_could_reach_outside_the_library_are_not_names() {
   assert!(!is_name("0123456789abcdef0123456789abcdef.exe"));
   assert!(is_name("0123456789abcdef0123456789abcdef.m4a"));
 }
+
+#[test]
+fn a_project_lets_go_of_the_sounds_no_clip_plays_and_keeps_the_rest() {
+  let project = scratch("prune");
+  let used = "0123456789abcdef0123456789abcdef";
+  let gone = "fedcba9876543210fedcba9876543210";
+  let files = |stem: &str| {
+    [
+      format!("{stem}.mp3"),
+      format!("{stem}.json"),
+      format!("{stem}.rest.flac"),
+      format!("{stem}.singing.flac"),
+      format!("{stem}.singing.json"),
+    ]
+  };
+  for name in files(used)
+    .iter()
+    .chain(&files(gone))
+    .chain(&[".DS_Store".to_owned()])
+  {
+    std::fs::write(project.join(name), b"kept").unwrap();
+  }
+  prune(&project, [format!("{used}.mp3").as_str()]);
+  let mut left: Vec<String> = std::fs::read_dir(&project)
+    .unwrap()
+    .flatten()
+    .filter_map(|entry| entry.file_name().into_string().ok())
+    .collect();
+  left.sort();
+  let mut expected: Vec<String> = files(used)
+    .into_iter()
+    .chain([".DS_Store".to_owned()])
+    .collect();
+  expected.sort();
+  assert_eq!(left, expected);
+}

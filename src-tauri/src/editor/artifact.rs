@@ -54,6 +54,7 @@ pub(super) fn take_artifact(app: &AppHandle, kind: EditorKind) -> Option<EditorA
     .take();
   if let Some(project) = artifact.as_ref().and_then(EditorArtifact::project) {
     super::project_look::clean_pictures(project);
+    super::sound_library::clean(project);
   }
   artifact
 }

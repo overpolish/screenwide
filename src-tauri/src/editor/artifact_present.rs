@@ -72,6 +72,7 @@ pub(super) fn present_new(
   // A project replaced by another is let go of as surely as one closed.
   if let Some(project) = replaced.as_ref().and_then(EditorArtifact::project) {
     super::project_look::clean_pictures(project);
+    super::sound_library::clean(project);
     super::project_name::settle_name(app, project);
   }
   reveal(app, kind);

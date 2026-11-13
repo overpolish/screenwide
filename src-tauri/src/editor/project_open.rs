@@ -112,11 +112,12 @@ fn open(app: &AppHandle, file: &Path) -> Result<(), OpenFailure> {
   }
   // Before anything draws, so the project's images find their pictures and
   // its songs their sounds on a computer that has never stored them. Then
-  // the pictures are tidied, in case it was last closed by the app
-  // quitting, which leaves no chance to.
+  // the pictures and sounds are tidied, in case it was last closed by the
+  // app quitting, which leaves no chance to.
   super::project_look::adopt_pictures(file);
   super::sound_library::adopt(file);
   super::project_look::clean_pictures(file);
+  super::sound_library::clean(file);
   // A track that is gone, or that a crash cut off before it held anything
   // readable, leaves the recording without it rather than refusing it.
   let optional = |name: Option<String>| -> Result<Option<PathBuf>, OpenFailure> {

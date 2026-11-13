@@ -184,6 +184,7 @@ pub async fn save_export(
     // A recording opened while this one exported has the window, so this
     // project is let go of as one closed is.
     super::super::project_look::clean_pictures(&project);
+    super::super::sound_library::clean(&project);
     super::super::project_name::settle_name(&app, &project);
   }
   if crate::settings::current(&app).open_location_after_export {

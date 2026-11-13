@@ -68,18 +68,15 @@ pub(super) fn entered(
   info: &ProtocolObject<dyn NSDraggingInfo>,
 ) -> NSDragOperation {
   let carried = picture(&info.draggingPasteboard()).filter(|_| taking(view));
-  // The picture takes no sound: songs and sound effects are dropped on the
-  // timeline, in the page, so a sound arriving here is only announced, for
-  // the editor to show where it goes. AppKit tells a view it refused of the
-  // drag being let go over it as if it had left.
-  match carried {
-    Some(DroppedPicture::File(path)) if screenwide_sound_track::store::is_sound_file(&path) => {
-      view.ivars().drop_accepts.set(false);
+  // A sound arriving is told to the editor, which shows the timeline's lanes
+  // to carry it down to; let go here instead, it is handed over too.
+  if let Some(DroppedPicture::File(path)) = &carried {
+    if screenwide_sound_track::store::is_sound_file(path) {
       view.ivars().drop_sound.set(true);
-      hand(view, Carried::Sound(SoundDrag::Over(path)));
+      hand(view, Carried::Sound(SoundDrag::Over(path.clone())));
     }
-    carried => view.ivars().drop_accepts.set(carried.is_some()),
   }
+  view.ivars().drop_accepts.set(carried.is_some());
   operation(view)
 }
 
@@ -115,6 +112,12 @@ pub(super) fn perform(view: &EditorView, info: &ProtocolObject<dyn NSDraggingInf
   let Some(picture) = picture(&info.draggingPasteboard()) else {
     return false;
   };
+  if view.ivars().drop_sound.replace(false) {
+    if let DroppedPicture::File(path) = picture {
+      return hand(view, Carried::Sound(SoundDrag::Dropped(path)));
+    }
+    return false;
+  }
   let point = view.pixels(view.convertPoint_fromView(info.draggingLocation(), None));
   let at = engine
     .land_drop(point)

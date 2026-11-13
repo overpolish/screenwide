@@ -15,7 +15,7 @@ const area = { height: 140, left: 64, top: 324, width: 680 };
 const meta = {
   argTypes: { onChoose: { control: false } },
   args: {
-    adding: { area, count: 1, hasSongRoom: true, isCarried: false, over: null },
+    adding: { area, count: 1, hasSongRoom: true },
     onChoose: fn(),
   },
   component: SoundKindChooser,
@@ -35,26 +35,6 @@ type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {};
 
-export const DraggedOverEffect: Story = {
-  args: {
-    adding: {
-      area,
-      count: 1,
-      hasSongRoom: true,
-      isCarried: true,
-      over: "effect",
-    },
-  },
-};
-
 export const NoSongRoom: Story = {
-  args: {
-    adding: {
-      area,
-      count: 1,
-      hasSongRoom: false,
-      isCarried: false,
-      over: null,
-    },
-  },
+  args: { adding: { area, count: 1, hasSongRoom: false } },
 };

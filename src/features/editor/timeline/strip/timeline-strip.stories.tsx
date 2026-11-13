@@ -194,6 +194,32 @@ export const SoundTrack: Story = {
   },
 };
 
+// A sound dragged in from the system and carried over the empty effects
+// lane, which shows while it is carried, with where it would land.
+export const SoundCarried: Story = {
+  args: {
+    audio: {
+      carried: {
+        ghosts: [
+          {
+            end: 31,
+            id: "carried",
+            isLooped: false,
+            kind: "effect",
+            lane: 0,
+            start: 20,
+            title: "Crazy Dinner Bell",
+          },
+        ],
+        kind: "effect",
+      },
+      clips: [],
+      onRestack: fn(),
+      onRetime: fn(),
+    },
+  },
+};
+
 // A stretch drawn across a lull and into the beat after it.
 export const RangeSelected: Story = {
   args: {

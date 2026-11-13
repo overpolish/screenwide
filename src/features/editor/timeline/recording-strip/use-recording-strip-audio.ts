@@ -127,18 +127,26 @@ export function useRecordingStripAudio({
     ...clip,
     endMs: Math.min(clip.endMs, timelineMs),
   });
-  const audioClips: TimelineAudioClip[] = clips.flatMap((clip) =>
+  /** `clip` as the strip draws it, a part each side of every jump. */
+  const partsOf = (clip: RecordingAudioClip, title: string) =>
     recordedParts(time.map, time.runs, shownClip(clip)).map((span, part) => ({
       ...span,
       id: partId(clip.id, part),
       isLooped: clip.isLooped,
       kind: clip.kind,
       lane: clip.lane,
-      title: sounds.get(clip.sound)?.title ?? "",
-    })),
+      title,
+    }));
+  const audioClips: TimelineAudioClip[] = clips.flatMap((clip) =>
+    partsOf(clip, sounds.get(clip.sound)?.title ?? ""),
   );
+  const { carried } = adding;
   const strip: Pick<TimelineStripProps, "audio"> = {
     audio: {
+      carried: carried && {
+        ghosts: carried.ghosts.flatMap((ghost) => partsOf(ghost, ghost.title)),
+        kind: carried.kind,
+      },
       clips: audioClips,
       onRestack: (laneOf) => {
         const lanes = new Map<string, number>();

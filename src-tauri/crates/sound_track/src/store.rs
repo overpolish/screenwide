@@ -15,7 +15,7 @@ pub mod singing;
 mod trim;
 
 pub use adding::import;
-pub use project::{adopt, carry, resolve};
+pub use project::{adopt, carry, prune, resolve};
 pub use singing::Separated;
 
 use std::path::{Path, PathBuf};
@@ -125,11 +125,15 @@ pub fn is_name(name: &str) -> bool {
   let Some((stem, extension)) = name.split_once('.') else {
     return false;
   };
+  is_stem(stem) && EXTENSIONS.contains(&extension)
+}
+
+/// Whether `stem` is a content hash, as every file kept for a sound starts.
+fn is_stem(stem: &str) -> bool {
   stem.len() == NAME_DIGITS
     && stem
       .bytes()
       .all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte))
-    && EXTENSIONS.contains(&extension)
 }
 
 /// Whether `path` is a kind of file the library takes, by its extension.
