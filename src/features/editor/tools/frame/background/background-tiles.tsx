@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { Image as ImageGlyph, Plus, Trash2 } from "lucide-react";
+import { Image as ImageGlyph, LibraryBig, Plus, Trash2 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { ToggleButtonGroup } from "react-aria-components";
 
@@ -39,6 +39,7 @@ const tileInk = (background: Background) => {
 export function BackgroundTiles({
   choice,
   isDisabled,
+  library,
   onPickImage,
   onRemovePreset,
   onSavePreset,
@@ -52,6 +53,9 @@ export function BackgroundTiles({
   presets: BackgroundPreset[];
   savedPresets: BackgroundPreset[];
   isDisabled?: boolean;
+  /** The Library tile, which opens the library's pictures beside the
+   * tiles (`controls` names what it opens); none where nothing can. */
+  library?: { controls: string; isOpen: boolean; onToggle: () => void };
 }) {
   const removal = useArmedRemoval(onRemovePreset);
   const armed = isDisabled ? null : removal.armed;
@@ -166,6 +170,22 @@ export function BackgroundTiles({
           <ImageGlyph aria-hidden="true" />
         </Swatch>
       </motion.span>
+      {library ? (
+        <motion.span className="flex" {...slide}>
+          <Swatch
+            aria-controls={library.controls}
+            aria-expanded={library.isOpen}
+            aria-label={t("background-library")}
+            id="library"
+            isDisabled={isDisabled}
+            isSelected={false}
+            onPress={library.onToggle}
+            size="sm"
+          >
+            <LibraryBig aria-hidden="true" />
+          </Swatch>
+        </motion.span>
+      ) : null}
     </ToggleButtonGroup>
   );
 }

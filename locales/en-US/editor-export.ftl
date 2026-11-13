@@ -81,6 +81,8 @@ editor-export-canceling = Canceling
 ## Once the file is written.
 
 editor-export-done = Exported
+# Under the exported file, where it uses CC BY works found on Openverse: the credits their licences ask for were written to a text file beside it. $name is that file's name.
+editor-export-credits = It uses CC BY works, so their credits are in { $name } beside it.
 # $platform is windows or macos: the file manager is Explorer or Finder.
 editor-export-reveal =
     { $platform ->

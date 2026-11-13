@@ -94,8 +94,8 @@ const meta = {
             savedPresets: args.savedPresets.filter((kept) => kept.id !== id),
           });
         }}
-        onSavePreset={(background) => {
-          args.onSavePreset(background);
+        onSavePreset={(background, name) => {
+          args.onSavePreset(background, name);
           updateArgs({
             savedPresets: [
               ...args.savedPresets,
@@ -103,7 +103,7 @@ const meta = {
                 background,
                 // Unique past removals, as the tiles are keyed by it.
                 id: `saved-${Date.now().toString(36)}`,
-                name: presetName(background),
+                name: name ?? presetName(background),
               },
             ],
           });

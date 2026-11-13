@@ -11,14 +11,19 @@ import type { Sound } from "../../../bindings/Sound";
 // too, where they are not heard. A song lands in the room nearest where it
 // was let go, as a song moved on its rail does: there where it fits, else
 // against the songs it would land on, and is cut off at the timeline's end.
-// A sound dropped where no lane says what it is goes by its length.
+// A sound dropped where no lane says what it is goes as the library lists
+// it.
 
-/** A sound this long or longer, dropped where no lane says, is a song. */
+/** A sound this long or longer, never placed, is a song. */
 const SONG_MS = 10_000;
 
-/** What a sound dropped where no lane says what it is becomes. */
-export const guessedKind = ({ durationMs }: Sound): AudioClipKind =>
-  durationMs >= SONG_MS ? "music" : "effect";
+/** What the library lists a sound as, and so what one dropped where no
+ * lane says becomes: what it was last used as, or else by its length. */
+export const guessedKind = ({
+  durationMs,
+  kind,
+}: Pick<Sound, "durationMs" | "kind">): AudioClipKind =>
+  kind ?? (durationMs >= SONG_MS ? "music" : "effect");
 
 const clipOf = (
   sound: Sound,

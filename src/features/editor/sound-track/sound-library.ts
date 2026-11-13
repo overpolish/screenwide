@@ -5,6 +5,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { useEffect, useSyncExternalStore } from "react";
 
+import type { AudioClipKind } from "../../../bindings/AudioClipKind";
 import type { Sound } from "../../../bindings/Sound";
 
 // The sound library as this window knows it: every song and sound effect
@@ -56,9 +57,13 @@ const keep = (sounds: Sound[]) => {
 export const isSoundPath = (path: string) =>
   EXTENSIONS.includes(path.split(".").pop()?.toLowerCase() ?? "");
 
-/** Adds the sounds at `paths` to the library, and says what each is. */
-export async function importSounds(paths: string[]) {
-  const sounds = await invoke<Sound[]>("import_sounds", { paths });
+/** Adds the sounds at `paths` to the library, listed as `kind` where they
+ * were added under one, and says what each is. */
+export async function importSounds(paths: string[], kind?: AudioClipKind) {
+  const sounds = await invoke<Sound[]>("import_sounds", {
+    kind: kind ?? null,
+    paths,
+  });
   keep(sounds);
   return sounds;
 }
@@ -70,6 +75,14 @@ export const browseSounds = () => invoke<string[]>("browse_sounds");
  * their own copy. */
 export const removeSound = (name: string) =>
   invoke<null>("remove_sound", { name });
+
+/** Takes the sound `name`, which the open recording carries but the
+ * library lacks, into the library as `kind`, and says what it is there. */
+export async function keepProjectSound(name: string, kind: AudioClipKind) {
+  const sound = await invoke<Sound>("keep_project_sound", { kind, name });
+  keep([sound]);
+  return sound;
+}
 
 /** Starts dragging the sound `name`'s file out of this window, from the
  * press under way, onto the lanes or into another app, drawn as `look`. */
@@ -96,15 +109,19 @@ export const MOST_PREVIEW_MS = 30_000;
 export const previewSound = (name: string, fromMs: number, lengthMs: number) =>
   invoke<ArrayBuffer>("get_sound_preview", { fromMs, lengthMs, name });
 
+/** Reads the library again, keeps it for this window, and says what it
+ * holds. */
+export const readSoundLibrary = () =>
+  invoke<Sound[]>("get_sound_library").then((sounds) => {
+    library = sounds;
+    notify();
+    return sounds;
+  });
+
 const read = () => {
-  invoke<Sound[]>("get_sound_library")
-    .then((sounds) => {
-      library = sounds;
-      notify();
-    })
-    .catch((cause: unknown) => {
-      console.error("Could not read the sound library", cause);
-    });
+  readSoundLibrary().catch((cause: unknown) => {
+    console.error("Could not read the sound library", cause);
+  });
 };
 
 /** Every sound in the library, read once per window, and again whenever any

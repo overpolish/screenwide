@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 mod export_command;
+mod export_credits;
 mod finished;
 pub use export_command::save_export;
 pub use finished::{copy_export_file, drag_export_file, put_away_export, reveal_export_file};

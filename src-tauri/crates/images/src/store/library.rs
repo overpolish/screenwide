@@ -14,8 +14,9 @@ use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
 use super::super::animation::decode;
-use super::{directory, is_name, stored_file, IMAGE_PREFIX, KEPT_EXTENSIONS};
+use super::{directory, is_name, removed, stored_file, IMAGE_PREFIX, KEPT_EXTENSIONS};
 use screenwide_annotations::image::{ImageArt, ImagePlay};
+use screenwide_credits::Credit;
 
 /// The version of the file kept beside a picture.
 const FORMAT_VERSION: u16 = 1;
@@ -40,6 +41,11 @@ pub struct Picture {
   /// in as it is listed, since the store's folder can move.
   #[serde(default)]
   pub file: String,
+  /// Who made it and under which licence, for a picture found on
+  /// Openverse; none for one given an image otherwise.
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  #[ts(optional)]
+  pub credit: Option<Credit>,
 }
 
 #[derive(Deserialize, Serialize)]
@@ -48,7 +54,7 @@ struct Kept {
   picture: Picture,
 }
 
-fn kept_path(folder: &Path, name: &str) -> std::path::PathBuf {
+pub(super) fn kept_path(folder: &Path, name: &str) -> std::path::PathBuf {
   folder.join(format!("{name}.json"))
 }
 
@@ -58,7 +64,7 @@ fn now_ms() -> u64 {
     .map_or(0, |since| since.as_millis() as u64)
 }
 
-fn read_kept(folder: &Path, name: &str) -> Option<Picture> {
+pub(super) fn read_kept(folder: &Path, name: &str) -> Option<Picture> {
   let bytes = std::fs::read(kept_path(folder, name)).ok()?;
   let kept: Kept = serde_json::from_slice(&bytes).ok()?;
   (kept.version == FORMAT_VERSION && kept.picture.name == name).then_some(kept.picture)
@@ -93,6 +99,7 @@ pub(super) fn note(art: &ImageArt, title: Option<&str>) {
   let (Some(folder), Some(name)) = (directory(), name_of(art)) else {
     return;
   };
+  removed::forget(folder, name);
   let picture = match read_kept(folder, name) {
     Some(known) if known.title.is_some() || title.is_none() => return,
     Some(known) => Picture {
@@ -105,10 +112,33 @@ pub(super) fn note(art: &ImageArt, title: Option<&str>) {
       added_ms: now_ms(),
       art: art.clone(),
       file: String::new(),
+      credit: None,
     },
   };
   if let Err(error) = write_kept(folder, &picture) {
     eprintln!("Could not note the picture {name}: {error}");
+  }
+}
+
+/// Names the picture `art` shows, found on Openverse, `title`, and credits
+/// it to who made it, unless it is credited already.
+pub(super) fn credit_found(art: &ImageArt, title: &str, credit: Credit) {
+  let (Some(folder), Some(name)) = (directory(), name_of(art)) else {
+    return;
+  };
+  let Some(picture) = picture(folder, name) else {
+    return;
+  };
+  if picture.credit.is_some() {
+    return;
+  }
+  let credited = Picture {
+    title: Some(title.to_owned()),
+    credit: Some(credit),
+    ..picture
+  };
+  if let Err(error) = write_kept(folder, &credited) {
+    eprintln!("Could not credit the picture {name}: {error}");
   }
 }
 
@@ -154,6 +184,7 @@ fn described(name: &str, file: &Path) -> Option<Picture> {
     added_ms,
     art,
     file: String::new(),
+    credit: None,
   })
 }
 
@@ -183,13 +214,14 @@ pub fn pictures() -> Vec<Picture> {
   let Ok(entries) = std::fs::read_dir(folder) else {
     return Vec::new();
   };
+  let hidden = removed::names(folder);
   let mut pictures: Vec<Picture> = entries
     .flatten()
     .filter_map(|entry| {
       let path = entry.path();
       let extension = path.extension()?.to_str()?;
       let name = path.file_stem()?.to_str()?;
-      (KEPT_EXTENSIONS.contains(&extension) && is_name(name))
+      (KEPT_EXTENSIONS.contains(&extension) && is_name(name) && !hidden.contains(name))
         .then(|| picture(folder, name))
         .flatten()
     })
@@ -220,12 +252,14 @@ pub(super) fn kept_art(file: &Path) -> Option<ImageArt> {
 }
 
 /// Takes the picture `name` out of the library. Projects that show it keep
-/// their own copy, which they hand back when they are opened again.
+/// their own copy, which they hand back when they are opened again, to draw
+/// it, but it stays out of the library (`removed`).
 pub fn remove(name: &str) -> Result<(), String> {
   if !is_name(name) {
     return Err("There is no such picture".to_owned());
   }
   let folder = directory().ok_or("Pictures cannot be kept yet")?;
+  removed::note(folder, name);
   if let Some(file) = stored_file(name) {
     std::fs::remove_file(file)
       .map_err(|error| format!("The picture could not be removed: {error}"))?;

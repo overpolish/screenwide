@@ -12,6 +12,10 @@ import { swatchStyles, type SwatchSize } from "./swatch-styles";
 
 type SwatchProps = {
   "aria-label": string;
+  /** The id of what a swatch that opens something opens. */
+  "aria-controls"?: string;
+  /** Whether what a swatch opens is open. */
+  "aria-expanded"?: boolean;
   children?: ReactNode;
   className?: string;
   /** CSS colour. */
@@ -35,6 +39,8 @@ type SwatchProps = {
 // Choosing another, the outline closes in onto the old swatch as it fades and
 // opens out from the new one's edge, so the choice is seen to move.
 export function Swatch({
+  "aria-controls": controls,
+  "aria-expanded": isExpanded,
   "aria-label": label,
   children,
   className,
@@ -56,6 +62,8 @@ export function Swatch({
     : motionDurationCss("travel");
   return (
     <ToggleButton
+      aria-controls={controls}
+      aria-expanded={isExpanded}
       aria-label={label}
       className={cn(
         swatchStyles(isPainted, size),

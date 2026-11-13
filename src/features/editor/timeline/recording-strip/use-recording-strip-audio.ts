@@ -16,6 +16,7 @@ import {
   trimmedClip,
 } from "../../sound-track/audio-clips";
 import {
+  keepProjectSound,
   useClipSounds,
   useSoundLibrary,
 } from "../../sound-track/sound-library";
@@ -92,6 +93,12 @@ export function useRecordingStripAudio({
     if (change.replace) {
       adding.replaceSound(chosen.id).catch((cause: unknown) => {
         console.error("Could not replace the sound", cause);
+      });
+      return;
+    }
+    if (change.keepInLibrary) {
+      keepProjectSound(chosen.sound, chosen.kind).catch((cause: unknown) => {
+        console.error("Could not add the sound to the library", cause);
       });
       return;
     }
@@ -203,6 +210,7 @@ export function useRecordingStripAudio({
       retypedClip(clips, chosen, { kind: "music", timelineMs }).kind ===
       "music",
     id: chosen.id,
+    isInLibrary: library.some((sound) => sound.name === chosen.sound),
     isInstrumental: chosen.isInstrumental,
     isLooped: chosen.isLooped,
     isSong: chosen.kind === "music",

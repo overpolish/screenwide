@@ -14,6 +14,7 @@ doctest = false
 
 [dependencies]
 realfft.workspace = true
+screenwide-credits.workspace = true
 screenwide-sidecar.workspace = true
 serde.workspace = true
 serde_json.workspace = true

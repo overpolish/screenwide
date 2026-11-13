@@ -98,8 +98,9 @@ export type ToolPanelExport = {
   deleteProjectAfterExport: boolean;
   /** Where the file is written; null before a folder is known. */
   directory: string | null;
-  /** The export the last save wrote, while the island shows it done. */
-  exported: { bytes: number; name: string } | null;
+  /** The export the last save wrote, while the island shows it done, and
+   * the credits file written beside it where it owes credits. */
+  exported: { bytes: number; credits: string | null; name: string } | null;
   /** The file's extension, which its format names. */
   extension: string;
   /** Why the last save failed, in the system's words. */

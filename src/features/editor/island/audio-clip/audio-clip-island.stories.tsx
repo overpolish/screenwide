@@ -45,6 +45,7 @@ const meta = {
     clipMs: 10_000,
     hasSongRoom: true,
     id: "song",
+    isInLibrary: true,
     isInstrumental: false,
     isLooped: false,
     isShown: true,
@@ -68,7 +69,8 @@ const meta = {
   component: AudioClipIsland,
   decorators: [featureStage({ height: 360, width: 480 })],
   // A change other than deleting or replacing updates the story's args, so
-  // the fields and the loop toggle follow.
+  // the fields and the loop toggle follow, and adding its sound to the
+  // library takes the button away.
   render: function Render(args) {
     const [, updateArgs] = useArgs<AudioClipIslandProps>();
     return (
@@ -76,8 +78,13 @@ const meta = {
         {...args}
         onChange={(change: AudioClipChange) => {
           args.onChange(change);
-          const { delete: _delete, replace: _replace, ...values } = change;
-          updateArgs(values);
+          const {
+            delete: _delete,
+            keepInLibrary,
+            replace: _replace,
+            ...values
+          } = change;
+          updateArgs(keepInLibrary ? { ...values, isInLibrary: true } : values);
         }}
       />
     );
@@ -125,4 +132,8 @@ export const SoundEffect: Story = {
 
 export const SoundEffectWithNoSongRoom: Story = {
   args: { ...SoundEffect.args, hasSongRoom: false },
+};
+
+export const NotInTheLibrary: Story = {
+  args: { ...SoundEffect.args, isInLibrary: false },
 };

@@ -3,7 +3,7 @@
 
 //! Saving the recording's timeline edit, and what follows from it.
 
-use tauri::{AppHandle, Manager};
+use tauri::{AppHandle, Emitter, Manager};
 
 use crate::editor::{
   camera_effects, project_look, sound_library, timeline_edit, EditorArtifact, EditorState,
@@ -48,6 +48,21 @@ pub async fn set_recording_timeline_edit(
     sound_library::carry(&project, &edit.audio_clips);
     sound_library::separate_singing(&app, &project, &edit.audio_clips);
     let before = timeline_edit::for_project(&project, artifact_id, duration_ms);
+    // A sound laid on a track, or moved to the other, is listed by the
+    // library as what it was last used as.
+    let placed = edit.audio_clips.iter().filter(|clip| {
+      !before.as_ref().is_some_and(|(_, before)| {
+        before
+          .audio_clips
+          .iter()
+          .any(|was| was.id == clip.id && was.kind == clip.kind && was.sound == clip.sound)
+      })
+    });
+    if screenwide_sound_track::store::remember_kinds(
+      placed.map(|clip| (clip.sound.as_str(), clip.kind)),
+    ) {
+      let _ = app.emit(sound_library::LIBRARY_EVENT, ());
+    }
     let ranges = edit.camera_background_ranges.clone();
     let segments = edit.segments.clone();
     timeline_edit::persist(&project, artifact_id, revision, edit)?;

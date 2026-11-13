@@ -7,10 +7,14 @@
 use std::path::Path;
 use std::time::{SystemTime, UNIX_EPOCH};
 
+use screenwide_credits::Credit;
+
+use super::kind::set_kind;
 use super::{
-  content_hash, directory, extension, measure, read_kept, trim, write_kept, write_whole, Sound,
-  CUT_EXTENSION,
+  content_hash, directory, extension, measure, read_kept, removed, trim, write_kept, write_whole,
+  Sound, CUT_EXTENSION,
 };
+use crate::AudioClipKind;
 
 /// Adds the sound in `file` to the library, measuring it, and says what it
 /// is. A sound added before is found again by the file it came from, as it
@@ -18,8 +22,28 @@ use super::{
 /// the library brings back: a sound effect's is cut, so its contents no
 /// longer match what it was added from. A sound effect is kept with its
 /// dead space cut, as lossless FLAC; where cutting it fails, it is kept as
-/// it came.
+/// it came. One taken out of the library before is let back in.
 pub fn import(file: &Path) -> Result<Sound, String> {
+  let sound = add(file)?;
+  removed::forget(directory()?, &sound.name);
+  Ok(sound)
+}
+
+/// Adds the sound in `file` to the library as `import` does, listed as
+/// `kind` where it was added under one, and says what it is.
+pub fn import_as(file: &Path, kind: Option<AudioClipKind>) -> Result<Sound, String> {
+  let sound = import(file)?;
+  let Some(kind) = kind else {
+    return Ok(sound);
+  };
+  set_kind(&sound.name, kind)?;
+  Ok(Sound {
+    kind: Some(kind),
+    ..sound
+  })
+}
+
+fn add(file: &Path) -> Result<Sound, String> {
   let folder = directory()?;
   if let Some(sound) = kept_from(folder, file) {
     return Ok(sound);
@@ -67,6 +91,24 @@ pub fn import(file: &Path) -> Result<Sound, String> {
     .map_or(0, |since| since.as_millis() as u64);
   let sound = Sound::from_measured(name, title, added_ms, measured);
   write_kept(folder, &sound)?;
+  Ok(sound)
+}
+
+/// Adds the sound in `file`, found on Openverse, to the library as `title`,
+/// credited to who made it, and says what it is. One the library already
+/// has, from a file, takes the credit and title; one already credited keeps
+/// its own.
+pub fn import_found(file: &Path, title: &str, credit: Credit) -> Result<Sound, String> {
+  let sound = import(file)?;
+  if sound.credit.is_some() {
+    return Ok(sound);
+  }
+  let sound = Sound {
+    title: title.to_owned(),
+    credit: Some(credit),
+    ..sound
+  };
+  write_kept(directory()?, &sound)?;
   Ok(sound)
 }
 

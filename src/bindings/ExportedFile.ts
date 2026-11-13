@@ -7,4 +7,9 @@ export type ExportedFile = {
 /**
  * How large the file came out, in bytes.
  */
-bytes: number, path: string, };
+bytes: number, 
+/**
+ * The credits file written beside it, where it uses CC BY works found on
+ * Openverse.
+ */
+credits: string | null, path: string, };

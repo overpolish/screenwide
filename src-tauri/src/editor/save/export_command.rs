@@ -11,6 +11,9 @@ pub struct ExportedFile {
   /// How large the file came out, in bytes.
   #[ts(type = "number")]
   pub bytes: u64,
+  /// The credits file written beside it, where it uses CC BY works found on
+  /// Openverse.
+  pub credits: Option<String>,
   pub path: String,
 }
 
@@ -153,6 +156,10 @@ pub async fn save_export(
     recording_preference,
     screenshot_preference.map(|output| output.canvas),
   );
+  // Where it uses CC BY works found on Openverse, their credits go beside it.
+  let credits = artifact
+    .project()
+    .and_then(|project| super::export_credits::write_beside(project, &path));
   // The finished Export island reveals, copies and drags out this file
   // until it is put away (`put_away_export`).
   *app
@@ -195,6 +202,7 @@ pub async fn save_export(
   let bytes = std::fs::metadata(&path).map_or(0, |metadata| metadata.len());
   Ok(Some(ExportedFile {
     bytes,
+    credits: credits.map(|credits| credits.to_string_lossy().into_owned()),
     path: path.to_string_lossy().into_owned(),
   }))
 }

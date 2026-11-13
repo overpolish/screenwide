@@ -17,6 +17,8 @@ export type ToolPanelStripItem =
       /** Whether it, made a song, would have room among the songs. */
       hasSongRoom: boolean;
       id: string;
+      /** Whether the library holds its sound. */
+      isInLibrary: boolean;
       /** Whether a song plays without its singing. */
       isInstrumental: boolean;
       isLooped: boolean;

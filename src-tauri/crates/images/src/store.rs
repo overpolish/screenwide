@@ -23,9 +23,10 @@ use screenwide_annotations::image::{ImageArt, ImagePlay};
 mod cache;
 mod library;
 mod portable;
+mod removed;
 pub(crate) use cache::load;
 pub use library::{pictures, remove, rename, Picture};
-pub use portable::{adopt, content_file_name, stored_file};
+pub use portable::{adopt, content_file_name, credit_in, record_file, stored_file};
 
 /// The prefix a stored picture's asset id carries.
 pub const IMAGE_PREFIX: &str = "image:";
@@ -214,6 +215,18 @@ pub fn import_file(path: &Path) -> Result<ImageArt, String> {
     std::fs::read(path).map_err(|error| format!("That picture could not be opened: {error}"))?;
   let art = import_bytes(&bytes)?;
   library::note(&art, path.file_stem().and_then(|stem| stem.to_str()));
+  Ok(art)
+}
+
+/// Keeps the picture in `bytes`, found on Openverse, named `title` and
+/// credited to who made it, and says what an image showing it carries.
+pub fn import_found(
+  bytes: &[u8],
+  title: &str,
+  credit: screenwide_credits::Credit,
+) -> Result<ImageArt, String> {
+  let art = import_bytes(bytes)?;
+  library::credit_found(&art, title, credit);
   Ok(art)
 }
 

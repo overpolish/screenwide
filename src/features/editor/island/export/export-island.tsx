@@ -6,6 +6,7 @@ import { CircleCheck, Upload } from "lucide-react";
 import { ConfirmActionButton } from "../../../../composites/confirm-action-button/confirm-action-button";
 import { appLocale, t } from "../../../../i18n/i18n";
 import { IslandRowTitle } from "../../../../primitives/island/row-title/island-row-title";
+import { Text } from "../../../../primitives/text/text";
 import { formatEta } from "../../duration";
 import { IslandWorkLine } from "../island-work-line";
 
@@ -69,12 +70,24 @@ export function exportIsland({
       actions: <ExportFinishActions {...finish} />,
       key: "export-done",
       section: (
-        <div className="flex">
-          <ExportFileChip
-            file={exported}
-            kind={settings.kind}
-            onDragOut={finish.onDragOut}
-          />
+        <div className="flex flex-col gap-inline">
+          <div className="flex">
+            <ExportFileChip
+              file={exported}
+              kind={settings.kind}
+              onDragOut={finish.onDragOut}
+            />
+          </div>
+          {exported.credits ? (
+            // It wraps to the width the file sets rather than widening the
+            // island with the credits file's name.
+            <Text
+              className="w-0 min-w-full px-inset-sm text-fg-secondary"
+              variant="caption"
+            >
+              {t("editor-export-credits", { name: exported.credits })}
+            </Text>
+          ) : null}
         </div>
       ),
       title: (

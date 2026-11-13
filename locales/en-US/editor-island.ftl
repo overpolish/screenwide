@@ -49,6 +49,8 @@ editor-island-sound-library-empty-effects = Sound effects you add are kept here,
 editor-island-sound-library-no-match = Nothing matches
 # A song or sound effect in the library, for assistive technology: pressing it adds it to the timeline. $title is its title, $length how long it plays.
 editor-island-sound-library-add = Add { $title }, { $length }
+# How long a sound under ten seconds plays, as the library lists it, in seconds to a tenth. $seconds is the number, already formatted.
+editor-island-sound-library-seconds = { $seconds } s
 # Plays a song or sound effect in the library, or stops it. $title is its title.
 editor-island-sound-library-play = Play { $title }
 editor-island-sound-library-stop = Stop { $title }
@@ -67,6 +69,30 @@ editor-island-library-picture-unnamed = Picture added { $date }
 editor-island-library-picture-remove = Remove { $name } from the library
 # The field a song's, sound effect's or picture's name is edited in, for assistive technology.
 editor-island-library-name = Name
+# Searches online (Openverse, a library of openly licensed works, which people need not know by name) for the words in the Library's search field, under its own results. $query is the words.
+editor-island-openverse-search = Search online for “{ $query }”
+# Heads what the online search found, under the library's own.
+editor-island-openverse-heading = Found online
+editor-island-openverse-searching = Searching online
+editor-island-openverse-more = More results
+editor-island-openverse-none = Nothing found online for that
+editor-island-openverse-busy = There have been too many searches for now.
+editor-island-openverse-unavailable = The online search is not answering right now.
+# Asks the online search again after it failed.
+editor-island-openverse-retry = Try again
+# For assistive technology, while a song, sound effect or picture found online downloads into the library. $title is its title.
+editor-island-openverse-fetching = Downloading { $title }
+# $title is what was found.
+editor-island-openverse-add-failed = “{ $title }” could not be downloaded.
+# Something found online was looked up again as it was downloaded, and is gone or no longer under a licence Screenwide may use, so it was not added. $title is what was found.
+editor-island-openverse-withdrawn = “{ $title }” is no longer offered under a licence Screenwide can use, so it was not added.
+# The button that downloads something found online into the library, for assistive technology. $title is its title, $creator who made it, $license its licence's short name.
+editor-island-openverse-fetch-by = Download { $title } by { $creator } to the library, { $license }
+editor-island-openverse-fetch = Download { $title } to the library, { $license }
+# The licences what is found on Openverse may have: CC BY, which an export credits, CC0, and the public domain.
+editor-island-openverse-license-by = CC BY
+editor-island-openverse-license-cc0 = CC0
+editor-island-openverse-license-pdm = Public domain
 
 ## A song or sound effect on the strip, laid under the recording
 
@@ -97,6 +123,8 @@ editor-island-audio-removing-singing = Removing the singing
 # Puts another song or sound effect in the clip's place, chosen from a file.
 editor-island-audio-replace = Replace
 editor-island-audio-delete = Delete the clip
+# Takes the clip's song or sound effect into the library from the project's own copy, where the library no longer holds it, for assistive technology.
+editor-island-audio-keep = Add the sound to the library
 editor-island-audio-confirm-delete = Confirm deleting
 
 ## The recording's tracks, each held in the export and the preview or left out
@@ -526,6 +554,9 @@ editor-island-cursor-in-scene =
 editor-island-frame-randomise = Randomise
 # Puts the frame's size back to the size of what was captured, leaving its background and corners as they are.
 editor-island-frame-original-size = Original size
+# The library's pictures, beside the Frame island, one of which frames the picture.
+editor-island-frame-library = Pictures from the library
+editor-island-frame-library-empty = Pictures you give images are kept in the library, and can frame the picture from here.
 
 ## Shared rows: names, sizes and places several islands use.
 

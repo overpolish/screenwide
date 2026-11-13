@@ -5611,6 +5611,7 @@ dependencies = [
  "screenwide-auto-zoom",
  "screenwide-capture",
  "screenwide-compositor",
+ "screenwide-credits",
  "screenwide-cursor-effects",
  "screenwide-export",
  "screenwide-gpu",
@@ -5622,6 +5623,7 @@ dependencies = [
  "screenwide-lexicon",
  "screenwide-licensing",
  "screenwide-moments",
+ "screenwide-openverse",
  "screenwide-osc",
  "screenwide-output",
  "screenwide-project",
@@ -5780,6 +5782,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "screenwide-credits"
+version = "1.0.3"
+dependencies = [
+ "serde",
+ "ts-rs",
+]
+
+[[package]]
 name = "screenwide-cursor-effects"
 version = "1.0.3"
 dependencies = [
@@ -5871,6 +5881,7 @@ version = "1.0.3"
 dependencies = [
  "image",
  "screenwide-annotations",
+ "screenwide-credits",
  "serde",
  "serde_json",
  "ts-rs",
@@ -5936,6 +5947,16 @@ dependencies = [
  "serde",
  "serde_json",
  "tauri-plugin-global-shortcut",
+ "ts-rs",
+]
+
+[[package]]
+name = "screenwide-openverse"
+version = "1.0.3"
+dependencies = [
+ "screenwide-credits",
+ "serde",
+ "serde_json",
  "ts-rs",
 ]
 
@@ -6065,6 +6086,7 @@ name = "screenwide-sound-track"
 version = "1.0.3"
 dependencies = [
  "realfft",
+ "screenwide-credits",
  "screenwide-sidecar",
  "serde",
  "serde_json",

@@ -177,7 +177,12 @@ export function exportIslandSnapshot({
     compare: kind === "audio" || isGif ? null : compare,
     deleteProjectAfterExport: settings.deleteProjectAfterExport,
     directory: settings.directory,
-    exported: exported && { bytes: exported.bytes, name },
+    exported: exported && {
+      bytes: exported.bytes,
+      // Shown by its name alone, as the exported file is.
+      credits: exported.credits?.split(/[/\\]/).pop() ?? null,
+      name,
+    },
     extension,
     failure,
     fileStem: settings.fileStem,

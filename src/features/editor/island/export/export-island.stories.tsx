@@ -292,7 +292,25 @@ export const Finished: Story = {
   args: {
     export: {
       ...VIDEO,
-      exported: { bytes: 41_380_112, name: "Onboarding walkthrough.mp4" },
+      exported: {
+        bytes: 41_380_112,
+        credits: null,
+        name: "Onboarding walkthrough.mp4",
+      },
+    },
+  },
+};
+
+// It uses CC BY music found on Openverse, whose credits went beside it.
+export const FinishedWithCredits: Story = {
+  args: {
+    export: {
+      ...VIDEO,
+      exported: {
+        bytes: 41_380_112,
+        credits: "Onboarding walkthrough.credits.txt",
+        name: "Onboarding walkthrough.mp4",
+      },
     },
   },
 };

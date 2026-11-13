@@ -6,7 +6,7 @@ use std::sync::OnceLock;
 
 use image::{Rgba, RgbaImage};
 
-use super::super::{import_bytes, import_file, initialize};
+use super::super::{import_bytes, import_file, import_found, initialize};
 use super::*;
 
 /// One store for every test in the process, as the app has one.
@@ -84,6 +84,23 @@ fn a_removed_picture_leaves_the_library() {
 }
 
 #[test]
+fn a_removed_picture_a_project_hands_back_is_drawn_but_stays_out_until_added_again() {
+  let file = picture_file("Carried.png", [200, 40, 40]);
+  let art = import_file(&file).unwrap();
+  let name = art.asset.strip_prefix(IMAGE_PREFIX).unwrap();
+  let project = data().join("project");
+  std::fs::create_dir_all(&project).unwrap();
+  let carried = project.join(stored_file(name).unwrap().file_name().unwrap());
+  std::fs::copy(stored_file(name).unwrap(), &carried).unwrap();
+  remove(name).unwrap();
+  super::super::adopt(&carried).unwrap();
+  assert!(stored_file(name).is_some());
+  assert!(listed(&art).is_none());
+  import_file(&file).unwrap();
+  assert!(listed(&art).is_some());
+}
+
+#[test]
 fn a_renamed_picture_is_listed_by_its_new_name() {
   let art =
     import_bytes(&std::fs::read(picture_file("Paste.png", [60, 20, 140])).unwrap()).unwrap();
@@ -91,4 +108,23 @@ fn a_renamed_picture_is_listed_by_its_new_name() {
   assert!(rename(name, "").is_err());
   rename(name, "Badge").unwrap();
   assert_eq!(listed(&art).unwrap().title.as_deref(), Some("Badge"));
+}
+
+#[test]
+fn a_found_picture_keeps_its_credit_and_its_title() {
+  let bytes = std::fs::read(picture_file("found.png", [140, 60, 20])).unwrap();
+  let credit = Credit {
+    title: "Arrow".to_owned(),
+    creator: Some("Ana".to_owned()),
+    creator_url: None,
+    license: "by".to_owned(),
+    license_version: Some("4.0".to_owned()),
+    license_url: None,
+    source_url: Some("https://example.org/arrow".to_owned()),
+    attribution: "\"Arrow\" by Ana is licensed under CC BY 4.0.".to_owned(),
+  };
+  let art = import_found(&bytes, "Arrow", credit.clone()).unwrap();
+  let name = art.asset.strip_prefix(IMAGE_PREFIX).unwrap();
+  assert_eq!(listed(&art).unwrap().title.as_deref(), Some("Arrow"));
+  assert_eq!(super::super::credit_in(None, name), Some(credit));
 }

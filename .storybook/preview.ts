@@ -226,6 +226,63 @@ if (!isNativePreview) {
           return [];
         case "get_sound_preview":
           return silentWav();
+        // What Openverse finds: three sounds or three pictures, one of each
+        // licence, so the badges and their credits show.
+        case "search_openverse": {
+          const isPicture =
+            typeof payload === "object" &&
+            "kind" in payload &&
+            payload.kind === "image";
+          return {
+            found: (
+              [
+                ["Rain on a tin roof", "Ana Reyes", "by", 48_000, "#22d3ee"],
+                ["Soft piano loop", "keys", "cc0", 92_000, "#fb7185"],
+                ["Old radio", null, "pdm", 7_400, "#a78bfa"],
+              ] as const
+            ).map(([title, creator, license, durationMs, colour], index) => ({
+              attribution: `"${title}" is licensed under ${license}.`,
+              creator,
+              creatorUrl: null,
+              durationMs: isPicture ? null : durationMs,
+              filetype: isPicture ? "png" : "mp3",
+              height: null,
+              id: `found-${String(index)}`,
+              landingUrl: null,
+              license,
+              licenseUrl: null,
+              licenseVersion: null,
+              thumbnail: isPicture ? storyPicture(colour, 1.4) : null,
+              title,
+              url: isPicture
+                ? storyPicture(colour, 1.4)
+                : "https://example.org",
+              width: null,
+            })),
+            pageCount: 2,
+          };
+        }
+        // A download that comes over two seconds, then leaves the results
+        // for the library.
+        case "add_openverse_sound":
+        case "add_openverse_picture": {
+          const channel =
+            typeof payload === "object" && "onProgress" in payload
+              ? (payload.onProgress as { onmessage?: (n: number) => void })
+              : null;
+          const fetched =
+            command === "add_openverse_sound" ? { name: "found.mp3" } : "found";
+          return new Promise((done) => {
+            let step = 0;
+            const timer = setInterval(() => {
+              step += 1;
+              channel?.onmessage?.(step / 10);
+              if (step < 10) return;
+              clearInterval(timer);
+              done(fetched);
+            }, 200);
+          });
+        }
         // A few pictures given to images, two from files, the rest pasted,
         // each drawn as a shape so the tiles can be told apart.
         case "get_picture_library":

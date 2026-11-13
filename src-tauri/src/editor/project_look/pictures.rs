@@ -17,7 +17,7 @@ use screenwide_output::ScreenshotOutputSettings;
 
 pub(super) const PICTURES_FOLDER: &str = "media/pictures";
 
-pub(super) fn folder(project: &Path) -> Result<PathBuf, String> {
+pub(crate) fn folder(project: &Path) -> Result<PathBuf, String> {
   screenwide_project::resolve(project, PICTURES_FOLDER)
 }
 
@@ -167,7 +167,7 @@ pub(crate) fn resolve_backgrounds(project: &Path, look: &mut Value) {
 }
 
 /// Every stored picture `value` names, wherever in it.
-pub(super) fn stored_names(value: &serde_json::Value, names: &mut BTreeSet<String>) {
+pub(crate) fn stored_names(value: &serde_json::Value, names: &mut BTreeSet<String>) {
   match value {
     serde_json::Value::String(text) => {
       if let Some(name) = text.strip_prefix(store::IMAGE_PREFIX) {
@@ -185,8 +185,9 @@ pub(super) fn stored_names(value: &serde_json::Value, names: &mut BTreeSet<Strin
 }
 
 /// Copies into the project each stored picture `content` shows that it does
-/// not hold yet. A picture the store has lost is skipped: the project then
-/// shows it only where the store still has it.
+/// not hold yet, with the record of who made it where the store keeps one.
+/// A picture the store has lost is skipped: the project then shows it only
+/// where the store still has it.
 pub(crate) fn carry_pictures(project: &Path, content: &impl serde::Serialize) {
   let Ok(value) = serde_json::to_value(content) else {
     return;
@@ -200,7 +201,14 @@ pub(crate) fn carry_pictures(project: &Path, content: &impl serde::Serialize) {
     let Some(file_name) = source.file_name().and_then(|file| file.to_str()) else {
       continue;
     };
-    if let Err(error) = folder(project).and_then(|folder| copy_into(&folder, &source, file_name)) {
+    let carried = folder(project).and_then(|folder| {
+      copy_into(&folder, &source, file_name)?;
+      match store::record_file(&name) {
+        Some(record) => copy_into(&folder, &record, &format!("{name}.json")).map(|_| ()),
+        None => Ok(()),
+      }
+    });
+    if let Err(error) = carried {
       eprintln!("Could not keep a picture in {}: {error}", project.display());
     }
   }

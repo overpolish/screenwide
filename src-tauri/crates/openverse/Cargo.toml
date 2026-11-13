@@ -1,0 +1,19 @@
+# SPDX-FileCopyrightText: 2026 overpolish
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+[package]
+name = "screenwide-openverse"
+description = "Searching Openverse for songs, sound effects and pictures through Screenwide's Worker, and crediting what is found"
+version.workspace = true
+authors.workspace = true
+license.workspace = true
+edition.workspace = true
+
+[lib]
+doctest = false
+
+[dependencies]
+screenwide-credits.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+ts-rs.workspace = true

@@ -131,17 +131,34 @@ fn a_file_with_no_sound_is_refused_and_not_kept() {
 }
 
 #[test]
-fn a_project_carries_its_sounds_and_hands_them_to_another_library() {
+fn a_project_hands_its_sounds_to_a_library_that_lacks_them() {
   let folder = scratch("carry");
   let sound = import(&tone(&folder, "Carried.wav", 330, None)).unwrap();
   let project = folder.join("project");
   carry(&project, [sound.name.as_str()]);
+  // As on a computer that has never seen it.
+  let library = directory().unwrap();
+  std::fs::remove_file(library.join(&sound.name)).unwrap();
+  std::fs::remove_file(kept_path(library, &sound.name)).unwrap();
+  assert!(!sounds().contains(&sound));
+  adopt(&project);
+  assert!(sounds().contains(&sound));
+}
+
+#[test]
+fn a_sound_taken_out_stays_out_until_it_is_added_again() {
+  let folder = scratch("taken-out");
+  let file = tone(&folder, "Taken out.wav", 550, None);
+  let sound = import(&file).unwrap();
+  let project = folder.join("project");
+  carry(&project, [sound.name.as_str()]);
   remove(&sound.name).unwrap();
+  adopt(&project);
   assert!(!sounds().contains(&sound));
   let (path, resolved) = resolve(Some(&project), &sound.name).unwrap();
   assert_eq!((path, resolved), (project.join(&sound.name), sound.clone()));
-  adopt(&project);
-  assert!(sounds().contains(&sound));
+  let again = import(&file).unwrap();
+  assert!(sounds().iter().any(|kept| kept.name == again.name));
 }
 
 #[test]
@@ -185,4 +202,35 @@ fn a_project_lets_go_of_the_sounds_no_clip_plays_and_keeps_the_rest() {
     .collect();
   expected.sort();
   assert_eq!(left, expected);
+}
+
+#[test]
+fn a_sound_is_listed_as_what_it_was_last_used_as() {
+  use crate::AudioClipKind::{Effect, Music};
+  let folder = scratch("kind");
+  let bell = import_as(&tone(&folder, "Bell.wav", 660, None), Some(Effect)).unwrap();
+  let listed = || {
+    sounds()
+      .into_iter()
+      .find(|kept| kept.name == bell.name)
+      .unwrap()
+      .kind
+  };
+  assert_eq!(listed(), Some(Effect));
+  assert!(remember_kinds([(bell.name.as_str(), Music)]));
+  assert_eq!(listed(), Some(Music));
+  assert!(!remember_kinds([(bell.name.as_str(), Music)]));
+}
+
+#[test]
+fn a_sound_taken_out_comes_back_from_a_project_as_the_kind_it_plays_as() {
+  let folder = scratch("kept-back");
+  let sound = import(&tone(&folder, "Kept back.wav", 770, None)).unwrap();
+  let project = folder.join("project");
+  carry(&project, [sound.name.as_str()]);
+  remove(&sound.name).unwrap();
+  let kept = keep_from_project(&project, &sound.name, crate::AudioClipKind::Effect).unwrap();
+  assert_eq!(kept.kind, Some(crate::AudioClipKind::Effect));
+  assert!(sounds().iter().any(|listed| listed.name == sound.name));
+  assert!(!removed::was_removed(directory().unwrap(), &sound.name));
 }

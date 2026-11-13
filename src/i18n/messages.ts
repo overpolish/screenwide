@@ -102,6 +102,7 @@ export type Messages = {
   "background-image": null;
   "background-kind-mesh": null;
   "background-label": null;
+  "background-library": null;
   "background-palette-color": { index: string | number };
   "background-palette-lock": { index: string | number };
   "background-saved-armed": { name: string | number };
@@ -192,6 +193,7 @@ export type Messages = {
   "editor-export-compare-original": null;
   "editor-export-confirm-cancel": null;
   "editor-export-copy": null;
+  "editor-export-credits": { name: string | number };
   "editor-export-delete-after": null;
   "editor-export-dimensions": {
     height: string | number;
@@ -255,6 +257,7 @@ export type Messages = {
   "editor-island-audio-effect": null;
   "editor-island-audio-fine-hint": { key: string | number };
   "editor-island-audio-instrumental": null;
+  "editor-island-audio-keep": null;
   "editor-island-audio-kind": null;
   "editor-island-audio-no-song-room": null;
   "editor-island-audio-plays": null;
@@ -364,6 +367,8 @@ export type Messages = {
   "editor-island-finding-face": null;
   "editor-island-focus": null;
   "editor-island-follow-face": null;
+  "editor-island-frame-library": null;
+  "editor-island-frame-library-empty": null;
   "editor-island-frame-original-size": null;
   "editor-island-frame-randomise": null;
   "editor-island-height": null;
@@ -413,6 +418,29 @@ export type Messages = {
   "editor-island-moment-transcribe-failed": null;
   "editor-island-moment-waiting": null;
   "editor-island-noise-cleaning": null;
+  "editor-island-openverse-add-failed": { title: string | number };
+  "editor-island-openverse-busy": null;
+  "editor-island-openverse-fetch": {
+    license: string | number;
+    title: string | number;
+  };
+  "editor-island-openverse-fetch-by": {
+    creator: string | number;
+    license: string | number;
+    title: string | number;
+  };
+  "editor-island-openverse-fetching": { title: string | number };
+  "editor-island-openverse-heading": null;
+  "editor-island-openverse-license-by": null;
+  "editor-island-openverse-license-cc0": null;
+  "editor-island-openverse-license-pdm": null;
+  "editor-island-openverse-more": null;
+  "editor-island-openverse-none": null;
+  "editor-island-openverse-retry": null;
+  "editor-island-openverse-search": { query: string | number };
+  "editor-island-openverse-searching": null;
+  "editor-island-openverse-unavailable": null;
+  "editor-island-openverse-withdrawn": { title: string | number };
   "editor-island-position": null;
   "editor-island-position-bottom": null;
   "editor-island-position-bottom-left": null;
@@ -533,6 +561,7 @@ export type Messages = {
   "editor-island-sound-library-play": { title: string | number };
   "editor-island-sound-library-play-from": { title: string | number };
   "editor-island-sound-library-search": null;
+  "editor-island-sound-library-seconds": { seconds: string | number };
   "editor-island-sound-library-stop": { title: string | number };
   "editor-island-sound-remove": { title: string | number };
   "editor-island-sound-reset-volume": { track: string | number };

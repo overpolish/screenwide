@@ -1,11 +1,12 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { AudioLines, Music, Trash2 } from "lucide-react";
+import { AudioLines, BookPlus, Music, Trash2 } from "lucide-react";
 
 import { ConfirmActionButton } from "../../../../composites/confirm-action-button/confirm-action-button";
 import { t } from "../../../../i18n/i18n";
 import { Button } from "../../../../primitives/button/button";
+import { IconButton } from "../../../../primitives/button/icon-button";
 import { IslandRowTitle } from "../../../../primitives/island/row-title/island-row-title";
 import { LoopToggle } from "../../../annotations/options/loop-toggle";
 import { LEAST_CLIP_MS } from "../../sound-track/audio-clips";
@@ -25,7 +26,9 @@ import type { ToolPanelModel } from "../../tools/tool-panel-selection";
 import type { EditorIslandContent } from "../editor-island";
 
 // A song or sound effect chosen on the strip, in hand: its title, and
-// deleting it, on the row. Under it, first whether it is a song or a sound
+// deleting it, on the row, with taking its sound back into the library
+// beside that while the library has none (taken out, or the project came
+// from another computer). Under it, first whether it is a song or a sound
 // effect, then the sound's waveform, where the clip's stretch is chosen and
 // heard: a song's start through a fisheye, a sound effect's start and end
 // on its whole sound. Then how loud it plays, from the level its kind plays
@@ -41,6 +44,8 @@ export type AudioClipChange = {
   delete?: true;
   isInstrumental?: boolean;
   isLooped?: boolean;
+  /** Take its sound into the library, from the project's own copy. */
+  keepInLibrary?: true;
   /** Make it a song or a sound effect. */
   kind?: AudioClipKind;
   /** Play this long of its sound, in ms, from `offsetMs`. */
@@ -57,6 +62,8 @@ export type AudioClipIslandProps = {
   /** Whether the clip, made a song, would have room among the songs. */
   hasSongRoom: boolean;
   id: string;
+  /** Whether the library holds its sound. */
+  isInLibrary: boolean;
   /** Whether a song plays without its singing. */
   isInstrumental: boolean;
   isLooped: boolean;
@@ -88,15 +95,29 @@ export function audioClipIsland(
   const Glyph = props.isSong ? Music : AudioLines;
   return {
     actions: (
-      <ConfirmActionButton
-        confirmLabel={t("editor-island-audio-confirm-delete")}
-        icon={<Trash2 aria-hidden />}
-        label={t("editor-island-audio-delete")}
-        onConfirm={() => {
-          onChange({ delete: true });
-        }}
-        variant="ghost"
-      />
+      <>
+        {props.isInLibrary ? null : (
+          <IconButton
+            aria-label={t("editor-island-audio-keep")}
+            className="text-fg-secondary enabled:hover:text-fg"
+            onPress={() => {
+              onChange({ keepInLibrary: true });
+            }}
+            variant="ghost"
+          >
+            <BookPlus aria-hidden className="size-icon" />
+          </IconButton>
+        )}
+        <ConfirmActionButton
+          confirmLabel={t("editor-island-audio-confirm-delete")}
+          icon={<Trash2 aria-hidden />}
+          label={t("editor-island-audio-delete")}
+          onConfirm={() => {
+            onChange({ delete: true });
+          }}
+          variant="ghost"
+        />
+      </>
     ),
     anchor: "end",
     key: `audio-clip-${props.id}`,

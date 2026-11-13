@@ -5,6 +5,8 @@
 
 background-label = Background
 background-image = Image
+# The tile that opens the library's pictures beside the tiles, to frame the picture on one.
+background-library = Pictures from the library
 # The tile for a background built by hand. While it shows one not kept yet, a right click keeps it as a tile of its own.
 background-custom = Custom
 # A kept background's tile after one right click or Delete: a second one forgets it. $name is the tile's name.

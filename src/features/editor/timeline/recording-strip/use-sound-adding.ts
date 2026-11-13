@@ -10,6 +10,7 @@ import {
 import {
   browseSounds,
   importSounds,
+  readSoundLibrary,
   type Sound,
 } from "../../sound-track/sound-library";
 import { type Playhead } from "../scrub-playhead";
@@ -99,7 +100,20 @@ export function useSoundAdding({
 
   const addSound = ({ kind, name }: SoundAddition) => {
     const sound = library.find((shelved) => shelved.name === name);
-    if (sound) place([sound], kind);
+    if (sound) {
+      place([sound], kind);
+      return;
+    }
+    // Added in the island's window a moment ago, as one found on Openverse
+    // is, before this window has heard the library changed.
+    readSoundLibrary()
+      .then((sounds) => {
+        const added = sounds.find((shelved) => shelved.name === name);
+        if (added) place([added], kind);
+      })
+      .catch((cause: unknown) => {
+        console.error("Could not read the sound library", cause);
+      });
   };
 
   const clips = latestRef.current.edit.audioClips ?? [];

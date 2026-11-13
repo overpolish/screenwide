@@ -16,7 +16,7 @@ const addFiles = (kind: LibraryKind) => {
     kind === "image"
       ? addLibraryPictures()
       : browseSounds().then((paths) =>
-          paths.length > 0 ? importSounds(paths) : null,
+          paths.length > 0 ? importSounds(paths, kind) : null,
         );
   adding.catch((cause: unknown) => {
     console.error("Could not add to the library", cause);

@@ -1,10 +1,11 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import { SearchX } from "lucide-react";
 import { useFilter } from "react-aria";
 
 import { t } from "../../../../i18n/i18n";
-import { Text } from "../../../../primitives/text/text";
+import { Alert } from "../../../../primitives/alert/alert";
 import { guessedKind } from "../../sound-track/dropped-clips";
 import {
   dragLibrarySound,
@@ -32,12 +33,15 @@ import type { AudioClipKind } from "../../../../bindings/AudioClipKind";
 export type SoundAddition = { kind: AudioClipKind; name: string };
 
 export function LibrarySoundList({
+  alsoShown,
   canDrag,
   hasSongRoom,
   kind,
   onAdd,
   query,
 }: {
+  /** Sounds shown whatever the search, by name. */
+  alsoShown: ReadonlySet<string>;
   /** Whether a sound can be dragged out, which only some systems allow. */
   canDrag: boolean;
   /** Whether a song added now would have room after the last song. */
@@ -51,17 +55,23 @@ export function LibrarySoundList({
   const { contains } = useFilter({ sensitivity: "base" });
   const preview = useLibraryPreview();
   const ofKind = library.filter((sound) => guessedKind(sound) === kind);
-  const shown = ofKind.filter((sound) => contains(sound.title, query));
+  const shown = ofKind.filter(
+    (sound) => alsoShown.has(sound.name) || contains(sound.title, query),
+  );
   const isFull = kind === "music" && !hasSongRoom;
+  // Standing in for the list, the note keeps the room a row would, rather
+  // than sitting tight under the search.
   if (shown.length === 0)
-    return (
-      <Text className="px-inset-sm text-fg-secondary" variant="caption">
-        {ofKind.length === 0
-          ? kind === "music"
-            ? t("editor-island-sound-library-empty-music")
-            : t("editor-island-sound-library-empty-effects")
-          : t("editor-island-sound-library-no-match")}
-      </Text>
+    return ofKind.length === 0 ? (
+      <Alert className="py-inset">
+        {kind === "music"
+          ? t("editor-island-sound-library-empty-music")
+          : t("editor-island-sound-library-empty-effects")}
+      </Alert>
+    ) : (
+      <Alert className="py-inset" icon={<SearchX />}>
+        {t("editor-island-sound-library-no-match")}
+      </Alert>
     );
   return (
     <ul aria-label={t("editor-island-sound-library")} className="flex flex-col">

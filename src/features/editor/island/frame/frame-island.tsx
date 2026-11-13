@@ -32,7 +32,9 @@ export type FrameIslandProps = {
   onPickImage: () => Promise<string | null>;
   /** Forgets a kept background, by its id. */
   onRemovePreset: (presetId: string) => void;
-  onSavePreset: (background: Background) => void;
+  /** Keeps `background` as a tile, named `name` where it has a name of
+   * its own, as a library picture does. */
+  onSavePreset: (background: Background, name?: string) => void;
   /** A changed side, or both while the aspect ratio is kept. */
   onSizeChange: (size: DimensionsChange) => void;
   /** The backgrounds that ship with the app. */

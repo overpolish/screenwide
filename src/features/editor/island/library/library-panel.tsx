@@ -11,6 +11,7 @@ import { ScrollArea } from "../../../../primitives/scroll-area/scroll-area";
 import { type LibraryKind, useLibraryKind } from "./library-kind";
 import { LibraryPictureGrid } from "./library-picture-grid";
 import { LibrarySoundList, type SoundAddition } from "./library-sound-list";
+import { OpenverseResults } from "./openverse-results";
 
 import type { ImageArt } from "../../annotations/annotations";
 
@@ -53,6 +54,9 @@ export function LibraryPanel({
 }: LibraryPanelProps) {
   const { kind, setKind } = useLibraryKind(kinds);
   const [query, setQuery] = useState("");
+  // What was downloaded from the online search stands in the library's own
+  // whatever the search, since it was found by more than its title.
+  const [fetched, setFetched] = useState<ReadonlySet<string>>(() => new Set());
   return (
     <div className="flex flex-col gap-inline" style={{ width: PANEL_PX }}>
       <div className="flex items-center gap-separate">
@@ -77,21 +81,32 @@ export function LibraryPanel({
         />
       </div>
       <ScrollArea constrainHeight rootClassName="max-h-80">
-        {kind === "image" ? (
-          <LibraryPictureGrid
-            canDrag={canDrag}
-            onAdd={onAddPicture}
-            query={query}
-          />
-        ) : (
-          <LibrarySoundList
-            canDrag={canDrag}
-            hasSongRoom={hasSongRoom}
+        <div className="flex flex-col gap-separate">
+          {kind === "image" ? (
+            <LibraryPictureGrid
+              alsoShown={fetched}
+              canDrag={canDrag}
+              onAdd={onAddPicture}
+              query={query}
+            />
+          ) : (
+            <LibrarySoundList
+              alsoShown={fetched}
+              canDrag={canDrag}
+              hasSongRoom={hasSongRoom}
+              kind={kind}
+              onAdd={onAddSound}
+              query={query}
+            />
+          )}
+          <OpenverseResults
             kind={kind}
-            onAdd={onAddSound}
+            onFetched={(name) => {
+              setFetched((now) => new Set(now).add(name));
+            }}
             query={query}
           />
-        )}
+        </div>
       </ScrollArea>
     </div>
   );

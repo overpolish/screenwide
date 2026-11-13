@@ -6,9 +6,11 @@
 //! to the library of any computer it is opened on.
 
 use std::path::{Path, PathBuf};
+use std::time::{SystemTime, UNIX_EPOCH};
 
 use super::singing::copy_if_more;
-use super::{directory, is_name, is_stem, read_kept, write_kept, Sound};
+use super::{directory, is_name, is_stem, read_kept, removed, write_kept, Sound};
+use crate::AudioClipKind;
 
 /// Copies the sound `name` from the folder `from` into the folder `to`
 /// where `to` lacks it, and the singing separated from it where `from` holds
@@ -75,7 +77,8 @@ pub fn prune<'a>(project_sounds: &Path, used: impl IntoIterator<Item = &'a str>)
 /// Hands the library every sound the project in `project_sounds` carries
 /// that it lacks, with the singing separated from it, so the project plays
 /// on a computer that has never seen them, and they can be used again in
-/// another.
+/// another; but not one taken out of the library here, which the project
+/// keeps playing from its own copy.
 pub fn adopt(project_sounds: &Path) {
   let (Ok(folder), Ok(entries)) = (directory(), std::fs::read_dir(project_sounds)) else {
     return;
@@ -84,13 +87,39 @@ pub fn adopt(project_sounds: &Path) {
     let Ok(name) = entry.file_name().into_string() else {
       continue;
     };
-    if !is_name(&name) {
+    if !is_name(&name) || removed::was_removed(folder, &name) {
       continue;
     }
     if let Err(error) = copy_sound(project_sounds, folder, &name) {
       eprintln!("Could not add {name} to the sound library: {error}");
     }
   }
+}
+
+/// Takes the sound `name` the project in `project_sounds` carries into the
+/// library, as though added again: listed as `kind`, newest, and no longer
+/// noted as taken out. Says what it is there.
+pub fn keep_from_project(
+  project_sounds: &Path,
+  name: &str,
+  kind: AudioClipKind,
+) -> Result<Sound, String> {
+  let folder = directory()?;
+  let carried = is_name(name)
+    .then(|| read_kept(project_sounds, name))
+    .flatten()
+    .ok_or("The project holds no copy of that sound")?;
+  copy_sound(project_sounds, folder, name)?;
+  removed::forget(folder, name);
+  let sound = Sound {
+    added_ms: SystemTime::now()
+      .duration_since(UNIX_EPOCH)
+      .map_or(0, |since| since.as_millis() as u64),
+    kind: Some(kind),
+    ..read_kept(folder, name).unwrap_or(carried)
+  };
+  write_kept(folder, &sound)?;
+  Ok(sound)
 }
 
 fn copy_whole(from: &Path, to: &Path) -> Result<(), String> {

@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { Trash2 } from "lucide-react";
+import { SearchX, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { useDateFormatter, useFilter } from "react-aria";
 import { Button } from "react-aria-components";
@@ -9,7 +9,7 @@ import { Button } from "react-aria-components";
 import { ConfirmActionButton } from "../../../../composites/confirm-action-button/confirm-action-button";
 import { t } from "../../../../i18n/i18n";
 import { cn, elementFocusVisible, focusStyles } from "../../../../lib/styling";
-import { Text } from "../../../../primitives/text/text";
+import { Alert } from "../../../../primitives/alert/alert";
 import {
   dragLibraryPicture,
   type Picture,
@@ -36,10 +36,13 @@ import type { ImageArt } from "../../annotations/annotations";
 // keep their own copy.
 
 export function LibraryPictureGrid({
+  alsoShown,
   canDrag,
   onAdd,
   query,
 }: {
+  /** Pictures shown whatever the search, by name. */
+  alsoShown: ReadonlySet<string>;
   /** Whether a picture can be dragged out, which only some systems allow. */
   canDrag: boolean;
   onAdd: (art: ImageArt) => void;
@@ -57,14 +60,20 @@ export function LibraryPictureGrid({
       }),
     picture,
   }));
-  const shown = named.filter(({ name }) => contains(name, query));
+  const shown = named.filter(
+    ({ name, picture }) => alsoShown.has(picture.name) || contains(name, query),
+  );
+  // Standing in for the grid, the note keeps the room a row would, rather
+  // than sitting tight under the search.
   if (shown.length === 0)
-    return (
-      <Text className="px-inset-sm text-fg-secondary" variant="caption">
-        {library.length === 0
-          ? t("editor-island-library-empty-images")
-          : t("editor-island-sound-library-no-match")}
-      </Text>
+    return library.length === 0 ? (
+      <Alert className="py-inset">
+        {t("editor-island-library-empty-images")}
+      </Alert>
+    ) : (
+      <Alert className="py-inset" icon={<SearchX />}>
+        {t("editor-island-sound-library-no-match")}
+      </Alert>
     );
   return (
     <ul

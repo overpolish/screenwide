@@ -19,6 +19,8 @@ mod export_picture;
 /// The pictures images show.
 pub(crate) mod images;
 mod naming;
+/// Songs, sound effects and pictures found on Openverse, for the Library.
+pub(crate) mod openverse;
 mod pointer;
 mod preferences;
 pub(crate) mod preview;

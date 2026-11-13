@@ -3,6 +3,7 @@
 
 import { Trash2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { useNumberFormatter } from "react-aria";
 import { Button } from "react-aria-components";
 
 import { ConfirmActionButton } from "../../../../composites/confirm-action-button/confirm-action-button";
@@ -29,6 +30,9 @@ import { useDragOut } from "./use-drag-out";
  * it a double-click. */
 const DOUBLE_CLICK_MS = 300;
 
+/** Below this, in ms, a length is shown in seconds to a tenth. */
+const SHORT_MS = 10_000;
+
 export function LibraryRow({
   isPlaying,
   onAdd,
@@ -51,6 +55,10 @@ export function LibraryRow({
   onDrag?: () => void;
 }) {
   const dragOut = useDragOut(onDrag);
+  const tenths = useNumberFormatter({
+    maximumFractionDigits: 1,
+    minimumFractionDigits: 1,
+  });
   const [isEditing, setIsEditing] = useState(false);
   const addingRef = useRef(0);
   useEffect(
@@ -79,7 +87,14 @@ export function LibraryRow({
       onAdd();
     }, DOUBLE_CLICK_MS);
   };
-  const length = formatDuration(sound.durationMs);
+  // Under ten seconds, as sound effects mostly are, whole seconds tell
+  // little apart and a short one would read 00:00.
+  const length =
+    sound.durationMs < SHORT_MS
+      ? t("editor-island-sound-library-seconds", {
+          seconds: tenths.format(sound.durationMs / 1_000),
+        })
+      : formatDuration(sound.durationMs);
   return (
     <li className="flex items-center gap-inline">
       <IslandPlayButton

@@ -20,6 +20,7 @@ use super::{EditorArtifact, EditorState};
 mod cleanup;
 mod drag;
 mod drop_refusal;
+mod keep;
 mod preview;
 mod rename;
 mod singing;
@@ -30,7 +31,7 @@ pub(crate) use singing::{ready_for_export, separate_singing};
 pub(crate) use voice::ducks;
 use voice::microphone;
 
-const COMMANDS: [&str; 9] = [
+const COMMANDS: [&str; 10] = [
   "browse_sounds",
   "import_sounds",
   "get_sound_library",
@@ -40,6 +41,7 @@ const COMMANDS: [&str; 9] = [
   "drag_library_sound",
   "set_sound_drop_refused",
   "rename_sound",
+  "keep_project_sound",
 ];
 
 /// `app_commands` with the sound library's commands beside them.
@@ -66,7 +68,8 @@ fn sound_commands() -> impl Fn(Invoke) -> bool + Send + Sync + 'static {
     remove_sound,
     drag::drag_library_sound,
     drop_refusal::set_sound_drop_refused,
-    rename::rename_sound
+    rename::rename_sound,
+    keep::keep_project_sound
   ]
 }
 
@@ -107,14 +110,19 @@ async fn browse_sounds(
 pub(super) const LIBRARY_EVENT: &str = "editor://sound-library";
 
 /// Adds each of `paths` that is a sound to the library and says what each
-/// is, in order. Fails only where none could be added.
+/// is, in order, listed as `kind` where it was added under one. Fails only
+/// where none could be added.
 #[tauri::command]
-async fn import_sounds(app: tauri::AppHandle, paths: Vec<PathBuf>) -> Result<Vec<Sound>, String> {
+async fn import_sounds(
+  app: tauri::AppHandle,
+  paths: Vec<PathBuf>,
+  kind: Option<AudioClipKind>,
+) -> Result<Vec<Sound>, String> {
   let imported = tauri::async_runtime::spawn_blocking(move || {
     let mut sounds = Vec::new();
     let mut failure = None;
     for path in paths {
-      match store::import(&path) {
+      match store::import_as(&path, kind) {
         Ok(sound) => sounds.push(sound),
         Err(error) => {
           eprintln!(
@@ -219,7 +227,7 @@ pub(crate) fn separate_open_songs(app: &tauri::AppHandle) {
 }
 
 /// Where the project whose manifest is `project` keeps its sounds.
-fn project_sounds(project: &Path) -> Option<PathBuf> {
+pub(crate) fn project_sounds(project: &Path) -> Option<PathBuf> {
   screenwide_project::resolve(project, store::PROJECT_FOLDER).ok()
 }
 

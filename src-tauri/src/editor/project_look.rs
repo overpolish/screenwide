@@ -17,7 +17,9 @@ mod pictures;
 
 use super::*;
 pub(crate) use cleanup::clean_pictures;
-pub(crate) use pictures::{adopt_pictures, carry_pictures, keep_in_app_data};
+pub(crate) use pictures::{
+  adopt_pictures, carry_pictures, folder as pictures_folder, keep_in_app_data, stored_names,
+};
 use screenwide_scenes::CameraOverlaySettings;
 use ts_rs::TS;
 

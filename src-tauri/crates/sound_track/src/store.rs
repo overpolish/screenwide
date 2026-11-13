@@ -8,14 +8,17 @@
 //! project carries a copy of each sound its clips play (`project`).
 
 mod adding;
+mod kind;
 mod measure;
 pub mod music;
 mod project;
+mod removed;
 pub mod singing;
 mod trim;
 
-pub use adding::import;
-pub use project::{adopt, carry, prune, resolve};
+pub use adding::{import, import_as, import_found};
+pub use kind::{remember_kinds, set_kind};
+pub use project::{adopt, carry, keep_from_project, prune, resolve};
 pub use singing::Separated;
 
 use std::path::{Path, PathBuf};
@@ -78,6 +81,16 @@ pub struct Sound {
   #[serde(default)]
   #[ts(skip)]
   pub measured: u16,
+  /// Who made it and under which licence, for a sound found on Openverse;
+  /// none for one added from a file.
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  #[ts(optional)]
+  pub credit: Option<screenwide_credits::Credit>,
+  /// What it was last used as: added under it, or laid on its track
+  /// (`kind`). A sound never placed has none, and its length says.
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  #[ts(optional)]
+  pub kind: Option<crate::AudioClipKind>,
 }
 
 impl Sound {
@@ -97,6 +110,8 @@ impl Sound {
       added_ms,
       music: Some(measured.music),
       measured: MEASURED,
+      credit: None,
+      kind: None,
     }
   }
 }
@@ -176,12 +191,16 @@ fn read_kept(folder: &Path, name: &str) -> Option<Sound> {
   // again, once, and kept as measured now. Its length and name stay.
   if kept.sound.measured < MEASURED && kept.sound.duration_ms > 0 {
     if let Ok(measured) = measure::measure(&file) {
-      let sound = Sound::from_measured(
-        kept.sound.name.clone(),
-        kept.sound.title.clone(),
-        kept.sound.added_ms,
-        measured,
-      );
+      let sound = Sound {
+        credit: kept.sound.credit.clone(),
+        kind: kept.sound.kind,
+        ..Sound::from_measured(
+          kept.sound.name.clone(),
+          kept.sound.title.clone(),
+          kept.sound.added_ms,
+          measured,
+        )
+      };
       let _ = write_kept(folder, &sound);
       return Some(sound);
     }
@@ -232,7 +251,7 @@ pub fn sounds() -> Vec<Sound> {
 }
 
 /// Takes the sound `name` out of the library. Projects that play it keep
-/// their own copy.
+/// their own copy, and do not hand it back (`removed`).
 pub fn remove(name: &str) -> Result<(), String> {
   if !is_name(name) {
     return Err("There is no such sound".to_owned());
@@ -247,6 +266,7 @@ pub fn remove(name: &str) -> Result<(), String> {
       Err(error) => return Err(format!("The sound could not be removed: {error}")),
     }
   }
+  removed::note(folder, name);
   Ok(())
 }
 

@@ -39,12 +39,12 @@ export function frameIslandContent({
     onRemovePreset: (id) => {
       change({ removePreset: id });
     },
-    onSavePreset: (background) => {
+    onSavePreset: (background, name) => {
       change({
         savePreset: {
           background,
           id: `saved-${Date.now().toString(36)}`,
-          name: presetName(background),
+          name: name ?? presetName(background),
         },
       });
     },
