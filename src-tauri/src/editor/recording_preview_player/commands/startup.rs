@@ -13,6 +13,12 @@ pub async fn start_recording_preview_player(
   session_id: u64,
 ) -> Result<RecordingPreviewPlayerInfo, String> {
   let mut sources = sources(&app, artifact_id, Some(&settings))?;
+  // The output is kept open while the editor is, so plays need not wait for
+  // headphones to start one; a recording with nothing to hear opens it at
+  // its first play with songs or sound effects.
+  if !sources.audio_tracks.is_empty() {
+    super::super::audio::warm_output();
+  }
   let info = RecordingPreviewPlayerInfo::from(&sources);
   #[cfg(any(target_os = "macos", target_os = "windows"))]
   if let Some(surface) = sources.preview_surface.as_ref() {

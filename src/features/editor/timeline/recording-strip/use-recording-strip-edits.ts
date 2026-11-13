@@ -6,11 +6,11 @@ import { useEffect, useRef } from "react";
 import { useEditorEditGesture } from "../../use-editor-edit-history";
 import { type RecordingTimelineEdit } from "../editing/recording-timeline-edit";
 import { keptOf } from "../strip/strip-beat-trim";
-import { baseOf } from "../strip/strip-part";
-import { type StripSelection } from "../strip/strip-selection";
+import { baseOf, partId } from "../strip/strip-part";
+import { chosenItems, type StripSelection } from "../strip/strip-selection";
+import { splitAt as splitItems } from "../strip/strip-split";
 import { type Span } from "../timeline-scale";
 
-import { type RecordingBeat } from "./recording-beats";
 import {
   cutStretch,
   moved,
@@ -90,40 +90,56 @@ function useEditSteps(
   };
 }
 
-/** The stretches `selection` stands for, each beat, lull or drawn range. */
+/** Where the part `id` of a beat or lull lies, in recorded seconds, as the
+ * strip draws it: split at every jump and every split. The first part keeps
+ * its item's id, so a whole item is its only part. */
+export type PartSpan = (kind: "beat" | "lull", id: string) => Span | undefined;
+
+type Spanned = { id: string; span: Span };
+
+export function partSpans(
+  { beats, lulls }: { beats: Spanned[]; lulls: Spanned[] },
+  { edges, splits }: Pick<RecordingStripTime, "edges" | "splits">,
+): PartSpan {
+  const pieces = [...edges, ...splits];
+  const parts = (items: Spanned[]) =>
+    new Map(
+      splitItems(items, pieces, {
+        part: (each, span, index) => ({ id: partId(each.id, index), span }),
+        spanOf: (each) => each.span,
+      }).map(({ id, span }) => [id, span]),
+    );
+  const beatParts = parts(beats);
+  const lullParts = parts(lulls);
+  return (kind, id) => (kind === "beat" ? beatParts : lullParts).get(id);
+}
+
+/** The stretches `selection` stands for, each beat, lull or part of one
+ * chosen, or a drawn range. */
 export function chosenSpans(
   selection: StripSelection | null,
-  { beats, lulls }: { beats: RecordingBeat[]; lulls: RecordingStripLulls },
+  spanOf: PartSpan,
 ): Span[] {
-  if (!selection) return [];
-  if (selection.kind === "range") return [selection];
-  const items =
-    selection.kind === "items"
-      ? selection.items
-      : selection.kind === "beat" || selection.kind === "lull"
-        ? [selection]
-        : [];
-  return items.flatMap(({ id, kind }) =>
-    kind === "beat"
-      ? (beats.find((beat) => beat.id === baseOf(id))?.span ?? [])
-      : (lulls.lulls.find((lull) => lull.id === baseOf(id))?.found ?? []),
+  if (selection?.kind === "range") return [selection];
+  return chosenItems(selection).flatMap(
+    ({ id, kind }) => spanOf(kind, id) ?? [],
   );
 }
 
 export function useRecordingStripEdits({
-  beats,
   edit,
   lulls,
   onEdit,
   recorded,
+  spanOf,
   time,
 }: {
-  beats: RecordingBeat[];
   edit: RecordingTimelineEdit;
   lulls: RecordingStripLulls;
   onEdit: (next: RecordingTimelineEdit) => void;
   /** How long the recording was recorded, in seconds. */
   recorded: number;
+  spanOf: PartSpan;
   time: RecordingStripTime;
 }) {
   const steps = useEditSteps(edit, onEdit);
@@ -137,13 +153,15 @@ export function useRecordingStripEdits({
         ),
       );
     },
+    // A part trims its own stretch, so the parts either side of a split
+    // keep theirs.
     onBeatTrim: (id: string, edge: "end" | "start", at: number) => {
-      const beat = beats.find((each) => each.id === baseOf(id));
-      if (!beat) return;
+      const span = spanOf("beat", id);
+      if (!span) return;
       steps.step(
         trimmed(
           edit,
-          { at, edge, kept: keptOf(beat.span, time.cuts), span: beat.span },
+          { at, edge, kept: keptOf(span, time.cuts), span },
           recorded,
         ),
       );
@@ -154,10 +172,18 @@ export function useRecordingStripEdits({
     // A lull trimmed plays as recorded, as the story's lulls do.
     onLullTrim: (id: string, end: number) => {
       const lull = lulls.lulls.find((each) => each.id === baseOf(id));
-      if (!lull) return;
+      const part = spanOf("lull", id);
+      if (!lull || !part) return;
+      // The last part can be drawn out again as far as the lull was found.
+      const isLast = part.end === lull.span.end;
       const next = trimmed(
         edit,
-        { at: end, edge: "end", kept: lull.span, span: lull.found },
+        {
+          at: end,
+          edge: "end",
+          kept: part,
+          span: { end: isLast ? lull.found.end : part.end, start: part.start },
+        },
         recorded,
       );
       steps.step(

@@ -92,16 +92,16 @@ export function EditorTransport({
       {/* Kept clear of the time, however short the column. */}
       <div className="mt-auto flex flex-col items-center gap-inline pt-separate">
         <ChromeSetBack isSetBack={isLocked && !isGifRange}>
-          {/* Held, ⌥ draws a range without the tool; ⇧R takes it up. Making a
-            GIF, it is held in hand and cannot be put down, and a press on it
-            leaves the Export island out. */}
+          {/* ⇧R takes it up and puts it down; held, ⌥ draws a range without
+            it. Making a GIF, it is held in hand and cannot be put down, and
+            a press on it leaves the Export island out. */}
           <span className="contents" data-gif-range>
             <ToolbarTool
               aria-label={t("editor-timeline-range-name")}
               isSelected={isRanging && (!isLocked || isGifRange)}
               label={t("editor-timeline-range")}
               onChange={isGifRange ? () => undefined : onRangingChange}
-              shortcut="Alt"
+              shortcut="Shift+R"
             >
               <RangeToolIcon />
             </ToolbarTool>

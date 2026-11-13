@@ -5,7 +5,10 @@ pub(super) mod clock;
 mod filter;
 
 mod output;
-use output::{output_stream, Mix};
+mod warm_output;
+use output::Mix;
+pub(super) use warm_output::{close as close_output, warm as warm_output};
+use warm_output::{Feed, Slot};
 
 use std::{
   collections::VecDeque,
@@ -97,14 +100,44 @@ const PREBUFFER_MILLISECONDS: usize = 120;
 
 pub(super) struct AudioPlayback {
   pub clock: Arc<AudioClock>,
-  pub stream: Stream,
+  /// What this play sounds, until [`AudioPlayback::play`] hands it to the
+  /// output.
+  feed: Mutex<Option<Feed>>,
+  slot: Slot,
   pub thread: std::thread::JoinHandle<()>,
 }
 
 impl AudioPlayback {
-  /// Starts the output stream, and with it the clock playback paces against.
+  /// Hands the output what this play sounds, starting the clock playback
+  /// paces against.
   pub(super) fn play(&self) -> Result<(), String> {
-    self.stream.play().map_err(|error| error.to_string())
+    let feed = self
+      .feed
+      .lock()
+      .unwrap_or_else(|poisoned| poisoned.into_inner())
+      .take();
+    *self
+      .slot
+      .lock()
+      .unwrap_or_else(|poisoned| poisoned.into_inner()) = feed;
+    Ok(())
+  }
+
+  /// Takes this play back from the output, which sounds silence again, and
+  /// waits for its decoding to stop, as it does once cancelled.
+  pub(super) fn finish(self) {
+    let mut slot = self
+      .slot
+      .lock()
+      .unwrap_or_else(|poisoned| poisoned.into_inner());
+    if slot
+      .as_ref()
+      .is_some_and(|feed| Arc::ptr_eq(&feed.clock, &self.clock))
+    {
+      *slot = None;
+    }
+    drop(slot);
+    let _ = self.thread.join();
   }
 }
 
@@ -127,16 +160,19 @@ pub(super) fn spawn(
     .clone();
   let sound = sound_track.is_heard().then_some(&sound_track);
   let track_count = channels.len() + usize::from(sound.is_some());
-  let (stream, clock, config) = output_stream(
-    Arc::clone(&queue),
-    Mix {
+  let (config, slot) = warm_output::output()?;
+  let clock = Arc::new(AudioClock::new(config.sample_rate));
+  let feed = Feed {
+    clock: Arc::clone(&clock),
+    mix: Mix {
       audio_volumes: Arc::clone(&audio_volumes),
       channels: channels.clone(),
       processing: Arc::clone(&sources.processing),
       selected_audio: Arc::clone(&selected_audio),
       sound: sound.is_some(),
     },
-  )?;
+    queue: Arc::clone(&queue),
+  };
   let mut process = screenwide_sidecar::ffmpeg_command();
   process
     .args(args(sources, &channels, sound, ranges, &config))
@@ -197,7 +233,8 @@ pub(super) fn spawn(
   }
   Ok(AudioPlayback {
     clock,
-    stream,
+    feed: Mutex::new(Some(feed)),
+    slot,
     thread,
   })
 }

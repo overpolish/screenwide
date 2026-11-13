@@ -99,13 +99,21 @@ type StripParts = {
   shortcuts: TimelineShortcut[];
 };
 
-/** Everything the strip draws, split at `edges`. */
-export function splitParts<T extends StripParts>(parts: T, edges: number[]): T {
-  if (edges.length === 0) return parts;
+/** Everything the strip draws, split at `edges`, where the recording no
+ * longer plays straight on; the beats and lulls are split at `splits` too,
+ * the blade's, so each piece between them is chosen, moved and cut on its
+ * own. */
+export function splitParts<T extends StripParts>(
+  parts: T,
+  edges: number[],
+  splits: number[] = [],
+): T {
+  if (edges.length === 0 && splits.length === 0) return parts;
+  const pieces = [...edges, ...splits];
   return {
     ...parts,
     annotations: splitSpans(parts.annotations, edges),
-    beats: splitAt(parts.beats, edges, {
+    beats: splitAt(parts.beats, pieces, {
       part: (each, span, index) => ({
         ...each,
         id: partId(each.id, index),
@@ -117,7 +125,7 @@ export function splitParts<T extends StripParts>(parts: T, edges: number[]): T {
       parts.captions &&
       splitAt(parts.captions, edges, { part: captionPart, spanOf: own }),
     cuts: splitSpans(parts.cuts, edges),
-    lulls: splitAt(parts.lulls, edges, {
+    lulls: splitAt(parts.lulls, pieces, {
       part: (each, span, index) => ({
         ...each,
         id: partId(each.id, index),

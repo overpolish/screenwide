@@ -123,8 +123,7 @@ pub(super) fn run(context: RunContext) {
     // The audio thread waits on a full queue until playback is cancelled.
     cancelled.store(true, Ordering::Release);
     stop_child(&audio_child);
-    drop(audio.stream);
-    let _ = audio.thread.join();
+    audio.finish();
     if let Err(error) = started {
       send_error(&event_channel, error);
     }
@@ -165,8 +164,7 @@ pub(super) fn run(context: RunContext) {
   }
   let was_cancelled = cancelled.swap(true, Ordering::AcqRel);
   stop_child(&audio_child);
-  drop(audio.stream);
-  let _ = audio.thread.join();
+  audio.finish();
   if was_cancelled {
     return;
   }

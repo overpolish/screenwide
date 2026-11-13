@@ -31,6 +31,7 @@ import {
   squeezedTo,
 } from "./recording-strip-lulls";
 import { recordingStripTime } from "./recording-strip-time";
+import { chosenSpans, partSpans } from "./use-recording-strip-edits";
 
 const RECORDED = 10;
 const whole = createRecordingTimelineEdit(1);
@@ -108,6 +109,20 @@ describe("strip edits", () => {
     const split = splitAt(whole, 4, RECORDED);
     expect(timeOf(split).splits).toEqual([4]);
     expect(unsplitAt(split, 4, RECORDED).segments).toHaveLength(1);
+  });
+
+  it("cuts the piece of a beat between two splits, and only that", () => {
+    const split = splitAt(splitAt(whole, 4, RECORDED), 6, RECORDED);
+    const spanOf = partSpans(
+      { beats: [{ id: "b", span: { end: 8, start: 2 } }], lulls: [] },
+      timeOf(split),
+    );
+    const piece = chosenSpans({ id: "b:1", kind: "beat" }, spanOf);
+    expect(piece).toEqual([{ end: 6, start: 4 }]);
+    expect(spansOf(cutStretch(split, piece[0], RECORDED))).toEqual([
+      [0, 4],
+      [6, 10],
+    ]);
   });
 
   it("moves a stretch and puts it back from its jump", () => {

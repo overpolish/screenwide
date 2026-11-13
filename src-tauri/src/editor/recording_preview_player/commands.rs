@@ -247,6 +247,9 @@ pub async fn stop_recording_preview_player(
   if let Some(worker) = worker {
     cancel_off_thread(worker).await?;
   }
+  // The editor is closing, or opening another recording, which warms it
+  // again: the headphones are let go meanwhile.
+  super::audio::close_output();
   Ok(())
 }
 
@@ -256,4 +259,5 @@ pub fn stop_all(app: &AppHandle) {
       manager.stop();
     }
   }
+  super::audio::close_output();
 }

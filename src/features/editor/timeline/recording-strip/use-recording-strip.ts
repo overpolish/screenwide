@@ -23,6 +23,7 @@ import { recordingStripLulls } from "./recording-strip-lulls";
 import { isPlayed, recordingStripTime } from "./recording-strip-time";
 import {
   chosenSpans,
+  partSpans,
   useRecordingStripEdits,
 } from "./use-recording-strip-edits";
 import { useRecordingStripReadings } from "./use-recording-strip-readings";
@@ -109,12 +110,13 @@ export function useRecordingStrip(source: RecordingStripSource) {
     selection,
   });
   const isAltHeld = useAltKey();
+  const spanOf = partSpans({ beats: found.beats, lulls: lulls.lulls }, time);
   const edits = useRecordingStripEdits({
-    beats: found.beats,
     edit,
     lulls,
     onEdit: source.onEdit,
     recorded,
+    spanOf,
     time,
   });
   const deleted = new Set(
@@ -171,7 +173,8 @@ export function useRecordingStrip(source: RecordingStripSource) {
   // Captions and shortcuts are read as recorded, so one a cut took out
   // whole would be drawn at the seam as a sliver, or as keys never pressed
   // in what plays (a beat leaves itself out under a px): those are left
-  // out. What runs across a jump is drawn as a part each side of it; the
+  // out. What runs across a jump is drawn as a part each side of it, and a
+  // beat or lull the blade split as a part each side of the split; the
   // lanes' annotations and scenes come in those parts already, read from
   // where they play (`recordingStripLanes`). Where an item's edge and a
   // jump's are one moment apart only by rounding, a part would be a
@@ -179,7 +182,7 @@ export function useRecordingStrip(source: RecordingStripSource) {
   const strip = (lanes: RecordingStripLanes): TimelineStripProps => {
     const props = stripProps(lanes);
     const made = {
-      ...splitParts(props, time.edges),
+      ...splitParts(props, time.edges, time.splits),
       annotations: props.annotations,
       scenes: props.scenes,
     };
@@ -190,7 +193,7 @@ export function useRecordingStrip(source: RecordingStripSource) {
       captions: captions.length > 0 ? captions : null,
       shortcuts: made.shortcuts.filter((span) => isPlayed(time.map, span)),
     };
-    if (time.edges.length === 0) return shown;
+    if (time.edges.length === 0 && time.splits.length === 0) return shown;
     const isWhole = ({ end, start }: Span) => end - start >= SLIVER_S;
     return {
       ...shown,
@@ -260,7 +263,7 @@ export function useRecordingStrip(source: RecordingStripSource) {
     onPlayingChange: source.onPlayingChange,
     playhead: source.playhead,
   };
-  const chosenStretches = chosenSpans(selection, { beats: found.beats, lulls });
+  const chosenStretches = chosenSpans(selection, spanOf);
   const cutChosen = () => {
     if (chosenStretches.length === 0) return;
     edits.cut(chosenStretches);
@@ -268,18 +271,15 @@ export function useRecordingStrip(source: RecordingStripSource) {
   };
   // Delete takes a chosen beat, lull or range and its time; the lanes'
   // own choices are deleted by theirs.
+  const deselect = selection
+    ? () => {
+        select(null);
+      }
+    : undefined;
   useEditorWindowShortcuts({
     onDelete: chosenStretches.length > 0 ? cutChosen : undefined,
-    onDeselect: selection
-      ? () => {
-          select(null);
-        }
-      : undefined,
-    onDeselectAll: selection
-      ? () => {
-          select(null);
-        }
-      : undefined,
+    onDeselect: deselect,
+    onDeselectAll: deselect,
   });
   return {
     beats,

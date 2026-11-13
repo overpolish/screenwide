@@ -133,8 +133,7 @@ fn stop_audio(context: &RunContext, audio: AudioPlayback) {
   // The audio thread waits on a full queue until playback is cancelled.
   context.cancelled.store(true, Ordering::Release);
   stop_child(&context.audio_child);
-  drop(audio.stream);
-  let _ = audio.thread.join();
+  audio.finish();
 }
 
 pub(super) fn run(context: RunContext) {

@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+use super::warm_output::{Feed, Slot};
 use super::*;
 use crate::editor::recording_preview_player::PreviewProcessing;
 
@@ -59,24 +60,31 @@ impl Mix {
   }
 }
 
+/// The stream the warm output sounds through (`warm_output.rs`): what the
+/// play in `slot` hands it, mixed, or silence where no play does. A stream
+/// error marks it `failed`, so the next play opens another.
 pub(super) fn build_output<T>(
   device: &cpal::Device,
   config: &StreamConfig,
-  queue: Arc<Mutex<VecDeque<f32>>>,
-  clock: Arc<AudioClock>,
-  mix: Mix,
+  slot: Slot,
+  failed: Arc<AtomicBool>,
 ) -> Result<Stream, String>
 where
   T: SizedSample + FromSample<f32>,
 {
   let output_channels = usize::from(config.channels);
   // Reused by every callback: the audio thread is not the place to allocate.
-  let mut gains: Vec<Option<f32>> = Vec::with_capacity(mix.channels.len());
+  let mut gains: Vec<Option<f32>> = Vec::new();
   device
     .build_output_stream(
       *config,
       move |output: &mut [T], info| {
         let received_at = Instant::now();
+        let feed = slot.lock().unwrap_or_else(|value| value.into_inner());
+        let Some(Feed { clock, mix, queue }) = feed.as_ref() else {
+          output.fill(T::from_sample(0.0_f32));
+          return;
+        };
         let mut queue = queue.lock().unwrap_or_else(|value| value.into_inner());
         let selected = mix
           .selected_audio
@@ -125,40 +133,8 @@ where
           output.len() / output_channels,
         );
       },
-      |_| {},
+      move |_| failed.store(true, Ordering::Release),
       None,
     )
     .map_err(|error| error.to_string())
-}
-
-pub(super) fn output_stream(
-  queue: Arc<Mutex<VecDeque<f32>>>,
-  mix: Mix,
-) -> Result<(Stream, Arc<AudioClock>, StreamConfig), String> {
-  let device = cpal::default_host()
-    .default_output_device()
-    .ok_or_else(|| "No audio output device is available".to_owned())?;
-  let supported = device
-    .default_output_config()
-    .map_err(|error| error.to_string())?;
-  let config: StreamConfig = supported.config();
-  let clock = Arc::new(AudioClock::new(config.sample_rate));
-  let queue_for = || Arc::clone(&queue);
-  let clock_for = || Arc::clone(&clock);
-  let stream = match supported.sample_format() {
-    SampleFormat::F32 => build_output::<f32>(&device, &config, queue_for(), clock_for(), mix),
-    SampleFormat::F64 => build_output::<f64>(&device, &config, queue_for(), clock_for(), mix),
-    SampleFormat::I8 => build_output::<i8>(&device, &config, queue_for(), clock_for(), mix),
-    SampleFormat::I16 => build_output::<i16>(&device, &config, queue_for(), clock_for(), mix),
-    SampleFormat::I24 => build_output::<cpal::I24>(&device, &config, queue_for(), clock_for(), mix),
-    SampleFormat::I32 => build_output::<i32>(&device, &config, queue_for(), clock_for(), mix),
-    SampleFormat::I64 => build_output::<i64>(&device, &config, queue_for(), clock_for(), mix),
-    SampleFormat::U8 => build_output::<u8>(&device, &config, queue_for(), clock_for(), mix),
-    SampleFormat::U16 => build_output::<u16>(&device, &config, queue_for(), clock_for(), mix),
-    SampleFormat::U24 => build_output::<cpal::U24>(&device, &config, queue_for(), clock_for(), mix),
-    SampleFormat::U32 => build_output::<u32>(&device, &config, queue_for(), clock_for(), mix),
-    SampleFormat::U64 => build_output::<u64>(&device, &config, queue_for(), clock_for(), mix),
-    format => Err(format!("Unsupported audio output format: {format}")),
-  }?;
-  Ok((stream, clock, config))
 }
