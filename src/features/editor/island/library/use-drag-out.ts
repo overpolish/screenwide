@@ -9,15 +9,15 @@ const DRAG_PX = 4;
 /** Handlers for whatever wraps something in the library that can be pressed
  * and dragged out: a press that moves far enough starts `onDrag`, and one
  * that does not stays a press. They read the press before the button's own
- * handling takes it. None where nothing can be dragged out.
+ * handling takes it.
  *
  * The system's drag takes the release with it, so the press is called off
  * as the drag starts: the button lets it go rather than waiting for a
- * release, and a drag let go back over it is not a press. The window is
- * handed the release itself when the drag ends (`save/finished/macos.rs`). */
-export function useDragOut(onDrag: (() => void) | undefined) {
+ * release, and a drag let go back over it is not a press. On macOS the
+ * window is handed the release itself when the drag ends
+ * (`save/finished/macos.rs`). */
+export function useDragOut(onDrag: () => void) {
   const pressRef = useRef<{ x: number; y: number } | null>(null);
-  if (!onDrag) return {};
   return {
     onPointerDownCapture: (event: PointerEvent) => {
       if (event.button === 0)

@@ -33,8 +33,6 @@ const KIND_LABELS: Record<LibraryKind, () => string> = {
 };
 
 export type LibraryPanelProps = {
-  /** Whether something can be dragged out, which only some systems allow. */
-  canDrag: boolean;
   /** Whether a song added now would have room after the last song. */
   hasSongRoom: boolean;
   /** What this editor's library offers, in order. */
@@ -46,7 +44,6 @@ export type LibraryPanelProps = {
 };
 
 export function LibraryPanel({
-  canDrag,
   hasSongRoom,
   kinds,
   onAddPicture,
@@ -85,14 +82,12 @@ export function LibraryPanel({
           {kind === "image" ? (
             <LibraryPictureGrid
               alsoShown={fetched}
-              canDrag={canDrag}
               onAdd={onAddPicture}
               query={query}
             />
           ) : (
             <LibrarySoundList
               alsoShown={fetched}
-              canDrag={canDrag}
               hasSongRoom={hasSongRoom}
               kind={kind}
               onAdd={onAddSound}

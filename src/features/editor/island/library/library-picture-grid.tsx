@@ -37,14 +37,11 @@ import type { ImageArt } from "../../annotations/annotations";
 
 export function LibraryPictureGrid({
   alsoShown,
-  canDrag,
   onAdd,
   query,
 }: {
   /** Pictures shown whatever the search, by name. */
   alsoShown: ReadonlySet<string>;
-  /** Whether a picture can be dragged out, which only some systems allow. */
-  canDrag: boolean;
   onAdd: (art: ImageArt) => void;
   /** The words searched for in the names of the files pictures came from. */
   query: string;
@@ -82,7 +79,6 @@ export function LibraryPictureGrid({
     >
       {shown.map(({ name, picture }) => (
         <PictureTile
-          canDrag={canDrag}
           key={picture.name}
           name={name}
           onAdd={onAdd}
@@ -94,26 +90,20 @@ export function LibraryPictureGrid({
 }
 
 function PictureTile({
-  canDrag,
   name,
   onAdd,
   picture,
 }: {
-  canDrag: boolean;
   /** What the tile is called, under it and for assistive technology. */
   name: string;
   onAdd: (art: ImageArt) => void;
   picture: Picture;
 }) {
-  const dragOut = useDragOut(
-    canDrag
-      ? () => {
-          dragLibraryPicture(picture.name).catch((cause: unknown) => {
-            console.error("Could not drag the picture", cause);
-          });
-        }
-      : undefined,
-  );
+  const dragOut = useDragOut(() => {
+    dragLibraryPicture(picture.name).catch((cause: unknown) => {
+      console.error("Could not drag the picture", cause);
+    });
+  });
   const [isEditing, setIsEditing] = useState(false);
   return (
     <li className="group relative flex min-w-0 flex-col" {...dragOut}>

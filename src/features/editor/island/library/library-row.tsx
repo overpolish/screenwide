@@ -45,6 +45,8 @@ export function LibraryRow({
 }: {
   isPlaying: boolean;
   onAdd: () => void;
+  /** Starts dragging its file out, from the press under way. */
+  onDrag: () => void;
   /** Hears it from a moment of it, in ms. */
   onPlayFrom: (fromMs: number) => void;
   onRename: (title: string) => void;
@@ -52,7 +54,6 @@ export function LibraryRow({
   /** How far into it it has played, from 0 to 1. */
   played: number;
   sound: Sound;
-  onDrag?: () => void;
 }) {
   const dragOut = useDragOut(onDrag);
   const tenths = useNumberFormatter({

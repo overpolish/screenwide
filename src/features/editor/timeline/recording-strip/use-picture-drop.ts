@@ -17,6 +17,8 @@ import {
 } from "../annotation-lane/picture-carry";
 import { type Playhead } from "../scrub-playhead";
 
+import { dragPoint } from "./drag-point";
+
 import type { ScrubPhase } from "../timeline-seek";
 
 // A picture dragged in from the system, or out of the library, over the
@@ -108,10 +110,13 @@ export function usePictureDrop({
       .onDragDropEvent(({ payload }) => {
         switch (payload.type) {
           case "enter":
-            follow(payload.paths.find(isPicturePath) ?? null, payload.position);
+            follow(
+              payload.paths.find(isPicturePath) ?? null,
+              dragPoint(payload.position),
+            );
             return;
           case "over":
-            follow(carried, payload.position);
+            follow(carried, dragPoint(payload.position));
             return;
           case "drop": {
             const path = carried;

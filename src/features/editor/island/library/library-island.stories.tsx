@@ -24,7 +24,6 @@ function LibraryIsland({
 const meta = {
   ...editorIslandStoryMeta,
   args: {
-    canDrag: true,
     hasSongRoom: true,
     isShown: true,
     kinds: ["music", "effect", "image"],

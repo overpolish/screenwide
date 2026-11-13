@@ -37,6 +37,9 @@ const POLL_ELSEWHERE: Duration = Duration::from_millis(50);
 struct Area {
   rects: Vec<IslandRect>,
   takes_clicks: Option<bool>,
+  /// A file is being dragged out of the panel, and its whole window lets the
+  /// pointer through to the editor under it.
+  is_dragging_out: bool,
 }
 
 /// The panels that let clicks through, by window label.
@@ -80,6 +83,7 @@ pub(crate) fn set_hit_area(app: AppHandle, label: String, rects: Option<Vec<Isla
       slot.insert(Area {
         rects,
         takes_clicks: None,
+        is_dragging_out: false,
       });
     }
   }
@@ -96,6 +100,18 @@ pub(crate) fn set_hit_area(app: AppHandle, label: String, rects: Option<Vec<Isla
 /// shows something else.
 pub(super) fn forget(panel: &str) {
   areas().remove(panel);
+}
+
+/// While a file is dragged out of the panel `label`, its whole window lets
+/// the pointer through, so the drag reaches the editor under it rather than
+/// the panel's own page, from the moment it starts rather than once the
+/// next look at the pointer finds it off the panel's parts. Called on the
+/// event loop's thread, as the drag starts and ends.
+pub(crate) fn set_dragging_out(app: &AppHandle, label: &str, is_dragging: bool) {
+  if let Some(area) = areas().get_mut(label) {
+    area.is_dragging_out = is_dragging;
+  }
+  update(app);
 }
 
 #[cfg(target_os = "windows")]
@@ -134,7 +150,7 @@ fn update(app: &AppHandle) {
     if !window.is_visible().unwrap_or(false) {
       continue;
     }
-    let over = is_over(app, &window, &area.rects);
+    let over = !area.is_dragging_out && is_over(app, &window, &area.rects);
     over_any |= over;
     if area.takes_clicks != Some(over) && set_takes_clicks(&window, over).is_ok() {
       area.takes_clicks = Some(over);

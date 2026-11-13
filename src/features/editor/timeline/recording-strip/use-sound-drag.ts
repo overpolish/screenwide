@@ -8,14 +8,15 @@ import { useEffect, useRef } from "react";
 
 import { isSoundPath } from "../../sound-track/sound-library";
 
+import { dragPoint } from "./drag-point";
+
 // A drag of sound files in from the system, followed over the editor. The
-// page sees the drag over itself as points (Tauri's drag events, whose
-// position, though called physical, is in the page's CSS px on macOS); the
-// picture, drawn natively over the page, tells of a sound over it, gone
-// from it, or let go on it (`editor/images/dropped.rs`). Going from one to
-// the other leaves the first, so a leave waits a moment before it counts:
-// long enough to reach the other, short enough to end soon after the drag
-// leaves the window.
+// page sees the drag over itself as points (Tauri's drag events, read in CSS
+// px by `dragPoint`); the picture, drawn natively over the page, tells of a
+// sound over it, gone from it, or let go on it (`editor/images/dropped.rs`).
+// Going from one to the other leaves the first, so a leave waits a moment
+// before it counts: long enough to reach the other, short enough to end soon
+// after the drag leaves the window.
 
 const LEAVE_GRACE_MS = 1_000;
 
@@ -68,13 +69,13 @@ export function useSoundDrag(handlers: SoundDragHandlers) {
         switch (payload.type) {
           case "enter":
             carry(payload.paths);
-            handlersRef.current.onMove(payload.position);
+            handlersRef.current.onMove(dragPoint(payload.position));
             return;
           case "over":
-            handlersRef.current.onMove(payload.position);
+            handlersRef.current.onMove(dragPoint(payload.position));
             return;
           case "drop":
-            handlersRef.current.onDrop(payload.position);
+            handlersRef.current.onDrop(dragPoint(payload.position));
             return;
           case "leave":
             leave();

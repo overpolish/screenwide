@@ -10,7 +10,7 @@
 
 use std::ffi::OsString;
 use std::os::windows::ffi::OsStringExt;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use windows::core::{w, PCWSTR};
 use windows::Win32::Foundation::HGLOBAL;
@@ -59,6 +59,10 @@ fn is_picture_name(name: &str) -> bool {
     })
 }
 
+fn is_picture_path(path: &Path) -> bool {
+  path.to_str().is_some_and(is_picture_name)
+}
+
 fn global_bytes(global: HGLOBAL) -> Option<Vec<u8>> {
   let size = unsafe { GlobalSize(global) }.min(MOST_BYTES);
   let start = unsafe { GlobalLock(global) };
@@ -103,8 +107,8 @@ fn read(data: &IDataObject, format: &FORMATETC) -> Option<Vec<u8>> {
   bytes
 }
 
-/// The image files the drag carries, from Explorer.
-fn files(data: &IDataObject) -> Vec<PathBuf> {
+/// The files the drag carries, from Explorer or the library, that `keeps`.
+fn files(data: &IDataObject, keeps: impl Fn(&Path) -> bool) -> Vec<PathBuf> {
   let Ok(mut medium) = (unsafe { data.GetData(&format(CF_HDROP.0, TYMED_HGLOBAL, -1)) }) else {
     return Vec::new();
   };
@@ -116,7 +120,7 @@ fn files(data: &IDataObject) -> Vec<PathBuf> {
     let mut name = vec![0_u16; length + 1];
     unsafe { DragQueryFileW(drop, index, Some(&mut name)) };
     let path = PathBuf::from(OsString::from_wide(&name[..length]));
-    if path.to_str().is_some_and(is_picture_name) {
+    if keeps(&path) {
       paths.push(path);
     }
   }
@@ -153,7 +157,7 @@ const EITHER: TYMED = TYMED(TYMED_HGLOBAL.0 | TYMED_ISTREAM.0);
 
 /// Whether the drag holds a picture in a form one can be read from.
 pub(crate) fn holds_picture(data: &IDataObject) -> bool {
-  !files(data).is_empty()
+  !files(data, is_picture_path).is_empty()
     || [
       registered(w!("PNG")),
       registered(w!("FileGroupDescriptorW")),
@@ -166,7 +170,7 @@ pub(crate) fn holds_picture(data: &IDataObject) -> bool {
 
 /// The dragged picture, in the form that keeps the most of it.
 pub(crate) fn picture(data: &IDataObject) -> Option<DroppedPicture> {
-  if let Some(path) = files(data).into_iter().next() {
+  if let Some(path) = files(data, is_picture_path).into_iter().next() {
     return Some(DroppedPicture::File(path));
   }
   let any = EITHER;
@@ -184,6 +188,13 @@ pub(crate) fn picture(data: &IDataObject) -> Option<DroppedPicture> {
     .find_map(|kind| read(data, &format(kind, TYMED_HGLOBAL, -1)))
     .and_then(|dib| bmp_from_dib(&dib))
     .map(DroppedPicture::Data)
+}
+
+/// The first sound file the drag carries, which the timeline places.
+pub(crate) fn sound_file(data: &IDataObject) -> Option<PathBuf> {
+  files(data, screenwide_sound_track::store::is_sound_file)
+    .into_iter()
+    .next()
 }
 
 /// The address the drag offers, as a browser does for a link or a picture

@@ -34,7 +34,6 @@ export type SoundAddition = { kind: AudioClipKind; name: string };
 
 export function LibrarySoundList({
   alsoShown,
-  canDrag,
   hasSongRoom,
   kind,
   onAdd,
@@ -42,8 +41,6 @@ export function LibrarySoundList({
 }: {
   /** Sounds shown whatever the search, by name. */
   alsoShown: ReadonlySet<string>;
-  /** Whether a sound can be dragged out, which only some systems allow. */
-  canDrag: boolean;
   /** Whether a song added now would have room after the last song. */
   hasSongRoom: boolean;
   kind: AudioClipKind;
@@ -82,17 +79,13 @@ export function LibrarySoundList({
           onAdd={() => {
             if (!isFull) onAdd({ kind, name: sound.name });
           }}
-          onDrag={
-            canDrag
-              ? () => {
-                  const look = soundDragLook(sound);
-                  if (!look) return;
-                  dragLibrarySound(sound.name, look).catch((cause: unknown) => {
-                    console.error("Could not drag the sound", cause);
-                  });
-                }
-              : undefined
-          }
+          onDrag={() => {
+            const look = soundDragLook(sound);
+            if (!look) return;
+            dragLibrarySound(sound.name, look).catch((cause: unknown) => {
+              console.error("Could not drag the sound", cause);
+            });
+          }}
           onPlayFrom={(fromMs) => {
             preview.playFrom(sound, fromMs);
           }}

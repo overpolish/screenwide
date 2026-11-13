@@ -8,6 +8,8 @@
 
 use super::*;
 
+#[cfg(target_os = "windows")]
+mod drag_windows;
 #[cfg(target_os = "macos")]
 mod macos;
 
@@ -87,6 +89,9 @@ pub fn drag_export_file(
 }
 
 /// What a file dragged out looks like under the pointer, in points.
+// Only the macOS and Windows drags draw it; elsewhere dragging out is refused.
+#[cfg_attr(not(any(target_os = "macos", target_os = "windows")), allow(dead_code))]
+#[derive(Clone)]
 pub(crate) enum DragLook {
   /// The file's own icon, as the Finder draws it.
   Icon,
@@ -110,7 +115,9 @@ pub(crate) fn drag_out(
 ) -> Result<(), String> {
   #[cfg(target_os = "macos")]
   return macos::drag(window, path, look);
-  #[cfg(not(target_os = "macos"))]
+  #[cfg(target_os = "windows")]
+  return drag_windows::drag(window, path, look);
+  #[cfg(not(any(target_os = "macos", target_os = "windows")))]
   {
     let _ = (window, look);
     Err(format!(

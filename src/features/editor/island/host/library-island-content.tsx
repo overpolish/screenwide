@@ -1,7 +1,6 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { isWindows } from "../../../../lib/platform";
 import { libraryIsland } from "../library/library-island";
 
 import type { ToolPanelPatch } from "../../tools/tool-panel-patch";
@@ -28,8 +27,6 @@ export function libraryIslandContent({
   workspace: EditorKind;
 }): EditorIslandContent {
   return libraryIsland({
-    // Only the Mac lets a drag start from the island's window.
-    canDrag: !isWindows(),
     hasSongRoom: snapshot.hasSongRoom ?? true,
     kinds: KINDS[workspace],
     onAddPicture: (libraryImage) => {

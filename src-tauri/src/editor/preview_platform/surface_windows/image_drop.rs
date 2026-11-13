@@ -22,7 +22,7 @@ use windows::Win32::System::Ole::{
 use windows::Win32::System::SystemServices::MODIFIERKEYS_FLAGS;
 
 use super::*;
-use crate::editor::images::dropped::{Carried, DroppedPicture, ImagePoint, SoundDrag};
+use crate::editor::images::dropped::{Carried, ImagePoint, SoundDrag};
 
 #[implement(IDropTarget)]
 struct ImageDropTarget {
@@ -115,17 +115,15 @@ impl IDropTarget_Impl for ImageDropTarget_Impl {
   ) -> ComResult<()> {
     // A sound arriving is told to the editor, which shows the timeline's
     // lanes to carry it down to; let go here instead, it is handed over too.
-    let carried = data
-      .as_ref()
-      .and_then(formats::picture)
-      .filter(|_| self.surface().is_some());
-    if let Some(DroppedPicture::File(path)) = &carried {
-      if screenwide_sound_track::store::is_sound_file(path) {
-        self.sound.set(true);
-        self.hand(Carried::Sound(SoundDrag::Over(path.clone())));
-      }
+    let data = data.as_ref();
+    let taking = self.surface().is_some();
+    let sound = data.and_then(formats::sound_file).filter(|_| taking);
+    self.sound.set(sound.is_some());
+    if let Some(path) = sound {
+      self.hand(Carried::Sound(SoundDrag::Over(path)));
     }
-    self.accepts.set(carried.is_some());
+    let accepts = self.sound.get() || (taking && data.and_then(formats::picture).is_some());
+    self.accepts.set(accepts);
     answer(effect, self.effect());
     Ok(())
   }
@@ -161,17 +159,17 @@ impl IDropTarget_Impl for ImageDropTarget_Impl {
     let Some(engine) = self.surface() else {
       return Ok(());
     };
-    let Some(picture) = data.as_ref().and_then(formats::picture) else {
-      return Ok(());
-    };
     if was_sound {
-      if let DroppedPicture::File(path) = picture {
+      if let Some(path) = data.as_ref().and_then(formats::sound_file) {
         if self.hand(Carried::Sound(SoundDrag::Dropped(path))) {
           answer(effect, DROPEFFECT_COPY);
         }
       }
       return Ok(());
     }
+    let Some(picture) = data.as_ref().and_then(formats::picture) else {
+      return Ok(());
+    };
     let mut client = POINT {
       x: point.x,
       y: point.y,
