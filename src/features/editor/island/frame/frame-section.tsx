@@ -60,6 +60,23 @@ export function FrameSection(props: FrameIslandProps) {
     props.onSavePreset(picked, name ?? undefined);
     choice.choose(picked);
   };
+  // A tile chosen outside the library puts the library's pictures away; one
+  // chosen from them leaves them open, so another can be tried.
+  const tileChoice = {
+    ...choice,
+    choose: (background: Background) => {
+      setIsLibraryOpen(false);
+      choice.choose(background);
+    },
+    choosePreset: (...chosen: Parameters<typeof choice.choosePreset>) => {
+      setIsLibraryOpen(false);
+      choice.choosePreset(...chosen);
+    },
+    openCustom: () => {
+      setIsLibraryOpen(false);
+      choice.openCustom();
+    },
+  };
   return (
     // The controls keep to the start, and the column opens at the end,
     // where the black reveals it as it grows (`TextLookPickers`).
@@ -101,7 +118,7 @@ export function FrameSection(props: FrameIslandProps) {
           key="tiles"
         >
           <BackgroundTiles
-            choice={choice}
+            choice={tileChoice}
             library={{
               controls: columnId,
               isOpen: isLibraryOpen,
@@ -134,6 +151,7 @@ export function FrameSection(props: FrameIslandProps) {
         content={
           isLibraryOpen ? (
             <FrameLibraryPictures
+              aspect={props.width / Math.max(props.height, 1)}
               onChoose={(picture) => {
                 wearPicture(picture.file, picture.title);
               }}

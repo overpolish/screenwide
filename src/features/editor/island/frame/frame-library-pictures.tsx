@@ -18,9 +18,13 @@ import {
 // Library island names it. The one the canvas wears is chosen.
 
 export function FrameLibraryPictures({
+  aspect,
   onChoose,
   selectedPath,
 }: {
+  /** The frame's width over its height: each picture is shown filling that
+   * shape, cropped as the background would be. */
+  aspect: number;
   onChoose: (picture: Picture) => void;
   /** The file the canvas's background is drawn from, where it is a
    * picture. */
@@ -56,6 +60,7 @@ export function FrameLibraryPictures({
           const picture = library.find((each) => each.file === file);
           if (picture) onChoose(picture);
         }}
+        pictureAspect={aspect}
         value={selectedPath ?? ""}
       />
     </ScrollArea>

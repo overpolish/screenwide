@@ -25,7 +25,6 @@ export function useRecordingPreviewShortcuts({
   arrangeScenePane,
   backToSelect,
   canEditActiveTrack,
-  canResizeActiveTrack,
   canvasTool,
   changeCanvasTool,
   hasAnnotations,
@@ -48,7 +47,6 @@ export function useRecordingPreviewShortcuts({
   /** Puts Select back in hand with nothing chosen and no mode open. */
   backToSelect: () => void;
   canEditActiveTrack: boolean;
-  canResizeActiveTrack: boolean;
   canvasTool: RecordingCanvasTool;
   changeCanvasTool: ReturnType<
     typeof useRecordingPreviewCanvasTool
@@ -107,8 +105,9 @@ export function useRecordingPreviewShortcuts({
     // scenes; the strip and the lanes let go of their own.
     onDeselectAll: backToSelect,
     onNudge: canNudgeActiveTrack ? nudgeActiveTrack : undefined,
-    onResizeCanvas:
-      canResizeActiveTrack && offered.has("frame") ? mode("frame") : undefined,
+    // As its title bar button, F opens Frame whatever is in hand: the
+    // canvas belongs to no track.
+    onResizeCanvas: offered.has("frame") ? mode("frame") : undefined,
     onSceneTool:
       offered.has("scene") && hasVisiblePanes ? mode("scene") : undefined,
     onSelectTool: hasVisiblePanes ? backToSelect : undefined,

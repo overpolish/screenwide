@@ -154,8 +154,6 @@ export function NativeRecordingPreview(rawProps: ScrubPreviewProps) {
   });
   const canEditActiveTrack =
     activeVideoTrack !== null && composedVideoTracks.has(activeVideoTrack);
-  const canResizeActiveTrack =
-    canEditActiveTrack && (!bakeCamera || canPreviewBakedCamera);
   const hasVisiblePanes = visiblePaneEntries.length > 0;
   useRecordingCanvasContextMenu(
     {
@@ -223,7 +221,6 @@ export function NativeRecordingPreview(rawProps: ScrubPreviewProps) {
     arrangeScenePane: sceneCanvas.arrangeSelectedPane,
     backToSelect: column.backToSelect,
     canEditActiveTrack,
-    canResizeActiveTrack,
     canvasTool,
     changeCanvasTool,
     hasAnnotations,
