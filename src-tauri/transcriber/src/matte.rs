@@ -20,9 +20,10 @@
 //!
 //! On Windows the model runs on the GPU through DirectML where it can, which
 //! answers as the CPU does and twice as fast, and takes the chunks one at a
-//! time. Otherwise several chunks are matted side by side, one model each on
-//! a share of the CPU. Each chunk's frames are cleaned up on several threads
-//! ([`in_order`]), which otherwise take longer than the model.
+//! time, sharing the GPU with whatever else the computer is doing
+//! (`shared_gpu`). Otherwise several chunks are matted side by side, one
+//! model each on a share of the CPU. Each chunk's frames are cleaned up on
+//! several threads ([`in_order`]), which otherwise take longer than the model.
 
 mod cleanup;
 mod compose;
@@ -41,7 +42,7 @@ use std::path::Path;
 use std::sync::atomic::{AtomicBool, AtomicU64, AtomicUsize, Ordering};
 use std::sync::mpsc;
 
-use ort::session::Session;
+use crate::shared_gpu::Shared;
 
 use self::decode::Decoder;
 use self::encode::Encoder;
@@ -81,7 +82,8 @@ pub fn matte_camera(
     return Ok(());
   }
   let cores = std::thread::available_parallelism().map_or(4, usize::from);
-  let mut gpu = on_directml(model, WHAT);
+  let shared = Shared::open(model, WHAT, || on_directml(model, WHAT));
+  let mut gpu = shared.has_gpu().then_some(shared);
   let count = if gpu.is_some() {
     1
   } else {
@@ -164,22 +166,26 @@ struct Job<'a> {
 
 impl Job<'_> {
   /// Mattes the chunks of `chunks` not yet taken, taking each in turn from
-  /// `next`, with `session` or on the CPU without one. Tells `finished` the
-  /// place of each chunk once its matte is written.
+  /// `next`, with `gpu`, or on the CPU without it. Tells `finished` the place
+  /// of each chunk once its matte is written.
   fn run(
     &self,
     chunks: &[MatteChunk],
     next: &AtomicUsize,
-    session: Option<Session>,
+    gpu: Option<Shared>,
     finished: &mpsc::Sender<usize>,
   ) -> Result<(), String> {
     let made = (|| {
       let (width, height) = (self.size.0 as usize, self.size.1 as usize);
-      let session = match session {
-        Some(session) => session,
-        None => on_cpu_threads(self.model, WHAT, self.model_threads)?,
+      let shared = match gpu {
+        Some(shared) => shared,
+        None => Shared::on_cpu(
+          self.model,
+          WHAT,
+          on_cpu_threads(self.model, WHAT, self.model_threads)?,
+        ),
       };
-      let mut model = Matting::new(session, (width, height));
+      let mut model = Matting::new(shared, (width, height));
       loop {
         if self.stop.load(Ordering::Relaxed) {
           return Ok(());

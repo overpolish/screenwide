@@ -11,6 +11,9 @@
 //! stretch the app asks for goes through in chunks of ten seconds, each
 //! overlapping the last by one, and is cut over from one chunk to the next
 //! inside the overlap (`splice`).
+//!
+//! Both models run on the GPU where they can, sharing it with whatever else
+//! the computer is doing (`shared_gpu`).
 
 mod fbank;
 mod high_pass;
@@ -21,15 +24,15 @@ use std::fs::File;
 use std::io::{BufReader, Read, Seek, SeekFrom};
 use std::path::Path;
 
-use ort::session::Session;
-use ort::value::Tensor;
+use ort::value::TensorRef;
 use screenwide_transcriber::{CLEAN_SAMPLE_RATE, SAMPLE_RATE};
 
 use self::fbank::{Fbank, WIDTH};
 use self::high_pass::HighPass;
 use self::output::{Output, Stretch};
 use self::splice::splice;
-use crate::session::session;
+use crate::session::{gpu_session, Fusion};
+use crate::shared_gpu::Shared;
 
 /// Seconds heard at once, and how many of them overlap the chunk before: the
 /// run-up a chunk hears before it is listened to, and the stretch the cut
@@ -54,8 +57,8 @@ const WHAT: &str = "Studio sound";
 
 struct Models {
   fbank: Fbank,
-  encoder: Session,
-  vocoder: Session,
+  encoder: Shared,
+  vocoder: Shared,
 }
 
 /// Restores the `stretches` of the mono samples at `audio`, at the
@@ -92,8 +95,8 @@ pub fn restore_speech(
     let gain = if peak > 0.0 { PEAK / peak } else { 1.0 };
     let mut models = Models {
       fbank: Fbank::new(SAMPLE_RATE),
-      encoder: session(features, WHAT)?,
-      vocoder: session(decoder, WHAT)?,
+      encoder: Shared::open(features, WHAT, || gpu_session(features, WHAT, Fusion::On)),
+      vocoder: Shared::open(decoder, WHAT, || gpu_session(decoder, WHAT, Fusion::On)),
     };
     let mut reader = BufReader::new(File::open(audio).map_err(unreadable)?);
     let mut done = 0;
@@ -185,29 +188,33 @@ fn restore_chunk(models: &mut Models, samples: &[f32]) -> Result<Vec<f32>, Strin
   if rows == 0 {
     return Ok(Vec::new());
   }
-  let input = Tensor::from_array(([1_usize, rows, WIDTH], features)).map_err(failed)?;
-  let outputs = models
-    .encoder
-    .run(ort::inputs!["input_features" => input])
-    .map_err(failed)?;
-  let (_, hidden) = outputs["last_hidden_state"]
-    .try_extract_tensor::<f32>()
-    .map_err(failed)?;
-  // The encoder speaks frame by frame; the vocoder listens band by band.
-  let mut transposed = vec![0.0_f32; rows * HIDDEN];
-  for (row, values) in hidden.as_chunks::<HIDDEN>().0.iter().enumerate() {
-    for (band, &value) in values.iter().enumerate() {
-      transposed[band * rows + row] = value;
+  let transposed = models.encoder.run(|session, _| {
+    let input =
+      TensorRef::from_array_view(([1_usize, rows, WIDTH], features.as_slice())).map_err(failed)?;
+    let outputs = session
+      .run(ort::inputs!["input_features" => input])
+      .map_err(failed)?;
+    let (_, hidden) = outputs["last_hidden_state"]
+      .try_extract_tensor::<f32>()
+      .map_err(failed)?;
+    // The encoder speaks frame by frame; the vocoder listens band by band.
+    let mut transposed = vec![0.0_f32; rows * HIDDEN];
+    for (row, values) in hidden.as_chunks::<HIDDEN>().0.iter().enumerate() {
+      for (band, &value) in values.iter().enumerate() {
+        transposed[band * rows + row] = value;
+      }
     }
-  }
-  drop(outputs);
-  let hidden = Tensor::from_array(([1_usize, HIDDEN, rows], transposed)).map_err(failed)?;
-  let outputs = models
-    .vocoder
-    .run(ort::inputs!["hidden" => hidden])
-    .map_err(failed)?;
-  let (_, voice) = outputs["wav"].try_extract_tensor::<f32>().map_err(failed)?;
-  Ok(voice.to_vec())
+    Ok(transposed)
+  })?;
+  models.vocoder.run(|session, _| {
+    let hidden = TensorRef::from_array_view(([1_usize, HIDDEN, rows], transposed.as_slice()))
+      .map_err(failed)?;
+    let outputs = session
+      .run(ort::inputs!["hidden" => hidden])
+      .map_err(failed)?;
+    let (_, voice) = outputs["wav"].try_extract_tensor::<f32>().map_err(failed)?;
+    Ok(voice.to_vec())
+  })
 }
 
 fn to_usize(samples: u64) -> usize {

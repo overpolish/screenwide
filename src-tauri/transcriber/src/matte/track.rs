@@ -101,7 +101,7 @@ pub fn follow_objects(
       .collect::<Result<Vec<_>, String>>()?
   };
   let graphs = [encode.as_path(), read.as_path(), memorise.as_path()];
-  let mut cutie = Cutie::load(graphs, &cache(&graphs))?;
+  let mut cutie = Cutie::load(graphs, &cache(&graphs));
   let mut done = 0_usize;
   let total = frames.len() + 1;
   let mut tell = |more: usize| {

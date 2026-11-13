@@ -10,10 +10,20 @@ use std::path::Path;
 use ort::ep::ExecutionProviderDispatch;
 use ort::session::{builder::SessionBuilder, Session};
 
+/// Whether DirectML may fuse the model's graph into one piece of GPU work.
+/// Fused, a large model can hold the GPU for long enough that Windows resets
+/// it, as Studio ducking's did, taking every program on it along; unfused,
+/// the same model ran faster in many short steps. Only DirectML reads this.
+#[derive(Clone, Copy)]
+pub(crate) enum Fusion {
+  On,
+  Off,
+}
+
 /// Loads the model at `path` for the feature named `what`, on the GPU if it
 /// can be.
 pub(crate) fn session(path: &Path, what: &str) -> Result<Session, String> {
-  match gpu_session(path, what) {
+  match gpu_session(path, what, Fusion::On) {
     Some(session) => Ok(session),
     None => on_cpu(path, what),
   }
@@ -21,11 +31,11 @@ pub(crate) fn session(path: &Path, what: &str) -> Result<Session, String> {
 
 /// The model at `path` for the feature named `what` on the GPU, or nothing
 /// where ONNX Runtime cannot take it there.
-pub(crate) fn gpu_session(path: &Path, what: &str) -> Option<Session> {
+pub(crate) fn gpu_session(path: &Path, what: &str, fusion: Fusion) -> Option<Session> {
   let name = path
     .file_name()
     .map_or_else(Default::default, |name| name.to_string_lossy());
-  match on_gpu(path, gpu()?) {
+  match on_gpu(path, gpu()?, fusion) {
     Ok(session) => {
       eprintln!("{what} runs {name} on the GPU through {BACKEND}");
       Some(session)
@@ -66,7 +76,7 @@ pub(crate) fn on_directml(path: &Path, what: &str) -> Option<Session> {
   if !cfg!(windows) {
     return None;
   }
-  match on_gpu(path, gpu()?) {
+  match on_gpu(path, gpu()?, Fusion::On) {
     Ok(session) => Some(session),
     Err(error) => {
       eprintln!("{what} runs on the CPU: {BACKEND} could not take it: {error}");
@@ -77,21 +87,20 @@ pub(crate) fn on_directml(path: &Path, what: &str) -> Option<Session> {
 
 /// The model at `path` for the feature named `what` on the GPU through the
 /// platform's own machine learning layer, CoreML on macOS and DirectML on
-/// Windows, where ONNX Runtime can take it there, and on the CPU otherwise.
-/// CoreML compiles a model on its first load, which takes a while; the
-/// compiled model is kept in `cache` for every load after.
-pub(crate) fn on_platform_gpu(path: &Path, what: &str, cache: &Path) -> Result<Session, String> {
+/// Windows, or nothing where ONNX Runtime cannot take it there. CoreML
+/// compiles a model on its first load, which takes a while; the compiled
+/// model is kept in `cache` for every load after.
+pub(crate) fn on_platform_gpu(path: &Path, what: &str, cache: &Path) -> Option<Session> {
   let name = path
     .file_name()
     .map_or_else(Default::default, |name| name.to_string_lossy());
-  match platform_gpu(path, cache) {
-    Some(Ok(session)) => return Ok(session),
-    Some(Err(error)) => {
-      eprintln!("{what} runs {name} on the CPU: the GPU could not take it: {error}")
+  match platform_gpu(path, cache)? {
+    Ok(session) => Some(session),
+    Err(error) => {
+      eprintln!("{what} runs {name} on the CPU: the GPU could not take it: {error}");
+      None
     }
-    None => {}
   }
-  on_cpu(path, what)
 }
 
 #[cfg(target_os = "macos")]
@@ -113,7 +122,7 @@ fn platform_gpu(path: &Path, cache: &Path) -> Option<ort::Result<Session>> {
 
 #[cfg(windows)]
 fn platform_gpu(path: &Path, _cache: &Path) -> Option<ort::Result<Session>> {
-  gpu().map(|backend| on_gpu(path, backend))
+  gpu().map(|backend| on_gpu(path, backend, Fusion::On))
 }
 
 #[cfg(not(any(target_os = "macos", windows)))]
@@ -121,18 +130,25 @@ fn platform_gpu(_path: &Path, _cache: &Path) -> Option<ort::Result<Session>> {
   None
 }
 
-fn gpu_builder(backend: ExecutionProviderDispatch) -> ort::Result<SessionBuilder> {
+fn gpu_builder(backend: ExecutionProviderDispatch, fusion: Fusion) -> ort::Result<SessionBuilder> {
   let builder = Session::builder()?;
   // DirectML takes neither of these, and refuses the session if they are on.
   #[cfg(windows)]
   let builder = builder
     .with_memory_pattern(false)?
     .with_parallel_execution(false)?;
+  #[cfg(windows)]
+  let builder = match fusion {
+    Fusion::On => builder,
+    Fusion::Off => builder.with_config_entry("ep.dml.disable_graph_fusion", "1")?,
+  };
+  #[cfg(not(windows))]
+  let _ = fusion;
   Ok(builder.with_execution_providers([backend.error_on_failure()])?)
 }
 
-fn on_gpu(path: &Path, backend: ExecutionProviderDispatch) -> ort::Result<Session> {
-  gpu_builder(backend)?.commit_from_file(path)
+fn on_gpu(path: &Path, backend: ExecutionProviderDispatch, fusion: Fusion) -> ort::Result<Session> {
+  gpu_builder(backend, fusion)?.commit_from_file(path)
 }
 
 #[cfg(target_os = "macos")]

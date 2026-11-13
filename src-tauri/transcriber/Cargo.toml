@@ -38,6 +38,7 @@ engine = [
   "dep:tract-hir",
   "dep:tract-onnx",
   "dep:tract-pulse",
+  "dep:windows",
 ]
 
 [dependencies]
@@ -78,6 +79,15 @@ whisper-rs = { version = "0.16.0", optional = true, features = ["vulkan"] }
 # WebGPU build brings a DXC of its own that would clash with the app's.
 # DirectML.dll ships beside the helper, which Windows looks in first.
 ort = { version = "=2.0.0-rc.13", optional = true, default-features = false, features = ["directml", "copy-dylibs"] }
+# Other programs' use of the GPU, read before each step of a model, and the
+# graphics driver a GPU reset is remembered against (`shared_gpu`).
+windows = { version = "0.62.2", optional = true, features = [
+  "Win32_Foundation",
+  "Win32_Graphics_Dxgi",
+  "Win32_System_Diagnostics_ToolHelp",
+  "Win32_System_Performance",
+  "Win32_System_Threading",
+] }
 
 # tract 0.21.4 cannot build its ARM64 kernels for Windows; the vendored copy
 # can (`../vendor/README.md`).

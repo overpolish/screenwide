@@ -15,10 +15,14 @@
 //! about 0.1 dB better for twice the work. The audio is read and written as
 //! it goes, so an hour of it is never held in memory at once.
 //!
-//! The model runs on the GPU where it can: WebGPU on macOS, DirectML on
-//! Windows. A GPU that fails, or gives an answer no singing could give, moves
-//! the work to the CPU, which redoes that chunk and the rest, so ducking
-//! never fails or goes wrong because of the GPU.
+//! The model runs on the GPU where it can, WebGPU on macOS and DirectML on
+//! Windows, sharing it with whatever else the computer is doing
+//! (`shared_gpu`). On DirectML its graph is not fused: fused, a chunk could
+//! hold the GPU for close to two seconds, long enough for Windows to reset
+//! the GPU once a game was competing for it; unfused it ran faster still,
+//! in many short steps. A GPU that fails, or gives an answer no singing could
+//! give, moves the work to the CPU, which redoes that chunk and the rest, so
+//! ducking never fails or goes wrong because of the GPU.
 
 mod spectrum;
 #[cfg(test)]
@@ -29,68 +33,42 @@ use std::io::{BufReader, BufWriter, Read, Write};
 use std::path::Path;
 
 use ort::session::Session;
-use ort::value::Tensor;
+use ort::value::TensorRef;
 
 use screenwide_transcriber::SEPARATE_CHUNK as CHUNK;
 
-use crate::session::{gpu_session, on_cpu};
+use crate::session::{gpu_session, Fusion};
+use crate::shared_gpu::{On, Shared};
 use spectrum::{Spectrum, BINS, FRAMES};
 
 const SIDES: usize = 2;
 /// The feature's name in what the helper reports.
 const WHAT: &str = "Studio ducking";
 
-/// Where the model runs.
-enum Runner {
-  Gpu(Session),
-  Cpu(Session),
-}
-
-impl Runner {
-  fn new(model: &Path) -> Result<Self, String> {
-    match gpu_session(model, WHAT) {
-      Some(session) => Ok(Self::Gpu(session)),
-      None => on_cpu(model, WHAT).map(Self::Cpu),
+/// The singing in one planar chunk, by `separator`.
+fn singing(
+  separator: &mut Shared,
+  spectrum: &mut Spectrum,
+  planar: &[f32],
+) -> Result<Vec<f32>, String> {
+  let input = spectrum.analyse(planar);
+  let peak = planar
+    .iter()
+    .fold(0.0_f32, |peak, sample| peak.max(sample.abs()));
+  separator.run(|session, on| {
+    let singing = run(session, &input).map(|singing| spectrum.synthesise(&singing));
+    match on {
+      On::Gpu => singing.and_then(|singing| plausible(singing, peak)),
+      On::Cpu => singing.map_err(|error| format!("{WHAT} could not run: {error}")),
     }
-  }
-
-  /// The singing in one planar chunk. `model` reloads it on the CPU when the
-  /// GPU's answer cannot be used.
-  fn singing(
-    &mut self,
-    model: &Path,
-    spectrum: &mut Spectrum,
-    planar: &[f32],
-  ) -> Result<Vec<f32>, String> {
-    let input = spectrum.analyse(planar);
-    if let Self::Gpu(session) = self {
-      let peak = planar
-        .iter()
-        .fold(0.0_f32, |peak, sample| peak.max(sample.abs()));
-      match run(session, input.clone())
-        .map(|singing| spectrum.synthesise(&singing))
-        .and_then(|singing| plausible(singing, peak))
-      {
-        Ok(singing) => return Ok(singing),
-        Err(error) => {
-          eprintln!("{WHAT} moves to the CPU: {error}");
-          *self = Self::Cpu(on_cpu(model, WHAT)?);
-        }
-      }
-    }
-    let Self::Cpu(session) = self else {
-      unreachable!("the GPU runner moves to the CPU before this")
-    };
-    run(session, input)
-      .map(|singing| spectrum.synthesise(&singing))
-      .map_err(|error| format!("{WHAT} could not run: {error}"))
-  }
+  })
 }
 
 /// The singing's spectrum for one chunk's, by the model in `session`.
-fn run(session: &mut Session, input: Vec<f32>) -> Result<Vec<f32>, String> {
+fn run(session: &mut Session, input: &[f32]) -> Result<Vec<f32>, String> {
   let failed = |error: ort::Error| error.to_string();
-  let input = Tensor::from_array(([1_usize, 2 * SIDES, BINS, FRAMES], input)).map_err(failed)?;
+  let input =
+    TensorRef::from_array_view(([1_usize, 2 * SIDES, BINS, FRAMES], input)).map_err(failed)?;
   let outputs = session
     .run(ort::inputs!["mix_spec" => input])
     .map_err(failed)?;
@@ -132,13 +110,13 @@ pub fn separate_vocals(
   let mut writer = BufWriter::new(
     File::create(output).map_err(|error| format!("Could not write the singing: {error}"))?,
   );
-  let mut runner = Runner::new(model)?;
+  let mut separator = Shared::open(model, WHAT, || gpu_session(model, WHAT, Fusion::Off));
   let mut spectrum = Spectrum::new();
   chunked(
     &mut reader,
     &mut writer,
     total,
-    &mut |planar| runner.singing(model, &mut spectrum, &planar),
+    &mut |planar| singing(&mut separator, &mut spectrum, &planar),
     progress,
   )?;
   writer

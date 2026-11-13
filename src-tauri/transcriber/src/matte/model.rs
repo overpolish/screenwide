@@ -4,8 +4,9 @@
 //! Robust Video Matting run frame after frame, carrying its four recurrent
 //! states from each frame into the next.
 
-use ort::session::Session;
 use ort::value::TensorRef;
+
+use crate::shared_gpu::Shared;
 
 use super::WHAT;
 
@@ -15,21 +16,26 @@ use super::WHAT;
 const BACKBONE_SIDE: f32 = 512.0;
 
 pub(super) struct Matting {
-  session: Session,
+  model: Shared,
   ratio: f32,
   states: [(Vec<usize>, Vec<f32>); 4],
+  /// Where the next frame's states are read into, kept apart until the frame
+  /// is matted, so a frame the GPU fails runs again on the CPU from the same
+  /// states; then the two swap.
+  spare: [(Vec<usize>, Vec<f32>); 4],
   /// The frame as the model takes it, kept between frames.
   planes: Vec<f32>,
 }
 
 impl Matting {
-  pub(super) fn new(session: Session, (width, height): (usize, usize)) -> Self {
+  pub(super) fn new(model: Shared, (width, height): (usize, usize)) -> Self {
     // The model starts from nothing seen, which it takes as a single zero.
     let empty = || (vec![1, 1, 1, 1], vec![0.0]);
     Self {
-      session,
+      model,
       ratio: (BACKBONE_SIDE / width.max(height) as f32).min(1.0),
       states: [empty(), empty(), empty(), empty()],
+      spare: Default::default(),
       planes: vec![0.0; width * height * 3],
     }
   }
@@ -55,29 +61,40 @@ impl Matting {
     fn state((shape, values): &(Vec<usize>, Vec<f32>)) -> ort::Result<TensorRef<'_, f32>> {
       TensorRef::from_array_view((shape.as_slice(), values.as_slice()))
     }
-    let ratio = [self.ratio];
-    let source = TensorRef::from_array_view(([1_usize, 3, height, width], self.planes.as_slice()));
-    let inputs = ort::inputs![
-      "src" => source.map_err(failed)?,
-      "r1i" => state(&self.states[0]).map_err(failed)?,
-      "r2i" => state(&self.states[1]).map_err(failed)?,
-      "r3i" => state(&self.states[2]).map_err(failed)?,
-      "r4i" => state(&self.states[3]).map_err(failed)?,
-      "downsample_ratio" => TensorRef::from_array_view(([1_usize], &ratio[..])).map_err(failed)?,
-    ];
-    let outputs = self.session.run(inputs).map_err(failed)?;
-    let (_, values) = outputs["pha"].try_extract_tensor::<f32>().map_err(failed)?;
-    quantise(values, alpha);
-    for (index, name) in ["r1o", "r2o", "r3o", "r4o"].into_iter().enumerate() {
-      let (shape, values) = outputs[name].try_extract_tensor::<f32>().map_err(failed)?;
-      let held = &mut self.states[index];
-      held.0.clear();
-      held
-        .0
-        .extend(shape.iter().map(|&side| side.max(0) as usize));
-      held.1.clear();
-      held.1.extend_from_slice(values);
-    }
+    let Self {
+      model,
+      ratio,
+      states,
+      spare,
+      planes,
+    } = self;
+    let ratio = [*ratio];
+    model.run(|session, _| {
+      let source = TensorRef::from_array_view(([1_usize, 3, height, width], planes.as_slice()));
+      let inputs = ort::inputs![
+        "src" => source.map_err(failed)?,
+        "r1i" => state(&states[0]).map_err(failed)?,
+        "r2i" => state(&states[1]).map_err(failed)?,
+        "r3i" => state(&states[2]).map_err(failed)?,
+        "r4i" => state(&states[3]).map_err(failed)?,
+        "downsample_ratio" => TensorRef::from_array_view(([1_usize], &ratio[..])).map_err(failed)?,
+      ];
+      let outputs = session.run(inputs).map_err(failed)?;
+      let (_, values) = outputs["pha"].try_extract_tensor::<f32>().map_err(failed)?;
+      quantise(values, alpha);
+      for (index, name) in ["r1o", "r2o", "r3o", "r4o"].into_iter().enumerate() {
+        let (shape, values) = outputs[name].try_extract_tensor::<f32>().map_err(failed)?;
+        let held = &mut spare[index];
+        held.0.clear();
+        held
+          .0
+          .extend(shape.iter().map(|&side| side.max(0) as usize));
+        held.1.clear();
+        held.1.extend_from_slice(values);
+      }
+      Ok(())
+    })?;
+    std::mem::swap(states, spare);
     Ok(())
   }
 }

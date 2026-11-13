@@ -13,6 +13,7 @@ mod read_text;
 mod restore;
 mod separate;
 mod session;
+mod shared_gpu;
 
 use std::io::{BufRead, Write};
 

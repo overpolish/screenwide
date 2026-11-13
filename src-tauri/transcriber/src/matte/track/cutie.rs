@@ -11,15 +11,19 @@
 //! As in Cutie's own inference, the clicked frame is remembered for good and
 //! every [`MEMORY_EVERY`]th frame since for a while, the newest replacing the
 //! oldest; the object's sensory memory changes every frame.
+//!
+//! Each graph runs on the GPU where it can, sharing it with whatever else
+//! the computer is doing (`shared_gpu`).
 
 use std::collections::VecDeque;
 use std::path::Path;
 
-use ort::session::{Session, SessionOutputs};
+use ort::session::SessionOutputs;
 use ort::value::TensorRef;
 
 use super::WHAT;
 use crate::session::on_platform_gpu;
+use crate::shared_gpu::Shared;
 
 /// The size the model sees each frame at: 480 lines, as Cutie works at, by
 /// a 16:9 width, in sixteens.
@@ -51,9 +55,9 @@ fn extracted(outputs: &SessionOutputs<'_>, name: &str) -> Result<Vec<f32>, Strin
 }
 
 pub(super) struct Cutie {
-  encode: Session,
-  read: Session,
-  memorise: Session,
+  encode: Shared,
+  read: Shared,
+  memorise: Shared,
 }
 
 /// A frame as the model reads it.
@@ -91,12 +95,13 @@ impl Object {
 impl Cutie {
   /// The three graphs, `encode`, `read` and `memorise`, on the GPU where it
   /// can be, CoreML keeping its compiled models in `cache`.
-  pub(super) fn load(files: [&Path; 3], cache: &Path) -> Result<Self, String> {
-    Ok(Self {
-      encode: on_platform_gpu(files[0], WHAT, cache)?,
-      read: on_platform_gpu(files[1], WHAT, cache)?,
-      memorise: on_platform_gpu(files[2], WHAT, cache)?,
-    })
+  pub(super) fn load(files: [&Path; 3], cache: &Path) -> Self {
+    let open = |file: &Path| Shared::open(file, WHAT, || on_platform_gpu(file, WHAT, cache));
+    Self {
+      encode: open(files[0]),
+      read: open(files[1]),
+      memorise: open(files[2]),
+    }
   }
 
   /// The 8-bit RGB frame `rgb`, [`WIDTH`] by [`HEIGHT`], read.
@@ -108,22 +113,22 @@ impl Cutie {
         planes[channel * plane + index] = f32::from(byte) / 255.0;
       }
     }
-    let image = TensorRef::from_array_view(([1_usize, 3, HEIGHT, WIDTH], planes.as_slice()))
-      .map_err(failed)?;
-    let outputs = self
-      .encode
-      .run(ort::inputs!["image" => image])
-      .map_err(failed)?;
-    let seen = Seen {
-      f8: extracted(&outputs, "f8")?,
-      f4: extracted(&outputs, "f4")?,
-      pix: extracted(&outputs, "pix")?,
-      key: extracted(&outputs, "key")?,
-      shrinkage: extracted(&outputs, "shrinkage")?,
-      selection: extracted(&outputs, "selection")?,
-      planes: Vec::new(),
-    };
-    drop(outputs);
+    let seen = self.encode.run(|session, _| {
+      let image = TensorRef::from_array_view(([1_usize, 3, HEIGHT, WIDTH], planes.as_slice()))
+        .map_err(failed)?;
+      let outputs = session
+        .run(ort::inputs!["image" => image])
+        .map_err(failed)?;
+      Ok(Seen {
+        f8: extracted(&outputs, "f8")?,
+        f4: extracted(&outputs, "f4")?,
+        pix: extracted(&outputs, "pix")?,
+        key: extracted(&outputs, "key")?,
+        shrinkage: extracted(&outputs, "shrinkage")?,
+        selection: extracted(&outputs, "selection")?,
+        planes: Vec::new(),
+      })
+    })?;
     Ok(Seen { planes, ..seen })
   }
 
@@ -169,27 +174,27 @@ impl Cutie {
     }
     let selector = [1.0_f32];
     let (h, w) = (HEIGHT / 16, WIDTH / 16);
-    let outputs = self
-      .read
-      .run(ort::inputs![
-        "key" => TensorRef::from_array_view(([1, KEY, h, w], seen.key.as_slice())).map_err(failed)?,
-        "selection" => TensorRef::from_array_view(([1, KEY, h, w], seen.selection.as_slice())).map_err(failed)?,
-        "memory_key" => TensorRef::from_array_view(([1, KEY, length], keys.as_slice())).map_err(failed)?,
-        "memory_shrinkage" => TensorRef::from_array_view(([1, 1, length], shrinkage.as_slice())).map_err(failed)?,
-        "memory_valid" => TensorRef::from_array_view(([1, 1, length], valid.as_slice())).map_err(failed)?,
-        "memory_value" => TensorRef::from_array_view(([1, 1, VALUE, length], values.as_slice())).map_err(failed)?,
-        "pix" => TensorRef::from_array_view(([1, 256, h, w], seen.pix.as_slice())).map_err(failed)?,
-        "sensory" => TensorRef::from_array_view(([1, 1, SENSORY, h, w], object.sensory.as_slice())).map_err(failed)?,
-        "last_mask" => TensorRef::from_array_view(([1, 1, HEIGHT, WIDTH], object.last.as_slice())).map_err(failed)?,
-        "object_memory" => TensorRef::from_array_view(([1, 1, 16, 257], object.summaries.as_slice())).map_err(failed)?,
-        "selector" => TensorRef::from_array_view(([1, 1, 1, 1], &selector[..])).map_err(failed)?,
-        "f8" => TensorRef::from_array_view(([1, 128, h * 2, w * 2], seen.f8.as_slice())).map_err(failed)?,
-        "f4" => TensorRef::from_array_view(([1, 64, h * 4, w * 4], seen.f4.as_slice())).map_err(failed)?,
-      ])
-      .map_err(failed)?;
-    object.sensory = extracted(&outputs, "sensory_out")?;
-    let quarter = extracted(&outputs, "prob")?;
-    drop(outputs);
+    let (sensory, quarter) = self.read.run(|session, _| {
+      let outputs = session
+        .run(ort::inputs![
+          "key" => TensorRef::from_array_view(([1, KEY, h, w], seen.key.as_slice())).map_err(failed)?,
+          "selection" => TensorRef::from_array_view(([1, KEY, h, w], seen.selection.as_slice())).map_err(failed)?,
+          "memory_key" => TensorRef::from_array_view(([1, KEY, length], keys.as_slice())).map_err(failed)?,
+          "memory_shrinkage" => TensorRef::from_array_view(([1, 1, length], shrinkage.as_slice())).map_err(failed)?,
+          "memory_valid" => TensorRef::from_array_view(([1, 1, length], valid.as_slice())).map_err(failed)?,
+          "memory_value" => TensorRef::from_array_view(([1, 1, VALUE, length], values.as_slice())).map_err(failed)?,
+          "pix" => TensorRef::from_array_view(([1, 256, h, w], seen.pix.as_slice())).map_err(failed)?,
+          "sensory" => TensorRef::from_array_view(([1, 1, SENSORY, h, w], object.sensory.as_slice())).map_err(failed)?,
+          "last_mask" => TensorRef::from_array_view(([1, 1, HEIGHT, WIDTH], object.last.as_slice())).map_err(failed)?,
+          "object_memory" => TensorRef::from_array_view(([1, 1, 16, 257], object.summaries.as_slice())).map_err(failed)?,
+          "selector" => TensorRef::from_array_view(([1, 1, 1, 1], &selector[..])).map_err(failed)?,
+          "f8" => TensorRef::from_array_view(([1, 128, h * 2, w * 2], seen.f8.as_slice())).map_err(failed)?,
+          "f4" => TensorRef::from_array_view(([1, 64, h * 4, w * 4], seen.f4.as_slice())).map_err(failed)?,
+        ])
+        .map_err(failed)?;
+      Ok((extracted(&outputs, "sensory_out")?, extracted(&outputs, "prob")?))
+    })?;
+    object.sensory = sensory;
     let (mask, last) = weighed(&quarter);
     object.last = last;
     object.since_memory += 1;
@@ -202,27 +207,27 @@ impl Cutie {
   /// Remembers `seen` with the object as last found in it.
   fn remember(&mut self, seen: &Seen, object: &mut Object) -> Result<(), String> {
     let (h, w) = (HEIGHT / 16, WIDTH / 16);
-    let outputs = self
-      .memorise
-      .run(ort::inputs![
-        "image" => TensorRef::from_array_view(([1_usize, 3, HEIGHT, WIDTH], seen.planes.as_slice())).map_err(failed)?,
-        "pix" => TensorRef::from_array_view(([1, 256, h, w], seen.pix.as_slice())).map_err(failed)?,
-        "sensory" => TensorRef::from_array_view(([1, 1, SENSORY, h, w], object.sensory.as_slice())).map_err(failed)?,
-        "mask" => TensorRef::from_array_view(([1, 1, HEIGHT, WIDTH], object.last.as_slice())).map_err(failed)?,
-      ])
-      .map_err(failed)?;
-    let value = extracted(&outputs, "value")?;
-    object.sensory = extracted(&outputs, "sensory_out")?;
+    let (value, sensory, summaries) = self.memorise.run(|session, _| {
+      let outputs = session
+        .run(ort::inputs![
+          "image" => TensorRef::from_array_view(([1_usize, 3, HEIGHT, WIDTH], seen.planes.as_slice())).map_err(failed)?,
+          "pix" => TensorRef::from_array_view(([1, 256, h, w], seen.pix.as_slice())).map_err(failed)?,
+          "sensory" => TensorRef::from_array_view(([1, 1, SENSORY, h, w], object.sensory.as_slice())).map_err(failed)?,
+          "mask" => TensorRef::from_array_view(([1, 1, HEIGHT, WIDTH], object.last.as_slice())).map_err(failed)?,
+        ])
+        .map_err(failed)?;
+      Ok((
+        extracted(&outputs, "value")?,
+        extracted(&outputs, "sensory_out")?,
+        extracted(&outputs, "summaries")?,
+      ))
+    })?;
+    object.sensory = sensory;
     // The object's summaries add up over every remembered frame, the last
     // of each being how much of the object it saw.
-    for (total, part) in object
-      .summaries
-      .iter_mut()
-      .zip(extracted(&outputs, "summaries")?)
-    {
+    for (total, part) in object.summaries.iter_mut().zip(summaries) {
       *total += part;
     }
-    drop(outputs);
     object
       .memory
       .push_back((seen.key.clone(), seen.shrinkage.clone(), value));
