@@ -396,7 +396,12 @@ fn rounded_coverage(pixel: vec2<f32>, rect: vec4<f32>, radius: f32) -> f32 {
   if (radius <= 0.0) {
     return select(0.0, 1.0, distance < 0.0);
   }
-  return 1.0 - smoothstep(-0.75, 0.75, distance);
+  // Softened over a canvas pixel and a half, as exported; zoomed out, where
+  // one drawn pixel covers several canvas pixels (`motion.z`), over the same
+  // share of a drawn pixel, or the softening falls inside one and the corner
+  // steps.
+  let soft = 0.75 * max(canvas.motion.z, 1.0);
+  return 1.0 - smoothstep(-soft, soft, distance);
 }
 
 fn drop_shadow(distance: f32, sigma: f32) -> f32 {
