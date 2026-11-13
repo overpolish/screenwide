@@ -15,7 +15,6 @@ import {
 import { RecordingStripBand } from "../../timeline/recording-strip/recording-strip-band";
 import { createPlayhead } from "../../timeline/scrub-playhead";
 import { useRecordingPreviewTracks } from "../../timeline/tracks/use-recording-preview-tracks";
-import { usePublishEditorModes } from "../../title-bar/editor-title-modes";
 import { EditorToolColumn } from "../../toolbar/editor-tool-column";
 import { useEditorEditGesture } from "../../use-editor-edit-history";
 import { useCopyRecordingFrame } from "../use-copy-recording-frame";
@@ -248,14 +247,13 @@ export function NativeRecordingPreview(rawProps: ScrubPreviewProps) {
     selection,
     transport,
   });
-  const hasTracks = Boolean(layout) && (hasTrackChoice || band.hasSounds);
-  const island = useRecordingIsland({ column, hasTracks, strip: band });
-  usePublishEditorModes({
+  useRecordingIsland({
+    column,
+    hasLibrary: Boolean(layout),
+    hasTracks: Boolean(layout) && (hasTrackChoice || band.hasSounds),
     kind,
-    mode: column.mode,
-    onModeChange: column.onModeChange,
     parts,
-    tracks: hasTracks ? island.tracks : null,
+    strip: band,
   });
   const { copyError } = useCopyRecordingFrame(props, {
     annotationClips: annotations.clips,

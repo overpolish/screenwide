@@ -71,6 +71,22 @@ export const browseSounds = () => invoke<string[]>("browse_sounds");
 export const removeSound = (name: string) =>
   invoke<null>("remove_sound", { name });
 
+/** Starts dragging the sound `name`'s file out of this window, from the
+ * press under way, onto the lanes or into another app, drawn as `look`. */
+export const dragLibrarySound = (
+  name: string,
+  look: { height: number; png: number[]; width: number },
+) => invoke<null>("drag_library_sound", { name, ...look });
+
+/** Gives the sound `name` the title `title` in the library. */
+export const renameSound = (name: string, title: string) =>
+  invoke<null>("rename_sound", { name, title });
+
+/** Says whether sounds let go where the pointer is now would be refused,
+ * which the drag shows (`sound_library::drop_refusal`). */
+export const setSoundDropRefused = (refused: boolean) =>
+  invoke<null>("set_sound_drop_refused", { refused });
+
 /** The longest stretch a preview plays, in ms, as the editor's
  * `sound_library::preview` cuts it. */
 export const MOST_PREVIEW_MS = 30_000;

@@ -93,6 +93,12 @@ fn a_sound_effect_is_kept_with_its_dead_space_cut_and_found_again() {
   );
   assert!(directory().unwrap().join(&sound.name).is_file());
   assert_eq!(import(&file).unwrap(), sound);
+  // Its cut file, dragged out of the library and back in, is the same sound
+  // rather than a new one named by the cut file's contents.
+  assert_eq!(
+    import(&directory().unwrap().join(&sound.name)).unwrap(),
+    sound
+  );
 }
 
 #[test]
@@ -100,6 +106,19 @@ fn a_title_tag_names_the_sound() {
   let folder = scratch("title");
   let sound = import(&tone(&folder, "track01.m4a", 523, Some("Evening"))).unwrap();
   assert_eq!(sound.title, "Evening");
+}
+
+#[test]
+fn a_renamed_sound_keeps_its_new_title_and_refuses_none() {
+  let folder = scratch("rename");
+  let sound = import(&tone(&folder, "take2.wav", 587, None)).unwrap();
+  assert!(rename(&sound.name, "  ").is_err());
+  assert_eq!(
+    rename(&sound.name, " Intro sting ").unwrap().title,
+    "Intro sting"
+  );
+  let listed = sounds().into_iter().find(|kept| kept.name == sound.name);
+  assert_eq!(listed.unwrap().title, "Intro sting");
 }
 
 #[test]

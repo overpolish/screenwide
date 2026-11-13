@@ -121,6 +121,15 @@ const silentWav = () => {
   return view.buffer;
 };
 
+/** A picture for a story's library: a rounded block of `colour` at
+ * `aspect`, as an SVG the page reads in place of a file. */
+const storyPicture = (colour: string, aspect: number) => {
+  const width = Math.round(120 * Math.min(aspect, 1.6));
+  const height = Math.round(width / aspect);
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${String(width)}" height="${String(height)}"><rect width="100%" height="100%" rx="12" fill="${colour}"/></svg>`;
+  return `data:image/svg+xml,${encodeURIComponent(svg)}`;
+};
+
 /** Each word `find_transcript_marks` was asked about: its text, and
  * whether the edit has removed it. */
 const askedWords = (payload: unknown): { removed: boolean; text: string }[] =>
@@ -188,22 +197,51 @@ if (!isNativePreview) {
             pending: [],
             pictures: [],
           };
-        // A library of three sounds, none carried by the story's project.
+        // A library of songs and sound effects, none carried by the story's
+        // project, each with a made-up waveform.
         case "get_sound_library":
           return [
             ["Morning Light", 184_000],
             ["Long Theme", 236_000],
+            [
+              "Habanera from Carmen (Georges Bizet) - Golden Hour Strings",
+              240_000,
+            ],
             ["Whoosh", 1_200],
+            ["Cartoon Cowbell", 1_300],
+            ["Pop", 540],
           ].map(([title, durationMs], index) => ({
             addedMs: 0,
             durationMs,
-            levels: [],
+            levels: Array.from(
+              { length: 64 },
+              (_, at) =>
+                0.3 + 0.3 * Math.abs(Math.sin(at * (index + 2) * 0.37)),
+            ),
             loudnessLufs: -18,
             name: `${String(index).repeat(32)}.mp3`,
             title,
           }));
         case "get_project_sounds":
           return [];
+        case "get_sound_preview":
+          return silentWav();
+        // A few pictures given to images, two from files, the rest pasted,
+        // each drawn as a shape so the tiles can be told apart.
+        case "get_picture_library":
+          return [
+            ["Logo", "#f97316", 1],
+            [null, "#38bdf8", 16 / 9],
+            ["Arrow sticker", "#a3e635", 1],
+            [null, "#e879f9", 3 / 4],
+            [null, "#facc15", 2],
+          ].map(([title, colour, aspect], index) => ({
+            addedMs: Date.UTC(2026, 10, 12 - index, 10),
+            art: { aspect, asset: `image:${String(index).repeat(32)}` },
+            file: storyPicture(String(colour), Number(aspect)),
+            name: String(index).repeat(32),
+            title,
+          }));
         // No transcription model set up, as on a fresh install.
         case "get_transcription_state":
           return { language: "system", models: [], systemLanguage: "en" };
@@ -250,6 +288,10 @@ if (!isNativePreview) {
   // The label is not an editor's, so `currentEditorKind()` stays null and
   // an editor story takes its workspace from the artifact it is given.
   mockWindows("storybook");
+  // A story's files are already addresses the page can read (`storyPicture`).
+  const internals: unknown = Reflect.get(window, "__TAURI_INTERNALS__");
+  if (internals && typeof internals === "object")
+    Reflect.set(internals, "convertFileSrc", (path: string) => path);
 }
 
 // Initialize React Aria's focus tracking before Storybook's test loader wraps

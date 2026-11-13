@@ -14,6 +14,7 @@ import { type Span, type TimelineScale } from "../timeline-scale";
 import { type StackBarPlacement } from "./stack-bar";
 import { carryScrollSpeed, type Held, heldLanes, holdStep } from "./stack-hold";
 import { BAR_PX, packLanes, type StackedBar } from "./stack-lanes";
+import { type IncomingBar, useIncomingBar } from "./use-incoming-bar";
 import { type BarPart } from "./use-stack-bar-drag";
 
 // Bars across the time each spans, stacked in lanes; the lanes are the
@@ -53,6 +54,11 @@ export type BarStackProps<T extends StackedBar> = {
   scale: TimelineScale;
   /** The strip's width, in px. */
   width: number;
+  /** A bar brought in from outside, such as a picture dragged in, carried
+   * with the pointer as a bar held is (`use-incoming-bar.ts`). */
+  incoming?: IncomingBar<T> | null;
+  /** Told every bar's lane if the incoming one is let go now, or null. */
+  onIncomingLanes?: (lanes: Record<string, number> | null) => void;
   selected?: string;
   /** Where a dragged end settles while ⌘ is held, given its bar, whose own
    * edges are left out. */
@@ -62,6 +68,8 @@ export type BarStackProps<T extends StackedBar> = {
 export function BarStack<T extends StackedBar>({
   bars,
   guideTo,
+  incoming = null,
+  onIncomingLanes,
   onRestack,
   onRetime,
   onSelect,
@@ -73,6 +81,8 @@ export function BarStack<T extends StackedBar>({
 }: BarStackProps<T>) {
   const reducedMotion = useReducedMotion() ?? false;
   const [held, setHeld] = useState<Held | null>(null);
+  const [viewport, setViewport] = useState<HTMLElement | null>(null);
+  const [scrollTop, setScrollTop] = useState(0);
   // Lanes are about what shows at once as it plays, so they are packed on
   // where the bars are drawn, which a reordered recording no longer keeps in
   // recorded order.
@@ -84,21 +94,28 @@ export function BarStack<T extends StackedBar>({
   // The lanes risen, as the strip shows them with nothing held; held, where
   // every bar goes if it is let go now.
   const settled = packLanes(drawn);
-  const lanes = held ? heldLanes(drawn, held) : settled;
+  const coming = useIncomingBar({
+    drawn,
+    drawnSpan,
+    incoming,
+    onLanes: onIncomingLanes,
+    scrollTop,
+    settled,
+  });
+  const active = held ?? coming.held;
+  const lanes = held ? heldLanes(drawn, held) : (coming.lanes ?? settled);
   const laneOf = (bar: T) => lanes[bar.id];
   const shownCount = Math.max(
     1,
     ...bars.map((bar) => laneOf(bar) + 1),
-    ...(held?.liftedTop == null
+    ...(active?.liftedTop == null
       ? []
-      : [Math.ceil(held.liftedTop / BAR_PX + 0.5)]),
+      : [Math.ceil(active.liftedTop / BAR_PX + 0.5)]),
   );
   // Only the rows the bars use: a chosen bar's handles, a little taller
   // than its row, show in the scrolling box's margin.
   const contentHeight = shownCount * BAR_PX;
   const height = Math.min(contentHeight, MAX_SHOWN_LANES * BAR_PX);
-  const [viewport, setViewport] = useState<HTMLElement | null>(null);
-  const [scrollTop, setScrollTop] = useState(0);
   useEffect(() => {
     if (!viewport) return;
     const onScroll = () => {
@@ -245,6 +262,19 @@ export function BarStack<T extends StackedBar>({
               </Fragment>
             );
           })}
+          {incoming && coming.held
+            ? renderBar(incoming.bar, {
+                isLifted: true,
+                isSelected: false,
+                onHold: () => {},
+                onRetime: () => {},
+                onSelect: () => {},
+                scale,
+                span: incoming.bar,
+                top: coming.held.liftedTop ?? 0,
+                width,
+              })
+            : null}
         </div>
       </ScrollArea>
       {guideTop === null || held?.guide == null ? null : (

@@ -222,6 +222,7 @@
       "assetProtocol": {
         "enable": true,
         "scope": [
+          "$APPDATA/images/*",
           "$APPDATA/text-templates/*/fonts/*",
           "$APPCACHE/background-thumbnails/*",
           "$APPCACHE/export-previews/*",

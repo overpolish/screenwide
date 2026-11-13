@@ -6,7 +6,8 @@ import { useState } from "react";
 import { motionDurationCss } from "../../../../lib/motion";
 import { cn } from "../../../../lib/styling";
 import { ScrollArea } from "../../../../primitives/scroll-area/scroll-area";
-import { AnnotationLane } from "../annotation-lane/annotation-lane";
+import { AnnotationDropLane } from "../annotation-lane/annotation-drop-lane";
+import { usePictureCarry } from "../annotation-lane/picture-carry";
 import { AudioLanes } from "../audio-lane/audio-lanes";
 import { CaptionLane } from "../caption-lane/caption-lane";
 import { Minimap } from "../minimap/minimap";
@@ -106,6 +107,7 @@ export function TimelineStrip(props: TimelineStripProps) {
   // The parts are drawn as the strip shows the recording, which a drag
   // lays out as if it were already let go.
   const shown = timelineScale(reorder.map);
+  const isPictureCarried = usePictureCarry() !== null;
   const drawn = splitParts(props, reorder.edges);
   const reshape = useStripReshape({
     ...drawn,
@@ -173,8 +175,8 @@ export function TimelineStrip(props: TimelineStripProps) {
                   width={width}
                 />
                 <StripLane>
-                  {drawn.annotations.length > 0 ? (
-                    <AnnotationLane
+                  {drawn.annotations.length > 0 || isPictureCarried ? (
+                    <AnnotationDropLane
                       annotations={drawn.annotations}
                       onRestack={props.onAnnotationRestack}
                       onRetime={props.onAnnotationRetime}

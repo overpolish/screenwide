@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { BarStack } from "../bar-stack/bar-stack";
+import { type IncomingBar } from "../bar-stack/use-incoming-bar";
 import { type SnapFor } from "../strip/strip-snap";
 import { type Span, type TimelineScale } from "../timeline-scale";
 
@@ -34,6 +35,10 @@ export type AnnotationLaneProps = {
   scale: TimelineScale;
   /** The strip's width, in px. */
   width: number;
+  /** A picture carried in, held as a bar of its own (`BarStack`). */
+  incoming?: IncomingBar<TimelineAnnotation> | null;
+  /** Told every bar's lane if the carried picture is let go now, or null. */
+  onIncomingLanes?: (lanes: Record<string, number> | null) => void;
   selected?: string;
   /** Where a dragged end settles while ⌘ is held, given its annotation,
    * whose own edges are left out. */

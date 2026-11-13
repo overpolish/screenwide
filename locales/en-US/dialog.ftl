@@ -8,6 +8,7 @@ dialog-project-filter = Screenwide Project
 dialog-choose-folder = Choose a folder
 dialog-choose-background = Choose a background picture
 dialog-choose-image = Choose an image
+dialog-choose-pictures = Choose pictures
 dialog-pictures-filter = Pictures
 dialog-choose-sounds = Choose music or sound effects
 dialog-sounds-filter = Sounds

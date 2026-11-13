@@ -84,16 +84,3 @@ export type ToolPanelSounds = {
   isHeard: boolean;
   kind: AudioClipKind;
 };
-
-/** Songs or sound effects on their way to the timeline, waiting to be told
- * which they are. */
-export type ToolPanelAddingSounds = {
-  /** Where the timeline lies in the island window, in CSS px, which the
-   * islands stand over: its left half for sound effects, its right half
-   * for songs. Null where there is none. */
-  area: { height: number; left: number; top: number; width: number } | null;
-  /** How many sounds are on their way. */
-  count: number;
-  /** Whether songs would have room after the last song. */
-  hasSongRoom: boolean;
-};

@@ -14,16 +14,22 @@ use super::{
 
 /// Adds the sound in `file` to the library, measuring it, and says what it
 /// is. A sound added before is found again by the file it came from, as it
-/// was. A sound effect is kept with its dead space cut, as lossless FLAC;
-/// where cutting it fails, it is kept as it came.
+/// was, or by the library's own file for it, which a sound dragged out of
+/// the library brings back: a sound effect's is cut, so its contents no
+/// longer match what it was added from. A sound effect is kept with its
+/// dead space cut, as lossless FLAC; where cutting it fails, it is kept as
+/// it came.
 pub fn import(file: &Path) -> Result<Sound, String> {
+  let folder = directory()?;
+  if let Some(sound) = kept_from(folder, file) {
+    return Ok(sound);
+  }
   let extension = extension(file).ok_or_else(|| "That is not a sound file".to_owned())?;
   let bytes =
     std::fs::read(file).map_err(|error| format!("The sound could not be read: {error}"))?;
   let hash = content_hash(&bytes);
   let name = format!("{hash}.{extension}");
   let cut_name = format!("{hash}.{CUT_EXTENSION}");
-  let folder = directory()?;
   if let Some(sound) = [&name, &cut_name]
     .into_iter()
     .find_map(|each| read_kept(folder, each))
@@ -62,6 +68,21 @@ pub fn import(file: &Path) -> Result<Sound, String> {
   let sound = Sound::from_measured(name, title, added_ms, measured);
   write_kept(folder, &sound)?;
   Ok(sound)
+}
+
+/// The sound `file` is, where it is one of the library's own files in
+/// `folder`.
+fn kept_from(folder: &Path, file: &Path) -> Option<Sound> {
+  let same = |one: &Path, other: &Path| {
+    one == other
+      || std::fs::canonicalize(one)
+        .ok()
+        .is_some_and(|one| std::fs::canonicalize(other).ok() == Some(one))
+  };
+  if !same(file.parent()?, folder) {
+    return None;
+  }
+  read_kept(folder, file.file_name()?.to_str()?)
 }
 
 /// The sound `kept` cut to `stretch` and kept as `cut_name` in `folder` in

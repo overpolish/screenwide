@@ -12,3 +12,5 @@ pub(crate) mod dragged_windows;
 pub(crate) mod dropped;
 /// Bringing a picture in from a file or the clipboard.
 pub mod import;
+/// The library of pictures the Library island lists.
+pub mod library;

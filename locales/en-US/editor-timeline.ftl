@@ -17,6 +17,9 @@ editor-timeline-range-name = Choose a range of the recording
 # The transport's toggle that brings out the Tracks island, where each recorded track is held in the export and the preview or left out.
 editor-timeline-tracks = Tracks
 editor-timeline-tracks-name = Choose the tracks to play and export
+# The title bar's toggle beside the modes that brings out the Library island: the songs, sound effects and pictures used before, to add again. A screenshot's holds only pictures.
+editor-timeline-library = Library
+editor-timeline-library-name = Add from your library
 editor-timeline-audio-visualizer = Audio visualizer
 editor-timeline-system-audio = System audio
 editor-timeline-microphone = Microphone

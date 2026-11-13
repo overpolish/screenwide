@@ -8,8 +8,9 @@
 //! contents, so an image carries only `image:` and that name, and the same
 //! picture pasted twice is kept once. A still is kept as a PNG, shrunk as it
 //! arrives where it is larger than any image is drawn; a moving one is kept
-//! as the file it came as, since no still could hold it. A project anywhere
-//! on disk can name any of them, so none is removed.
+//! as the file it came as, since no still could hold it. Together they are
+//! the library of pictures (`library`), from which one can be removed: a
+//! project carries its own copy of each it shows, and hands it back.
 
 use std::path::{Path, PathBuf};
 use std::sync::OnceLock;
@@ -20,8 +21,10 @@ use super::animation::{decode, extension, ImageAnimation};
 use screenwide_annotations::image::{ImageArt, ImagePlay};
 
 mod cache;
+mod library;
 mod portable;
 pub(crate) use cache::load;
+pub use library::{pictures, remove, rename, Picture};
 pub use portable::{adopt, content_file_name, stored_file};
 
 /// The prefix a stored picture's asset id carries.
@@ -147,12 +150,14 @@ pub fn import(image: DynamicImage) -> Result<ImageArt, String> {
     .map_err(|error| format!("The picture could not be kept: {error}"))?;
   let name = content_name(&png);
   keep(&name, "png", &png)?;
-  Ok(ImageArt {
+  let art = ImageArt {
     asset: format!("{IMAGE_PREFIX}{name}"),
     aspect: f64::from(original_width) / f64::from(original_height),
     pixels: Some(f64::from(longer)),
     play: None,
-  })
+  };
+  library::note(&art, None);
+  Ok(art)
 }
 
 /// Keeps the moving picture in `bytes` as the file it is, since no still
@@ -176,12 +181,14 @@ fn import_animation(bytes: &[u8], animation: ImageAnimation) -> Result<ImageArt,
     once: false,
   };
   cache::remember_animation(&name, animation);
-  Ok(ImageArt {
+  let art = ImageArt {
     asset: format!("{IMAGE_PREFIX}{name}"),
     aspect: f64::from(width) / f64::from(height),
     pixels: Some(f64::from(width.max(height))),
     play: Some(play),
-  })
+  };
+  library::note(&art, None);
+  Ok(art)
 }
 
 /// Reads the picture in `bytes`, in whatever format they say they are: a
@@ -196,11 +203,18 @@ pub fn import_bytes(bytes: &[u8]) -> Result<ImageArt, String> {
   import(image)
 }
 
-/// Reads the picture at `path`.
+/// Reads the picture at `path`, named by its file. One of the store's own
+/// files, dragged out of the library and back, is the picture it already
+/// is.
 pub fn import_file(path: &Path) -> Result<ImageArt, String> {
+  if let Some(art) = library::kept_art(path) {
+    return Ok(art);
+  }
   let bytes =
     std::fs::read(path).map_err(|error| format!("That picture could not be opened: {error}"))?;
-  import_bytes(&bytes)
+  let art = import_bytes(&bytes)?;
+  library::note(&art, path.file_stem().and_then(|stem| stem.to_str()));
+  Ok(art)
 }
 
 #[cfg(test)]

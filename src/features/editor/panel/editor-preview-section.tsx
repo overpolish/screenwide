@@ -10,7 +10,6 @@ import { useSelectHold } from "../choice/use-select-hold";
 import { useToolFollowsChoice } from "../choice/use-tool-follows-choice";
 import { placeScreenshotImage } from "../images/image-api";
 import { useIncomingImages } from "../images/use-incoming-images";
-import { useEditorIslandWindow } from "../island/host/use-editor-island-window";
 import { PreviewViewport } from "../preview/preview-viewport";
 import {
   screenshotBetween,
@@ -27,6 +26,7 @@ import {
 import { screenshotWorkspaceItemOutput } from "../screenshot/screenshot-output";
 import { useScreenshotAnnotations } from "../screenshot/use-screenshot-annotations";
 import { useScreenshotLayerActions } from "../screenshot/use-screenshot-layer-actions";
+import { useScreenshotLibrary } from "../screenshot/use-screenshot-library";
 import { useScreenshotNudge } from "../screenshot/use-screenshot-nudge";
 import { useScreenshotRecenter } from "../screenshot/use-screenshot-recenter";
 import { useScreenshotTool } from "../screenshot/use-screenshot-tool";
@@ -138,7 +138,6 @@ export function ScreenshotSection({
     selectedKind: annotations.selectedKind,
     tool,
   });
-  useEditorIslandWindow({ island, workspace: "screenshot" });
   const newestItemId =
     artifact.items.length > 0
       ? artifact.items[artifact.items.length - 1].id
@@ -190,8 +189,10 @@ export function ScreenshotSection({
     setTool,
     tool,
   });
+  const library = useScreenshotLibrary({ backToSelect, island });
   usePublishEditorModes({
     kind: "screenshot",
+    library,
     mode,
     onModeChange: chooseMode,
     parts: NO_CAPTURE_PARTS,

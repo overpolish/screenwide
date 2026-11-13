@@ -33,16 +33,40 @@ editor-island-sound = Sound
 editor-island-sound-volume = { $track } volume
 # Puts a track back at the level it was recorded at. $track is the track's name, such as Microphone.
 editor-island-sound-reset-volume = Reset { $track } volume
-# The library of songs and sound effects added to any recording, under the tracks on the Sound island.
+# The library of songs and sound effects added to any recording, as the Library island lists them.
 editor-island-sound-library = Music and sound effects
-editor-island-sound-library-empty = Songs and sound effects you add are kept here, for any recording.
-# Adds the song or sound effect chosen in the library to the timeline.
-editor-island-sound-add = Add
-# Chooses songs or sound effects from files and adds them to the timeline and the library.
-editor-island-sound-add-from-file = Add from a file
-# Takes the chosen song or sound effect out of the library; projects that use it keep their own copy.
-editor-island-sound-remove = Remove from the library
-editor-island-sound-confirm-remove = Confirm removing
+# The Library island's plus: chooses files of the kind shown (songs, sound effects or pictures) and keeps them in the library, without adding them to the timeline or the picture.
+editor-island-library-add = Add to the library
+# The choice at the top of the Library island between its songs, its sound effects and its pictures; for songs and sound effects it is also what one added becomes.
+editor-island-sound-library-kind = Show
+editor-island-sound-library-music = Music
+editor-island-sound-library-effects = Sound effects
+editor-island-library-images = Images
+editor-island-sound-library-search = Search
+editor-island-sound-library-empty-music = Songs you add are kept here, for any recording.
+editor-island-sound-library-empty-effects = Sound effects you add are kept here, for any recording.
+# Nothing in the library has the words searched for in its name.
+editor-island-sound-library-no-match = Nothing matches
+# A song or sound effect in the library, for assistive technology: pressing it adds it to the timeline. $title is its title, $length how long it plays.
+editor-island-sound-library-add = Add { $title }, { $length }
+# Plays a song or sound effect in the library, or stops it. $title is its title.
+editor-island-sound-library-play = Play { $title }
+editor-island-sound-library-stop = Stop { $title }
+# A song or sound effect's waveform in the library, for assistive technology: pressing along it plays it from there. $title is its title.
+editor-island-sound-library-play-from = Play { $title } from where you press
+# Takes a song or sound effect out of the library; projects that use it keep their own copy. $title is its title.
+editor-island-sound-remove = Remove { $title } from the library
+# Confirms taking a song, sound effect or picture out of the library.
+editor-island-library-confirm-remove = Confirm removing
+editor-island-library-empty-images = Pictures you give images are kept here, for any recording or screenshot.
+# A picture in the library, for assistive technology: pressing it places it as a new image. $name is the name it was given or came with, or when it was added.
+editor-island-library-picture-add = Add { $name }
+# Names a picture in the library that has no name yet, as pasted pictures do. $date is when it was added.
+editor-island-library-picture-unnamed = Picture added { $date }
+# Takes a picture out of the library; projects that show it keep their own copy. $name names it as above.
+editor-island-library-picture-remove = Remove { $name } from the library
+# The field a song's, sound effect's or picture's name is edited in, for assistive technology.
+editor-island-library-name = Name
 
 ## A song or sound effect on the strip, laid under the recording
 
@@ -50,12 +74,8 @@ editor-island-sound-confirm-remove = Confirm removing
 editor-island-audio-kind = Kind
 editor-island-audio-song = Song
 editor-island-audio-effect = Sound effect
-# Beside the Song and Sound effect choice for a few seconds after Song is pressed for a sound effect that would land on a song: songs never overlap, and there is no room for it among them.
+# Beside the Song and Sound effect choice for a few seconds after Song is pressed for a sound effect that would land on a song, and in the library's column while it shows music with no room left for another song: songs never overlap, and there is no room for it among them.
 editor-island-audio-no-song-room = No room on the music track
-# Under the Sound effect island that sounds being added are dropped on or pressed to lay them down as sound effects: where they go on the timeline.
-editor-island-add-effect-where = At the playhead
-# Under the Song island that sounds being added are dropped on or pressed to lay them down as songs: where they go on the timeline.
-editor-island-add-song-where = After the last song
 editor-island-audio-volume = Volume
 # Puts the clip back at the level it plays at by default: under the voice for a song, a little under it for a sound effect.
 editor-island-audio-reset-volume = Reset volume

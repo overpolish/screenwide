@@ -27,11 +27,7 @@ import {
   ToolPanelSelection,
   ToolPanelSoundTrack,
 } from "./tool-panel-selection";
-import {
-  ToolPanelAddingSounds,
-  ToolPanelStripItem,
-  ToolPanelTrack,
-} from "./tool-panel-strip";
+import { ToolPanelStripItem, ToolPanelTrack } from "./tool-panel-strip";
 import { ToolPanelTranscript } from "./tool-panel-transcript";
 
 import type { RecordingCaptions } from "../../../bindings/RecordingCaptions";
@@ -104,9 +100,6 @@ export type ToolPanelSnapshot = {
   selection: ToolPanelSelection | null;
   /** Latest panel request committed with this snapshot. */
   acknowledgedSeq?: number;
-  /** Songs or sound effects on their way to the recording's timeline,
-   * waiting to be told which; absent or null otherwise. */
-  addingSounds?: ToolPanelAddingSounds | null;
   /** The recording's captions, with the defaults for whatever is unset,
    * where it has a microphone to caption; absent or null otherwise. */
   captions?: RecordingCaptions | null;
@@ -116,6 +109,9 @@ export type ToolPanelSnapshot = {
   /** What the Export island shows, while it can be brought out; absent or
    * null otherwise. */
   export?: ToolPanelExport | null;
+  /** Whether a song added to the recording's timeline now would have room
+   * after the last song; absent where songs cannot be added. */
+  hasSongRoom?: boolean;
   /** Every recorded audio track, for the Sound island; absent or empty
    * where there is none. */
   soundTracks?: ToolPanelSoundTrack[];

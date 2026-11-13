@@ -14,6 +14,7 @@ import { t } from "../../../i18n/i18n";
 import { isWindows } from "../../../lib/platform";
 import { annotationToolLabel } from "../../annotations/annotation-text";
 import {
+  LIBRARY_SHORTCUT,
   MODE_SHORTCUTS,
   TRACKS_SHORTCUT,
 } from "../../editor/toolbar/editor-modes";
@@ -109,6 +110,7 @@ const editorModes = (): Row[] => [
   { label: t("editor-toolbar-transcript"), value: MODE_SHORTCUTS.transcript },
   { label: t("editor-island-sound"), value: MODE_SHORTCUTS.sound },
   { label: t("editor-timeline-tracks"), value: TRACKS_SHORTCUT },
+  { label: t("editor-timeline-library"), value: LIBRARY_SHORTCUT },
 ];
 
 const ARROWS = ["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"];

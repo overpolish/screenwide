@@ -1,16 +1,14 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { Pause, Play } from "lucide-react";
 import { useMemo, useRef, useState } from "react";
 
 import { t } from "../../../../i18n/i18n";
 import { cn } from "../../../../lib/styling";
-import { IconButton } from "../../../../primitives/button/icon-button";
-import { IconSwap } from "../../../../primitives/icon-swap/icon-swap";
 import { useSize } from "../../../../primitives/island/island-size";
 import { formatDuration } from "../../duration";
 import { LEAST_CLIP_MS } from "../../sound-track/audio-clips";
+import { IslandPlayButton } from "../island-play-button";
 
 import { contrasted, keyedStart, type Lens } from "./fisheye";
 import { FisheyeSound } from "./fisheye-sound";
@@ -106,24 +104,15 @@ export function SoundTrimPicker({
   const heardMs = shown.fromMs + preview.progress * preview.lengthMs;
   return (
     <div className="flex items-center gap-inline">
-      <IconButton
-        aria-label={
+      <IslandPlayButton
+        isPlaying={preview.isPlaying}
+        label={
           preview.isPlaying
             ? t("editor-island-audio-stop-preview")
             : t("editor-island-audio-preview")
         }
-        className="shrink-0"
         onPress={preview.onTogglePlay}
-      >
-        <IconSwap swapKey={preview.isPlaying ? "pause" : "play"}>
-          {/* Filled, as the editor's transport draws play and pause. */}
-          {preview.isPlaying ? (
-            <Pause aria-hidden className="size-icon fill-current" />
-          ) : (
-            <Play aria-hidden className="size-icon fill-current" />
-          )}
-        </IconSwap>
-      </IconButton>
+      />
       <div
         className={cn(
           "relative h-island-control w-60 min-w-0 grow cursor-pointer touch-none",

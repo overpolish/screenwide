@@ -23,12 +23,11 @@ import { Background, BackgroundPreset } from "./frame/background/background";
 import { TranscriptRequest } from "./tool-panel-transcript";
 
 import type { ToolPanelExportPatch } from "./tool-panel-export";
-import type { AudioClipKind } from "../../../bindings/AudioClipKind";
 import type { TextStyle } from "../../../bindings/TextStyle";
 import type { AnnotationPinAction } from "../island/annotation/annotation-pin";
 import type { AudioClipChange } from "../island/audio-clip/audio-clip-island";
 import type { CropAspect } from "../island/crop-aspect-choice";
-import type { SoundAddition } from "../island/sound/sound-library-list";
+import type { SoundAddition } from "../island/library/library-panel";
 
 /**
  * What a tool panel can ask for. Each one is an editor handler that already
@@ -125,6 +124,9 @@ export type ToolPanelHandlers = {
   onKeyboardEffectsChange?: (settings: Partial<KeyboardEffectSettings>) => void;
   /** Bring back every shortcut deleted from the timeline. */
   onKeyboardShortcutsRestore?: () => void;
+  /** Place an image showing a picture from the library in the middle of
+   * the layer in hand. */
+  onLibraryImage?: (art: ImageArt) => void;
   /** Have the lull chosen on the strip squeeze with the rest, or keep it
    * as recorded. */
   onLullPlayChange?: (play: "keep" | "squeeze") => void;
@@ -194,12 +196,8 @@ export type ToolPanelHandlers = {
   onSelectionRecenter?: () => void;
   /** Turn the selected layer in depth, a field at a time. */
   onSelectionRotationChange?: (rotation: Partial<SceneRotation>) => void;
-  /** Add a song or sound effect to the timeline, from the library or a
-   * file. */
+  /** Add a song or sound effect from the library to the timeline. */
   onSoundAdd?: (addition: SoundAddition) => void;
-  /** Lay the sounds on their way down as songs or sound effects, or, with
-   * none, leave them out. */
-  onSoundKind?: (kind: AudioClipKind | null) => void;
   /** Cut what is chosen on the strip, and its time with it. */
   onStripItemCut?: () => void;
   /** Let go of what is chosen on the strip. */

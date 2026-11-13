@@ -66,7 +66,8 @@ export const useNotePlayback = (artifactId: number, moment: number | null) =>
 /**
  * Plays the sound `load` reads, once there is a `key` naming it, as
  * `useNotePlayback` plays a note: a new key loads and plays its own sound
- * from its beginning.
+ * from its beginning. Asked to play before its sound has loaded, it plays
+ * as soon as it has.
  */
 export function useIslandSoundPlayback(
   key: string | null,
@@ -78,6 +79,9 @@ export function useIslandSoundPlayback(
   const bufferRef = useRef<AudioBuffer | null>(null);
   const playingRef = useRef<Playing | null>(null);
   const offsetRef = useRef(0);
+  /** Whether play was asked for before the sound had loaded. */
+  const wantsRef = useRef(false);
+  const toggleRef = useRef<() => Promise<void>>(() => Promise.resolve());
   const [playingKey, setPlayingKey] = useState<string | null>(null);
   const [heard, setHeard] = useState<{ key: string; progress: number } | null>(
     null,
@@ -94,13 +98,16 @@ export function useIslandSoundPlayback(
       .current()
       .then((bytes) => context.decodeAudioData(bytes))
       .then((buffer) => {
-        if (!cancelled) bufferRef.current = buffer;
+        if (cancelled) return;
+        bufferRef.current = buffer;
+        if (wantsRef.current) void toggleRef.current();
       })
       .catch((error: unknown) => {
         console.error("Could not load the sound to play", error);
       });
     return () => {
       cancelled = true;
+      wantsRef.current = false;
       playingRef.current?.source.stop();
       playingRef.current = null;
       bufferRef.current = null;
@@ -132,7 +139,9 @@ export function useIslandSoundPlayback(
   const toggle = async () => {
     const context = contextRef.current;
     const buffer = bufferRef.current;
-    if (!context || !buffer || key === null) return;
+    if (key === null) return;
+    wantsRef.current = !buffer;
+    if (!context || !buffer) return;
     const current = playingRef.current;
     if (current) {
       offsetRef.current = Math.max(0, heardAt(context) - current.startedAt);
@@ -161,6 +170,7 @@ export function useIslandSoundPlayback(
     source.start(0, offset);
     setPlayingKey(key);
   };
+  toggleRef.current = toggle;
 
   return { playing, progress, toggle };
 }

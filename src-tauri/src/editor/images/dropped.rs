@@ -128,6 +128,7 @@ pub(crate) fn deliver(app: &AppHandle, workspace: &'static str, carried: Carried
   let app = app.clone();
   tauri::async_runtime::spawn_blocking(move || match keep(picture) {
     Ok(art) => {
+      super::library::changed(&app);
       let _ = app.emit(IMAGE_DROP_EVENT, ImageDropEvent { workspace, art, at });
     }
     Err(error) => eprintln!("Could not use the dropped picture: {error}"),

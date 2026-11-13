@@ -9,7 +9,11 @@ import {
   type RecordingAudioClip,
 } from "../../sound-track/audio-clips";
 import { droppedClips, guessedKind } from "../../sound-track/dropped-clips";
-import { importSounds, type Sound } from "../../sound-track/sound-library";
+import {
+  importSounds,
+  setSoundDropRefused,
+  type Sound,
+} from "../../sound-track/sound-library";
 import {
   type SoundDropSpot,
   soundDropSpot,
@@ -20,14 +24,15 @@ import { type StripSelection } from "../strip/strip-selection";
 import { type AudioClipWriter, type LatestEdit } from "./audio-clip-writer";
 import { useSoundDrag } from "./use-sound-drag";
 
-// Sound files dragged in from the system and let go on the timeline. They
-// are read into the library as they arrive, so where they would land can be
-// drawn at their length while they are carried. Let go on a lane, they
-// become what that lane holds, from the moment under the pointer, one after
-// another (`dropped-clips.ts`); anywhere else on the page, nothing is
-// added. Let go on the picture, which knows no lanes, each goes by its
-// length to the playhead, as a sound added from the library does. The
-// first added is chosen.
+// Sound files dragged in from the system, or out of the library, and let
+// go on the timeline. They are read into the library as they arrive, so
+// where they would land can be drawn at their length while they are
+// carried. Let go on a lane, they become what that lane holds, from the
+// moment under the pointer, one after another (`dropped-clips.ts`). Off the
+// lanes, or on the song rail with no room for them, the drag shows the drop
+// refused and nothing is added. Let go on the picture, which knows no
+// lanes, each goes by its length to the playhead, as a sound added from the
+// library does. The first added is chosen.
 
 /** Sounds on their way in: their files, the sounds read from them once they
  * are, and the spot on the lanes under the pointer. */
@@ -69,19 +74,34 @@ export function useSoundCarry({
   // Read by the drag's events, which can come twice before the page draws
   // again.
   const carryRef = useRef<Carry | null>(null);
+  const clipsNow = () => latestRef.current.edit.audioClips ?? [];
+  // Whether the drag now shows a drop refused: off the lanes, or on the song
+  // rail with no room for what is carried, nothing would be added.
+  const refusedRef = useRef(false);
+  const showRefused = (next: Carry | null) => {
+    const refused =
+      next !== null &&
+      (next.spot === null ||
+        (next.sounds !== null &&
+          droppedClips(clipsNow(), next.sounds, { ...next.spot, timelineMs })
+            .added.length === 0));
+    if (refused === refusedRef.current) return;
+    refusedRef.current = refused;
+    setSoundDropRefused(refused).catch(failed);
+  };
   const keep = (next: Carry | null) => {
     carryRef.current = next;
     setCarry(next);
+    showRefused(next);
   };
-  const clipsNow = () => latestRef.current.edit.audioClips ?? [];
   const write = (clips: RecordingAudioClip[], first: string | undefined) => {
     if (first === undefined) return;
     writer.write(clips);
     select({ id: first, kind: "audioClip" });
   };
-  const failed = (cause: unknown) => {
+  function failed(cause: unknown) {
     console.error("Could not add the sounds", cause);
-  };
+  }
   /** Reads `paths` into the library, keeping what they are on the carry
    * that asked for them, if it is still carried. */
   const read = (paths: string[]) => {

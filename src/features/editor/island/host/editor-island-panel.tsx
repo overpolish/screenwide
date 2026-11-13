@@ -13,7 +13,6 @@ import {
   useToolPanelStore,
 } from "../../tools/tool-panel-store";
 import { usePanelShortcuts } from "../../tools/use-panel-shortcuts";
-import { SoundKindChooser } from "../sound-kind/sound-kind-chooser";
 
 import {
   isStripIsland,
@@ -74,17 +73,12 @@ export function EditorIslandPanel({
       shown.gif === null
     );
   });
-  // While sounds wait for a press to tell what they are, the chooser takes
-  // the whole window, so a press off its islands reaches nothing beneath.
-  const adding = useToolPanelStore(
-    (state) => state.snapshots[content.workspace]?.addingSounds ?? null,
-  );
   const partsRef = useRef<Record<"corner" | "script", PopupPanelPart[]>>({
     corner: [],
     script: [],
   });
   const takesWholeRef = useRef(false);
-  takesWholeRef.current = dismissesOnPress || adding !== null;
+  takesWholeRef.current = dismissesOnPress;
   const reportHitArea = () => {
     void setPopupPanelHitArea(
       label,
@@ -135,17 +129,6 @@ export function EditorIslandPanel({
         onParts={reportOf("script")}
         shown={script}
       />
-      {adding ? (
-        <SoundKindChooser
-          adding={adding}
-          onChoose={(kind) => {
-            sendToolPanelRequest(content.workspace, {
-              type: "patch",
-              values: { soundKind: { kind } },
-            });
-          }}
-        />
-      ) : null}
     </div>
   );
 }

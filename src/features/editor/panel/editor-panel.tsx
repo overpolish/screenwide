@@ -13,10 +13,6 @@ import {
   defaultCameraOverlay,
 } from "../export/recording-export-settings";
 import { useEditorExportIsland } from "../export/use-editor-export-island";
-import {
-  stripIslandControls,
-  useStripIslandChoice,
-} from "../timeline/recording-strip/strip-island-channel";
 import { EditorTitleModeBar } from "../title-bar/editor-mode-bar";
 import { EditorTitleBar } from "../title-bar/editor-title-bar";
 import { useEditorToolPanels } from "../tools/use-editor-tool-panels";
@@ -128,7 +124,6 @@ export function EditorPanel(props: EditorPanelProps) {
     workspace,
   });
   const { setHasTranscript } = exportIsland;
-  const isAddingSounds = useStripIslandChoice(workspace).adding !== null;
   useEffect(() => {
     setHasTranscript(hasTranscript);
   }, [hasTranscript, setHasTranscript]);
@@ -136,40 +131,25 @@ export function EditorPanel(props: EditorPanelProps) {
     <WindowShell
       className="relative"
       header={
-        // The island window, which dims the rest of the editor while sounds
-        // wait to be told what they are, covers the content alone, so the
-        // title bar dims itself; a press on it adds nothing, as one off the
-        // islands does.
-        <div className="relative shrink-0">
-          <EditorTitleBar
-            artifact={artifact}
-            canExport={canOpenExport}
-            exportProgress={exportIsland.saveProgress}
-            isExportOpen={exportIsland.isOpen}
-            isSaving={isSaving}
-            modes={
-              <ChromeSetBack isSetBack={isExportOpen}>
-                <EditorTitleModeBar isDisabled={isExportOpen} />
-              </ChromeSetBack>
-            }
-            onClose={onCancel}
-            onCopy={onCopy}
-            onDelete={onDeleteProject}
-            onExport={exportIsland.toggle}
-            onMinimize={onMinimize}
-            onRename={onRenameProject}
-            onToggleMaximize={onToggleMaximize}
-          />
-          {isAddingSounds ? (
-            <div
-              aria-hidden
-              className="absolute inset-0 bg-island/50"
-              onPointerDown={() => {
-                stripIslandControls(workspace)?.chooseSoundKind(null);
-              }}
-            />
-          ) : null}
-        </div>
+        <EditorTitleBar
+          artifact={artifact}
+          canExport={canOpenExport}
+          exportProgress={exportIsland.saveProgress}
+          isExportOpen={exportIsland.isOpen}
+          isSaving={isSaving}
+          modes={
+            <ChromeSetBack isSetBack={isExportOpen}>
+              <EditorTitleModeBar isDisabled={isExportOpen} />
+            </ChromeSetBack>
+          }
+          onClose={onCancel}
+          onCopy={onCopy}
+          onDelete={onDeleteProject}
+          onExport={exportIsland.toggle}
+          onMinimize={onMinimize}
+          onRename={onRenameProject}
+          onToggleMaximize={onToggleMaximize}
+        />
       }
     >
       <div

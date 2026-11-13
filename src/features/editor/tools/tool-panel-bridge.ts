@@ -66,7 +66,6 @@ const applyPatch = (values: ToolPanelPatch, on: ToolPanelHandlers) => {
     on.onAutoVolumeChange?.(values.autoVolume);
   if (values.audioClip) on.onAudioClipChange?.(values.audioClip);
   if (values.soundAddition) on.onSoundAdd?.(values.soundAddition);
-  if (values.soundKind) on.onSoundKind?.(values.soundKind.kind);
   if (values.studioSound !== undefined)
     on.onStudioSoundChange?.(values.studioSound);
   if (values.downloadStudioSound) on.onStudioSoundDownload?.();
@@ -158,6 +157,7 @@ const applyPatch = (values: ToolPanelPatch, on: ToolPanelHandlers) => {
     on.onCaptionDefaultsChange?.(values.captionDefaults);
   if (values.cutStripItem) on.onStripItemCut?.();
   if (values.deselectStripItem) on.onStripItemDeselect?.();
+  if (values.libraryImage) on.onLibraryImage?.(values.libraryImage);
   if (values.lullPlay !== undefined) on.onLullPlayChange?.(values.lullPlay);
   if (values.trimLullToBreath) on.onLullTrimToBreath?.();
   if (values.trackEnabled !== undefined)

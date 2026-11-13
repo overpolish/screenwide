@@ -225,9 +225,8 @@ export function useRecordingStripAudio({
   };
   return {
     addSound: adding.addSound,
-    adding: adding.adding,
     changeAudioClip,
-    chooseSoundKind: adding.chooseSoundKind,
+    hasSongRoom: adding.hasSongRoom,
     hearSounds,
     island,
     sounds: soundKinds.map((kind) => ({

@@ -3,7 +3,11 @@
 
 import { describe, expect, it, vi } from "vitest";
 
-import { MODE_SHORTCUTS, TRACKS_SHORTCUT } from "../toolbar/editor-modes";
+import {
+  LIBRARY_SHORTCUT,
+  MODE_SHORTCUTS,
+  TRACKS_SHORTCUT,
+} from "../toolbar/editor-modes";
 import {
   ANNOTATION_TOOLS,
   EDITOR_TOOL_SHORTCUTS,
@@ -94,6 +98,7 @@ describe("the editor's tool keys", () => {
           ],
       ),
       ["tracks", TRACKS_SHORTCUT, "onToggleTracks"],
+      ["library", LIBRARY_SHORTCUT, "onToggleLibrary"],
     ];
     for (const [button, shortcut, callback] of buttons) {
       const keys = { [callback]: vi.fn(), onTool: vi.fn() };

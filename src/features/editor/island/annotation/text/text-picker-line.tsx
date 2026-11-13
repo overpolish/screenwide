@@ -5,20 +5,13 @@ import { ChevronDown } from "lucide-react";
 import { motion } from "motion/react";
 import { type ReactNode } from "react";
 import { useLocale } from "react-aria";
-import { Button } from "react-aria-components";
 
-import {
-  cn,
-  elementFocusVisible,
-  focusStyles,
-} from "../../../../../lib/styling";
-import { IslandFill } from "../../../../../primitives/island/island-fill";
 import { useGlyphMotion } from "../../../../annotations/options/glyph-motion";
+import { IslandLineButton } from "../../island-line-button";
 
 /** A picker folded to one line across the section: what is chosen, and a
  * chevron that turns to point at the column of choices as it opens beside
- * the section. Pressing it opens them or folds them away again. Quiet at
- * rest, as the island's controls are, filled under the pointer. */
+ * the section. Pressing it opens them or folds them away again. */
 export function TextPickerLine({
   children,
   controls,
@@ -40,21 +33,14 @@ export function TextPickerLine({
   // pointing down to pointing there: right in a left-to-right language.
   const towardEnd = useLocale().direction === "rtl" ? 90 : -90;
   return (
-    <Button
+    <IslandLineButton
       aria-controls={isOpen ? controls : undefined}
       aria-expanded={isOpen}
       aria-label={label}
-      // Padded the small inset, so what it shows starts on the island's
-      // text column with the rows' names, while its fill keeps to the
-      // section's edge.
-      className={cn(
-        "group relative isolate flex h-island-control w-full cursor-default items-center justify-between gap-inline rounded-full px-inset-sm text-label text-fg outline-none",
-        focusStyles,
-        elementFocusVisible,
-      )}
+      className="justify-between"
+      isChosen={isOpen}
       onPress={onPress}
     >
-      <IslandFill isChosen={isOpen} />
       <span className="flex min-w-0 items-center gap-inline">{children}</span>
       <motion.span
         animate={{ rotate: isOpen ? towardEnd : 0 }}
@@ -64,6 +50,6 @@ export function TextPickerLine({
       >
         <ChevronDown aria-hidden className="size-icon" />
       </motion.span>
-    </Button>
+    </IslandLineButton>
   );
 }

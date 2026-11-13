@@ -13,9 +13,14 @@ use objc2::runtime::{NSObjectProtocol, ProtocolObject};
 use objc2::{define_class, msg_send, AllocAnyThread, MainThreadMarker, MainThreadOnly};
 use objc2_app_kit::{
   NSApplication, NSDragOperation, NSDraggingContext, NSDraggingItem, NSDraggingSession,
-  NSDraggingSource, NSEventType, NSPasteboard, NSPasteboardWriting, NSView, NSWorkspace,
+  NSDraggingSource, NSEvent, NSEventModifierFlags, NSEventType, NSImage, NSPasteboard,
+  NSPasteboardWriting, NSView, NSWindow, NSWorkspace,
 };
-use objc2_foundation::{NSArray, NSObject, NSPoint, NSRect, NSSize, NSString, NSURL};
+use objc2_foundation::{
+  NSArray, NSData, NSObject, NSPoint, NSProcessInfo, NSRect, NSSize, NSString, NSURL,
+};
+
+use super::DragLook;
 
 /// How large the file's icon is drawn under the pointer as it is dragged.
 const DRAG_ICON_POINTS: f64 = 48.0;
@@ -24,6 +29,9 @@ thread_local! {
   /// The source of the drag under way, kept until the next one, as the
   /// session holds it weakly.
   static SOURCE: RefCell<Option<Retained<ExportDragSource>>> = const { RefCell::new(None) };
+  /// The window whose page pressed the drag under way, told of the release
+  /// when it ends.
+  static PRESSED: RefCell<Option<Retained<NSWindow>>> = const { RefCell::new(None) };
 }
 
 define_class!(
@@ -45,6 +53,31 @@ define_class!(
       _context: NSDraggingContext,
     ) -> NSDragOperation {
       NSDragOperation::Copy
+    }
+
+    /// The page that started the drag pressed the mouse and never sees it
+    /// let go: the drag took the release. Left so, WebKit still holds the
+    /// press, so the next click only ends it, and the click after counts as
+    /// one with no pointer, which React Aria rings as keyboard focus. It is
+    /// handed the release where the drag ended, wherever that was.
+    #[unsafe(method(draggingSession:endedAtPoint:operation:))]
+    fn ended(&self, _session: &NSDraggingSession, at: NSPoint, _operation: NSDragOperation) {
+      let Some(window) = PRESSED.with(|pressed| pressed.borrow_mut().take()) else {
+        return;
+      };
+      if let Some(release) = NSEvent::mouseEventWithType_location_modifierFlags_timestamp_windowNumber_context_eventNumber_clickCount_pressure(
+        NSEventType::LeftMouseUp,
+        window.convertPointFromScreen(at),
+        NSEventModifierFlags::empty(),
+        NSProcessInfo::processInfo().systemUptime(),
+        window.windowNumber(),
+        None,
+        0,
+        1,
+        0.0,
+      ) {
+        window.sendEvent(&release);
+      }
     }
   }
 );
@@ -83,10 +116,11 @@ pub(super) fn copy(path: &Path) -> Result<(), String> {
   }
 }
 
-pub(super) fn drag(window: &tauri::WebviewWindow, path: &Path) -> Result<(), String> {
-  let marker = main_thread()?;
-  let view = page_view(window)?;
-  let event = NSApplication::sharedApplication(marker)
+/// The press the drag starts from: the mouse event being handled, or, where
+/// AppKit is handling something else by the time the page asks (as when the
+/// window was not the key window at the press), one made at the pointer.
+fn press_event(view: &NSView, marker: MainThreadMarker) -> Result<Retained<NSEvent>, String> {
+  if let Some(event) = NSApplication::sharedApplication(marker)
     .currentEvent()
     .filter(|event| {
       matches!(
@@ -94,24 +128,70 @@ pub(super) fn drag(window: &tauri::WebviewWindow, path: &Path) -> Result<(), Str
         NSEventType::LeftMouseDown | NSEventType::LeftMouseDragged
       )
     })
-    .ok_or_else(|| "The drag was let go before it could start".to_owned())?;
+  {
+    return Ok(event);
+  }
+  let window = view.window().ok_or("The page has no window")?;
+  NSEvent::mouseEventWithType_location_modifierFlags_timestamp_windowNumber_context_eventNumber_clickCount_pressure(
+    NSEventType::LeftMouseDragged,
+    window.mouseLocationOutsideOfEventStream(),
+    NSEventModifierFlags::empty(),
+    NSProcessInfo::processInfo().systemUptime(),
+    window.windowNumber(),
+    None,
+    0,
+    1,
+    1.0,
+  )
+  .ok_or_else(|| "The drag could not be started".to_owned())
+}
+
+/// What is drawn under the pointer, and its size in points.
+fn drawn(path: &Path, look: &DragLook) -> (Retained<NSImage>, NSSize) {
+  let picture = match look {
+    DragLook::Icon => None,
+    DragLook::File { width, height } => NSImage::initWithContentsOfFile(
+      NSImage::alloc(),
+      &NSString::from_str(&path.to_string_lossy()),
+    )
+    .map(|image| (image, NSSize::new(*width, *height))),
+    DragLook::Png { png, width, height } => {
+      NSImage::initWithData(NSImage::alloc(), &NSData::with_bytes(png))
+        .map(|image| (image, NSSize::new(*width, *height)))
+    }
+  };
+  picture.unwrap_or_else(|| {
+    (
+      NSWorkspace::sharedWorkspace().iconForFile(&NSString::from_str(&path.to_string_lossy())),
+      NSSize::new(DRAG_ICON_POINTS, DRAG_ICON_POINTS),
+    )
+  })
+}
+
+pub(super) fn drag(
+  window: &tauri::WebviewWindow,
+  path: &Path,
+  look: &DragLook,
+) -> Result<(), String> {
+  let marker = main_thread()?;
+  let view = page_view(window)?;
+  let event = press_event(view, marker)?;
   let url = file_url(path);
   let item = NSDraggingItem::initWithPasteboardWriter(
     NSDraggingItem::alloc(),
     ProtocolObject::from_ref(&*url),
   );
-  let icon =
-    NSWorkspace::sharedWorkspace().iconForFile(&NSString::from_str(&path.to_string_lossy()));
+  let (image, size) = drawn(path, look);
+  image.setSize(size);
   let at = view.convertPoint_fromView(event.locationInWindow(), None);
-  let half = DRAG_ICON_POINTS / 2.0;
   // Safety: the contents are an NSImage, which a dragging frame draws.
   unsafe {
     item.setDraggingFrame_contents(
       NSRect::new(
-        NSPoint::new(at.x - half, at.y - half),
-        NSSize::new(DRAG_ICON_POINTS, DRAG_ICON_POINTS),
+        NSPoint::new(at.x - size.width / 2.0, at.y - size.height / 2.0),
+        size,
       ),
-      Some(&icon),
+      Some(&image),
     );
   }
   let source = ExportDragSource::new(marker);
@@ -121,5 +201,6 @@ pub(super) fn drag(window: &tauri::WebviewWindow, path: &Path) -> Result<(), Str
     ProtocolObject::from_ref(&*source),
   );
   SOURCE.with(|kept| kept.replace(Some(source)));
+  PRESSED.with(|pressed| pressed.replace(view.window()));
   Ok(())
 }

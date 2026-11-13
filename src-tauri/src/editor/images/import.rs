@@ -76,10 +76,14 @@ fn clipboard_picture(clipboard: &mut arboard::Clipboard) -> Result<Option<ImageA
 /// The picture on the clipboard, kept for an image, or nothing when the
 /// clipboard holds none.
 #[tauri::command]
-pub async fn read_clipboard_image() -> Result<Option<ImageArt>, String> {
-  tauri::async_runtime::spawn_blocking(clipboard_image)
+pub async fn read_clipboard_image(app: AppHandle) -> Result<Option<ImageArt>, String> {
+  let art = tauri::async_runtime::spawn_blocking(clipboard_image)
     .await
-    .map_err(|error| error.to_string())?
+    .map_err(|error| error.to_string())??;
+  if art.is_some() {
+    super::library::changed(&app);
+  }
+  Ok(art)
 }
 
 /// Asks for a picture file and keeps it for an image, or nothing when the
@@ -89,7 +93,8 @@ pub async fn browse_annotation_image(
   app: AppHandle,
   window: WebviewWindow,
 ) -> Result<Option<ImageArt>, String> {
-  tauri::async_runtime::spawn_blocking(move || {
+  let added = app.clone();
+  let art = tauri::async_runtime::spawn_blocking(move || {
     use tauri_plugin_dialog::DialogExt;
 
     // Parented to the asking window, as the background picker is, so the
@@ -108,5 +113,9 @@ pub async fn browse_annotation_image(
     picked.map(|path| import_file(&path)).transpose()
   })
   .await
-  .map_err(|error| error.to_string())?
+  .map_err(|error| error.to_string())??;
+  if art.is_some() {
+    super::library::changed(&added);
+  }
+  Ok(art)
 }

@@ -20,6 +20,7 @@ import {
   cropIslandContent,
   screenIslandContent,
 } from "./layer-island-content";
+import { libraryIslandContent } from "./library-island-content";
 import {
   cursorIslandContent,
   keyboardIslandContent,
@@ -103,6 +104,8 @@ export function useSnapshotIsland(
         return frameIslandContent({ ...inputs, capture, presets });
       case "keyboard":
         return keyboardIslandContent(inputs);
+      case "library":
+        return libraryIslandContent({ ...inputs, workspace });
       case "scene":
         return sceneIslandContent({
           ...inputs,

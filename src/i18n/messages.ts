@@ -153,6 +153,7 @@ export type Messages = {
   "dialog-choose-background": null;
   "dialog-choose-folder": null;
   "dialog-choose-image": null;
+  "dialog-choose-pictures": null;
   "dialog-choose-sounds": null;
   "dialog-export-template": null;
   "dialog-import-template": null;
@@ -231,8 +232,6 @@ export type Messages = {
   "editor-export-title-recording": null;
   "editor-export-title-screenshot": null;
   "editor-export-try-again": null;
-  "editor-island-add-effect-where": null;
-  "editor-island-add-song-where": null;
   "editor-island-annotation-animate": null;
   "editor-island-annotation-confirm-delete": null;
   "editor-island-annotation-delete": null;
@@ -381,6 +380,14 @@ export type Messages = {
   "editor-island-keyboard-show": null;
   "editor-island-label": null;
   "editor-island-layer": { number: string | number };
+  "editor-island-library-add": null;
+  "editor-island-library-confirm-remove": null;
+  "editor-island-library-empty-images": null;
+  "editor-island-library-images": null;
+  "editor-island-library-name": null;
+  "editor-island-library-picture-add": { name: string | number };
+  "editor-island-library-picture-remove": { name: string | number };
+  "editor-island-library-picture-unnamed": { date: string | number };
   "editor-island-lull": null;
   "editor-island-lull-confirm-cut": null;
   "editor-island-lull-cut": null;
@@ -512,12 +519,22 @@ export type Messages = {
   "editor-island-shape": null;
   "editor-island-size": null;
   "editor-island-sound": null;
-  "editor-island-sound-add": null;
-  "editor-island-sound-add-from-file": null;
-  "editor-island-sound-confirm-remove": null;
   "editor-island-sound-library": null;
-  "editor-island-sound-library-empty": null;
-  "editor-island-sound-remove": null;
+  "editor-island-sound-library-add": {
+    length: string | number;
+    title: string | number;
+  };
+  "editor-island-sound-library-effects": null;
+  "editor-island-sound-library-empty-effects": null;
+  "editor-island-sound-library-empty-music": null;
+  "editor-island-sound-library-kind": null;
+  "editor-island-sound-library-music": null;
+  "editor-island-sound-library-no-match": null;
+  "editor-island-sound-library-play": { title: string | number };
+  "editor-island-sound-library-play-from": { title: string | number };
+  "editor-island-sound-library-search": null;
+  "editor-island-sound-library-stop": { title: string | number };
+  "editor-island-sound-remove": { title: string | number };
   "editor-island-sound-reset-volume": { track: string | number };
   "editor-island-sound-volume": { track: string | number };
   "editor-island-strip-group": { count: number };
@@ -650,6 +667,8 @@ export type Messages = {
   "editor-timeline-cut-name": null;
   "editor-timeline-deleted": { duration: string | number };
   "editor-timeline-label": null;
+  "editor-timeline-library": null;
+  "editor-timeline-library-name": null;
   "editor-timeline-lull": { duration: string | number };
   "editor-timeline-microphone": null;
   "editor-timeline-moment": { moment: string | number };

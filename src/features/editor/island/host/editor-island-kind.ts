@@ -12,9 +12,10 @@ import type { EditorKind } from "../../types";
 // and Transcript the Script island alone, in the same place. A beat, lull,
 // moment or range chosen on the strip brings out its own, and several
 // beats and lulls gathered with Shift the strip group's, over what is
-// chosen at the picture's foot; the transport's Tracks button brings out
-// the Tracks island. The title bar's Export button brings out the Export
-// island, which stands in for any other while it is out.
+// chosen at the picture's foot; the title bar's Tracks and Library buttons
+// bring out the Tracks and Library islands. The title bar's Export button
+// brings out the Export island, which stands in for any other while it is
+// out.
 
 export type EditorIslandKind =
   | "annotation"
@@ -27,6 +28,7 @@ export type EditorIslandKind =
   | "export"
   | "frame"
   | "keyboard"
+  | "library"
   | "lull"
   | "moment"
   | "range"

@@ -83,12 +83,36 @@ pub fn drag_export_file(
   window: tauri::WebviewWindow,
   workspace: EditorKind,
 ) -> Result<(), String> {
-  let path = exported(&app, workspace)?;
+  drag_out(&window, &exported(&app, workspace)?, &DragLook::Icon)
+}
+
+/// What a file dragged out looks like under the pointer, in points.
+pub(crate) enum DragLook {
+  /// The file's own icon, as the Finder draws it.
+  Icon,
+  /// The file itself, a picture.
+  File { height: f64, width: f64 },
+  /// A picture of what is dragged, as PNG data.
+  Png {
+    height: f64,
+    png: Vec<u8>,
+    width: f64,
+  },
+}
+
+/// Starts dragging the file at `path` out of `window`, drawn as `look`, from
+/// the press its page is handling now, so it drops wherever files are taken
+/// as the file.
+pub(crate) fn drag_out(
+  window: &tauri::WebviewWindow,
+  path: &Path,
+  look: &DragLook,
+) -> Result<(), String> {
   #[cfg(target_os = "macos")]
-  return macos::drag(&window, &path);
+  return macos::drag(window, path, look);
   #[cfg(not(target_os = "macos"))]
   {
-    let _ = window;
+    let _ = (window, look);
     Err(format!(
       "Dragging {} out is not available here",
       path.display()

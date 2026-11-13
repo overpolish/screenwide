@@ -24,12 +24,11 @@ import { ToolPanelExportPatch } from "./tool-panel-export";
 import { TranscriptRequest } from "./tool-panel-transcript";
 
 import type { ToolPanelSnapshot } from "./tool-panel-store";
-import type { AudioClipKind } from "../../../bindings/AudioClipKind";
 import type { TextStyle } from "../../../bindings/TextStyle";
 import type { AnnotationPinAction } from "../island/annotation/annotation-pin";
 import type { AudioClipChange } from "../island/audio-clip/audio-clip-island";
 import type { CropAspect } from "../island/crop-aspect-choice";
-import type { SoundAddition } from "../island/sound/sound-library-list";
+import type { SoundAddition } from "../island/library/library-panel";
 
 /** The settings a panel may ask the editor to change. */
 export type ToolPanelPatch = Partial<
@@ -135,6 +134,9 @@ export type ToolPanelPatch = Partial<
   /** The shortcut settings every shortcut is drawn with, changed a field at a
    * time so a panel never has to send the whole group back. */
   keyboardEffects?: Partial<KeyboardEffectSettings>;
+  /** Place an image showing this picture from the library in the middle of
+   * the layer in hand, as a pasted picture is. */
+  libraryImage?: ImageArt;
   /** Have the lull chosen on the strip squeeze with the rest, or keep it
    * as recorded. */
   lullPlay?: "keep" | "squeeze";
@@ -220,12 +222,8 @@ export type ToolPanelPatch = Partial<
   /** Lay the chosen redaction's blocks out again, or draw the chosen
    * hand-drawn highlight's stroke again, from a fresh seed. */
   shuffleAnnotation?: true;
-  /** Add a song or sound effect to the timeline, from the library or a
-   * file. */
+  /** Add a song or sound effect from the library to the timeline. */
   soundAddition?: SoundAddition;
-  /** Lay the sounds on their way to the timeline down as songs or as sound
-   * effects, or, with none, leave them out. */
-  soundKind?: { kind: AudioClipKind | null };
   /** Move the singing in the selected microphone's system audio out of its
    * way while it speaks, or let the system audio make way as a whole. */
   studioDucking?: boolean;

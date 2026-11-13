@@ -19,3 +19,6 @@ test-support = []
 [dependencies]
 image.workspace = true
 screenwide-annotations.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+ts-rs.workspace = true

@@ -19,7 +19,6 @@ import {
   StudioSoundGlyph,
   VocalCleanupGlyph,
 } from "./sound-glyphs";
-import { type SoundAddition, SoundLibraryList } from "./sound-library-list";
 import { SoundVolumeRow } from "./sound-volume-row";
 
 import type {
@@ -39,9 +38,7 @@ import type { EditorIslandContent } from "../editor-island";
 // tool whose model is not on this computer yet offers the download in its
 // place, and a tool at work shows how far it has got, each on a line that
 // comes and goes as the others glide (`IslandParts`). Remove silences is not
-// here: it sits with the pauses on the strip and with Transcript. Under the
-// tracks, the library of songs and sound effects to lay under the recording
-// (`sound-library-list.tsx`), there for every recording, with sound or not.
+// here: it sits with the pauses on the strip and with Transcript.
 
 /** A microphone tool that can be turned on. */
 export type SoundTool =
@@ -62,9 +59,6 @@ export type SoundTrack = {
 };
 
 export type SoundIslandProps = {
-  /** Adds a song or sound effect to the timeline, from the library or a
-   * file. */
-  onAddSound: (addition: SoundAddition) => void;
   onDownloadStudioDucking: () => void;
   onDownloadStudioSound: () => void;
   onToolChange: (tool: SoundTool, isOn: boolean) => void;
@@ -101,7 +95,6 @@ export function soundIsland(props: SoundIslandProps): EditorIslandContent {
             ? microphoneParts(track.id, track.microphone, props)
             : []),
         ])}
-        <SoundLibraryList key="library" onAdd={props.onAddSound} />
       </IslandParts>
     ),
     title: (

@@ -62,6 +62,9 @@ export const MODE_SHORTCUTS = {
 /** The key that brings out the Tracks island beside the modes. */
 export const TRACKS_SHORTCUT = "Shift+KeyA";
 
+/** The key that brings out the Library island beside Tracks. */
+export const LIBRARY_SHORTCUT = "Shift+KeyL";
+
 /** A group of modes the title bar sets apart, named for what it is of: the
  * picture, what was done while recording, and what was said and heard. */
 export type EditorModeGroup = {
@@ -91,6 +94,8 @@ export type TranscriptState = "heard" | "pending" | "silent";
 /** What a capture holds in its export as it stands, each part offering the
  * modes made of it. */
 export type CaptureParts = {
+  /** Any sound. */
+  audio: boolean;
   /** A camera beside the recording's own picture. */
   camera: boolean;
   /** The cursor's movement, recorded. */
@@ -107,6 +112,7 @@ export type CaptureParts = {
 
 /** A screenshot's: it has none. */
 export const NO_CAPTURE_PARTS: CaptureParts = {
+  audio: false,
   camera: false,
   cursor: false,
   keyboard: false,
@@ -143,6 +149,7 @@ export function captureParts({
     enabledStreams.has(streamIndex),
   );
   return {
+    audio: audio.length > 0,
     camera: recorded.camera && enabledVideoTracks.has("camera"),
     cursor: recorded.cursor,
     keyboard: recorded.keyboard,
@@ -261,9 +268,7 @@ export function editorModeGroups({
           label: t("editor-toolbar-transcript"),
           shortcut: MODE_SHORTCUTS.transcript,
         },
-        // Songs and sound effects can be laid under any recording, so Sound,
-        // which holds their library, is always offered.
-        {
+        parts.audio && {
           icon: Volume2,
           id: "sound",
           label: t("editor-island-sound"),

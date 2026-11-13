@@ -194,7 +194,6 @@ export function useEditorToolPanels({
   useToolPanelBridge(
     workspace,
     {
-      addingSounds: strip.adding,
       annotation,
       annotationColors,
       annotationCount,
@@ -213,6 +212,7 @@ export function useEditorToolPanels({
       },
       frame: frameTarget?.snapshot ?? null,
       hasCursorData: artifact?.kind === "recording" && artifact.hasCursorData,
+      hasSongRoom: strip.hasSongRoom,
       isLocked,
       keyboardEffects,
       scene,

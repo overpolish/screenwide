@@ -250,5 +250,24 @@ pub fn remove(name: &str) -> Result<(), String> {
   Ok(())
 }
 
+/// Gives the sound `name` the title `title`, and says what it is now.
+pub fn rename(name: &str, title: &str) -> Result<Sound, String> {
+  let title = title.trim();
+  if title.is_empty() {
+    return Err("A sound needs a title".to_owned());
+  }
+  let folder = directory()?;
+  let sound = is_name(name)
+    .then(|| read_kept(folder, name))
+    .flatten()
+    .ok_or_else(|| "There is no such sound".to_owned())?;
+  let sound = Sound {
+    title: title.to_owned(),
+    ..sound
+  };
+  write_kept(folder, &sound)?;
+  Ok(sound)
+}
+
 #[cfg(test)]
 mod tests;

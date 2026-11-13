@@ -12,6 +12,7 @@ mod export_job;
 mod lifecycle;
 mod recording_file;
 
+pub(crate) use finished::{drag_out, DragLook};
 pub(crate) use lifecycle::is_exporting;
 
 pub use export_command::{__cmd__save_export, __tauri_command_name_save_export};

@@ -23,6 +23,7 @@ import {
   applyAnnotationSway,
   applyAnnotationZoom,
 } from "../../annotations/annotation-apply";
+import { requestImagePlacement } from "../../images/image-requests";
 import { EditorKind } from "../../types";
 import { ToolPanelHandlers } from "../tool-panel-handlers";
 
@@ -55,6 +56,7 @@ export const annotationPanelHandlers = (
   | "onAnnotationsDelete"
   | "onAnnotationStyleChange"
   | "onAnnotationZoomChange"
+  | "onLibraryImage"
 > => ({
   onAnnotationAngleChange: (angle) => {
     applyAnnotationAngle(workspace, angle);
@@ -109,5 +111,10 @@ export const annotationPanelHandlers = (
   },
   onAnnotationsDelete: () => {
     applyAnnotationsDelete(workspace);
+  },
+  // A picture from the library is always a new image, placed as a pasted
+  // one is, rather than given to the image in hand.
+  onLibraryImage: (art) => {
+    requestImagePlacement(workspace, art);
   },
 });

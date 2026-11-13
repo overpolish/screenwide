@@ -42,6 +42,8 @@ export type EditorToolKeys = {
   onToggleCursorPanel?: () => void;
   /** Shift+K: the keyboard panel, on or away. */
   onToggleKeyboardPanel?: () => void;
+  /** Shift+L: the Library island, out or away. */
+  onToggleLibrary?: () => void;
   onTogglePlayback?: () => void;
   /** Shift+R: the strip's range tool, in hand or put down. */
   onToggleRangeTool?: () => void;
@@ -123,6 +125,7 @@ export const editorToolKeyAction = (
         KeyA: keys.onToggleTracks,
         KeyC: keys.onToggleCursorPanel,
         KeyK: keys.onToggleKeyboardPanel,
+        KeyL: keys.onToggleLibrary,
         KeyM: keys.onToggleCameraPanel,
         KeyR: keys.onToggleRangeTool,
         KeyS: keys.onToggleScreenPanel,

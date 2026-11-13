@@ -4,7 +4,6 @@
 import { useEffect, useRef, useSyncExternalStore } from "react";
 
 import {
-  type ToolPanelAddingSounds,
   type ToolPanelSounds,
   type ToolPanelStripItem,
 } from "../../tools/tool-panel-strip";
@@ -12,7 +11,7 @@ import { type EditorKind } from "../../types";
 
 import type { AudioClipKind } from "../../../../bindings/AudioClipKind";
 import type { AudioClipChange } from "../../island/audio-clip/audio-clip-island";
-import type { SoundAddition } from "../../island/sound/sound-library-list";
+import type { SoundAddition } from "../../island/library/library-panel";
 
 /**
  * What is chosen on the recording's strip, and what its island can do to
@@ -30,9 +29,6 @@ export type StripIslandControls = {
   /** Changes the song or sound effect chosen, deletes it or gives it
    * another sound. */
   changeAudioClip: (change: AudioClipChange) => void;
-  /** Lays the sounds on their way down as songs or sound effects, or, with
-   * none, leaves them out. */
-  chooseSoundKind: (kind: AudioClipKind | null) => void;
   /** Cuts what is chosen, and its time with it. */
   cut: () => void;
   /** Deletes the shortcuts chosen in their lane. */
@@ -50,8 +46,8 @@ export type StripIslandControls = {
 
 /** What is chosen on the strip, as its islands show it. */
 export type StripIslandChoice = {
-  /** Songs or sound effects on their way, waiting to be told which. */
-  adding: ToolPanelAddingSounds | null;
+  /** Whether a song added now would have room after the last song. */
+  hasSongRoom: boolean;
   /** The one item, or the gathered beats and lulls, with an island. */
   item: ToolPanelStripItem | null;
   /** How many shortcuts are chosen in their lane. */
@@ -65,7 +61,7 @@ type PublishedStripItem = StripIslandChoice & {
 };
 
 const NOTHING_CHOSEN: StripIslandChoice = {
-  adding: null,
+  hasSongRoom: true,
   item: null,
   shortcuts: 0,
   sounds: [],
@@ -108,9 +104,6 @@ export function usePublishStripIsland(
         },
         changeAudioClip: (change) => {
           controlsRef.current.changeAudioClip(change);
-        },
-        chooseSoundKind: (kind) => {
-          controlsRef.current.chooseSoundKind(kind);
         },
         cut: () => {
           controlsRef.current.cut();

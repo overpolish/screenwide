@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { Layers } from "lucide-react";
+import { Layers, LibraryBig } from "lucide-react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { type ReactNode } from "react";
 
@@ -15,17 +15,19 @@ import {
   type EditorKind,
   type EditorMode,
   editorModeGroups,
+  LIBRARY_SHORTCUT,
   TRACKS_SHORTCUT,
 } from "../toolbar/editor-modes";
 
 import {
-  type EditorTracksToggle,
+  type EditorIslandToggle,
   useEditorTitleModes,
 } from "./editor-title-modes";
 
 // The editor's modes, centred in its title bar between the project's name
 // and the window's commands, in groups a gap apart, and after them a
-// recording's Tracks, a gap apart as well. They are tools, not commands, so
+// recording's Tracks and Library, a gap apart as well: each brings out an
+// island of its own for the whole timeline. They are tools, not commands, so
 // each is its glyph alone, as the column's tools are, naming itself to
 // assistive technology and, with its key, in a tooltip; the open one is
 // filled as a held toggle is. The group keeps its width, and the name gives
@@ -42,8 +44,10 @@ export type EditorModeBarProps = {
   parts: CaptureParts;
   /** While a save runs or a sheet stands over the editor. */
   isDisabled?: boolean;
+  /** A recording's Library button. */
+  library?: EditorIslandToggle | null;
   /** A recording's Tracks button. */
-  tracks?: EditorTracksToggle | null;
+  tracks?: EditorIslandToggle | null;
 };
 
 /** The open editor's modes, as its preview publishes them
@@ -56,6 +60,7 @@ export function EditorTitleModeBar({ isDisabled }: { isDisabled: boolean }) {
 export function EditorModeBar({
   isDisabled = false,
   kind,
+  library = null,
   mode,
   onModeChange,
   parts,
@@ -63,7 +68,7 @@ export function EditorModeBar({
 }: EditorModeBarProps) {
   const groups = editorModeGroups({ kind, parts });
   const reduce = useReducedMotion();
-  if (groups.length === 0 && !tracks) return null;
+  if (groups.length === 0 && !tracks && !library) return null;
   const transition = reduce
     ? { duration: 0 }
     : { duration: motionDurations.rearrange, ease: motionEasings.out };
@@ -97,7 +102,7 @@ export function EditorModeBar({
             </Presence>
           )),
         ])}
-        {tracks && groups.length > 0 ? (
+        {(tracks || library) && groups.length > 0 ? (
           <GroupGap key="gap:tracks" transition={transition} />
         ) : null}
         {tracks ? (
@@ -110,6 +115,19 @@ export function EditorModeBar({
               shortcut={TRACKS_SHORTCUT}
             >
               <Layers />
+            </ToolbarTool>
+          </Presence>
+        ) : null}
+        {library ? (
+          <Presence className="px-px" key="library" transition={transition}>
+            <ToolbarTool
+              aria-label={t("editor-timeline-library-name")}
+              isSelected={library.isOpen}
+              label={t("editor-timeline-library")}
+              onChange={library.onOpenChange}
+              shortcut={LIBRARY_SHORTCUT}
+            >
+              <LibraryBig />
             </ToolbarTool>
           </Presence>
         ) : null}

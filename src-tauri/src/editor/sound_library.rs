@@ -18,7 +18,10 @@ use tauri::{Emitter, Manager};
 use super::{EditorArtifact, EditorState};
 
 mod cleanup;
+mod drag;
+mod drop_refusal;
 mod preview;
+mod rename;
 mod singing;
 mod voice;
 
@@ -27,13 +30,16 @@ pub(crate) use singing::{ready_for_export, separate_singing};
 pub(crate) use voice::ducks;
 use voice::microphone;
 
-const COMMANDS: [&str; 6] = [
+const COMMANDS: [&str; 9] = [
   "browse_sounds",
   "import_sounds",
   "get_sound_library",
   "get_project_sounds",
   "get_sound_preview",
   "remove_sound",
+  "drag_library_sound",
+  "set_sound_drop_refused",
+  "rename_sound",
 ];
 
 /// `app_commands` with the sound library's commands beside them.
@@ -57,7 +63,10 @@ fn sound_commands() -> impl Fn(Invoke) -> bool + Send + Sync + 'static {
     get_sound_library,
     get_project_sounds,
     preview::get_sound_preview,
-    remove_sound
+    remove_sound,
+    drag::drag_library_sound,
+    drop_refusal::set_sound_drop_refused,
+    rename::rename_sound
   ]
 }
 
@@ -95,7 +104,7 @@ async fn browse_sounds(
 
 /// The event every window hears when the library changes, so each reads it
 /// again.
-const LIBRARY_EVENT: &str = "editor://sound-library";
+pub(super) const LIBRARY_EVENT: &str = "editor://sound-library";
 
 /// Adds each of `paths` that is a sound to the library and says what each
 /// is, in order. Fails only where none could be added.

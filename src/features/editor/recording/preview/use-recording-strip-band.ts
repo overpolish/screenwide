@@ -12,6 +12,7 @@ import {
   BREATH_S,
   stripIslandItem,
 } from "../../timeline/recording-strip/strip-island-item";
+import { usePictureDrop } from "../../timeline/recording-strip/use-picture-drop";
 import { useRecordingStrip } from "../../timeline/recording-strip/use-recording-strip";
 import { useRecordingStripAudio } from "../../timeline/recording-strip/use-recording-strip-audio";
 import { useRecordingStripServices } from "../../timeline/recording-strip/use-recording-strip-services";
@@ -135,6 +136,11 @@ export function useRecordingStripBand(
     timelineMs: timelineBlade.timelineDurationMs,
   });
   useSoundTrackReplay(edit, props.enabledStreamIndices, player);
+  usePictureDrop({
+    playhead,
+    seek: timelineBlade.seek,
+    timelineMs: timelineBlade.timelineDurationMs,
+  });
   const stripProps: TimelineStripProps = {
     ...audio.strip,
     ...strip.strip({
@@ -180,7 +186,7 @@ export function useRecordingStripBand(
         }))
       : null;
   const chosen = {
-    adding: audio.adding,
+    hasSongRoom: audio.hasSongRoom,
     item: island,
     shortcuts: chosenShortcuts.length,
     sounds: audio.sounds,
@@ -188,7 +194,6 @@ export function useRecordingStripBand(
   usePublishStripIsland("recording", chosen, {
     addSound: audio.addSound,
     changeAudioClip: audio.changeAudioClip,
-    chooseSoundKind: audio.chooseSoundKind,
     cut: strip.cutChosen,
     deleteShortcuts: () => {
       if (chosenShortcuts.length === 0) return;

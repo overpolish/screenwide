@@ -23,6 +23,7 @@ import { EditorTitleBar } from "./editor-title-bar";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 
 const EVERY_PART: CaptureParts = {
+  audio: true,
   camera: true,
   cursor: true,
   keyboard: true,
@@ -54,6 +55,7 @@ function Modes({
 }) {
   const [mode, setMode] = useState<EditorMode | null>(null);
   const [isTracksOpen, setIsTracksOpen] = useState(false);
+  const [isLibraryOpen, setIsLibraryOpen] = useState(false);
   return (
     <EditorModeBar
       isDisabled={isDisabled}
@@ -64,11 +66,12 @@ function Modes({
         setMode(next);
       }}
       parts={parts}
-      tracks={
-        kind === "screenshot"
-          ? null
-          : { isOpen: isTracksOpen, onOpenChange: setIsTracksOpen }
-      }
+      {...(kind === "screenshot"
+        ? {}
+        : {
+            library: { isOpen: isLibraryOpen, onOpenChange: setIsLibraryOpen },
+            tracks: { isOpen: isTracksOpen, onOpenChange: setIsTracksOpen },
+          })}
     />
   );
 }
@@ -120,10 +123,12 @@ const meta = {
         "keyboard",
         "microphone",
         "transcript",
+        "audio",
       ],
     },
   },
   render: ({
+    audio,
     camera,
     cursor,
     keyboard,
@@ -140,6 +145,7 @@ const meta = {
           kind="recording"
           onModeChange={onModeChange}
           parts={{
+            audio,
             camera,
             cursor,
             keyboard,
