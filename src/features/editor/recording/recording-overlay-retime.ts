@@ -6,6 +6,7 @@ import {
   RecordingTimelineChange,
   retimeRecordingTimelineClips,
 } from "../timeline/editing/recording-timeline-time";
+import { recordingTimelineGaps } from "../timeline/recording-strip/recording-timeline-gaps";
 import { TimedSpanClip } from "../timeline/tracks/timed-span-clips";
 
 import { withSceneShapesFollowing } from "./annotations/recording-annotation-scenes";
@@ -13,6 +14,7 @@ import {
   RecordingAnnotationClip,
   renumberedAnnotationClips,
 } from "./annotations/recording-annotations";
+import { scenesClearOfGaps } from "./scenes/recording-scene-gaps";
 
 import type { RecordingTimelineSegment } from "../timeline/recording-timeline-types";
 
@@ -136,14 +138,23 @@ export function retimeRecordingOverlays(
     timedOn(next.cameraBackgroundRanges, previous.cameraBackgroundRanges),
   );
   // A scene cut in two hands each new part the places annotations had in
-  // it, and one cut away entirely takes them with it.
+  // it, and one cut away entirely takes them with it. No scene plays over a
+  // gap, so one that would is cut back to either side of it.
   const sceneParts = new Map<string, string>();
-  const sceneClips =
+  const onScenePart = (from: { id: string }, part: { id: string }) => {
+    sceneParts.set(part.id, sceneParts.get(from.id) ?? from.id);
+  };
+  const retimedScenes =
     next.sceneClips && sceneChange
-      ? retimedSpanClips(next.sceneClips, sceneChange, (from, part) => {
-          sceneParts.set(part.id, from.id);
-        })
+      ? retimedSpanClips(next.sceneClips, sceneChange, onScenePart)
       : next.sceneClips;
+  const sceneClips =
+    retimedScenes &&
+    scenesClearOfGaps(
+      retimedScenes,
+      recordingTimelineGaps(next, sourceDurationMs),
+      onScenePart,
+    );
   const retimedAnnotations =
     next.annotationClips && annotationChange
       ? retimedAnnotationClips(next.annotationClips, annotationChange)

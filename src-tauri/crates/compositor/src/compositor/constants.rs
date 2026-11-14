@@ -73,6 +73,10 @@ pub(super) struct Constants {
   /// it hides or shows them, then how strong each casts its shadow, zero to
   /// one, which the preview fades as one is turned on or off.
   pub(super) scene_opacity: [f32; 4],
+  /// How opaque the screen's annotations, and the cursor carried with them,
+  /// are drawn (`x`): as the screen is, but kept over the background by a
+  /// blank scene that hides the screen. The rest are spare.
+  pub(super) annotation_opacity: [f32; 4],
   /// What the pictures the screen and the camera are drawn from say of
   /// themselves: whether each is enlarged along its edges (FSR 1's EASU)
   /// where drawn larger than it is, then whether each is a person cut out,

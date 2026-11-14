@@ -59,9 +59,12 @@ impl PreviewPlayerManager {
     snap: u32,
     image_points: f64,
   ) -> Option<Commit> {
-    let (clips, duration_ms) = {
+    let (clips, position) = {
       let sources = self.sources.as_ref()?;
-      (Arc::clone(&sources.annotation_clips), sources.duration_ms)
+      (
+        Arc::clone(&sources.annotation_clips),
+        sources.moment_ms(self.position_ms),
+      )
     };
     if matches!(phase, SelectionGesturePhase::Cancel) {
       let drag = self.annotation.group.take()?;
@@ -70,7 +73,6 @@ impl PreviewPlayerManager {
       return None;
     }
     if matches!(phase, SelectionGesturePhase::Begin) {
-      let position = self.position_ms.min(duration_ms.saturating_sub(1));
       self.annotation.pane = Some(pane);
       self.annotation.group = Some(self.begin_group(pane, position, x, y)?);
       return None;

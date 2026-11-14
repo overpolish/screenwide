@@ -5,42 +5,42 @@ import { type Snap } from "../bar-stack/use-stack-bar-drag";
 import { baseOf } from "../strip/strip-part";
 import { type Span } from "../timeline-scale";
 
-/** The room a scene at a moment can have: from the end of the one before
- * to the start of the one after, within the recording. */
-export function sceneRoom(scenes: Span[], duration: number, moment: number) {
+/** The room a scene at a moment can have: from the end of what is taken
+ * before it to the start of what is taken after, within the recording. */
+function sceneRoom(taken: Span[], duration: number, moment: number) {
   return {
     from: Math.max(
       0,
-      ...scenes.filter(({ end }) => end <= moment).map(({ end }) => end),
+      ...taken.filter(({ end }) => end <= moment).map(({ end }) => end),
     ),
     to: Math.min(
       duration,
-      ...scenes
-        .filter(({ start }) => start >= moment)
-        .map(({ start }) => start),
+      ...taken.filter(({ start }) => start >= moment).map(({ start }) => start),
     ),
   };
 }
 
 /** Where the scene `moving` goes, moved whole by `by` seconds: kept between
- * the scenes either side of it, other than its own parts, and within the
- * recording; with `snap`, its start or else its end settles on what is in
- * reach, which `guide` says. */
+ * what is `taken` either side of it (the other scenes, other than its own
+ * parts, and the gaps), and within the recording; with `snap`, its start or
+ * else its end settles on what is in reach, which `guide` says. */
 export function movedScene(
   {
     by,
     duration,
     moving,
-    scenes,
+    taken,
   }: {
     by: number;
     duration: number;
     moving: Span & { id: string };
-    scenes: (Span & { id: string })[];
+    taken: (Span & { id?: string })[];
   },
   snap?: Snap,
 ): { guide: number | null; span: Span } {
-  const others = scenes.filter(({ id }) => baseOf(id) !== baseOf(moving.id));
+  const others = taken.filter(
+    ({ id }) => id === undefined || baseOf(id) !== baseOf(moving.id),
+  );
   const before = sceneRoom(others, duration, moving.start).from;
   const after = sceneRoom(others, duration, moving.end).to;
   const length = moving.end - moving.start;

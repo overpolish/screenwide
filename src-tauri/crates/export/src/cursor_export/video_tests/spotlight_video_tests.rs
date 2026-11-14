@@ -94,6 +94,7 @@ fn exported(source: &Path, destination: &Path, clips: &[RecordingAnnotationClip]
         source_start: 0.0,
         source_end: 1.0,
         playback_rate: 1.0,
+        background: None,
       }],
     },
     2_000,

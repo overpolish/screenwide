@@ -62,6 +62,25 @@ describe("recording timeline playback", () => {
     expect(recordingTimelinePlaybackPosition(7_998, 8_000)).toBe(7_998);
   });
 
+  it("plays on from a playhead in a gap", () => {
+    // A 2 s gap past the 8 s recording's end, between its halves.
+    const gapped: RecordingTimelineEdit = {
+      ...edit,
+      segments: [
+        { id: 0, sourceEnd: 0.5, sourceStart: 0 },
+        { id: 5, sourceEnd: 1.75, sourceStart: 1.5 },
+        { id: 1, sourceEnd: 1, sourceStart: 0.5 },
+      ],
+    };
+    const ranges = recordingTimelinePlaybackRanges(gapped, 8_000);
+    const inGap = recordingTimelinePlaybackPosition(13_000, 8_000);
+    expect(inGap).toBe(13_000);
+    expect(recordingTimelinePlaybackRangesFrom(ranges, inGap)).toEqual([
+      { playbackRate: 1, sourceEndMs: 14_000, sourceStartMs: 13_000 },
+      { playbackRate: 1, sourceEndMs: 8_000, sourceStartMs: 4_000 },
+    ]);
+  });
+
   it("carries rates and does not coalesce adjacent ranges with different rates", () => {
     const rated: RecordingTimelineEdit = {
       ...edit,

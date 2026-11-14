@@ -30,7 +30,11 @@ function LiveRail(args: SceneRailProps) {
         {...args}
         onDraw={(from, to) => {
           args.onDraw(from, to);
-          const drawn = sceneDrawn({ duration: DURATION, scenes }, from, to);
+          const drawn = sceneDrawn(
+            { duration: DURATION, gaps: [...args.gaps], scenes },
+            from,
+            to,
+          );
           setScenes(
             [...scenes, drawn].sort(
               (first, second) => first.start - second.start,
@@ -41,7 +45,11 @@ function LiveRail(args: SceneRailProps) {
         onRetime={(id, start, end) => {
           logRetime(id, start, end);
           setScenes(
-            keptScene({ duration: DURATION, scenes }, id, { end, start }),
+            keptScene(
+              { duration: DURATION, gaps: [...args.gaps], scenes },
+              id,
+              { end, start },
+            ),
           );
         }}
         onSelect={(id) => {
@@ -58,6 +66,7 @@ function LiveRail(args: SceneRailProps) {
 const meta = {
   args: {
     duration: DURATION,
+    gaps: [],
     onDraw: fn(),
     onRetime: fn(),
     onSelect: fn(),
@@ -86,3 +95,6 @@ export const Default: Story = {};
 
 // Nothing framed yet: hovering the rail shows where a drag draws a scene.
 export const Empty: Story = { args: { scenes: [] } };
+
+// A gap from 44 to 54 s, which no scene is drawn over.
+export const Gap: Story = { args: { gaps: [{ end: 54, start: 44 }] } };

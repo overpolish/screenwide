@@ -10,7 +10,7 @@ import type { EditorKind } from "../../types";
 // of the title bar's modes opens its own. Captions
 // opens the Captions island with the Script island at the opposite corner,
 // and Transcript the Script island alone, in the same place. A beat, lull,
-// moment or range chosen on the strip brings out its own, and several
+// gap, moment or range chosen on the strip brings out its own, and several
 // beats and lulls gathered with Shift the strip group's, over what is
 // chosen at the picture's foot; the title bar's Tracks and Library buttons
 // bring out the Tracks and Library islands. The title bar's Export button
@@ -27,6 +27,7 @@ export type EditorIslandKind =
   | "cursor"
   | "export"
   | "frame"
+  | "gap"
   | "keyboard"
   | "library"
   | "lull"
@@ -43,6 +44,7 @@ export type EditorIslandKind =
 const STRIP_ISLANDS: readonly EditorIslandKind[] = [
   "audioClip",
   "beat",
+  "gap",
   "lull",
   "moment",
   "range",

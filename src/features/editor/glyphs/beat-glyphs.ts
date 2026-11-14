@@ -9,6 +9,7 @@ import {
   type LucideIcon,
   MessageSquareQuote,
   MousePointerClick,
+  RectangleHorizontal,
   TextCursorInput,
   Volume2,
 } from "lucide-react";
@@ -17,6 +18,7 @@ import {
 
 export const BEAT_GLYPHS = {
   click: MousePointerClick,
+  gap: RectangleHorizontal,
   keys: Keyboard,
   moment: Flag,
   screen: LayoutPanelTop,

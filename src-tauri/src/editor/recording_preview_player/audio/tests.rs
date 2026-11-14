@@ -110,6 +110,39 @@ fn trims_reordered_ranges_from_the_earliest_source_start() {
   assert!(rendered.find("start=0.500").unwrap() < rendered.find("start=0.000").unwrap());
 }
 
+/// Played 0-500 ms, a 400 ms gap past the 1 s recording's end, then
+/// 500-1000 ms: the gap is silence, and only the recorded ranges are split
+/// from the decode, which starts where the earliest of them does.
+#[test]
+fn a_gap_plays_silence_between_the_recorded_ranges() {
+  let mut sources = test_sources();
+  sources.audio_tracks.truncate(1);
+  let config = StreamConfig {
+    channels: 2,
+    sample_rate: 48_000,
+    buffer_size: cpal::BufferSize::Default,
+  };
+  let range = |source_start_ms, source_end_ms| RecordingPreviewPlaybackRange {
+    source_start_ms,
+    source_end_ms,
+    playback_rate: 1.0,
+  };
+  let rendered = args(
+    &sources,
+    &channels(&sources),
+    None,
+    &[range(0, 500), range(90_000, 90_400), range(500, 1_000)],
+    &config,
+  )
+  .join(" ");
+
+  assert!(rendered.contains("-ss 0.000"));
+  assert!(rendered.contains("asplit=2"));
+  assert!(rendered.contains("anullsrc=r=48000:cl=mono,atrim=duration=0.400[track0range1]"));
+  assert!(rendered.contains("[track0range0][track0range1][track0range2]concat=n=3"));
+  assert!(rendered.contains("apad=whole_dur=1.400"));
+}
+
 #[test]
 fn applies_atempo_and_scales_audio_duration() {
   let sources = test_sources();

@@ -25,6 +25,7 @@ fn exports_reordered_segments_in_the_order_they_play() {
     playback_rate: 1.0,
     source_end,
     source_start,
+    background: None,
   };
   let timeline = TimelinePlan::from_edit(
     &RecordingTimelineEdit {
@@ -102,6 +103,7 @@ fn exports_the_stretch_after_a_long_cut() {
     playback_rate: 1.0,
     source_end,
     source_start,
+    background: None,
   };
   let timeline = TimelinePlan::from_edit(
     &RecordingTimelineEdit {

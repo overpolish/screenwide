@@ -131,6 +131,9 @@ export type ToolPanelPatch = Partial<
   frameRadius?: number;
   /** Size the output canvas, leaving what is in it where it sits. */
   frameSize?: { height?: number; width?: number };
+  /** Give the gap chosen on the strip this background, or the recording's
+   * again for null. */
+  gapBackground?: Background | null;
   /** The shortcut settings every shortcut is drawn with, changed a field at a
    * time so a panel never has to send the whole group back. */
   keyboardEffects?: Partial<KeyboardEffectSettings>;

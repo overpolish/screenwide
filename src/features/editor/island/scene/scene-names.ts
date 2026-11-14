@@ -21,6 +21,8 @@ export const presetName = (preset: ScenePreset) => {
       return t("editor-island-scene-camera-only");
     case "screen-only":
       return t("editor-island-scene-screen-only");
+    case "blank":
+      return t("editor-island-scene-blank");
   }
 };
 

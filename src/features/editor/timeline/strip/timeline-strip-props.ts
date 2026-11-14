@@ -29,6 +29,9 @@ export type TimelineStripProps = Pick<
   | "pictureAspect"
   | "selection"
 > & {
+  /** In played seconds, as every lane over the timeline is
+   * (`strip-lane-time.ts`); so are the scenes and the songs and sound
+   * effects, and the times their drags and drawings tell. */
   annotations: TimelineAnnotation[];
   beats: StripBeat[];
   /** The voice's lines, or null where the recording has no voice. */
@@ -84,6 +87,8 @@ export type TimelineStripProps = Pick<
   playhead: Playhead;
   /** How long the recording was recorded, in seconds. */
   recorded: number;
+  /** What plays on without a jump, as stretches of played seconds. */
+  runs: Span[];
   scenes: TimelineScene[];
   /** The shortcuts pressed while recording, where they show. */
   shortcuts: TimelineShortcut[];
@@ -93,6 +98,8 @@ export type TimelineStripProps = Pick<
   squeeze: number;
   /** The songs and sound effects, where the strip shows them. */
   audio?: StripAudio;
+  /** How long the gaps play, in seconds: time added, not taken out. */
+  gapped?: number;
   /** Locked but for the range tool, which stays in hand: the Export island
    * is making a GIF of the range, which is at most this many seconds of
    * the edited recording. */

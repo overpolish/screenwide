@@ -12,7 +12,7 @@ use screenwide_annotations::timing::{covers, scene_blend, video_ms, FrameTime};
 use screenwide_output::ScreenshotOutputSettings;
 use screenwide_scenes::framing::SceneFraming;
 use screenwide_scenes::geometry::Rect;
-use screenwide_scenes::model::RecordingSceneClip;
+use screenwide_scenes::model::{RecordingSceneClip, RecordingScenePreset};
 use screenwide_scenes::motion::SceneMotion;
 use screenwide_scenes::placement::Placement;
 use screenwide_scenes::CameraOverlaySettings;
@@ -41,6 +41,29 @@ fn placement_at(
     return Some(to);
   }
   Some(placed(blend.from).toward(to, blend.share))
+}
+
+/// How opaque the screen's annotations are drawn on the frame `timeline_ms`
+/// into a video `video_ms` long, on the clock the panes move by: as the
+/// screen is, except in a blank scene, which hides the screen but keeps what
+/// is drawn on it over the background. Whole outside every clip.
+fn annotations_opacity(
+  clips: &[RecordingSceneClip],
+  (timeline_ms, video_ms): (u64, Option<u64>),
+  base: &Base,
+) -> f64 {
+  let shown = |index: Option<usize>| match index.map(|index| &clips[index]) {
+    Some(clip) if clip.preset == RecordingScenePreset::Blank => 1.0,
+    Some(clip) => base.target(clip).map_or(1.0, |placed| placed.opacity.0),
+    None => 1.0,
+  };
+  scene_blend(clips, (timeline_ms, video_ms), |clip| {
+    base.target(clip).is_some()
+  })
+  .map_or(1.0, |blend| {
+    let (from, to) = (shown(blend.from), shown(blend.to));
+    from + (to - from) * blend.share
+  })
 }
 
 /// Arranges the screen's `output`, in the canvas's output pixels, and the
@@ -131,7 +154,11 @@ pub fn arrange_following(
     placed.screen.height,
   ]);
   output.radius_percent = placed.radius.0;
-  output.scene_opacity = Some([placed.opacity.0 as f32, placed.opacity.1 as f32]);
+  output.scene_opacity = Some([
+    placed.opacity.0 as f32,
+    placed.opacity.1 as f32,
+    annotations_opacity(clips, (timeline_ms, video_ms), &base) as f32,
+  ]);
   output.scene_camera_front = Some(placed.camera_front as f32);
   // The scene's turn replaces the layer's own, upright where it gives none.
   output.rotation = Some(placed.rotation).filter(|rotation| !rotation.is_upright());

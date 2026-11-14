@@ -34,6 +34,7 @@ fn segment(id: u64, source_start: f64, source_end: f64) -> RecordingTimelineSegm
     playback_rate: 1.0,
     source_end,
     source_start,
+    background: None,
   }
 }
 

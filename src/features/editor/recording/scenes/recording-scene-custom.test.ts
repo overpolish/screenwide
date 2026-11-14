@@ -89,6 +89,29 @@ describe("customRecordingSceneClip", () => {
       screen: { height: 1, width: 1, x: 0, y: 0 },
     });
   });
+
+  it("keeps a camera-only scene's screen hidden and its camera square and in place", () => {
+    const before = arranged(clip("camera-only"));
+    const custom = customRecordingSceneClip({
+      camera,
+      clip: clip("camera-only"),
+      output,
+    });
+    expect(custom.boxes?.screenHidden).toBe(true);
+    expect(custom.radius?.camera).toBe(0);
+    const after = arranged(custom);
+    expect(after?.opacity).toEqual(before?.opacity);
+    expect(after?.cameraOverlay?.frameWidth).toBeCloseTo(
+      before?.cameraOverlay?.frameWidth ?? NaN,
+    );
+  });
+
+  it("leaves a blank scene a preset, as it has no pane to place", () => {
+    const blank = clip("blank");
+    expect(customRecordingSceneClip({ camera, clip: blank, output })).toBe(
+      blank,
+    );
+  });
 });
 
 describe("arrangedRecordingScene in a custom scene", () => {

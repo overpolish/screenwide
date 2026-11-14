@@ -2,7 +2,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { type TimelineBeat } from "../beat-clip/beat-label";
-import { type Span } from "../timeline-scale";
+import { type Span, type TimeMap } from "../timeline-scale";
+
+import type { RecordingSceneClip } from "../../../../bindings/RecordingSceneClip";
 
 // The beats of a real recording and the lulls between them, found in what
 // was read from it: what was said, grouped into lines; the clicks, the
@@ -173,19 +175,40 @@ function laidOut(beats: RecordingBeat[], duration: number) {
   return kept;
 }
 
-/** What is left of `readings` with the screen's track out of the export:
- * the voice and the moments. The clicks, the typing, the shortcuts and the
- * picture were all read off the screen, so the lulls are the gaps between
- * what was said and flagged, and none moves by itself. */
+/** What is left of `readings` where the screen is not seen: with its track
+ * out of the export, everywhere, or under a blank scene, wherever `isHidden`
+ * says, in recorded seconds. The clicks, the typing, the shortcuts and the
+ * picture were all read off the screen, so there the lulls are the gaps
+ * between what was said and flagged, and none moves by itself. */
 export const withoutScreen = (
   readings: RecordingReadings,
+  isHidden: (at: number) => boolean = () => true,
 ): RecordingReadings => ({
   ...readings,
-  clicks: [],
-  picture: [],
-  shortcuts: [],
-  typing: [],
+  clicks: readings.clicks.filter(({ at }) => !isHidden(at)),
+  picture: readings.picture.filter(({ start }) => !isHidden(start)),
+  shortcuts: readings.shortcuts.filter(({ at }) => !isHidden(at)),
+  typing: readings.typing.filter((at) => !isHidden(at)),
 });
+
+/** What is left of `readings` under the blank scenes among `scenes`, which
+ * hide the screen, so what was done on it makes no beats there: their
+ * stretches are speech and moments alone. `map` places a recorded moment on
+ * the timeline the scenes are timed on. */
+export const withoutScreenUnderBlank = (
+  readings: RecordingReadings,
+  scenes: readonly RecordingSceneClip[] | undefined,
+  map: TimeMap,
+): RecordingReadings => {
+  const blank = (scenes ?? []).filter(({ preset }) => preset === "blank");
+  if (blank.length === 0) return readings;
+  return withoutScreen(readings, (at) => {
+    const playedMs = map.toPlayed(at) * 1000;
+    return blank.some(
+      ({ endMs, startMs }) => startMs <= playedMs && playedMs < endMs,
+    );
+  });
+};
 
 /** A recording's beats and the lulls between them. */
 export type RecordingBeats = { beats: RecordingBeat[]; lulls: RecordingLull[] };

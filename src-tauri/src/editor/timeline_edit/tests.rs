@@ -25,12 +25,14 @@ fn edit(artifact_id: u64, split: f64) -> RecordingTimelineEdit {
         source_end: split,
         source_start: 0.0,
         playback_rate: 1.0,
+        background: None,
       },
       RecordingTimelineSegment {
         id: 1,
         source_end: 1.0,
         source_start: split,
         playback_rate: 1.0,
+        background: None,
       },
     ],
   }

@@ -24,7 +24,7 @@ export type StripAudio = {
   clips: TimelineAudioClip[];
   /** Told every clip's lane, by id, after a drag moved any. */
   onRestack: (lanes: Record<string, number>) => void;
-  /** Told a clip moved whole or an end of it pulled, in recorded seconds. */
+  /** Told a clip moved whole or an end of it pulled, in played seconds. */
   onRetime: (id: string, span: Span, part: BarPart) => void;
   /** Sounds dragged in from the system, while they are carried over the
    * editor: the kind of the lane under the pointer, if any, and where they
@@ -49,7 +49,7 @@ export function AudioStack({ onSelect, ...stack }: AudioStackProps) {
       {...stack}
       bars={stack.clips}
       guideTo="above"
-      // A clip drawn either side of a jump is chosen whole.
+      // A clip drawn in parts while a move is dragged is chosen whole.
       onSelect={(id) => {
         onSelect(baseOf(id));
       }}

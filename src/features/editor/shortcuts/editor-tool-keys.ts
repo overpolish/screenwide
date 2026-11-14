@@ -27,6 +27,8 @@ export type EditorToolKeys = {
   /** `]` and `[` move what is selected one step through the stacking, and
    * with Shift all the way to the front or the back. */
   onArrange?: (move: Arrangement) => void;
+  /** G: a gap inserted at the playhead. */
+  onInsertGap?: () => void;
   onResizeCanvas?: () => void;
   /** L: the scene tool, on or off. */
   onSceneTool?: () => void;
@@ -134,6 +136,7 @@ export const editorToolKeyAction = (
       }
     : {
         KeyB: keys.onToggleBladeTool,
+        KeyG: keys.onInsertGap,
         KeyN: keys.onToggleSnap,
         KeyP: keys.onTogglePlayback,
         KeyU: keys.onToggleCaptionsPanel,

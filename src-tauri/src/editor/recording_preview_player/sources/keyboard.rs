@@ -32,7 +32,8 @@ pub(super) fn keyboard_compositor(
 }
 
 impl PlayerSources {
-  /// The shortcut strip at `position_ms`, fitted to `dimensions`.
+  /// The shortcut strip at `position_ms`, fitted to `dimensions`, faded as
+  /// the scenes there show the keys.
   pub(in crate::editor::recording_preview_player) fn keyboard_overlay(
     &self,
     position_ms: u64,
@@ -40,15 +41,21 @@ impl PlayerSources {
     dimensions: (u32, u32),
   ) -> Option<screenwide_keyboard_effects::KeyboardOverlay> {
     let keyboard = self.keyboard.as_deref()?;
+    let shown = self.scenes.keys_shown(position_ms);
+    if shown <= 0.0 {
+      return None;
+    }
     let ranges = self
       .animation_ranges
       .read()
       .unwrap_or_else(|poisoned| poisoned.into_inner());
-    keyboard.evaluate_fitted_with_ranges(
-      position_ms,
-      settings,
-      dimensions,
-      (!ranges.is_empty()).then_some(ranges.as_slice()),
-    )
+    keyboard
+      .evaluate_fitted_with_ranges(
+        position_ms,
+        settings,
+        dimensions,
+        (!ranges.is_empty()).then_some(ranges.as_slice()),
+      )
+      .map(|overlay| overlay.faded(shown))
   }
 }

@@ -7,16 +7,19 @@
 use super::CursorExportRequest;
 use crate::media_preview::BakedVideoExportOptions;
 use crate::scenes;
-use screenwide_annotations::timing::{covers, cursor_in_scenes, video_ms, FrameTime};
+use screenwide_annotations::timing::{
+  covers, cursor_in_scenes, keys_in_scenes, video_ms, FrameTime,
+};
 use screenwide_output::ScreenshotOutputSettings;
 use screenwide_scenes::{FacePath, RecordingSceneClip};
 use screenwide_timeline::TimelineRange;
 use std::sync::Arc;
 
-/// The export's scene clips, the baked camera they move where there is one,
-/// and where the face is over that camera where the camera or a scene
-/// follows it. A scene that places a camera stands idle without one, while a
-/// full scene still frames the screen.
+/// The export's scene clips, with the timeline's gaps among them as blank
+/// scenes ([`screenwide_scenes::with_gaps`]), the baked camera they move
+/// where there is one, and where the face is over that camera where the
+/// camera or a scene follows it. A scene that places a camera stands idle
+/// without one, while a full scene still frames the screen.
 pub(super) struct ExportScenes {
   camera: Option<BakedVideoExportOptions>,
   clips: Vec<RecordingSceneClip>,
@@ -26,9 +29,9 @@ pub(super) struct ExportScenes {
 
 impl ExportScenes {
   pub(super) fn for_request(request: &CursorExportRequest<'_>) -> Self {
-    let clips = request
-      .timeline
-      .map_or_else(Vec::new, |timeline| timeline.scene_clips.clone());
+    let clips = request.timeline.map_or_else(Vec::new, |timeline| {
+      screenwide_scenes::with_gaps(&timeline.scene_clips, timeline.gap_scenes())
+    });
     let follows = request
       .camera
       .is_some_and(|(_, options)| options.overlay.follow_face)
@@ -59,28 +62,43 @@ impl ExportScenes {
         .is_some_and(|options| options.overlay.follow_face)
   }
 
+  /// Where the frame `source_ms` into the recording plays, and how long the
+  /// video is, on the timeline.
+  fn clock(&self, source_ms: u64) -> (u64, Option<u64>) {
+    (
+      FrameTime::on(&self.ranges, source_ms).timeline_ms,
+      video_ms(&self.ranges),
+    )
+  }
+
   /// How much of the cursor shows on the frame `source_ms` into the
   /// recording, from nothing to whole, `shown` being the recording's own
   /// choice: as the scene there says, faded as it arrives and leaves.
   pub(super) fn cursor_shown(&self, source_ms: u64, shown: bool) -> f32 {
-    let timeline_ms = FrameTime::on(&self.ranges, source_ms).timeline_ms;
-    cursor_in_scenes(&self.clips, shown, (timeline_ms, video_ms(&self.ranges)))
+    cursor_in_scenes(&self.clips, shown, self.clock(source_ms))
   }
 
-  /// The frame `source_ms` into the recording as the scenes arrange it: the
-  /// screen's settings on the canvas `output` describes, carrying how far a
-  /// scene moved it over the frame's `frame_ms` of source time, and the baked
-  /// camera's options measured on that same canvas where there is one. `None`
-  /// outside every scene, where the request's own composition stands, unless
-  /// the camera follows the face there or a scene's background reaches it.
+  /// How much of the keys pressed show on the frame `source_ms` into the
+  /// recording, from nothing to whole: hidden by a blank scene or a gap,
+  /// faded as either arrives and leaves.
+  pub(super) fn keys_shown(&self, source_ms: u64) -> f32 {
+    keys_in_scenes(&self.clips, self.clock(source_ms))
+  }
+
+  /// The frame `source_ms` into the recording as the scenes and the gaps
+  /// arrange it: the screen's settings on the canvas `output` describes,
+  /// carrying how far a scene moved it over the frame's `frame_ms` of source
+  /// time, and the baked camera's options measured on that same canvas where
+  /// there is one. `None` outside every scene and gap, where the request's
+  /// own composition stands, unless the camera follows the face there or a
+  /// background of a scene or gap reaches it.
   pub(super) fn at(
     &self,
     output: &ScreenshotOutputSettings,
     source_ms: u64,
     frame_ms: f32,
   ) -> Option<(ScreenshotOutputSettings, Option<BakedVideoExportOptions>)> {
-    let timeline_ms = FrameTime::on(&self.ranges, source_ms).timeline_ms;
-    let video_ms = video_ms(&self.ranges);
+    let (timeline_ms, video_ms) = self.clock(source_ms);
     // A scene's own background changes a little past its clip's edges, so
     // with one anywhere every frame is arranged.
     let dressed = self.clips.iter().any(|clip| clip.background.is_some());

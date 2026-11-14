@@ -105,7 +105,7 @@ export function ExportOptions({
             ) : null}
             {shown.compare?.seeThrough ? (
               <Alert
-                className="w-0 min-w-full px-inset-sm"
+                className="w-0 min-w-full"
                 color="warning"
                 key="see-through"
                 role="status"
@@ -116,7 +116,7 @@ export function ExportOptions({
             {/* Says where the GIF's range comes from, as the strip shows it. */}
             {shown.gif ? (
               <Alert
-                className="w-0 min-w-full px-inset-sm"
+                className="w-0 min-w-full"
                 color={shown.gif === "tooLong" ? "warning" : "neutral"}
                 key="gif"
                 role="status"
@@ -253,7 +253,7 @@ export function ExportOptions({
                 {t("editor-export-try-again")}
               </Button>
             }
-            className="min-h-island-control ps-inset-sm"
+            className="min-h-island-control"
             color="error"
             key="failure"
             role="alert"

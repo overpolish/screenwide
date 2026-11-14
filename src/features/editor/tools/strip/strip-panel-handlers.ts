@@ -13,6 +13,7 @@ export const stripPanelHandlers = (
   ToolPanelHandlers,
   | "onAudioClipChange"
   | "onChosenShortcutsDelete"
+  | "onGapBackgroundChange"
   | "onLullPlayChange"
   | "onLullTrimToBreath"
   | "onSoundAdd"
@@ -24,6 +25,9 @@ export const stripPanelHandlers = (
   },
   onChosenShortcutsDelete: () => {
     stripIslandControls(workspace)?.deleteShortcuts();
+  },
+  onGapBackgroundChange: (background) => {
+    stripIslandControls(workspace)?.dressGap(background);
   },
   onLullPlayChange: (play) => {
     stripIslandControls(workspace)?.playLull(play);

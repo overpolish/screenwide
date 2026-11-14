@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { t } from "../../../../i18n/i18n";
-import { cn } from "../../../../lib/styling";
 import { Alert } from "../../../../primitives/alert/alert";
 
 /** At the Cursor island's foot over a scene, about the eye on its row:
@@ -22,10 +21,7 @@ export function CursorSceneNote({
 }) {
   const state = choice === null ? "other" : choice ? "shown" : "hidden";
   return (
-    <Alert
-      className={cn("px-inset-sm", isShown && "w-0 min-w-full")}
-      role="status"
-    >
+    <Alert className={isShown ? "w-0 min-w-full" : undefined} role="status">
       {t("editor-island-cursor-in-scene", { state })}
     </Alert>
   );

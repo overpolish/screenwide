@@ -59,18 +59,16 @@ pub async fn play_recording_preview(
   if !manager.is_playing {
     return Ok(());
   }
-  let duration_ms = manager
-    .sources
-    .as_ref()
-    .map_or(0, |sources| sources.duration_ms);
   manager.position_ms = start_position_ms.map_or(manager.position_ms, |position_ms| {
-    decodable_position(position_ms, duration_ms)
+    decodable_position(&manager, position_ms)
   });
   manager.restart(PlaybackMode::Playing)
 }
 
 /// Ranges play in the order given, which a reordered timeline leaves out of
-/// source order; no two may play the same source.
+/// source order; no two may play the same source. A range past the
+/// recording's end is a gap, which plays at speed one; none runs over the
+/// end.
 fn validate_playback_ranges(
   ranges: &[RecordingPreviewPlaybackRange],
   duration_ms: u64,
@@ -81,8 +79,13 @@ fn validate_playback_ranges(
     .collect();
   spans.sort_unstable();
   let valid = ranges.iter().all(|range| {
+    let in_bounds = if range.source_start_ms >= duration_ms {
+      range.playback_rate == 1.0
+    } else {
+      range.source_end_ms <= duration_ms
+    };
     range.source_start_ms < range.source_end_ms
-      && range.source_end_ms <= duration_ms
+      && in_bounds
       && range.playback_rate.is_finite()
       && (0.25..=4.0).contains(&range.playback_rate)
   }) && spans.windows(2).all(|pair| pair[0].1 <= pair[1].0);
@@ -131,5 +134,16 @@ mod tests {
       },
     ];
     assert!(validate_playback_ranges(&overlapping, 4_000).is_err());
+    let gap = RecordingPreviewPlaybackRange {
+      source_start_ms: 90_000,
+      source_end_ms: 92_000,
+      playback_rate: 1.0,
+    };
+    assert!(validate_playback_ranges(&[gap, valid[0]], 4_000).is_ok());
+    let hurried_gap = RecordingPreviewPlaybackRange {
+      playback_rate: 2.0,
+      ..gap
+    };
+    assert!(validate_playback_ranges(&[hurried_gap], 4_000).is_err());
   }
 }

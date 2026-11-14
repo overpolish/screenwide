@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { deletedRecordingKeyboardShortcutFragments } from "../keyboard/recording-keyboard-timeline-edit";
+import { isGapSegment } from "../recording-timeline-types";
 
 import {
   layoutRecordingTimelineSegments,
@@ -33,12 +34,15 @@ export type RecordingTimelineCut = {
 /**
  * Every stretch of source left out, in output order. A blade split with
  * nothing removed, or a jump a reordered timeline makes, leaves nothing to
- * bring back and is no cut.
+ * bring back and is no cut, and nor does the empty source past the
+ * recording's end the gaps play.
  */
 export const recordingTimelineCuts = (
   edit: RecordingTimelineEdit,
 ): RecordingTimelineCut[] => {
-  const layout = layoutRecordingTimelineSegments(edit);
+  const layout = layoutRecordingTimelineSegments(edit).filter(
+    (segment) => !isGapSegment(segment),
+  );
   if (layout.length === 0) return [];
   const bySource = [...layout].sort((a, b) => a.sourceStart - b.sourceStart);
   const cuts: RecordingTimelineCut[] = [];

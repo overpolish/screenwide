@@ -14,6 +14,8 @@ editor-timeline-cut-name = Split the recording where you press
 # The transport's range tool: a drag across the strip draws a range, to make a GIF of or cut.
 editor-timeline-range = Range
 editor-timeline-range-name = Choose a range of the recording
+# The transport's button that inserts a gap at the playhead: time with nothing recorded behind it, for a title card, a header or a pause, that pushes what comes after later.
+editor-timeline-insert-gap = Insert gap
 # The transport's toggle that brings out the Tracks island, where each recorded track is held in the export and the preview or left out.
 editor-timeline-tracks = Tracks
 editor-timeline-tracks-name = Choose the tracks to play and export
@@ -38,6 +40,8 @@ editor-timeline-restore-cut = Restore { $duration } cut
 editor-timeline-lull = Lull, { $duration }
 # A moment flagged while recording. $moment is its kind's name, which the user chooses, such as Notable.
 editor-timeline-moment = { $moment } moment
+# Time inserted into the recording with nothing recorded behind it, showing the background and what is drawn over it.
+editor-timeline-gap = Gap
 # $layout names the scene's layout, such as Side by side.
 editor-timeline-scene = Scene, { $layout }
 # Shown where dragging along the scene line would draw a scene.

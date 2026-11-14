@@ -54,10 +54,10 @@ export function useStripView({
   // Kept in played seconds rather than shares, and fixed once the strip is
   // first shown, so a trim, a cut or a squeeze changing how long the
   // recording plays leaves a second as wide as it was: the strip never
-  // rescales under the pointer, and a recording grown shorter than the view
-  // leaves room past its end rather than stretching to fill it. What cuts
-  // and the squeeze take out stays on the strip past the end, so the strip
-  // is always as long as the recording.
+  // rescales under the pointer. What cuts and the squeeze take out stays on
+  // the strip past the end, so the strip is always as long as the recording
+  // and the gaps in it; a gap taken away shortens it, and the view is drawn
+  // back inside it at once (below), as the next zoom or pan would.
   const [chosen, setChosen] = useState<View | null>(null);
   if (chosen === null && width > 0)
     setChosen({
@@ -121,6 +121,14 @@ export function useStripView({
     const left = view.start * trackWidth;
     if (Math.abs(viewport.scrollLeft - left) > 0.5) viewport.scrollLeft = left;
   }, [viewport, view.start, trackWidth]);
+
+  // A strip grown shorter than the view, as a gap taken away leaves it,
+  // takes back the room past its end rather than leaving it empty.
+  const total = duration + Math.max(takenOut, 0);
+  useLayoutEffect(() => {
+    if (chosen && chosen.end > total + 1e-6)
+      actionsRef.current.set(latestRef.current.view);
+  }, [chosen, total]);
 
   useEffect(() => {
     if (!viewport) return;

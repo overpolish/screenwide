@@ -52,9 +52,11 @@ export function presetDrawing(
   shape: SceneShape,
 ): SceneDrawing {
   const { aspect } = shape;
-  // Screen only keeps the recording's own place for the screen.
+  // Screen only keeps the recording's own place for the screen, and blank
+  // shows only the video.
   if (preset === "screen-only")
     return { aspect, screen: shape.screen, ...turnOf(shape) };
+  if (preset === "blank") return { aspect };
   const { camera, screen } = recordingScenePanes(
     preset,
     { height: 1, width: aspect },
@@ -85,7 +87,7 @@ export function presetDrawing(
 }
 
 /** A custom or saved layout, drawn from its boxes, which are shares of the
- * video. */
+ * video. A screen the boxes hide is not drawn. */
 export function boxesDrawing(
   boxes: SceneBoxes,
   shape: SceneShape,
@@ -95,7 +97,6 @@ export function boxesDrawing(
     camera: boxes.camera
       ? { ...boxes.camera, radius: shape.cameraRadius }
       : undefined,
-    screen: boxes.screen,
-    ...turnOf(shape),
+    ...(boxes.screenHidden ? {} : { screen: boxes.screen, ...turnOf(shape) }),
   };
 }

@@ -56,7 +56,20 @@ export const sceneNeedsCamera = ({
 }) =>
   boxes
     ? boxes.camera !== undefined
-    : preset !== "full" && preset !== "screen-only";
+    : preset !== "full" && preset !== "screen-only" && preset !== "blank";
+
+/** Whether a scene shows the screen: every scene but camera only and blank,
+ * and a custom scene unless its boxes hide it. */
+export const sceneShowsScreen = ({
+  boxes,
+  preset,
+}: {
+  preset: RecordingScenePreset;
+  boxes?: SceneBoxes;
+}) =>
+  boxes
+    ? boxes.screenHidden !== true
+    : preset !== "camera-only" && preset !== "blank";
 
 /** How long a scene added at the playhead lasts, where there is room. */
 const RECORDING_SCENE_DEFAULT_MS = 5000;

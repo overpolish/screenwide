@@ -9,18 +9,24 @@ import { type RecordingTimelineEdit } from "../editing/recording-timeline-edit";
 import { type EditorTransportProps } from "../editor-transport";
 import { deletedRecordingKeyboardShortcutIds } from "../keyboard/recording-keyboard-timeline-edit";
 import { type RecordingMoment } from "../moments/recording-moments";
+import { isGapSegment } from "../recording-timeline-types";
 import { type Playhead } from "../scrub-playhead";
 import { type StripSelection } from "../strip/strip-selection";
-import { SLIVER_S, splitParts } from "../strip/strip-split";
 import { type TimelineStripProps } from "../strip/timeline-strip-props";
 import { useAltKey } from "../strip/use-alt-key";
-import { type Span } from "../timeline-scale";
 import { type ScrubPhase } from "../timeline-seek";
 
 import { correctedLines } from "./corrected-words";
-import { recordingBeats, speechBeatId, withoutScreen } from "./recording-beats";
+import {
+  recordingBeats,
+  speechBeatId,
+  withoutScreen,
+  withoutScreenUnderBlank,
+} from "./recording-beats";
+import { recordingStripGapActions } from "./recording-strip-gap-actions";
 import { recordingStripLulls } from "./recording-strip-lulls";
-import { isPlayed, recordingStripTime } from "./recording-strip-time";
+import { shownStripBeats, shownStripParts } from "./recording-strip-shown";
+import { recordingStripTime } from "./recording-strip-time";
 import {
   chosenSpans,
   partSpans,
@@ -77,13 +83,18 @@ export function useRecordingStrip(source: RecordingStripSource) {
   const recorded = durationMs / 1000;
   const readings = useRecordingStripReadings(source);
   const { isScreenShown } = source;
-  const found = useMemo(
-    () => recordingBeats(isScreenShown ? readings : withoutScreen(readings)),
-    [isScreenShown, readings],
-  );
   const time = useMemo(
     () => recordingStripTime(edit, recorded),
     [edit, recorded],
+  );
+  const found = useMemo(
+    () =>
+      recordingBeats(
+        isScreenShown
+          ? withoutScreenUnderBlank(readings, edit.sceneClips, time.map)
+          : withoutScreen(readings),
+      ),
+    [edit.sceneClips, isScreenShown, readings, time.map],
   );
   const lulls = useMemo(
     () =>
@@ -134,33 +145,20 @@ export function useRecordingStrip(source: RecordingStripSource) {
     [durationMs, edit, readings.words],
   );
   const said = new Map(lines.map((line) => [speechBeatId(line.start), line]));
-  const beats = found.beats.map((beat) => {
-    const middle = (beat.span.start + beat.span.end) / 2;
-    const frame =
-      thumbnails.length > 0
-        ? thumbnails[
-            Math.min(
-              thumbnails.length - 1,
-              Math.floor(
-                (middle / Math.max(recorded, 1e-6)) * thumbnails.length,
-              ),
-            )
-          ]
-        : undefined;
-    const line = beat.beat.kind === "speech" ? said.get(beat.id) : undefined;
-    return {
-      ...beat,
-      ...(line ? { beat: { kind: "speech", line: line.text } as const } : {}),
-      isHidden:
-        beat.beat.kind === "keys" &&
-        (!source.isKeyboardShown || deleted.has(beat.id.slice("keys-".length))),
-      // With the screen out there is no picture to show.
-      thumbnail: isScreenShown ? (frame?.url ?? null) : undefined,
-    };
+  const beats = shownStripBeats({
+    deletedShortcuts: deleted,
+    found: found.beats,
+    gaps: edit.segments.filter(isGapSegment),
+    isKeyboardShown: source.isKeyboardShown,
+    isScreenShown,
+    recorded,
+    said,
+    thumbnails,
   });
   const seekTo = (seconds: number, phase?: ScrubPhase) => {
+    // A gap's moments lie past the recording's end, where the map has them.
     const ratio =
-      time.map.toPlayed(Math.min(Math.max(seconds, 0), recorded)) /
+      time.map.toPlayed(Math.max(seconds, 0)) /
       Math.max(time.map.duration, 1e-6);
     if (phase) {
       source.seek(ratio, phase);
@@ -170,45 +168,14 @@ export function useRecordingStrip(source: RecordingStripSource) {
     source.seek(ratio, "end");
   };
 
-  // Captions and shortcuts are read as recorded, so one a cut took out
-  // whole would be drawn at the seam as a sliver, or as keys never pressed
-  // in what plays (a beat leaves itself out under a px): those are left
-  // out. What runs across a jump is drawn as a part each side of it, and a
-  // beat or lull the blade split as a part each side of the split; the
-  // lanes' annotations and scenes come in those parts already, read from
-  // where they play (`recordingStripLanes`). Where an item's edge and a
-  // jump's are one moment apart only by rounding, a part would be a
-  // sliver: those are left out too.
-  const strip = (lanes: RecordingStripLanes): TimelineStripProps => {
-    const props = stripProps(lanes);
-    const made = {
-      ...splitParts(props, time.edges, time.splits),
-      annotations: props.annotations,
-      scenes: props.scenes,
-    };
-    const captions =
-      made.captions?.filter((span) => isPlayed(time.map, span)) ?? [];
-    const shown = {
-      ...made,
-      captions: captions.length > 0 ? captions : null,
-      shortcuts: made.shortcuts.filter((span) => isPlayed(time.map, span)),
-    };
-    if (time.edges.length === 0 && time.splits.length === 0) return shown;
-    const isWhole = ({ end, start }: Span) => end - start >= SLIVER_S;
-    return {
-      ...shown,
-      beats: shown.beats.filter(({ span }) => isWhole(span)),
-      captions: shown.captions?.filter(isWhole) ?? null,
-      cuts: shown.cuts.filter(isWhole),
-      lulls: shown.lulls.filter(({ span }) => isWhole(span)),
-      shortcuts: shown.shortcuts.filter(isWhole),
-    };
-  };
+  const strip = (lanes: RecordingStripLanes): TimelineStripProps =>
+    shownStripParts(stripProps(lanes), time);
   const stripProps = (lanes: RecordingStripLanes): TimelineStripProps => ({
     ...lanes,
     beats,
     captions: lines.length > 0 ? lines : null,
     cuts: time.cuts,
+    gapped: time.gapped,
     isAltHeld,
     isCaptionsHidden: edit.captions?.enabled !== true,
     ...tools.strip,
@@ -243,6 +210,7 @@ export function useRecordingStrip(source: RecordingStripSource) {
     pictureAspect: source.pictureAspect,
     playhead: source.playhead,
     recorded,
+    runs: time.runs,
     selection,
     // Read off the screen, so they go with it.
     shortcuts: (isScreenShown ? readings.shortcuts : [])
@@ -251,25 +219,42 @@ export function useRecordingStrip(source: RecordingStripSource) {
     splits: time.splits,
     squeeze: lulls.squeeze,
   });
-  // The strip's half of the transport: its play, its blade and its range.
+  const gaps = recordingStripGapActions({
+    durationMs,
+    edit,
+    map: time.map,
+    playhead: source.playhead,
+    select,
+    selection,
+    steps: edits.steps,
+  });
+  // The strip's half of the transport: its play, its blade, its range and
+  // a gap inserted at the playhead.
   const transport: Pick<
     EditorTransportProps,
-    "durationMs" | "isPlaying" | "onPlayingChange" | "playhead"
+    "durationMs" | "isPlaying" | "onInsertGap" | "onPlayingChange" | "playhead"
   > &
     typeof tools.transport = {
     ...tools.transport,
     durationMs: time.map.duration * 1000,
     isPlaying: source.isPlaying,
+    onInsertGap: gaps.insert,
     onPlayingChange: source.onPlayingChange,
     playhead: source.playhead,
   };
   const chosenStretches = chosenSpans(selection, spanOf);
+  // A gap chosen is taken away and closed up, its songs and sound effects
+  // moving back with what came after it; anything else is cut.
   const cutChosen = () => {
+    if (gaps.chosenId !== null) {
+      gaps.remove();
+      return;
+    }
     if (chosenStretches.length === 0) return;
     edits.cut(chosenStretches);
     select(null);
   };
-  // Delete takes a chosen beat, lull or range and its time; the lanes'
+  // Delete takes a chosen beat, lull, gap or range and its time; the lanes'
   // own choices are deleted by theirs.
   const deselect = selection
     ? () => {
@@ -280,11 +265,15 @@ export function useRecordingStrip(source: RecordingStripSource) {
     onDelete: chosenStretches.length > 0 ? cutChosen : undefined,
     onDeselect: deselect,
     onDeselectAll: deselect,
+    onInsertGap: gaps.insert,
   });
   return {
     beats,
     /** Cuts what is chosen, a beat, a lull, several or a drawn range. */
     cutChosen,
+    /** Gives the gap chosen on the strip a background, or the recording's
+     * again for null. */
+    dressGap: gaps.dress,
     lulls,
     /** Brings the playhead to a moment, in recorded seconds. */
     seekTo,

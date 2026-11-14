@@ -10,6 +10,7 @@ import {
 import { type EditorKind } from "../../types";
 
 import type { AudioClipKind } from "../../../../bindings/AudioClipKind";
+import type { Background } from "../../../../bindings/Background";
 import type { AudioClipChange } from "../../island/audio-clip/audio-clip-island";
 import type { SoundAddition } from "../../island/library/library-panel";
 
@@ -35,6 +36,9 @@ export type StripIslandControls = {
   deleteShortcuts: () => void;
   /** Lets go of what is chosen, as ⌘D does. */
   deselect: () => void;
+  /** Gives the chosen gap a background of its own, or the recording's again
+   * for null. */
+  dressGap: (background: Background | null) => void;
   /** Hears the songs or the sound effects, or leaves them out, as the
    * Tracks island asks. */
   hearSounds: (kind: AudioClipKind, isHeard: boolean) => void;
@@ -113,6 +117,9 @@ export function usePublishStripIsland(
         },
         deselect: () => {
           controlsRef.current.deselect();
+        },
+        dressGap: (background) => {
+          controlsRef.current.dressGap(background);
         },
         hearSounds: (kind, isHeard) => {
           controlsRef.current.hearSounds(kind, isHeard);

@@ -186,6 +186,7 @@ const editorTimeline = (): Row[] => [
     value: "CommandOrControl+KeyB",
   },
   { label: t("editor-timeline-range"), value: "Shift+KeyR" },
+  { label: t("editor-timeline-insert-gap"), value: "KeyG" },
   { label: t("settings-shortcut-editor-snapping"), value: "KeyN" },
 ];
 

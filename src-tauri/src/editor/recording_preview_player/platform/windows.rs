@@ -37,13 +37,15 @@ impl PaneFrame for GpuFrame {
   }
 }
 
-/// Presents a paused moment: the frames' own time, nothing moving.
+/// Presents a paused moment: the frames' own time, or the gap's `gap_ms`
+/// where the still stands in one, nothing moving.
 fn present_still(
   sources: &PlayerSources,
   screen: Option<&GpuFrame>,
   camera: Option<&GpuFrame>,
+  gap_ms: Option<u64>,
 ) -> bool {
-  let Some(timestamp_ms) = screen.or(camera).map(|frame| frame.timestamp_ms) else {
+  let Some(timestamp_ms) = gap_ms.or(screen.or(camera).map(|frame| frame.timestamp_ms)) else {
     return false;
   };
   present::present(

@@ -51,6 +51,7 @@ const PRESETS: ScenePreset[] = [
   "picture-in-picture",
   "camera-only",
   "screen-only",
+  "blank",
 ];
 
 /** Rows of tiles shown before they scroll. */
@@ -163,7 +164,10 @@ export function SceneLayoutGroup(props: SceneFramingProps) {
     // and the one the scene already has, so it still shows what it is.
     ...PRESETS.filter(
       (preset) =>
-        canPlaceCamera || preset === "screen-only" || preset === chosen,
+        canPlaceCamera ||
+        preset === "screen-only" ||
+        preset === "blank" ||
+        preset === chosen,
     ).map((preset) => ({
       id: preset,
       label: presetName(preset),

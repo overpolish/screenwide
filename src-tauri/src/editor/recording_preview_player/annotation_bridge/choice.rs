@@ -96,9 +96,7 @@ impl PreviewPlayerManager {
         // through the band, as it may through any other drag.
         let additive = band.additive || SnapModifiers::from_bits(snap).position;
         self.annotation.selected = chosen_after_band(&self.annotation.selected, swept, additive);
-        let position = self
-          .position_ms
-          .min(self.sources.as_ref()?.duration_ms.saturating_sub(1));
+        let position = self.sources.as_ref()?.moment_ms(self.position_ms);
         self.commit_choice(pane, position, shown)
       }
     }

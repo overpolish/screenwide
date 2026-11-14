@@ -34,10 +34,12 @@ export const compositionBoxes = ({
   camera,
   cameraBehind,
   screen,
+  screenHidden,
 }: SchematicComposition): SceneBoxes => ({
   screen: screen ?? WHOLE_FRAME,
   ...(camera ? { camera } : {}),
   ...(cameraBehind ? { cameraBehind } : {}),
+  ...(screenHidden ? { screenHidden } : {}),
 });
 
 export function sceneClipDrawing(

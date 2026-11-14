@@ -212,12 +212,7 @@ export function QrCodeSection({
         </section>
       ) : null}
       {problem ? (
-        <Alert
-          className="px-inset-sm"
-          color="error"
-          key={`problem-${problem}`}
-          role="alert"
-        >
+        <Alert color="error" key={`problem-${problem}`} role="alert">
           {problem}
         </Alert>
       ) : null}

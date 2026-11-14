@@ -5,7 +5,7 @@
 //! annotation's place in each scene both move by, so an annotation glides to
 //! where a scene puts it while the scene itself arrives.
 
-use screenwide_scenes::RecordingSceneClip;
+use screenwide_scenes::{RecordingSceneClip, RecordingScenePreset};
 use screenwide_timeline::easing::ease_in_out_cubic;
 
 use super::frame_time::{covers, progress, reaches_video_ends};
@@ -94,7 +94,9 @@ pub fn cursor_in_scenes(
   (timeline_ms, video_ms): (u64, Option<u64>),
 ) -> f32 {
   let shows = |index: Option<usize>| {
-    let shows = index.and_then(|index| clips[index].cursor).unwrap_or(shown);
+    let shows = index
+      .and_then(|index| clips[index].cursor_choice())
+      .unwrap_or(shown);
     if shows {
       1.0
     } else {
@@ -108,6 +110,27 @@ pub fn cursor_in_scenes(
     }
     None => shows(None),
   }
+}
+
+/// How much of the keys pressed show on the frame `timeline_ms` into a video
+/// `video_ms` long, from nothing to whole: all of them, except in a blank
+/// scene, which hides the screen they were pressed on, fading on the
+/// scene's clock as the picture does.
+pub fn keys_in_scenes(
+  clips: &[RecordingSceneClip],
+  (timeline_ms, video_ms): (u64, Option<u64>),
+) -> f32 {
+  let shows = |index: Option<usize>| {
+    if index.is_some_and(|index| clips[index].preset == RecordingScenePreset::Blank) {
+      0.0
+    } else {
+      1.0
+    }
+  };
+  scene_blend(clips, (timeline_ms, video_ms), |_| true).map_or(1.0, |blend| {
+    let (from, to) = (shows(blend.from), shows(blend.to));
+    from + (to - from) * blend.share as f32
+  })
 }
 
 /// Whether the cursor shows anywhere in the video: `shown`, the recording's

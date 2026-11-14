@@ -92,11 +92,7 @@ pub async fn pause_recording_preview(
     // the paused frame decodes in parallel with that teardown.
     let worker = manager.take_worker();
     let displayed_position_ms = manager.position_ms;
-    let duration_ms = manager
-      .sources
-      .as_ref()
-      .map_or(0, |sources| sources.duration_ms);
-    manager.position_ms = decodable_position(manager.position_ms, duration_ms);
+    manager.position_ms = decodable_position(&manager, manager.position_ms);
     // A pinned annotation sits somewhere else at the paused frame, so its
     // grips move with it.
     #[cfg(any(target_os = "macos", target_os = "windows"))]
@@ -114,20 +110,13 @@ pub async fn pause_recording_preview(
   result
 }
 
-fn decodable_position(position_ms: u64, duration_ms: u64) -> u64 {
-  position_ms.min(duration_ms.saturating_sub(1))
-}
-
-#[cfg(test)]
-mod tests {
-  use super::decodable_position;
-
-  #[test]
-  fn playback_end_uses_the_final_decodable_offset_for_its_still() {
-    assert_eq!(decodable_position(8_000, 8_000), 7_999);
-    assert_eq!(decodable_position(4_000, 8_000), 4_000);
-    assert_eq!(decodable_position(0, 0), 0);
-  }
+/// The moment a still at `position_ms` shows: a gap's own, or else the last
+/// the recording holds at most.
+pub(super) fn decodable_position(manager: &PreviewPlayerManager, position_ms: u64) -> u64 {
+  manager
+    .sources
+    .as_ref()
+    .map_or(0, |sources| sources.moment_ms(position_ms))
 }
 
 #[tauri::command]
@@ -171,11 +160,7 @@ pub async fn seek_recording_preview(
     manager.latest_seek_request = request_id;
     manager.rough_seek = rough;
     let worker = manager.take_worker();
-    let duration_ms = manager
-      .sources
-      .as_ref()
-      .map_or(0, |value| value.duration_ms);
-    manager.position_ms = position_ms.min(duration_ms.saturating_sub(1));
+    manager.position_ms = decodable_position(&manager, position_ms);
     manager.is_playing = false;
     // A pinned annotation moves with the playhead, and its grips with it.
     #[cfg(any(target_os = "macos", target_os = "windows"))]

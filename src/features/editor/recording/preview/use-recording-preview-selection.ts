@@ -15,6 +15,7 @@ import {
 } from "../../screenshot/screenshot-output";
 import { createRecordingTimelineEdit } from "../../timeline/editing/recording-timeline-edit";
 import { useRecordingKeyboardTimelineEditing } from "../../timeline/keyboard/use-recording-keyboard-timeline-editing";
+import { isInRecordingTimelineGap } from "../../timeline/recording-strip/recording-timeline-gaps";
 import { useCropAspectStore } from "../../tools/crop/crop-aspect-store";
 import { RecordingVideoTrackId } from "../../types";
 import { useEditorEditGesture } from "../../use-editor-edit-history";
@@ -212,8 +213,10 @@ export function useRecordingPreviewSelection(
   const picks = scenePanePicks({
     arrangement: turn.arrangement,
     canPreviewBakedCamera,
+    freeCamera: scene.freesCamera && canvasTool === "select",
     freeScreen: scene.freesScreen && canvasTool === "select",
     isFramed,
+    isInGap: isInRecordingTimelineGap(laneEdit, durationMs, previewPositionMs),
     overlay: videoSelectionOverlay,
     reframe,
     screenRotation: turn.screenRotation,

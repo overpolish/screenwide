@@ -173,9 +173,9 @@ pub(super) fn sources_with_surface(
     .unwrap_or_default();
   // Until the session sends its own, the clips are timed on the saved edit,
   // which is the edit they were saved with.
-  let overlay_ranges = persisted
-    .as_ref()
-    .map_or_else(Vec::new, |plan| plan.ranges().to_vec());
+  let (overlay_ranges, gaps) = persisted.as_ref().map_or_else(Default::default, |plan| {
+    (plan.ranges().to_vec(), plan.gap_scenes().to_vec())
+  });
   screenwide_annotations::timing::lay_on_recording(&mut annotation_clips, &overlay_ranges);
   // The surface carries no callbacks yet: they name the session that adopts
   // these sources, and on Windows one compositor is shared by every session
@@ -211,8 +211,9 @@ pub(super) fn sources_with_surface(
     annotation_clips: Arc::new(RwLock::new(annotation_clips)),
     annotation_ranges: Arc::new(RwLock::new(overlay_ranges.clone())),
     scenes: super::scene_preview::PreviewScenes::new(
-      scene_clips,
+      (scene_clips, gaps),
       overlay_ranges,
+      duration_ms,
       camera
         .as_ref()
         .and_then(|camera| screenwide_export::scenes::face_track::load(&camera.path)),

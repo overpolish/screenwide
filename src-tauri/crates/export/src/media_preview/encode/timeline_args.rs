@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 mod commands;
+mod pieces;
 #[cfg(test)]
 mod tests;
 
@@ -11,10 +12,9 @@ pub(crate) use commands::{
 };
 
 use super::*;
-use screenwide_timeline::TimelineRange;
+use pieces::{audio_piece, video_piece};
 use screenwide_timeline_edit::TimelinePlan;
 
-const CUT_FADE_US: u64 = 3_000;
 /// Where the Mixdown's peaks are held once songs and sound effects are
 /// summed with the recorded tracks, which could otherwise clip.
 const MIX_LIMITER: &str = "alimiter=limit=-1dB:attack=5:release=50:level=0:latency=1";
@@ -69,45 +69,6 @@ fn sound_track_filter(
   Some(mix.graph)
 }
 
-fn seconds(microseconds: u64) -> String {
-  format!("{:.6}", microseconds as f64 / 1_000_000.0)
-}
-
-fn atempo(rate: f64) -> String {
-  let mut remaining = rate;
-  let mut filters = Vec::new();
-  while remaining > 2.0 {
-    filters.push("atempo=2.0".to_owned());
-    remaining /= 2.0;
-  }
-  while remaining < 0.5 {
-    filters.push("atempo=0.5".to_owned());
-    remaining /= 0.5;
-  }
-  if (remaining - 1.0).abs() > f64::EPSILON {
-    filters.push(format!("atempo={remaining:.6}"));
-  }
-  filters.join(",")
-}
-
-fn cut_fades(range: TimelineRange, index: usize, count: usize) -> String {
-  let mut fades = String::new();
-  if index > 0 {
-    fades.push_str(&format!(",afade=t=in:st=0:d={}", seconds(CUT_FADE_US)));
-  }
-  if index + 1 < count {
-    let duration_us = ((range.source_end_us.saturating_sub(range.source_start_us)) as f64
-      / range.playback_rate)
-      .round() as u64;
-    fades.push_str(&format!(
-      ",afade=t=out:st={}:d={}",
-      seconds(duration_us.saturating_sub(CUT_FADE_US)),
-      seconds(CUT_FADE_US)
-    ));
-  }
-  fades
-}
-
 /// x264 at the export's quality: an export that follows an edit always
 /// re-encodes, Original included.
 pub(in crate::media_preview) fn video_encoding_args(video: VideoExportOptions) -> Vec<OsString> {
@@ -149,12 +110,8 @@ fn append_video_filters(
     } else {
       format!("[{input}:v:0]")
     };
-    filters.push(format!(
-      "{source}trim=start={}:end={},setpts=(PTS-STARTPTS)/{}[v{index}]",
-      seconds(range.source_start_us),
-      seconds(range.source_end_us),
-      range.playback_rate
-    ));
+    let piece = video_piece(range, timeline.source_duration_us());
+    filters.push(format!("{source}{piece}[v{index}]"));
     parts.push_str(&format!("[v{index}]"));
   }
   let scale = resolution_filter(video.source_scale_percent, video.resolution_scale_percent)
@@ -197,18 +154,8 @@ fn append_audio_filters(
       } else {
         label.clone()
       };
-      let fades = cut_fades(*range, index, ranges.len());
-      let tempo = atempo(range.playback_rate);
-      let tempo = if tempo.is_empty() {
-        String::new()
-      } else {
-        format!(",{tempo}")
-      };
-      filters.push(format!(
-        "{source}atrim=start={}:end={},asetpts=PTS-STARTPTS{tempo}{fades}[a{track}_{index}]",
-        seconds(range.source_start_us),
-        seconds(range.source_end_us)
-      ));
+      let piece = audio_piece(range, (index, ranges.len()), timeline.source_duration_us());
+      filters.push(format!("{source}{piece}[a{track}_{index}]"));
       parts.push_str(&format!("[a{track}_{index}]"));
     }
     let volume = selection.volume_decibels(*stream);

@@ -220,7 +220,7 @@ impl Compositor {
       // How opaque a scene draws the screen and the camera, then how strong
       // each casts its shadow while the preview fades one in or out.
       scene_opacity: {
-        let [screen, camera] = settings.scene_opacity.unwrap_or([1.0, 1.0]);
+        let [screen, camera, _] = settings.scene_opacity.unwrap_or([1.0; 3]);
         [
           screen,
           camera,
@@ -228,6 +228,14 @@ impl Compositor {
           settings.camera_shadow_strength.unwrap_or(1.0),
         ]
       },
+      annotation_opacity: [
+        settings
+          .scene_opacity
+          .map_or(1.0, |[_, _, annotations]| annotations),
+        0.0,
+        0.0,
+        0.0,
+      ],
       source_flags: source_flags(source, camera),
       scene_turn: scene_turn_rows(settings, &placement, geometry.size),
       // Set in `submit` for the passes a focused frame takes.

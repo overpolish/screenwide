@@ -241,10 +241,12 @@ pub(super) fn run(context: RunContext) {
   if was_cancelled || failed {
     return;
   }
-  let final_end_ms = ranges
-    .last()
-    .map_or(context.start_ms, |range| range.source_end_ms);
-  if final_end_ms < context.sources.duration_ms {
+  let last = ranges.last();
+  let final_end_ms = last.map_or(context.start_ms, |range| range.source_end_ms);
+  // A timeline that ends in a gap ends past the recording, where the gap
+  // does.
+  let ends_in_gap = last.is_some_and(|range| range.source_start_ms >= context.sources.duration_ms);
+  if final_end_ms < context.sources.duration_ms || ends_in_gap {
     let _ = context
       .event_channel
       .send(RecordingPreviewPlayerEvent::RangeEnded {

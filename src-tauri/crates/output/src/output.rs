@@ -100,11 +100,13 @@ pub struct ScreenshotOutputSettings {
   #[serde(skip)]
   pub scene_motion: Option<screenwide_scenes::SceneMotion>,
   /// How opaque a scene draws the screen and the camera as it hides or shows
-  /// them, and how far it draws the camera in front, one to zero. Set per
-  /// drawn frame by the scene arrangement, never sent or saved; unset, both
-  /// are drawn whole in the composition's own order.
+  /// them, then the annotations drawn on the screen, which a blank scene keeps
+  /// over the background though it hides the screen. Set per drawn frame by
+  /// the scene arrangement, never sent or saved; unset, all are drawn whole.
   #[serde(skip)]
-  pub scene_opacity: Option<[f32; 2]>,
+  pub scene_opacity: Option<[f32; 3]>,
+  /// How far a scene draws the camera in front, one to zero; set per drawn
+  /// frame, never sent or saved, unset in the composition's own order.
   #[serde(skip)]
   pub scene_camera_front: Option<f32>,
   /// Where a padding scene shows the picture in the crop, as left, top, width

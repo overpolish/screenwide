@@ -54,6 +54,7 @@ pub(in crate::editor) fn untouched(artifact_id: u64) -> RecordingTimelineEdit {
       playback_rate: 1.0,
       source_end: 1.0,
       source_start: 0.0,
+      background: None,
     }],
   }
 }

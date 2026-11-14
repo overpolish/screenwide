@@ -31,7 +31,7 @@ const SONG_SNAP_PX = 8;
 type Drag =
   | { edge: "end" | "start"; id: string; kind: "edge" }
   | {
-      /** Where it was pressed, in recorded seconds and on screen. */
+      /** Where it was pressed, in played seconds and on screen. */
       grab: number;
       grabX: number;
       id: string;
@@ -43,7 +43,7 @@ type Drag =
     };
 
 export type SongRailProps = {
-  /** Told a song moved whole or an end of it pulled, in recorded seconds. */
+  /** Told a song moved whole or an end of it pulled, in played seconds. */
   onRetime: (id: string, span: Span, part: BarPart) => void;
   onSelect: (id: string) => void;
   scale: TimelineScale;

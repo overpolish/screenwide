@@ -27,17 +27,24 @@ export function useRecordingTimelineEditState(artifact: EditorArtifact | null) {
     null,
   );
   const artifactId = artifact?.kind === "recording" ? artifact.id : null;
-  const initialEdit = useMemo(
-    () =>
-      artifact?.kind === "recording"
-        ? (artifact.timelineEdit ?? createRecordingTimelineEdit(artifact.id))
-        : null,
+  const timelinesRef = useRef<RecordingOverlayTimelines>(new WeakMap());
+  const sourceDurationMs =
+    artifact?.kind === "recording" ? artifact.durationMs : 0;
+  const initialEdit = useMemo(() => {
+    if (artifact?.kind !== "recording") return null;
+    const opened =
+      artifact.timelineEdit ?? createRecordingTimelineEdit(artifact.id);
+    // A project saved with a scene over a gap opens with it cut back to
+    // either side, as an edit would leave it.
+    return retimeRecordingOverlays(
+      { next: opened, previous: opened },
+      { sourceDurationMs, timelines: timelinesRef.current },
+    );
     // The editor window owns one editing session per artifact. Keeping this
     // fallback stable is important: downstream timeline effects use identity
     // to distinguish a real edit from an ordinary React render.
     // eslint-disable-next-line @eslint-react/exhaustive-deps
-    [artifactId],
-  );
+  }, [artifactId]);
   const revisionRef = useRef({
     artifactId,
     value:
@@ -60,7 +67,6 @@ export function useRecordingTimelineEditState(artifact: EditorArtifact | null) {
       : null;
   const latestRef = useRef(edit);
   latestRef.current = edit;
-  const timelinesRef = useRef<RecordingOverlayTimelines>(new WeakMap());
   const update = useCallback((next: RecordingTimelineEdit | null) => {
     latestRef.current = next;
     setStoredEdit(next);
@@ -73,8 +79,6 @@ export function useRecordingTimelineEditState(artifact: EditorArtifact | null) {
       next,
     );
   }, []);
-  const sourceDurationMs =
-    artifact?.kind === "recording" ? artifact.durationMs : 0;
   const commit = useCallback(
     (next: RecordingTimelineEdit) => {
       const previous = latestRef.current;

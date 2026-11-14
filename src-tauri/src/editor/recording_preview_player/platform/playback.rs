@@ -25,10 +25,27 @@ pub(in crate::editor::recording_preview_player::platform) trait PaneDecoders {
   /// Whether a frame holds on to its decoder's samples, so the next moment
   /// must wait until this one has been presented and released them.
   const HOLDS_SAMPLES: bool;
+  /// Whether a moment with no frame goes on rather than ends playback: in a
+  /// gap, where nothing was recorded, every moment is one.
+  const ENDLESS: bool = false;
 
   /// Each pane's frame at `position_ms`, the screen's first; `None` for a
   /// pane past its end or with nothing new. `Err` ends playback.
   fn frames_at(&mut self, position_ms: u64) -> Result<[Option<Self::Frame>; 2], ()>;
+}
+
+/// A gap's decoders: nothing was recorded there, so each moment has no frame
+/// and the panes keep the pictures they hold, which the gap hides.
+pub(in crate::editor::recording_preview_player::platform) struct GapDecoders;
+
+impl PaneDecoders for GapDecoders {
+  type Frame = super::backend::Frame;
+  const HOLDS_SAMPLES: bool = false;
+  const ENDLESS: bool = true;
+
+  fn frames_at(&mut self, _position_ms: u64) -> Result<[Option<Self::Frame>; 2], ()> {
+    Ok([None, None])
+  }
 }
 
 /// How long the platform has to open its decoders.
@@ -104,7 +121,7 @@ fn play<D: PaneDecoders<Frame = super::backend::Frame>>(
     let Ok([screen, camera]) = decoders.frames_at(position_ms) else {
       return;
     };
-    if screen.is_none() && camera.is_none() {
+    if screen.is_none() && camera.is_none() && !D::ENDLESS {
       return;
     }
     let (presented, released) = if D::HOLDS_SAMPLES {

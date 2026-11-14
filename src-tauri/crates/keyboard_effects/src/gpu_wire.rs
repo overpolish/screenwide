@@ -88,4 +88,14 @@ impl KeyboardOverlay {
   pub(crate) const ANIMATION_NONE: u32 = 2;
   pub(crate) const APPEARANCE_DARK: u32 = 0;
   pub const APPEARANCE_LIGHT: u32 = 1;
+
+  /// The overlay drawn `shown` of its own strength, nothing to whole: each
+  /// key as faint as that share of its own fade.
+  #[must_use]
+  pub fn faded(mut self, shown: f32) -> Self {
+    for key in &mut self.keys {
+      key.alpha *= shown;
+    }
+    self
+  }
 }

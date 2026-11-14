@@ -23,13 +23,11 @@ import {
 import { type TimelineAudioClip } from "../audio-lane/audio-stack";
 import { type RecordingTimelineEdit } from "../editing/recording-timeline-edit";
 import { type Playhead } from "../scrub-playhead";
-import { baseOf, partId } from "../strip/strip-part";
+import { baseOf } from "../strip/strip-part";
 import { type StripSelection } from "../strip/strip-selection";
 import { type TimelineStripProps } from "../strip/timeline-strip-props";
-import { type Span, type TimeMap } from "../timeline-scale";
 
 import { audioClipWriter } from "./audio-clip-writer";
-import { playedMs, recordedParts, retimedParts } from "./recording-strip-time";
 import { type RecordingStripSteps } from "./use-recording-strip-edits";
 import { useSoundAdding } from "./use-sound-adding";
 
@@ -37,10 +35,10 @@ import type { AudioClipChange } from "../../island/audio-clip/audio-clip-island"
 import type { ToolPanelStripItem } from "../../tools/tool-panel-strip";
 
 // The recording's songs and sound effects on its strip: drawn from the
-// edit where they play, in parts either side of a jump as annotations are,
-// moved, trimmed and restacked there, added as `useSoundAdding` adds them,
-// and changed from the island of the one chosen. Each change is one step of
-// the edit's history.
+// edit where they play, in played seconds, one piece wherever they run as
+// annotations are (`strip-lane-time.ts`), moved, trimmed and restacked
+// there, added as `useSoundAdding` adds them, and changed from the island
+// of the one chosen. Each change is one step of the edit's history.
 
 export function useRecordingStripAudio({
   edit,
@@ -48,7 +46,6 @@ export function useRecordingStripAudio({
   select,
   selection,
   steps,
-  time,
   timelineMs,
 }: {
   edit: RecordingTimelineEdit;
@@ -56,8 +53,6 @@ export function useRecordingStripAudio({
   select: (next: StripSelection | null) => void;
   selection: StripSelection | null;
   steps: RecordingStripSteps;
-  /** How the strip reads the edit's time. */
-  time: { map: TimeMap; runs: Span[] };
   /** How long the edited video plays, in ms. */
   timelineMs: number;
 }) {
@@ -134,32 +129,35 @@ export function useRecordingStripAudio({
     ...clip,
     endMs: Math.min(clip.endMs, timelineMs),
   });
-  /** `clip` as the strip draws it, a part each side of every jump. */
-  const partsOf = (clip: RecordingAudioClip, title: string) =>
-    recordedParts(time.map, time.runs, shownClip(clip)).map((span, part) => ({
-      ...span,
-      id: partId(clip.id, part),
+  /** `clip` as the strip draws it, in played seconds, one piece wherever it
+   * runs. */
+  const laneClip = (clip: RecordingAudioClip, title: string) => {
+    const shown = shownClip(clip);
+    return {
+      end: shown.endMs / 1000,
+      id: clip.id,
       isLooped: clip.isLooped,
       kind: clip.kind,
       lane: clip.lane,
+      start: shown.startMs / 1000,
       title,
-    }));
-  const audioClips: TimelineAudioClip[] = clips.flatMap((clip) =>
-    partsOf(clip, sounds.get(clip.sound)?.title ?? ""),
+    };
+  };
+  const audioClips: TimelineAudioClip[] = clips.map((clip) =>
+    laneClip(clip, sounds.get(clip.sound)?.title ?? ""),
   );
   const { carried } = adding;
   const strip: Pick<TimelineStripProps, "audio"> = {
     audio: {
       carried: carried && {
-        ghosts: carried.ghosts.flatMap((ghost) => partsOf(ghost, ghost.title)),
+        ghosts: carried.ghosts.map((ghost) => laneClip(ghost, ghost.title)),
         kind: carried.kind,
       },
       clips: audioClips,
       onRestack: (laneOf) => {
         const lanes = new Map<string, number>();
         for (const { id } of audioClips)
-          if (id in laneOf && !lanes.has(baseOf(id)))
-            lanes.set(baseOf(id), laneOf[id]);
+          if (id in laneOf) lanes.set(id, laneOf[id]);
         const current = latestRef.current.edit.audioClips ?? [];
         writer.write(
           current.map((clip) => ({
@@ -179,18 +177,16 @@ export function useRecordingStripAudio({
           (clip, others) => {
             const shown = shownClip(clip);
             if (part === "body") {
-              const was = audioClips.find((each) => each.id === id);
+              const was = audioClips.find((each) => each.id === baseOf(id));
               if (!was) return clip;
-              const deltaMs =
-                playedMs(time.map, start) - playedMs(time.map, was.start);
+              const deltaMs = Math.round((start - was.start) * 1000);
               return movedClip(others, clip.kind === "music" ? shown : clip, {
                 deltaMs,
                 timelineMs,
               });
             }
-            const pulled = retimedParts(time, shown, { end, id, start });
             return trimmedClip(shown, {
-              atMs: part === "start" ? pulled.startMs : pulled.endMs,
+              atMs: Math.round((part === "start" ? start : end) * 1000),
               bounds: trimBounds(others, shown, {
                 durationMs: durationOf(clip),
                 edge: part,

@@ -20,9 +20,10 @@ export type StripSelection =
 
 type Part = Exclude<StripSelection["kind"], "items" | "range" | "shortcuts">;
 
-/** A stretch, and where choosing it brings the playhead in recorded seconds
- * where that is not its start (a scene once it has arrived). */
-type Landing = Span & { landsAt?: number };
+/** A stretch, and the recorded moment choosing it brings the playhead to
+ * where that is not where it starts playing (a scene's once it has
+ * arrived, a part kept in recorded seconds). */
+type Landing = Span & { seek?: number };
 
 /** The stretch a selection covers, found among the parts that have one;
  * several items cover from the first one's start to the last one's end. */

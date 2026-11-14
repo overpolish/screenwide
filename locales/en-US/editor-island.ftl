@@ -321,6 +321,15 @@ editor-island-range-confirm-cut = Confirm cutting
 editor-island-range-deselect = Deselect range
 # Opens the Export island set to make a GIF of the range.
 
+## A gap on the strip: time inserted with nothing recorded behind it
+
+editor-island-gap = Gap
+# Takes the gap away, closing up the time it took.
+editor-island-gap-remove = Remove the gap
+editor-island-gap-confirm-remove = Confirm removing
+# Takes the gap's own background away, so it shows the recording's again.
+editor-island-gap-clear-background = Clear gap background
+
 ## Several beats and lulls gathered on the strip with Shift
 
 # $count is how many beats and lulls are chosen, two or more.
@@ -400,6 +409,8 @@ editor-island-scene-stacked = Stacked
 editor-island-scene-picture-in-picture = Picture in picture
 editor-island-scene-camera-only = Camera only
 editor-island-scene-screen-only = Screen only
+# A layout showing neither the screen nor the camera: the background alone, for drawing on or showing pictures while the recording plays on.
+editor-island-scene-blank = Blank
 # Where the camera sits against the screen in a pair: on one side of the video or the other, or above or below.
 editor-island-scene-camera-place = Camera
 editor-island-scene-left = Left

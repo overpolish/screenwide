@@ -7,19 +7,19 @@ import {
 } from "../../glyphs/scene-layout-drawing";
 import { presetName } from "../../island/scene/scene-names";
 import { sceneLandingMs } from "../../recording/scenes/recording-scene-arrangement";
+import { LEAST_SCENE_MS } from "../../recording/scenes/recording-scene-gaps";
 import { sceneCustomLabel } from "../../recording/scenes/recording-scene-labels";
 import { type TimelineAnnotation } from "../annotation-lane/annotation-lane";
 import { type TimelineScene } from "../scene-rail/scene-clip";
 import { drawnSceneSpan, LEAST_DRAWN_S } from "../scene-rail/scene-draw";
 import { type Playhead } from "../scrub-playhead";
-import { baseOf, partId } from "../strip/strip-part";
+import { baseOf } from "../strip/strip-part";
 import {
   isPlayheadOutside,
   type StripSelection,
 } from "../strip/strip-selection";
 import { type Span, type TimeMap } from "../timeline-scale";
 
-import { playedMs, recordedParts, retimedParts } from "./recording-strip-time";
 import { type RecordingStripSteps } from "./use-recording-strip-edits";
 
 import type { RecordingStripLanes } from "./use-recording-strip";
@@ -27,14 +27,14 @@ import type { RecordingAnnotationClip } from "../../../../bindings/RecordingAnno
 import type { RecordingSceneClip } from "../../../../bindings/RecordingSceneClip";
 
 // The strip's lanes over the recording's own annotations and scenes, which
-// the edit times in the edited recording's milliseconds and the strip in
-// recorded seconds. Retimed, restacked or drawn on the strip, they change
-// through the hooks that own them, as their lanes did; chosen, an
+// the edit times in the edited recording's milliseconds and the strip lays
+// out where they play, in played seconds (`strip-lane-time.ts`), each one
+// piece wherever it runs. Retimed, restacked or drawn on the strip, they
+// change through the hooks that own them, as their lanes did; chosen, an
 // annotation takes up Select, whose island follows it to its pen, and a
 // scene takes up the Scene tool, whose island is its mode.
 
-/** Shorter than this, in ms, a scene would spend its whole life arriving. */
-const LEAST_SCENE_MS = 500;
+type TimedSpan = { endMs: number; startMs: number };
 
 export type RecordingStripLaneSource = {
   annotations: {
@@ -46,13 +46,15 @@ export type RecordingStripLaneSource = {
   };
   /** Takes up a tool, as choosing an annotation or a scene does. */
   changeCanvasTool: (tool: "scene" | "select") => void;
+  /** The gaps on the timeline, in ms, which a scene stops at the edges of
+   * as at another scene's. */
+  gaps: readonly TimedSpan[];
+  /** How the recording plays, which brings the playhead to a moment. */
   map: TimeMap;
   /** Opens the Captions mode. */
   openCaptions: () => void;
   /** Where the playhead stands, a share of what plays. */
   playhead: Playhead;
-  /** What plays on without a jump, in played seconds (`RecordingStripTime`). */
-  runs: Span[];
   scenes: {
     /** Whether a scene can place the camera: a drawn scene starts as a
      * picture in picture only where it can, else as the screen alone. */
@@ -73,13 +75,16 @@ export type RecordingStripLaneSource = {
   steps: RecordingStripSteps;
 };
 
-/** The room a scene has between its neighbours, leaving out `except`. */
+/** The room a scene has between its neighbours and the gaps, leaving out
+ * `except`. */
 function roomAround(
-  clips: RecordingSceneClip[],
+  obstacles: readonly (TimedSpan & { id?: string })[],
   atMs: number,
   except?: string,
 ) {
-  const others = clips.filter(({ id }) => id !== except);
+  const others = obstacles.filter(
+    ({ id }) => except === undefined || id !== except,
+  );
   return {
     from: Math.max(
       0,
@@ -95,31 +100,38 @@ function roomAround(
 }
 
 export function recordingStripLanes(source: RecordingStripLaneSource) {
-  const { annotations, map, runs, scenes, steps } = source;
-  const partsOf = (clip: { endMs: number; startMs: number }) =>
-    recordedParts(map, runs, clip);
+  const { annotations, map, scenes, steps } = source;
+  const obstacles = [...scenes.clips, ...source.gaps];
+  /** A clip where it plays, in played seconds: one piece, as it plays. */
+  const playedOf = (clip: { endMs: number; startMs: number }) => ({
+    end: clip.endMs / 1000,
+    start: clip.startMs / 1000,
+  });
+  /** A span the strip tells, in played seconds, in edited ms. */
+  const timedMs = ({ end, start }: Span) => ({
+    endMs: Math.round(end * 1000),
+    startMs: Math.round(start * 1000),
+  });
   // Later clips are drawn in front, on the top lane.
   const laneOfClip = (index: number) => annotations.clips.length - 1 - index;
-  const timelineAnnotations: TimelineAnnotation[] = annotations.clips.flatMap(
-    (clip, index) =>
-      partsOf(clip).map((span, part) => ({
-        ...span,
-        id: partId(clip.annotation.id, part),
-        kind: clip.annotation.shape.kind,
-        lane: laneOfClip(index),
-      })),
+  const timelineAnnotations: TimelineAnnotation[] = annotations.clips.map(
+    (clip, index) => ({
+      ...playedOf(clip),
+      id: clip.annotation.id,
+      kind: clip.annotation.shape.kind,
+      lane: laneOfClip(index),
+    }),
   );
-  const timelineScenes: TimelineScene[] = scenes.clips.flatMap((clip) => {
+  const timelineScenes: TimelineScene[] = scenes.clips.map((clip) => {
     const preset: ScenePreset =
       clip.preset === "full" ? "screen-only" : clip.preset;
-    const landsAt = map.toRecorded(sceneLandingMs(clip) / 1000);
-    return partsOf(clip).map((span, part) => ({
-      ...span,
+    return {
+      ...playedOf(clip),
       drawing: scenes.drawingOf(clip),
-      id: partId(clip.id, part),
-      landsAt,
+      id: clip.id,
+      landsAt: sceneLandingMs(clip) / 1000,
       name: clip.boxes ? sceneCustomLabel() : presetName(preset),
-    }));
+    };
   });
   const sortedScenes = (clips: RecordingSceneClip[]) =>
     [...clips].sort((one, other) => one.startMs - other.startMs);
@@ -135,8 +147,7 @@ export function recordingStripLanes(source: RecordingStripLaneSource) {
         ]),
       );
       for (const { id, lane: was } of timelineAnnotations) {
-        if (id in laneOf && laneOf[id] !== was)
-          laneOfBase.set(baseOf(id), laneOf[id]);
+        if (id in laneOf && laneOf[id] !== was) laneOfBase.set(id, laneOf[id]);
       }
       const order = [...annotations.clips].sort(
         (one, other) =>
@@ -150,10 +161,7 @@ export function recordingStripLanes(source: RecordingStripLaneSource) {
     onAnnotationRetime: (id, start, end) => {
       const next = annotations.clips.map((clip) =>
         clip.annotation.id === baseOf(id)
-          ? {
-              ...clip,
-              ...retimedParts({ map, runs }, clip, { end, id, start }),
-            }
+          ? { ...clip, ...timedMs({ end, start }) }
           : clip,
       );
       steps.step(() => {
@@ -163,10 +171,11 @@ export function recordingStripLanes(source: RecordingStripLaneSource) {
     onCaptionPress: source.openCaptions,
     onSceneDraw: (from, to) => {
       if (!scenes.isAvailable) return;
-      const fromMs = playedMs(map, Math.min(from, to));
-      const toMs = playedMs(map, Math.max(from, to), true);
-      // Drawn too short, it grows as the rail showed it, not vanishing.
-      const room = roomAround(scenes.clips, fromMs);
+      // In the order drawn, so a drag too short grows from where it was
+      // pressed, as the rail showed it, rather than vanishing.
+      const fromMs = from * 1000;
+      const toMs = to * 1000;
+      const room = roomAround(obstacles, fromMs);
       const span = drawnSceneSpan(
         { from: fromMs, to: toMs },
         { from: room.from, to: Math.min(room.to, map.duration * 1000) },
@@ -189,25 +198,30 @@ export function recordingStripLanes(source: RecordingStripLaneSource) {
       // Scene island show the scene under the playhead, which would
       // otherwise be another or none, and a layout chosen there would add a
       // scene.
-      const parts = partsOf(clip);
-      const at = map.toRecorded(source.playhead.ratio() * map.duration);
-      if (parts.every((span) => isPlayheadOutside(at, span)))
+      const played = source.playhead.ratio() * map.duration;
+      if (isPlayheadOutside(played, playedOf(clip)))
         source.seek(map.toRecorded(sceneLandingMs(clip) / 1000));
     },
     onSceneRetime: (id, start, end) => {
       const own = scenes.clips.find((clip) => clip.id === baseOf(id));
       if (!own) return;
-      const room = roomAround(
-        scenes.clips,
-        (own.startMs + own.endMs) / 2,
-        own.id,
-      );
-      const pulled = retimedParts({ map, runs }, own, { end, id, start });
-      const startMs = Math.max(pulled.startMs, room.from);
-      const endMs = Math.max(
-        Math.min(pulled.endMs, room.to),
-        startMs + LEAST_SCENE_MS,
-      );
+      const room = roomAround(obstacles, (own.startMs + own.endMs) / 2, own.id);
+      const pulled = timedMs({ end, start });
+      // Moved whole, it keeps its length and stops at a gap as at a scene,
+      // rather than being squeezed against it.
+      const length = own.endMs - own.startMs;
+      const isMoved =
+        pulled.startMs !== own.startMs &&
+        Math.abs(pulled.endMs - pulled.startMs - length) < 2;
+      const startMs = isMoved
+        ? Math.min(
+            Math.max(pulled.startMs, room.from),
+            Math.max(room.from, room.to - length),
+          )
+        : Math.max(pulled.startMs, room.from);
+      const endMs = isMoved
+        ? startMs + length
+        : Math.max(Math.min(pulled.endMs, room.to), startMs + LEAST_SCENE_MS);
       steps.step(() => {
         scenes.onClipsChange(
           scenes.clips.map((clip) =>

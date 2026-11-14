@@ -11,23 +11,26 @@ const layerOf = (selection: RecordingPreviewSelection) =>
 
 /**
  * What the select tool may pick as a scene draws the panes: the pane in hand
- * and every pane a press may land on. A pane the scene hides is neither drawn
- * nor picked. A custom scene's box moves and resizes like any layer, but the
- * canvas it sits on is the scene's to size, so dragging it never grows the
- * canvas. The screen carries how it is turned, by the scene or, outside every
- * scene, by its own turn, which its chrome is drawn through and the rotation
- * gizmo turns. `freeScreen` frees the screen of a scene that otherwise fixes
- * its panes, a preset's, which its first move or resize makes custom, so the
- * select tool's handles resize it as a box rather than zoom it in place.
- * While the crop tool reframes a pane, `reframe` stands in for it. A press
- * over both panes finds the last target, the one drawn in front, so a scene
- * that puts the camera behind lists the screen after it.
+ * and every pane a press may land on. A pane the scene hides, or a gap, which
+ * shows neither, is neither drawn nor picked. A custom scene's box moves and
+ * resizes like any layer, but the canvas it sits on is the scene's to size,
+ * so dragging it never grows the canvas. The screen carries how it is
+ * turned, by the scene or, outside every scene, by its own turn, which its
+ * chrome is drawn through and the rotation gizmo turns. `freeScreen` frees
+ * the screen of a scene that otherwise fixes its panes, a preset's, which
+ * its first move or resize makes custom, so the select tool's handles resize
+ * it as a box rather than zoom it in place; `freeCamera` frees a camera-only
+ * scene's camera so. While the crop tool reframes a pane, `reframe` stands
+ * in for it. A press over both panes finds the last target, the one drawn in
+ * front, so a scene that puts the camera behind lists the screen after it.
  */
 export function scenePanePicks({
   arrangement,
   canPreviewBakedCamera,
+  freeCamera,
   freeScreen,
   isFramed,
+  isInGap,
   overlay,
   reframe,
   screenRotation,
@@ -35,8 +38,11 @@ export function scenePanePicks({
 }: {
   arrangement: RecordingSceneArrangement | null | undefined;
   canPreviewBakedCamera: boolean;
+  freeCamera: boolean;
   freeScreen: boolean;
   isFramed: boolean;
+  /** Whether the playhead is in a gap, where neither pane is drawn. */
+  isInGap: boolean;
   overlay: RecordingPreviewSelection | null;
   reframe: RecordingPreviewSelection | undefined;
   /** How the screen turns itself, outside every scene. */
@@ -44,10 +50,11 @@ export function scenePanePicks({
   targets: RecordingPreviewSelection[] | null;
 }) {
   const placedFreely = (given: RecordingPreviewSelection) => {
+    const freed =
+      (freeScreen && layerOf(given) === 0) ||
+      (freeCamera && canPreviewBakedCamera && layerOf(given) === 1);
     const selection =
-      freeScreen && layerOf(given) === 0 && !given.cropMode
-        ? { ...given, framed: false }
-        : given;
+      freed && !given.cropMode ? { ...given, framed: false } : given;
     const placed =
       isFramed &&
       !selection.framed &&
@@ -66,11 +73,12 @@ export function scenePanePicks({
   };
   const opacity = arrangement?.opacity;
   const isHidden = (selection: RecordingPreviewSelection) =>
-    opacity !== undefined &&
-    ((layerOf(selection) === 0 && opacity.screen === 0) ||
-      (layerOf(selection) === 1 &&
-        canPreviewBakedCamera &&
-        opacity.camera === 0));
+    (isInGap && layerOf(selection) <= 1) ||
+    (opacity !== undefined &&
+      ((layerOf(selection) === 0 && opacity.screen === 0) ||
+        (layerOf(selection) === 1 &&
+          canPreviewBakedCamera &&
+          opacity.camera === 0)));
   const pane = reframe ?? overlay;
   const shown = targets
     ?.filter((target) => !isHidden(target))

@@ -105,6 +105,7 @@ pub(super) fn timeline(scene: serde_json::Value) -> TimelinePlan {
         playback_rate: 1.0,
         source_end: 1.0,
         source_start: 0.0,
+        background: None,
       }],
     },
     2_000,

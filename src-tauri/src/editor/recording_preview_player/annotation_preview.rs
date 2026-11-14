@@ -37,7 +37,7 @@ pub(super) fn apply_clips(
   {
     settings.annotations = revealed_annotations(
       clips,
-      &scenes,
+      scenes.own(),
       track,
       ranges,
       source_ms,

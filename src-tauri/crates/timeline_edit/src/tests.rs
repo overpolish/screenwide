@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use super::*;
-use screenwide_timeline::source_after_output_duration_us;
+use screenwide_timeline::{source_after_output_duration_us, TimelineRange};
 
 #[test]
 fn old_edits_default_deleted_shortcuts_to_empty() {
@@ -70,12 +70,14 @@ fn edit(artifact_id: u64, split: f64) -> RecordingTimelineEdit {
         source_end: split,
         source_start: 0.0,
         playback_rate: 1.0,
+        background: None,
       },
       RecordingTimelineSegment {
         id: 1,
         source_end: 1.0,
         source_start: split,
         playback_rate: 1.0,
+        background: None,
       },
     ],
   }
@@ -91,6 +93,42 @@ fn rejects_overlapping_or_empty_segments() {
 }
 
 #[test]
+fn a_gap_plays_past_the_recording_and_never_joins_it() {
+  // An 8 s recording split in half, a 2 s gap between the halves: its own
+  // stretch of the empty source past the end, 2 s being a quarter of 8.
+  let mut timeline = edit(1, 0.5);
+  timeline.next_segment_id = 3;
+  timeline.segments.insert(
+    1,
+    RecordingTimelineSegment {
+      id: 2,
+      source_end: 3.25,
+      source_start: 3.0,
+      playback_rate: 1.0,
+      background: None,
+    },
+  );
+  assert!(validate(&timeline).is_ok());
+  let plan = TimelinePlan::from_edit(&timeline, 8_000).unwrap();
+  assert_eq!(plan.duration_ms(), 10_000);
+  let gap = &plan.gap_scenes()[0];
+  assert_eq!(
+    (plan.gap_scenes().len(), gap.start_ms, gap.end_ms),
+    (1, 4_000, 6_000)
+  );
+  assert_eq!(plan.source_to_output_us(24_500_000), Some(4_500_000));
+  assert_eq!(plan.source_to_output_us(5_000_000), Some(7_000_000));
+  // A gap plays at speed one, and a timeline of gaps alone plays nothing
+  // of the recording.
+  let mut hurried = timeline.clone();
+  hurried.segments[1].playback_rate = 2.0;
+  assert!(validate(&hurried).is_err());
+  let mut only_gap = timeline;
+  only_gap.segments.retain(RecordingTimelineSegment::is_gap);
+  assert!(validate(&only_gap).is_err());
+}
+
+#[test]
 fn export_plan_coalesces_cuts_and_maps_retained_source_time() {
   let mut timeline = edit(1, 0.25);
   timeline.next_segment_id = 4;
@@ -99,6 +137,7 @@ fn export_plan_coalesces_cuts_and_maps_retained_source_time() {
     source_end: 1.0,
     source_start: 0.75,
     playback_rate: 1.0,
+    background: None,
   });
   timeline.segments[1].source_end = 0.5;
 
@@ -122,6 +161,7 @@ fn a_moment_cut_away_shows_the_frame_beside_it() {
     source_end: 1.0,
     source_start: 0.75,
     playback_rate: 1.0,
+    background: None,
   });
   let plan = TimelinePlan::from_edit(&timeline, 8_000).unwrap();
   assert_eq!(plan.output_frame_at_us(0), 0);

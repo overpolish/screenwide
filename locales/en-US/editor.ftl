@@ -53,6 +53,7 @@ editor-recording-preparing-recording = Preparing recording preview
 
 ## Scenes, as the lane and the Scene panel name them
 
+editor-scene-blank = Blank
 editor-scene-custom = Custom
 editor-scene-camera-only = Camera only
 editor-scene-picture-in-picture = Picture in picture

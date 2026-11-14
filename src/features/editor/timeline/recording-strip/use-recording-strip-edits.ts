@@ -22,6 +22,10 @@ import {
   withListsOf,
 } from "./recording-strip-edits";
 import {
+  gapSegmentIdOf,
+  trimRecordingTimelineGap,
+} from "./recording-strip-gaps";
+import {
   lullPlayed,
   type RecordingStripLulls,
   squeezedTo,
@@ -154,8 +158,20 @@ export function useRecordingStripEdits({
       );
     },
     // A part trims its own stretch, so the parts either side of a split
-    // keep theirs.
+    // keep theirs; a gap's ends move its own empty stretch, in or out.
     onBeatTrim: (id: string, edge: "end" | "start", at: number) => {
+      const gapId = gapSegmentIdOf(baseOf(id));
+      if (gapId !== null) {
+        steps.step(
+          trimRecordingTimelineGap(edit, {
+            atMs: at * 1000,
+            durationMs: recorded * 1000,
+            edge,
+            id: gapId,
+          }),
+        );
+        return;
+      }
       const span = spanOf("beat", id);
       if (!span) return;
       steps.step(

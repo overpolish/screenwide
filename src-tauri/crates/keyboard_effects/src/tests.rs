@@ -29,6 +29,7 @@ fn speed_plan(rate: f64) -> TimelinePlan {
         source_start: 0.0,
         source_end: 1.0,
         playback_rate: rate,
+        background: None,
       }],
     },
     10_000,

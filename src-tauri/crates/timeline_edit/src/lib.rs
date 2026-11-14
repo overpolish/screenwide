@@ -11,7 +11,8 @@
 //! the segments re-time the annotation and scene clips as they are made,
 //! and leave the audio clips where they are.
 
-use screenwide_timeline::{output_at_us, source_to_output_us, TimelineRange};
+mod plan;
+pub use plan::TimelinePlan;
 mod validation;
 pub use validation::validate;
 mod silences;
@@ -27,8 +28,9 @@ use ts_rs::TS;
 
 /// Annotations are drawn in document order, segments play in list order,
 /// which need not be source order, annotation and scene clips are times on
-/// the timeline, and audio clips may be laid under it.
-pub const FORMAT_VERSION: u16 = 5;
+/// the timeline, audio clips may be laid under it, and segments past the
+/// recording's end are gaps ([`RecordingTimelineSegment::is_gap`]).
+pub const FORMAT_VERSION: u16 = 6;
 /// Version 2 edits always kept segments in source order, which later
 /// versions still read the same way.
 const OLDEST_READABLE_VERSION: u16 = 2;
@@ -44,6 +46,11 @@ const MAX_SEGMENTS: usize = 100_000;
 mod keyboard;
 pub use keyboard::RecordingTimelineKeyboardDeletions;
 
+/// A stretch the timeline plays: of the recording, as shares of its length,
+/// at a speed of its own; or, past its end (a source of one or more), a gap,
+/// time with nothing recorded behind it, always at speed one, which may show
+/// a background of its own. Each gap keeps a stretch of that empty source of
+/// its own, so no two ever meet.
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize, TS)]
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
@@ -54,6 +61,18 @@ pub struct RecordingTimelineSegment {
   #[serde(default = "default_playback_rate")]
   #[ts(as = "Option<f64>", optional)]
   pub playback_rate: f64,
+  /// A gap's own background, over the recording's; never set on a stretch
+  /// of the recording.
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  #[ts(optional)]
+  pub background: Option<screenwide_background::Background>,
+}
+
+impl RecordingTimelineSegment {
+  /// Whether the segment is a gap rather than a stretch of the recording.
+  pub fn is_gap(&self) -> bool {
+    self.source_start >= 1.0
+  }
 }
 
 const fn default_playback_rate() -> f64 {
@@ -131,128 +150,6 @@ pub struct RecordingTimelineEdit {
   pub captions: Option<screenwide_text::captions::RecordingCaptions>,
   pub next_segment_id: u64,
   pub segments: Vec<RecordingTimelineSegment>,
-}
-
-#[derive(Clone, Debug, PartialEq)]
-pub struct TimelinePlan {
-  annotation_clips: Vec<screenwide_annotations::timing::RecordingAnnotationClip>,
-  deleted_keyboard_shortcut_ids: Vec<u64>,
-  deleted_keyboard_shortcut_ranges: Vec<DeletedKeyboardShortcutRange>,
-  /// Read by the export, which arranges each frame as they have it.
-  pub scene_clips: Vec<screenwide_scenes::RecordingSceneClip>,
-  /// The songs and sound effects, with their files once the app has found
-  /// them ([`Self::find_sounds`]).
-  sound_track: screenwide_sound_track::SoundTrack,
-  duration_us: u64,
-  ranges: Vec<TimelineRange>,
-}
-
-impl TimelinePlan {
-  pub fn from_edit(edit: &RecordingTimelineEdit, duration_ms: u64) -> Option<Self> {
-    if duration_ms == 0 || validate(edit).is_err() {
-      return None;
-    }
-    let source_duration_us = duration_ms.saturating_mul(1_000);
-    let mut ranges: Vec<TimelineRange> = Vec::new();
-    for segment in &edit.segments {
-      let source_start_us = (segment.source_start * source_duration_us as f64).round() as u64;
-      let source_end_us = (segment.source_end * source_duration_us as f64).round() as u64;
-      if ranges.last().is_some_and(|range| {
-        range.source_end_us == source_start_us && range.playback_rate == segment.playback_rate
-      }) {
-        ranges.last_mut()?.source_end_us = source_end_us;
-        continue;
-      }
-      let output_start_us = ranges.last().map_or(0, |range| {
-        range.output_start_us.saturating_add(
-          ((range.source_end_us.saturating_sub(range.source_start_us)) as f64 / range.playback_rate)
-            .round() as u64,
-        )
-      });
-      ranges.push(TimelineRange {
-        output_start_us,
-        source_end_us,
-        source_start_us,
-        playback_rate: segment.playback_rate,
-      });
-    }
-    let duration_us = ranges.last().map_or(0, |range| {
-      range.output_start_us.saturating_add(
-        ((range.source_end_us.saturating_sub(range.source_start_us)) as f64 / range.playback_rate)
-          .round() as u64,
-      )
-    });
-    let plan = Self {
-      annotation_clips: edit.annotation_clips.clone(),
-      deleted_keyboard_shortcut_ids: edit.keyboard_deletions.shortcut_ids.clone(),
-      deleted_keyboard_shortcut_ranges: keyboard::ranges(
-        &edit.keyboard_deletions,
-        &edit.segments,
-        duration_ms,
-      ),
-      duration_us,
-      scene_clips: edit.scene_clips.clone(),
-      sound_track: screenwide_sound_track::SoundTrack {
-        clips: edit.audio_clips.clone(),
-        muted: edit.muted_audio.clone(),
-        ..Default::default()
-      },
-      ranges,
-    };
-    (!plan.annotation_clips.is_empty()
-      || !plan.scene_clips.is_empty()
-      || !plan.sound_track.clips.is_empty()
-      || !plan.is_identity(source_duration_us)
-      || !plan.deleted_keyboard_shortcut_ids.is_empty()
-      || !plan.deleted_keyboard_shortcut_ranges.is_empty())
-    .then_some(plan)
-  }
-
-  pub fn annotation_clips(&self) -> &[screenwide_annotations::timing::RecordingAnnotationClip] {
-    &self.annotation_clips
-  }
-
-  pub fn duration_ms(&self) -> u64 {
-    self.duration_us.div_ceil(1_000)
-  }
-
-  pub fn ranges(&self) -> &[TimelineRange] {
-    &self.ranges
-  }
-
-  pub fn deleted_keyboard_shortcut_ids(&self) -> &[u64] {
-    &self.deleted_keyboard_shortcut_ids
-  }
-
-  pub fn deleted_keyboard_shortcut_ranges(&self) -> &[DeletedKeyboardShortcutRange] {
-    &self.deleted_keyboard_shortcut_ranges
-  }
-
-  #[cfg_attr(not(target_os = "windows"), allow(dead_code))]
-  pub fn source_to_output_us(&self, source_us: u64) -> Option<u64> {
-    source_to_output_us(&self.ranges, source_us)
-  }
-
-  /// Where the frame shown for the source moment `source_us` sits in the
-  /// output. A moment the edit cuts away, such as a playhead resting at 0
-  /// in a recording whose start is cut, shows the frame restoring it would
-  /// sit beside; past the last kept moment, the last frame.
-  pub fn output_frame_at_us(&self, source_us: u64) -> u64 {
-    self.source_to_output_us(source_us).unwrap_or_else(|| {
-      let landed = output_at_us(&self.ranges, source_us as f64).round() as u64;
-      landed.min(self.duration_us.saturating_sub(1))
-    })
-  }
-
-  fn is_identity(&self, source_duration_us: u64) -> bool {
-    self.ranges.as_slice()
-      == [TimelineRange {
-        output_start_us: 0,
-        source_end_us: source_duration_us,
-        source_start_us: 0,
-        playback_rate: 1.0,
-      }]
-  }
 }
 
 /// The edit as a project keeps it. The revision orders saves that can arrive

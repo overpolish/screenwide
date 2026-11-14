@@ -61,6 +61,15 @@ impl StillFrames for Stills {
       rough,
       ..
     } = seek;
+    // A gap's moment lies past the recording's end: the frame playback
+    // holds there is decoded for it, under the panes the gap fades away,
+    // and the still is composed at the gap's own.
+    let gap_ms = sources.scenes.is_gap(position_ms).then_some(position_ms);
+    let decode_ms = sources
+      .scenes
+      .held_ms(position_ms)
+      .unwrap_or(position_ms)
+      .min(sources.duration_ms.saturating_sub(1));
     if let Some((_, [screen, camera])) = self
       .settled
       .as_ref()
@@ -69,7 +78,7 @@ impl StillFrames for Stills {
       if sources.playing.load(Ordering::Acquire) {
         return;
       }
-      let presented = present_still(sources, screen.as_ref(), camera.as_ref());
+      let presented = present_still(sources, screen.as_ref(), camera.as_ref(), gap_ms);
       if presented {
         announce_ready(sources, events, (position_ms, position_ms), request_id);
         return;
@@ -86,7 +95,7 @@ impl StillFrames for Stills {
       // seeks keep their warm reader unless it demonstrably falls behind,
       // preserving fast drag feedback.
       if reader.is_none() || !rough {
-        match GpuVideoReader::open_at(path, position_ms, self.surface.device()) {
+        match GpuVideoReader::open_at(path, decode_ms, self.surface.device()) {
           Ok(opened) => *reader = Some(opened),
           Err(message) => {
             let _ = events.send(RecordingPreviewPlayerEvent::Error { message });
@@ -95,8 +104,8 @@ impl StillFrames for Stills {
           }
         }
       } else if let Some(reader) = reader.as_mut() {
-        if should_seek(reader.last_timestamp_ms(), position_ms, rough) {
-          if let Err(message) = reader.seek(position_ms, rough) {
+        if should_seek(reader.last_timestamp_ms(), decode_ms, rough) {
+          if let Err(message) = reader.seek(decode_ms, rough) {
             let _ = events.send(RecordingPreviewPlayerEvent::Error { message });
             presented = false;
             break;
@@ -105,7 +114,7 @@ impl StillFrames for Stills {
       }
       let decoded = match reader
         .as_mut()
-        .and_then(|reader| reader.frame_at(position_ms).transpose())
+        .and_then(|reader| reader.frame_at(decode_ms).transpose())
       {
         Some(Ok(frame)) => Some(frame),
         Some(Err(message)) => {
@@ -117,7 +126,7 @@ impl StillFrames for Stills {
       };
       let needs_reopen = decoded
         .as_ref()
-        .is_none_or(|frame| frame_is_stale(frame.timestamp_ms, position_ms));
+        .is_none_or(|frame| frame_is_stale(frame.timestamp_ms, decode_ms));
       let frame = if needs_reopen && rough {
         // Reopening a Media Foundation reader costs far more than the drag has
         // to spare. Retry the seek on the warm reader instead and, if it still
@@ -125,8 +134,8 @@ impl StillFrames for Stills {
         // more step; the settled seek that ends the drag is authoritative.
         let recovered = reader.as_mut().and_then(|reader| {
           reader
-            .seek(position_ms, true)
-            .and_then(|()| reader.frame_at(position_ms))
+            .seek(decode_ms, true)
+            .and_then(|()| reader.frame_at(decode_ms))
             .ok()
             .flatten()
         });
@@ -136,13 +145,11 @@ impl StillFrames for Stills {
         };
         recovered
       } else if needs_reopen {
-        match GpuVideoReader::open(path, position_ms, self.surface.device()).and_then(
-          |mut opened| {
-            let frame = opened.frame_at(position_ms)?;
-            *reader = Some(opened);
-            frame.ok_or_else(|| "Media Foundation returned no frame after reopening".to_owned())
-          },
-        ) {
+        match GpuVideoReader::open(path, decode_ms, self.surface.device()).and_then(|mut opened| {
+          let frame = opened.frame_at(decode_ms)?;
+          *reader = Some(opened);
+          frame.ok_or_else(|| "Media Foundation returned no frame after reopening".to_owned())
+        }) {
           Ok(recovered) => recovered,
           Err(message) => {
             let _ = events.send(RecordingPreviewPlayerEvent::Error { message });
@@ -166,7 +173,7 @@ impl StillFrames for Stills {
     // not moving, so its annotations are not blurred.
     let [screen, camera] = &frames;
     if screen.is_some() || camera.is_some() {
-      presented &= present_still(sources, screen.as_ref(), camera.as_ref());
+      presented &= present_still(sources, screen.as_ref(), camera.as_ref(), gap_ms);
     }
     if presented {
       announce_ready(sources, events, (position_ms, position_ms), request_id);

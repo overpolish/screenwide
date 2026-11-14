@@ -102,6 +102,7 @@ fn exported(name: &str, camera: Vec<Annotation>) -> impl Fn(u32, u32) -> [u8; 3]
         source_start: 0.0,
         source_end: 1.0,
         playback_rate: 1.0,
+        background: None,
       }],
     },
     2_000,

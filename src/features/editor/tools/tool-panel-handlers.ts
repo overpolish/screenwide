@@ -120,6 +120,9 @@ export type ToolPanelHandlers = {
   onFrameReset?: () => void;
   /** Size the output canvas to what a field asked for. */
   onFrameSizeChange?: (size: { height?: number; width?: number }) => void;
+  /** Give the gap chosen on the strip this background, or the recording's
+   * again for null. */
+  onGapBackgroundChange?: (background: Background | null) => void;
   /** Draw every shortcut with these settings. */
   onKeyboardEffectsChange?: (settings: Partial<KeyboardEffectSettings>) => void;
   /** Bring back every shortcut deleted from the timeline. */

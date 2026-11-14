@@ -116,7 +116,7 @@ pub(crate) async fn compose_preview_frames(
           .unwrap_or_else(|poisoned| poisoned.into_inner());
         output.primary.annotations = revealed_annotations(
           clips,
-          &scenes,
+          scenes.own(),
           AnnotationTrack::Primary,
           &ranges,
           position_ms,
@@ -125,7 +125,7 @@ pub(crate) async fn compose_preview_frames(
         );
         output.camera.annotations = revealed_annotations(
           clips,
-          &scenes,
+          scenes.own(),
           AnnotationTrack::Camera,
           &ranges,
           position_ms,

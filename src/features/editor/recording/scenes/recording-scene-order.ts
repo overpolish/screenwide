@@ -24,16 +24,20 @@ const withCameraBehind = (
 const isInFront = (clip: RecordingSceneClip, pane: ScenePane) =>
   (pane === "camera") !== Boolean(clip.boxes?.cameraBehind);
 
+/** Whether `clip` is custom and shows a box for each pane. */
+const hasTwoPanes = (clip: RecordingSceneClip) =>
+  Boolean(clip.boxes?.camera) && !clip.boxes?.screenHidden;
+
 /**
  * The moves a menu on `pane` offers through `clip`'s order. Only a custom
- * scene with a box for each pane orders them, and with two panes the step
+ * scene showing a box for each pane orders them, and with two panes the step
  * and the jump go the same way, so each is offered with the other.
  */
 export const scenePaneArrangements = (
   clip: RecordingSceneClip,
   pane: ScenePane,
 ) => {
-  const orderable = Boolean(clip.boxes?.camera);
+  const orderable = hasTwoPanes(clip);
   const inFront = isInFront(clip, pane);
   return {
     canBringForward: orderable && !inFront,
@@ -48,7 +52,7 @@ export const arrangedScenePane = (
   pane: ScenePane,
   move: Arrangement,
 ): RecordingSceneClip => {
-  if (!clip.boxes?.camera) return clip;
+  if (!hasTwoPanes(clip)) return clip;
   const toFront = move === "front" || move === "forward";
   return withCameraBehind(clip, pane === "camera" ? !toFront : toFront);
 };
@@ -56,13 +60,14 @@ export const arrangedScenePane = (
 /**
  * `clip` with its two panes traded: each takes the other's box and the other's
  * place in the order, and keeps its own framing and radius. Swapping again
- * gives the scene back. A scene without a box for each pane is left as it is.
+ * gives the scene back. A scene not showing a box for each pane is left as
+ * it is.
  */
 export const swappedScenePanes = (
   clip: RecordingSceneClip,
 ): RecordingSceneClip => {
   const boxes = clip.boxes;
-  if (!boxes?.camera) return clip;
+  if (!boxes?.camera || !hasTwoPanes(clip)) return clip;
   return withCameraBehind(
     { ...clip, boxes: { camera: boxes.screen, screen: boxes.camera } },
     !boxes.cameraBehind,

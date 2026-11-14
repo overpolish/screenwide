@@ -8,9 +8,11 @@
 //! the recording. Outside every clip the recording keeps the composition it
 //! already has. Applying a clip to a frame's output settings is the app's.
 
+mod boxes;
 mod camera_overlay;
 pub mod face;
 pub mod framing;
+mod gaps;
 pub mod geometry;
 pub mod model;
 pub mod motion;
@@ -22,6 +24,7 @@ pub mod variant;
 pub use camera_overlay::CameraOverlaySettings;
 pub use face::{FacePath, FaceSighting};
 pub use framing::SceneFraming;
+pub use gaps::{with_gaps, GapScene};
 pub use model::{validate_clips, RecordingSceneClip, RecordingScenePreset, SceneRadius};
 pub use motion::SceneMotion;
 pub use rotation::SceneRotation;

@@ -53,12 +53,17 @@ export const turnedStoryScene = (scene: TimelineScene): TimelineScene => ({
   },
 });
 
-/** The scenes on a rail, and the recording's length they keep inside. */
-type Rail = { duration: number; scenes: TimelineScene[] };
+/** The scenes on a rail, the recording's length they keep inside, and the
+ * gaps they stop at. */
+type Rail = { duration: number; scenes: TimelineScene[]; gaps?: Span[] };
 
 /** The room between the neighbours of a moment, leaving out `except`. */
-function roomAt({ duration, scenes }: Rail, moment: number, except?: string) {
-  const others = scenes.filter((other) => other.id !== except);
+function roomAt(
+  { duration, gaps = [], scenes }: Rail,
+  moment: number,
+  except?: string,
+) {
+  const others = [...scenes.filter((other) => other.id !== except), ...gaps];
   return {
     from: Math.max(
       0,

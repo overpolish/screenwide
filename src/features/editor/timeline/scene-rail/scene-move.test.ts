@@ -7,7 +7,7 @@ import { partId } from "../strip/strip-part";
 
 import { movedScene } from "./scene-move";
 
-const scenes = [
+const taken = [
   { end: 4, id: "a", start: 2 },
   { end: 10, id: "b", start: 6 },
   { end: 16, id: "c", start: 14 },
@@ -16,15 +16,15 @@ const moving = { end: 10, id: "b", start: 6 };
 
 describe("movedScene", () => {
   it("moves a scene whole, stopping at its neighbours", () => {
-    expect(movedScene({ by: 1, duration: 20, moving, scenes }).span).toEqual({
+    expect(movedScene({ by: 1, duration: 20, moving, taken }).span).toEqual({
       end: 11,
       start: 7,
     });
-    expect(movedScene({ by: -5, duration: 20, moving, scenes }).span).toEqual({
+    expect(movedScene({ by: -5, duration: 20, moving, taken }).span).toEqual({
       end: 8,
       start: 4,
     });
-    expect(movedScene({ by: 9, duration: 20, moving, scenes }).span).toEqual({
+    expect(movedScene({ by: 9, duration: 20, moving, taken }).span).toEqual({
       end: 14,
       start: 10,
     });
@@ -33,8 +33,15 @@ describe("movedScene", () => {
   it("keeps a lone scene within the recording", () => {
     const lone = [moving];
     expect(
-      movedScene({ by: 20, duration: 12, moving, scenes: lone }).span,
+      movedScene({ by: 20, duration: 12, moving, taken: lone }).span,
     ).toEqual({ end: 12, start: 8 });
+  });
+
+  it("stops whole at a gap, as at a scene", () => {
+    const gap = { end: 13, start: 11 };
+    expect(
+      movedScene({ by: 2, duration: 20, moving, taken: [moving, gap] }).span,
+    ).toEqual({ end: 11, start: 7 });
   });
 
   it("is not stopped by its own parts", () => {
@@ -47,7 +54,7 @@ describe("movedScene", () => {
         by: 2,
         duration: 20,
         moving: parts[0] ?? moving,
-        scenes: parts,
+        taken: parts,
       }).span,
     ).toEqual({ end: 12, start: 8 });
   });
@@ -62,13 +69,13 @@ describe("movedScene", () => {
           : { isSnapped: true, seconds: edge };
       };
     expect(
-      movedScene({ by: 0.8, duration: 20, moving, scenes }, snapTo(7)),
+      movedScene({ by: 0.8, duration: 20, moving, taken }, snapTo(7)),
     ).toEqual({ guide: 7, span: { end: 11, start: 7 } });
     expect(
-      movedScene({ by: 0.8, duration: 20, moving, scenes }, snapTo(11)),
+      movedScene({ by: 0.8, duration: 20, moving, taken }, snapTo(11)),
     ).toEqual({ guide: 11, span: { end: 11, start: 7 } });
     expect(
-      movedScene({ by: 3.8, duration: 20, moving, scenes }, snapTo(14.2)),
+      movedScene({ by: 3.8, duration: 20, moving, taken }, snapTo(14.2)),
     ).toEqual({ guide: null, span: { end: 14, start: 10 } });
   });
 });

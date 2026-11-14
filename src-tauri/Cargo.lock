@@ -6158,6 +6158,7 @@ name = "screenwide-timeline-edit"
 version = "1.0.3"
 dependencies = [
  "screenwide-annotations",
+ "screenwide-background",
  "screenwide-scenes",
  "screenwide-sound-track",
  "screenwide-text",

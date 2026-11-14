@@ -27,6 +27,7 @@ mod camera_effect_video_tests;
 mod caption_video_tests;
 mod compare_fit_video_tests;
 mod cursor_order_video_tests;
+mod gap_video_tests;
 mod highlight_tests;
 mod keyboard_tests;
 mod magnify_video_tests;

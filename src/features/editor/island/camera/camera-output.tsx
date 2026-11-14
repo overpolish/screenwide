@@ -29,9 +29,7 @@ export function separateCameraIsland({
     section: (
       // The note is all the section holds, so it sets the island's width
       // rather than wrapping to the row's.
-      <Alert className="px-inset-sm" role="status">
-        {t("editor-island-camera-separate")}
-      </Alert>
+      <Alert role="status">{t("editor-island-camera-separate")}</Alert>
     ),
     title: (
       <IslandRowTitle

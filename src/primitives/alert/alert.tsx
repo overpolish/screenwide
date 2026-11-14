@@ -17,11 +17,14 @@ import { Text } from "../text/text";
 // parts it is about. Its lines start at the icon rather than centring each
 // under the last, so a message that wraps reads as one paragraph. One with
 // an action keeps to the start, so the message and its answer read across
-// the line.
+// the line. Either way it starts on the island's text column, inside a
+// section, and one alone ends there too, so a message that wraps keeps off
+// the section's edges; an action reaches the end, flush with the section's
+// controls.
 const alertVariants = tv({
   compoundVariants: [
     {
-      class: { base: "justify-center", lead: "grow-0" },
+      class: { base: "justify-center pe-inset-sm", lead: "grow-0" },
       hasAction: false,
       skin: "island",
     },
@@ -61,7 +64,7 @@ const alertVariants = tv({
       // to the control's height and centres the message beside it.
       island: {
         action: "h-auto",
-        base: "items-center gap-inline rounded-none bg-transparent p-0 text-caption text-fg-secondary",
+        base: "items-center gap-inline rounded-none bg-transparent p-0 ps-inset-sm text-caption text-fg-secondary",
         icon: "[&>svg]:size-icon-sm",
       },
       window: {},

@@ -6,6 +6,7 @@
 //! easing curves effects move along it.
 
 pub mod easing;
+mod gaps;
 mod time_mapping;
 
 pub use time_mapping::{

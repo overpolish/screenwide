@@ -190,14 +190,20 @@ impl<'a> FrameDraw<'a> {
       .map(|cursor| cursor.faded(cursor_shown)),
       None => None,
     };
-    let keyboard = self.keyboard.as_ref().and_then(|keyboard| {
-      keyboard.evaluate_fitted_with_timeline(
-        source_ms,
-        self.keyboard_effects,
-        (self.output.width, self.output.height),
-        self.timeline,
-      )
-    });
+    let keys_shown = self.scenes.keys_shown(source_ms);
+    let keyboard = self
+      .keyboard
+      .as_ref()
+      .filter(|_| keys_shown > 0.0)
+      .and_then(|keyboard| {
+        keyboard.evaluate_fitted_with_timeline(
+          source_ms,
+          self.keyboard_effects,
+          (self.output.width, self.output.height),
+          self.timeline,
+        )
+      })
+      .map(|keyboard| keyboard.faded(keys_shown));
     compositor.draw_with_camera(
       target,
       &screen,

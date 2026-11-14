@@ -28,6 +28,9 @@ export type BeatTrim = {
   /** How wide a second of the beat is drawn, in px: beats play as they
    * were recorded. */
   pxPerSecond: number;
+  /** How far the ends may be drawn out, where not just to the recorded
+   * span: a gap's, which grows as far as a gap may. */
+  reach?: Span;
   /** Where a dragged end settles, such as between two words in reach. */
   snap?: (seconds: number) => number;
 };
@@ -39,6 +42,7 @@ export function BeatTrimHandles({
   onTrim,
   pad,
   pxPerSecond,
+  reach,
   snap = (seconds) => seconds,
   span,
 }: BeatTrim & {
@@ -87,10 +91,11 @@ export function BeatTrimHandles({
         const held = heldRef.current;
         if (held?.edge !== edge) return;
         const moved = snap(held.from + (event.clientX - held.x) / pxPerSecond);
+        const bounds = reach ?? span;
         const at =
           edge === "start"
-            ? Math.min(Math.max(moved, span.start), held.other - LEAST_S)
-            : Math.max(Math.min(moved, span.end), held.other + LEAST_S);
+            ? Math.min(Math.max(moved, bounds.start), held.other - LEAST_S)
+            : Math.max(Math.min(moved, bounds.end), held.other + LEAST_S);
         if (at === held.at) return;
         held.at = at;
         onTrim(edge, at);

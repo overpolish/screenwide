@@ -157,11 +157,17 @@ int screenwide_video_export(const char *screen_path, const char *camera_path,
           if (session->stream_fd < 0 || ring.lastObject == nil) continue;
           frame = [ring.lastObject repeatedAt:output_pts];
         } else {
-          if (!reposition_if_far(session, pts, &screen_sample, &next_screen_sample,
-                                 &camera_sample, &next_camera_sample, &error))
-            break;
-          advance(session->screen_output, &screen_sample, &next_screen_sample, pts);
-          advance(session->camera_output, &camera_sample, &next_camera_sample, pts);
+          // A gap's moments lie past the recording's end: nothing is read
+          // there, and the frame in hand, which the gap hides, is composed
+          // at the gap's own moment.
+          bool in_gap = export_time_us(pts) >= session->source_duration_us;
+          if (!in_gap) {
+            if (!reposition_if_far(session, pts, &screen_sample, &next_screen_sample,
+                                   &camera_sample, &next_camera_sample, &error))
+              break;
+            advance(session->screen_output, &screen_sample, &next_screen_sample, pts);
+            advance(session->camera_output, &camera_sample, &next_camera_sample, pts);
+          }
           CVPixelBufferRef destination = NULL;
           CVPixelBufferPoolRef pool = session->stream_pool ?: session->adaptor.pixelBufferPool;
           if (CVPixelBufferPoolCreatePixelBuffer(kCFAllocatorDefault, pool, &destination) !=

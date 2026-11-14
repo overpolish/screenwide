@@ -440,6 +440,7 @@ fn an_exported_video_carries_the_highlight_on_both_planes() {
         source_start: 0.0,
         source_end: 1.0,
         playback_rate: 1.0,
+        background: None,
       }],
     },
     1_000,

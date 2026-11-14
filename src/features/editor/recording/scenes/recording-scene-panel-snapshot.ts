@@ -136,6 +136,7 @@ export function toolPanelSceneOf({
           camera: current.boxes.camera ?? null,
           cameraBehind: current.boxes.cameraBehind ?? false,
           screen: current.boxes.screen,
+          screenHidden: current.boxes.screenHidden ?? false,
         }
       : null,
     cameraAspect,

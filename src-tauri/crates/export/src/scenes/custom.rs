@@ -7,7 +7,7 @@
 
 use screenwide_output::ScreenshotOutputSettings;
 use screenwide_scenes::geometry::Rect;
-use screenwide_scenes::model::{RecordingScenePreset, SceneBox, SceneBoxes};
+use screenwide_scenes::model::{RecordingScenePreset, SceneBox, SceneBoxes, SceneRadius};
 use screenwide_scenes::{CameraOverlaySettings, RecordingSceneClip, SceneFraming};
 
 use super::target::Base;
@@ -16,15 +16,16 @@ use super::target::Base;
 /// on the screen's `output`, and showing what they show there, so the change
 /// alone moves nothing. `camera` is the camera drawn into the picture, with
 /// its source size, where there is one; a full scene's camera then gets the
-/// recording's own box. `None` for a clip already custom, for one whose
-/// preset hides the screen, which a custom scene would show, and for an
-/// output with no placement to measure from.
+/// recording's own box. A camera-only scene keeps the screen hidden in the
+/// recording's own place. `None` for a clip already custom, for a blank
+/// scene, which has no pane to place, and for an output with no placement
+/// to measure from.
 pub fn made_custom(
   clip: &RecordingSceneClip,
   output: &ScreenshotOutputSettings,
   camera: Option<(&CameraOverlaySettings, (u32, u32))>,
 ) -> Option<RecordingSceneClip> {
-  if clip.boxes.is_some() || !output.has_placement() {
+  if clip.boxes.is_some() || clip.preset == RecordingScenePreset::Blank || !output.has_placement() {
     return None;
   }
   let camera = camera
@@ -33,7 +34,7 @@ pub fn made_custom(
   let base = Base::of(output, camera, None);
   let crop = base.placement.screen;
   let (screen, preset_camera) = match base.preset_panes(clip) {
-    Some(panes) => (panes.screen?, panes.camera),
+    Some(panes) => (panes.screen.unwrap_or(crop), panes.camera),
     None => (crop, None),
   };
   let camera_box = preset_camera.or_else(|| {
@@ -65,13 +66,29 @@ pub fn made_custom(
     }
     .moved((0.0, 0.0), 1.0)
   };
+  let camera_only = clip.preset == RecordingScenePreset::CameraOnly;
+  // A camera filling the canvas is cut by the canvas's corners, not rounded
+  // inside them; a box of its own would round it, so the square corners it
+  // shows are written down.
+  let radius = match clip.radius {
+    Some(SceneRadius {
+      camera: Some(_), ..
+    }) => clip.radius,
+    _ if camera_only => Some(SceneRadius {
+      camera: Some(0.0),
+      ..clip.radius.unwrap_or_default()
+    }),
+    _ => clip.radius,
+  };
   Some(RecordingSceneClip {
     boxes: Some(SceneBoxes {
       screen: share(screen),
       camera: camera_box.map(share),
       camera_behind: false,
+      screen_hidden: camera_only,
     }),
     camera: framing,
+    radius,
     ..clip.clone()
   })
 }

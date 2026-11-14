@@ -126,7 +126,7 @@ impl PreviewPlayerManager {
           return None;
         }
         let sources = self.sources.as_ref()?;
-        let position = self.position_ms.min(sources.duration_ms.saturating_sub(1));
+        let position = sources.moment_ms(self.position_ms);
         self.begin_text_session(pane, position, annotation.id)
       }
       AnnotationTextPhase::Change => {

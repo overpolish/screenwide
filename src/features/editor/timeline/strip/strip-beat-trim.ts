@@ -68,6 +68,7 @@ export function beatTrimOf({
       onTrim(beat.id, edge, at);
     },
     pxPerSecond,
+    reach: beat.reach,
     // A word's start in reach catches the end, so a trim can stop clean
     // between words; further off, the end goes where it is dragged.
     snap: starts

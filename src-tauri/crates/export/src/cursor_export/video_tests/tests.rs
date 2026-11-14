@@ -261,6 +261,7 @@ fn exports_composited_cursor_pixels_into_a_real_movie() {
     source_end,
     source_start,
     playback_rate: 1.0,
+    background: None,
   };
   let timeline = screenwide_timeline_edit::TimelinePlan::from_edit(
     &screenwide_timeline_edit::RecordingTimelineEdit {

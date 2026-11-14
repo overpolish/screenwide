@@ -3,11 +3,13 @@
 
 import { type ToolPanelStripItem } from "../../tools/tool-panel-strip";
 import { type RecordingMoment } from "../moments/recording-moments";
+import { type RecordingTimelineSegment } from "../recording-timeline-types";
 import { baseOf } from "../strip/strip-part";
 import { type StripSelection } from "../strip/strip-selection";
 import { type TimeMap } from "../timeline-scale";
 
 import { type RecordingBeat } from "./recording-beats";
+import { gapSegmentIdOf } from "./recording-strip-gaps";
 import { type RecordingStripLulls } from "./recording-strip-lulls";
 import { playedMs } from "./recording-strip-time";
 
@@ -30,6 +32,7 @@ export function stripIslandItem({
   lulls,
   map,
   moments,
+  segments,
   selection,
 }: {
   artifactId: number;
@@ -38,6 +41,8 @@ export function stripIslandItem({
   /** From recorded to played seconds. */
   map: TimeMap;
   moments: RecordingMoment[];
+  /** What the timeline plays, among them the gaps. */
+  segments: readonly RecordingTimelineSegment[];
   selection: StripSelection | null;
 }): ToolPanelStripItem | null {
   switch (selection?.kind) {
@@ -64,6 +69,15 @@ export function stripIslandItem({
       const found = beats.find(({ id }) => id === baseOf(selection.id));
       if (!found) return null;
       const { beat } = found;
+      if (beat.kind === "gap") {
+        const segmentId = gapSegmentIdOf(found.id);
+        return {
+          background:
+            segments.find(({ id }) => id === segmentId)?.background ?? null,
+          id: selection.id,
+          kind: "gap",
+        };
+      }
       if (beat.kind !== "moment")
         return { beat, id: selection.id, kind: "beat" };
       const index = Number(found.id.slice(MOMENT_PREFIX.length));

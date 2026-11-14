@@ -172,7 +172,7 @@ impl PreviewPlayerManager {
           &scenes,
           track,
           &ranges,
-          self.position_ms.min(sources.duration_ms.saturating_sub(1)),
+          sources.moment_ms(self.position_ms),
           picture,
         )
       })

@@ -5,10 +5,40 @@ import { browseBackgroundImage } from "../../api";
 import { presetName } from "../../tools/frame/background/background";
 import { frameIsland } from "../frame/frame-island";
 
-import type { BackgroundPreset } from "../../tools/frame/background/background";
+import type {
+  Background,
+  BackgroundPreset,
+} from "../../tools/frame/background/background";
 import type { ToolPanelPatch } from "../../tools/tool-panel-patch";
 import type { ToolPanelSnapshot } from "../../tools/tool-panel-store";
 import type { EditorIslandContent } from "../editor-island";
+
+/** What every island choosing a background asks for besides the background
+ * itself: a picture of your own, and the tiles kept and forgotten, which
+ * the Frame island and a gap's share. */
+export const backgroundChoices = (
+  change: (values: ToolPanelPatch) => void,
+  {
+    presets,
+    snapshot,
+  }: { presets: BackgroundPreset[]; snapshot: ToolPanelSnapshot },
+) => ({
+  onPickImage: browseBackgroundImage,
+  onRemovePreset: (id: string) => {
+    change({ removePreset: id });
+  },
+  onSavePreset: (background: Background, name?: string) => {
+    change({
+      savePreset: {
+        background,
+        id: `saved-${Date.now().toString(36)}`,
+        name: name ?? presetName(background),
+      },
+    });
+  },
+  presets,
+  savedPresets: snapshot.backgroundPresets,
+});
 
 /** The canvas: its size and background, over a scene that scene's
  * background, and for a screenshot its corners. A video's corners are never
@@ -31,6 +61,7 @@ export function frameIslandContent({
   // has none; the size stays the recording's.
   const scene = snapshot.scene?.hasSceneAtPlayhead ? snapshot.scene : null;
   return frameIsland({
+    ...backgroundChoices(change, { presets, snapshot }),
     background: scene?.background ?? snapshot.background,
     height: frame.height,
     onBackgroundChange: (background) => {
@@ -39,24 +70,9 @@ export function frameIslandContent({
     onOriginalSize: () => {
       change({ resetFrame: true });
     },
-    onPickImage: browseBackgroundImage,
-    onRemovePreset: (id) => {
-      change({ removePreset: id });
-    },
-    onSavePreset: (background, name) => {
-      change({
-        savePreset: {
-          background,
-          id: `saved-${Date.now().toString(36)}`,
-          name: name ?? presetName(background),
-        },
-      });
-    },
     onSizeChange: (frameSize) => {
       change({ frameSize });
     },
-    presets,
-    savedPresets: snapshot.backgroundPresets,
     width: frame.width,
     ...(capture === "screenshot"
       ? {

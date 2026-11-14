@@ -207,7 +207,6 @@ export function redactionIsland(
         ) : null}
         {isNotSecure ? (
           <Alert
-            className="px-inset-sm"
             color="error"
             icon={<ShieldAlert aria-hidden />}
             key="not-secure"

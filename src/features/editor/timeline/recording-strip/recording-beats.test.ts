@@ -9,6 +9,7 @@ import {
   recordingBeats,
   type RecordingReadings,
   withoutScreen,
+  withoutScreenUnderBlank,
 } from "./recording-beats";
 
 const empty: RecordingReadings = {
@@ -188,5 +189,28 @@ describe("withoutScreen", () => {
       { id: "lull-28000", span: { end: 30, start: 28 } },
     ]);
     expectTiled(found, 30);
+  });
+
+  it("drops what was done on the screen under a blank scene alone", () => {
+    const asPlayed = {
+      duration: 30,
+      toPlayed: (at: number) => at,
+      toRecorded: (at: number) => at,
+    };
+    const blank = {
+      endMs: 13_000,
+      id: "b",
+      preset: "blank" as const,
+      startMs: 5_000,
+    };
+    const found = recordingBeats(
+      withoutScreenUnderBlank(readings, [blank], asPlayed),
+    );
+    expect(found.beats.map(({ beat }) => beat.kind)).toEqual([
+      "speech",
+      "screen",
+      "speech",
+      "moment",
+    ]);
   });
 });

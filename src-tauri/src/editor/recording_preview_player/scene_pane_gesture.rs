@@ -7,7 +7,7 @@
 
 use super::{PreviewCompositionSettings, PreviewPlayerManager};
 use screenwide_export::scenes::{camera_target, made_custom};
-use screenwide_scenes::{RecordingSceneClip, SceneRotation};
+use screenwide_scenes::{RecordingSceneClip, RecordingScenePreset, SceneRotation};
 use screenwide_workspace::editing::SelectionGestureOperation;
 
 /// The index of the clip `timeline_ms` falls in.
@@ -19,13 +19,14 @@ fn clip_at(clips: &[RecordingSceneClip], timeline_ms: u64) -> Option<usize> {
 
 /// A select gesture on a pane of a custom scene `timeline_ms` into the
 /// edited video: the clips with that pane's box moved or resized. A preset
-/// scene's screen moves too: the gesture first makes the scene custom where
-/// it stands (`custom`, as the panel's Custom does), so nothing jumps as it
-/// starts. A preset's camera is left to pan and zoom inside its box. `None`
-/// where the clip there is neither; `Some(None)` for a pane its boxes do not
-/// place, whose gestures stay the recording's own. `delta` is in shares of
-/// the `canvas`, as the boxes are; the screen's is measured on its box padded
-/// by the scene's inset, where its handles are drawn.
+/// scene's screen moves too, and a camera-only scene's camera: the gesture
+/// first makes the scene custom where it stands (`custom`, as the panel's
+/// Custom does), so nothing jumps as it starts. Any other preset's camera is
+/// left to pan and zoom inside its box. `None` where the clip there is
+/// neither; `Some(None)` for a pane its boxes do not place, whose gestures
+/// stay the recording's own. `delta` is in shares of the `canvas`, as the
+/// boxes are; the screen's is measured on its box padded by the scene's
+/// inset, where its handles are drawn.
 pub(super) fn custom_box_gesture(
   clips: &[RecordingSceneClip],
   timeline_ms: u64,
@@ -39,7 +40,12 @@ pub(super) fn custom_box_gesture(
   let index = clip_at(clips, timeline_ms)?;
   let mut next = clips.to_vec();
   if next[index].boxes.is_none() {
-    if layer_id != 0 {
+    let frees = match layer_id {
+      0 => true,
+      1 => bake_camera && clips[index].preset == RecordingScenePreset::CameraOnly,
+      _ => false,
+    };
+    if !frees {
       return None;
     }
     next[index] = custom(&clips[index])?;

@@ -17,10 +17,10 @@ export function SceneRailDraft({
   hover,
   scale,
 }: {
-  /** The scene being drawn, in recorded seconds. */
+  /** The scene being drawn, in the rail's seconds. */
   drawn: Span | null;
-  /** Where the pointer is over the empty rail, in recorded seconds, and the
-   * room there, in px. */
+  /** Where the pointer is over the empty rail, in the rail's seconds, and
+   * the room there, in px. */
   hover: { at: number; room: number } | null;
   scale: TimelineScale;
 }) {

@@ -31,8 +31,8 @@ export type ScenePaneFraming = {
  * screen's `output`: the camera while `selectsCamera` and the scene places
  * one drawn into the picture, else the screen. A scene that hides one pane
  * leaves only the other. Its framing is held where the picture still fills
- * the box the scene settles it in. Null for an output with no placement to
- * measure from.
+ * the box the scene settles it in. Null for a scene that hides both, and
+ * for an output with no placement to measure from.
  */
 export function selectedPaneFraming({
   camera,
@@ -78,6 +78,7 @@ export function selectedPaneFraming({
       pane: "camera",
     };
   }
+  if (target.opacity.screen === 0) return null;
   return {
     aspect: screenAspect,
     box: target.screen,

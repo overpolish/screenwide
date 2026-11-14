@@ -85,6 +85,10 @@ struct Canvas {
   // hides or shows them, then how strong each casts its shadow, which the
   // preview fades as one is turned on or off.
   scene_opacity: vec4<f32>,
+  // `x`: how opaque the screen's annotations, and the cursor carried with
+  // them, are drawn: as the screen is, but kept over the background by a
+  // blank scene that hides the screen.
+  annotation_opacity: vec4<f32>,
   // What the screen's and the camera's pictures say of themselves: whether
   // each is enlarged along its edges where drawn larger than it is
   // (Enhance), then whether each is a person cut out, whose shadow follows
@@ -1271,9 +1275,10 @@ fn screen_pane(result_in: vec4<f32>, screen: ScreenPoint, foreground_only: bool)
 // One run of annotations over `result_in`: the screen's, which carries the
 // cursor, over every mark but shaded and hidden by what acts on the picture,
 // or the camera's own, which a scene fades with the camera rather than with
-// the screen. The screen's are probed at `screen`, the point of the screen
-// the pixel shows, their edges feathered over as much of it as the pixel
-// covers; the camera's at the pixel itself.
+// the screen. The screen's fade with the screen, unless a blank scene keeps
+// them over the background. The screen's are probed at `screen`, the point
+// of the screen the pixel shows, their edges feathered over as much of it as
+// the pixel covers; the camera's at the pixel itself.
 fn annotation_run(result_in: vec4<f32>, base: vec4<f32>, pixel: vec2<f32>, screen: ScreenPoint,
                   camera_run: bool, feather: f32, atlas: AnnotationTextAtlas) -> Panes {
   let below = select(0u, canvas.annotation_options.x, annotations_drawn);
@@ -1304,7 +1309,7 @@ fn annotation_run(result_in: vec4<f32>, base: vec4<f32>, pixel: vec2<f32>, scree
                                            probe_feather, atlas, cursor);
   probing_turned = false;
   result = mix(result_in, result,
-               select(canvas.scene_opacity.x, canvas.scene_opacity.y, camera_run));
+               select(canvas.annotation_opacity.x, canvas.scene_opacity.y, camera_run));
   let shade = annotation_blur_spotlight();
   return Panes(result, base, annotation_blur_mode() == 1u && shade >= first && shade < last);
 }

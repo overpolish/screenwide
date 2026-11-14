@@ -35,6 +35,9 @@ export type StripBeat = {
   isHidden?: boolean;
   /** Its sound, as peaks from 0 to 1. */
   peaks?: number[];
+  /** How far its ends may be drawn out, where not just to its span: a
+   * gap's, which grows as far as a gap may. */
+  reach?: Span;
   /** The screen at the beat, or null while it is read from the video;
    * none where the screen is not in the export. */
   thumbnail?: string | null;

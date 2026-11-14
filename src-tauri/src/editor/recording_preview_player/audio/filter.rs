@@ -92,11 +92,15 @@ pub(super) fn args(
       })
       .unwrap_or_else(|| format!("[track{position}]"))
   };
+  // A range past the recording's end is a gap, which sounds nothing.
+  let is_gap = |range: &RecordingPreviewPlaybackRange| range.source_start_ms >= sources.duration_ms;
+  let recorded = ranges.iter().filter(|range| !is_gap(range)).count();
   // Every range is trimmed from one decode of the source, which therefore
   // starts at the range earliest in it: on a reordered timeline that need
   // not be the first one played.
   let first_start_ms = ranges
     .iter()
+    .filter(|range| !is_gap(range))
     .map(|range| range.source_start_ms)
     .min()
     .unwrap_or(0);
@@ -149,21 +153,38 @@ pub(super) fn args(
   );
   let mut merged_inputs = String::new();
   for (track_position, label) in labels.iter().enumerate() {
-    if ranges.len() > 1 {
-      let split_inputs = (0..ranges.len())
-        .map(|range_index| format!("[track{track_position}source{range_index}]"))
-        .collect::<String>();
-      filter.push_str(&format!("{label}asplit={}{split_inputs};", ranges.len()));
+    match recorded {
+      // Every decoded input is taken up, even where only gaps play.
+      0 => filter.push_str(&format!("{label}anullsink;")),
+      1 => {}
+      _ => {
+        let split_inputs = (0..recorded)
+          .map(|piece| format!("[track{track_position}source{piece}]"))
+          .collect::<String>();
+        filter.push_str(&format!("{label}asplit={recorded}{split_inputs};"));
+      }
     }
     let mut range_inputs = String::new();
+    let mut piece = 0;
     for (range_index, range) in ranges.iter().enumerate() {
+      let output = format!("[track{track_position}range{range_index}]");
+      range_inputs.push_str(&output);
+      if is_gap(range) {
+        filter.push_str(&format!(
+          "anullsrc=r={}:cl=mono,atrim=duration={}{output};",
+          config.sample_rate,
+          seconds(range.duration_ms()),
+        ));
+        continue;
+      }
       let relative_start = range.source_start_ms.saturating_sub(first_start_ms);
       let relative_end = range.source_end_ms.saturating_sub(first_start_ms);
-      let source = if ranges.len() == 1 {
+      let source = if recorded == 1 {
         label.clone()
       } else {
-        format!("[track{track_position}source{range_index}]")
+        format!("[track{track_position}source{piece}]")
       };
+      piece += 1;
       let fades = cut_fades(*range, range_index, ranges.len());
       let tempo = atempo(range.playback_rate);
       let tempo = if tempo.is_empty() {
@@ -172,11 +193,10 @@ pub(super) fn args(
         format!(",{tempo}")
       };
       filter.push_str(&format!(
-        "{source}atrim=start={}:end={},asetpts=PTS-STARTPTS{tempo}{fades}[track{track_position}range{range_index}];",
+        "{source}atrim=start={}:end={},asetpts=PTS-STARTPTS{tempo}{fades}{output};",
         seconds(relative_start),
         seconds(relative_end),
       ));
-      range_inputs.push_str(&format!("[track{track_position}range{range_index}]"));
     }
     let heard = if voice_track == Some(track_position) {
       format!("[track{track_position}heard]")

@@ -9,6 +9,7 @@ import { type Span } from "../timeline-scale";
 import { storyFrameAspect } from "../timeline-story-fixtures";
 
 import { type StripLull } from "./strip-beat-row";
+import { playedSpan } from "./strip-lane-time";
 import { selectionSpan, type StripSelection } from "./strip-selection";
 import { type LiveLull, useStoryContent } from "./strip-story-content";
 import { type StoryRecording } from "./strip-story-fixtures";
@@ -172,6 +173,13 @@ export function LiveStrip(props: LiveStripProps) {
       cancelAnimationFrame(frame);
     };
   });
+  // The editor times what lies over the timeline as it plays; the story
+  // keeps it as recorded, and lays it out where it plays for the strip.
+  const played = <T extends Span>(each: T) => ({
+    ...each,
+    ...playedSpan(map, each),
+  });
+  const recordedAt = (seconds: number) => map.toRecorded(seconds);
 
   return (
     <TimelineStrip
@@ -179,9 +187,14 @@ export function LiveStrip(props: LiveStripProps) {
       annotations={
         props.isAnnotationsHidden || !props.isScreenShown
           ? []
-          : content.annotations
+          : content.annotations.map(played)
       }
-      audio={props.audio}
+      audio={
+        props.audio && {
+          ...props.audio,
+          clips: props.audio.clips.map(played),
+        }
+      }
       isAltHeld={props.isAltHeld || altKey}
       isCaptionsHidden={props.isCaptionsHidden}
       isCutting={props.isCutting}
@@ -197,8 +210,8 @@ export function LiveStrip(props: LiveStripProps) {
         edit.restack(lanes);
       }}
       onAnnotationRetime={(id, start, end) => {
-        log.annotation(id, start, end);
-        edit.retimeAnnotation(id, start, end);
+        log.annotation(id, recordedAt(start), recordedAt(end));
+        edit.retimeAnnotation(id, recordedAt(start), recordedAt(end));
       }}
       onBeatTrim={(id, edge, at) => {
         log.beatTrim(id, edge, at);
@@ -234,13 +247,13 @@ export function LiveStrip(props: LiveStripProps) {
         edit.restore(ids);
       }}
       onSceneDraw={(from, to) => {
-        props.onSceneDraw(from, to);
-        const drawn = edit.drawScene(from, to);
+        props.onSceneDraw(recordedAt(from), recordedAt(to));
+        const drawn = edit.drawScene(recordedAt(from), recordedAt(to));
         setSelection({ id: drawn.id, kind: "scene" });
       }}
       onSceneRetime={(id, start, end) => {
-        log.scene(id, start, end);
-        edit.retimeScene(id, start, end);
+        log.scene(id, recordedAt(start), recordedAt(end));
+        edit.retimeScene(id, recordedAt(start), recordedAt(end));
       }}
       onSeek={(seconds) => {
         log.seek(seconds);
@@ -265,6 +278,8 @@ export function LiveStrip(props: LiveStripProps) {
       pictureAspect={storyFrameAspect()}
       playhead={playhead}
       recorded={recording.duration}
+      runs={content.order.map((span) => playedSpan(map, span))}
+      scenes={content.scenes.map(played)}
       selection={selection}
       shortcuts={props.isShortcutsHidden ? [] : content.shortcuts}
       squeeze={share * maxSqueeze}

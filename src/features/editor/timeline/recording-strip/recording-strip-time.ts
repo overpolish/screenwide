@@ -11,11 +11,11 @@ import {
   type RecordingTimelineEdit,
   recordingTimelineRetainedDuration,
 } from "../editing/recording-timeline-edit";
-import { baseOf, partId } from "../strip/strip-part";
-import { SLIVER_S } from "../strip/strip-split";
+import {
+  isGapSegment,
+  type RecordingTimelineSegment,
+} from "../recording-timeline-types";
 import { type Span, type TimeMap } from "../timeline-scale";
-
-import type { RecordingTimelineSegment } from "../recording-timeline-types";
 
 // How the strip reads the recording's timeline edit: its segments, in the
 // order they play, as a map from recorded to played seconds; what was left
@@ -32,12 +32,18 @@ const TOLERANCE_S = 1e-6;
 export type RecordingStripTime = {
   cuts: TimelineCut[];
   /** Where the parts that run across a jump are split, in recorded
-   * seconds: both sides of every jump. */
+   * seconds: both sides of every jump, a gap's edges among them. */
   edges: number[];
+  /** How long the gaps play, in seconds, which add to what plays but take
+   * nothing out of the recording. */
+  gapped: number;
+  /** Where play jumps to, in recorded seconds: a stretch moved, not a gap's
+   * edges, which nothing put back undoes. */
   jumps: number[];
   map: TimeMap;
   /** What plays on without a jump, as stretches of played seconds: each
-   * plays the recording forward, passing over only what is cut. */
+   * plays the recording forward, passing over only what is cut, and a gap
+   * stands apart from what plays either side of it. */
   runs: Span[];
   splits: number[];
 };
@@ -156,6 +162,8 @@ export function recordingStripTime(
   const { segments } = edit;
   const jumps = jumpIndexes(segments);
   const breaks = jumps.map((index) => layout[index].outputStart * played);
+  const nextToGap = (index: number) =>
+    isGapSegment(segments[index]) || isGapSegment(segments[index - 1]);
   return {
     cuts: cuts.map((cut) => ({
       end: seconds(cut.sourceEnd),
@@ -166,7 +174,16 @@ export function recordingStripTime(
       seconds(segments[index - 1].sourceEnd),
       seconds(segments[index].sourceStart),
     ]),
-    jumps: jumps.map((index) => seconds(segments[index].sourceStart)),
+    gapped: segments
+      .filter(isGapSegment)
+      .reduce(
+        (sum, segment) =>
+          sum + seconds(segment.sourceEnd - segment.sourceStart),
+        0,
+      ),
+    jumps: jumps
+      .filter((index) => !nextToGap(index))
+      .map((index) => seconds(segments[index].sourceStart)),
     map: timeMap(steps, played),
     runs: [0, ...breaks].map((start, index) => ({
       end: breaks[index] ?? played,
@@ -179,56 +196,6 @@ export function recordingStripTime(
     ),
   };
 }
-
-/** A stretch's span in recorded seconds, from its span in played seconds,
- * inside one run. */
-function recordedSpan(map: TimeMap, from: number, to: number) {
-  const start = map.toRecorded(from);
-  // Its end is the last moment it shows, which is in what plays before it.
-  const end = map.toRecorded(Math.max(to - 1e-4, from)) + 1e-4;
-  return { end: Math.max(end, start), start };
-}
-
-/** A clip's parts in recorded seconds, from its span in edited ms: one for
- * each run it plays across, so a clip played across a jump is drawn each
- * side of it. One span from its start to its end would take in what plays
- * elsewhere between them (a stretch moved away from inside it, drawn where
- * it plays now), or run backwards (one moved into it). */
-export function recordedParts(
-  map: TimeMap,
-  runs: Span[],
-  { endMs, startMs }: { endMs: number; startMs: number },
-) {
-  return runs.flatMap((run) => {
-    const from = Math.max(startMs / 1000, run.start);
-    const to = Math.min(endMs / 1000, run.end);
-    return to - from >= SLIVER_S ? [recordedSpan(map, from, to)] : [];
-  });
-}
-
 /** Where a recorded moment plays, in edited ms. */
 export const playedMs = (map: TimeMap, seconds: number, isEnd?: boolean) =>
   Math.round(map.toPlayed(seconds, isEnd) * 1000);
-
-/** `clip`'s times once its part `id` is pulled to `start`–`end`, in
- * recorded seconds. Only the clip's own ends move, the first part's start
- * and the last part's end; where a part meets a jump it ends with the run,
- * not by choice. */
-export function retimedParts(
-  { map, runs }: { map: TimeMap; runs: Span[] },
-  clip: { endMs: number; startMs: number },
-  { end, id, start }: Span & { id: string },
-) {
-  const parts = recordedParts(map, runs, clip);
-  const index = parts.findIndex((_, each) => partId(baseOf(id), each) === id);
-  if (index < 0) return { endMs: clip.endMs, startMs: clip.startMs };
-  const part = parts[index];
-  return {
-    endMs:
-      index === parts.length - 1 && end !== part.end
-        ? playedMs(map, end, true)
-        : clip.endMs,
-    startMs:
-      index === 0 && start !== part.start ? playedMs(map, start) : clip.startMs,
-  };
-}

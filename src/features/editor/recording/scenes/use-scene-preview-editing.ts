@@ -16,6 +16,7 @@ import { ownEditedAutoZooms } from "./recording-scene-auto-zoom";
 import { pictureRect } from "./recording-scene-custom-crop";
 import { reframeWindow } from "./recording-scene-framing";
 import { SceneRect } from "./recording-scene-geometry";
+import { sceneShowsScreen } from "./recording-scenes";
 import {
   RecordingSceneTarget,
   useRecordingSceneGesture,
@@ -168,15 +169,19 @@ export function useScenePreviewEditing({
             : {}),
         }
       : null;
+  const preset =
+    arrangement && !arrangement.clip.boxes ? arrangement.clip.preset : null;
   return {
     arrangement,
+    /** Whether the scene at the playhead is a camera-only preset, whose
+     * camera the select tool moves and resizes as a custom scene's, making
+     * it custom (`scene_pane_gesture.rs`). */
+    freesCamera: preset === "camera-only",
     /** Whether the scene at the playhead is a preset that shows the screen,
      * whose screen the select tool moves and resizes as a custom scene's,
-     * making it custom (`scene_pane_gesture.rs`); camera only hides it. */
-    freesScreen:
-      arrangement !== null &&
-      !arrangement.clip.boxes &&
-      arrangement.clip.preset !== "camera-only",
+     * making it custom (`scene_pane_gesture.rs`); camera only and blank
+     * hide it. */
+    freesScreen: preset !== null && sceneShowsScreen({ preset }),
     gesture,
     /** Whether the scene at the playhead is custom, its panes' boxes moved
      * and resized by the select tool rather than fixed. */

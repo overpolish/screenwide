@@ -95,7 +95,7 @@ export function sceneIsland(props: SceneIslandProps): EditorIslandContent {
           <ScenePaneGroup {...props} pane={open} />
         )}
         {scene?.isPaused ? (
-          <Alert className="w-0 min-w-full px-inset-sm" role="status">
+          <Alert className="w-0 min-w-full" role="status">
             {t("editor-island-scene-paused")}
           </Alert>
         ) : scene === null ? (

@@ -92,7 +92,7 @@ const onCanvas = (box: SceneBox, canvas: Canvas): SceneRect => ({
  * its custom boxes or else its preset, and which of the two it shows. The
  * camera's box is null where the scene places none and the recording's own
  * box stays. A pane the preset hides keeps the recording's own place,
- * unseen; a custom scene shows both.
+ * unseen; a custom scene shows both, unless its boxes hide the screen.
  */
 export const sceneBoxes = (
   clip: RecordingSceneClip,
@@ -107,7 +107,7 @@ export const sceneBoxes = (
     return {
       camera: boxes.camera ? onCanvas(boxes.camera, canvas) : null,
       screen: onCanvas(boxes.screen, canvas),
-      shown: { camera: true, screen: true },
+      shown: { camera: true, screen: boxes.screenHidden !== true },
     };
   if (clip.preset === "full" || clip.preset === "screen-only")
     return {

@@ -13,13 +13,24 @@ import { type Span } from "../timeline-scale";
 import type { RecordingAnnotationPin } from "../../recording/annotations/recording-annotations";
 import type { RecordingPinStatus } from "../../recording/annotations/use-recording-pin-status";
 
-/** `stretches`, in source milliseconds, as recorded seconds kept to `part`,
- * run together where they overlap. */
-function joinedIn(stretches: [number, number][], part: Span): Span[] {
+/** From recorded seconds to where they play, `isEnd` placing a moment as
+ * the end of what stops there (`TimeMap.toPlayed`). */
+type ToPlayed = (recorded: number, isEnd?: boolean) => number;
+
+/** `stretches`, in source milliseconds, where they play kept to `part`,
+ * run together where they overlap. One on past every part (an infinite
+ * end) stays so. */
+function joinedIn(
+  stretches: [number, number][],
+  part: Span,
+  toPlayed: ToPlayed,
+): Span[] {
+  const played = (ms: number, isEnd?: boolean) =>
+    Number.isFinite(ms) ? toPlayed(ms / 1000, isEnd) : ms;
   const kept = stretches
     .map(([start, end]) => ({
-      end: Math.min(end / 1000, part.end),
-      start: Math.max(start / 1000, part.start),
+      end: Math.min(played(end, true), part.end),
+      start: Math.max(played(start), part.start),
     }))
     .filter(({ end, start }) => end > start)
     .sort((one, other) => one.start - other.start);
@@ -34,21 +45,22 @@ function joinedIn(stretches: [number, number][], part: Span): Span[] {
 }
 
 /**
- * What one part of a pinned annotation's bar shows of its pin, in recorded
- * seconds, which the pin's source milliseconds are a thousandth of: where
- * it is hidden because its content is out of view, as the tracker found or
- * the hand said (the stretches the menu's Content Back in View answers);
- * where the tracker is unsure of its content, having lost it, found it off
- * the frame or under a cover; and each correction, all kept to `part`.
+ * What one bar of a pinned annotation shows of its pin, where it plays,
+ * from the pin's source milliseconds (`toPlayed` lays recorded seconds out
+ * as the bar is): where it is hidden because its content is out of view,
+ * as the tracker found or the hand said (the stretches the menu's Content
+ * Back in View answers); where the tracker is unsure of its content,
+ * having lost it, found it off the frame or under a cover; and each
+ * correction, all kept to `part`.
  */
 export function timelineAnnotationPin(
   pin: RecordingAnnotationPin,
   status: RecordingPinStatus | undefined,
-  part: Span,
+  { part, toPlayed }: { part: Span; toPlayed: ToPlayed },
 ): TimelineAnnotationPin {
   return {
     corrections: pinCorrections(pin)
-      .map((ms) => ms / 1000)
+      .map((ms) => toPlayed(ms / 1000))
       .filter((moment) => moment >= part.start && moment <= part.end),
     outOfView: joinedIn(
       [
@@ -58,6 +70,7 @@ export function timelineAnnotationPin(
         ...outOfViewStretches(pin, Number.POSITIVE_INFINITY),
       ],
       part,
+      toPlayed,
     ),
     unsure: joinedIn(
       [
@@ -66,19 +79,26 @@ export function timelineAnnotationPin(
         ...(status?.under ?? []),
       ],
       part,
+      toPlayed,
     ),
   };
 }
 
-/** The strip's annotation bars, each part of a pinned clip's bar with what
- * it shows of the pin. */
+/** The strip's annotation bars, each of a pinned clip with what it shows
+ * of the pin, laid out where it plays by `toPlayed`. */
 export function withAnnotationPins(
   bars: TimelineAnnotation[],
-  clips: readonly {
-    annotation: { id: string };
-    pin?: RecordingAnnotationPin | null;
-  }[],
-  statuses: ReadonlyMap<string, RecordingPinStatus>,
+  {
+    clips,
+    statuses,
+  }: {
+    clips: readonly {
+      annotation: { id: string };
+      pin?: RecordingAnnotationPin | null;
+    }[];
+    statuses: ReadonlyMap<string, RecordingPinStatus>;
+  },
+  toPlayed: ToPlayed,
 ): TimelineAnnotation[] {
   const pins = new Map(
     clips.flatMap((clip) =>
@@ -89,7 +109,13 @@ export function withAnnotationPins(
     const id = baseOf(bar.id);
     const pin = pins.get(id);
     return pin
-      ? { ...bar, pin: timelineAnnotationPin(pin, statuses.get(id), bar) }
+      ? {
+          ...bar,
+          pin: timelineAnnotationPin(pin, statuses.get(id), {
+            part: bar,
+            toPlayed,
+          }),
+        }
       : bar;
   });
 }

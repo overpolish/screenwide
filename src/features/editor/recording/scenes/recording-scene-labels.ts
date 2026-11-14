@@ -11,6 +11,8 @@ export const sceneCustomLabel = () => t("editor-scene-custom");
 /** What the lane and the Scene panel call a preset. */
 export const scenePresetLabel = (preset: ArrangedScenePreset) => {
   switch (preset) {
+    case "blank":
+      return t("editor-scene-blank");
     case "camera-only":
       return t("editor-scene-camera-only");
     case "picture-in-picture":
@@ -32,4 +34,5 @@ export const RECORDING_SCENE_PRESETS: ArrangedScenePreset[] = [
   "picture-in-picture",
   "camera-only",
   "screen-only",
+  "blank",
 ];

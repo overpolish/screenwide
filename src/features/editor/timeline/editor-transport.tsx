@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { Pause, Play, Scissors } from "lucide-react";
+import { BetweenVerticalStart, Pause, Play, Scissors } from "lucide-react";
 
 import { t } from "../../../i18n/i18n";
 import { cn } from "../../../lib/styling";
@@ -18,11 +18,11 @@ import { ElapsedTime } from "./timeline-elapsed-time";
 
 // The strip's own controls, centred in the editor's left column under the
 // tools: play at the top, where the playhead is over how long the recording
-// is, and at the foot the range tool and the blade, beside the strip they
-// work on. Tracks is in the title bar with the modes (`EditorModeBar`).
-// While the Export island stands over the editor only play answers and the
-// tools are set back, but for the range tool while a GIF is made: it stays
-// in hand, to choose the GIF's range.
+// is, and at the foot the range tool, the blade and a gap inserted at the
+// playhead, beside the strip they work on. Tracks is in the title bar with
+// the modes (`EditorModeBar`). While the Export island stands over the
+// editor only play answers and the tools are set back, but for the range
+// tool while a GIF is made: it stays in hand, to choose the GIF's range.
 
 export type EditorTransportProps = {
   /** How long the recording plays once squeezed and cut, in ms. */
@@ -43,6 +43,9 @@ export type EditorTransportProps = {
   playhead: Playhead;
   /** Only play answers: nothing is cut. */
   isLocked?: boolean;
+  /** Inserts a gap at the playhead: time with nothing recorded behind it.
+   * Without it the transport offers none. */
+  onInsertGap?: () => void;
 };
 
 export function EditorTransport({
@@ -53,6 +56,7 @@ export function EditorTransport({
   isPlaying,
   isRanging,
   onCuttingChange,
+  onInsertGap,
   onPlayingChange,
   onRangingChange,
   playhead,
@@ -118,6 +122,24 @@ export function EditorTransport({
             <Scissors />
           </ToolbarTool>
         </ChromeSetBack>
+        {onInsertGap ? (
+          <ChromeSetBack isSetBack={isLocked}>
+            <TooltipTrigger
+              tooltip={{
+                label: t("editor-timeline-insert-gap"),
+                shortcut: "G",
+              }}
+            >
+              <IconButton
+                aria-label={t("editor-timeline-insert-gap")}
+                isDisabled={isLocked}
+                onPress={onInsertGap}
+              >
+                <BetweenVerticalStart aria-hidden />
+              </IconButton>
+            </TooltipTrigger>
+          </ChromeSetBack>
+        ) : null}
       </div>
     </div>
   );

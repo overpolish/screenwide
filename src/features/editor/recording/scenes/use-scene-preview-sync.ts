@@ -7,6 +7,7 @@ import { useEffect, useRef } from "react";
 import { useTweenedOutput } from "../../preview/use-tweened-output";
 import { ScreenshotOutputSettings } from "../../screenshot/screenshot-output";
 import { RecordingTimelineEdit } from "../../timeline/editing/recording-timeline-edit";
+import { recordingTimelineGaps } from "../../timeline/recording-strip/recording-timeline-gaps";
 import {
   RecordingTimelinePlaybackRange,
   recordingTimelinePlaybackRanges,
@@ -17,9 +18,13 @@ import { sceneRadius } from "./recording-scene-panel-snapshot";
 import { RecordingSceneClip } from "./recording-scenes";
 import { sceneClipsBetween } from "./scene-clips-between";
 
-/** Scenes with the timeline they are timed on. */
+import type { GapScene } from "../../../../bindings/GapScene";
+
+/** Scenes with the timeline they are timed on and the gaps drawn among
+ * them. */
 type TimedScenes = {
   clips: RecordingSceneClip[];
+  gaps: GapScene[];
   playbackRanges: RecordingTimelinePlaybackRange[];
 };
 
@@ -86,32 +91,18 @@ export function useScenePreviewSync({
     { part: "scenes", workspace: "recording" },
     sceneClipsBetween((clip, pane) => sceneRadius(clip, pane, look)),
   );
+  const timed = (sent: RecordingSceneClip[]): TimedScenes => ({
+    clips: sent,
+    gaps: recordingTimelineGaps(edit, sourceDurationMs),
+    playbackRanges: recordingTimelinePlaybackRanges(edit, sourceDurationMs),
+  });
   useEffect(() => {
     if (sessionId !== null)
-      sendScenes(
-        queueRef.current,
-        {
-          clips: drawnClips,
-          playbackRanges: recordingTimelinePlaybackRanges(
-            edit,
-            sourceDurationMs,
-          ),
-        },
-        sessionId,
-      );
+      sendScenes(queueRef.current, timed(drawnClips), sessionId);
+    // eslint-disable-next-line @eslint-react/exhaustive-deps -- `timed` reads only `edit` and `sourceDurationMs`.
   }, [drawnClips, edit, sessionId, sourceDurationMs]);
   return (draft: RecordingSceneClip[] | null) => {
     if (sessionId !== null)
-      sendScenes(
-        queueRef.current,
-        {
-          clips: draft ?? clips,
-          playbackRanges: recordingTimelinePlaybackRanges(
-            edit,
-            sourceDurationMs,
-          ),
-        },
-        sessionId,
-      );
+      sendScenes(queueRef.current, timed(draft ?? clips), sessionId);
   };
 }

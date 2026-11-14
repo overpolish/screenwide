@@ -373,6 +373,10 @@ export type Messages = {
   "editor-island-frame-library-empty": null;
   "editor-island-frame-original-size": null;
   "editor-island-frame-randomise": null;
+  "editor-island-gap": null;
+  "editor-island-gap-clear-background": null;
+  "editor-island-gap-confirm-remove": null;
+  "editor-island-gap-remove": null;
   "editor-island-height": null;
   "editor-island-highlight": null;
   "editor-island-image": null;
@@ -504,6 +508,7 @@ export type Messages = {
   "editor-island-rotation-z": null;
   "editor-island-scene": null;
   "editor-island-scene-auto-zoom": null;
+  "editor-island-scene-blank": null;
   "editor-island-scene-bottom": null;
   "editor-island-scene-bottom-left": null;
   "editor-island-scene-bottom-right": null;
@@ -708,6 +713,7 @@ export type Messages = {
   "editor-recording-preparing-recording": null;
   "editor-recording-preview": null;
   "editor-recording-screen-preview": null;
+  "editor-scene-blank": null;
   "editor-scene-camera-only": null;
   "editor-scene-custom": null;
   "editor-scene-picture-in-picture": null;
@@ -727,6 +733,8 @@ export type Messages = {
   "editor-timeline-cut": null;
   "editor-timeline-cut-name": null;
   "editor-timeline-deleted": { duration: string | number };
+  "editor-timeline-gap": null;
+  "editor-timeline-insert-gap": null;
   "editor-timeline-label": null;
   "editor-timeline-library": null;
   "editor-timeline-library-name": null;

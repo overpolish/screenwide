@@ -22,6 +22,7 @@ import { StripBeats } from "./strip-beats";
 import { stripChoice } from "./strip-choice";
 import { GLIDE, GlideCue } from "./strip-glide";
 import { StripLane } from "./strip-lane";
+import { laneLayout, laneSnapParts } from "./strip-lane-time";
 import { StripScrubBand } from "./strip-scrub-band";
 import { stripSnap } from "./strip-snap";
 import { splitParts } from "./strip-split";
@@ -58,18 +59,21 @@ export function TimelineStrip(props: TimelineStripProps) {
   /** Where a scene's or song's end has snapped while drawn or dragged, if
    * anywhere. */
   const [guide, setGuide] = useState<number | null>(null);
-  const share = (seconds: number, isEnd?: boolean) =>
-    map.toPlayed(seconds, isEnd) / Math.max(map.duration, 1e-6);
+  const length = Math.max(map.duration, 1e-6);
   const { choose, chosen, chosenId } = stripChoice(props);
-  const taken = takenOut(props.cuts, map.duration, props.recorded);
+  const taken = takenOut(
+    props.cuts,
+    map.duration - (props.gapped ?? 0),
+    props.recorded,
+  );
   const view = useStripView({
     duration: map.duration,
     focus:
       chosen && selection
         ? {
-            end: share(chosen.end, true),
+            end: chosen.end / length,
             key: JSON.stringify(selection),
-            start: share(chosen.start),
+            start: chosen.start / length,
           }
         : null,
     isPlaying: props.isPlaying,
@@ -107,6 +111,7 @@ export function TimelineStrip(props: TimelineStripProps) {
   // The parts are drawn as the strip shows the recording, which a drag
   // lays out as if it were already let go.
   const shown = timelineScale(reorder.map);
+  const lanes = laneLayout(props, { edges: reorder.edges, shown });
   const isPictureCarried = usePictureCarry() !== null;
   const drawn = splitParts(props, reorder.edges);
   const reshape = useStripReshape({
@@ -116,12 +121,12 @@ export function TimelineStrip(props: TimelineStripProps) {
     width,
   });
   const isGliding = reorder.isGliding || reshape.isReshaping;
-  // With ⌘ held, a scene or an annotation's bar dragged settles on one list
-  // of edges (`strip-snap.ts`).
+  // With ⌘ held, a scene, an annotation's bar or a song dragged settles on
+  // one list of edges, where they play (`strip-snap.ts`).
   const snap = stripSnap({
-    parts: props,
-    playheadAt: () => map.toRecorded(props.playhead.ratio() * map.duration),
-    scale,
+    parts: laneSnapParts(props),
+    playheadAt: () => props.playhead.ratio() * map.duration,
+    scale: lanes.scale,
     width,
   });
   const chosenShortcuts = selection?.kind === "shortcuts" ? selection.ids : [];
@@ -161,29 +166,30 @@ export function TimelineStrip(props: TimelineStripProps) {
               {/* Locked, a press falls through the lanes and scrubs. */}
               <div className="contents" inert={props.isLocked}>
                 <SceneRail
-                  duration={props.recorded}
+                  duration={map.duration}
+                  gaps={lanes.gaps}
                   onDraw={props.onSceneDraw}
                   onGuide={setGuide}
                   onRetime={props.onSceneRetime}
                   onSelect={(id) => {
                     choose({ id, kind: "scene" });
                   }}
-                  scale={shown}
-                  scenes={drawn.scenes}
+                  scale={lanes.scale}
+                  scenes={lanes.scenes}
                   selected={chosenId("scene")}
                   snap={snap}
                   width={width}
                 />
                 <StripLane>
-                  {drawn.annotations.length > 0 || isPictureCarried ? (
+                  {lanes.annotations.length > 0 || isPictureCarried ? (
                     <AnnotationDropLane
-                      annotations={drawn.annotations}
+                      annotations={lanes.annotations}
                       onRestack={props.onAnnotationRestack}
                       onRetime={props.onAnnotationRetime}
                       onSelect={(id) => {
                         choose({ id, kind: "annotation" });
                       }}
-                      scale={shown}
+                      scale={lanes.scale}
                       selected={chosenId("annotation")}
                       snap={snap}
                       width={width}
@@ -239,12 +245,12 @@ export function TimelineStrip(props: TimelineStripProps) {
                   ) : null}
                 </StripLane>
                 <AudioLanes
-                  audio={props.audio}
+                  audio={lanes.audio}
                   onGuide={setGuide}
                   onSelect={(id) => {
                     choose({ id, kind: "audioClip" });
                   }}
-                  scale={shown}
+                  scale={lanes.scale}
                   selected={chosenId("audioClip")}
                   snap={snap}
                   width={width}
@@ -261,7 +267,7 @@ export function TimelineStrip(props: TimelineStripProps) {
               {guide === null ? null : (
                 <SnapGuide
                   className="top-8 bottom-0"
-                  style={at(shown, guide)}
+                  style={at(lanes.scale, guide)}
                 />
               )}
               {range.bladeX === null ? null : <CutBlade x={range.bladeX} />}

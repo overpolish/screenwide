@@ -4,20 +4,22 @@
 //! The scenes, arranged into the native preview's compositions the way the
 //! export arranges its frames.
 
+use super::gap_preview::SceneClips;
 use super::scene_reframe::{SceneCrop, SceneReframe};
 use super::*;
 use screenwide_export::scenes::arrange_following;
-use screenwide_scenes::{validate_clips, FacePath, RecordingSceneClip};
+use screenwide_scenes::{validate_clips, FacePath, GapScene, RecordingSceneClip};
 
-/// The scenes the preview draws: the recording's clips, the timeline they
-/// are timed on, where the face is over the camera for the clips that
-/// follow it, the pane of the one under the playhead the crop tool is
-/// reframing, drawn unzoomed so the crop window shows what it picks from,
-/// and the selection drawn over the pane a scene places.
+/// The scenes the preview draws: the clips and the gaps drawn among them, the
+/// timeline they are timed on, how long the recording is, past which its gaps
+/// lie, where the face is over the camera for the clips that follow it, the
+/// pane of the one under the playhead the crop tool is reframing, drawn
+/// unzoomed for the crop window, and the selection over a scene's pane.
 #[derive(Clone, Default)]
 pub(super) struct PreviewScenes {
-  pub(super) clips: Arc<RwLock<Vec<RecordingSceneClip>>>,
+  pub(super) clips: Arc<RwLock<SceneClips>>,
   pub(super) ranges: Arc<RwLock<Vec<TimelineRange>>>,
+  pub(super) source_duration_us: u64,
   pub(super) face_path: Arc<RwLock<Option<Arc<FacePath>>>>,
   pub(super) crop: Arc<RwLock<SceneCrop>>,
   pub(super) selection: Arc<Mutex<super::scene_selection::DrawnSelection>>,
@@ -25,13 +27,15 @@ pub(super) struct PreviewScenes {
 
 impl PreviewScenes {
   pub(super) fn new(
-    clips: Vec<RecordingSceneClip>,
+    (clips, gaps): (Vec<RecordingSceneClip>, Vec<GapScene>),
     ranges: Vec<TimelineRange>,
+    source_duration_ms: u64,
     face_path: Option<Arc<FacePath>>,
   ) -> Self {
     Self {
-      clips: Arc::new(RwLock::new(clips)),
+      clips: Arc::new(RwLock::new(SceneClips::new(clips, gaps))),
       ranges: Arc::new(RwLock::new(ranges)),
+      source_duration_us: source_duration_ms.saturating_mul(1_000),
       face_path: Arc::new(RwLock::new(face_path)),
       crop: Arc::default(),
       selection: Arc::default(),
@@ -112,7 +116,9 @@ impl PlayerSources {
       .map(|crop| *crop)
       .unwrap_or_default();
     let reframe = crop.pane;
-    let reframed = super::scene_reframe::reframed_clips(&clips, reframe, timeline_ms);
+    // A reframed clip is drawn among the gaps as the clips it stands for.
+    let reframed = super::scene_reframe::reframed_clips(clips.own(), reframe, timeline_ms)
+      .map(|reframed| screenwide_scenes::with_gaps(&reframed, clips.gaps()));
     let camera = self.camera_source_size();
     // While the crop tool reframes the camera it is drawn still, the picture
     // where the webview's crop window expects it; the face is followed again
@@ -127,7 +133,7 @@ impl PlayerSources {
     let base = composition.recording_output.primary.clone();
     let placed = arrange_composition(
       composition,
-      reframed.as_deref().unwrap_or(&clips),
+      reframed.as_deref().unwrap_or(clips.drawn()),
       &ranges,
       (source_ms, frame_ms),
       camera,
@@ -143,6 +149,7 @@ impl PlayerSources {
       return placed;
     };
     let in_place = clips
+      .own()
       .iter()
       .find(|clip| clip.start_ms <= timeline_ms && timeline_ms < clip.end_ms)
       .is_some_and(|clip| super::scene_reframe::crops_in_place(clip, reframe));
@@ -189,7 +196,14 @@ impl PreviewPlayerManager {
     self
       .sources
       .as_ref()
-      .and_then(|sources| sources.scenes.clips.read().ok().map(|clips| clips.clone()))
+      .and_then(|sources| {
+        sources
+          .scenes
+          .clips
+          .read()
+          .ok()
+          .map(|clips| clips.own().to_vec())
+      })
       .unwrap_or_default()
   }
 
@@ -199,11 +213,12 @@ impl PreviewPlayerManager {
       .sources
       .as_ref()
       .ok_or_else(|| "The recording preview player is not open".to_owned())?;
-    *sources
+    sources
       .scenes
       .clips
       .write()
-      .map_err(|_| "The scenes are unavailable".to_owned())? = clips;
+      .map_err(|_| "The scenes are unavailable".to_owned())?
+      .set(clips, None);
     Ok(())
   }
 
@@ -220,16 +235,17 @@ impl PreviewPlayerManager {
   }
 }
 
-/// Hands the preview the recording's scene clips and the timeline they are
-/// timed on, as `playback_ranges` lay it out, redrawing a paused frame that
-/// they change. Where a scene follows the face before it has been found in
-/// the camera, finding it starts.
+/// Hands the preview the recording's scene clips, the gaps drawn among them
+/// and the timeline they are timed on, as `playback_ranges` lay it out,
+/// redrawing a paused frame that they change. Where a scene follows the face
+/// before it has been found in the camera, finding it starts.
 #[tauri::command]
 pub async fn set_recording_preview_scenes(
   app: tauri::AppHandle,
   state: tauri::State<'_, RecordingPreviewPlayerState>,
   session_id: u64,
   clips: Vec<RecordingSceneClip>,
+  gaps: Vec<GapScene>,
   playback_ranges: Vec<RecordingPreviewPlaybackRange>,
 ) -> Result<(), String> {
   validate_clips(&clips)?;
@@ -265,8 +281,7 @@ pub async fn set_recording_preview_scenes(
     .ranges
     .write()
     .map_err(|_| "The scenes are unavailable".to_owned())?;
-  let changed = *current != clips || *current_ranges != ranges;
-  *current = clips;
+  let changed = current.set(clips, Some(gaps)) || *current_ranges != ranges;
   *current_ranges = ranges;
   drop(current);
   drop(current_ranges);

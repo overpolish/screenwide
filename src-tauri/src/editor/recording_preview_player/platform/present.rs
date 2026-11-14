@@ -34,7 +34,8 @@ pub(in crate::editor::recording_preview_player) struct Moment {
 }
 
 /// Presents `screen` and `camera`, the frames one moment decoded to; a pane
-/// without a frame keeps the picture it holds.
+/// without a frame keeps the picture it holds. A moment in a gap has none,
+/// and the gap hides the pictures held.
 pub(in crate::editor::recording_preview_player) fn present<F: PaneFrame>(
   sources: &PlayerSources,
   screen: Option<&F>,
@@ -46,7 +47,7 @@ pub(in crate::editor::recording_preview_player) fn present<F: PaneFrame>(
     frame_ms,
     factors,
   } = moment;
-  if screen.is_none() && camera.is_none() {
+  if screen.is_none() && camera.is_none() && !sources.scenes.is_gap(timestamp_ms) {
     return false;
   }
   let Some(surface) = sources.preview_surface.as_ref() else {
@@ -93,6 +94,27 @@ pub(in crate::editor::recording_preview_player) fn present<F: PaneFrame>(
       &mut settings.recording_output.primary,
       frame,
       factors.0,
+    );
+  } else if let Some(pane) = sources
+    .playback_layout
+    .panes
+    .first()
+    .filter(|_| sources.scenes.is_gap(timestamp_ms))
+  {
+    // A gap decodes nothing, so its annotations are carried onto the grid a
+    // frame decoded this far toward the pane would have.
+    let decoded = (
+      (f64::from(pane.source_width) * factors.0.min(1.0)).round() as u32,
+      (f64::from(pane.source_height) * factors.0.min(1.0)).round() as u32,
+    );
+    let track = &mut settings.recording_output.primary;
+    let output_width = track.width;
+    *track = scaled_output(track, factors.0);
+    screenwide_workspace::remap_source(
+      track,
+      (pane.source_width, pane.source_height),
+      decoded,
+      output_width,
     );
   }
   if let Some(frame) = camera.filter(|_| !settings.bake_camera) {

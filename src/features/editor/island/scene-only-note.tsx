@@ -17,7 +17,7 @@ export function SceneOnlyNote({
   layer: "camera" | "crop" | "frame" | "screen";
 }) {
   return (
-    <Alert className="w-0 min-w-full px-inset-sm" role="status">
+    <Alert className="w-0 min-w-full" role="status">
       {layer === "camera"
         ? t("editor-island-camera-in-scene")
         : layer === "crop"

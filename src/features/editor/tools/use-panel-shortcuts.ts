@@ -52,6 +52,9 @@ export function usePanelShortcuts(workspace: EditorKind) {
     onExport: () => {
       forward("KeyE", { ctrlKey: true });
     },
+    onInsertGap: () => {
+      forward("KeyG");
+    },
     onNudge: (x, y, shiftKey) => {
       forward(
         x < 0

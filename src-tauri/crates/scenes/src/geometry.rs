@@ -75,7 +75,7 @@ fn camera_ratio(size: SceneCameraSize) -> f64 {
 /// Picture in picture is the screen at its own aspect with the camera
 /// reaching past the corner it sits over by the same share each way. Each
 /// pair is scaled to the largest size the margin leaves room for and centred.
-/// Camera only fills the canvas.
+/// Camera only fills the canvas, and blank places neither pane.
 pub fn preset_panes(
   preset: RecordingScenePreset,
   canvas: (f64, f64),
@@ -90,6 +90,12 @@ pub fn preset_panes(
   let ratio = camera_ratio(variant.camera_size.unwrap_or_default());
   let (screen, camera) = match preset {
     RecordingScenePreset::Full | RecordingScenePreset::ScreenOnly => return None,
+    RecordingScenePreset::Blank => {
+      return Some(PresetPanes {
+        screen: None,
+        camera: None,
+      })
+    }
     RecordingScenePreset::CameraOnly => {
       return Some(PresetPanes {
         screen: None,

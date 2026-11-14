@@ -6,7 +6,7 @@ import { RefObject, useEffect } from "react";
 import { withAnnotationGlides } from "../../timeline/recording-strip/recording-strip-glides";
 import { recordingStripLanes } from "../../timeline/recording-strip/recording-strip-lanes";
 import { withAnnotationPins } from "../../timeline/recording-strip/recording-strip-pins";
-import { recordedParts } from "../../timeline/recording-strip/recording-strip-time";
+import { recordingTimelineGaps } from "../../timeline/recording-strip/recording-timeline-gaps";
 import { usePublishStripIsland } from "../../timeline/recording-strip/strip-island-channel";
 import {
   BREATH_S,
@@ -106,12 +106,12 @@ export function useRecordingStripBand(
   const lanes = recordingStripLanes({
     annotations,
     changeCanvasTool,
+    gaps: recordingTimelineGaps(edit, durationMs),
     map: strip.time.map,
     openCaptions: () => {
       openOverlayTool(CAPTIONS_LAYER_ID);
     },
     playhead,
-    runs: strip.time.runs,
     scenes,
     seek: strip.seekTo,
     steps: strip.steps,
@@ -132,7 +132,6 @@ export function useRecordingStripBand(
     select: strip.select,
     selection: strip.selection,
     steps: strip.steps,
-    time: strip.time,
     timelineMs: timelineBlade.timelineDurationMs,
   });
   useSoundTrackReplay(edit, props.enabledStreamIndices, player);
@@ -148,13 +147,11 @@ export function useRecordingStripBand(
       annotations: withAnnotationGlides(
         withAnnotationPins(
           lanes.lanes.annotations,
-          annotations.clips,
-          annotations.pinStatus,
+          { clips: annotations.clips, statuses: annotations.pinStatus },
+          strip.time.map.toPlayed,
         ),
         {
           clips: annotations.clips,
-          partsOf: (span) =>
-            recordedParts(strip.time.map, strip.time.runs, span),
           pictures: props.previewSourceDimensions,
           scenes: scenes.clips,
           videoMs: timelineBlade.timelineDurationMs,
@@ -182,6 +179,7 @@ export function useRecordingStripBand(
           lulls: strip.lulls,
           map: strip.time.map,
           moments: services.moments,
+          segments: edit.segments,
           selection: strip.selection,
         }))
       : null;
@@ -203,6 +201,7 @@ export function useRecordingStripBand(
     deselect: () => {
       strip.select(null);
     },
+    dressGap: strip.dressGap,
     hearSounds: audio.hearSounds,
     playLull: (play) => {
       if (island?.kind === "lull")

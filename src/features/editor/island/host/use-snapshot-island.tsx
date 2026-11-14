@@ -75,12 +75,14 @@ export function useSnapshotIsland(
     switch (island) {
       case "audioClip":
       case "beat":
+      case "gap":
       case "lull":
       case "moment":
       case "range":
       case "stripGroup":
         return stripIslandContent({
           audioClip,
+          backgrounds: { presets, snapshot },
           change,
           island,
           item: snapshot.stripItem,

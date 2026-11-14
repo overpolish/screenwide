@@ -69,7 +69,8 @@ pub(super) fn send_frame(sources: &PlayerSources, payload: VideoFramePayload) ->
 }
 
 /// Starts the playback decode thread at `start_ms`, blocking until the
-/// platform's decoders are open.
+/// platform's decoders are open. A range that starts past the recording's
+/// end is a gap, which reads nothing.
 pub(super) fn spawn_video(
   sources: &PlayerSources,
   playback_factors: &[f64],
@@ -85,6 +86,16 @@ pub(super) fn spawn_video(
     playback_factors.first().copied().unwrap_or(1.0),
     playback_factors.get(1).copied().unwrap_or(1.0),
   );
+  if start_ms >= sources.duration_ms {
+    return playback::spawn(
+      || Ok(playback::GapDecoders),
+      start_ms,
+      playback_rate,
+      factors,
+      cancelled,
+      sender,
+    );
+  }
   playback::spawn(
     backend::open_playback(sources, factors, start_ms)?,
     start_ms,

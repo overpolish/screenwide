@@ -137,13 +137,24 @@ pub(super) fn render_video(
     let Some(source_us) = frame_clock::source_us(output_us, &ranges) else {
       continue;
     };
-    screen.show(source_us, frame_us)?;
+    // A gap's moments lie past the recording's end: nothing is read there,
+    // and the frame in hand, which the gap hides, is composed at the gap's
+    // own moment; a gap the video starts with takes the recording's first.
+    let in_gap = source_us >= request.duration_ms.saturating_mul(1_000);
+    let read_us = match (in_gap, screen.frame().is_some()) {
+      (false, _) => Some(source_us),
+      (true, false) => Some(0),
+      (true, true) => None,
+    };
+    if let Some(read_us) = read_us {
+      screen.show(read_us, frame_us)?;
+      if let Some(camera) = camera.as_mut() {
+        camera.show(read_us, frame_us)?;
+      }
+    }
     let Some(picture) = screen.frame() else {
       break;
     };
-    if let Some(camera) = camera.as_mut() {
-      camera.show(source_us, frame_us)?;
-    }
     let texture = canvas.compose(
       &mut draw,
       picture,

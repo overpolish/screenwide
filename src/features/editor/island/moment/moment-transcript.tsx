@@ -60,11 +60,7 @@ export function MomentTranscriptLine({
       );
     case "failed":
       return (
-        <Alert
-          className={cn("px-inset-sm", MOMENT_ISLAND_WIDTH.part)}
-          color="error"
-          role="status"
-        >
+        <Alert className={MOMENT_ISLAND_WIDTH.part} color="error" role="status">
           {t("editor-island-moment-transcribe-failed")}
         </Alert>
       );

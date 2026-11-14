@@ -35,14 +35,11 @@ export function OpenverseFailureAlert({
       </Alert>
     );
   }
-  // With its action it keeps to the start, so its icon sits on the text
-  // column, under the heading, and the action at the line's end.
   return (
     <Alert
       action={
         <Button onPress={onRetry}>{t("editor-island-openverse-retry")}</Button>
       }
-      className="ps-inset-sm"
       color="error"
     >
       {failure === "busy"

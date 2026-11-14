@@ -18,17 +18,27 @@ pub fn validate(edit: &RecordingTimelineEdit) -> Result<(), String> {
   }
   let mut ids = std::collections::HashSet::with_capacity(edit.segments.len());
   for segment in &edit.segments {
+    // A segment is either of the recording, within it, or a gap past its
+    // end, which plays as it was made and alone may wear a background.
+    let in_bounds = if segment.is_gap() {
+      segment.playback_rate == 1.0
+    } else {
+      segment.source_end <= 1.0 && segment.background.is_none()
+    };
     if !segment.source_start.is_finite()
       || !segment.source_end.is_finite()
       || segment.source_start < 0.0
       || segment.source_end <= segment.source_start
-      || segment.source_end > 1.0
+      || !in_bounds
       || !segment.playback_rate.is_finite()
       || !(0.25..=4.0).contains(&segment.playback_rate)
       || !ids.insert(segment.id)
     {
       return Err("The timeline contains an invalid segment".to_owned());
     }
+  }
+  if edit.segments.iter().all(RecordingTimelineSegment::is_gap) {
+    return Err("The timeline must play some of the recording".to_owned());
   }
   // Segments play in list order, which a reordered timeline leaves out of
   // source order; each moment of the recording still plays at most once.

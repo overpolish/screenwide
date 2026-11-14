@@ -81,8 +81,11 @@ export const movedPaddedSceneBox = (
  * `clip` made custom: its panes kept in the boxes it puts them in now, on the
  * screen's `output`, and showing what they show there, so the change alone
  * moves nothing. A full scene's camera, where `camera` gives one drawn into
- * the picture, gets the recording's own box. A clip already custom, or an
- * output with no placement to measure from, is left as it is.
+ * the picture, gets the recording's own box. A camera-only scene keeps the
+ * screen hidden in the recording's own place, and the square corners its
+ * camera had filling the canvas. A clip already custom, a blank one, which
+ * has no pane to place, or an output with no placement to measure from, is
+ * left as it is. The twin of `made_custom` in `custom.rs`.
  */
 export function customRecordingSceneClip({
   camera,
@@ -93,7 +96,12 @@ export function customRecordingSceneClip({
   clip: RecordingSceneClip;
   output: ScreenshotOutputSettings;
 }): RecordingSceneClip {
-  if (clip.boxes || output.cropWidth <= 0 || output.cropHeight <= 0)
+  if (
+    clip.boxes ||
+    clip.preset === "blank" ||
+    output.cropWidth <= 0 ||
+    output.cropHeight <= 0
+  )
     return clip;
   const canvas = { height: output.height, width: output.width };
   const base = basePlacement(output, camera);
@@ -123,12 +131,17 @@ export function customRecordingSceneClip({
           camera.aspect,
         )
       : clip.camera;
+  const isCameraOnly = clip.preset === "camera-only";
   return {
     ...clip,
     boxes: {
       screen: share(boxes.screen),
       ...(cameraBox ? { camera: share(cameraBox) } : {}),
+      ...(isCameraOnly ? { screenHidden: true as const } : {}),
     },
     ...(cameraFraming ? { camera: cameraFraming } : {}),
+    ...(isCameraOnly && clip.radius?.camera === undefined
+      ? { radius: { ...clip.radius, camera: 0 } }
+      : {}),
   };
 }

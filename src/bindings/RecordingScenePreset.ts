@@ -4,4 +4,4 @@
  * The twin of `RecordingScenePreset` in
  * `src/features/editor/recording/scenes/recording-scenes.ts`.
  */
-export type RecordingScenePreset = "full" | "split-two-thirds" | "picture-in-picture" | "stacked" | "camera-only" | "screen-only";
+export type RecordingScenePreset = "full" | "split-two-thirds" | "picture-in-picture" | "stacked" | "camera-only" | "screen-only" | "blank";

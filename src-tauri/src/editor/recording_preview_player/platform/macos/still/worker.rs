@@ -27,10 +27,11 @@ pub(super) fn show(
     .preview_surface
     .as_ref()
     .map(|surface| surface.present_batch());
-  let arranged = sources.annotated_composition(
-    frame_position(position_ms, sources.duration_ms),
-    &annotation_clips,
-  );
+  // A gap's moment lies past the recording's end: the frame playback holds
+  // there is decoded for it, under the panes the gap fades away, and the
+  // still is composed at the gap's own.
+  let moment_ms = sources.moment_ms(position_ms);
+  let arranged = sources.annotated_composition(moment_ms, &annotation_clips);
   let composition = arranged.as_ref().map(|(composition, _)| composition);
   // Paused editing keeps one native-resolution source frame resident. Frame,
   // crop and OSC gestures then only rerun the GPU composition instead of
@@ -38,7 +39,10 @@ pub(super) fn show(
   // playback still uses pane-sized decode factors in `video.rs`.
   let screen_size = screen.decode_size(1.0);
   let camera_size = camera.as_ref().map(|camera| camera.decode_size(1.0));
-  let screen_position_ms = frame_position(position_ms, sources.duration_ms);
+  let screen_position_ms = frame_position(
+    sources.scenes.held_ms(position_ms).unwrap_or(position_ms),
+    sources.duration_ms,
+  );
   let camera_position_ms = camera.as_ref().zip(camera_size).map(|_| {
     frame_position(
       screen_position_ms,
@@ -103,9 +107,7 @@ pub(super) fn show(
     .read()
     .map(|settings| *settings)
     .unwrap_or_default();
-  let cursor_shown = sources
-    .scenes
-    .cursor_shown(screen_position_ms, cursor_settings.bake);
+  let cursor_shown = sources.scenes.cursor_shown(moment_ms, cursor_settings.bake);
   let cursor = sources
     .cursor
     .as_deref()
@@ -127,8 +129,7 @@ pub(super) fn show(
       )
     },
   );
-  let keyboard =
-    sources.keyboard_overlay(screen_position_ms, keyboard_settings, keyboard_dimensions);
+  let keyboard = sources.keyboard_overlay(moment_ms, keyboard_settings, keyboard_dimensions);
   if sources.playing.load(Ordering::Acquire) {
     return;
   }
@@ -178,15 +179,15 @@ pub(super) fn show(
       .flatten();
     let mut layers = vec![RecordingWorkspaceLayer {
       pane_index: 0,
-      source_token: screen_position_ms << 2,
+      source_token: moment_ms << 2,
       source: cache.screen.picture(),
       settings: screen_output,
       placement: NativeWorkspacePlacement::default(),
-      seconds: screen_position_ms as f64 / 1_000.0,
+      seconds: moment_ms as f64 / 1_000.0,
       cursor,
       keyboard,
       // A paused frame exposes nothing, so its captions are sharp.
-      captions: sources.captions_at(screen_position_ms, 0.0),
+      captions: sources.captions_at(moment_ms, 0.0),
       camera: baked_camera.map(DecodedFrame::picture),
       overlay: overlay.as_ref(),
       camera_settings: composition.bake_camera.then(|| {
@@ -211,7 +212,7 @@ pub(super) fn show(
     // The chrome over a pane a scene places moves with the still it outlines,
     // drawn with it in this batch.
     if let Some(selection) = arranged.as_ref().and_then(|(composition, placed)| {
-      sources.selection_for_frame(composition, *placed, (screen_position_ms, 0.0))
+      sources.selection_for_frame(composition, *placed, (moment_ms, 0.0))
     }) {
       surface.set_drawn_selection(Some(selection));
     }

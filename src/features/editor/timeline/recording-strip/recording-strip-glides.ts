@@ -4,7 +4,6 @@
 import { annotationGlides } from "../../recording/annotations/recording-annotation-glides";
 import { type TimelineAnnotation } from "../annotation-lane/annotation-lane";
 import { baseOf } from "../strip/strip-part";
-import { type Span } from "../timeline-scale";
 
 import type { RecordingSceneClip } from "../../../../bindings/RecordingSceneClip";
 import type { RecordingAnnotationClip } from "../../recording/annotations/recording-annotations";
@@ -13,23 +12,19 @@ type Size = { height: number; width: number };
 
 /**
  * `bars` with where each one's annotation travels between its places in
- * the scenes (`glides`), in recorded seconds, kept to each bar's part.
- * `partsOf` lays timeline milliseconds out on the strip, as the bars' own
- * parts are, either side of a jump; `pictures` are the screen's and the
- * camera's source sizes, which a glide is paced against, and `videoMs` the
- * edited video's length.
+ * the scenes (`glides`), in played seconds as the bars are, kept to each
+ * bar. `pictures` are the screen's and the camera's source sizes, which a
+ * glide is paced against, and `videoMs` the edited video's length.
  */
 export function withAnnotationGlides(
   bars: TimelineAnnotation[],
   {
     clips,
-    partsOf,
     pictures,
     scenes,
     videoMs,
   }: {
     clips: readonly RecordingAnnotationClip[];
-    partsOf: (span: { endMs: number; startMs: number }) => Span[];
     pictures: { camera?: Size; primary?: Size };
     scenes: readonly RecordingSceneClip[];
     videoMs: number | undefined;
@@ -45,7 +40,10 @@ export function withAnnotationGlides(
         picture: clip.trackId === "camera" ? pictures.camera : pictures.primary,
         scenes: sorted,
         videoMs,
-      }).flatMap((glide) => partsOf(glide)),
+      }).map(({ endMs, startMs }) => ({
+        end: endMs / 1000,
+        start: startMs / 1000,
+      })),
     ]),
   );
   return bars.map((bar) => {

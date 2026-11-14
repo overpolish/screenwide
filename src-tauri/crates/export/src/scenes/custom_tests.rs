@@ -34,6 +34,7 @@ fn custom(preset: RecordingScenePreset, camera: Option<SceneBox>) -> RecordingSc
       screen: SCREEN,
       camera,
       camera_behind: false,
+      screen_hidden: false,
     }),
     radius: None,
     inset: None,
@@ -186,6 +187,11 @@ fn a_preset_made_custom_keeps_every_pane_where_the_preset_put_it() {
         camera.frame_height,
       ]),
       round([camera.camera_x, camera.camera_y, camera.camera_width, 0.0]),
+      // Whether the screen, and what is drawn on it, shows; a camera shown
+      // where none is drawn in makes no difference.
+      output
+        .scene_opacity
+        .map(|[screen, _, annotations]| [screen, annotations]),
     )
   };
   let cases = [
@@ -195,6 +201,7 @@ fn a_preset_made_custom_keeps_every_pane_where_the_preset_put_it() {
     (RecordingScenePreset::Full, true),
     (RecordingScenePreset::PictureInPicture, true),
     (RecordingScenePreset::SplitTwoThirds, true),
+    (RecordingScenePreset::CameraOnly, true),
   ];
   for (preset, with_camera) in cases {
     let preset_clip = RecordingSceneClip {
@@ -216,13 +223,13 @@ fn a_preset_made_custom_keeps_every_pane_where_the_preset_put_it() {
       "{preset:?} moved when made custom"
     );
   }
-  // Custom shows both panes, so a preset hiding the screen stays a preset.
-  let camera_only = RecordingSceneClip {
+  // A blank scene has no pane to place, so it stays a preset.
+  let blank = RecordingSceneClip {
     boxes: None,
-    ..custom(RecordingScenePreset::CameraOnly, None)
+    ..custom(RecordingScenePreset::Blank, None)
   };
   let output = test_output_settings(1_600, 900);
-  assert!(made_custom(&camera_only, &output, Some((&overlay(), (1_280, 720)))).is_none());
+  assert!(made_custom(&blank, &output, Some((&overlay(), (1_280, 720)))).is_none());
 }
 
 #[test]
@@ -258,6 +265,7 @@ fn boxes_whose_middle_leaves_the_canvas_are_refused() {
     screen: SceneBox { x: 0.9, ..SCREEN },
     camera: None,
     camera_behind: false,
+    screen_hidden: false,
   });
   assert!(validate_clips(&[lost]).is_err());
 }

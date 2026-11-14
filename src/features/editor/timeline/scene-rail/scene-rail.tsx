@@ -9,9 +9,10 @@ import { type SnapFor } from "../strip/strip-snap";
 import { type Span, type TimelineScale } from "../timeline-scale";
 
 import { SceneClip, type TimelineScene } from "./scene-clip";
-import { drawnSceneSpan, LEAST_DRAWN_S } from "./scene-draw";
-import { movedScene, sceneRoom } from "./scene-move";
+import { draftedScene, isOverGap, playedRoom } from "./scene-draw";
+import { movedScene } from "./scene-move";
 import { SceneRailDraft } from "./scene-rail-draft";
+import { SceneRailGaps } from "./scene-rail-gaps";
 
 // The scenes along the top of the strip, each over the stretch it frames,
 // drawn as its layout and named. Press one to choose it and drag it to move
@@ -21,13 +22,14 @@ import { SceneRailDraft } from "./scene-rail-draft";
 // (`snap`), a drawing's as the key goes down or up, and the strip draws its
 // guide where one has (`onGuide`). Outside every scene, the recording keeps
 // the composition it was recorded with. A drawing is fitted between its
-// neighbours, and never shorter than the shortest scene a drag draws
-// (`scene-draw.ts`).
+// neighbours and the gaps, measured as the timeline plays, and never
+// shorter than the shortest scene a drag draws (`scene-draw.ts`); over a
+// gap nothing is drawn (`scene-rail-gaps.tsx`).
 
 type Drag =
   | { edge: "end" | "start"; id: string; kind: "edge" }
   | {
-      /** Where it was pressed, in recorded seconds and on screen. */
+      /** Where it was pressed, in the rail's seconds and on screen. */
       grab: number;
       grabX: number;
       id: string;
@@ -50,8 +52,12 @@ type Drag =
 const NO_SNAP: SnapFor = () => (seconds) => ({ isSnapped: false, seconds });
 
 export type SceneRailProps = {
-  /** The recording's length, in recorded seconds. */
+  /** How long what plays is, in the rail's seconds: played seconds, as
+   * the strip lays its lanes out (`strip-lane-time.ts`). */
   duration: number;
+  /** Where the timeline's gaps are, in the rail's seconds, which no scene
+   * plays over. */
+  gaps: readonly Span[];
   /** A stretch drawn along the empty rail, either way round. */
   onDraw: (from: number, to: number) => void;
   onRetime: (id: string, start: number, end: number) => void;
@@ -70,6 +76,7 @@ export type SceneRailProps = {
 
 export function SceneRail({
   duration,
+  gaps,
   onDraw,
   onGuide,
   onRetime,
@@ -92,22 +99,8 @@ export function SceneRail({
     if (!box || box.width === 0) return 0;
     return scale.toSeconds((event.clientX - box.left) / box.width);
   };
-  /** The scene the drag draws, in recorded seconds: at least the shortest
-   * one as it plays, inside the room where it was pressed. */
-  const draftSpan = ({ from, to }: { from: number; to: number }): Span => {
-    const { map } = scale;
-    const room = sceneRoom(scenes, duration, from);
-    const span = drawnSceneSpan(
-      {
-        from: map.toPlayed(Math.min(from, to)),
-        to: map.toPlayed(Math.max(from, to), true),
-      },
-      { from: map.toPlayed(room.from), to: map.toPlayed(room.to, true) },
-      LEAST_DRAWN_S,
-    );
-    return { end: map.toRecorded(span.end), start: map.toRecorded(span.start) };
-  };
-  const drawn = draft && draftSpan(draft);
+  const taken = [...scenes, ...gaps];
+  const drawn = draft && draftedScene(draft, taken, scale.map);
   /** The drawing as the pointer and the snapping keys leave it. */
   const draw = (
     drag: Extract<Drag, { kind: "draw" }>,
@@ -175,7 +168,7 @@ export function SceneRail({
         return;
       drag.isDragging = true;
       const { guide, span } = movedScene(
-        { by: moment - drag.grab, duration, moving: drag.moving, scenes },
+        { by: moment - drag.grab, duration, moving: drag.moving, taken },
         event.metaKey || event.ctrlKey ? snap(baseOf(drag.id)) : undefined,
       );
       onGuide?.(guide);
@@ -221,6 +214,7 @@ export function SceneRail({
         event.stopPropagation();
         event.currentTarget.setPointerCapture(event.pointerId);
         const moment = secondsAt(event);
+        if (isOverGap(gaps, moment)) return;
         const drag = {
           from: moment,
           isSnap: false,
@@ -236,16 +230,21 @@ export function SceneRail({
       }}
       onPointerMove={(event) => {
         move(event);
-        // While held, the rail has the pointer, wherever it is.
+        // While held, the rail has the pointer, wherever it is; over a gap
+        // nothing is drawn, so nothing waits there.
+        const moment = secondsAt(event);
         setHover(
-          !dragRef.current && event.target === event.currentTarget
-            ? secondsAt(event)
+          !dragRef.current &&
+            event.target === event.currentTarget &&
+            !isOverGap(gaps, moment)
+            ? moment
             : null,
         );
       }}
       onPointerUp={end}
       ref={ref}
     >
+      <SceneRailGaps gaps={gaps} scale={scale} />
       {scenes.map((scene) => (
         <SceneClip
           isSelected={baseOf(scene.id) === selected}
@@ -282,7 +281,11 @@ export function SceneRail({
             : {
                 at: hover,
                 room:
-                  (scale.toX(sceneRoom(scenes, duration, hover).to) -
+                  (scale.toX(
+                    scale.map.toRecorded(
+                      playedRoom(taken, scale.map, hover).to,
+                    ),
+                  ) -
                     scale.toX(hover)) *
                   width,
               }

@@ -141,7 +141,7 @@ impl Base {
           }
           None => base.frame,
         },
-        (true, true),
+        (!boxes.screen_hidden, true),
       ),
       (None, Some(panes)) => {
         if panes.camera.is_some() {

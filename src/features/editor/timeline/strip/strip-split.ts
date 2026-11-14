@@ -1,10 +1,8 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { type TimelineAnnotation } from "../annotation-lane/annotation-lane";
 import { type TimelineCaption } from "../caption-lane/caption-line";
 import { type TimelineCut } from "../cut-seams/cut-seams";
-import { type TimelineScene } from "../scene-rail/scene-clip";
 import { type TimelineShortcut } from "../shortcut-lane/shortcut-chip";
 import { type Span } from "../timeline-scale";
 
@@ -90,19 +88,18 @@ export const captionPart = (line: TimelineCaption, span: Span) => {
 };
 
 type StripParts = {
-  annotations: TimelineAnnotation[];
   beats: StripBeat[];
   captions: TimelineCaption[] | null;
   cuts: TimelineCut[];
   lulls: StripLull[];
-  scenes: TimelineScene[];
   shortcuts: TimelineShortcut[];
 };
 
-/** Everything the strip draws, split at `edges`, where the recording no
- * longer plays straight on; the beats and lulls are split at `splits` too,
- * the blade's, so each piece between them is chosen, moved and cut on its
- * own. */
+/** Everything of the footage the strip draws, split at `edges`, where the
+ * recording no longer plays straight on; the beats and lulls are split at
+ * `splits` too, the blade's, so each piece between them is chosen, moved
+ * and cut on its own. The lanes over the timeline are laid out where they
+ * play (`strip-lane-time.ts`). */
 export function splitParts<T extends StripParts>(
   parts: T,
   edges: number[],
@@ -112,7 +109,6 @@ export function splitParts<T extends StripParts>(
   const pieces = [...edges, ...splits];
   return {
     ...parts,
-    annotations: splitSpans(parts.annotations, edges),
     beats: splitAt(parts.beats, pieces, {
       part: (each, span, index) => ({
         ...each,
@@ -137,7 +133,6 @@ export function splitParts<T extends StripParts>(
       }),
       spanOf: (each) => each.span,
     }),
-    scenes: splitSpans(parts.scenes, edges),
     shortcuts: splitSpans(parts.shortcuts, edges),
   };
 }

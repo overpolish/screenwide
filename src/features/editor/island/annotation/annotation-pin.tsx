@@ -163,9 +163,8 @@ const PIN_FORMS: {
   { state: "following", unsure: "under-cover" },
 ];
 
-/** The status line, its answers at its end. With answers it starts on the
- * text column and they end flush with the section, as the controls above
- * do. */
+/** The status line, its answers at its end, flush with the section as the
+ * controls above are. */
 function PinStatus({
   answers,
   state,
@@ -175,18 +174,19 @@ function PinStatus({
   state: "following" | "out-of-view";
   unsure: AnnotationPinUnsure | null;
 }) {
-  const className = cn(
-    "whitespace-nowrap",
-    answers ? "ps-inset-sm" : "px-inset-sm",
-  );
   return unsure ? (
-    <Alert action={answers} className={className} color="warning" role="status">
+    <Alert
+      action={answers}
+      className="whitespace-nowrap"
+      color="warning"
+      role="status"
+    >
       {t(UNSURE_NOTES[unsure])}
     </Alert>
   ) : (
     <Alert
       action={answers}
-      className={className}
+      className="whitespace-nowrap"
       icon={state === "out-of-view" ? <EyeOff /> : <Pin />}
       role="status"
     >
@@ -273,7 +273,7 @@ function SceneStatus({ onReset }: { onReset?: () => void }) {
           <RotateCcw aria-hidden className="size-icon" />
         </IconButton>
       }
-      className="ps-inset-sm whitespace-nowrap"
+      className="whitespace-nowrap"
       icon={<LayoutDashboard />}
       role="status"
     >

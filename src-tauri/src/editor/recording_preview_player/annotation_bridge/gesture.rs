@@ -74,7 +74,7 @@ impl PreviewPlayerManager {
     }
     self.session_id?;
     let sources = self.sources.as_ref()?;
-    let position_ms = self.position_ms.min(sources.duration_ms.saturating_sub(1));
+    let position_ms = sources.moment_ms(self.position_ms);
     let source = sources.playback_layout.panes.get(pane as usize)?;
     let source_size = (source.source_width, source.source_height);
     let point = source_point(x, y, source_size);

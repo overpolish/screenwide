@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import type { AudioClipKind } from "../../../bindings/AudioClipKind";
+import type { Background } from "../../../bindings/Background";
 import type { BeatWhat } from "../island/beat/beat-island";
 import type { LullPlay } from "../island/lull/lull-island";
 import type { NoteTranscript } from "../timeline/moments/recording-moments";
@@ -36,6 +37,13 @@ export type ToolPanelStripItem =
       volumeDb: number;
     }
   | { beat: BeatWhat; id: string; kind: "beat" }
+  | {
+      /** The gap's own background, or null where it shows the
+       * recording's. */
+      background: Background | null;
+      id: string;
+      kind: "gap";
+    }
   | { id: string; kind: "lull"; play: LullPlay }
   | {
       /** The recording, whose voice notes the panel plays itself. */

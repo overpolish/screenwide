@@ -39,7 +39,7 @@ export function IslandTranscriptLine({
       );
     case "failed":
       return (
-        <Alert className="px-inset-sm" color="error" role="status">
+        <Alert color="error" role="status">
           {t("editor-island-transcribe-failed")}
         </Alert>
       );

@@ -1,7 +1,8 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-use super::{TimelineRange, atempo, cut_fades};
+use super::pieces::{atempo, cut_fades};
+use screenwide_timeline::TimelineRange;
 
 const RANGE: TimelineRange = TimelineRange {
   output_start_us: 0,

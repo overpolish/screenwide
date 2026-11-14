@@ -133,7 +133,7 @@ fn a_small_picture_in_picture_sits_over_the_corner_it_names() {
 #[test]
 fn camera_only_fills_the_canvas_and_hides_the_screen() {
   let (output, overlay) = arranged(clip(RecordingScenePreset::CameraOnly), 5_000);
-  assert_eq!(output.scene_opacity, Some([0.0, 1.0]));
+  assert_eq!(output.scene_opacity, Some([0.0, 1.0, 0.0]));
   assert_eq!(
     (
       overlay.frame_x,
@@ -151,7 +151,7 @@ fn camera_only_fills_the_canvas_and_hides_the_screen() {
 fn screen_only_keeps_the_screen_and_hides_the_camera() {
   let (output, _) = arranged(clip(RecordingScenePreset::ScreenOnly), 5_000);
   let base = test_output_settings(1_600, 900);
-  assert_eq!(output.scene_opacity, Some([1.0, 0.0]));
+  assert_eq!(output.scene_opacity, Some([1.0, 0.0, 1.0]));
   assert_eq!(
     (output.crop_x, output.crop_width),
     (base.crop_x, base.crop_width)
@@ -163,8 +163,19 @@ fn a_camera_a_scene_hides_shrinks_where_it_was_as_it_fades() {
   // Halfway through the screen-only scene's arrival the camera is half
   // faded and five eighths of its size, still centred where it was drawn.
   let (output, overlay) = arranged(clip(RecordingScenePreset::ScreenOnly), 1_300);
-  assert_eq!(output.scene_opacity, Some([1.0, 0.5]));
+  assert_eq!(output.scene_opacity, Some([1.0, 0.5, 1.0]));
   assert!((overlay.frame_width - 180.0 * 0.625).abs() < 1e-9);
   assert!((overlay.frame_x + overlay.frame_width / 2.0 - 1_400.0).abs() < 1e-9);
   assert!((overlay.frame_y + overlay.frame_height / 2.0 - 750.0).abs() < 1e-9);
+}
+
+#[test]
+fn a_blank_scene_hides_both_panes_but_keeps_what_is_drawn_on_the_screen() {
+  let (output, _) = arranged(clip(RecordingScenePreset::Blank), 5_000);
+  assert_eq!(output.scene_opacity, Some([0.0, 0.0, 1.0]));
+  // Arriving from the composition, what is drawn on the screen never fades.
+  let (arriving, _) = arranged(clip(RecordingScenePreset::Blank), 1_300);
+  let [screen, camera, annotations] = arriving.scene_opacity.unwrap();
+  assert!(screen > 0.0 && screen < 1.0 && camera > 0.0 && camera < 1.0);
+  assert_eq!(annotations, 1.0);
 }

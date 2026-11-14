@@ -88,6 +88,7 @@ export function resolveToolPanelSnapshot(
     downloadStudioSound: _downloadStudioSound,
     frameRadius,
     frameSize,
+    gapBackground: _gapBackground,
     keyboardEffects,
     libraryImage: _libraryImage,
     lullPlay: _lullPlay,

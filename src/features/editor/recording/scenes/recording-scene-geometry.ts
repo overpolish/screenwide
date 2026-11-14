@@ -50,7 +50,7 @@ const CAMERA_RATIO = { third: 0.5, "two-thirds": 2 } as const;
  * Picture in picture is the screen at its own aspect with the camera
  * reaching past the corner it sits over by the same share each way. Each
  * pair is scaled to the largest size the margin leaves room for and centred.
- * Camera only fills the canvas.
+ * Camera only fills the canvas, and blank places neither pane.
  */
 export function recordingScenePanes(
   preset: LaidOutScenePreset,
@@ -61,6 +61,7 @@ export function recordingScenePanes(
     variant = {},
   }: { cameraAspect: number; screenAspect: number; variant?: SceneVariant },
 ): { camera: SceneRect | null; screen: SceneRect | null } {
+  if (preset === "blank") return { camera: null, screen: null };
   if (preset === "camera-only")
     return {
       camera: { height: canvas.height, width: canvas.width, x: 0, y: 0 },

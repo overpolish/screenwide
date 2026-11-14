@@ -63,13 +63,16 @@ export function recordingTimelinePlaybackRangeAt(
  * Where playback from a playhead at `sourcePositionMs` goes on from. At the
  * recording's end the playhead shows its last decodable millisecond, the
  * still the native player can draw there, which leaves nothing to play: it
- * counts as the end itself, past which playback starts over.
+ * counts as the end itself, past which playback starts over. A gap's
+ * moments lie well past the end and play on from where they are.
  */
 export function recordingTimelinePlaybackPosition(
   sourcePositionMs: number,
   sourceDurationMs: number,
 ) {
-  return sourceDurationMs > 0 && sourcePositionMs >= sourceDurationMs - 1
+  return sourceDurationMs > 0 &&
+    sourcePositionMs >= sourceDurationMs - 1 &&
+    sourcePositionMs <= sourceDurationMs
     ? sourceDurationMs
     : sourcePositionMs;
 }
