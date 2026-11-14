@@ -131,6 +131,10 @@ pub struct ScreenshotLayer {
   /// rather than stopping the project opening.
   #[serde(default, skip_serializing_if = "Vec::is_empty")]
   pub annotations: Vec<serde_json::Value>,
+  /// The canvas's own layer, whose picture is empty: it holds what is drawn
+  /// on a blank canvas and is never drawn or chosen as a picture.
+  #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+  pub blank: bool,
 }
 
 /// What the capture knew that the movie itself cannot say.

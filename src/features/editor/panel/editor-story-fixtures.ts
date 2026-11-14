@@ -6,10 +6,13 @@ import { EditorArtifact } from "../types";
 
 /** Shared story captures, so the panel and the export dialog show the same ones. */
 export const screenshot: EditorArtifact = {
+  deletedItemIds: [],
   extension: "png",
   height: 2234,
   id: 1,
-  items: [{ annotations: [], height: 2234, id: 2, width: 3456 }],
+  items: [
+    { annotations: [], height: 2234, id: 2, isBlank: false, width: 3456 },
+  ],
   kind: "screenshot",
   suggestedFileStem: "Screenwide 2026-08-08 at 14.32.05",
   width: 3456,

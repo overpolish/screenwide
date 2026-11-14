@@ -20,6 +20,9 @@ pub(super) fn shared_selection_hit(
       selections.push(current);
     }
   }
+  // A blank canvas's own layer is never pressed as a picture: a press on
+  // empty canvas chooses nothing, as it would with no layer there.
+  selections.retain(|selection| selection.blank == 0);
   // A turned layer, the screen a scene turns, is measured apart: at the press
   // carried back onto it, where every other layer is measured at the press
   // itself.

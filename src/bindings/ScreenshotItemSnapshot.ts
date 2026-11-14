@@ -5,4 +5,9 @@ export type ScreenshotItemSnapshot = {
 /**
  * The annotations the item starts with, in its own pixels.
  */
-annotations: Array<Annotation>, height: number, id: number, width: number, };
+annotations: Array<Annotation>, height: number, id: number, 
+/**
+ * The canvas's own layer, whose picture is empty: it holds what is drawn
+ * on a blank canvas and is never drawn or chosen as a picture.
+ */
+isBlank: boolean, width: number, };

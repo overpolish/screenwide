@@ -3,6 +3,7 @@
 
 import { EditorArtifact } from "../types";
 
+import { blankLayerOutput } from "./screenshot-blank";
 import {
   defaultScreenshotOutput,
   resetScreenshotLayout,
@@ -20,16 +21,20 @@ type ScreenshotArtifactItem = Extract<
  * A layer's first output: the look borrowed from the template, laid out for the
  * item's own size, carrying the annotations the item arrived with. Those are
  * the live overlay's, drawn over the shot when it was taken; the annotations on
- * the layers already in the workspace are never copied onto a new one.
+ * the layers already in the workspace are never copied onto a new one. A blank
+ * layer takes none of the look, so nothing of it shows.
  */
 export const seedScreenshotItemOutput = (
   template: ScreenshotOutputSettings,
   item: ScreenshotArtifactItem,
   options: { fit?: boolean } = {},
-): ScreenshotOutputSettings => ({
-  ...resetScreenshotLayout(screenshotOutputTemplate(template), item, options),
-  annotations: item.annotations,
-});
+): ScreenshotOutputSettings => {
+  const output = {
+    ...resetScreenshotLayout(screenshotOutputTemplate(template), item, options),
+    annotations: item.annotations,
+  };
+  return item.isBlank ? blankLayerOutput(output) : output;
+};
 
 /**
  * The workspace a screenshot artifact opens with. The remembered look is a
@@ -94,12 +99,15 @@ export const reopenedScreenshotWorkspace = (
   };
   return {
     ...workspace,
-    items: artifact.items.map(
-      (item) =>
-        savedItems.find((savedItem) => savedItem.id === item.id) ?? {
-          id: item.id,
-          output: seedScreenshotItemOutput(workspace, item, { fit: false }),
-        },
-    ),
+    // A layer deleted before it was saved stays deleted.
+    items: artifact.items
+      .filter((item) => !artifact.deletedItemIds.includes(item.id))
+      .map(
+        (item) =>
+          savedItems.find((savedItem) => savedItem.id === item.id) ?? {
+            id: item.id,
+            output: seedScreenshotItemOutput(workspace, item, { fit: false }),
+          },
+      ),
   };
 };

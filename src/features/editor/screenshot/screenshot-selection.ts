@@ -58,7 +58,7 @@ export const screenshotItemSelection = ({
 }: {
   cropKeepsShape: boolean;
   cropMode: boolean;
-  item: { height: number; width: number };
+  item: { height: number; width: number; isBlank?: boolean };
   itemOutput: ScreenshotOutputSettings;
   paneIndex: number;
   target: { height: number; width: number };
@@ -66,6 +66,9 @@ export const screenshotItemSelection = ({
 }) => ({
   cropKeepsShape: cropMode && cropKeepsShape,
   cropMode,
+  // A blank canvas's own layer draws no frame and is never pressed as a
+  // picture (`screenshot-blank.ts`).
+  isBlank: item.isBlank === true,
   paneIndex,
   radiusPercent: itemOutput.radiusPercent,
   ...screenshotLayerTurn(withShareOfTurn(itemOutput, turnShare), cropMode),
@@ -79,7 +82,7 @@ export const screenshotItemSelection = ({
 /** One selectable target per workspace pane, in pane order, for the native
  * select and crop overlays to hit-test. Panes whose item is gone are skipped. */
 export function screenshotSelectionTargets(
-  items: { height: number; id: number; width: number }[],
+  items: { height: number; id: number; width: number; isBlank?: boolean }[],
   workspaceOutput: ScreenshotWorkspaceOutputSettings,
   target: { cropMode: boolean; height: number; width: number },
 ) {
@@ -91,6 +94,7 @@ export function screenshotSelectionTargets(
     return [
       {
         cropMode,
+        isBlank: item.isBlank === true,
         paneIndex,
         radiusPercent: itemOutput.output.radiusPercent,
         ...screenshotLayerTurn(itemOutput.output, cropMode),

@@ -13,7 +13,10 @@ use super::*;
 
 /// The open screenshot's project and its layers' ids, back to front, if it is
 /// `artifact_id`.
-fn open_project(app: &AppHandle, artifact_id: u64) -> Result<(PathBuf, Vec<u64>), String> {
+pub(super) fn open_project(
+  app: &AppHandle,
+  artifact_id: u64,
+) -> Result<(PathBuf, Vec<u64>), String> {
   let state = app.state::<EditorState>();
   let artifact = state
     .screenshot
@@ -70,9 +73,29 @@ fn restored(saved: Value, ids: &[u64]) -> Option<Value> {
 }
 
 /// The workspace saved in the screenshot project `project`, for a window
-/// whose layers are `ids`.
-pub(crate) fn restored_workspace(project: &Path, ids: &[u64]) -> Option<Value> {
-  restored(super::super::project_look::saved_look(project)?, ids)
+/// whose layers are `ids`, and which of `ids` it no longer holds: layers
+/// deleted in the editor, which reopening must not bring back as though they
+/// had been taken since it was saved.
+pub(crate) fn restored_workspace(project: &Path, ids: &[u64]) -> (Option<Value>, Vec<u64>) {
+  let Some(saved) = super::super::project_look::saved_look(project) else {
+    return (None, Vec::new());
+  };
+  let gone = deleted(&saved, ids);
+  (restored(saved, ids), gone)
+}
+
+/// The layers of `ids` whose place in `saved` is empty. A layer added since
+/// it was saved has no place there at all, and is not among them.
+fn deleted(saved: &Value, ids: &[u64]) -> Vec<u64> {
+  let Some(layers) = saved.get("layers").and_then(Value::as_array) else {
+    return Vec::new();
+  };
+  ids
+    .iter()
+    .zip(layers)
+    .filter(|(_, output)| output.is_null())
+    .map(|(id, _)| *id)
+    .collect()
 }
 
 /// Saves the open screenshot's canvas and layers in its project.
@@ -154,5 +177,20 @@ mod tests {
         { "id": 22, "output": { "radiusPercent": 2 } },
       ])
     );
+  }
+
+  #[test]
+  fn a_deleted_layer_is_told_apart_from_one_taken_since() {
+    // Three layers, the middle one deleted before the save.
+    let window = json!({
+      "items": [
+        { "id": 7, "output": { "radiusPercent": 1 } },
+        { "id": 9, "output": { "radiusPercent": 3 } },
+      ],
+    });
+    let kept = stored(window, &[7, 8, 9]);
+
+    // Reopened with a fourth taken since: only the deleted one is named.
+    assert_eq!(deleted(&kept, &[21, 22, 23, 24]), vec![22]);
   }
 }

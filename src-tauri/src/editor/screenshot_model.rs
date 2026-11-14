@@ -13,6 +13,9 @@ use ts_rs::TS;
 #[derive(Clone)]
 pub struct ScreenshotItem {
   pub annotations: Vec<Annotation>,
+  /// The canvas's own layer, whose picture is empty: it holds what is drawn
+  /// on a blank canvas, and is never drawn or chosen as a picture.
+  pub blank: bool,
   pub id: u64,
   pub image: CapturedImage,
   /// The display scale the image was captured at: how many of its pixels one
@@ -22,6 +25,21 @@ pub struct ScreenshotItem {
 }
 
 impl ScreenshotItem {
+  /// A blank layer `width` by `height` pixels: its picture all clear.
+  pub(crate) fn blank(id: u64, width: u32, height: u32) -> Self {
+    Self {
+      annotations: Vec::new(),
+      blank: true,
+      id,
+      image: CapturedImage {
+        rgba: vec![0; width as usize * height as usize * 4],
+        width,
+        height,
+      },
+      scale_factor: 1.0,
+    }
+  }
+
   /// What the image was captured at, which its redactions and annotation
   /// sizes are measured against.
   pub(crate) fn capture(&self) -> Capture {

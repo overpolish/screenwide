@@ -10,11 +10,11 @@ import { featureStage } from "../../../storybook/feature-story-stage";
 import { StoryGrid, StoryGridRow } from "../../../storybook/story-grid";
 import { recording, screenshot } from "../panel/editor-story-fixtures";
 import { useRecordingFrameCopy } from "../recording/use-copy-recording-frame";
+import { SCREENSHOT_PARTS } from "../screenshot/screenshot-column";
 import {
   type CaptureParts,
   type EditorKind,
   type EditorMode,
-  NO_CAPTURE_PARTS,
 } from "../toolbar/editor-modes";
 
 import { EditorModeBar } from "./editor-mode-bar";
@@ -45,7 +45,7 @@ function Modes({
   isDisabled,
   kind,
   onModeChange,
-  parts = kind === "screenshot" ? NO_CAPTURE_PARTS : EVERY_PART,
+  parts = kind === "screenshot" ? SCREENSHOT_PARTS : EVERY_PART,
 }: {
   kind: EditorKind;
   onModeChange: (mode: EditorMode | null) => void;

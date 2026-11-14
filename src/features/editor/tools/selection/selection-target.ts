@@ -103,11 +103,13 @@ const screenshotSelectionTarget = (
   artifact: Extract<EditorArtifact, { kind: "screenshot" }>,
 ): EditorSelectionTarget | null => {
   const output = inputs.screenshotOutput;
-  const index = artifact.items.findIndex(
+  // The blank layer is never chosen as a picture, and is no layer to count.
+  const pictures = artifact.items.filter((item) => !item.isBlank);
+  const index = pictures.findIndex(
     (item) => item.id === inputs.selectedScreenshotItemId,
   );
   if (!output || index < 0) return null;
-  const item = artifact.items[index];
+  const item = pictures[index];
   // A composite carries no layer names, so a layer is known by where it sits
   // in the stack, counted from the bottom the way the layer actions count it.
   return placedSelectionTarget({
@@ -116,7 +118,7 @@ const screenshotSelectionTarget = (
     },
     kind: "layer",
     label:
-      artifact.items.length > 1
+      pictures.length > 1
         ? t("editor-island-layer", { number: index + 1 })
         : t("editor-island-screenshot"),
     settings: screenshotWorkspaceItemOutput(output, item.id),

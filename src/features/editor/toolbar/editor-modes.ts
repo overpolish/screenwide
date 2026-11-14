@@ -111,7 +111,7 @@ export type CaptureParts = {
   transcript: TranscriptState;
 };
 
-/** A screenshot's: it has none. */
+/** A screenshot with no picture, a blank canvas: it has nothing. */
 export const NO_CAPTURE_PARTS: CaptureParts = {
   audio: false,
   camera: false,
@@ -174,8 +174,8 @@ export const recordedTrackCount = (recorded: RecordedParts) =>
  * scene), what was done while recording (the cursor, the keys), then what
  * was said and heard. A mode is offered only while the export holds
  * something for it to work on (DECISIONS.md, "Which modes are offered").
- * A screenshot always has its layers, so it always offers its Frame and
- * Screenshot. */
+ * A screenshot always has its canvas, so it always offers its Frame, and its
+ * Screenshot while it holds a picture: a blank canvas has none. */
 export function editorModeGroups({
   kind,
   parts,
@@ -198,7 +198,8 @@ export function editorModeGroups({
         : t("editor-island-screen"),
     shortcut: MODE_SHORTCUTS.screen,
   };
-  if (kind === "screenshot") return [{ id: "picture", modes: [frame, screen] }];
+  const shot = parts.picture === null ? [frame] : [frame, screen];
+  if (kind === "screenshot") return [{ id: "picture", modes: shot }];
   const hasPicture = parts.picture !== null || parts.camera;
   // Until the transcript is made, Captions and Transcript are where its
   // model is fetched and its progress shown; made with nothing heard, they

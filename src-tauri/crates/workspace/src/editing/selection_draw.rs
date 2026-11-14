@@ -40,6 +40,8 @@ pub(super) fn draw_selection(inner: &SurfaceInner, state: &SurfaceState) {
     .then(|| {
       state
         .selection
+        // A blank canvas's own layer draws no frame or grips.
+        .filter(|selection| selection.blank == 0)
         .and_then(|selection| display_selection(state, selection))
         .map(|rect| {
           let (x, right) = pixels::scaled_edges(rect.x, rect.width, scale);

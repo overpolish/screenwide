@@ -10,6 +10,7 @@
 //! the project reopens as it was left. A capture copied to the clipboard
 //! alone never reaches the editor, and makes no project.
 
+pub(crate) mod blank;
 pub(crate) mod workspace;
 
 use super::artifact::next_id;
@@ -18,6 +19,7 @@ use super::project_open::OpenFailure;
 use super::*;
 use screenwide_project::{ScreenshotLayer, ScreenshotManifest};
 
+pub(crate) use blank::open_blank_canvas;
 pub(crate) use workspace::restored_workspace;
 
 /// Hands a freshly captured still to the editor window, seeding its layer
@@ -34,6 +36,7 @@ pub fn present_screenshot(
 ) -> Result<(), String> {
   let item = ScreenshotItem {
     annotations,
+    blank: false,
     id: next_id(app),
     image,
     scale_factor,
@@ -115,6 +118,7 @@ fn layer(item: &ScreenshotItem, image: String) -> ScreenshotLayer {
       .iter()
       .filter_map(|annotation| serde_json::to_value(annotation).ok())
       .collect(),
+    blank: item.blank,
     image,
     scale_factor: item.scale_factor,
   }
@@ -215,6 +219,7 @@ pub(super) fn open(app: &AppHandle, file: &Path) -> Result<(), OpenFailure> {
           rgba: image.into_raw(),
         },
         scale_factor: layer.scale_factor,
+        blank: layer.blank,
       })
     })
     .collect::<Result<Vec<_>, OpenFailure>>()?;

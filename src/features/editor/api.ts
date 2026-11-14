@@ -45,6 +45,7 @@ export type PreviewSelectionLayout = {
   cropKeepsShape?: boolean;
   cropMode?: boolean;
   image?: { height: number; width: number; x: number; y: number };
+  isBlank?: boolean;
   layerId?: number;
   maximumScale?: number;
   minimumScale?: number;

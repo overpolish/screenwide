@@ -16,11 +16,13 @@ import {
   useTweenedOutput,
 } from "../preview/use-tweened-output";
 import { useRecenterInsetControls } from "../recenter-inset-channel";
+import { screenshotLayersInHand } from "../screenshot/screenshot-blank";
 import { screenshotChoices } from "../screenshot/screenshot-choices";
 import {
   columnMode,
   columnTool,
   screenshotIsland,
+  SCREENSHOT_PARTS,
   ScreenshotTool,
 } from "../screenshot/screenshot-column";
 import { screenshotWorkspaceItemOutput } from "../screenshot/screenshot-output";
@@ -72,9 +74,10 @@ export function ScreenshotSection({
     tool,
   });
   const pictureTool = hold.isHeld ? "select" : tool;
-  const selectedItem = artifact.items.find(
-    (item) => item.id === selectedItemId,
-  );
+  // The blank layer is drawn on but never chosen as a picture, so it opens
+  // no Screenshot mode (`screenshot-blank.ts`).
+  const { hasPicture, isBlank, newestItemId, selectedItem, selectedPicture } =
+    screenshotLayersInHand(artifact.items, selectedItemId, screenshotOutput);
   const selectedOutput =
     screenshotOutput && selectedItem
       ? screenshotWorkspaceItemOutput(screenshotOutput, selectedItem.id)
@@ -101,7 +104,7 @@ export function ScreenshotSection({
   // Select's band show their own island instead.
   const mode = columnMode(
     tool,
-    selectedItem !== undefined && !annotations.hasSelection,
+    selectedPicture !== undefined && !annotations.hasSelection,
   );
   // The pen a click on an annotation calls for shows at once, though it is
   // taken up only as the press ends, so the column never passes through
@@ -134,14 +137,12 @@ export function ScreenshotSection({
   });
   const island = screenshotIsland({
     annotationCount: annotations.selectedIds.size,
-    hasSelectedLayer: selectedItem !== undefined,
+    hasSelectedLayer: selectedPicture !== undefined,
     selectedKind: annotations.selectedKind,
     tool,
   });
-  const newestItemId =
-    artifact.items.length > 0
-      ? artifact.items[artifact.items.length - 1].id
-      : null;
+  // Crop goes with the last picture (`screenshotLayersInHand`).
+  if (tool === "crop" && !hasPicture) setActiveTool("select");
   const cropLayer = selectedItemId ?? newestItemId;
   const cropAspect = useCropAspectStore((state) =>
     cropLayer === null
@@ -150,6 +151,7 @@ export function ScreenshotSection({
   );
   const { deleteLayer: deleteSelectedLayer, moveLayer: moveSelectedLayer } =
     useScreenshotLayerActions({
+      isBlank,
       onCanvasResize,
       onSelectedItemChange,
       screenshotOutput,
@@ -158,7 +160,7 @@ export function ScreenshotSection({
   const recenter = useScreenshotRecenter({
     artifactId: artifact.id,
     onOutputChange,
-    selectedItem,
+    selectedItem: selectedPicture,
     selectedOutput,
   });
   // A setting chosen on an island is drawn as the picture moving to it.
@@ -169,7 +171,7 @@ export function ScreenshotSection({
   );
   const nudgeSelectedLayer = useScreenshotNudge({
     onOutputChange,
-    selectedItem,
+    selectedItem: selectedPicture,
     selectedOutput,
   });
   // The crop tool is the one tool you are "in": Enter accepts what is framed
@@ -195,7 +197,7 @@ export function ScreenshotSection({
     library,
     mode,
     onModeChange: chooseMode,
-    parts: NO_CAPTURE_PARTS,
+    parts: hasPicture ? SCREENSHOT_PARTS : NO_CAPTURE_PARTS,
     tracks: null,
   });
   // The Screenshot island's padding controls reach this workspace's analysis
@@ -222,7 +224,7 @@ export function ScreenshotSection({
     // hand.
     onDeselectAll: backToSelect,
     onNudge:
-      tool === "select" && selectedItem && selectedOutput
+      tool === "select" && selectedPicture && selectedOutput
         ? nudgeSelectedLayer
         : undefined,
     onResizeCanvas: () => {
@@ -230,10 +232,10 @@ export function ScreenshotSection({
     },
     onSelectTool: backToSelect,
     onToggleCrop: () => {
-      toggle("crop");
+      if (hasPicture) toggle("crop");
     },
     onToggleScreenPanel: () => {
-      chooseMode(isScreenOpen ? null : "screen");
+      if (hasPicture) chooseMode(isScreenOpen ? null : "screen");
     },
     onTool: toggle,
     ownsEscape: tool !== "select" || hasSelectedAnnotation || isScreenOpen,
@@ -249,6 +251,7 @@ export function ScreenshotSection({
     <div className="flex min-h-0 min-w-0 grow gap-inline">
       <ChromeSetBack className="flex" isSetBack={isExportOpen}>
         <EditorToolColumn
+          canCrop={hasPicture}
           isModeOpen={mode !== null}
           kind="screenshot"
           onToolChange={(next) => {

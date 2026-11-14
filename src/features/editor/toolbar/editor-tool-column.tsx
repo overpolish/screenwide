@@ -51,9 +51,12 @@ export type EditorToolColumnProps = {
   onToolChange: (tool: EditorTool) => void;
   /** The tool in hand. */
   tool: EditorTool;
+  /** Whether there is a picture to crop: a blank canvas has none. */
+  canCrop?: boolean;
 };
 
 export function EditorToolColumn({
+  canCrop = true,
   isModeOpen,
   kind,
   onToolChange,
@@ -106,17 +109,19 @@ export function EditorToolColumn({
             >
               <MousePointer2 />
             </ToolbarTool>
-            <ToolbarTool
-              aria-label={t("editor-tool-crop-name")}
-              isSelected={tool === "crop" && !isModeOpen}
-              label={t("editor-tool-crop")}
-              onChange={(isSelected) => {
-                onToolChange(isSelected ? "crop" : "select");
-              }}
-              shortcut={toolShortcut("crop")}
-            >
-              <Crop />
-            </ToolbarTool>
+            {canCrop ? (
+              <ToolbarTool
+                aria-label={t("editor-tool-crop-name")}
+                isSelected={tool === "crop" && !isModeOpen}
+                label={t("editor-tool-crop")}
+                onChange={(isSelected) => {
+                  onToolChange(isSelected ? "crop" : "select");
+                }}
+                shortcut={toolShortcut("crop")}
+              >
+                <Crop />
+              </ToolbarTool>
+            ) : null}
             {shown.map(({ icon: Icon, id, shortcut }) => (
               <ToolbarTool
                 aria-label={

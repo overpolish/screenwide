@@ -43,6 +43,7 @@ pub(super) fn handle(app: &AppHandle, id: &str) {
       }
     }
     DISCARD_MENU_ID | CANCEL_RECORDING_MENU_ID => report("discard", crate::recording::cancel(app)),
+    NEW_CANVAS_MENU_ID => crate::editor::screenshot_project::open_blank_canvas(app),
     OPEN_CLIPBOARD_SCREENSHOT_MENU_ID => {
       crate::screenshots::open_clipboard_in_export(app);
     }

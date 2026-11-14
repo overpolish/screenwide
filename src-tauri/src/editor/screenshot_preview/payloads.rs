@@ -20,6 +20,9 @@ pub struct ScreenshotSelectionOverlay {
   /// Whether the crop keeps its shape as its handles are pulled.
   #[serde(default)]
   pub(super) crop_keeps_shape: bool,
+  /// A blank canvas's own layer, never pressed as a picture.
+  #[serde(default)]
+  pub(super) is_blank: bool,
   #[serde(default)]
   pub(super) image: Option<PreviewSurfaceRect>,
   pub(super) layer_id: Option<u32>,
@@ -56,9 +59,12 @@ impl ScreenshotSelectionOverlay {
       width: self.rect.width,
       height: self.rect.height,
       radius_percent: self.radius_percent,
+      blank: u32::from(self.is_blank),
       ..PreviewSelection::default()
     }
-    .turned_by(self.rotation)
+    // A blank canvas's own layer shows no gizmo: turning it would turn
+    // everything drawn on the canvas.
+    .turned_by(self.rotation.filter(|_| !self.is_blank))
   }
 }
 

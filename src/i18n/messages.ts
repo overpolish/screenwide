@@ -1550,6 +1550,7 @@ export type Messages = {
   "tray-discard-recording": null;
   "tray-keep-awake-off": null;
   "tray-keep-awake-on": null;
+  "tray-new-blank-canvas": null;
   "tray-open": null;
   "tray-open-clipboard-screenshot": null;
   "tray-pause-recording": null;

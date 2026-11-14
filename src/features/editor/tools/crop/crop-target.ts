@@ -252,13 +252,15 @@ const screenshotCropTarget = (
   artifact: Extract<EditorArtifact, { kind: "screenshot" }>,
 ): EditorCropTarget | null => {
   const output = inputs.screenshotOutput;
-  if (!output || artifact.items.length === 0) return null;
+  // A blank canvas's own layer has no picture to crop.
+  const pictures = artifact.items.filter((item) => !item.isBlank);
+  if (!output || pictures.length === 0) return null;
   // The layer in hand, and the newest one when nothing is selected: the very
   // layer the Crop toolbar button selects before it takes the tool up.
   const item =
-    artifact.items.find(
+    pictures.find(
       (candidate) => candidate.id === inputs.selectedScreenshotItemId,
-    ) ?? artifact.items[artifact.items.length - 1];
+    ) ?? pictures[pictures.length - 1];
   const aspectKey = cropAspectKey("screenshot", item.id);
   return target({
     applyOutput: (next) => {

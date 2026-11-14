@@ -1,12 +1,20 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import { type CaptureParts, NO_CAPTURE_PARTS, EditorMode  } from "../toolbar/editor-modes";
 import { drawingToolKind } from "../tools/tool-registry";
 
 import type { AnnotationKind } from "../../annotations/types";
 import type { EditorIslandKind } from "../island/host/editor-island-kind";
-import type { EditorMode } from "../toolbar/editor-modes";
 import type { EditorTool } from "../toolbar/editor-tool-column";
+
+/** What a screenshot holding a picture offers its modes for: the picture.
+ * A blank canvas holds none (`NO_CAPTURE_PARTS`), so it offers no
+ * Screenshot mode. */
+export const SCREENSHOT_PARTS: CaptureParts = {
+  ...NO_CAPTURE_PARTS,
+  picture: "screen",
+};
 
 /** What a press on the screenshot does: Select, a pen, the crop, or the
  * frame's own drag (`canvas`). */

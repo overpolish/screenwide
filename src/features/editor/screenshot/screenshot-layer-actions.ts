@@ -27,7 +27,8 @@ export const moveScreenshotLayer = ({
 };
 
 /** The workspace without one layer. Its counters go with it, and the rest
- * close up behind them. */
+ * close up behind them. The last layer may go too: the canvas is then given
+ * a blank layer (`useScreenshotLayers`). */
 export const deleteScreenshotLayer = ({
   itemId,
   settings,
@@ -35,7 +36,6 @@ export const deleteScreenshotLayer = ({
   itemId: number;
   settings: ScreenshotWorkspaceOutputSettings;
 }) => {
-  if (settings.items.length <= 1) return null;
   const index = settings.items.findIndex((item) => item.id === itemId);
   if (index === -1) return null;
   const items = settings.items.filter((item) => item.id !== itemId);

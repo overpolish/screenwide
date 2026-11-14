@@ -8,6 +8,7 @@
 tray-open = Open Screenwide
 tray-projects = Projects
 tray-open-clipboard-screenshot = Open Screenshot from Clipboard
+tray-new-blank-canvas = New Blank Canvas
 tray-delayed-screenshot = Delayed Screenshot
 tray-cancel-delayed-screenshot = Cancel Delayed Screenshot
 tray-pause-recording = Pause Recording

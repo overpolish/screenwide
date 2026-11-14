@@ -22,11 +22,18 @@ import {
 const source = { height: 1_000, width: 1_000 };
 
 const artifact: EditorArtifact = {
+  deletedItemIds: [],
   extension: "png",
   height: source.height,
   id: 1,
   items: [
-    { annotations: [], height: source.height, id: 7, width: source.width },
+    {
+      annotations: [],
+      height: source.height,
+      id: 7,
+      isBlank: false,
+      width: source.width,
+    },
   ],
   kind: "screenshot",
   suggestedFileStem: "capture",

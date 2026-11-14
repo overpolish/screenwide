@@ -66,6 +66,7 @@ pub(crate) fn invoke_handler() -> impl Fn(tauri::ipc::Invoke) -> bool + Send + S
     editor::recording_preview_player::timeline_thumbnails::stream_recording_timeline_thumbnails,
     editor::project_thumbnail::owed::request_recording_project_pictures,
     editor::project_look::set_recording_project_look,
+    editor::screenshot_project::blank::add_blank_screenshot_layer,
     editor::screenshot_project::workspace::set_screenshot_project_workspace,
     editor::screenshot_project::workspace::save_screenshot_project_still,
     editor::save::save_export,

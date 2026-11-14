@@ -29,6 +29,7 @@ const ANNOTATE_CLEAR_MENU_ID: &str = "annotate-clear";
 const CANCEL_RECORDING_MENU_ID: &str = "cancel-recording";
 const DELAYED_SCREENSHOT_MENU_ID: &str = "delayed-screenshot";
 const DISCARD_MENU_ID: &str = "discard-recording";
+const NEW_CANVAS_MENU_ID: &str = "new-blank-canvas";
 const OPEN_CLIPBOARD_SCREENSHOT_MENU_ID: &str = "open-clipboard-screenshot";
 const OPEN_MENU_ID: &str = "open-screenwide";
 const OPEN_PROJECT_MENU_ID: &str = "open-project";
@@ -70,6 +71,11 @@ fn build_menu(app: &AppHandle, status: RecordingStatus) -> tauri::Result<Menu<Wr
       OPEN_CLIPBOARD_SCREENSHOT_MENU_ID,
       t!("tray-open-clipboard-screenshot"),
       icons::load(icons::CLIPBOARD)?,
+    )
+    .icon(
+      NEW_CANVAS_MENU_ID,
+      t!("tray-new-blank-canvas"),
+      icons::load(icons::CANVAS)?,
     )
     .item(&delayed_screenshot);
 

@@ -19,6 +19,7 @@ import {
   ScanText,
   Settings,
   Square,
+  SquareDashed,
   Timer,
   Trash2,
   X,
@@ -41,6 +42,7 @@ await mkdir(windowsOutput, { recursive: true });
 for (const [name, icon] of Object.entries({
   annotate: PenTool,
   cancel: X,
+  canvas: SquareDashed,
   clipboard: ClipboardPaste,
   discard: Trash2,
   "keep-awake": Coffee,

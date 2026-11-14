@@ -11,7 +11,13 @@ import type { ScreenshotWorkspaceOutputSettings } from "./ScreenshotWorkspaceOut
  * What the window is told about the pending artifact. Deliberately without
  * pixels: the preview travels separately, as bytes.
  */
-export type EditorArtifact = { "kind": "screenshot", id: number, items: Array<ScreenshotItemSnapshot>, 
+export type EditorArtifact = { "kind": "screenshot", 
+/**
+ * The layers `project_workspace` no longer holds: deleted in the
+ * editor, so reopening leaves them out rather than laying them out as
+ * layers taken since it was saved.
+ */
+deletedItemIds: Array<number>, id: number, items: Array<ScreenshotItemSnapshot>, 
 /**
  * The canvas and layers saved in the project, which the window shows in
  * place of the remembered look.

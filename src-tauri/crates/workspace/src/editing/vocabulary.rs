@@ -155,6 +155,10 @@ pub struct PreviewSelection {
   pub rotation_x: f64,
   pub rotation_y: f64,
   pub rotation_z: f64,
+  /// Non-zero for a blank canvas's own layer: its annotations are drawn on
+  /// and a drawing press on empty canvas joins it, but it is never pressed
+  /// as a picture and draws no frame or grips.
+  pub blank: u32,
 }
 
 impl PreviewSelection {

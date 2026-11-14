@@ -51,6 +51,7 @@ import {
 } from "./recording/use-project-look";
 import { useRecordingEditorPreview } from "./recording/use-recording-editor-preview";
 import { sourceScalePercent } from "./resolution";
+import { newestScreenshotLayer } from "./screenshot/screenshot-blank";
 import {
   defaultRecordingOutput,
   defaultScreenshotOutput,
@@ -62,9 +63,9 @@ import {
 } from "./screenshot/screenshot-output";
 import {
   reopenedScreenshotWorkspace,
-  seedScreenshotItemOutput,
   seedScreenshotWorkspace,
 } from "./screenshot/screenshot-seed";
+import { useScreenshotLayers } from "./screenshot/use-screenshot-layers";
 import { useScreenshotProject } from "./screenshot/use-screenshot-project";
 import {
   selectArtifact,
@@ -435,7 +436,11 @@ export function EditorWindow() {
     );
     setSelectedScreenshotItemId(
       artifact?.kind === "screenshot"
-        ? (artifact.items[artifact.items.length - 1]?.id ?? null)
+        ? (newestScreenshotLayer(
+            artifact.items.filter(
+              (item) => !artifact.deletedItemIds.includes(item.id),
+            ),
+          )?.id ?? null)
         : null,
     );
     seenScreenshotItemIdsRef.current = new Set(
@@ -471,35 +476,16 @@ export function EditorWindow() {
     screenshotOutput,
   );
 
-  const screenshotItems =
-    artifact?.kind === "screenshot" ? artifact.items : null;
-  useEffect(() => {
-    if (!screenshotItems) return;
-    const newestId = screenshotItems[screenshotItems.length - 1]?.id ?? null;
-    const added = screenshotItems.filter(
-      (item) => !seenScreenshotItemIdsRef.current.has(item.id),
-    );
-    seenScreenshotItemIdsRef.current = new Set(
-      screenshotItems.map((item) => item.id),
-    );
-    /* eslint-disable @eslint-react/set-state-in-effect */
-    setSelectedScreenshotItemId(newestId);
-    setScreenshotOutput((current) => {
-      if (added.length === 0) return current;
-      return {
-        ...current,
-        items: [
-          ...current.items,
-          ...added.map((item) => ({
-            id: item.id,
-            // Placed at its real size: fitting is the user's to do.
-            output: seedScreenshotItemOutput(current, item, { fit: false }),
-          })),
-        ],
-      };
-    });
-    /* eslint-enable @eslint-react/set-state-in-effect */
-  }, [screenshotItems]);
+  useScreenshotLayers({
+    onSelectedItemChange: setSelectedScreenshotItemId,
+    screenshot:
+      artifact?.kind === "screenshot" && seededArtifactId === artifact.id
+        ? artifact
+        : null,
+    seenRef: seenScreenshotItemIdsRef,
+    setWorkspace: setScreenshotOutput,
+    workspace: screenshotOutput,
+  });
 
   // Keep the workspace name aligned with the latest capture suggestion.
   useEffect(() => {

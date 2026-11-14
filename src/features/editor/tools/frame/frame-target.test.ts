@@ -14,10 +14,13 @@ import { CameraOverlaySettings, EditorArtifact } from "../../types";
 import { editorFrameTarget } from "./frame-target";
 
 const screenshotArtifact: EditorArtifact = {
+  deletedItemIds: [],
   extension: "png",
   height: 900,
   id: 1,
-  items: [{ annotations: [], height: 900, id: 7, width: 1_600 }],
+  items: [
+    { annotations: [], height: 900, id: 7, isBlank: false, width: 1_600 },
+  ],
   kind: "screenshot",
   suggestedFileStem: "capture",
   width: 1_600,

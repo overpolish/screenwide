@@ -13,6 +13,9 @@ pub struct ScreenshotItemSnapshot {
   pub annotations: Vec<Annotation>,
   pub height: u32,
   pub id: u64,
+  /// The canvas's own layer, whose picture is empty: it holds what is drawn
+  /// on a blank canvas and is never drawn or chosen as a picture.
+  pub is_blank: bool,
   pub width: u32,
 }
 
@@ -31,6 +34,10 @@ pub struct ScreenshotItemSnapshot {
 #[allow(clippy::large_enum_variant)]
 pub enum EditorArtifactSnapshot {
   Screenshot {
+    /// The layers `project_workspace` no longer holds: deleted in the
+    /// editor, so reopening leaves them out rather than laying them out as
+    /// layers taken since it was saved.
+    deleted_item_ids: Vec<u64>,
     id: u64,
     items: Vec<ScreenshotItemSnapshot>,
     /// The canvas and layers saved in the project, which the window shows in
@@ -88,26 +95,31 @@ pub(super) fn snapshot(app: &AppHandle, kind: EditorKind) -> EditorSnapshot {
         items,
         project,
         suggested_file_stem,
-      } => EditorArtifactSnapshot::Screenshot {
-        id: *id,
-        items: items
-          .iter()
-          .map(|item| ScreenshotItemSnapshot {
-            annotations: item.annotations.clone(),
-            height: item.image.height,
-            id: item.id,
-            width: item.image.width,
-          })
-          .collect(),
-        project_workspace: super::screenshot_project::restored_workspace(
+      } => {
+        let (project_workspace, deleted) = super::screenshot_project::restored_workspace(
           project,
           &items.iter().map(|item| item.id).collect::<Vec<_>>(),
-        ),
-        suggested_file_stem: suggested_file_stem.clone(),
-        extension: SCREENSHOT_EXTENSION.to_owned(),
-        width: items.first().map_or(0, |item| item.image.width),
-        height: items.first().map_or(0, |item| item.image.height),
-      },
+        );
+        EditorArtifactSnapshot::Screenshot {
+          deleted_item_ids: deleted,
+          id: *id,
+          items: items
+            .iter()
+            .map(|item| ScreenshotItemSnapshot {
+              annotations: item.annotations.clone(),
+              height: item.image.height,
+              id: item.id,
+              is_blank: item.blank,
+              width: item.image.width,
+            })
+            .collect(),
+          project_workspace,
+          suggested_file_stem: suggested_file_stem.clone(),
+          extension: SCREENSHOT_EXTENSION.to_owned(),
+          width: items.first().map_or(0, |item| item.image.width),
+          height: items.first().map_or(0, |item| item.image.height),
+        }
+      }
       EditorArtifact::Recording {
         audio_tracks,
         camera,

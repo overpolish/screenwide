@@ -158,6 +158,8 @@ fn icon_for(item: &MenuItemKind<Wry>) -> Option<&'static [u8]> {
     super::icons::PROJECT
   } else if id == super::OPEN_CLIPBOARD_SCREENSHOT_MENU_ID {
     super::icons::CLIPBOARD
+  } else if id == super::NEW_CANVAS_MENU_ID {
+    super::icons::CANVAS
   } else if id == super::RECOGNIZE_TEXT_MENU_ID {
     super::icons::TEXT
   } else if id == super::RULER_OVERLAY_MENU_ID {

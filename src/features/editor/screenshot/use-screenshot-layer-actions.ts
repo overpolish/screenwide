@@ -31,15 +31,19 @@ const meet = () => true;
  * The workspace's layers moved through the stacking or taken away, by the
  * keyboard or from the menu a right press on a bare layer opens. The menu
  * offers the same moves, under the same words and keys, as an annotation's,
- * then Delete while another layer would be left; the native side has
- * already selected the layer the press landed on.
+ * then Delete; the native side has already selected the layer the press
+ * landed on. Every picture can be deleted, the last leaving a blank canvas;
+ * the blank layer itself never is.
  */
 export function useScreenshotLayerActions({
+  isBlank,
   onCanvasResize,
   onSelectedItemChange,
   screenshotOutput,
   selectedItemId,
 }: {
+  /** Whether a layer is a blank canvas's own (`screenshot-blank.ts`). */
+  isBlank: (itemId: number) => boolean;
   screenshotOutput: ScreenshotWorkspaceOutputSettings | undefined;
   selectedItemId: number | null;
   onCanvasResize?: (settings: ScreenshotWorkspaceOutputSettings) => void;
@@ -55,12 +59,7 @@ export function useScreenshotLayerActions({
     if (next !== screenshotOutput) onCanvasResize?.(next);
   };
   const deleteLayer = (itemId = selectedItemId) => {
-    if (
-      !screenshotOutput ||
-      itemId === null ||
-      screenshotOutput.items.length <= 1
-    )
-      return;
+    if (!screenshotOutput || itemId === null || isBlank(itemId)) return;
     const result = deleteScreenshotLayer({
       itemId,
       settings: screenshotOutput,
@@ -94,15 +93,15 @@ export function useScreenshotLayerActions({
     const layer = items[paneIndex];
     const moves = [
       ...annotationArrangeItems(availableArrangements(items, paneIndex, meet)),
-      ...(items.length > 1
-        ? [
+      ...(isBlank(layer.id)
+        ? []
+        : [
             {
               id: DELETE_ITEM,
               label: t("editor-delete"),
               shortcut: "Backspace",
             },
-          ]
-        : []),
+          ]),
     ];
     if (moves.length === 0) return;
     void openMenu({

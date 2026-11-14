@@ -9,6 +9,7 @@ use tauri::menu::ContextMenu;
 mod assets {
   pub const ANNOTATE: &[u8] = include_bytes!("../../icons/menu/windows/annotate.png");
   pub const CANCEL: &[u8] = include_bytes!("../../icons/menu/windows/cancel.png");
+  pub const CANVAS: &[u8] = include_bytes!("../../icons/menu/windows/canvas.png");
   pub const CLIPBOARD: &[u8] = include_bytes!("../../icons/menu/windows/clipboard.png");
   pub const DISCARD: &[u8] = include_bytes!("../../icons/menu/windows/discard.png");
   pub const KEEP_AWAKE: &[u8] = include_bytes!("../../icons/menu/windows/keep-awake.png");
@@ -29,6 +30,7 @@ mod assets {
 mod assets {
   pub const ANNOTATE: &[u8] = include_bytes!("../../icons/menu/annotate.png");
   pub const CANCEL: &[u8] = include_bytes!("../../icons/menu/cancel.png");
+  pub const CANVAS: &[u8] = include_bytes!("../../icons/menu/canvas.png");
   pub const CLIPBOARD: &[u8] = include_bytes!("../../icons/menu/clipboard.png");
   pub const DISCARD: &[u8] = include_bytes!("../../icons/menu/discard.png");
   pub const KEEP_AWAKE: &[u8] = include_bytes!("../../icons/menu/keep-awake.png");

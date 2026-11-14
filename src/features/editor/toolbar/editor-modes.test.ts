@@ -36,10 +36,12 @@ const offered = (
   );
 
 describe("editorModeGroups", () => {
-  it("offers a screenshot its Frame and Screenshot, always", () => {
-    expect(offered(NO_CAPTURE_PARTS, "screenshot")).toEqual([
+  it("offers a screenshot its Frame, and Screenshot while it holds a picture", () => {
+    expect(offered({ picture: "screen" }, "screenshot")).toEqual([
       "picture: frame screen",
     ]);
+    // A blank canvas has no picture to work on.
+    expect(offered(NO_CAPTURE_PARTS, "screenshot")).toEqual(["picture: frame"]);
   });
 
   it("offers every mode for a recording that holds everything", () => {
