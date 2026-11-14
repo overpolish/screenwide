@@ -11,6 +11,8 @@
 //! how much of it changed since the last, and how much is unlike anything in
 //! the seconds before, which tells a new screen from one that only moves.
 //! What that means is judged against the recording's own level (`states`).
+//! A camera's picture is judged for where the person on it moved
+//! (`movement`).
 //!
 //! The capture reads its frames as it writes them (`tap`, `grey`), on every
 //! platform alike, so a recording's readings are ready when it stops. A
@@ -18,6 +20,7 @@
 
 mod grey;
 mod measure;
+mod movement;
 mod sample;
 mod states;
 mod tap;
@@ -26,6 +29,7 @@ mod tests;
 
 pub use grey::{grey_from_bgra, grey_from_luma};
 pub use measure::{Measure, PictureReading, PictureState, SAMPLE_SIZE};
+pub use movement::{movements, Movement};
 pub use sample::{read_picture, SAMPLES_PER_SECOND};
 pub use states::states;
 pub use tap::{read_readings, readings_path, PictureTap};

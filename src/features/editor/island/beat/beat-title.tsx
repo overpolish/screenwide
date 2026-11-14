@@ -33,6 +33,8 @@ function beatTitle(beat: BeatWhat) {
       return t("editor-island-beat-switch", { app: beat.app });
     case "screen":
       return t("editor-island-beat-screen");
+    case "camera":
+      return t("editor-island-beat-camera");
     case "sound":
       return t("editor-island-beat-sound");
     case "speech":

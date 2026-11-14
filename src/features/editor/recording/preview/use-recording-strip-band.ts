@@ -3,6 +3,7 @@
 
 import { RefObject, useEffect } from "react";
 
+import { composedVideoTracks } from "../../export/camera-output";
 import { withAnnotationGlides } from "../../timeline/recording-strip/recording-strip-glides";
 import { recordingStripLanes } from "../../timeline/recording-strip/recording-strip-lanes";
 import { withAnnotationPins } from "../../timeline/recording-strip/recording-strip-pins";
@@ -89,6 +90,10 @@ export function useRecordingStripBand(
     durationMs,
     edit,
     hasKeyboardData: props.hasKeyboardData,
+    isCameraShown: composedVideoTracks(
+      props.enabledVideoTracks,
+      props.bakeCamera,
+    ).includes("camera"),
     isKeyboardShown: keyboardEffects.bake,
     isPlaying: player.isPlaying,
     isScreenShown: props.enabledVideoTracks.includes("primary"),

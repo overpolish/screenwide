@@ -4,19 +4,24 @@
 import { type TimelineBeat } from "../beat-clip/beat-label";
 import { type Span, type TimeMap } from "../timeline-scale";
 
+import { movementSpans } from "./recording-camera-beats";
+
 import type { RecordingSceneClip } from "../../../../bindings/RecordingSceneClip";
 
 // The beats of a real recording and the lulls between them, found in what
 // was read from it: what was said, grouped into lines; the clicks, the
 // typing and the shortcuts pressed; the moments flagged while recording;
-// and where the picture went new. Each beat keeps a little of what led up
-// to it and what came of it. Where two would overlap, the earlier gives
-// way, unless that would leave it too short to see, when the later starts
-// after it instead. Beats and lulls tile the recording: a gap too short to
-// be a lull goes to the beat before it.
+// where the picture went new; and where the person on camera moved. Each
+// beat keeps a little of what led up to it and what came of it. Where two
+// would overlap, the earlier gives way, unless that would leave it too
+// short to see, when the later starts after it instead. Beats and lulls
+// tile the recording: a gap too short to be a lull goes to the beat before
+// it.
 
 /** What a real recording holds to find its beats in, in recorded seconds. */
 export type RecordingReadings = {
+  /** Where the person on camera moved, where the camera is seen. */
+  camera: Span[];
   clicks: { at: number; count: number }[];
   duration: number;
   moments: { at: number; color: string; index: number; name: string }[];
@@ -110,11 +115,17 @@ function typingRuns(typing: number[]): Span[] {
 
 /** Every beat the readings hold, as found, overlapping where they do. */
 function foundBeats(readings: RecordingReadings): RecordingBeat[] {
+  const lines = linesOf(readings.words);
   return [
-    ...linesOf(readings.words).map((line) => ({
+    ...lines.map((line) => ({
       beat: { kind: "speech", line: line.text } as const,
       id: speechBeatId(line.start),
       span: { end: line.end, start: line.start },
+    })),
+    ...movementSpans(readings.camera, lines).map((span) => ({
+      beat: { kind: "camera" } as const,
+      id: idOf("camera", span.start),
+      span,
     })),
     ...readings.clicks.map(({ at }) => ({
       beat: { kind: "click" } as const,

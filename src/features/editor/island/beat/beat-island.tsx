@@ -22,6 +22,7 @@ export type BeatWhat =
   | { keys: string[]; kind: "keys" }
   /** `label` names what was clicked or typed, where the recording knows. */
   | { kind: "click" | "type"; label?: string }
+  | { kind: "camera" }
   | { kind: "screen" }
   | { kind: "sound" }
   | { kind: "speech"; line: string };

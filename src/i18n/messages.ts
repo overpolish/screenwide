@@ -275,6 +275,7 @@ export type Messages = {
   "editor-island-audio-volume": null;
   "editor-island-auto-volume": null;
   "editor-island-auto-volume-measuring": null;
+  "editor-island-beat-camera": null;
   "editor-island-beat-click": { label: string | number };
   "editor-island-beat-click-unnamed": null;
   "editor-island-beat-confirm-cut": null;

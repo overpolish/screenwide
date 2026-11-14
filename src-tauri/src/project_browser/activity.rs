@@ -100,7 +100,8 @@ fn read(file: &Path) -> Option<ProjectActivity> {
     .collect();
   let edit = timeline.and_then(|persisted| persisted.into_current(duration_ms));
   Some(ProjectActivity {
-    activity: activity::read(cursor.as_deref(), keyboard.as_deref(), &movie),
+    // Whether the camera is drawn into the video is the editor's to say.
+    activity: activity::read(None, cursor.as_deref(), keyboard.as_deref(), &movie),
     duration_ms,
     edit,
     moments,

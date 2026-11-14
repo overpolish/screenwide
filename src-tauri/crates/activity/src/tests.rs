@@ -6,6 +6,7 @@ use std::path::PathBuf;
 
 use crate::grey::grey_from_bgra;
 use crate::measure::{Measure, PictureReading, PictureState, SAMPLE_SIZE};
+use crate::movement::movements;
 use crate::states::states;
 use crate::tap::{read_readings, readings_path, PictureTap};
 
@@ -230,4 +231,46 @@ fn a_frame_is_shrunk_to_cells_that_keep_where_it_is_light() {
   let (columns, _) = SAMPLE_SIZE;
   assert!(grey[..columns / 2].iter().all(|cell| *cell == 0));
   assert!(grey[columns / 2..columns].iter().all(|cell| *cell >= 250));
+}
+
+/// A camera's readings, ten a second: talking's small movement throughout,
+/// with `changed` set where `moved` says.
+fn camera(seconds: u64, moved: &[(u64, u64)]) -> Vec<PictureReading> {
+  (0..seconds * 10)
+    .map(|tenth| {
+      let ms = tenth * 100;
+      let changed = if moved.iter().any(|&(from, to)| from <= ms && ms < to) {
+        0.2
+      } else {
+        0.005 + 0.005 * (tenth % 3) as f32
+      };
+      PictureReading { changed, ms, novelty: changed }
+    })
+    .collect()
+}
+
+#[test]
+fn talking_on_camera_is_no_movement() {
+  assert_eq!(movements(&camera(30, &[])), []);
+}
+
+#[test]
+fn a_gesture_on_camera_is_a_movement_where_it_happens() {
+  let found = movements(&camera(30, &[(10_000, 12_000)]));
+  assert_eq!(found.len(), 1);
+  assert!((9_700..=10_000).contains(&found[0].start_ms));
+  assert!((12_000..=12_300).contains(&found[0].end_ms));
+}
+
+#[test]
+fn movements_a_moment_apart_are_one_and_a_calm_parts_them() {
+  let close = movements(&camera(30, &[(5_000, 6_000), (7_000, 8_000)]));
+  assert_eq!(close.len(), 1);
+  let apart = movements(&camera(30, &[(5_000, 6_000), (10_000, 11_000)]));
+  assert_eq!(apart.len(), 2);
+}
+
+#[test]
+fn a_twitch_on_camera_is_no_movement() {
+  assert_eq!(movements(&camera(30, &[(10_000, 10_100)])), []);
 }

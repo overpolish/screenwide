@@ -42,10 +42,22 @@ pub struct RecordingPictureSpan {
   pub state: &'static str,
 }
 
+/// A stretch where the person on camera moved: a gesture, a lean, a turn.
+#[derive(Clone, Debug, Serialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct RecordingMovement {
+  pub end_ms: u64,
+  pub start_ms: u64,
+}
+
 #[derive(Clone, Debug, Default, Serialize, TS)]
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
 pub struct RecordingActivity {
+  /// Where the person on a camera beside the screen moved. A camera that is
+  /// the recording's only picture is its `picture`.
+  pub camera: Vec<RecordingMovement>,
   pub clicks: Vec<RecordingClick>,
   pub picture: Vec<RecordingPictureSpan>,
   /// When text was typed, sorted; the key file says no more than that.
@@ -53,6 +65,7 @@ pub struct RecordingActivity {
 }
 
 struct Sources {
+  camera: Option<PathBuf>,
   cursor: Option<PathBuf>,
   keyboard: Option<PathBuf>,
   movie: PathBuf,
@@ -66,6 +79,7 @@ fn sources(app: &AppHandle, artifact_id: u64) -> Result<Sources, String> {
     .lock()
     .unwrap_or_else(|poisoned| poisoned.into_inner());
   let Some(EditorArtifact::Recording {
+    camera,
     cursor,
     id,
     keyboard,
@@ -79,6 +93,7 @@ fn sources(app: &AppHandle, artifact_id: u64) -> Result<Sources, String> {
     return Err("That recording is no longer available in the editor".to_owned());
   }
   Ok(Sources {
+    camera: camera.as_ref().map(|camera| camera.path.clone()),
     cursor: cursor.as_ref().map(|cursor| cursor.path.clone()),
     keyboard: keyboard.as_ref().map(|keyboard| keyboard.path.clone()),
     movie: path.clone(),
@@ -93,6 +108,7 @@ pub async fn get_recording_activity(
   let sources = sources(&app, artifact_id)?;
   tauri::async_runtime::spawn_blocking(move || {
     read(
+      sources.camera.as_deref(),
       sources.cursor.as_deref(),
       sources.keyboard.as_deref(),
       &sources.movie,
@@ -105,11 +121,24 @@ pub async fn get_recording_activity(
 /// A file that cannot be read gives nothing rather than failing the rest:
 /// each reading stands on its own.
 pub(crate) fn read(
+  camera: Option<&Path>,
   cursor: Option<&Path>,
   keyboard: Option<&Path>,
   movie: &Path,
 ) -> RecordingActivity {
   RecordingActivity {
+    camera: camera
+      .and_then(|path| screenwide_activity::read_readings(path).ok())
+      .map(|readings| {
+        screenwide_activity::movements(&readings)
+          .into_iter()
+          .map(|movement| RecordingMovement {
+            end_ms: movement.end_ms,
+            start_ms: movement.start_ms,
+          })
+          .collect()
+      })
+      .unwrap_or_default(),
     clicks: cursor
       .and_then(|path| screenwide_records::cursor::read(path).ok())
       .map(|records| clicks(&records))

@@ -358,6 +358,9 @@ editor-island-beat-press = Press { $keys }
 editor-island-beat-switch = Switch to { $app }
 # The picture changes to something new, such as another page.
 editor-island-beat-screen = New screen
+# The person on camera moves more than they do while talking: a hand
+# raised, a lean towards the camera.
+editor-island-beat-camera = Movement on camera
 # The sound jumps well above its level: a shot, a crash, a cheer.
 editor-island-beat-sound = Loud moment
 # A line said in the recording, quoted. $line is the line.

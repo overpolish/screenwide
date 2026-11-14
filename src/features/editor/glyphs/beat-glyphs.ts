@@ -4,6 +4,7 @@
 import {
   AppWindow,
   Flag,
+  Hand,
   Keyboard,
   LayoutPanelTop,
   type LucideIcon,
@@ -17,6 +18,7 @@ import {
 // What happens at a beat, drawn the same on the strip and on its island.
 
 export const BEAT_GLYPHS = {
+  camera: Hand,
   click: MousePointerClick,
   gap: RectangleHorizontal,
   keys: Keyboard,

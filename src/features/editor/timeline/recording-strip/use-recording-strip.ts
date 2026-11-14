@@ -23,6 +23,7 @@ import {
   withoutScreen,
   withoutScreenUnderBlank,
 } from "./recording-beats";
+import { movementsSeen } from "./recording-camera-beats";
 import { recordingStripGapActions } from "./recording-strip-gap-actions";
 import { recordingStripLulls } from "./recording-strip-lulls";
 import { shownStripBeats, shownStripParts } from "./recording-strip-shown";
@@ -49,6 +50,9 @@ export type RecordingStripSource = {
   durationMs: number;
   edit: RecordingTimelineEdit;
   hasKeyboardData: boolean;
+  /** Whether the camera is drawn into the video: saved as its own file or
+   * out of the export, where it moves makes no beats. */
+  isCameraShown: boolean;
   /** Whether the shortcuts are drawn over the picture. */
   isKeyboardShown: boolean;
   isPlaying: boolean;
@@ -82,20 +86,22 @@ export function useRecordingStrip(source: RecordingStripSource) {
   const { artifactId, durationMs, edit } = source;
   const recorded = durationMs / 1000;
   const readings = useRecordingStripReadings(source);
-  const { isScreenShown } = source;
+  const { isCameraShown, isScreenShown } = source;
   const time = useMemo(
     () => recordingStripTime(edit, recorded),
     [edit, recorded],
   );
-  const found = useMemo(
-    () =>
-      recordingBeats(
-        isScreenShown
-          ? withoutScreenUnderBlank(readings, edit.sceneClips, time.map)
-          : withoutScreen(readings),
-      ),
-    [edit.sceneClips, isScreenShown, readings, time.map],
-  );
+  const found = useMemo(() => {
+    const screen = isScreenShown
+      ? withoutScreenUnderBlank(readings, edit.sceneClips, time.map)
+      : withoutScreen(readings);
+    return recordingBeats({
+      ...screen,
+      camera: isCameraShown
+        ? movementsSeen(readings.camera, edit.sceneClips, time.map)
+        : [],
+    });
+  }, [edit.sceneClips, isCameraShown, isScreenShown, readings, time.map]);
   const lulls = useMemo(
     () =>
       recordingStripLulls({

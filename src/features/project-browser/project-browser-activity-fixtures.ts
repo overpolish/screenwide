@@ -42,6 +42,7 @@ const activity = ({
   typing?: number[];
 }): ProjectActivity => ({
   activity: {
+    camera: [],
     clicks: clicks.map((at) => ({ count: 1, ms: at * 1000 })),
     picture: screens.map((at) => ({
       endMs: (at + 0.6) * 1000,

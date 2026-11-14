@@ -13,6 +13,7 @@ import {
 } from "./recording-beats";
 
 const empty: RecordingReadings = {
+  camera: [],
   clicks: [],
   duration: 20,
   moments: [],
@@ -139,6 +140,27 @@ describe("recordingBeats", () => {
       moving: [{ end: 9, start: 7 }],
       span: { end: 12, start: 5 },
     });
+  });
+
+  it("makes a beat of a movement on camera only where nothing is said", () => {
+    // A line from 4 to 6 s; a gesture from 5.5 to 8 s, which runs on past
+    // the line; and one from 12 to 13 s, in the quiet.
+    const found = recordingBeats({
+      ...empty,
+      camera: [
+        { end: 8, start: 5.5 },
+        { end: 13, start: 12 },
+      ],
+      words: [word(4, 6, "Look here.")],
+    });
+    expect(
+      found.beats.map(({ beat, span }) => [beat.kind, span.start, span.end]),
+    ).toEqual([
+      ["speech", 4, 6],
+      ["camera", 6, 9],
+      ["camera", 11.5, 14],
+    ]);
+    expectTiled(found, 20);
   });
 });
 

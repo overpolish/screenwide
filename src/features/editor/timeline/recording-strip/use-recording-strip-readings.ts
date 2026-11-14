@@ -23,7 +23,12 @@ import type { RecordingTranscriptWord } from "../../../../bindings/RecordingTran
 // edit, so they stay where they were pressed; and its moments, which the
 // band reads already.
 
-const NO_ACTIVITY: RecordingActivity = { clicks: [], picture: [], typing: [] };
+const NO_ACTIVITY: RecordingActivity = {
+  camera: [],
+  clicks: [],
+  picture: [],
+  typing: [],
+};
 const NO_WORDS: RecordingTranscriptWord[] = [];
 
 /** One answer per recording, cleared while another is read. */
@@ -89,6 +94,10 @@ export function useRecordingStripReadings({
   return useMemo(() => {
     const seconds = (ms: number) => ms / 1000;
     return {
+      camera: activity.camera.map(({ endMs, startMs }) => ({
+        end: seconds(endMs),
+        start: seconds(startMs),
+      })),
       clicks: activity.clicks.map(({ count, ms }) => ({
         at: seconds(ms),
         count,

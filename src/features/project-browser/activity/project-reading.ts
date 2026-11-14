@@ -55,6 +55,8 @@ export function projectReading(activity: ProjectActivity): ProjectReading {
     text,
   }));
   const { beats } = recordingBeats({
+    // Whether the camera is drawn into the video is the editor's to say.
+    camera: [],
     clicks: activity.activity.clicks.map(({ count, ms }) => ({
       at: seconds(ms),
       count,
