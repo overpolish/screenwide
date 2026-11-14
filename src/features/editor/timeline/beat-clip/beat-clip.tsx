@@ -23,7 +23,9 @@ import { type BeatTrim, BeatTrimHandles } from "./beat-trim";
 const GLYPH_PX = 18;
 /** The narrowest a beat shows its picture beside its glyph at, in px. */
 const THUMBNAIL_PX = 64;
-/** The narrowest a beat shows its title at, in px. */
+/** The narrowest a beat shows its title at beside its picture, in px; one
+ * with no picture, such as a gap, shows it once it is as wide as a picture
+ * would need (`THUMBNAIL_PX`), its glyph and a word or two then fitting. */
 const TITLE_PX = 170;
 
 export type BeatClipProps = {
@@ -139,7 +141,8 @@ export function BeatClip({
             {hasGlyph ? <BeatGlyph beat={beat} /> : null}
             {/* The keys are drawn in the shortcut lane over the beats, so a
                 shortcut is not written twice. */}
-            {px > TITLE_PX && beat.kind !== "keys" ? (
+            {px > (thumbnail === undefined ? THUMBNAIL_PX : TITLE_PX) &&
+            beat.kind !== "keys" ? (
               <span className="truncate" dir="auto">
                 {/* The flag already says it is a moment; its name says
                     which kind. Assistive technology hears "… moment". */}

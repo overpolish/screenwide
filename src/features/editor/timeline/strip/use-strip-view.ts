@@ -86,6 +86,9 @@ export function useStripView({
   useLayoutEffect(() => {
     latestRef.current = { extent, least, length, trackWidth, view };
   });
+  /** Where the view started, in played seconds, when a gap's start was
+   * taken hold of. */
+  const heldStartRef = useRef<number | null>(null);
   const set = (next: View) => {
     const { extent: end, least: fewest, length: playing } = latestRef.current;
     const kept = clampView(next, fewest, end);
@@ -192,6 +195,25 @@ export function useStripView({
     /** How wide a second is drawn, in px. */
     pxPerSecond: trackWidth / length,
     set,
+    /** Told null as a gap's start is taken hold of, then how many seconds
+     * it has grown there since: the view moves by as much from where it
+     * was, its zoom kept, so the start stays under the pointer and what
+     * came before is pushed back. Measured from the hold, it cannot drift;
+     * at the strip's start it can go no further back. */
+    shiftSinceHold: (grown: number | null) => {
+      const { length: playing, view: shown } = latestRef.current;
+      if (grown === null) {
+        heldStartRef.current = shown.start * playing;
+        return;
+      }
+      const from = heldStartRef.current;
+      if (from === null) return;
+      const start = Math.max(0, from + grown);
+      setChosen((current) => ({
+        end: start + (current ? current.end - current.start : 0),
+        start,
+      }));
+    },
     trackWidth,
     view,
   };

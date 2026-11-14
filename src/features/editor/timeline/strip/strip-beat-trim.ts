@@ -6,7 +6,7 @@ import { type TimelineCaption } from "../caption-lane/caption-line";
 import { type TimelineCut } from "../cut-seams/cut-seams";
 import { type Span, type TimeMap } from "../timeline-scale";
 
-import { type StripBeat } from "./strip-beat-row";
+import { type StripBeat, type StripBeatRowProps } from "./strip-beat-row";
 
 // A beat's trim, as the strip reads it: what plays of it is what its cuts
 // leave, a trim at either end being a cut there; and said aloud, its ends
@@ -48,6 +48,7 @@ export function beatTrimOf({
   captions,
   cuts,
   map,
+  onGapStart,
   onTrim,
   width,
 }: {
@@ -55,16 +56,26 @@ export function beatTrimOf({
   captions: TimelineCaption[] | null;
   cuts: TimelineCut[];
   map: TimeMap;
-  onTrim: (id: string, edge: "end" | "start", at: number) => void;
+  onTrim: StripBeatRowProps["onBeatTrim"];
   /** The track's width, in px. */
   width: number;
+  onGapStart?: StripBeatRowProps["onGapStart"];
 }): BeatTrim {
   const starts =
     beat.beat.kind === "speech" ? wordStarts(beat.span, captions) : null;
   const pxPerSecond = width / Math.max(map.duration, 1e-6);
+  // A gap grows or shrinks at its start as at its end, so the view follows
+  // it by as much, measured from where it was taken hold of so nothing
+  // drifts however far it goes back and forth.
+  const isGapStart = (edge: "end" | "start") =>
+    edge === "start" && beat.beat.kind === "gap";
   return {
     kept: keptOf(beat.span, cuts),
-    onTrim: (edge, at) => {
+    onHold: (edge) => {
+      if (isGapStart(edge)) onGapStart?.(null);
+    },
+    onTrim: (edge, at, from) => {
+      if (isGapStart(edge)) onGapStart?.(from - at);
       onTrim(beat.id, edge, at);
     },
     pxPerSecond,

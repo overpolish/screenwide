@@ -25,12 +25,12 @@ import { cutAt, joinedAt } from "./recording-strip-source";
 const GAP_SLOT_MS = 3_600_000;
 /** How long a gap may be at most, and at least, in ms. */
 export const MAX_GAP_MS = 600_000;
-const MIN_GAP_MS = 100;
+export const MIN_GAP_MS = 100;
 /** How long a gap is inserted, in ms. */
 export const DEFAULT_GAP_MS = 3_000;
 
 /** Within this of a moment, in ms, is that moment. */
-const SAME_MS = 0.5;
+export const SAME_MS = 0.5;
 
 const GAP_BEAT_PREFIX = "gap-";
 
@@ -72,7 +72,7 @@ const clampLength = (lengthMs: number) =>
 /** `edit`'s songs and sound effects that start at `fromMs` or later moved
  * by `byMs`, in whole ms as clips are timed; those already playing there
  * keep playing through. */
-const shiftedAudio = (
+export const shiftedAudio = (
   edit: RecordingTimelineEdit,
   fromMs: number,
   byMs: number,
@@ -94,11 +94,11 @@ const shiftedAudio = (
 };
 
 /** The share of the recording where a gap's slot `slot` begins. */
-const slotStart = (slot: number, durationMs: number) =>
+export const slotStart = (slot: number, durationMs: number) =>
   1 + (slot * GAP_SLOT_MS) / durationMs;
 
 /** The slot the gap `segment` lies in. */
-const slotOf = (segment: RecordingTimelineSegment, durationMs: number) =>
+export const slotOf = (segment: RecordingTimelineSegment, durationMs: number) =>
   Math.floor(((segment.sourceStart - 1) * durationMs) / GAP_SLOT_MS);
 
 /** The first slot of the empty source no gap of `edit` holds. Slot 0 is
@@ -146,33 +146,61 @@ export function insertRecordingTimelineGap(
       id: held.id,
       lengthMs: playedMs(held, durationMs) + length,
     });
-  // Split where the gap goes, unless that is already a segment's edge.
-  const split = held
-    ? cutAt(
-        edit,
-        held.sourceStart +
-          ((atMs - starts[holding]) * (held.playbackRate ?? 1)) / durationMs,
-      )
-    : edit;
+  // Placed a longest gap into its slot, so its start can be drawn out too.
+  const start =
+    slotStart(freeSlot(edit, durationMs), durationMs) + MAX_GAP_MS / durationMs;
+  return placedGap(edit, {
+    atMs,
+    durationMs,
+    gap: { sourceEnd: start + length / durationMs, sourceStart: start },
+  });
+}
+
+/**
+ * `edit` with `gap` played `atMs` into the timeline, on a recording
+ * `durationMs` long: the recording split there, unless that is already a
+ * segment's edge, and what comes after moved later, songs and sound effects
+ * with it. A gap with no id yet takes the next one free.
+ */
+export function placedGap(
+  edit: RecordingTimelineEdit,
+  {
+    atMs,
+    durationMs,
+    gap,
+  }: {
+    atMs: number;
+    durationMs: number;
+    gap: Omit<RecordingTimelineSegment, "id"> & { id?: number };
+  },
+): RecordingTimelineEdit {
+  const starts = startsMs(edit.segments, durationMs);
+  const holding = edit.segments.findIndex(
+    (segment, index) =>
+      atMs > starts[index] + SAME_MS &&
+      atMs < starts[index] + playedMs(segment, durationMs) - SAME_MS,
+  );
+  const held = edit.segments[holding] as RecordingTimelineSegment | undefined;
+  const split =
+    held && !isGapSegment(held)
+      ? cutAt(
+          edit,
+          held.sourceStart +
+            ((atMs - starts[holding]) * (held.playbackRate ?? 1)) / durationMs,
+        )
+      : edit;
   const splitStarts = startsMs(split.segments, durationMs);
   const index = splitStarts.findIndex((start) => start >= atMs - SAME_MS);
   const at = index < 0 ? split.segments.length : index;
-  // Placed a longest gap into its slot, so its start can be drawn out too.
-  const start =
-    slotStart(freeSlot(split, durationMs), durationMs) +
-    MAX_GAP_MS / durationMs;
-  const gap: RecordingTimelineSegment = {
-    id: split.nextSegmentId,
-    sourceEnd: start + length / durationMs,
-    sourceStart: start,
-  };
+  const placed = { ...gap, id: gap.id ?? split.nextSegmentId };
   return {
     ...split,
-    ...shiftedAudio(edit, atMs, length),
-    nextSegmentId: split.nextSegmentId + 1,
+    ...shiftedAudio(edit, atMs, playedMs(placed, durationMs)),
+    nextSegmentId:
+      gap.id === undefined ? split.nextSegmentId + 1 : split.nextSegmentId,
     segments: [
       ...split.segments.slice(0, at),
-      gap,
+      placed,
       ...split.segments.slice(at),
     ],
   };
@@ -234,61 +262,4 @@ export function deleteRecordingTimelineGap(
   return after && !isGapSegment(after)
     ? joinedAt(removed, [after.sourceStart])
     : removed;
-}
-
-/** How far the gap `segment` on a recording `durationMs` long may be drawn
- * out, in recorded seconds, as its beat is: its start back as far as its
- * slot begins, and either end until the gap is as long as a gap may be. */
-export function gapTrimReach(
-  segment: RecordingTimelineSegment,
-  durationMs: number,
-): { end: number; start: number } {
-  const recorded = durationMs / 1000;
-  const most = MAX_GAP_MS / 1000;
-  return {
-    end: segment.sourceStart * recorded + most,
-    start: Math.max(
-      slotStart(slotOf(segment, durationMs), durationMs) * recorded,
-      segment.sourceEnd * recorded - most,
-    ),
-  };
-}
-
-/**
- * `edit` with an end of the gap `id` dragged to `atMs` of its own empty
- * source, as a beat's end is trimmed: in, the gap shortens, out, it grows,
- * within `gapTrimReach` and no shorter than a gap may be. Each end is a
- * moment of the gap's own stretch, so the same drag gives the same gap
- * however often it is told; what comes after the gap moves with its end.
- */
-export function trimRecordingTimelineGap(
-  edit: RecordingTimelineEdit,
-  {
-    atMs,
-    durationMs,
-    edge,
-    id,
-  }: { atMs: number; durationMs: number; edge: "end" | "start"; id: number },
-): RecordingTimelineEdit {
-  const index = edit.segments.findIndex(
-    (segment) => segment.id === id && isGapSegment(segment),
-  );
-  if (index < 0 || durationMs <= 0) return edit;
-  const gap = edit.segments[index];
-  const reach = gapTrimReach(gap, durationMs);
-  const at =
-    Math.min(Math.max(atMs / 1000, reach.start), reach.end) /
-    (durationMs / 1000);
-  const least = MIN_GAP_MS / durationMs;
-  const trimmed =
-    edge === "start"
-      ? { ...gap, sourceStart: Math.min(at, gap.sourceEnd - least) }
-      : { ...gap, sourceEnd: Math.max(at, gap.sourceStart + least) };
-  const before = playedMs(gap, durationMs);
-  const after = playedMs(trimmed, durationMs);
-  if (Math.abs(after - before) < SAME_MS) return edit;
-  const endMs = startsMs(edit.segments, durationMs)[index] + before;
-  const segments = [...edit.segments];
-  segments[index] = trimmed;
-  return { ...edit, ...shiftedAudio(edit, endMs, after - before), segments };
 }

@@ -63,6 +63,8 @@ const KINDS: { beat: TimelineBeat; label: string }[] = [
     beat: { color: "#ff8d28", kind: "moment", name: "Notable" },
     label: "Moment",
   },
+  // A gap has no recording behind it, so no picture.
+  { beat: { kind: "gap" }, label: "Gap" },
 ];
 
 const meta = {
@@ -108,7 +110,7 @@ export const Kinds: Story = {
             {...args}
             beat={beat}
             peaks={storyPeaks(index)}
-            thumbnail={storyFrame(index)}
+            thumbnail={beat.kind === "gap" ? undefined : storyFrame(index)}
           />
         </StoryGridRow>
       ))}

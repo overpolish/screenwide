@@ -218,6 +218,7 @@ export function TimelineStrip(props: TimelineStripProps) {
                 <StripBeats
                   {...drawn}
                   lifted={reorder.lifted}
+                  onGapStart={view.shiftSinceHold}
                   onGrab={reorder.grab}
                   onPutBack={props.onPutBack}
                   onRemoveSplit={props.onRemoveSplit}

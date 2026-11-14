@@ -23,6 +23,7 @@ export type TimelineStripProps = Pick<
   | "cuts"
   | "isAltHeld"
   | "onBeatTrim"
+  | "onGapSlide"
   | "onLullPlayChange"
   | "onLullTrim"
   | "onRestore"

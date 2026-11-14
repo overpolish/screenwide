@@ -7,7 +7,8 @@ import { type TimelineStripProps } from "../strip/timeline-strip-props";
 import { type Span } from "../timeline-scale";
 
 import { type RecordingBeat } from "./recording-beats";
-import { gapBeatId, gapTrimReach } from "./recording-strip-gaps";
+import { gapTrimReach } from "./recording-strip-gap-edges";
+import { gapBeatId } from "./recording-strip-gaps";
 import { isPlayed, type RecordingStripTime } from "./recording-strip-time";
 
 import type { RecordingTimelineThumbnail } from "../../types";

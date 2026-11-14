@@ -22,9 +22,10 @@ import {
   withListsOf,
 } from "./recording-strip-edits";
 import {
-  gapSegmentIdOf,
+  slideRecordingTimelineGap,
   trimRecordingTimelineGap,
-} from "./recording-strip-gaps";
+} from "./recording-strip-gap-edges";
+import { gapSegmentIdOf } from "./recording-strip-gaps";
 import {
   lullPlayed,
   type RecordingStripLulls,
@@ -182,6 +183,18 @@ export function useRecordingStripEdits({
         ),
       );
     },
+    /** Slides the gap `id` to start `at` played seconds in. */
+    onGapSlide: (id: string, at: number) => {
+      const gapId = gapSegmentIdOf(baseOf(id));
+      if (gapId === null) return;
+      steps.step(
+        slideRecordingTimelineGap(edit, {
+          atMs: at * 1000,
+          durationMs: recorded * 1000,
+          id: gapId,
+        }),
+      );
+    },
     onLullPlayChange: (id: string, play: LullPlay) => {
       steps.step(lullPlayed(edit, lulls, { id: baseOf(id), play, recorded }));
     },
@@ -210,8 +223,16 @@ export function useRecordingStripEdits({
         }),
       );
     },
+    // A gap slides on its own (`onGapSlide`); gathered with beats, only the
+    // recording's stretches move, a gap's empty stretch being no footage.
     onMove: (spans: Span[], before: number | null) => {
-      steps.once(moved(edit, { before, spans }, recorded));
+      steps.once(
+        moved(
+          edit,
+          { before, spans: spans.filter(({ start }) => start < recorded) },
+          recorded,
+        ),
+      );
     },
     onPutBack: (at: number) => {
       steps.once(putBack(edit, at, recorded));

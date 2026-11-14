@@ -10,6 +10,7 @@ import { RangeBand } from "../range-cut/range-band";
 import { Spring } from "../spring/spring";
 import { type Span, type TimelineScale, type TimeMap } from "../timeline-scale";
 
+import { slideGap } from "./gap-slide";
 import { beatTrimOf } from "./strip-beat-trim";
 import {
   chosenItems,
@@ -87,6 +88,13 @@ export type StripBeatRowProps = {
   width: number;
   /** Classes for the row, whose children are the beats and lulls. */
   className?: string;
+  /** Told a gap slid along the strip, by its beat's id, to start a played
+   * moment in (`gap-slide.ts`); a gap is otherwise lifted as a beat is. */
+  onGapSlide?: (id: string, at: number) => void;
+  /** Told null as a gap's start is taken hold of, then how many seconds it
+   * has been drawn earlier since (less than none as it shrinks), so the
+   * view can follow it. */
+  onGapStart?: (seconds: number | null) => void;
 };
 
 export function StripBeatRow({
@@ -99,6 +107,8 @@ export function StripBeatRow({
   lulls,
   map,
   onBeatTrim,
+  onGapSlide,
+  onGapStart,
   onGrab,
   onLullPlayChange,
   onLullTrim,
@@ -166,6 +176,16 @@ export function StripBeatRow({
           isSelected={isChosen(selection, "beat", beat.id)}
           key={beat.id}
           onGrab={(event) => {
+            if (beat.beat.kind === "gap" && onGapSlide) {
+              slideGap(event, {
+                from: map.toPlayed(beat.span.start),
+                onSlide: (at) => {
+                  onGapSlide(beat.id, at);
+                },
+                pxPerSecond: width / Math.max(map.duration, 1e-6),
+              });
+              return;
+            }
             grab(event, { id: beat.id, kind: "beat" }, beat.span);
           }}
           onPress={(event) => {
@@ -181,6 +201,7 @@ export function StripBeatRow({
             captions,
             cuts,
             map,
+            onGapStart,
             onTrim: onBeatTrim,
             width,
           })}

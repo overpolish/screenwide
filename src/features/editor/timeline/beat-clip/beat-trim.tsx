@@ -23,11 +23,13 @@ export type BeatTrim = {
   /** The part of the beat that plays now, inside its recorded span. */
   kept: Span;
   /** Told an end trimmed to, or brought back to, a recorded moment, as it
-   * is dragged. */
-  onTrim: (edge: "end" | "start", at: number) => void;
+   * is dragged, with where it was when taken hold of (`from`). */
+  onTrim: (edge: "end" | "start", at: number, from: number) => void;
   /** How wide a second of the beat is drawn, in px: beats play as they
    * were recorded. */
   pxPerSecond: number;
+  /** Told an end taken hold of, before it is dragged. */
+  onHold?: (edge: "end" | "start") => void;
   /** How far the ends may be drawn out, where not just to the recorded
    * span: a gap's, which grows as far as a gap may. */
   reach?: Span;
@@ -39,6 +41,7 @@ type Edge = "end" | "start";
 
 export function BeatTrimHandles({
   kept,
+  onHold,
   onTrim,
   pad,
   pxPerSecond,
@@ -86,6 +89,7 @@ export function BeatTrimHandles({
           other: edge === "start" ? kept.end : kept.start,
           x: event.clientX,
         };
+        onHold?.(edge);
       }}
       onPointerMove={(event) => {
         const held = heldRef.current;
@@ -98,7 +102,7 @@ export function BeatTrimHandles({
             : Math.max(Math.min(moved, bounds.end), held.other + LEAST_S);
         if (at === held.at) return;
         held.at = at;
-        onTrim(edge, at);
+        onTrim(edge, at, held.from);
       }}
       onPointerUp={() => {
         heldRef.current = null;

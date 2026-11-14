@@ -197,6 +197,7 @@ export function useRecordingStrip(source: RecordingStripSource) {
         ].sort((one, other) => one - other),
       });
     },
+    onGapSlide: edits.onGapSlide,
     onLullPlayChange: edits.onLullPlayChange,
     onLullTrim: edits.onLullTrim,
     onMove: edits.onMove,
