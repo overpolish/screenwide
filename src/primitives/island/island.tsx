@@ -151,8 +151,15 @@ export function Island({
                 which is drawn from the row's start: in a right-to-left page
                 the clip is mirrored as the black is, and what it holds is
                 mirrored back. */}
+            {/* A layout root, measured itself (`layout`, which a root
+                moves at once), so what it holds glides only as it moves
+                inside the island: the island carried elsewhere, as a strip
+                item's island follows the strip, takes it along at once
+                rather than leaving it to catch up (#40). */}
             <motion.div
               className="relative rtl:-scale-x-100"
+              layout
+              layoutRoot
               ref={clipRef}
               style={{ opacity: contentOpacity }}
             >
