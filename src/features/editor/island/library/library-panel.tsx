@@ -11,13 +11,17 @@ import { ScrollArea } from "../../../../primitives/scroll-area/scroll-area";
 import { type LibraryKind, useLibraryKind } from "./library-kind";
 import { LibraryPictureGrid } from "./library-picture-grid";
 import { LibrarySoundList, type SoundAddition } from "./library-sound-list";
+import { MusicFilterLine } from "./music-filter-line";
+import { type MusicFilters, NO_MUSIC_FILTERS } from "./music-filters";
 import { OpenverseResults } from "./openverse-results";
+import { useOpenverseSearch } from "./use-openverse-search";
 
 import type { ImageArt } from "../../annotations/annotations";
 
 // What the Library island holds: the songs, sound effects and pictures
 // added to any recording or screenshot, the most recent first, one kind at
-// a time where it offers more than one, found by name.
+// a time where it offers more than one, found by name and, for songs, by
+// the music filters, and under them what is found online the same way.
 
 export type { SoundAddition };
 
@@ -51,6 +55,9 @@ export function LibraryPanel({
 }: LibraryPanelProps) {
   const { kind, setKind } = useLibraryKind(kinds);
   const [query, setQuery] = useState("");
+  const [musicFilters, setMusicFilters] =
+    useState<MusicFilters>(NO_MUSIC_FILTERS);
+  const search = useOpenverseSearch(kind, query, musicFilters);
   // What was downloaded from the online search stands in the library's own
   // whatever the search, since it was found by more than its title.
   const [fetched, setFetched] = useState<ReadonlySet<string>>(() => new Set());
@@ -77,6 +84,15 @@ export function LibraryPanel({
           value={query}
         />
       </div>
+      {kind === "music" ? (
+        <MusicFilterLine
+          filters={musicFilters}
+          onChange={(next) => {
+            setMusicFilters(next);
+            search.search();
+          }}
+        />
+      ) : null}
       <ScrollArea constrainHeight rootClassName="max-h-80">
         <div className="flex flex-col gap-separate">
           {kind === "image" ? (
@@ -90,6 +106,7 @@ export function LibraryPanel({
               alsoShown={fetched}
               hasSongRoom={hasSongRoom}
               kind={kind}
+              musicFilters={musicFilters}
               onAdd={onAddSound}
               query={query}
             />
@@ -100,6 +117,7 @@ export function LibraryPanel({
               setFetched((now) => new Set(now).add(name));
             }}
             query={query}
+            search={search}
           />
         </div>
       </ScrollArea>

@@ -6,7 +6,18 @@
 // credit (public domain, CC0 and CC BY; never ShareAlike, NonCommercial or
 // NoDerivatives, since music under a video adapts it and ShareAlike would
 // bind the whole video), in the formats the app reads, cut down to what the
-// Library island shows and the credit needs.
+// Library island shows and the credit needs. Songs are searched where songs
+// are published, Jamendo and Wikimedia, leaving out Freesound's loops and
+// clips, and can be narrowed by tempo, vocals and mood (`music.ts`).
+
+import {
+  describeMusic,
+  hasMusicFilters,
+  type MusicDescription,
+  type MusicFilters,
+  musicTags,
+  parseMusicFilters,
+} from "./music";
 
 const API = "https://api.openverse.org/v1";
 
@@ -22,16 +33,18 @@ const LAST_PAGE = 12;
 /** The longest query Openverse takes. */
 const LONGEST_QUERY = 200;
 
+/** The audio formats the app reads. Jamendo, Openverse's music source,
+ * gives its MP3s as `mp32`. */
+const AUDIO_EXTENSIONS = "mp3,mp32,ogg,wav,flac,m4a,aac,aiff,opus";
+
 /** What the library shows of songs, of sound effects and of pictures, as
  * Openverse's own filters: a sound effect is under 30 seconds, a song from
- * 30 seconds to 10 minutes. */
+ * 30 seconds to 10 minutes and not from Freesound, whose long sounds are
+ * loops and recordings rather than songs. */
 const KINDS = {
   effect: {
     endpoint: "audio",
-    filters: {
-      extension: "mp3,ogg,wav,flac,m4a,aac,aiff,opus",
-      length: "shortest",
-    },
+    filters: { extension: AUDIO_EXTENSIONS, length: "shortest" },
   },
   image: {
     endpoint: "images",
@@ -40,7 +53,8 @@ const KINDS = {
   music: {
     endpoint: "audio",
     filters: {
-      extension: "mp3,ogg,wav,flac,m4a,aac,aiff,opus",
+      excluded_source: "freesound",
+      extension: AUDIO_EXTENSIONS,
       length: "short,medium",
     },
   },
@@ -55,7 +69,13 @@ export const endpointOf = (kind: Kind) => `${API}/${KINDS[kind].endpoint}/`;
 export const isKind = (kind: string | null): kind is Kind =>
   kind === "music" || kind === "effect" || kind === "image";
 
-export type Search = { kind: Kind; page: number; query: string };
+export type Search = {
+  /** What music is narrowed by; none for other kinds. */
+  filters: MusicFilters;
+  kind: Kind;
+  page: number;
+  query: string;
+};
 
 /** One result, as the app takes it: enough to show it, fetch it and credit
  * it. */
@@ -74,6 +94,8 @@ export type Found = {
   license: string;
   licenseUrl: string | null;
   licenseVersion: string | null;
+  /** What it is as music, as Jamendo tags it; empty for others. */
+  tags: MusicDescription;
   /** A small picture of it, for a picture. */
   thumbnail: string | null;
   title: string;
@@ -84,29 +106,32 @@ export type Found = {
 
 export type Page = { found: Found[]; pageCount: number };
 
-/** The search `url` asks for, or why it is not one. */
+/** The search `url` asks for, or why it is not one. Music may be searched
+ * by its filters alone. */
 export function parseSearch(url: URL): Search | string {
   const kind = url.searchParams.get("kind");
   const query = (url.searchParams.get("q") ?? "").trim().replace(/\s+/g, " ");
   const page = Number(url.searchParams.get("page") ?? "1");
   if (!isKind(kind)) return "unknown_kind";
-  if (query.length === 0 || query.length > LONGEST_QUERY) return "bad_query";
+  const filters = kind === "music" ? parseMusicFilters(url.searchParams) : {};
+  if (!filters) return "bad_filter";
+  if (query.length > LONGEST_QUERY) return "bad_query";
+  if (query.length === 0 && !hasMusicFilters(filters)) return "bad_query";
   if (!Number.isInteger(page) || page < 1 || page > LAST_PAGE)
     return "bad_page";
-  return { kind, page, query: query.toLowerCase() };
+  return { filters, kind, page, query: query.toLowerCase() };
 }
 
 /** The Openverse request for `search`. */
-export function upstreamUrl({ kind, page, query }: Search) {
-  const { filters } = KINDS[kind];
+export function upstreamUrl({ filters, kind, page, query }: Search) {
   const url = new URL(endpointOf(kind));
   url.search = new URLSearchParams({
-    ...filters,
+    ...KINDS[kind].filters,
     license: LICENSES,
     mature: "false",
     page: String(page),
     page_size: String(PAGE_SIZE),
-    q: query,
+    q: [query, ...musicTags(filters)].filter(Boolean).join(" "),
   }).toString();
   return url;
 }
@@ -115,6 +140,24 @@ const text = (value: unknown) =>
   typeof value === "string" && value.length > 0 ? value : null;
 const number = (value: unknown) =>
   typeof value === "number" && Number.isFinite(value) ? value : null;
+const texts = (value: unknown) =>
+  Array.isArray(value) ? value.flatMap((each) => text(each) ?? []) : [];
+/** The names of a result's tags, which Openverse gives as objects. */
+const tagNames = (value: unknown) =>
+  Array.isArray(value)
+    ? value.flatMap((tag: unknown) =>
+        tag && typeof tag === "object"
+          ? (text(Reflect.get(tag, "name")) ?? [])
+          : [],
+      )
+    : [];
+
+/** The kind of file it is, as the app names files: Jamendo's `mp32` is an
+ * MP3. */
+const fileTypeOf = (value: unknown) => {
+  const type = text(value);
+  return type === "mp32" ? "mp3" : type;
+};
 
 /** One of Openverse's results as the app takes it, or none where it lacks a
  * file or a licence the app can use. */
@@ -131,13 +174,14 @@ export function foundOf(result: unknown): Found | null {
     creator: text(field("creator")),
     creatorUrl: text(field("creator_url")),
     durationMs: number(field("duration")),
-    filetype: text(field("filetype")),
+    filetype: fileTypeOf(field("filetype")),
     height: number(field("height")),
     id,
     landingUrl: text(field("foreign_landing_url")),
     license,
     licenseUrl: text(field("license_url")),
     licenseVersion: text(field("license_version")),
+    tags: describeMusic(tagNames(field("tags")), texts(field("genres"))),
     thumbnail: text(field("thumbnail")),
     title: text(field("title")) ?? id,
     url,

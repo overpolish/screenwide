@@ -10,6 +10,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use screenwide_credits::Credit;
 
 use super::kind::set_kind;
+use super::music::MusicTags;
 use super::{
   content_hash, directory, extension, measure, read_kept, removed, trim, write_kept, write_whole,
   Sound, CUT_EXTENSION,
@@ -95,10 +96,15 @@ fn add(file: &Path) -> Result<Sound, String> {
 }
 
 /// Adds the sound in `file`, found on Openverse, to the library as `title`,
-/// credited to who made it, and says what it is. One the library already
-/// has, from a file, takes the credit and title; one already credited keeps
-/// its own.
-pub fn import_found(file: &Path, title: &str, credit: Credit) -> Result<Sound, String> {
+/// credited to who made it, with what Openverse says of it as music, and
+/// says what it is. One the library already has, from a file, takes the
+/// credit, title and tags; one already credited keeps its own.
+pub fn import_found(
+  file: &Path,
+  title: &str,
+  credit: Credit,
+  tags: MusicTags,
+) -> Result<Sound, String> {
   let sound = import(file)?;
   if sound.credit.is_some() {
     return Ok(sound);
@@ -106,6 +112,7 @@ pub fn import_found(file: &Path, title: &str, credit: Credit) -> Result<Sound, S
   let sound = Sound {
     title: title.to_owned(),
     credit: Some(credit),
+    tags: Some(tags),
     ..sound
   };
   write_kept(directory()?, &sound)?;

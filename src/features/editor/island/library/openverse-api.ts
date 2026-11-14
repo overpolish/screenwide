@@ -6,6 +6,7 @@ import { Channel, invoke } from "@tauri-apps/api/core";
 import { t } from "../../../../i18n/i18n";
 
 import type { AudioClipKind } from "../../../../bindings/AudioClipKind";
+import type { MusicFilters } from "../../../../bindings/MusicFilters";
 import type { OpenverseFailure } from "../../../../bindings/OpenverseFailure";
 import type { OpenverseFound } from "../../../../bindings/OpenverseFound";
 import type { OpenverseKind } from "../../../../bindings/OpenverseKind";
@@ -25,13 +26,14 @@ export type { OpenverseFailure, OpenverseFound, OpenverseKind, OpenversePage };
 export const isSearchedOnline = (kind: OpenverseKind): boolean =>
   kind !== "image";
 
-/** `page` of what Openverse holds of `kind` for `query`. Rejects with an
- * `OpenverseFailure`. */
-export const searchOpenverse = (
-  kind: OpenverseKind,
-  query: string,
-  page: number,
-) => invoke<OpenversePage>("search_openverse", { kind, page, query });
+/** `page` of what Openverse holds of `kind` for `query`, music narrowed by
+ * `filters`. Rejects with an `OpenverseFailure`. */
+export const searchOpenverse = (search: {
+  filters: MusicFilters;
+  kind: OpenverseKind;
+  page: number;
+  query: string;
+}) => invoke<OpenversePage>("search_openverse", search);
 
 /** A channel handing `onProgress` how much of a file has come, 0 to 1. */
 const progressChannel = (onProgress: (fraction: number) => void) => {
@@ -65,8 +67,14 @@ export const fetchOpenversePicture = (
   });
 
 /** Why a search failed, from what it rejected with. */
-export const failureOf = (cause: unknown): OpenverseFailure =>
-  cause === "busy" ? "busy" : "unavailable";
+export const failureOf = (cause: unknown): OpenverseFailure => {
+  if (cause === "busy") return "busy";
+  const usedUp: unknown =
+    cause && typeof cause === "object" ? Reflect.get(cause, "usedUp") : null;
+  const until: unknown =
+    usedUp && typeof usedUp === "object" ? Reflect.get(usedUp, "until") : null;
+  return typeof until === "number" ? { usedUp: { until } } : "unavailable";
+};
 
 /** A licence's short name, as the library shows it. */
 export const licenseName = (license: string) =>

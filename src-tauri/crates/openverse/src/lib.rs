@@ -8,7 +8,13 @@
 //! crate is what is asked and what comes back; the app sends the request
 //! (`src/editor/openverse.rs`), as it does the licence server's.
 
+mod install;
+mod music;
+
+pub use install::{install_id, INSTALL_HEADER};
+pub use music::MusicFilters;
 use screenwide_credits::Credit;
+use screenwide_sound_track::store::music::MusicTags;
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
@@ -47,6 +53,9 @@ pub struct Found {
   /// How long it plays, in ms; none for a picture.
   pub duration_ms: Option<f64>,
   pub filetype: Option<String>,
+  /// What it is as music, as Jamendo tags it; empty for others.
+  #[serde(default)]
+  pub tags: MusicTags,
   pub width: Option<f64>,
   pub height: Option<f64>,
   pub license: String,
@@ -92,17 +101,31 @@ pub struct Page {
 #[serde(rename_all = "camelCase")]
 #[ts(export, rename = "OpenverseFailure")]
 pub enum Failure {
-  /// Too many searches for now, from here or from everyone.
+  /// Too many searches this minute, from here or from everyone.
   Busy,
+  /// This installation's searches for the day are used up, until `until`,
+  /// in ms since the epoch.
+  UsedUp { until: f64 },
   /// Openverse, or the way to it, could not answer.
   Unavailable,
 }
 
 /// The Worker's answer: `status` and its body.
 pub fn page_from(status: u16, body: &[u8]) -> Result<Page, Failure> {
+  #[derive(Deserialize)]
+  struct Refusal {
+    error: String,
+    until: Option<f64>,
+  }
   match status {
     200 => serde_json::from_slice(body).map_err(|_| Failure::Unavailable),
-    429 => Err(Failure::Busy),
+    429 => Err(match serde_json::from_slice::<Refusal>(body) {
+      Ok(Refusal {
+        error,
+        until: Some(until),
+      }) if error == "used_up" => Failure::UsedUp { until },
+      _ => Failure::Busy,
+    }),
     _ => Err(Failure::Unavailable),
   }
 }
@@ -148,13 +171,25 @@ fn encoded(text: &str) -> String {
 }
 
 /// The address the Worker at `base` is asked at for `page` of what `kind`
-/// finds for `query`.
-pub fn search_url(base: &str, kind: Kind, query: &str, page: u32) -> String {
-  format!(
+/// finds for `query`, music narrowed by `filters`.
+pub fn search_url(
+  base: &str,
+  kind: Kind,
+  query: &str,
+  filters: &MusicFilters,
+  page: u32,
+) -> String {
+  let mut url = format!(
     "{base}/search?kind={}&q={}&page={page}",
     kind.as_str(),
     encoded(query.trim())
-  )
+  );
+  if kind == Kind::Music {
+    for (name, value) in filters.params() {
+      url.push_str(&format!("&{name}={value}"));
+    }
+  }
+  url
 }
 
 /// The address the Worker at `base` is asked at for the work `id` of `kind`
@@ -166,12 +201,36 @@ pub fn work_url(base: &str, kind: Kind, id: &str) -> String {
 #[cfg(test)]
 mod tests {
   use super::*;
+  use screenwide_sound_track::store::music::{Mood, Tempo};
 
   #[test]
   fn a_search_is_asked_with_its_words_encoded() {
     assert_eq!(
-      search_url(WORKER_URL, Kind::Effect, " rain & café ", 2),
+      search_url(
+        WORKER_URL,
+        Kind::Effect,
+        " rain & café ",
+        &MusicFilters::default(),
+        2
+      ),
       "https://openverse.getscreenwide.com/search?kind=effect&q=rain%20%26%20caf%C3%A9&page=2"
+    );
+  }
+
+  #[test]
+  fn music_is_asked_with_the_filters_set() {
+    let filters = MusicFilters {
+      tempo: Some(Tempo::Slow),
+      vocals: None,
+      mood: Some(Mood::Calm),
+    };
+    assert_eq!(
+      search_url(WORKER_URL, Kind::Music, "", &filters, 1),
+      "https://openverse.getscreenwide.com/search?kind=music&q=&page=1&mood=calm&tempo=slow"
+    );
+    assert_eq!(
+      search_url(WORKER_URL, Kind::Effect, "door", &filters, 1),
+      "https://openverse.getscreenwide.com/search?kind=effect&q=door&page=1"
     );
   }
 
@@ -181,7 +240,13 @@ mod tests {
     let page = page_from(200, body).unwrap();
     assert_eq!(page.page_count, 3);
     assert!(page.found[0].credit().is_owed());
-    assert_eq!(page_from(429, b"{}"), Err(Failure::Busy));
+    assert_eq!(page_from(429, br#"{"error":"busy"}"#), Err(Failure::Busy));
+    assert_eq!(
+      page_from(429, br#"{"error":"used_up","until":1763164800000}"#),
+      Err(Failure::UsedUp {
+        until: 1_763_164_800_000.0
+      })
+    );
     assert_eq!(page_from(502, b"{}"), Err(Failure::Unavailable));
   }
 

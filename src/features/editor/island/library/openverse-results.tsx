@@ -6,47 +6,49 @@ import { useState } from "react";
 
 import { t } from "../../../../i18n/i18n";
 import { Alert } from "../../../../primitives/alert/alert";
-import { Button } from "../../../../primitives/button/button";
+import { IslandParts } from "../../../../primitives/island/island-parts";
+import { IslandSwap } from "../../../../primitives/island/island-swap";
+import { ProgressBar } from "../../../../primitives/progress-bar/progress-bar";
 import { Text } from "../../../../primitives/text/text";
 import { IslandLineButton } from "../island-line-button";
-import { IslandWorkLine } from "../island-work-line";
 
 import {
   fetchOpenversePicture,
   fetchOpenverseSound,
-  isSearchedOnline,
   type OpenverseFound,
 } from "./openverse-api";
+import { OpenverseFailureAlert } from "./openverse-failure-alert";
 import {
   type FetchProgress,
   FoundPictureTile,
   FoundSoundRow,
 } from "./openverse-found";
 import { useFoundPreview } from "./use-found-preview";
-import { useOpenverseSearch } from "./use-openverse-search";
 
 import type { LibraryKind } from "./library-kind";
+import type { OpenverseSearch } from "./use-openverse-search";
 
-// Under the library's own, what Openverse holds for the words searched,
-// called a search online, since few know Openverse by name: asked for with
-// a press, then shown as the library's own are, a page at a time. A find is
-// heard from where it is published; downloaded, credited to who made it, it
-// moves up into the library's own, to be added or dragged out from there.
-// Only what may be used with no more than a credit is found
-// (`workers/openverse`).
+// Under the library's own, what Openverse holds for the words searched and,
+// for music, the filters set, called a search online, since few know
+// Openverse by name: asked for with a press, then shown as the library's own
+// are, a page at a time. A find is heard from where it is published;
+// downloaded, credited to who made it, it moves up into the library's own,
+// to be added or dragged out from there. Only what may be used with no more
+// than a credit is found (`workers/openverse`).
 
 export function OpenverseResults({
   kind,
   onFetched,
   query,
+  search,
 }: {
   kind: LibraryKind;
   /** Hands on the library's name for what was downloaded into it. */
   onFetched: (name: string) => void;
   /** The words searched for. */
   query: string;
+  search: OpenverseSearch;
 }) {
-  const search = useOpenverseSearch(kind, query);
   const preview = useFoundPreview();
   const [fetching, setFetching] = useState<ReadonlyMap<string, FetchProgress>>(
     () => new Map(),
@@ -92,7 +94,8 @@ export function OpenverseResults({
       });
   };
   const shown = search.found.filter((found) => !fetched.has(found.id));
-  if (query.trim().length === 0 || !isSearchedOnline(kind)) return null;
+  if (!search.canSearch) return null;
+  const isFirstPageComing = search.isSearching && !search.hasMore;
   if (!search.hasSearched)
     return (
       <IslandLineButton onPress={search.search}>
@@ -106,9 +109,27 @@ export function OpenverseResults({
       aria-label={t("editor-island-openverse-heading")}
       className="flex flex-col gap-inline"
     >
-      <Text className="px-inset-sm text-fg-secondary" variant="caption">
-        {t("editor-island-openverse-heading")}
-      </Text>
+      {/* While the first page comes, the heading says so and carries the
+          bar, then gives way to Found online as the answer comes; a next
+          page's bar comes at the end of More results, as the heading may
+          have scrolled away by then. */}
+      <IslandParts
+        className="flex items-center justify-between gap-separate ps-inset-sm"
+        direction="row"
+      >
+        <IslandSwap
+          initial={false}
+          key="heading"
+          swapKey={isFirstPageComing ? "searching" : "found"}
+        >
+          <Text className="text-fg-secondary" variant="caption">
+            {isFirstPageComing
+              ? t("editor-island-openverse-searching-heading")
+              : t("editor-island-openverse-heading")}
+          </Text>
+        </IslandSwap>
+        {isFirstPageComing ? <SearchingBar key="bar" /> : null}
+      </IslandParts>
       {kind === "image" ? (
         <ul className="grid grid-cols-4 gap-1">
           {shown.map((found) => (
@@ -140,25 +161,8 @@ export function OpenverseResults({
           ))}
         </ul>
       )}
-      {search.isSearching ? (
-        <IslandWorkLine
-          label={t("editor-island-openverse-searching")}
-          value={null}
-        />
-      ) : null}
       {search.failure ? (
-        <Alert
-          action={
-            <Button onPress={search.more}>
-              {t("editor-island-openverse-retry")}
-            </Button>
-          }
-          color="error"
-        >
-          {search.failure === "busy"
-            ? t("editor-island-openverse-busy")
-            : t("editor-island-openverse-unavailable")}
-        </Alert>
+        <OpenverseFailureAlert failure={search.failure} onRetry={search.more} />
       ) : null}
       {failed ? (
         <Alert color="error">
@@ -171,14 +175,33 @@ export function OpenverseResults({
               })}
         </Alert>
       ) : null}
+      {/* Standing in for the results, it keeps the room a row would, as
+          the library's own Nothing matches does. */}
       {!search.isSearching && !search.failure && search.found.length === 0 ? (
-        <Alert icon={<SearchX />}>{t("editor-island-openverse-none")}</Alert>
+        <Alert className="py-inset" icon={<SearchX />}>
+          {t("editor-island-openverse-none")}
+        </Alert>
       ) : null}
-      {search.hasMore && !search.isSearching && !search.failure ? (
-        <IslandLineButton onPress={search.more}>
+      {search.hasMore && !search.failure ? (
+        <IslandLineButton
+          className="justify-between"
+          isDisabled={search.isSearching}
+          onPress={search.more}
+        >
           {t("editor-island-openverse-more")}
+          {search.isSearching ? <SearchingBar /> : null}
         </IslandLineButton>
       ) : null}
     </section>
+  );
+}
+
+function SearchingBar() {
+  return (
+    <ProgressBar
+      aria-label={t("editor-island-openverse-searching")}
+      className="w-24"
+      isIndeterminate
+    />
   );
 }

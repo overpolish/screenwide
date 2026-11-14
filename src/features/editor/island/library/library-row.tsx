@@ -16,6 +16,7 @@ import { IslandLineButton } from "../island-line-button";
 import { IslandPlayButton } from "../island-play-button";
 
 import { LibraryNameField } from "./library-name-field";
+import { SongGenre } from "./song-genre";
 import { useDragOut } from "./use-drag-out";
 
 // One sound in the library: play, as a moment's voice note plays; its
@@ -136,6 +137,7 @@ export function LibraryRow({
             <span className="min-w-0 truncate" dir="auto">
               {sound.title}
             </span>
+            <SongGenre genres={sound.tags?.genres ?? []} />
           </IslandLineButton>
         </span>
       )}

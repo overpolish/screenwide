@@ -11,16 +11,18 @@
 
 mod download;
 
+use std::sync::OnceLock;
 use std::time::Duration;
 
 use screenwide_images::store::IMAGE_PREFIX;
 use screenwide_openverse::{
-  page_from, search_url, work_from, work_url, Failure, Found, Kind, Page, WorkFailure, WORKER_URL,
+  install_id, page_from, search_url, work_from, work_url, Failure, Found, Kind, MusicFilters, Page,
+  WorkFailure, INSTALL_HEADER, WORKER_URL,
 };
 use screenwide_sound_track::store::{self as sounds, Sound};
 use screenwide_sound_track::AudioClipKind;
 use tauri::ipc::Channel;
-use tauri::{AppHandle, Emitter};
+use tauri::{AppHandle, Emitter, Manager};
 
 use download::download;
 
@@ -44,18 +46,40 @@ fn client(timeout: Duration) -> Result<reqwest::Client, String> {
     .map_err(|error| error.to_string())
 }
 
-/// `page` of what Openverse holds of `kind` for `query`.
+/// A question for the Worker at `url`, naming this installation
+/// (`screenwide_openverse::install_id`). Only the Worker is told it: a file
+/// is fetched from where it is published without it.
+fn ask_worker(app: &AppHandle, url: String) -> Result<reqwest::RequestBuilder, String> {
+  static INSTALL: OnceLock<Option<String>> = OnceLock::new();
+  let install = INSTALL.get_or_init(|| install_id(&app.path().app_data_dir().ok()?));
+  let request = client(Duration::from_secs(30))?.get(url);
+  Ok(match install {
+    Some(id) => request.header(INSTALL_HEADER, id),
+    None => request,
+  })
+}
+
+/// `page` of what Openverse holds of `kind` for `query`, music narrowed by
+/// `filters`.
 #[tauri::command]
-pub async fn search_openverse(kind: Kind, query: String, page: u32) -> Result<Page, Failure> {
-  let client = client(Duration::from_secs(30)).map_err(|_| Failure::Unavailable)?;
-  let answer = client
-    .get(search_url(&worker_base(), kind, &query, page))
-    .send()
-    .await
-    .map_err(|error| {
-      eprintln!("Could not search Openverse: {error}");
-      Failure::Unavailable
-    })?;
+pub async fn search_openverse(
+  app: AppHandle,
+  kind: Kind,
+  query: String,
+  filters: MusicFilters,
+  page: u32,
+) -> Result<Page, Failure> {
+  let answer = ask_worker(
+    &app,
+    search_url(&worker_base(), kind, &query, &filters, page),
+  )
+  .map_err(|_| Failure::Unavailable)?
+  .send()
+  .await
+  .map_err(|error| {
+    eprintln!("Could not search Openverse: {error}");
+    Failure::Unavailable
+  })?;
   let status = answer.status().as_u16();
   let body = answer.bytes().await.map_err(|_| Failure::Unavailable)?;
   page_from(status, &body)
@@ -64,9 +88,8 @@ pub async fn search_openverse(kind: Kind, query: String, page: u32) -> Result<Pa
 /// `found` as it stands now, looked up again: refused with `withdrawn`
 /// where it is gone or no longer under a licence the app may use, which the
 /// island says.
-async fn as_it_stands(kind: Kind, found: &Found) -> Result<Found, String> {
-  let answer = client(Duration::from_secs(30))?
-    .get(work_url(&worker_base(), kind, &found.id))
+async fn as_it_stands(app: &AppHandle, kind: Kind, found: &Found) -> Result<Found, String> {
+  let answer = ask_worker(app, work_url(&worker_base(), kind, &found.id))?
     .send()
     .await
     .map_err(|error| format!("Could not look {} up again: {error}", found.id))?;
@@ -108,6 +131,7 @@ pub async fn add_openverse_sound(
   on_progress: Channel<f64>,
 ) -> Result<Sound, String> {
   let found = as_it_stands(
+    &app,
     match kind {
       AudioClipKind::Music => Kind::Music,
       AudioClipKind::Effect => Kind::Effect,
@@ -125,13 +149,14 @@ pub async fn add_openverse_sound(
       extension_of(&found)
     ));
     std::fs::write(&file, &bytes).map_err(|error| error.to_string())?;
-    let added = sounds::import_found(&file, &found.title, found.credit()).and_then(|sound| {
-      sounds::set_kind(&sound.name, kind)?;
-      Ok(Sound {
-        kind: Some(kind),
-        ..sound
-      })
-    });
+    let added = sounds::import_found(&file, &found.title, found.credit(), found.tags.clone())
+      .and_then(|sound| {
+        sounds::set_kind(&sound.name, kind)?;
+        Ok(Sound {
+          kind: Some(kind),
+          ..sound
+        })
+      });
     let _ = std::fs::remove_file(&file);
     added
   })
@@ -150,7 +175,7 @@ pub async fn add_openverse_picture(
   found: Found,
   on_progress: Channel<f64>,
 ) -> Result<String, String> {
-  let found = as_it_stands(Kind::Image, &found).await?;
+  let found = as_it_stands(&app, Kind::Image, &found).await?;
   let bytes = download(&found.url, on_progress).await?;
   let art = tauri::async_runtime::spawn_blocking(move || {
     screenwide_images::store::import_found(&bytes, &found.title, found.credit())

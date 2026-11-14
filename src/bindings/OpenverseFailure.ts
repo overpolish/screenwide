@@ -3,4 +3,4 @@
 /**
  * Why a search found nothing to show.
  */
-export type OpenverseFailure = "busy" | "unavailable";
+export type OpenverseFailure = "busy" | { "usedUp": { until: number, } } | "unavailable";

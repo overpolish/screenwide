@@ -22,7 +22,7 @@ fn file(name: &str, beat: Option<Beat>) -> SoundFile {
     loudest_lufs: Some(-11.0),
     levels: Vec::new(),
     separated: None,
-    music: Music { beat },
+    music: Music { beat, vocals: None },
   }
 }
 

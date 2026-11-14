@@ -12,7 +12,7 @@ import { SiteBrand, SiteFooter } from "./site-chrome";
 const CONTACT = "dom@overpolish.co";
 
 // When the page last changed; move it with every change to what it says.
-const UPDATED = new Date(2026, 10, 8);
+const UPDATED = new Date(2026, 10, 14);
 
 function Section({ children, title }: { children: string; title: string }) {
   return (
@@ -61,6 +61,9 @@ export function SitePrivacy() {
               </p>
               <p className="text-tile text-fg-secondary">
                 {t("site-privacy-models")}
+              </p>
+              <p className="text-tile text-fg-secondary">
+                {t("site-privacy-online-search")}
               </p>
             </section>
             <Section title={t("site-privacy-buying-title")}>

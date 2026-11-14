@@ -35,6 +35,7 @@ const STEADY: f64 = 2.5;
 pub(crate) fn analyse(samples: &[f32], rate: usize) -> Music {
   Music {
     beat: beat(&flux(samples), rate),
+    vocals: None,
   }
 }
 

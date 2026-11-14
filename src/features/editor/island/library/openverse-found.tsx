@@ -16,6 +16,7 @@ import { IslandLineButton } from "../island-line-button";
 import { IslandPlayButton } from "../island-play-button";
 
 import { licenseName, type OpenverseFound } from "./openverse-api";
+import { SongGenre } from "./song-genre";
 
 // What was found online, laid out as the library's own: a sound as a row,
 // heard from its play button or its title, and a picture as a tile. Each
@@ -107,6 +108,7 @@ export function FoundSoundRow({
             {found.creator}
           </span>
         ) : null}
+        <SongGenre genres={found.tags.genres} />
       </IslandLineButton>
       <Badge>{licenseName(found.license)}</Badge>
       <span className="shrink-0 text-caption whitespace-nowrap text-fg-tertiary tabular-nums">

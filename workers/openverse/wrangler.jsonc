@@ -11,16 +11,26 @@
   "routes": [
     { "pattern": "openverse.getscreenwide.com", "custom_domain": true },
   ],
-  // Searches each address may make: well inside what the app's
-  // registration allows across everyone (100 a minute), so one address
-  // cannot use it up for the rest.
+  // Questions sent on to Openverse in a burst, from one installation and
+  // from one address: well inside what the app's registration allows
+  // across everyone (100 a minute). The day's allowance is counted in
+  // `Allowance` (`src/allowance.ts`).
   "ratelimits": [
     {
-      "name": "SEARCHES",
+      "name": "PERSON_BURST",
       "namespace_id": "1001",
       "simple": { "limit": 20, "period": 60 },
     },
+    {
+      "name": "ADDRESS_BURST",
+      "namespace_id": "1002",
+      "simple": { "limit": 60, "period": 60 },
+    },
   ],
+  "durable_objects": {
+    "bindings": [{ "name": "ALLOWANCES", "class_name": "Allowance" }],
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Allowance"] }],
   // Set with `wrangler secret put`, never written here: the app's
   // registration with Openverse (`POST /v1/auth_tokens/register/`).
   "secrets": {

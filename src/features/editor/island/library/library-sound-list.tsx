@@ -15,18 +15,20 @@ import {
 
 import { soundDragLook } from "./drag-look";
 import { LibraryRow } from "./library-row";
+import { type MusicFilters } from "./music-filters";
+import { describeSong, fitsMusicFilters } from "./song-description";
 import { useLibraryPreview } from "./use-library-preview";
 
 import type { AudioClipKind } from "../../../../bindings/AudioClipKind";
 
 // The library's songs or its sound effects (a sound 10 seconds or longer is
-// a song), found by title. Each can be heard in place, from its start or
-// from anywhere along its waveform, and renamed. Pressed, one is added to
-// the timeline as the kind shown; dragged out, drawn as a chip of its
-// waveform and title, it lands on the lane it is let go on, as a file from
-// the Finder does, where the system lets a drag start. A song pressed with
-// no room on the music track adds nothing; dragged over the full rail, the
-// drag shows the drop refused.
+// a song), found by title, and songs also by the music filters. Each can be
+// heard in place, from its start or from anywhere along its waveform, and
+// renamed. Pressed, one is added to the timeline as the kind shown; dragged
+// out, drawn as a chip of its waveform and title, it lands on the lane it is
+// let go on, as a file from the Finder does, where the system lets a drag
+// start. A song pressed with no room on the music track adds nothing;
+// dragged over the full rail, the drag shows the drop refused.
 
 /** What the island asks of the editor: a sound from the library, added as
  * `kind`. */
@@ -36,6 +38,7 @@ export function LibrarySoundList({
   alsoShown,
   hasSongRoom,
   kind,
+  musicFilters,
   onAdd,
   query,
 }: {
@@ -44,6 +47,8 @@ export function LibrarySoundList({
   /** Whether a song added now would have room after the last song. */
   hasSongRoom: boolean;
   kind: AudioClipKind;
+  /** What songs are narrowed by; sound effects are not. */
+  musicFilters: MusicFilters;
   onAdd: (addition: SoundAddition) => void;
   /** The words searched for in the titles. */
   query: string;
@@ -53,7 +58,11 @@ export function LibrarySoundList({
   const preview = useLibraryPreview();
   const ofKind = library.filter((sound) => guessedKind(sound) === kind);
   const shown = ofKind.filter(
-    (sound) => alsoShown.has(sound.name) || contains(sound.title, query),
+    (sound) =>
+      alsoShown.has(sound.name) ||
+      (contains(sound.title, query) &&
+        (kind !== "music" ||
+          fitsMusicFilters(describeSong(sound), musicFilters))),
   );
   const isFull = kind === "music" && !hasSongRoom;
   // Standing in for the list, the note keeps the room a row would, rather

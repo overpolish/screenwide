@@ -38,9 +38,30 @@ describe("a search", () => {
     );
   });
 
-  it("refuses a search with no words, an unknown kind or a page past the last", () => {
+  it("asks for songs where they are published, narrowed by their filters", () => {
+    const url = upstreamUrl(
+      searchOf("kind=music&q=Piano&tempo=slow&vocals=instrumental&mood=calm"),
+    );
+    expect(url.searchParams.get("excluded_source")).toBe("freesound");
+    expect(url.searchParams.get("extension")).toContain("mp32");
+    expect(url.searchParams.get("q")).toBe(
+      "piano speed_low instrumental peaceful",
+    );
+    expect(
+      upstreamUrl(searchOf("kind=music&mood=happy")).searchParams.get("q"),
+    ).toBe("happy");
+    expect(
+      upstreamUrl(searchOf("kind=effect&q=door&mood=happy")).searchParams.get(
+        "q",
+      ),
+    ).toBe("door");
+  });
+
+  it("refuses a search with nothing to find, an unknown kind or filter, or a page past the last", () => {
     for (const query of [
       "kind=music&q=%20",
+      "kind=effect&mood=happy",
+      "kind=music&mood=angry",
       "kind=video&q=rain",
       "kind=music&q=rain&page=13",
       "kind=music&q=rain&page=0",
@@ -48,6 +69,35 @@ describe("a search", () => {
       expect(
         typeof parseSearch(new URL(`https://w.test/search?${query}`)),
       ).toBe("string");
+  });
+
+  it("names Jamendo's MP3s as MP3s and describes a song by its tags", () => {
+    const found = foundOf({
+      ...result("by"),
+      filetype: "mp32",
+      genres: ["ambient", 3],
+      tags: [
+        { name: "speed_low" },
+        { name: "instrumental" },
+        { name: "peaceful" },
+        { name: "sad" },
+        { name: "piano" },
+      ],
+    });
+    expect(found?.filetype).toBe("mp3");
+    expect(found?.tags).toEqual({
+      genres: ["ambient"],
+      moods: ["calm", "sad"],
+      tempo: "slow",
+      vocals: "instrumental",
+    });
+    // Tagged both ways, a track says nothing of its singing.
+    expect(
+      foundOf({
+        ...result("by"),
+        tags: [{ name: "instrumental" }, { name: "vocal" }],
+      })?.tags.vocals,
+    ).toBeNull();
   });
 
   it("keeps only results under a licence the app can use", () => {

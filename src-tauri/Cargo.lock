@@ -5966,7 +5966,9 @@ dependencies = [
 name = "screenwide-openverse"
 version = "1.0.3"
 dependencies = [
+ "getrandom 0.3.4",
  "screenwide-credits",
+ "screenwide-sound-track",
  "serde",
  "serde_json",
  "ts-rs",

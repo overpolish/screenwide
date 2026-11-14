@@ -24,10 +24,11 @@ mod keep;
 mod preview;
 mod rename;
 mod singing;
+mod vocals;
 mod voice;
 
 pub(crate) use cleanup::clean;
-pub(crate) use singing::{ready_for_export, separate_singing};
+pub(crate) use singing::{ready_for_export, separate_open_songs, separate_singing};
 pub(crate) use voice::ducks;
 use voice::microphone;
 
@@ -144,12 +145,15 @@ async fn import_sounds(
   Ok(imported)
 }
 
-/// Every sound in the library, the most recently added first.
+/// Every sound in the library, the most recently added first. Songs not yet
+/// heard for their singing are heard in the background (`vocals`).
 #[tauri::command]
-async fn get_sound_library() -> Result<Vec<Sound>, String> {
-  tauri::async_runtime::spawn_blocking(store::sounds)
+async fn get_sound_library(app: tauri::AppHandle) -> Result<Vec<Sound>, String> {
+  let sounds = tauri::async_runtime::spawn_blocking(store::sounds)
     .await
-    .map_err(|error| error.to_string())
+    .map_err(|error| error.to_string())?;
+  vocals::hear(&app, &sounds);
+  Ok(sounds)
 }
 
 /// The sounds `names` as the recording open in the editor holds them: its
@@ -194,35 +198,6 @@ fn open_project(app: &tauri::AppHandle) -> Option<PathBuf> {
   match artifact.as_ref() {
     Some(EditorArtifact::Recording { project, .. }) => Some(project.clone()),
     _ => None,
-  }
-}
-
-/// Separates, in the background, what the songs of the recording open in
-/// the editor need now that Studio ducking is on, which wants every song's
-/// singing, not only the instrumental ones'.
-pub(crate) fn separate_open_songs(app: &tauri::AppHandle) {
-  let open = {
-    let state = app.state::<EditorState>();
-    let artifact = state
-      .recording
-      .artifact
-      .lock()
-      .unwrap_or_else(|poisoned| poisoned.into_inner());
-    match artifact.as_ref() {
-      Some(EditorArtifact::Recording {
-        id,
-        project,
-        duration_ms,
-        ..
-      }) => Some((project.clone(), *id, *duration_ms)),
-      _ => None,
-    }
-  };
-  let Some((project, id, duration_ms)) = open else {
-    return;
-  };
-  if let Some((_, edit)) = super::timeline_edit::for_project(&project, id, duration_ms) {
-    separate_singing(app, &project, &edit.audio_clips);
   }
 }
 

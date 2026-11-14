@@ -18,9 +18,10 @@ use screenwide_sound_track::store::Separated;
 use screenwide_sound_track::{AudioClipKind, RecordingAudioClip, SoundTrack};
 use screenwide_transcriber::{SEPARATE_CHUNK, SEPARATE_SAMPLE_RATE};
 use serde::Serialize;
-use tauri::{AppHandle, Emitter};
+use tauri::{AppHandle, Emitter, Manager};
 
 use super::{ducks, file, microphone, project_sounds};
+use crate::editor::{EditorArtifact, EditorState};
 
 /// How many frames of a song each piece of its singing holds.
 const PIECE_FRAMES: u64 = PIECE_MS * SEPARATE_SAMPLE_RATE as u64 / 1_000;
@@ -171,13 +172,52 @@ pub(crate) fn ready_for_export(
     return Ok(());
   };
   for (_, path, pieces) in wanted(app, project, clips) {
-    let _one = ONE_AT_A_TIME
-      .lock()
-      .unwrap_or_else(|poisoned| poisoned.into_inner());
-    let runs = missing(Separated::read(&path).as_ref(), &pieces);
-    separate_runs(&path, &runs, model.clone(), &mut |_| {})?;
+    separate_pieces(&path, &pieces, model.clone())?;
   }
   Ok(())
+}
+
+/// Separates whichever of `pieces` of the song `sound` are not separated
+/// yet, waiting for any other separation to finish first.
+pub(super) fn separate_pieces(
+  sound: &Path,
+  pieces: &BTreeSet<u64>,
+  model: PathBuf,
+) -> Result<(), String> {
+  let _one = ONE_AT_A_TIME
+    .lock()
+    .unwrap_or_else(|poisoned| poisoned.into_inner());
+  let runs = missing(Separated::read(sound).as_ref(), pieces);
+  separate_runs(sound, &runs, model, &mut |_| {})
+}
+
+/// Separates, in the background, what the songs of the recording open in
+/// the editor need now that Studio ducking is on, which wants every song's
+/// singing, not only the instrumental ones'.
+pub(crate) fn separate_open_songs(app: &AppHandle) {
+  let open = {
+    let state = app.state::<EditorState>();
+    let artifact = state
+      .recording
+      .artifact
+      .lock()
+      .unwrap_or_else(|poisoned| poisoned.into_inner());
+    match artifact.as_ref() {
+      Some(EditorArtifact::Recording {
+        id,
+        project,
+        duration_ms,
+        ..
+      }) => Some((project.clone(), *id, *duration_ms)),
+      _ => None,
+    }
+  };
+  let Some((project, id, duration_ms)) = open else {
+    return;
+  };
+  if let Some((_, edit)) = crate::editor::timeline_edit::for_project(&project, id, duration_ms) {
+    separate_singing(app, &project, &edit.audio_clips);
+  }
 }
 
 /// Separates each run of pieces of the song `sound` into its two parts and

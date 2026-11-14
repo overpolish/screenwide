@@ -419,6 +419,31 @@ export type Messages = {
   "editor-island-moment-play": null;
   "editor-island-moment-transcribe-failed": null;
   "editor-island-moment-waiting": null;
+  "editor-island-music-filter-mood": null;
+  "editor-island-music-filter-mood-any": null;
+  "editor-island-music-filter-mood-calm": null;
+  "editor-island-music-filter-mood-dark": null;
+  "editor-island-music-filter-mood-dreamy": null;
+  "editor-island-music-filter-mood-energetic": null;
+  "editor-island-music-filter-mood-epic": null;
+  "editor-island-music-filter-mood-happy": null;
+  "editor-island-music-filter-mood-romantic": null;
+  "editor-island-music-filter-mood-sad": null;
+  "editor-island-music-filter-mood-uplifting": null;
+  "editor-island-music-filter-set": {
+    choice: string | number;
+    filter: string | number;
+  };
+  "editor-island-music-filter-tempo": null;
+  "editor-island-music-filter-tempo-any": null;
+  "editor-island-music-filter-tempo-fast": null;
+  "editor-island-music-filter-tempo-medium": null;
+  "editor-island-music-filter-tempo-slow": null;
+  "editor-island-music-filter-vocals": null;
+  "editor-island-music-filter-vocals-any": null;
+  "editor-island-music-filter-vocals-instrumental": null;
+  "editor-island-music-filter-vocals-vocal": null;
+  "editor-island-music-filters": null;
   "editor-island-noise-cleaning": null;
   "editor-island-openverse-add-failed": { title: string | number };
   "editor-island-openverse-busy": null;
@@ -441,7 +466,12 @@ export type Messages = {
   "editor-island-openverse-retry": null;
   "editor-island-openverse-search": { query: string | number };
   "editor-island-openverse-searching": null;
+  "editor-island-openverse-searching-heading": null;
   "editor-island-openverse-unavailable": null;
+  "editor-island-openverse-used-up": {
+    midnight: string | number;
+    time: string | number;
+  };
   "editor-island-openverse-withdrawn": { title: string | number };
   "editor-island-position": null;
   "editor-island-position-bottom": null;
@@ -1438,6 +1468,7 @@ export type Messages = {
   "site-privacy-intro": null;
   "site-privacy-licence": null;
   "site-privacy-models": null;
+  "site-privacy-online-search": null;
   "site-privacy-questions": { email: string | number };
   "site-privacy-retention": null;
   "site-privacy-retention-title": null;

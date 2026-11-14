@@ -74,10 +74,17 @@ editor-island-openverse-search = Search online for “{ $query }”
 # Heads what the online search found, under the library's own.
 editor-island-openverse-heading = Found online
 editor-island-openverse-searching = Searching online
+# Heads the online search while its first results are on their way, before it becomes the heading above.
+editor-island-openverse-searching-heading = Searching
 editor-island-openverse-more = More results
 editor-island-openverse-none = Nothing found online for that
 editor-island-openverse-busy = There have been too many searches for now.
 editor-island-openverse-unavailable = The online search is not answering right now.
+# Each installation may search online a set number of times a day, so no one uses up the searches everyone shares. $time is when the limit resets, in the person's own time, already formatted, such as 01:00; $midnight is yes where that is midnight, said as a word rather than 00:00.
+editor-island-openverse-used-up = You've reached today's search limit. { $midnight ->
+    [yes] Try again after midnight.
+   *[no] Try again after { $time }.
+}
 # Asks the online search again after it failed.
 editor-island-openverse-retry = Try again
 # For assistive technology, while a song, sound effect or picture found online downloads into the library. $title is its title.
@@ -93,6 +100,33 @@ editor-island-openverse-fetch = Download { $title } to the library, { $license }
 editor-island-openverse-license-by = CC BY
 editor-island-openverse-license-cc0 = CC0
 editor-island-openverse-license-pdm = Public domain
+# The filters under the Library's search field while it shows music, which narrow the songs found online. Each shows what it is set to and opens its choices.
+editor-island-music-filters = Music filters
+# A music filter that is set, for assistive technology. $filter is the filter's name below, $choice what it is set to.
+editor-island-music-filter-set = { $filter }: { $choice }
+# How fast a song goes.
+editor-island-music-filter-tempo = Tempo
+editor-island-music-filter-tempo-any = Any tempo
+editor-island-music-filter-tempo-slow = Slow
+editor-island-music-filter-tempo-medium = Medium
+editor-island-music-filter-tempo-fast = Fast
+# Whether a song is sung.
+editor-island-music-filter-vocals = Vocals
+editor-island-music-filter-vocals-any = With or without vocals
+editor-island-music-filter-vocals-instrumental = Instrumental
+editor-island-music-filter-vocals-vocal = With vocals
+# How a song feels.
+editor-island-music-filter-mood = Mood
+editor-island-music-filter-mood-any = Any mood
+editor-island-music-filter-mood-happy = Happy
+editor-island-music-filter-mood-uplifting = Uplifting
+editor-island-music-filter-mood-energetic = Energetic
+editor-island-music-filter-mood-calm = Calm
+editor-island-music-filter-mood-dreamy = Dreamy
+editor-island-music-filter-mood-romantic = Romantic
+editor-island-music-filter-mood-sad = Sad
+editor-island-music-filter-mood-dark = Dark
+editor-island-music-filter-mood-epic = Epic
 
 ## A song or sound effect on the strip, laid under the recording
 

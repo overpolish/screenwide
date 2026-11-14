@@ -13,7 +13,9 @@ edition.workspace = true
 doctest = false
 
 [dependencies]
+getrandom.workspace = true
 screenwide-credits.workspace = true
+screenwide-sound-track.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 ts-rs.workspace = true

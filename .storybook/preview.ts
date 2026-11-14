@@ -27,6 +27,7 @@ import { installInactiveWindowHoverBridge } from "../src/lib/inactive-window-hov
 import { installKeyboardNavigationModality } from "../src/lib/keyboard-navigation-modality";
 import { isWindowsHost, stampPlatform } from "../src/lib/platform";
 import { synchronizeSystemAccent } from "../src/lib/system-accent";
+import { storyOnlineSearch } from "../src/storybook/story-online-search";
 import { StandaloneListboxEntry } from "../src/windows/standalone-listbox-entry";
 
 import { DocsPage } from "./docs-page";
@@ -150,6 +151,12 @@ const askedWords = (payload: unknown): { removed: boolean; text: string }[] =>
       )
     : [];
 
+// A command refused as the app refuses it: the app rejects with the error
+// its command returned, a string or an object, never an `Error`.
+const refusedWith = (reason: unknown): Promise<never> =>
+  // eslint-disable-next-line @typescript-eslint/prefer-promise-reject-errors -- Tauri's invoke rejects with the command's own error value.
+  Promise.reject(reason);
+
 /** The fillers and profanity among the words asked about, by the sample
  * transcript's own few, found by their words alone as the lists would. Words
  * already removed are left out, as the app's own finding leaves them. */
@@ -226,44 +233,80 @@ if (!isNativePreview) {
           return [];
         case "get_sound_preview":
           return silentWav();
-        // What Openverse finds: three sounds or three pictures, one of each
-        // licence, so the badges and their credits show.
+        // What Openverse finds, as the story asks (`answerOnlineSearch`):
+        // by default three songs, sound effects or pictures, one of each
+        // licence, so the badges and their credits show, songs with their
+        // genres.
         case "search_openverse": {
           const isPicture =
             typeof payload === "object" &&
             "kind" in payload &&
             payload.kind === "image";
+          const isMusic =
+            typeof payload === "object" &&
+            "kind" in payload &&
+            payload.kind === "music";
+          switch (storyOnlineSearch()) {
+            case "searching":
+              return new Promise(() => undefined);
+            case "nothing":
+              return { found: [], pageCount: 0 };
+            case "busy":
+            case "unavailable":
+              return refusedWith(storyOnlineSearch());
+            case "usedUp":
+              return refusedWith({
+                usedUp: { until: Date.UTC(2026, 10, 15) },
+              });
+            case "found":
+            case "withdrawn":
+              break;
+          }
+          const rows = isMusic
+            ? ([
+                ["Morning Walk", "Ana Reyes", "by", 184_000, "acoustic"],
+                ["Soft Piano Theme", "keys", "cc0", 152_000, "classical"],
+                ["Old Radio Swing", null, "pdm", 201_000, "jazz"],
+              ] as const)
+            : ([
+                ["Rain on a tin roof", "Ana Reyes", "by", 48_000, null],
+                ["Soft piano loop", "keys", "cc0", 92_000, null],
+                ["Old radio", null, "pdm", 7_400, null],
+              ] as const);
+          const colours = ["#22d3ee", "#fb7185", "#a78bfa"];
           return {
-            found: (
-              [
-                ["Rain on a tin roof", "Ana Reyes", "by", 48_000, "#22d3ee"],
-                ["Soft piano loop", "keys", "cc0", 92_000, "#fb7185"],
-                ["Old radio", null, "pdm", 7_400, "#a78bfa"],
-              ] as const
-            ).map(([title, creator, license, durationMs, colour], index) => ({
-              attribution: `"${title}" is licensed under ${license}.`,
-              creator,
-              creatorUrl: null,
-              durationMs: isPicture ? null : durationMs,
-              filetype: isPicture ? "png" : "mp3",
-              height: null,
-              id: `found-${String(index)}`,
-              landingUrl: null,
-              license,
-              licenseUrl: null,
-              licenseVersion: null,
-              thumbnail: isPicture ? storyPicture(colour, 1.4) : null,
-              title,
-              url: isPicture
-                ? storyPicture(colour, 1.4)
-                : "https://example.org",
-              width: null,
-            })),
+            found: rows.map(
+              ([title, creator, license, durationMs, genre], index) => ({
+                attribution: `"${title}" is licensed under ${license}.`,
+                creator,
+                creatorUrl: null,
+                durationMs: isPicture ? null : durationMs,
+                filetype: isPicture ? "png" : "mp3",
+                height: null,
+                id: `found-${String(index)}`,
+                landingUrl: null,
+                license,
+                licenseUrl: null,
+                licenseVersion: null,
+                tags: {
+                  genres: genre ? [genre] : [],
+                  moods: [],
+                  tempo: null,
+                  vocals: null,
+                },
+                thumbnail: isPicture ? storyPicture(colours[index], 1.4) : null,
+                title,
+                url: isPicture
+                  ? storyPicture(colours[index], 1.4)
+                  : "https://example.org",
+                width: null,
+              }),
+            ),
             pageCount: 2,
           };
         }
         // A download that comes over two seconds, then leaves the results
-        // for the library.
+        // for the library, or is refused as no longer offered.
         case "add_openverse_sound":
         case "add_openverse_picture": {
           const channel =
@@ -272,6 +315,7 @@ if (!isNativePreview) {
               : null;
           const fetched =
             command === "add_openverse_sound" ? { name: "found.mp3" } : "found";
+          const isWithdrawn = storyOnlineSearch() === "withdrawn";
           return new Promise((done) => {
             let step = 0;
             const timer = setInterval(() => {
@@ -279,7 +323,7 @@ if (!isNativePreview) {
               channel?.onmessage?.(step / 10);
               if (step < 10) return;
               clearInterval(timer);
-              done(fetched);
+              done(isWithdrawn ? refusedWith("withdrawn") : fetched);
             }, 200);
           });
         }

@@ -11,15 +11,19 @@ mod adding;
 mod kind;
 mod measure;
 pub mod music;
+mod naming;
 mod project;
 mod removed;
 pub mod singing;
+mod sung;
 mod trim;
 
 pub use adding::{import, import_as, import_found};
 pub use kind::{remember_kinds, set_kind};
+pub use naming::{is_name, is_sound_file, EXTENSIONS};
 pub use project::{adopt, carry, keep_from_project, prune, resolve};
 pub use singing::Separated;
+pub use sung::{is_sung, keep_heard_vocals};
 
 use std::path::{Path, PathBuf};
 use std::sync::OnceLock;
@@ -27,15 +31,10 @@ use std::sync::OnceLock;
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
+use naming::{content_hash, extension, is_stem};
+
 /// Where a project keeps the sounds its clips play, beside its other media.
 pub const PROJECT_FOLDER: &str = "media/audio";
-/// The kinds of file the library takes. Whether one holds sound FFmpeg can
-/// play is found as it is measured.
-pub const EXTENSIONS: [&str; 12] = [
-  "aac", "aif", "aiff", "caf", "flac", "m4a", "mp3", "mp4", "oga", "ogg", "opus", "wav",
-];
-/// How many hex digits a sound's name has before its extension.
-const NAME_DIGITS: usize = 32;
 /// The make of the file kept beside each sound.
 const FORMAT_VERSION: u16 = 1;
 /// How a sound is measured, raised whenever what is measured changes: a
@@ -72,9 +71,10 @@ pub struct Sound {
   pub levels: Vec<f32>,
   /// When it was added, in milliseconds since the Unix epoch.
   pub added_ms: u64,
-  /// Its beat, which songs that touch are joined by.
+  /// Its beat, which songs that touch are joined by, and whether it is
+  /// sung, once heard.
   #[serde(default, skip_serializing_if = "Option::is_none")]
-  #[ts(skip)]
+  #[ts(optional)]
   pub music: Option<music::Music>,
   /// How it was measured (`MEASURED`); 0 for a sound kept before that was
   /// told.
@@ -86,6 +86,10 @@ pub struct Sound {
   #[serde(default, skip_serializing_if = "Option::is_none")]
   #[ts(optional)]
   pub credit: Option<screenwide_credits::Credit>,
+  /// What Openverse says of it as music, for a song found there.
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  #[ts(optional)]
+  pub tags: Option<music::MusicTags>,
   /// What it was last used as: added under it, or laid on its track
   /// (`kind`). A sound never placed has none, and its length says.
   #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -111,6 +115,7 @@ impl Sound {
       music: Some(measured.music),
       measured: MEASURED,
       credit: None,
+      tags: None,
       kind: None,
     }
   }
@@ -134,46 +139,6 @@ fn directory() -> Result<&'static Path, String> {
     .ok_or_else(|| "The sound library is not ready yet".to_owned())
 }
 
-/// Whether `name` could be one the library gave out: a content hash and a
-/// short extension, nothing that could reach outside a folder.
-pub fn is_name(name: &str) -> bool {
-  let Some((stem, extension)) = name.split_once('.') else {
-    return false;
-  };
-  is_stem(stem) && EXTENSIONS.contains(&extension)
-}
-
-/// Whether `stem` is a content hash, as every file kept for a sound starts.
-fn is_stem(stem: &str) -> bool {
-  stem.len() == NAME_DIGITS
-    && stem
-      .bytes()
-      .all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte))
-}
-
-/// Whether `path` is a kind of file the library takes, by its extension.
-pub fn is_sound_file(path: &Path) -> bool {
-  extension(path).is_some()
-}
-
-fn extension(path: &Path) -> Option<String> {
-  let extension = path.extension()?.to_str()?.to_ascii_lowercase();
-  EXTENSIONS
-    .contains(&extension.as_str())
-    .then_some(extension)
-}
-
-/// A stable 128-bit FNV-1a of `bytes`, as the library's name for them. The
-/// name only has to tell sounds apart, not stand up to anyone forging one.
-fn content_hash(bytes: &[u8]) -> String {
-  let mut hash: u128 = 0x6c62_272e_07bb_0142_62b8_2175_6295_c58d;
-  for byte in bytes {
-    hash ^= u128::from(*byte);
-    hash = hash.wrapping_mul(0x0000_0000_0100_0000_0000_0000_0000_013b);
-  }
-  format!("{hash:032x}")
-}
-
 /// The file kept beside the sound `name` in `folder`.
 fn kept_path(folder: &Path, name: &str) -> PathBuf {
   let stem = name.split_once('.').map_or(name, |(stem, _)| stem);
@@ -193,6 +158,7 @@ fn read_kept(folder: &Path, name: &str) -> Option<Sound> {
     if let Ok(measured) = measure::measure(&file) {
       let sound = Sound {
         credit: kept.sound.credit.clone(),
+        tags: kept.sound.tags.clone(),
         kind: kept.sound.kind,
         ..Sound::from_measured(
           kept.sound.name.clone(),

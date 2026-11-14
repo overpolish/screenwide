@@ -2,30 +2,42 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 //! What the library knows of a sound as music, found once as it is measured
-//! (`analyse`): its beat, where it holds a steady one. Songs that touch are
-//! joined by it: where their tempos are close, the earlier comes to the
-//! later's and the two blend on the beat.
+//! (`analyse`): its beat, where it holds a steady one, and, once heard by
+//! the separation model, whether it is sung. Songs that touch are joined by
+//! the beat: where their tempos are close, the earlier comes to the later's
+//! and the two blend on the beat. Its tempo and singing narrow the library
+//! as the search online is narrowed (`tags`).
 
 mod analyse;
+mod tags;
 
 pub(super) use analyse::analyse;
+pub use tags::{Mood, MusicTags, Tempo, Vocals};
 
 use serde::{Deserialize, Serialize};
+use ts_rs::TS;
 
 /// How far apart, as a share of the slower, two tempos may be for the
 /// earlier song to come to the later's: further, the stretch is heard.
 const MATCHING_TEMPO: f64 = 0.12;
 
-#[derive(Clone, Copy, Debug, Default, Deserialize, PartialEq, Serialize)]
+#[derive(Clone, Copy, Debug, Default, Deserialize, PartialEq, Serialize, TS)]
 #[serde(rename_all = "camelCase")]
+#[ts(export)]
 pub struct Music {
   pub beat: Option<Beat>,
+  /// Whether it is sung, as the separation model heard it; none until it
+  /// has been heard (`keep_heard_vocals`).
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  #[ts(optional)]
+  pub vocals: Option<Vocals>,
 }
 
 /// A steady beat: one every `period_ms`, the first `first_ms` into the
 /// sound.
-#[derive(Clone, Copy, Debug, Deserialize, PartialEq, Serialize)]
+#[derive(Clone, Copy, Debug, Deserialize, PartialEq, Serialize, TS)]
 #[serde(rename_all = "camelCase")]
+#[ts(export)]
 pub struct Beat {
   pub period_ms: f64,
   pub first_ms: f64,

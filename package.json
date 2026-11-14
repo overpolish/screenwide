@@ -22,7 +22,12 @@
           "src-tauri/target/**"
         ]
       },
-      "workers/*": {}
+      "workers/*": {},
+      "workers/openverse": {
+        "ignoreDependencies": [
+          "cloudflare"
+        ]
+      }
     }
   },
   "scripts": {
