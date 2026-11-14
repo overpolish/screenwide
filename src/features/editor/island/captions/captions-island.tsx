@@ -99,8 +99,9 @@ export function captionsIsland(
         />
       </IslandParts>
     ) : undefined,
-    // Hung from the row's start, so the pickers' column opens past its end.
-    anchor: "start",
+    // Hung from the row's end, so the pickers' column opens past its start,
+    // away from the picture's corner the island stands in (`IslandAside`).
+    anchor: "end",
     key: "captions",
     section:
       isReady && props.enabled ? <CaptionsSection {...props} /> : undefined,

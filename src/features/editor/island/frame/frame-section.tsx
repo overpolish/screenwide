@@ -11,6 +11,7 @@ import {
   AnnotationChoiceRow,
   AnnotationLine,
 } from "../annotation/annotation-island-parts";
+import { IslandPickerRow } from "../island-picker-column";
 import { PICTURE_CORNERS } from "../picture-corners";
 import { SceneOnlyNote } from "../scene-only-note";
 
@@ -36,9 +37,9 @@ export function FrameSection(props: FrameIslandProps) {
     aspect: props.width / Math.max(props.height, 1),
   });
   return (
-    // The controls keep to the start, and the column opens at the end,
-    // where the black reveals it as it grows (`TextLookPickers`).
-    <div className="flex">
+    // The controls keep to the end, and the column opens at the start, where
+    // the black reveals it as it grows (`IslandPickerRow`).
+    <IslandPickerRow>
       <IslandParts
         className={cn(
           "flex shrink-0 flex-col gap-separate self-start",
@@ -97,6 +98,6 @@ export function FrameSection(props: FrameIslandProps) {
         </div>
       </IslandParts>
       {background.column}
-    </div>
+    </IslandPickerRow>
   );
 }

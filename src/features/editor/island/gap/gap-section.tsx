@@ -7,6 +7,7 @@ import { Button } from "../../../../primitives/button/button";
 import { IslandParts } from "../../../../primitives/island/island-parts";
 import { FRAME_ISLAND_WIDTH } from "../frame/frame-width";
 import { useBackgroundParts } from "../frame/use-background-parts";
+import { IslandPickerRow } from "../island-picker-column";
 
 import type { GapIslandProps } from "./gap-island";
 
@@ -21,7 +22,7 @@ export function GapSection(props: GapIslandProps) {
     // The tiles open the section, whose box clips what reaches past its
     // top, so a chosen tile's outline in the first row needs the small
     // inset above it; in the Frame island the size line gives it that room.
-    <div className="flex">
+    <IslandPickerRow>
       <IslandParts
         className={cn(
           "flex shrink-0 flex-col gap-separate self-start pt-inset-sm",
@@ -40,6 +41,6 @@ export function GapSection(props: GapIslandProps) {
         </div>
       </IslandParts>
       {parts.column}
-    </div>
+    </IslandPickerRow>
   );
 }

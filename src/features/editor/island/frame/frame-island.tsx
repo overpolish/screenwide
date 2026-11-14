@@ -70,6 +70,9 @@ export type FrameScene = {
 
 export function frameIsland(props: FrameIslandProps): EditorIslandContent {
   return {
+    // Hung from the row's end, so the library's column opens past its start,
+    // away from the picture's corner the island stands in (`IslandAside`).
+    anchor: "end",
     key: "frame",
     section: <FrameSection {...props} />,
     title: (

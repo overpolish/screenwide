@@ -6,6 +6,7 @@ import { motion } from "motion/react";
 import { type ReactNode } from "react";
 import { useLocale } from "react-aria";
 
+import { useIslandAsideAtStart } from "../../../../../primitives/island/island-context";
 import { useGlyphMotion } from "../../../../annotations/options/glyph-motion";
 import { IslandLineButton } from "../../island-line-button";
 
@@ -29,9 +30,11 @@ export function TextPickerLine({
   onPress: () => void;
 }) {
   const motionOf = useGlyphMotion();
-  // The column opens at the section's end, so the chevron turns from
-  // pointing down to pointing there: right in a left-to-right language.
-  const towardEnd = useLocale().direction === "rtl" ? 90 : -90;
+  // The chevron turns from pointing down to pointing at the column, on
+  // whichever side of the section it opens (`IslandAside`): left for one
+  // at the start in a left-to-right language.
+  const isLeft = useIslandAsideAtStart() !== (useLocale().direction === "rtl");
+  const towardColumn = isLeft ? 90 : -90;
   return (
     <IslandLineButton
       aria-controls={isOpen ? controls : undefined}
@@ -43,7 +46,7 @@ export function TextPickerLine({
     >
       <span className="flex min-w-0 items-center gap-inline">{children}</span>
       <motion.span
-        animate={{ rotate: isOpen ? towardEnd : 0 }}
+        animate={{ rotate: isOpen ? towardColumn : 0 }}
         className="flex shrink-0 text-fg-secondary"
         initial={false}
         transition={motionOf.move}

@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { createContext } from "react";
+import { createContext, use } from "react";
 
 import type { IslandNotch } from "./island-geometry";
 
@@ -21,7 +21,13 @@ export const IslandContext = createContext<{
 
 /** How the section's aside (`IslandAside`) hands the island its element,
  * which the island measures with the section, in the same pass, so the two
- * never disagree for a frame; nothing outside an island. */
-export const IslandAsideContext = createContext<
-  (element: HTMLDivElement | null) => void
->(() => undefined);
+ * never disagree for a frame; and which side of the section it opens on:
+ * the start for a section hung from the row's end, the end otherwise
+ * (`islandLayout`). Nothing outside an island. */
+export const IslandAsideContext = createContext<{
+  isAtStart: boolean;
+  ref: (element: HTMLDivElement | null) => void;
+}>({ isAtStart: false, ref: () => undefined });
+
+/** Whether the section's aside opens at its start (`IslandAside`). */
+export const useIslandAsideAtStart = () => use(IslandAsideContext).isAtStart;

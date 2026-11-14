@@ -6,7 +6,10 @@ import { type ReactNode, useId, useState } from "react";
 import { IslandParts } from "../../../../../primitives/island/island-parts";
 import { useFontChoices } from "../../../tools/text-style/text-fonts";
 import { useTemplatePreviews } from "../../../tools/text-style/use-template-previews";
-import { IslandPickerColumn } from "../../island-picker-column";
+import {
+  IslandPickerColumn,
+  IslandPickerRow,
+} from "../../island-picker-column";
 
 import { TextFontLine, TextFontPanel } from "./text-font-picker";
 import { TextTemplateLine, TextTemplateTiles } from "./text-template-picker";
@@ -19,7 +22,7 @@ import type { TextTemplates } from "../../../recording/captions/use-text-templat
 type Picker = "accent" | "font" | "template";
 
 /** A text's template and faces, each folded to a line, of which one at a
- * time opens its choices in a column beside the section, at its end: the
+ * time opens its choices in a column beside the section, at its start: the
  * island grows sideways and keeps its height. Opening another line swaps
  * the column's choices. Choosing leaves them open, so one choice after
  * another can be tried; the line folds them away. A note that answers the
@@ -91,10 +94,10 @@ export function TextLookPickers({
       fontPanel(look.accentFont, "accentFont")
     ) : null;
   return (
-    // The controls keep to the start, under the row, so whatever the
-    // section has beyond the island's box spills at the end, where the
-    // black reveals it as it grows.
-    <div className="flex">
+    // The controls keep to the island's end, under the row, so whatever the
+    // section has beyond the island's box spills at the start, where the
+    // column opens and the black reveals it as it grows (`IslandPickerRow`).
+    <IslandPickerRow>
       {/* Neither squeezed nor stretched while the island's box catches up
        * with the column, wider or narrower than what it holds: the controls
        * keep their layout and place, and the black opens or closes beside
@@ -141,6 +144,6 @@ export function TextLookPickers({
         contentKey={shown ?? ""}
         id={columnId}
       />
-    </div>
+    </IslandPickerRow>
   );
 }

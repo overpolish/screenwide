@@ -44,6 +44,9 @@ export function gapIsland(props: GapIslandProps): EditorIslandContent {
         variant="ghost"
       />
     ),
+    // Hung from the row's end, so the library's column opens past its start,
+    // as the Frame island's does (`IslandAside`).
+    anchor: "end",
     key: `gap-${props.id}`,
     section: <GapSection {...props} />,
     title: (

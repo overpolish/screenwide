@@ -80,8 +80,13 @@ export function Island({
   const { direction } = useLocale();
   const controlAnchor = useControlAnchor(anchorControl, rowElement, direction);
   const settledAnchor = useAfterLeave(anchor, { isShown });
+  const sectionAnchor = controlAnchor ?? settledAnchor;
+  const aside = useMemo(
+    () => ({ isAtStart: sectionAnchor === "end", ref: measured.setAside }),
+    [sectionAnchor, measured.setAside],
+  );
   const layout = layOutIsland({
-    anchor: controlAnchor ?? settledAnchor,
+    anchor: sectionAnchor,
     below: isStacked ? (measured.belowSize ?? { height: 0, width: 0 }) : null,
     direction,
     hasSection: Boolean(section),
@@ -232,7 +237,7 @@ export function Island({
                         {below}
                       </IslandBelow>
                     </motion.div>
-                    <IslandAsideContext value={measured.setAside}>
+                    <IslandAsideContext value={aside}>
                       <IslandSection
                         isFromMiddle={isFromMiddle}
                         isOpening={isOpening}
