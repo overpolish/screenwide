@@ -10,12 +10,17 @@
 //! manager, which draws the desktop whatever else runs and is not taken down
 //! by a reset. Elsewhere than Windows the GPU is never taken to be busy.
 
+// The counters are read on Windows only; the arithmetic over them is kept
+// apart from the reading so it is tested everywhere.
+#[cfg(any(windows, test))]
 use std::collections::HashMap;
 
 /// The busiest other program's share of an engine, in percent, from which a
 /// model steps aside, and below which it comes back. Apart, so a load
 /// hovering near one does not move the work back and forth.
+#[cfg(any(windows, test))]
 const BUSY_FROM: f64 = 30.0;
+#[cfg(any(windows, test))]
 const QUIET_BELOW: f64 = 15.0;
 
 pub(super) fn busy() -> bool {
@@ -27,12 +32,14 @@ pub(super) fn busy() -> bool {
 
 /// Whether the GPU counts as busy now, given whether it did and the busiest
 /// other program's share.
+#[cfg(any(windows, test))]
 fn settle(was_busy: bool, load: f64) -> bool {
   load >= if was_busy { QUIET_BELOW } else { BUSY_FROM }
 }
 
 /// One engine of one program, as Windows names its counter:
 /// `pid_1234_luid_0x00000000_0x0000C2A1_phys_0_eng_0_engtype_3D`.
+#[cfg(any(windows, test))]
 struct Instance<'a> {
   pid: u32,
   /// The adapter and engine, the same for every program on it.
@@ -40,6 +47,7 @@ struct Instance<'a> {
   kind: &'a str,
 }
 
+#[cfg(any(windows, test))]
 fn parse(name: &str) -> Option<Instance<'_>> {
   let (pid, rest) = name.strip_prefix("pid_")?.split_once('_')?;
   let (engine, kind) = rest.split_once("_engtype_")?;
@@ -52,6 +60,7 @@ fn parse(name: &str) -> Option<Instance<'_>> {
 
 /// The busiest program's share of one 3D or compute engine, in percent, from
 /// each engine instance's reading, leaving out the `ignored` programs.
+#[cfg(any(windows, test))]
 fn others_load<'a>(readings: impl IntoIterator<Item = (&'a str, f64)>, ignored: &[u32]) -> f64 {
   let mut shares: HashMap<(u32, &str), f64> = HashMap::new();
   for (name, value) in readings {
