@@ -107,6 +107,7 @@ pub(super) fn forget(panel: &str) {
 /// the panel's own page, from the moment it starts rather than once the
 /// next look at the pointer finds it off the panel's parts. Called on the
 /// event loop's thread, as the drag starts and ends.
+#[cfg(target_os = "windows")]
 pub(crate) fn set_dragging_out(app: &AppHandle, label: &str, is_dragging: bool) {
   if let Some(area) = areas().get_mut(label) {
     area.is_dragging_out = is_dragging;
