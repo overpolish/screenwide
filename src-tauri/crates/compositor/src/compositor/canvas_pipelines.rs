@@ -36,9 +36,13 @@
 //! On macOS each of those draws changes to a slim variant once one is ready:
 //! the same kinds, keeping only the shader's other paths the frame takes
 //! ([`super::canvas_features`]). Metal compiles it in the background the
-//! first time a frame asks for it, in about half a second with no annotation
-//! and about two with every kind, and the system keeps it for later launches;
-//! the frames until then are drawn as above.
+//! first time a frame asks for it, in about a second, and the system keeps
+//! it for later launches. The frames until then are drawn as above, with
+//! every path kept, which on Apple's GPUs costs 25 to 50 ms a frame against
+//! 1 to 4, so a pen taken up has the variant its first stroke will need
+//! compiled at once (`Compositor::prepare_annotation_kind`), and the variant
+//! keeping every path is never compiled for a set of its own there: no
+//! frame would draw with it once the slim one is ready.
 
 /// Whether every annotated draw takes the variant with every kind; see the
 /// module's notes.
@@ -67,12 +71,18 @@ pub(super) enum Target {
   Delta = 2,
 }
 
+/// A placed layer's last draw: its target, and the kinds and paths drawn.
+type Drawn = (Target, KindMask, FeatureMask);
+
 pub(super) struct CanvasPipelines {
   device: wgpu::Device,
   variants: Mutex<HashMap<(KindMask, FeatureMask), Arc<Variant>>>,
   /// Whether a draw missing its variant starts compiling it on another
   /// thread, as a preview's does, rather than only waiting for it.
   in_background: AtomicBool,
+  /// What each placed layer was last drawn with, by its slot and target:
+  /// the sets a pen taken up adds its kind to (`variant_choice.rs`).
+  drawn: Mutex<HashMap<(usize, usize), Drawn>>,
   /// Whether the variants the build compiled are used, rather than compiled
   /// here from WGSL like any other.
   precompiled: bool,
@@ -140,6 +150,7 @@ impl CanvasPipelines {
       device: device.clone(),
       variants: Mutex::default(),
       in_background: AtomicBool::new(false),
+      drawn: Mutex::default(),
       precompiled,
     }
   }
@@ -196,7 +207,10 @@ impl CanvasPipelines {
     if kinds == 0 {
       return own.pipeline(&self.device, target).clone();
     }
-    if self.in_background.load(Ordering::Relaxed) {
+    // Where frames are drawn slim (macOS), the slim variant asked for above
+    // is what the frames after this one take, so compiling this one too
+    // would only slow that one down: seconds of work no frame would use.
+    if features == ALL_FEATURES && self.in_background.load(Ordering::Relaxed) {
       self.compile_in_background(&own, target);
     }
     if let Some(pipeline) = self.ready_cover(target, kinds) {

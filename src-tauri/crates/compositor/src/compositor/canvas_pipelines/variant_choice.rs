@@ -8,8 +8,10 @@
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
 
-use super::super::canvas_features::ALL_FEATURES;
-use super::super::canvas_variants::every_kind;
+use screenwide_annotations::AnnotationKind;
+
+use super::super::canvas_features::{self, FeatureMask, ALL_FEATURES};
+use super::super::canvas_variants::{every_kind, kind_bit, KindMask};
 use super::super::Compositor;
 use super::Target;
 
@@ -57,6 +59,56 @@ impl Compositor {
           variant.pipeline(&device, target);
         }
       });
+  }
+
+  /// Starts compiling, in the background, the slim variants a stroke of
+  /// `kind` will be drawn with: each placed layer's last set with `kind`
+  /// added, keeping the paths it was last drawn with and those `kind`
+  /// brings. A pen taken up calls this, so its first stroke is drawn with
+  /// its own variant rather than with every path kept while that compiles.
+  /// A variant ready already is left as it is; so is everything where
+  /// frames keep every path, as on Windows.
+  pub fn prepare_annotation_kind(&self, kind: AnnotationKind) {
+    let canvas = &self.canvas;
+    let bit = kind_bit(kind);
+    let brought = canvas_features::of_kind(kind);
+    // A spotlight's blur and a lens's ground are drawn by the variant's
+    // third pipeline.
+    let draws_delta = matches!(kind, AnnotationKind::Spotlight | AnnotationKind::Magnify);
+    let drawn = canvas
+      .drawn
+      .lock()
+      .map(|drawn| drawn.values().copied().collect::<Vec<_>>())
+      .unwrap_or_default();
+    for (target, kinds, features) in drawn {
+      let variant = canvas.variant(kinds | bit, features | brought);
+      let delta = draws_delta.then_some(Target::Delta);
+      for target in std::iter::once(target).chain(delta) {
+        if variant.pipelines[target as usize].get().is_none() {
+          canvas.compile_in_background(&variant, target);
+        }
+      }
+    }
+  }
+}
+
+impl super::CanvasPipelines {
+  /// Notes what the placed layer in `slot` was drawn into `target` with,
+  /// for [`Compositor::prepare_annotation_kind`]: only where frames are
+  /// drawn slim and a preview compiles in the background.
+  pub(in super::super) fn remember(
+    &self,
+    slot: usize,
+    target: Target,
+    kinds: KindMask,
+    features: FeatureMask,
+  ) {
+    if features == ALL_FEATURES || !self.in_background.load(Ordering::Relaxed) {
+      return;
+    }
+    if let Ok(mut drawn) = self.drawn.lock() {
+      drawn.insert((slot, target as usize), (target, kinds, features));
+    }
   }
 }
 

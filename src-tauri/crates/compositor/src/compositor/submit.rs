@@ -222,6 +222,13 @@ impl Compositor {
     } else {
       Target::Canvas
     };
+    // A placed layer is a preview's: a pen taken up there prepares its
+    // stroke's variant from what it was drawn with (`variant_choice.rs`).
+    if layer.placement.is_some() {
+      self
+        .canvas
+        .remember(layer.redaction_slot, canvas_target, kinds, features);
+    }
     let canvas_pass = |encoder: &mut wgpu::CommandEncoder,
                        view: &wgpu::TextureView,
                        viewport: (u32, u32),

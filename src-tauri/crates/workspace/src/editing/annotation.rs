@@ -163,6 +163,10 @@ impl WorkspaceEditor {
     // on without waiting for it to move.
     if changed {
       self.inner.host.hover_again();
+      // A pen taken up has its first stroke's shader made ready meanwhile.
+      if let Some(kind) = drawing_kind(mode) {
+        self.inner.host.scene().prepare_annotation_kind(kind);
+      }
     }
   }
 

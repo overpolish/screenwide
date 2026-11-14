@@ -108,6 +108,14 @@ impl WorkspaceScene {
       .map_err(|_| "The workspace scene is poisoned".to_owned())
   }
 
+  /// Makes ready, in the background, what a stroke of `kind` will be drawn
+  /// with on this scene's layers (`Compositor::prepare_annotation_kind`).
+  pub fn prepare_annotation_kind(&self, kind: screenwide_annotations::AnnotationKind) {
+    if let Ok(state) = self.read() {
+      state.compositor.prepare_annotation_kind(kind);
+    }
+  }
+
   /// Draws the caret and selection `typing` holds into its box from now on,
   /// or none with `None`. Answers whether that changes what is drawn.
   pub fn set_typing(&self, typing: Option<(u32, usize, TypingMarks)>) -> bool {

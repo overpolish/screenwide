@@ -105,6 +105,16 @@ pub(super) fn of(values: &Constants, focus: bool, keyboard: bool) -> FeatureMask
   .fold(0, |features, (_, feature)| features | feature)
 }
 
+/// The paths an annotation of `kind` brings into a frame besides its own:
+/// a focus, the blur outside its box.
+pub(super) fn of_kind(kind: screenwide_annotations::AnnotationKind) -> FeatureMask {
+  if kind == screenwide_annotations::AnnotationKind::Focus {
+    FOCUS
+  } else {
+    0
+  }
+}
+
 /// `shader` keeping only `features`.
 pub(super) fn keeping(shader: String, features: FeatureMask) -> String {
   debug_assert!(
