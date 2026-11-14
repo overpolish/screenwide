@@ -24,6 +24,7 @@ export function ScriptCaptions({
   onCaptionsChange,
   onCorrect,
   onSeek,
+  onTogglePlayback,
   playheadMs,
   text,
 }: ScriptCaptionsProps) {
@@ -52,6 +53,7 @@ export function ScriptCaptions({
         isDisabled={false}
         marks={marks}
         onSeek={onSeek}
+        onTogglePlayback={onTogglePlayback}
         playheadMs={playheadMs}
         rootClassName="max-h-[26rem] rounded-none bg-transparent"
         text={text}

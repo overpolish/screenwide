@@ -29,6 +29,8 @@ export type ScriptCaptionsProps = {
   onCorrect: OnCorrect;
   /** Moves the playhead, to a word's caption when one is pressed. */
   onSeek: (ms: number) => void;
+  /** Plays or pauses, for Space while the script has focus. */
+  onTogglePlayback: () => void;
   playheadMs: number;
   /** The script as the captions last made break it. */
   text: CaptionText;

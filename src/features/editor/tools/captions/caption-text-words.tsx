@@ -23,7 +23,7 @@ export const captionWordClass = (
   mark: TranscriptMark | undefined,
 ) =>
   cn(
-    "group-focus-visible:aria-selected:ring-2 group-focus-visible:aria-selected:ring-focus",
+    "group-data-ring:aria-selected:ring-2 group-data-ring:aria-selected:ring-focus",
     isMarked && word.caption === null
       ? "text-fg-tertiary line-through"
       : cn(

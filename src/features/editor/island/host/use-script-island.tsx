@@ -16,6 +16,7 @@ import {
   useTranscriptWordsFeed,
 } from "../../tools/transcript/use-transcript-feed";
 import { useTranscriptMarks } from "../../tools/transcript/use-transcript-marks";
+import { forwardToolPanelShortcut } from "../../tools/use-panel-shortcuts";
 import { scriptIsland } from "../script/script-island";
 
 import { scriptTranscriptProps } from "./script-island-content";
@@ -185,6 +186,9 @@ export function useScriptIsland({
               },
               onCorrect: correct,
               onSeek: seek,
+              onTogglePlayback: () => {
+                forwardToolPanelShortcut(workspace, "KeyP");
+              },
               playheadMs,
               text,
             })

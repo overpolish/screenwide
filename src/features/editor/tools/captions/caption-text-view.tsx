@@ -25,6 +25,7 @@ import {
 import { beforeCaptionWord, captionWordClass } from "./caption-text-words";
 import { CaptionWordEditSpan } from "./caption-word-edit-span";
 import { CaptionPaint, useCaptionPaint } from "./use-caption-paint";
+import { useKeyboardRing } from "./use-keyboard-ring";
 
 import type { TranscriptMark } from "../transcript/use-transcript-marks";
 
@@ -50,9 +51,9 @@ const partsOf = (root: HTMLElement | null, caption: number) => [
  * `captionSeekMs` says, and a double-click edits the word in place;
  * Command-click hides or shows a word, and Command-drag every word it
  * reaches (`useCaptionPaint`). The arrows move between words, Return
- * edits, Backspace hides or shows a word, and the menu key or a right
- * click opens what else it can do; a right click on a break or a space
- * asks only about that gap.
+ * edits, Backspace hides or shows a word, Space plays or pauses, and the
+ * menu key or a right click opens what else it can do; a right click on a
+ * break or a space asks only about that gap.
  */
 export function CaptionTextView({
   className,
@@ -65,6 +66,7 @@ export function CaptionTextView({
   onMenu,
   onPaint,
   onSeek,
+  onTogglePlayback,
   playheadMs,
   rootClassName,
   text,
@@ -81,6 +83,8 @@ export function CaptionTextView({
   onMenu: (word: number, bounds: DOMRect, part: CaptionTextPart) => void;
   onPaint: (paint: CaptionPaint) => void;
   onSeek: (ms: number) => void;
+  /** Plays or pauses, for Space, which the window leaves to the list. */
+  onTogglePlayback: () => void;
   playheadMs: number;
   text: CaptionText;
   /** The text's inset within the box, over the panel's own. */
@@ -90,6 +94,7 @@ export function CaptionTextView({
   rootClassName?: string;
 }) {
   const id = useId();
+  const ring = useKeyboardRing();
   const rootRef = useRef<HTMLDivElement>(null);
   const hoveredRef = useRef<number | null>(null);
   const [active, setActive] = useState(0);
@@ -164,7 +169,8 @@ export function CaptionTextView({
     ) {
       const bounds = boundsOf(focused);
       if (bounds) onMenu(focused, bounds, "word");
-    } else return;
+    } else if (event.key === " ") onTogglePlayback();
+    else return;
     event.preventDefault();
   };
 
@@ -182,6 +188,7 @@ export function CaptionTextView({
           "group flex cursor-default flex-col gap-separate p-inset-sm text-body text-fg outline-none select-none",
           className,
         )}
+        {...ring}
         data-owns-text-keys
         dir="auto"
         onClick={(event) => {

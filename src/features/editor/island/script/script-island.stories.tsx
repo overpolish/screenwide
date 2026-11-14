@@ -51,6 +51,7 @@ type ScriptStoryProps = EditorIslandStoryProps &
     isMade: boolean;
     mode: "captions" | "transcript";
     onCaptionsChange: (patch: CaptionsPatch) => void;
+    onTogglePlayback: () => void;
     playheadMs: number;
     transcript: IslandTranscript;
   };
@@ -153,6 +154,7 @@ const meta = {
     onRestore: fn(),
     onRestoreAll: fn(),
     onSeek: fn(),
+    onTogglePlayback: fn(),
     onTranscribe: fn(),
     playheadMs: 5_200,
     transcript: { status: "ready" },
