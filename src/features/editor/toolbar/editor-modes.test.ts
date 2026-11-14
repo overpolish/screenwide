@@ -87,7 +87,7 @@ describe("editorModeGroups", () => {
     expect(offered({ transcript: "silent" })[2]).toBe("heard: sound");
   });
 
-  it("takes Captions and Transcript away without the microphone", () => {
+  it("takes Captions and Transcript away without a microphone recorded", () => {
     expect(offered({ microphone: false })[2]).toBe("heard: sound");
   });
 
@@ -145,15 +145,25 @@ describe("captureParts", () => {
 
   it("leaves out the tracks switched off", () => {
     expect(inExport([2], ["camera"])).toMatchObject({
+      audio: true,
       camera: true,
-      microphone: false,
       picture: null,
     });
     expect(inExport([], ["primary"])).toMatchObject({
+      audio: false,
       camera: false,
-      microphone: false,
       picture: "screen",
     });
+  });
+
+  it("keeps the microphone's words with its sound switched off", () => {
+    expect(inExport([2], ["primary"]).microphone).toBe(true);
+    expect(
+      inExport([2], ["primary"], {
+        ...RECORDED,
+        audio: [{ kind: "system-audio", streamIndex: 2 }],
+      }).microphone,
+    ).toBe(false);
   });
 
   it("holds no camera beside the picture where none was recorded", () => {

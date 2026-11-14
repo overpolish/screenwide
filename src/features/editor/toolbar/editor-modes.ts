@@ -102,7 +102,8 @@ export type CaptureParts = {
   cursor: boolean;
   /** The keys pressed, recorded. */
   keyboard: boolean;
-  /** The microphone, which the transcript is made of. */
+  /** A microphone recorded, which the transcript is made of, its track in
+   * the export or not. */
   microphone: boolean;
   /** The recording's own picture, or null with none: an audio recording,
    * or the picture left out of the export. */
@@ -153,7 +154,9 @@ export function captureParts({
     camera: recorded.camera && enabledVideoTracks.has("camera"),
     cursor: recorded.cursor,
     keyboard: recorded.keyboard,
-    microphone: audio.some(({ kind }) => kind === "microphone"),
+    // What was said is captioned and transcribed whether or not its sound
+    // is in the export.
+    microphone: recorded.audio.some(({ kind }) => kind === "microphone"),
     picture: enabledVideoTracks.has("primary") ? recorded.picture : null,
     transcript,
   };

@@ -181,14 +181,15 @@ A mode is in the title bar only while it has something to act on in what the exp
 | Scene | the recording's own picture is in, alone too: a scene zooms and moves the picture by itself, and the zooms planned from the cursor and keys are scenes, so it does not wait for a second track | audio-only; the screen switched off (a scene needs the picture it frames) |
 | Cursor | cursor movement was recorded and the screen is in | no cursor data; the screen switched off; a camera-only recording |
 | Keyboard | key presses were recorded and the screen is in | no key presses; the screen switched off; a camera-only recording |
-| Captions | a picture is in, the microphone is in, and the transcript is not made-with-nothing-heard | no picture; no microphone or it switched off; transcribed and no words heard |
-| Transcript | the microphone is in, and the transcript is not made-with-nothing-heard | no microphone or it switched off; transcribed and no words heard |
+| Captions | a picture is in, a microphone was recorded (its track switched off too), and the transcript is not made-with-nothing-heard | no picture; no microphone; transcribed and no words heard |
+| Transcript | a microphone was recorded (its track switched off too), and the transcript is not made-with-nothing-heard | no microphone; transcribed and no words heard |
 | Sound | any audio track is in the export | no audio; every audio track switched off |
 | Tracks | the recording has two tracks or more to switch (picture, camera, each audio stream) | one track: there is nothing to choose, and the last track in is never left out |
 | Library | always: a recording's holds songs, sound effects and pictures, a screenshot's pictures | never |
 
 - **The transcript still to make shows its modes:** with no model, while transcribing, after a failure, or before it is begun, Captions and Transcript are offered, since the Script island is where the model is fetched and the progress shown. Once made with no words, both go; there is no island saying nothing was heard.
 - **Only the microphone is transcribed:** system audio alone offers Sound but not Captions or Transcript.
+- **What was said outlives its sound:** a microphone switched off in Tracks still offers Captions and Transcript, since its words can be captioned and edited with its sound left out of the export (user asked, 2026-11-14).
 - **A screenshot always offers Frame and Screenshot:** it always has a layer to frame and dress.
 - **The open mode goes with its button:** when the mode open stops being offered (the screen switched off under Cursor, say), it is put away as its button would (`useOfferedModes`): Select back in hand, nothing chosen, and its island leaves.
 - **Coming and going:** each mode, gap and Tracks grows in from nothing and shrinks back out, fading, over `motionDurations.rearrange`, so the rest slide and the group stays centred as its width changes; at once with reduced motion, and never on the window's first render.
