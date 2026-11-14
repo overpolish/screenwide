@@ -55,6 +55,9 @@ pub(crate) const PREVIEW: ShaderLayout = ShaderLayout {
     fragment(18, TEXTURE),
     // What each lens shows: `compositor/lens_ground.rs`.
     fragment(19, TEXTURE),
+    // The picture of the background giving way while a scene's blooms in:
+    // `compositor/background_turn.rs`.
+    fragment(20, TEXTURE),
   ]],
   vertex_buffers: &[],
 };

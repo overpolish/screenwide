@@ -72,7 +72,7 @@ impl ExportScenes {
   /// scene moved it over the frame's `frame_ms` of source time, and the baked
   /// camera's options measured on that same canvas where there is one. `None`
   /// outside every scene, where the request's own composition stands, unless
-  /// the camera follows the face there.
+  /// the camera follows the face there or a scene's background reaches it.
   pub(super) fn at(
     &self,
     output: &ScreenshotOutputSettings,
@@ -81,7 +81,11 @@ impl ExportScenes {
   ) -> Option<(ScreenshotOutputSettings, Option<BakedVideoExportOptions>)> {
     let timeline_ms = FrameTime::on(&self.ranges, source_ms).timeline_ms;
     let video_ms = video_ms(&self.ranges);
+    // A scene's own background changes a little past its clip's edges, so
+    // with one anywhere every frame is arranged.
+    let dressed = self.clips.iter().any(|clip| clip.background.is_some());
     if !self.camera_follows()
+      && !dressed
       && !self
         .clips
         .iter()
@@ -107,6 +111,7 @@ impl ExportScenes {
         .as_ref()
         .map(|path| path.at(source_ms as f64)),
     );
-    (placed || self.camera_follows()).then_some((arranged, camera))
+    let redressed = arranged.background_turn.is_some() || !arranged.wears_background_of(output);
+    (placed || self.camera_follows() || redressed).then_some((arranged, camera))
   }
 }

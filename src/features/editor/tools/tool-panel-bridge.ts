@@ -127,6 +127,8 @@ const applyPatch = (values: ToolPanelPatch, on: ToolPanelHandlers) => {
     on.onScenePresetChoose?.(values.scenePreset);
   if (values.sceneFraming !== undefined)
     on.onSceneFramingChange?.(values.sceneFraming, values.sceneFramingPane);
+  if (values.sceneBackground !== undefined)
+    on.onSceneBackgroundChange?.(values.sceneBackground);
   if (values.sceneCursor !== undefined)
     on.onSceneCursorChange?.(values.sceneCursor);
   if (values.sceneFollowFace !== undefined)

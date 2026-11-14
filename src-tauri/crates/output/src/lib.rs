@@ -50,7 +50,7 @@ pub use mesh_generator::{generator_palette, mesh_generator};
 pub use output::compose_screenshot;
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 pub use output::output_dimensions;
-pub use output::{CropPreviewRect, ScreenshotOutputSettings};
+pub use output::{BackgroundTurn, CanvasBackground, CropPreviewRect, ScreenshotOutputSettings};
 pub use placement::{output_placement, OutputPlacement};
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 pub use recenter::{colour_f32, foreground_bounds_f32, optional_colour_f32};

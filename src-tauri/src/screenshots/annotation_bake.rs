@@ -47,6 +47,7 @@ fn identity_settings(
     scene_opacity: None,
     scene_camera_front: None,
     scene_window: None,
+    background_turn: None,
     camera_shadow_strength: None,
     rotation: None,
     // Never painted on a solid canvas, but the compositor's colour table is

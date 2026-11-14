@@ -543,6 +543,8 @@ editor-island-screen-in-scene = Inset, corners, rotation, Recenter and Reset pla
 editor-island-crop-in-scene = This crop applies to this scene only.
 # At the foot of the Camera island while the playhead is in a scene, which can round the camera, have it follow the face and place it its own way.
 editor-island-camera-in-scene = Corners, Follow face and Reset placement apply to this scene only.
+# At the foot of the Frame island while the playhead is in a scene, which can sit on a background of its own; the frame's size holds for the whole recording.
+editor-island-frame-in-scene = The background applies to this scene only.
 # At the foot of the Cursor island while the playhead is in a scene, about the eye on its row, which there shows or hides the cursor for that scene alone; the cursor's other options hold for the whole recording. Kept short, under the island's Cursor title. $state is "hidden" or "shown" where the scene hides or shows the cursor its own way (a game with no cursor, say), and "other" where it does as the rest of the recording does, so the eye would make it the scene's own.
 editor-island-cursor-in-scene =
     { $state ->
@@ -554,6 +556,8 @@ editor-island-cursor-in-scene =
 editor-island-frame-randomise = Randomise
 # Puts the frame's size back to the size of what was captured, leaving its background and corners as they are.
 editor-island-frame-original-size = Original size
+# On the Frame island while the playhead is in a scene that has a background of its own: takes that background away, so the scene shows the one set outside every scene again, and a later change to that one reaches the scene too.
+editor-island-frame-clear-scene-background = Clear scene background
 # The library's pictures, beside the Frame island, one of which frames the picture.
 editor-island-frame-library = Pictures from the library
 editor-island-frame-library-empty = Pictures you give images are kept in the library, and can frame the picture from here.

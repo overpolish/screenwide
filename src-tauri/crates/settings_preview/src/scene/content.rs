@@ -75,6 +75,7 @@ pub(super) fn canvas_settings(
     scene_opacity: None,
     scene_camera_front: None,
     scene_window: None,
+    background_turn: None,
     camera_shadow_strength: None,
     mesh_colors: Vec::new(),
     mesh_generator: default_generator(),

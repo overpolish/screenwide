@@ -23,6 +23,7 @@ libwebp-sys.workspace = true
 png.workspace = true
 quantette.workspace = true
 screenwide-annotations.workspace = true
+screenwide-background.workspace = true
 screenwide-gpu.workspace = true
 screenwide-imaging.workspace = true
 screenwide-scenes.workspace = true

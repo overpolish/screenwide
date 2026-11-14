@@ -15,7 +15,9 @@ impl Compositor {
     size: (u32, u32),
     composition: ComposedFrame,
     camera: Option<(&SourceTexture, BakeGeometry, bool, bool)>,
-    picture: Option<std::sync::Arc<super::super::background_image::BackgroundImage>>,
+    // The background's picture, then the one giving way while a scene's
+    // background blooms in over it.
+    pictures: [Option<std::sync::Arc<super::super::background_image::BackgroundImage>>; 2],
     mut values: Constants,
     // The prepared annotations, their exposure samples, and what each counter's
     // number is: the numbers are rasterised here, at the size they are drawn.
@@ -124,6 +126,8 @@ impl Compositor {
       .transpose()?;
     let fallback = &self.fallback_view;
     let lenses = atlas.as_ref().unwrap_or(fallback);
+    let pictures = pictures
+      .map(|picture| picture.map_or_else(|| fallback.clone(), |picture| picture.view.clone()));
     let bind = |constants: &wgpu::Buffer, [marks, cursor, lenses]: [&wgpu::TextureView; 3]| {
       gpu.device.create_bind_group(&wgpu::BindGroupDescriptor {
         label: Some("Screenwide preview bindings"),
@@ -140,10 +144,7 @@ impl Compositor {
               .as_ref()
               .map_or(fallback, |(artwork, _)| &artwork.view),
           ),
-          texture(
-            6,
-            picture.as_ref().map_or(fallback, |picture| &picture.view),
-          ),
+          texture(6, &pictures[0]),
           buffer(7, &annotation_buffer),
           buffer(8, &sample_buffer),
           texture(9, numbers.as_ref().map_or(fallback, |atlas| &atlas.view)),
@@ -163,6 +164,7 @@ impl Compositor {
           texture(17, images.as_ref().unwrap_or(fallback)),
           texture(18, under.as_ref().unwrap_or(fallback)),
           texture(19, lenses),
+          texture(20, &pictures[1]),
         ],
       })
     };

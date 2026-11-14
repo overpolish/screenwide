@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use super::background::background_constants;
+use super::background_turn::turn_rows;
 use super::draw_rows::{
   camera_rows, crop_preview_shadow_sigma, cursor_rows, screen_shadow_sigma, source_flags,
   LayerCamera,
@@ -73,7 +74,7 @@ impl Compositor {
     {
       return Err("The screenshot canvas settings are not valid".to_owned());
     }
-    let background = background_constants(settings)?;
+    let background = background_constants(settings.into())?;
     let (visible_left, visible_top, visible_right, visible_bottom) =
       foreground_bounds_f32(placement, settings.recenter_inset_color.is_some());
     let shadow_sigma = screen_shadow_sigma(
@@ -100,6 +101,9 @@ impl Compositor {
       .then_some(settings.background_image_path.as_deref())
       .flatten()
       .and_then(|path| self.background_cache.resolve(&self.gpu, path));
+    let (mut turn, turn_path) = turn_rows(settings, geometry.size)?;
+    let turn_picture = turn_path.and_then(|path| self.background_cache.resolve(&self.gpu, path));
+    turn.options[3] = u32::from(turn_picture.is_some());
     let (cursor_artwork, cursor_frame, cursor_model) =
       self.cursor_artwork_constants(composition.cursor)?;
     let [scene_motion, scene_image_motion, camera_motion_frame, camera_motion_crop] =
@@ -247,6 +251,7 @@ impl Compositor {
         0.0,
         0.0,
       ],
+      turn,
     };
     self.submit(
       target,
@@ -254,7 +259,7 @@ impl Compositor {
       geometry.size,
       composition,
       camera,
-      picture,
+      [picture, turn_picture],
       values,
       annotations,
       layer,

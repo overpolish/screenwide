@@ -31,6 +31,7 @@ export const scenePanelHandlers = (
   ToolPanelHandlers,
   | "onSceneAutoZoom"
   | "onSceneAutoZoomsClear"
+  | "onSceneBackgroundChange"
   | "onSceneCursorChange"
   | "onSceneDelete"
   | "onSceneFramingChange"
@@ -52,6 +53,9 @@ export const scenePanelHandlers = (
   },
   onSceneAutoZoomsClear: () => {
     recordingSceneControls(workspace)?.clearAutoZooms();
+  },
+  onSceneBackgroundChange: (background) => {
+    recordingSceneControls(workspace)?.setBackground(background);
   },
   onSceneCursorChange: (shown) => {
     recordingSceneControls(workspace)?.setCursor(shown);

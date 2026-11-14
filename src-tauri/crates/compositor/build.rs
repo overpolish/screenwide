@@ -21,6 +21,7 @@ const MODULES: &[(&str, &[&str])] = &[
     &[
       // First: it carries the module's directive.
       "src/shaders/preview.wgsl",
+      "src/shaders/canvas_background.wgsl",
       "../output/src/mesh_generator_common.wgsl",
       "../output/src/mesh_generators.wgsl",
       "../output/src/mesh_generators_layered.wgsl",

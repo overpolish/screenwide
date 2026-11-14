@@ -48,6 +48,7 @@ fn clip(
     variant: None,
     follow_face,
     cursor: None,
+    background: None,
     auto: false,
   }
 }

@@ -13,6 +13,7 @@ edition.workspace = true
 doctest = false
 
 [dependencies]
+screenwide-background.workspace = true
 serde.workspace = true
 ts-rs.workspace = true
 

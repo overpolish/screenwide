@@ -367,6 +367,8 @@ export type Messages = {
   "editor-island-finding-face": null;
   "editor-island-focus": null;
   "editor-island-follow-face": null;
+  "editor-island-frame-clear-scene-background": null;
+  "editor-island-frame-in-scene": null;
   "editor-island-frame-library": null;
   "editor-island-frame-library-empty": null;
   "editor-island-frame-original-size": null;

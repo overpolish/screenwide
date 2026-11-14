@@ -45,6 +45,7 @@ fn clip(preset: RecordingScenePreset) -> RecordingSceneClip {
     variant: None,
     follow_face: None,
     cursor: None,
+    background: None,
     auto: false,
   }
 }

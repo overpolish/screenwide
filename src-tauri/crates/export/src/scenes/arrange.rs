@@ -50,7 +50,9 @@ fn placement_at(
 /// they are outside every clip, which the answer says: `true` where a scene
 /// placed them. `frame_ms` is how much recording time the frame covers:
 /// where the panes moved over it, `output` carries that motion for the
-/// compositor to blur; a still passes zero.
+/// compositor to blur; a still passes zero. The canvas's background is a
+/// scene's own where it has one, changing on a clock of its own that starts
+/// and ends a little past the clip's edges, whatever the answer.
 pub fn arrange(
   clips: &[RecordingSceneClip],
   ranges: &[TimelineRange],
@@ -86,6 +88,7 @@ pub fn arrange_following(
   );
   let timeline_ms = FrameTime::on(ranges, source_ms).timeline_ms;
   let video_ms = video_ms(ranges);
+  super::background::dress(clips, (timeline_ms, video_ms), &base, output);
   let placed = (!clips.is_empty() && output.has_placement())
     .then(|| placement_at(clips, (timeline_ms, video_ms), &base))
     .flatten();

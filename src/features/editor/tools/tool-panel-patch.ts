@@ -19,7 +19,7 @@ import {
 } from "../recording/scenes/recording-scenes";
 import { KeyboardEffectSettings } from "../types";
 
-import { BackgroundPreset } from "./frame/background/background";
+import { Background, BackgroundPreset } from "./frame/background/background";
 import { ToolPanelExportPatch } from "./tool-panel-export";
 import { TranscriptRequest } from "./tool-panel-transcript";
 
@@ -173,6 +173,9 @@ export type ToolPanelPatch = Partial<
   savePreset?: BackgroundPreset;
   /** Keep the custom scene under the playhead as a template. */
   saveSceneTemplate?: true;
+  /** Give the scene under the playhead a background of its own, or with
+   * null have it show the recording's. */
+  sceneBackground?: Background | null;
   /** Show or hide the cursor in the scene under the playhead over the
    * recording's own choice, or with null have it do as the recording does. */
   sceneCursor?: boolean | null;

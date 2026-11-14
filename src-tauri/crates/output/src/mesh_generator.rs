@@ -110,13 +110,7 @@ const GENERATORS: [MeshGenerator; 9] = [
 /// array every backend hands them.
 pub(crate) const MAXIMUM_GENERATOR_COLORS: usize = 4;
 
-/// The name settings written before generators existed carry, and the one an
-/// absent field falls back to.
-pub const DEFAULT_GENERATOR: &str = "mesh";
-
-pub fn default_generator() -> String {
-  DEFAULT_GENERATOR.to_owned()
-}
+pub use screenwide_background::{default_generator, DEFAULT_GENERATOR};
 
 /// Resolves a generator seed on the CPU so every Direct3D draw receives
 /// stable domain coordinates instead of recalculating a large GPU sine hash.

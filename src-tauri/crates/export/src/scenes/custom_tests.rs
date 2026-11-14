@@ -41,6 +41,7 @@ fn custom(preset: RecordingScenePreset, camera: Option<SceneBox>) -> RecordingSc
     variant: None,
     follow_face: None,
     cursor: None,
+    background: None,
     auto: false,
   }
 }

@@ -6,6 +6,7 @@
 //! themselves, and the layouts they take, are `screenwide_scenes`.
 
 pub mod arrange;
+mod background;
 mod custom;
 pub mod face_track;
 mod target;
@@ -13,6 +14,8 @@ mod target;
 pub use arrange::{arrange, arrange_following, camera_target};
 pub use custom::made_custom;
 
+#[cfg(test)]
+mod background_tests;
 #[cfg(test)]
 mod custom_tests;
 #[cfg(test)]

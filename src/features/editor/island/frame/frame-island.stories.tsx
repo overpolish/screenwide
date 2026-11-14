@@ -135,3 +135,28 @@ export const Custom: Story = {
 
 // A screenshot's frame, the one place a picture's corners are rounded.
 export const Screenshot: Story = { args: { radius: 4 } };
+
+// The playhead in a scene with a background of its own, which the tiles
+// then set; the size stays the recording's.
+export const InScene: Story = {
+  args: {
+    background: NEBULA,
+    scene: {
+      hasOwnBackground: true,
+      isInScene: true,
+      onClearSceneBackground: fn(),
+    },
+  },
+};
+
+// A recording with scenes, the playhead between them: the scene's note and
+// action keep their room, so playing into a scene leaves the island its size.
+export const BetweenScenes: Story = {
+  args: {
+    scene: {
+      hasOwnBackground: false,
+      isInScene: false,
+      onClearSceneBackground: fn(),
+    },
+  },
+};

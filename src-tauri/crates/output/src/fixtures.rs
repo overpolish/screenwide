@@ -56,6 +56,7 @@ pub fn test_output_settings(width: u32, height: u32) -> ScreenshotOutputSettings
     scene_opacity: None,
     scene_camera_front: None,
     scene_window: None,
+    background_turn: None,
     camera_shadow_strength: None,
     rotation: None,
     mesh_colors: vec![

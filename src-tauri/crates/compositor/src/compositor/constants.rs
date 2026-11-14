@@ -99,4 +99,7 @@ pub(super) struct Constants {
   /// window recorded on its own has them black in its movie. The rest are
   /// spare.
   pub(super) source_shape: [f32; 4],
+  /// The background giving way while a scene's blooms in over it, and the
+  /// bloom; empty, with no background giving way.
+  pub(super) turn: super::background_turn::TurnRows,
 }

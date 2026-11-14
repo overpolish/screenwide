@@ -33,6 +33,7 @@ const CROP_PREVIEW: FeatureMask = 128;
 const BACKGROUND_PICTURE: FeatureMask = 256;
 const BACKGROUND_MESH: FeatureMask = 512;
 const BACKGROUND_GENERATOR: FeatureMask = 1024;
+const BACKGROUND_TURN: FeatureMask = 2048;
 
 /// The line every slim variant replaces.
 const ALL_LINE: &str = "const canvas_features: u32 = 0xffffffffu;";
@@ -62,6 +63,10 @@ pub(super) fn of(values: &Constants, focus: bool, keyboard: bool) -> FeatureMask
   }
   let mesh = values.options[1] != 0;
   let generator = values.background_options[1] != 0;
+  // While a background gives way, its own paths are taken too.
+  let turning = values.turn.turning();
+  let turn_mesh = turning && values.turn.options[1] != 0;
+  let turn_generator = values.turn.style[0] != 0;
   [
     (values.cursor_options[1] != 0, CURSOR),
     (values.camera_effects[1] != 0.0, CAMERA),
@@ -81,9 +86,19 @@ pub(super) fn of(values: &Constants, focus: bool, keyboard: bool) -> FeatureMask
     ),
     (focus, FOCUS),
     (values.crop_preview_effects[1] != 0.0, CROP_PREVIEW),
-    (values.background_options[0] != 0, BACKGROUND_PICTURE),
-    (mesh && !generator, BACKGROUND_MESH),
-    (mesh && generator, BACKGROUND_GENERATOR),
+    (
+      values.background_options[0] != 0 || turning && values.turn.options[3] != 0,
+      BACKGROUND_PICTURE,
+    ),
+    (
+      mesh && !generator || turn_mesh && !turn_generator,
+      BACKGROUND_MESH,
+    ),
+    (
+      mesh && generator || turn_mesh && turn_generator,
+      BACKGROUND_GENERATOR,
+    ),
+    (turning, BACKGROUND_TURN),
   ]
   .into_iter()
   .filter(|(kept, _)| *kept)

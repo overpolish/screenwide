@@ -110,6 +110,9 @@ struct Canvas {
   // `x`: how round the source's own corners are, in canvas pixels, which its
   // picture is cut to (`screen_layer`).
   source_shape: vec4<f32>,
+  // The background giving way while a scene's blooms in over it, and the
+  // bloom: `canvas_background.wgsl`.
+  turn: BackgroundTurn,
 }
 
 fn focus_mode() -> u32 {
@@ -235,6 +238,7 @@ const feature_crop_preview: u32 = 128u;
 const feature_background_picture: u32 = 256u;
 const feature_background_mesh: u32 = 512u;
 const feature_background_generator: u32 = 1024u;
+const feature_background_turn: u32 = 2048u;
 
 fn feature_kept(feature: u32) -> bool {
   return (canvas_features & feature) != 0u;
@@ -259,6 +263,8 @@ struct Keyboard {
 @group(0) @binding(4) var camera_image: texture_2d<f32>;
 @group(0) @binding(5) var keyboard_image: texture_2d<f32>;
 @group(0) @binding(6) var background_image: texture_2d<f32>;
+// The picture of the background giving way while a scene's blooms in.
+@group(0) @binding(20) var turn_image: texture_2d<f32>;
 @group(0) @binding(12) var linear_sampler: sampler;
 @group(0) @binding(13) var point_sampler: sampler;
 // What the annotations under the spotlights' shade add to the canvas, and the
@@ -742,82 +748,6 @@ fn annotation_cursor_blurred(point: vec2<f32>) -> vec4<f32> {
   return textureSampleLevel(annotation_cursor_layer, linear_sampler,
                             annotation_blur_at(probed_drawn(point), annotation_cursor_layer),
                             0.0);
-}
-
-// A chosen picture covers the canvas: it is scaled until both sides reach,
-// centred, and the overflowing axis is trimmed evenly, so it never letterboxes
-// and never stretches. The same framing as `cover_fit` in the CPU compose
-// path, done here in UVs so one upload serves every canvas size.
-fn background_picture(pixel: vec2<f32>) -> vec3<f32> {
-  let picture = vec2<f32>(textureDimensions(background_image));
-  if (picture.x == 0.0 || picture.y == 0.0) {
-    return canvas.solid_color.rgb;
-  }
-  let output = canvas.output_source.xy;
-  let scale = max(output.x / picture.x, output.y / picture.y);
-  let covered = picture * scale;
-  let origin = (output - covered) * 0.5;
-  return textureSample(background_image, linear_sampler, (pixel - origin) / covered).rgb;
-}
-
-fn background(pixel: vec2<f32>) -> vec3<f32> {
-  if (feature_kept(feature_background_picture) && canvas.background_options.x != 0u) {
-    return background_picture(pixel);
-  }
-  if (canvas.options.y == 0u) {
-    return canvas.solid_color.rgb;
-  }
-  // A ported generator reads its palette from the front of the mesh colours,
-  // the seed, and the same timeline seconds the classic mesh drifts with,
-  // which `gen_pixel_shifted` scales by the generator's own speed in `motion.y`.
-  if (feature_kept(feature_background_generator) && canvas.background_options.y != 0u) {
-    let palette = GenPalette(canvas.mesh_colors[0].rgb, canvas.mesh_colors[1].rgb,
-                             canvas.mesh_colors[2].rgb, canvas.mesh_colors[3].rgb,
-                             canvas.background_options.z);
-    // Ported generators reuse the classic mesh point slot for the seed's
-    // domain shift, resolved on the CPU unless its last word asks for the
-    // shader's own hash; only the classic generator reads point geometry.
-    var shift = canvas.mesh_points[0].xyz;
-    if (canvas.mesh_points[0].w != 0.0) {
-      shift = gen_seed_shift(canvas.options.x);
-    }
-    return gen_pixel_shifted(canvas.background_options.y, pixel, canvas.output_source.xy, palette,
-                             shift, canvas.motion.x, canvas.motion.y);
-  }
-  if (!feature_kept(feature_background_mesh)) {
-    return canvas.solid_color.rgb;
-  }
-  let shortest = min(canvas.output_source.x, canvas.output_source.y);
-  let dimensions = canvas.output_source.xy;
-  let aspect = dimensions / shortest;
-  let frequency = 3.5 / shortest;
-  let phase = canvas.motion.x * 0.28;
-  let drift = vec2<f32>(sin(phase), cos(phase * 0.83)) * shortest * 0.012;
-  let warped_pixel = pixel + drift;
-  let warp_scale = shortest * canvas.effects.z / 100.0;
-  let seed = canvas.options.x;
-  let warp = vec2<f32>(
-      fractal_noise(warped_pixel * frequency + phase * 0.035, seed),
-      fractal_noise(warped_pixel * frequency + vec2<f32>(19.7, -7.3) - phase * 0.03,
-                    seed ^ 0xa511e9b3u)) * warp_scale;
-  var weighted = canvas.base_color.rgb * 0.18;
-  var total = 0.18;
-  for (var index = 0u; index < canvas.options.z; index++) {
-    let first = canvas.mesh_points[index * 2u];
-    let second = canvas.mesh_points[index * 2u + 1u];
-    let local_phase = phase + f32(index) * 1.73;
-    let animated_center = first.xy + vec2<f32>(sin(local_phase), cos(local_phase * 0.91)) * 0.012;
-    let delta = (pixel + warp) / shortest - animated_center * aspect;
-    let rotated = vec2<f32>(delta.x * second.x + delta.y * second.y,
-                            -delta.x * second.y + delta.y * second.x);
-    let distance = length(rotated / max(first.zw, vec2<f32>(0.01)));
-    let weight = 1.0 / (pow(max(distance, 0.025), 3.5) + 0.012);
-    weighted += canvas.mesh_colors[index].rgb * weight;
-    total += weight;
-  }
-  let result = weighted / total;
-  let depth = fractal_noise((pixel + drift) * frequency * 0.7, seed ^ 0xd1b54a35u) * 13.0 / 255.0;
-  return saturate(result + depth);
 }
 
 @vertex

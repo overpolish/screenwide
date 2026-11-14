@@ -14,6 +14,13 @@ use super::frame_time::{covers, progress, reaches_video_ends};
 /// too short for two of them gives each half of its length.
 pub const SCENE_TRANSITION_MS: f32 = 600.0;
 
+/// How long the panes take to arrive or leave in a clip `length` long:
+/// `SCENE_TRANSITION_MS`, or half the clip where it has two transitions to
+/// fit, all of it where it reaches either end of the video and has one.
+fn pane_window(length: f32, reaches_an_end: bool) -> f32 {
+  SCENE_TRANSITION_MS.min(if reaches_an_end { length } else { length / 2.0 })
+}
+
 /// Where the scenes stand on one frame: on their way `from` one place `to`
 /// another, `share` of the way there, eased. A place is the index of the
 /// clip that sets it, or `None` for the composition outside every scene.
@@ -47,11 +54,7 @@ pub fn scene_blend(
   }
   let (elapsed, length) = progress([clip.start_ms, clip.end_ms], timeline_ms)?;
   let (starts_video, ends_video) = reaches_video_ends(video_ms, [clip.start_ms, clip.end_ms]);
-  let window = SCENE_TRANSITION_MS.min(if starts_video || ends_video {
-    length
-  } else {
-    length / 2.0
-  });
+  let window = pane_window(length, starts_video || ends_video);
   let ease = |share: f32| f64::from(ease_in_out_cubic(share.clamp(0.0, 1.0)));
   if !starts_video && elapsed < window {
     let from = index
@@ -112,6 +115,9 @@ pub fn cursor_in_scenes(
 pub fn cursor_shown_anywhere(clips: &[RecordingSceneClip], shown: bool) -> bool {
   shown || clips.iter().any(|clip| clip.cursor == Some(true))
 }
+
+mod background;
+pub use background::*;
 
 #[cfg(test)]
 mod tests;

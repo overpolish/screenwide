@@ -18,8 +18,8 @@ import type { EditorIslandContent } from "../editor-island";
 // it sits on. Its size is the one place numbers are given, in the finished
 // picture's pixels, as a frame drag moves them. Its corners are presets, for
 // a screenshot only: a video's are never rounded. Its background is chosen
-// from tiles, its colours set under them, or a picture of your own; then
-// putting the size back as the capture arrived.
+// from tiles, its colours set under them, or a picture of your own, over a
+// scene that scene's own; then putting the size back as the capture arrived.
 
 export type FrameIslandProps = {
   background: Background;
@@ -49,6 +49,23 @@ export type FrameIslandProps = {
    * rounded; a video's never are, so a video leaves this out and the island
    * offers no corners. */
   radius?: number;
+  /** Set for a recording with scenes, whose background `background` is
+   * while the playhead is in one; left out for a recording without scenes
+   * and for a screenshot. */
+  scene?: FrameScene;
+};
+
+/** A recording's scenes, as the Frame island sets a scene's background. */
+export type FrameScene = {
+  /** Whether the scene under the playhead has a background of its own. */
+  hasOwnBackground: boolean;
+  /** Whether the playhead is in a scene. Outside one the island keeps the
+   * room of the scene's note and action, so it does not change size as
+   * playback moves between scenes. */
+  isInScene: boolean;
+  /** Takes the scene's own background away, so it shows the one set
+   * outside every scene again. */
+  onClearSceneBackground: () => void;
 };
 
 export function frameIsland(props: FrameIslandProps): EditorIslandContent {

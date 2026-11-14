@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+use screenwide_background::Background;
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
@@ -194,6 +195,12 @@ pub struct RecordingSceneClip {
   #[serde(default, skip_serializing_if = "Option::is_none")]
   #[ts(optional)]
   pub cursor: Option<bool>,
+  /// What the canvas sits on in this scene, over the recording's own,
+  /// blooming in as the scene arrives and out as it leaves. Unset, the
+  /// scene shows the recording's.
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  #[ts(optional)]
+  pub background: Option<Background>,
   /// Set, a custom scene: the panes sit in these boxes instead of the
   /// preset's, which a reset returns them to.
   #[serde(default, skip_serializing_if = "Option::is_none")]

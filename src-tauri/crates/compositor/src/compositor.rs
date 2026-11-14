@@ -7,6 +7,7 @@
 //! platform brings the frames in and takes the canvas out.
 
 mod background;
+mod background_turn;
 mod camera;
 mod canvas_features;
 #[cfg(test)]

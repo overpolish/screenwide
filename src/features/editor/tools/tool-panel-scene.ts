@@ -10,6 +10,8 @@ import {
 
 import { SchematicComposition } from "./scene/scene-schematic";
 
+import type { Background } from "./frame/background/background";
+
 /** A pane of the scene under the playhead: what part of it the scene
  * shows, how round its corners are, in percent of its shorter side, and how
  * far it is padded, as a share of its box's shorter side (the screen's
@@ -28,6 +30,10 @@ export type ToolPanelScenePane = {
  * a press changes, or none, where a press adds one there.
  */
 export type ToolPanelScene = {
+  /** What the canvas sits on in the scene under the playhead, over the
+   * recording's own; null where it shows the recording's or there is no
+   * scene. */
+  background: Background | null;
   /** Where the scene under the playhead puts its panes, as shares of the
    * canvas, where it is custom; null for a preset's boxes or no scene. */
   boxes: SchematicComposition | null;
@@ -56,6 +62,9 @@ export type ToolPanelScene = {
   /** Whether the recording has a camera for an arrangement to place. */
   hasCamera: boolean;
   hasSceneAtPlayhead: boolean;
+  /** Whether the timeline holds any scene, for which the Frame island keeps
+   * room for a scene's note and action as the playhead moves. */
+  hasScenes: boolean;
   /** Whether the camera is drawn into the screen's video, without which the
    * scenes that place it stand idle. */
   isBaked: boolean;

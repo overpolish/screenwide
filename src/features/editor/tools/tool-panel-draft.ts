@@ -106,6 +106,7 @@ export function resolveToolPanelSnapshot(
     saveAnnotationColor: _saveAnnotationColor,
     savePreset: _savePreset,
     saveSceneTemplate: _saveSceneTemplate,
+    sceneBackground,
     sceneCursor,
     sceneFollowFace,
     sceneFraming,
@@ -242,6 +243,7 @@ export function resolveToolPanelSnapshot(
     ...(resolved.scene &&
     (scenePreset ||
       sceneFraming ||
+      sceneBackground !== undefined ||
       sceneCursor !== undefined ||
       sceneFollowFace !== undefined ||
       sceneInset !== undefined ||
@@ -251,6 +253,10 @@ export function resolveToolPanelSnapshot(
       ? {
           scene: {
             ...resolved.scene,
+            background:
+              sceneBackground === undefined
+                ? resolved.scene.background
+                : sceneBackground,
             cursor:
               sceneCursor === undefined ? resolved.scene.cursor : sceneCursor,
             followsFace: sceneFollowFace ?? resolved.scene.followsFace,

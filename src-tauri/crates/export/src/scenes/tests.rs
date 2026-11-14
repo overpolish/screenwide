@@ -28,6 +28,7 @@ fn clip(id: &str, start_ms: u64, end_ms: u64, preset: RecordingScenePreset) -> R
     variant: None,
     follow_face: None,
     cursor: None,
+    background: None,
     auto: false,
   }
 }

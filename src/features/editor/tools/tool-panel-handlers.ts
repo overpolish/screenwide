@@ -140,6 +140,9 @@ export type ToolPanelHandlers = {
   /** Take every auto zoom off the timeline, the scenes of your own left as
    * they are. */
   onSceneAutoZoomsClear?: () => void;
+  /** Give the scene under the playhead a background of its own, or with
+   * null have it show the recording's. */
+  onSceneBackgroundChange?: (background: Background | null) => void;
   /** Show or hide the cursor in the scene under the playhead over the
    * recording's own choice, or with null have it do as the recording does. */
   onSceneCursorChange?: (shown: boolean | null) => void;

@@ -21,6 +21,7 @@ import {
 } from "../annotation/annotation-island-parts";
 import { IslandPickerColumn } from "../island-picker-column";
 import { PICTURE_CORNERS } from "../picture-corners";
+import { SceneOnlyNote } from "../scene-only-note";
 
 import { FrameBackgroundEditor } from "./frame-background-editor";
 import { FrameLibraryPictures } from "./frame-library-pictures";
@@ -29,12 +30,14 @@ import { FRAME_ISLAND_WIDTH } from "./frame-width";
 import type { FrameIslandProps } from "./frame-island";
 
 /** Under the Frame island's row: the finished picture's size, then for a
- * screenshot its corners on a row named as Radius, what it sits on, its
- * colours while there are any to set, and putting its size back. The
- * island is as wide as its lines need, and never narrower than a mesh's
- * colours (`FRAME_ISLAND_WIDTH`). The colours' line comes into place under
- * the tiles for a mesh or a colour of your own, and goes for a solid tile
- * or a picture, the lines after it gliding to make room (`IslandParts`).
+ * screenshot its corners on a row named as Radius, what it sits on, and its
+ * colours while there are any to set; for a recording with scenes, a note
+ * that what it sits on is the scene's while the playhead is in one; then
+ * the actions: clearing that scene's own background, and putting the size
+ * back. The island is as wide as its lines need, and never narrower than a
+ * mesh's colours (`FRAME_ISLAND_WIDTH`). The colours' line comes into place
+ * under the tiles for a mesh or a colour of your own, and goes for a solid
+ * tile or a picture, the lines after it gliding to make room (`IslandParts`).
  * The Library tile opens the library's pictures in a column beside the
  * section (`IslandPickerColumn`), as the text island's templates open; one
  * chosen there is worn, and kept as a tile as a picture of your own is,
@@ -141,7 +144,30 @@ export function FrameSection(props: FrameIslandProps) {
             />
           </div>
         ) : null}
-        <div className="flex justify-end" key="original-size">
+        {props.scene ? (
+          // Outside a scene the note and its action keep their room, unseen,
+          // so playback crossing into and out of scenes leaves the island
+          // its size.
+          <div
+            aria-hidden={!props.scene.isInScene}
+            className={cn(!props.scene.isInScene && "invisible")}
+            key="scene-note"
+          >
+            <SceneOnlyNote layer="frame" />
+          </div>
+        ) : null}
+        <div className="flex justify-end gap-separate" key="actions">
+          {props.scene ? (
+            <Button
+              className={cn(!props.scene.isInScene && "invisible")}
+              isDisabled={
+                !props.scene.isInScene || !props.scene.hasOwnBackground
+              }
+              onPress={props.scene.onClearSceneBackground}
+            >
+              {t("editor-island-frame-clear-scene-background")}
+            </Button>
+          ) : null}
           <Button onPress={props.onOriginalSize}>
             {t("editor-island-frame-original-size")}
           </Button>

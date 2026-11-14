@@ -4,6 +4,10 @@
 import { UPRIGHT_ROTATION } from "../../layer-rotation";
 import { ScreenshotOutputSettings } from "../../screenshot/screenshot-output";
 import { timedSpanClipAt } from "../../timeline/tracks/timed-span-clips";
+import {
+  applyBackgroundToOutput,
+  backgroundFromOutput,
+} from "../../tools/frame/background-adapters";
 
 import { RecordingSceneControls } from "./recording-scene-channel";
 import {
@@ -180,6 +184,22 @@ export function recordingSceneEdits({
     },
     resetScreenCrop: () => {
       reframeCurrent((clip) => uncroppedSceneScreen(clip, { camera, output }));
+    },
+    // Kept as the canvas would draw it, so a composition chosen without its
+    // blobs takes the ones the canvas would give it. Unset, the scene shows
+    // the recording's background again, a later change to it included.
+    setBackground: (background) => {
+      reframeCurrent((clip) => {
+        const { background: _background, ...rest } = clip;
+        return background === null
+          ? rest
+          : {
+              ...rest,
+              background: backgroundFromOutput(
+                applyBackgroundToOutput(output, background),
+              ),
+            };
+      });
     },
     // Unset, the scene shows or hides the cursor as the recording does.
     setCursor: (shown) => {

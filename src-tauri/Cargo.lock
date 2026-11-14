@@ -5609,6 +5609,7 @@ dependencies = [
  "screenwide-activity",
  "screenwide-annotations",
  "screenwide-auto-zoom",
+ "screenwide-background",
  "screenwide-capture",
  "screenwide-compositor",
  "screenwide-credits",
@@ -5701,6 +5702,7 @@ version = "1.0.3"
 dependencies = [
  "bytemuck",
  "getrandom 0.3.4",
+ "screenwide-background",
  "screenwide-imaging",
  "screenwide-scenes",
  "screenwide-text",
@@ -5717,6 +5719,15 @@ dependencies = [
  "screenwide-records",
  "screenwide-scenes",
  "serde",
+]
+
+[[package]]
+name = "screenwide-background"
+version = "1.0.3"
+dependencies = [
+ "serde",
+ "serde_json",
+ "ts-rs",
 ]
 
 [[package]]
@@ -5813,6 +5824,7 @@ dependencies = [
  "cidre",
  "image",
  "screenwide-annotations",
+ "screenwide-background",
  "screenwide-compositor",
  "screenwide-cursor-effects",
  "screenwide-gpu",
@@ -5986,6 +5998,7 @@ dependencies = [
  "png",
  "quantette",
  "screenwide-annotations",
+ "screenwide-background",
  "screenwide-gpu",
  "screenwide-imaging",
  "screenwide-scenes",
@@ -6040,6 +6053,7 @@ dependencies = [
 name = "screenwide-scenes"
 version = "1.0.3"
 dependencies = [
+ "screenwide-background",
  "serde",
  "serde_json",
  "ts-rs",

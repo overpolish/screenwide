@@ -18,6 +18,7 @@ import {
 } from "./recording-scenes";
 
 import type { Arrangement } from "../../annotations/annotation-order";
+import type { Background } from "../../tools/frame/background/background";
 
 /**
  * The scene under the preview's playhead, and the edits that change it,
@@ -56,6 +57,9 @@ export type RecordingSceneControls = {
   resetPanePlacement: (pane: ScenePane) => void;
   /** Take the scene's crop of the screen away. */
   resetScreenCrop: () => void;
+  /** Give the scene a background of its own over the recording's, or with
+   * null show the recording's again. */
+  setBackground: (background: Background | null) => void;
   /** Show or hide the cursor in the scene over the recording's own choice,
    * or with null do as the recording does. */
   setCursor: (shown: boolean | null) => void;
@@ -149,6 +153,9 @@ export function usePublishRecordingScene(
         },
         resetScreenCrop: () => {
           controlsRef.current.resetScreenCrop();
+        },
+        setBackground: (background) => {
+          controlsRef.current.setBackground(background);
         },
         setCursor: (shown) => {
           controlsRef.current.setCursor(shown);

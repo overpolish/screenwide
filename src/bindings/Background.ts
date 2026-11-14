@@ -2,7 +2,7 @@
 import type { BackgroundMeshPoint } from "./BackgroundMeshPoint";
 
 /**
- * What sits behind the picture, as a saved preset carries it.
+ * What sits behind the picture, as a saved preset or a scene carries it.
  *
  * The three kinds are the three ways a canvas is filled: one colour, a mesh
  * of them, or a picture of your own. The editor spreads the same values

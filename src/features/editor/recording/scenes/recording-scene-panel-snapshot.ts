@@ -130,6 +130,7 @@ export function toolPanelSceneOf({
       : null;
   };
   return {
+    background: current?.background ?? null,
     boxes: current?.boxes
       ? {
           camera: current.boxes.camera ?? null,
@@ -147,6 +148,7 @@ export function toolPanelSceneOf({
     hasAutoZooms: clips.some((clip) => clip.auto),
     hasCamera,
     hasSceneAtPlayhead: current !== null,
+    hasScenes: clips.length > 0,
     isBaked,
     panes: { camera: paneOf("camera"), screen: paneOf("screen") },
     preset: current?.preset ?? null,
