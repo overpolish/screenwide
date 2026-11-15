@@ -16,7 +16,10 @@ use core_graphics::event_source::{CGEventSource, CGEventSourceStateID};
 use objc2::rc::Retained;
 use objc2::runtime::{AnyObject, NSObjectProtocol, ProtocolObject};
 use objc2::{define_class, msg_send, DefinedClass, MainThreadMarker, MainThreadOnly};
-use objc2_app_kit::{NSPasteboard, NSPasteboardItem, NSPasteboardTypeString};
+use objc2_app_kit::{
+  NSApplication, NSApplicationActivationOptions, NSPasteboard, NSPasteboardItem,
+  NSPasteboardTypeString, NSRunningApplication, NSWorkspace,
+};
 use objc2_foundation::{NSArray, NSData, NSInteger, NSObject, NSString};
 
 use super::{settled, OnMain, Refusal};
@@ -105,6 +108,49 @@ pub(super) fn paste(text: &str, on_main: OnMain<'_>) -> Result<(), Refusal> {
     std::thread::sleep(POLL);
   }
   on_main_thread(on_main, put_back)
+}
+
+/// An app, by its process.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(super) struct Target(i32);
+
+impl Target {
+  pub(super) fn current() -> Option<Self> {
+    frontmost().filter(|&pid| !is_ours(pid)).map(Self)
+  }
+}
+
+fn frontmost() -> Option<i32> {
+  NSWorkspace::sharedWorkspace()
+    .frontmostApplication()
+    .map(|app| app.processIdentifier())
+}
+
+fn is_ours(pid: i32) -> bool {
+  u32::try_from(pid).is_ok_and(|pid| pid == std::process::id())
+}
+
+/// Brings `target` in front if Screenwide is: activation is handed over, as
+/// macOS asks of an app making another active. False when nothing was done.
+pub(super) fn bring_back(target: Target, on_main: OnMain<'_>) -> bool {
+  on_main_thread(on_main, move || {
+    let Some(marker) = MainThreadMarker::new() else {
+      return false;
+    };
+    if !frontmost().is_some_and(is_ours) {
+      return false;
+    }
+    let Some(app) = NSRunningApplication::runningApplicationWithProcessIdentifier(target.0) else {
+      return false;
+    };
+    NSApplication::sharedApplication(marker).yieldActivationToApplication(&app);
+    app.activateWithOptions(NSApplicationActivationOptions::empty())
+  })
+  .unwrap_or(false)
+}
+
+pub(super) fn is_in_front(target: Target, on_main: OnMain<'_>) -> bool {
+  on_main_thread(on_main, move || frontmost() == Some(target.0)).unwrap_or(false)
 }
 
 /// Runs `work` on the main thread and waits for its answer.

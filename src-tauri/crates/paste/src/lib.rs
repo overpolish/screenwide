@@ -1,10 +1,14 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! Text put where the caret is in whichever app is in front, the way a person
-//! would: on the clipboard, then the paste keys. Typing it key by key is slow
-//! and garbles characters in some Windows apps; pasting is what every app
-//! takes.
+//! Text put where the caret is, the way a person would: on the clipboard,
+//! then the paste keys. Typing it key by key is slow and garbles characters
+//! in some Windows apps; pasting is what every app takes.
+//!
+//! It goes to the app that was in front when the text was asked for
+//! ([`Target`]). A press on Screenwide's own windows meanwhile, such as the
+//! island's Done, brings Screenwide in front, so that app is brought back
+//! first; one the person switched to themselves keeps the paste.
 //!
 //! What the clipboard held is put back afterwards, once the app has read the
 //! text: the text is a promise the system asks for when it is read, which is
@@ -53,10 +57,35 @@ const GIVE_UP: Duration = Duration::from_secs(8);
 /// Runs work on the app's main thread, which macOS's clipboard needs.
 pub type OnMain<'a> = &'a dyn Fn(Box<dyn FnOnce() + Send>);
 
-/// Pastes `text` into the app in front, then puts the clipboard back. Blocks
-/// until the clipboard is back, so it must not run on the main thread; work
-/// that needs that thread is handed to `on_main`.
-pub fn paste(text: &str, on_main: OnMain<'_>) -> Result<(), Refusal> {
+/// How long a target brought back is given to come in front.
+const COMING_FORWARD: Duration = Duration::from_secs(1);
+/// How often it is looked for in front meanwhile.
+const POLL: Duration = Duration::from_millis(20);
+
+/// The app in front, to paste into later.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct Target(platform::Target);
+
+impl Target {
+  /// The app in front now, unless it is Screenwide.
+  pub fn current() -> Option<Self> {
+    platform::Target::current().map(Self)
+  }
+}
+
+/// Pastes `text` into the app in front, bringing `target` back first when
+/// Screenwide has come in front meanwhile, then puts the clipboard back.
+/// Blocks until the clipboard is back, so it must not run on the main
+/// thread; work that needs that thread is handed to `on_main`.
+pub fn paste(text: &str, target: Option<Target>, on_main: OnMain<'_>) -> Result<(), Refusal> {
+  if let Some(Target(target)) = target {
+    if platform::bring_back(target, on_main) {
+      let deadline = Instant::now() + COMING_FORWARD;
+      while !platform::is_in_front(target, on_main) && Instant::now() < deadline {
+        std::thread::sleep(POLL);
+      }
+    }
+  }
   platform::paste(text, on_main)
 }
 

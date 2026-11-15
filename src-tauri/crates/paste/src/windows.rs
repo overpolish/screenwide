@@ -11,6 +11,9 @@
 mod formats;
 mod guard;
 mod keys;
+mod target;
+
+pub(super) use self::target::{bring_back, is_in_front, Target};
 
 use std::cell::RefCell;
 use std::time::{Duration, Instant};

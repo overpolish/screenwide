@@ -16,7 +16,7 @@ use std::sync::{Mutex, MutexGuard, PoisonError};
 use std::time::{Duration, Instant};
 
 use screenwide_dictation::{Ended, Event, Session};
-use screenwide_paste::Refusal;
+use screenwide_paste::{Refusal, Target};
 use screenwide_speech::catalogue::Purpose;
 use screenwide_speech::runner::Transcriber;
 use tauri::AppHandle;
@@ -59,6 +59,8 @@ pub fn set_dictation_microphone(microphone: Option<String>) {
 struct Listening {
   session: Session,
   pressed_at: Instant,
+  /// The app dictated into: the one in front as listening started.
+  target: Option<Target>,
 }
 
 static DICTATION: Mutex<Option<Dictation>> = Mutex::new(None);
@@ -111,30 +113,30 @@ pub(crate) fn pressed(app: &AppHandle) {
   with(|dictation| {
     let helper = dictation.helper.take();
     dictation.used += 1;
-    dictation.listening =
-      Some(Listening {
-        session: Session::start(model, dictation.microphone.clone(), helper, move |event| {
-          match event {
-            Event::Level(decibels) => island::level(&events, decibels),
-            // Words still arriving as listening stops would show over the
-            // island's Finishing.
-            Event::Heard(text) if is_listening() => island::tell(
-              &events,
-              DictationIslandState::Listening {
-                settled: text.settled,
-                unsettled: text.unsettled,
-              },
-            ),
-            Event::Heard(_) => {}
-            // Said as a problem once the session's end says why.
-            Event::Failed => {
-              let app = events.clone();
-              let _ = events.run_on_main_thread(move || finish(&app));
-            }
+    dictation.listening = Some(Listening {
+      session: Session::start(model, dictation.microphone.clone(), helper, move |event| {
+        match event {
+          Event::Level(decibels) => island::level(&events, decibels),
+          // Words still arriving as listening stops would show over the
+          // island's Finishing.
+          Event::Heard(text) if is_listening() => island::tell(
+            &events,
+            DictationIslandState::Listening {
+              settled: text.settled,
+              unsettled: text.unsettled,
+            },
+          ),
+          Event::Heard(_) => {}
+          // Said as a problem once the session's end says why.
+          Event::Failed => {
+            let app = events.clone();
+            let _ = events.run_on_main_thread(move || finish(&app));
           }
-        }),
-        pressed_at: Instant::now(),
-      });
+        }
+      }),
+      pressed_at: Instant::now(),
+      target: Target::current(),
+    });
   });
   island::tell(
     app,
@@ -202,14 +204,16 @@ fn end(app: &AppHandle, cancelled: bool) {
         let on_main = |work: Box<dyn FnOnce() + Send>| {
           let _ = app.run_on_main_thread(work);
         };
-        screenwide_paste::paste(&text, &on_main).map_err(|refusal| match refusal {
-          Refusal::SecureField => DictationProblem::PasswordField,
-          Refusal::Elevated => DictationProblem::Administrator,
-          Refusal::Failed(error) => {
-            eprintln!("Could not paste the dictation: {error}");
-            DictationProblem::Failed
-          }
-        })
+        screenwide_paste::paste(&text, listening.target, &on_main).map_err(
+          |refusal| match refusal {
+            Refusal::SecureField => DictationProblem::PasswordField,
+            Refusal::Elevated => DictationProblem::Administrator,
+            Refusal::Failed(error) => {
+              eprintln!("Could not paste the dictation: {error}");
+              DictationProblem::Failed
+            }
+          },
+        )
       }
       Err(error) => {
         eprintln!("Dictation failed: {error}");
