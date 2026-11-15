@@ -138,15 +138,14 @@ fn the_chrome_boxes_every_shown_member_and_the_whole_group() {
     new_counter("shown".to_owned(), point(100.0, 100.0), 1, None, None),
     new_counter("hidden".to_owned(), point(900.0, 500.0), 2, None, None),
   ];
-  let boxes = group_boxes(
-    &members.iter().collect::<Vec<_>>(),
-    |id| id == "shown",
-    SOURCE,
-    2.0,
-    0,
-  );
+  let shown = [
+    new_counter("other".to_owned(), point(10.0, 10.0), 3, None, None),
+    members[0].clone(),
+  ];
+  let boxes = group_boxes(&members.iter().collect::<Vec<_>>(), &shown, SOURCE, 2.0, 0);
   assert_eq!(boxes.len(), 2);
   assert_eq!(boxes[0].kind, GROUP_BOX_MEMBER);
+  assert_eq!(boxes[0].member, 1, "the member's place among the shown");
   assert!(boxes[0].right < 0.1);
   assert_eq!(boxes[1].kind, GROUP_BOX_GROUP);
   // The group's box reaches the hidden member too.

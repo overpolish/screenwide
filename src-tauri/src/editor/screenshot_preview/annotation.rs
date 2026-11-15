@@ -134,7 +134,7 @@ pub(super) fn annotation_layout(
       .collect();
     layout.group.extend(group_boxes(
       &members,
-      |_| true,
+      annotations,
       source,
       screenwide_annotations::snap::source_per_size(source, image_width),
       layer,

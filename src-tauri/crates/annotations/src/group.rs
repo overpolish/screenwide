@@ -165,9 +165,8 @@ impl GroupMove {
   }
 }
 
-/// One box the macOS chrome draws round a group, normalised over its layer's
-/// source image, matching the C `ScreenwideAnnotationGroupBox`: the box round
-/// one member, or round the whole group on that layer.
+/// One box the chrome draws round a group, normalised over its layer's source
+/// image: the box round one member, or round the whole group on that layer.
 #[repr(C)]
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct NativeAnnotationGroupBox {
@@ -178,9 +177,13 @@ pub struct NativeAnnotationGroupBox {
   pub layer_id: i32,
   /// [`GROUP_BOX_MEMBER`] or [`GROUP_BOX_GROUP`].
   pub kind: u32,
+  /// A member's place in the list its layer's grips are published from,
+  /// which is the `index` of its grips, so the chrome can draw its box
+  /// through the lenses over it; -1 for the whole group's box.
+  pub member: i32,
 }
 
-const _: () = assert!(std::mem::size_of::<NativeAnnotationGroupBox>() == 40);
+const _: () = assert!(std::mem::size_of::<NativeAnnotationGroupBox>() == 48);
 
 /// The box round one member shown at the playhead.
 pub(crate) const GROUP_BOX_MEMBER: u32 = 0;
@@ -192,7 +195,7 @@ pub(crate) fn native_group_box(
   bounds: SnapBox,
   source: (u32, u32),
   layer_id: i32,
-  kind: u32,
+  (kind, member): (u32, i32),
 ) -> NativeAnnotationGroupBox {
   let across = f64::from(source.0.max(1));
   let down = f64::from(source.1.max(1));
@@ -203,15 +206,17 @@ pub(crate) fn native_group_box(
     bottom: (bounds.y + bounds.height) / down,
     layer_id,
     kind,
+    member,
   }
 }
 
 /// The boxes the chrome draws for the members of a group on one layer: one
-/// round each member `shown` at the playhead, and one round all of `members`,
-/// shown or not. Nothing for a layer with no member.
+/// round each member in `shown`, the list the layer's grips are published
+/// from, and one round all of `members`, shown or not. Nothing for a layer
+/// with no member.
 pub fn group_boxes(
   members: &[&Annotation],
-  shown: impl Fn(&str) -> bool,
+  shown: &[Annotation],
   source: (u32, u32),
   source_per_size: f64,
   layer_id: i32,
@@ -221,14 +226,24 @@ pub fn group_boxes(
   };
   members
     .iter()
-    .filter(|member| shown(&member.id))
-    .filter_map(|member| annotation_bounds(member, source_per_size))
-    .map(|bounds| native_group_box(bounds, source, layer_id, GROUP_BOX_MEMBER))
+    .filter_map(|member| {
+      let place = shown
+        .iter()
+        .position(|annotation| annotation.id == member.id)?;
+      let bounds = annotation_bounds(member, source_per_size)?;
+      let place = i32::try_from(place).ok()?;
+      Some(native_group_box(
+        bounds,
+        source,
+        layer_id,
+        (GROUP_BOX_MEMBER, place),
+      ))
+    })
     .chain(std::iter::once(native_group_box(
       whole,
       source,
       layer_id,
-      GROUP_BOX_GROUP,
+      (GROUP_BOX_GROUP, -1),
     )))
     .collect()
 }

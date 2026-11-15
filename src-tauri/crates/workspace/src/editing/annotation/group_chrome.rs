@@ -110,9 +110,37 @@ pub(super) fn marquee_layer_at_point(state: &SurfaceState, point: (f64, f64)) ->
     })
 }
 
+/// A member's box where it shows through the lenses over its annotation,
+/// enlarged whole as the view at its middle shows it, as a chosen box is.
+/// The whole group's box, and a member whose grips are not published, stay
+/// where they lie.
+fn seen_rect(
+  state: &SurfaceState,
+  group_box: &NativeAnnotationGroupBox,
+  rect: PreviewSurfaceRect,
+) -> PreviewSurfaceRect {
+  let Some(index) = state.annotation.handles.iter().position(|item| {
+    item.layer_id == group_box.layer_id && i64::from(item.index) == i64::from(group_box.member)
+  }) else {
+    return rect;
+  };
+  let middle = (rect.x + rect.width / 2.0, rect.y + rect.height / 2.0);
+  let Some((_, view)) = super::magnify_chrome::shown(state, index, middle) else {
+    return rect;
+  };
+  let [left, top] = view.seen([rect.x, rect.y]);
+  let [right, bottom] = view.seen([rect.x + rect.width, rect.y + rect.height]);
+  PreviewSurfaceRect {
+    x: left,
+    y: top,
+    width: right - left,
+    height: bottom - top,
+  }
+}
+
 /// The group's boxes in device pixels, for the overlay to draw as the layer
 /// selection's own frame without handles: every whole-group box first, then
-/// one round each member shown.
+/// one round each member shown, where it shows through the lenses over it.
 pub(crate) fn group_frames(state: &SurfaceState, scale: f64) -> Vec<[f32; 4]> {
   if !has_group(state) {
     return Vec::new();
@@ -123,7 +151,14 @@ pub(crate) fn group_frames(state: &SurfaceState, scale: f64) -> Vec<[f32; 4]> {
     .iter()
     .filter(whole)
     .chain(group.iter().filter(|group_box| !whole(group_box)))
-    .filter_map(|group_box| box_rect(state, group_box))
+    .filter_map(|group_box| {
+      let rect = box_rect(state, group_box)?;
+      Some(if whole(&group_box) {
+        rect
+      } else {
+        seen_rect(state, group_box, rect)
+      })
+    })
     .filter(|rect| rect.width > 0.0 || rect.height > 0.0)
     .map(|rect| device_rect(rect, scale))
     .collect()

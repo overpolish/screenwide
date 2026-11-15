@@ -220,7 +220,7 @@ impl PreviewPlayerManager {
       .collect();
     screenwide_annotations::group::group_boxes(
       &members,
-      |id| shown.iter().any(|annotation| annotation.id == id),
+      shown,
       source,
       source_per_size(source, size_width),
       pane as i32,
