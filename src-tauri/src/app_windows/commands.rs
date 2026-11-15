@@ -8,7 +8,7 @@
 
 use tauri::ipc::Invoke;
 
-const COMMANDS: [&str; 30] = [
+const COMMANDS: [&str; 31] = [
   "window_ready",
   "show_inactive_cursor",
   "close_color_panel",
@@ -33,6 +33,7 @@ const COMMANDS: [&str; 30] = [
   "set_region_selector_passthrough",
   "set_screenshot_region_session",
   "show_region_selector",
+  "focus_region_selector",
   "prepare_screenshot_region_magnifier",
   "set_screenshot_region_osc",
   "set_region_selector_osc_frame_visible",
@@ -82,6 +83,7 @@ fn window_commands() -> impl Fn(Invoke) -> bool + Send + Sync + 'static {
     region::set_region_selector_passthrough,
     region::set_screenshot_region_session,
     region::show_region_selector,
+    region::focus_region_selector,
     screenshot_region::magnifier::prepare_screenshot_region_magnifier,
     screenshot_region::osc_command::set_screenshot_region_osc,
     screenshot_region::presentation::set_region_selector_osc_frame_visible,

@@ -131,6 +131,9 @@ export const beginRegionSelectorGesture = () =>
 export const finishRegionSelectorGesture = () =>
   invoke<null>("finish_region_selector_gesture");
 
+/** Hands the keyboard to the region overlay, while a window is picked. */
+export const focusRegionSelector = () => invoke<null>("focus_region_selector");
+
 export const prepareScreenshotRegionMagnifier = (
   monitorId: number,
   window: string,

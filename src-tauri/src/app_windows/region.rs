@@ -22,6 +22,10 @@ pub use shutter::{
   __tauri_command_name_begin_screenshot_drawing, __tauri_command_name_set_region_selector_opacity,
 };
 pub use shutter::{begin_screenshot_drawing, set_region_selector_opacity};
+mod visibility;
+pub(super) use visibility::focus;
+pub use visibility::focus_region_selector;
+pub use visibility::{__cmd__focus_region_selector, __tauri_command_name_focus_region_selector};
 
 #[cfg(test)]
 use borrowed_controls::recording_controls_may_restore;
@@ -146,7 +150,7 @@ pub fn show_region_selector(
     platform::show(&region, initial_opacity)?;
   }
   #[cfg(not(target_os = "macos"))]
-  platform::show(&region, initial_opacity)?;
+  visibility::show(&region, initial_opacity)?;
   platform::restore_recording_level(&region)?;
   #[cfg(any(target_os = "macos", target_os = "windows"))]
   if desktop {
@@ -154,9 +158,9 @@ pub fn show_region_selector(
   }
 
   apply_region_selector_interactivity(&app)?;
-  // Applying editor interactivity focuses its full-monitor WebView. Put the
-  // recording controls above it afterwards without taking that focus, so the
-  // editor remains usable everywhere the controls do not cover it.
+  // Put the recording controls above the full-monitor overlay without taking
+  // the keyboard, so the editor stays usable everywhere the controls do not
+  // cover it.
   raise_recording_controls(&app)?;
   #[cfg(target_os = "macos")]
   tauri::async_runtime::spawn_blocking(move || {
@@ -186,7 +190,7 @@ pub fn hide_region_selector(app: AppHandle) -> tauri::Result<()> {
   if let Some(region) = app.get_webview_window(WindowLabel::RegionSelector.as_str()) {
     #[cfg(any(target_os = "macos", target_os = "windows"))]
     super::screenshot_region::set_recording_overlay_desktop_presented(&region, false)?;
-    platform::hide(&region)?;
+    visibility::hide(&region)?;
   }
   set_recording_controls_borrowed(app, false)
 }

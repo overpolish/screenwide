@@ -105,9 +105,17 @@ pub fn prepare_to_show(window: &WebviewWindow) -> tauri::Result<()> {
   set_capture_affinity(window, record_screenwide_windows)
 }
 
+/// The region overlay, never activated by a click: drawing a screenshot's
+/// area would otherwise make it the foreground window, and once it is hidden
+/// Windows is left with none, which leaves the system-keys hook unseen until
+/// another window is focused, so the next Win+Shift+S opens Snipping Tool.
+/// tao is told it cannot take focus before the window is first shown, so its
+/// rewrites of the extended style keep `WS_EX_NOACTIVATE`. A region gesture
+/// and a window pick, which want the keyboard, activate it themselves.
 #[cfg(target_os = "windows")]
 pub fn initialize_region_selector(window: &WebviewWindow) -> tauri::Result<()> {
-  initialize_overlay(window)
+  initialize_overlay(window)?;
+  window.set_focusable(false)
 }
 
 #[cfg(target_os = "windows")]
@@ -280,5 +288,16 @@ pub fn hide_without_activation(window: &WebviewWindow) -> tauri::Result<()> {
   };
 
   let _ = unsafe { ShowWindowAsync(HWND(window.hwnd()?.0), SW_HIDE) };
+  Ok(())
+}
+
+/// Makes `window` the foreground window, for a window shown without
+/// activation that now wants the keyboard. tao's `set_focus` would do nothing
+/// there: it acts only on a window its own flags say is shown.
+#[cfg(target_os = "windows")]
+pub fn activate(window: &WebviewWindow) -> tauri::Result<()> {
+  use ::windows::Win32::{Foundation::HWND, UI::WindowsAndMessaging::SetForegroundWindow};
+
+  let _ = unsafe { SetForegroundWindow(HWND(window.hwnd()?.0)) };
   Ok(())
 }

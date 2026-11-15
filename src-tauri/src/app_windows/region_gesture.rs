@@ -24,7 +24,7 @@ pub fn begin_region_selector_gesture(app: AppHandle) -> tauri::Result<()> {
     // recording controls. A pointer gesture is the explicit handoff that makes the
     // region editor the keyboard target for editing.
     if let Some(region) = app.get_webview_window(WindowLabel::RegionSelector.as_str()) {
-      region.set_focus()?;
+      super::region::focus(&region)?;
     }
     // Tucked away while the region is dragged out, and taking no clicks as
     // it goes, so a drag across the top of the screen is the region's.

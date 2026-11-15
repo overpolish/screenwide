@@ -18,7 +18,7 @@ pub(super) fn apply_region_selector_interactivity(app: &AppHandle) -> tauri::Res
     crate::recording::is_idle(app),
   );
 
-  region.set_ignore_cursor_events(!is_interactive)?;
+  super::visibility::set_passthrough(&region, !is_interactive)?;
   if !is_interactive {
     // Going passthrough while still holding key status would leave the user
     // typing into an invisible overlay instead of the app they are recording,

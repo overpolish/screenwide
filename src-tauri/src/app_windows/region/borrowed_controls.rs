@@ -74,7 +74,7 @@ pub fn set_screenshot_region_session(
         #[cfg(not(any(target_os = "macos", target_os = "windows")))]
         let peers = Ok(());
         peers
-          .and_then(|()| platform::hide(&region))
+          .and_then(|()| super::visibility::hide(&region))
           .and_then(|()| platform::set_opacity(&region, 0.0))
       }
       None => Ok(()),

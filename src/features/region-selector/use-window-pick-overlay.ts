@@ -1,11 +1,11 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { getCurrentWindow } from "@tauri-apps/api/window";
 import { useEffect, useRef, useState } from "react";
 
 import { useTauriEvent } from "../../lib/use-tauri-event";
 import {
+  focusRegionSelector,
   listMonitors,
   pickWindow,
   stepWindowPick,
@@ -93,7 +93,7 @@ export function useWindowPickOverlay() {
     void listMonitors().then((next) => {
       if (!disposed) setMonitors(next);
     });
-    void getCurrentWindow().setFocus();
+    void focusRegionSelector();
     return () => {
       disposed = true;
     };
