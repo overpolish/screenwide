@@ -9,7 +9,7 @@ use tauri::{AppHandle, Manager};
 use tauri_plugin_clipboard_manager::ClipboardExt;
 
 use super::{
-  text_selection::TextSelection, visual::VisualSnapshot, TextRecognitionResult,
+  tables::Copied, text_selection::TextSelection, visual::VisualSnapshot, TextRecognitionResult,
   TextRecognitionState,
 };
 
@@ -25,7 +25,7 @@ pub enum TextAction {
 
 pub struct TextUpdate {
   pub snapshot: Option<VisualSnapshot>,
-  pub copy_text: Option<String>,
+  pub copied: Option<Copied>,
   pub qr_code: Option<super::RecognizedQrCode>,
   pub qr_cursor: bool,
   pub text_cursor: bool,
@@ -106,43 +106,70 @@ impl TextRecognitionState {
       TextAction::Up => session.text.as_mut()?.pointer_up(point),
       TextAction::SelectAll => session.text.as_mut()?.select_all(),
     };
-    let copy_text = (action == TextAction::Copy)
-      .then(|| session.text.as_ref().map(|model| model.selected_text()))
-      .flatten()
-      .filter(|text| !text.is_empty());
+    let copied = (action == TextAction::Copy)
+      .then(|| session.text.as_ref().and_then(|model| copied(model, false)))
+      .flatten();
     let snapshot = changed.then(|| {
       let model = session.text.as_ref().expect("text model remains installed");
       super::visual::snapshot(selection, model.result(), &model.rectangles())
     });
     Some(TextUpdate {
       snapshot,
-      copy_text,
+      copied,
       qr_code,
       qr_cursor: qr_index.is_some(),
       text_cursor: inside && has_text && qr_index.is_none(),
     })
   }
 
-  pub(super) fn selection_text(&self, fallback_all: bool, paragraph: bool) -> Option<String> {
+  /// What copying puts on the clipboard: the selected text, or all of it
+  /// when `fallback_all` and nothing is selected, joined into one paragraph
+  /// with `paragraph`, and otherwise with its tables kept as tables.
+  pub(super) fn copied(&self, fallback_all: bool, paragraph: bool) -> Option<Copied> {
     let session = self
       .0
       .lock()
       .unwrap_or_else(|poisoned| poisoned.into_inner());
     let model = session.text.as_ref()?;
-    let selected = model.selected_text();
-    let text = if selected.is_empty() && fallback_all {
-      model.all_text().to_owned()
-    } else {
-      selected
-    };
-    (!text.is_empty()).then(|| {
-      if paragraph {
-        super::text_selection::paragraph(&text)
+    if paragraph {
+      let selected = model.selected_text();
+      let text = if selected.is_empty() && fallback_all {
+        model.all_text().to_owned()
       } else {
-        text
-      }
-    })
+        selected
+      };
+      return (!text.is_empty()).then(|| Copied {
+        text: super::text_selection::paragraph(&text),
+        html: None,
+      });
+    }
+    copied(model, fallback_all)
   }
+}
+
+/// What copying the selection in `model` puts on the clipboard, or all it
+/// read when `fallback_all` and nothing is selected.
+fn copied(model: &TextSelection, fallback_all: bool) -> Option<Copied> {
+  let selected = model.selected_sources();
+  let copied = if selected.iter().any(|source| source.start < source.end) {
+    super::tables::copied(model.result(), Some(&selected))
+  } else if fallback_all {
+    super::tables::copied(model.result(), None)
+  } else {
+    return None;
+  };
+  (!copied.text.is_empty()).then_some(copied)
+}
+
+/// Puts `copied` on the clipboard: as HTML, with the text for apps that take
+/// only text, where it holds a table.
+pub(super) fn write(app: &AppHandle, copied: Copied) -> Result<(), String> {
+  let clipboard = app.clipboard();
+  match copied.html {
+    Some(html) => clipboard.write_html(html, Some(copied.text)),
+    None => clipboard.write_text(copied.text),
+  }
+  .map_err(|error| error.to_string())
 }
 
 /// Copies the selected text, or all of it when `fallback_all` and nothing is
@@ -152,14 +179,11 @@ pub(crate) fn copy_selection_and_dismiss(
   paragraph: bool,
   fallback_all: bool,
 ) -> Result<(), String> {
-  let text = app
+  let copied = app
     .state::<TextRecognitionState>()
-    .selection_text(fallback_all, paragraph)
+    .copied(fallback_all, paragraph)
     .ok_or_else(|| "No recognized text is selected".to_owned())?;
-  app
-    .clipboard()
-    .write_text(text)
-    .map_err(|error| error.to_string())?;
+  write(app, copied)?;
   super::dismiss(app);
   Ok(())
 }

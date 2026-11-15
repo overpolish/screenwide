@@ -27,6 +27,7 @@ fn state_with_qr() -> TextRecognitionState {
         decode_error: None,
       }],
       text: String::new(),
+      tables: Vec::new(),
     }
   ));
   state
@@ -56,6 +57,7 @@ fn desktop_pointer_input_updates_native_selection_and_copy_text() {
       }],
       qr_codes: Vec::new(),
       text: "hello".to_owned(),
+      tables: Vec::new(),
     }
   ));
 
@@ -80,7 +82,13 @@ fn desktop_pointer_input_updates_native_selection_and_copy_text() {
   state
     .text_input(TextAction::Up, Point { x: 1940.0, y: 70.0 })
     .unwrap();
-  assert_eq!(state.selection_text(false, false).as_deref(), Some("hello"));
+  assert_eq!(
+    state
+      .copied(false, false)
+      .map(|copied| copied.text)
+      .as_deref(),
+    Some("hello")
+  );
   assert!(matches!(
     state.island_state(),
     Some(super::super::island::TextRecognitionIslandState::Ready {

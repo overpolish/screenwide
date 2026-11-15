@@ -1,0 +1,18 @@
+# SPDX-FileCopyrightText: 2026 overpolish
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+[package]
+name = "screenwide-tables"
+description = "The tables in recognized text: their rows, columns and cells, and the clipboard formats that keep them"
+version.workspace = true
+authors.workspace = true
+license.workspace = true
+edition.workspace = true
+
+[lib]
+doctest = false
+
+[dev-dependencies]
+image.workspace = true
+serde.workspace = true
+serde_json.workspace = true

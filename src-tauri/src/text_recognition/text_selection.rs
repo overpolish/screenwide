@@ -7,10 +7,10 @@
 use screenwide_osc::geometry::Point;
 
 use super::{TextRecognitionResult, TextRect};
-use extraction::{line_length, selected_text, selection_rects};
+use extraction::{line_length, selected_sources, selected_text, selection_rects};
 
 mod extraction;
-pub(super) use extraction::paragraph;
+pub(super) use extraction::{paragraph, source_text};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct TextPosition {
@@ -126,6 +126,11 @@ impl TextSelection {
 
   pub fn selected_text(&self) -> String {
     selected_text(&self.result, &self.current_ranges())
+  }
+
+  /// What is selected, as the tables' cells know their text.
+  pub fn selected_sources(&self) -> Vec<screenwide_tables::Source> {
+    selected_sources(&self.result, &self.current_ranges())
   }
 
   pub fn all_text(&self) -> &str {

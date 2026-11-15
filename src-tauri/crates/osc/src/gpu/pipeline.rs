@@ -84,6 +84,8 @@ pub struct RenderConstants {
   /// a point spans, which their lengths are given in, and `.y` 1 where the
   /// picture has see-through pixels and casts its shadow from them.
   pub reference: [f32; 4],
+  /// The wash over a table Text Recognition found.
+  pub ocr_table: [f32; 4],
 }
 
 /// The rows of `RenderConstants::turn_rings`.
@@ -136,6 +138,7 @@ impl RenderConstants {
       window_cutout: [0.0; 4],
       window_shape: [0.0; 4],
       reference: [0.0; 4],
+      ocr_table: ocr.table_fill,
     }
   }
 }

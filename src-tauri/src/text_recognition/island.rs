@@ -55,7 +55,8 @@ pub enum TextRecognitionIslandState {
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
 pub enum TextRecognitionIslandAction {
-  /// The selected text, or all of it with none selected.
+  /// The selected text, or all of it with none selected, its tables kept as
+  /// tables.
   Copy,
   /// The same, joined into one paragraph.
   CopyParagraph,

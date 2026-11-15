@@ -24,6 +24,7 @@ mod perf_tests;
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 pub(crate) mod preview;
 pub(crate) mod snapshot;
+mod tables;
 mod text_selection;
 pub(crate) mod visual;
 #[cfg(target_os = "windows")]
@@ -81,6 +82,9 @@ pub struct TextRecognitionResult {
   pub lines: Vec<RecognizedLine>,
   pub qr_codes: Vec<RecognizedQrCode>,
   pub text: String,
+  /// The tables among the lines, from the top.
+  #[serde(skip)]
+  pub tables: Vec<screenwide_tables::Table>,
 }
 
 fn recognition_windows(app: &AppHandle) -> Vec<tauri::WebviewWindow> {
@@ -266,7 +270,7 @@ async fn recognize_current(app: &AppHandle) -> Result<(), String> {
   let Some((generation, image)) = state.recognition_input() else {
     return Err("The selected image is no longer available".to_owned());
   };
-  let (lines, qr_codes) = match recognize(image).await {
+  let result = match recognize(image).await {
     Ok(result) => result,
     Err(error) => {
       if state.is_current_generation(generation) {
@@ -274,16 +278,6 @@ async fn recognize_current(app: &AppHandle) -> Result<(), String> {
       }
       return Err(error);
     }
-  };
-  let text = lines
-    .iter()
-    .map(|line| line.text.as_str())
-    .collect::<Vec<_>>()
-    .join("\n");
-  let result = TextRecognitionResult {
-    lines,
-    qr_codes,
-    text,
   };
   if state.install_result(generation, result) {
     adapter::show_ready(app, generation);

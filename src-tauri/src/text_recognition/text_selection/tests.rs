@@ -45,6 +45,7 @@ fn result() -> TextRecognitionResult {
     ],
     qr_codes: Vec::new(),
     text: "hello\nworld".to_owned(),
+    tables: Vec::new(),
   }
 }
 
@@ -70,6 +71,7 @@ fn line_hit_testing_uses_both_axes_for_columns_on_the_same_row() {
     ],
     qr_codes: Vec::new(),
     text: "left\nright".to_owned(),
+    tables: Vec::new(),
   };
 
   assert_eq!(
@@ -99,6 +101,7 @@ fn overlapping_character_boxes_advance_at_ordered_caret_boundaries() {
     )],
     qr_codes: Vec::new(),
     text: "ab".to_owned(),
+    tables: Vec::new(),
   };
 
   assert_eq!(
@@ -149,6 +152,7 @@ fn selection_offsets_are_utf16_like_the_frontend() {
     lines: vec![line("A😀B", bounds(0.0, 0.0, 1.0, 1.0), Vec::new())],
     qr_codes: Vec::new(),
     text: "A😀B".to_owned(),
+    tables: Vec::new(),
   };
   let range = TextRange {
     start: TextPosition { line: 0, offset: 1 },

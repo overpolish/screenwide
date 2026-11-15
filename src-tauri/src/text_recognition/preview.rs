@@ -118,19 +118,7 @@ impl OcrPreview {
     };
     let (sender, receiver) = mpsc::channel();
     std::thread::spawn(move || {
-      let read = tauri::async_runtime::block_on(recognize(image));
-      let _ = sender.send(read.map(|(lines, qr_codes)| {
-        let text = lines
-          .iter()
-          .map(|line| line.text.as_str())
-          .collect::<Vec<_>>()
-          .join("\n");
-        TextRecognitionResult {
-          lines,
-          qr_codes,
-          text,
-        }
-      }));
+      let _ = sender.send(tauri::async_runtime::block_on(recognize(image)));
     });
     self.stage = Stage::Reading(generation, receiver);
     vec![

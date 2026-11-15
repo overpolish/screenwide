@@ -11,9 +11,9 @@ text-recognition-island-failed = Could not read that area. Try another.
 text-recognition-island-reading = Finding text and QR codes
 # Names the spinner beside the line above, for assistive technology.
 text-recognition-island-reading-label = Reading the area
-# Copies the selected text; shown while some is selected.
+# Copies the selected text, tables kept as tables; shown while some is selected.
 text-recognition-island-copy = Copy
-# Copies everything found; shown while nothing is selected.
+# Copies everything found, tables kept as tables; shown while nothing is selected.
 text-recognition-island-copy-all = Copy all
 # Copies the selected text, or all of it, joined into one paragraph.
 text-recognition-island-copy-paragraph = Copy as paragraph

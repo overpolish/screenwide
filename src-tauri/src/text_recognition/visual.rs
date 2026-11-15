@@ -24,6 +24,7 @@ pub enum VisualKind {
   Qr = 2,
   QrError = 3,
   Selection = 4,
+  Table = 5,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -123,7 +124,20 @@ pub fn snapshot(
   result: &TextRecognitionResult,
   selected: &[TextRect],
 ) -> VisualSnapshot {
-  let mut rects = Vec::with_capacity(result.lines.len() + result.qr_codes.len() + selected.len());
+  let mut rects = Vec::with_capacity(
+    result.tables.len() + result.lines.len() + result.qr_codes.len() + selected.len(),
+  );
+  // Under the lines, so a table's text keeps its own wash over the table's.
+  rects.extend(
+    result
+      .tables
+      .iter()
+      .filter_map(|table| table_rect(selection, table))
+      .map(|rect| VisualRect {
+        rect,
+        kind: VisualKind::Table,
+      }),
+  );
   rects.extend(result.lines.iter().filter_map(|line| {
     project(selection, line.bounds).map(|rect| VisualRect {
       rect,
@@ -149,6 +163,35 @@ pub fn snapshot(
   VisualSnapshot { selection, rects }
 }
 
+/// The area a table takes, in desktop points: its cells' text with half a
+/// cell's height of room round it, as a table pads its cells, kept inside
+/// the area read.
+fn table_rect(selection: Rect, table: &screenwide_tables::Table) -> Option<Rect> {
+  let bounds = table.bounds()?;
+  let mut heights: Vec<f64> = table
+    .rows
+    .iter()
+    .flatten()
+    .map(|cell| cell.bounds.height)
+    .collect();
+  heights.sort_by(f64::total_cmp);
+  let pad = 0.5 * heights[heights.len() / 2] * selection.size.height;
+  let rect = project(
+    selection,
+    TextRect {
+      x: bounds.x,
+      y: bounds.y,
+      width: bounds.width,
+      height: bounds.height,
+    },
+  )?;
+  let left = (rect.origin.x - pad).max(selection.origin.x);
+  let top = (rect.origin.y - pad).max(selection.origin.y);
+  let right = (rect.right() + pad).min(selection.right());
+  let bottom = (rect.bottom() + pad).min(selection.bottom());
+  (right > left && bottom > top).then(|| Rect::from_xywh(left, top, right - left, bottom - top))
+}
+
 fn project(selection: Rect, normalized: TextRect) -> Option<Rect> {
   let rect = Rect::from_xywh(
     selection.origin.x + normalized.x * selection.size.width,
@@ -160,87 +203,4 @@ fn project(selection: Rect, normalized: TextRect) -> Option<Rect> {
 }
 
 #[cfg(test)]
-mod tests {
-  use super::*;
-  use crate::text_recognition::{RecognizedLine, RecognizedQrCode};
-
-  #[test]
-  fn projects_results_into_one_desktop_selection() {
-    let result = TextRecognitionResult {
-      lines: vec![RecognizedLine {
-        text: "hello".to_owned(),
-        confidence: 1.0,
-        bounds: TextRect {
-          x: 0.1,
-          y: 0.2,
-          width: 0.5,
-          height: 0.1,
-        },
-        characters: Vec::new(),
-      }],
-      qr_codes: vec![RecognizedQrCode {
-        bounds: TextRect {
-          x: 0.8,
-          y: 0.0,
-          width: 0.2,
-          height: 1.0,
-        },
-        content: String::new(),
-        decode_error: Some("unsupported".to_owned()),
-      }],
-      text: "hello".to_owned(),
-    };
-    let visual = snapshot(
-      Rect::from_xywh(1700.0, 50.0, 400.0, 200.0),
-      &result,
-      &[TextRect {
-        x: 0.2,
-        y: 0.3,
-        width: 0.1,
-        height: 0.2,
-      }],
-    );
-
-    assert_eq!(
-      visual.rects[0].rect,
-      Rect::from_xywh(1740.0, 90.0, 200.0, 20.0)
-    );
-    assert_eq!(visual.rects[0].kind, VisualKind::Line);
-    assert_eq!(
-      visual.rects[1].rect,
-      Rect::from_xywh(2020.0, 50.0, 80.0, 200.0)
-    );
-    assert_eq!(visual.rects[1].kind, VisualKind::QrError);
-    assert_eq!(visual.rects[2].kind, VisualKind::Selection);
-    assert_eq!(
-      visual.rects[2].rect,
-      Rect::from_xywh(1780.0, 110.0, 40.0, 40.0)
-    );
-  }
-
-  #[test]
-  fn ready_and_choosing_packets_share_geometry_and_presentation_policy() {
-    let snapshot = VisualSnapshot {
-      selection: Rect::from_xywh(0.0, 0.0, 100.0, 100.0),
-      rects: vec![VisualRect {
-        rect: Rect::from_xywh(10.0, 20.0, 30.0, 40.0),
-        kind: VisualKind::Selection,
-      }],
-    };
-
-    let ready = RenderPacket::ready(&snapshot);
-    assert_eq!(ready.phase, VisualPhase::Ready);
-    assert_eq!((ready.rects[0].x, ready.rects[0].kind), (10.0, 4));
-    assert_eq!(ready.presentation.input, Some(true));
-    assert_eq!(ready.presentation.frame, Some(false));
-    assert!(!ready.presentation.claim_crosshair);
-
-    let choosing = RenderPacket::choosing();
-    assert_eq!(choosing.phase, VisualPhase::Idle);
-    assert!(choosing.rects.is_empty());
-    assert_eq!(choosing.presentation.frame, Some(true));
-    assert_eq!(choosing.presentation.input, Some(true));
-    assert!(choosing.presentation.reset);
-    assert!(choosing.presentation.claim_crosshair);
-  }
-}
+mod tests;

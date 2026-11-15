@@ -108,9 +108,10 @@ pub struct OcrPalette {
   pub error_outline: [f32; 4],
   pub selection_fill: [f32; 4],
   pub selection_outline: [f32; 4],
+  pub table_fill: [f32; 4],
 }
 
-const _: () = assert!(std::mem::size_of::<OcrPalette>() == 128);
+const _: () = assert!(std::mem::size_of::<OcrPalette>() == 144);
 
 const NEUTRAL_800: f32 = 38.0 / 255.0;
 const WHITE: f32 = 1.0;
@@ -131,8 +132,9 @@ pub extern "C" fn screenwide_osc_control_palette(light_mode: u32) -> ControlPale
 /// OCR highlights in `--color-info`, the blue the Ruler draws its guides in,
 /// and unreadable QR codes in `--color-error`. Recognised text is a faint
 /// wash and selected text a stronger one, as text selection is, neither with
-/// a border: its outline is its fill. QR codes, which a click opens, carry an
-/// outline, as does the area read.
+/// a border: its outline is its fill. A table found is a fainter wash still,
+/// under its text's. QR codes, which a click opens, carry an outline, as does
+/// the area read.
 pub fn ocr_palette(light_appearance: bool) -> OcrPalette {
   let [red, green, blue, _] = info(light_appearance);
   let [error_red, error_green, error_blue, _] = error(light_appearance);
@@ -147,6 +149,7 @@ pub fn ocr_palette(light_appearance: bool) -> OcrPalette {
     error_outline: [error_red, error_green, error_blue, 0.9],
     selection_fill: selection,
     selection_outline: selection,
+    table_fill: [red, green, blue, 0.08],
   }
 }
 

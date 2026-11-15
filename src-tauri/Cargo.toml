@@ -68,6 +68,7 @@ screenwide-sidecar = { path = "crates/sidecar" }
 screenwide-sound-track = { path = "crates/sound_track" }
 screenwide-speech = { path = "crates/speech" }
 screenwide-system-keys = { path = "crates/system_keys" }
+screenwide-tables = { path = "crates/tables" }
 screenwide-text = { path = "crates/text" }
 screenwide-timeline = { path = "crates/timeline" }
 screenwide-timeline-edit = { path = "crates/timeline_edit" }
@@ -226,6 +227,7 @@ screenwide-workspace.workspace = true
 screenwide-output.workspace = true
 screenwide-project.workspace = true
 screenwide-qr.workspace = true
+screenwide-tables.workspace = true
 screenwide-records.workspace = true
 screenwide-scenes.workspace = true
 screenwide-settings-preview.workspace = true

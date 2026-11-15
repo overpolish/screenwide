@@ -1,0 +1,8 @@
+[
+{"text":"Steps to reproduce:","bounds":{"x":0.04667,"y":0.11429,"width":0.18167,"height":0.04643}},
+{"text":"1. Open the editor with a recording.","bounds":{"x":0.09,"y":0.225,"width":0.33667,"height":0.04643}},
+{"text":"2. Zoom the timeline in twice.","bounds":{"x":0.08833,"y":0.28214,"width":0.28667,"height":0.04643}},
+{"text":"3. Drag the playhead past the end.","bounds":{"x":0.0875,"y":0.33929,"width":0.32083,"height":0.05357}},
+{"text":"4. Press the space bar.","bounds":{"x":0.08833,"y":0.40714,"width":0.20833,"height":0.04643}},
+{"text":"Expected: playback starts at the end. Actual: nothing happens.","bounds":{"x":0.045,"y":0.51786,"width":0.58333,"height":0.04643}}
+]

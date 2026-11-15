@@ -90,6 +90,19 @@ pub(super) fn selection_rects(
 }
 
 pub(super) fn selected_text(result: &TextRecognitionResult, ranges: &[TextRange]) -> String {
+  selected_sources(result, ranges)
+    .iter()
+    .map(|source| source_text(result, *source))
+    .collect::<Vec<_>>()
+    .join("\n")
+}
+
+/// The selected text of each line, in line order, by UTF-16 offsets, as the
+/// tables' cells know theirs; overlapping ranges in a line are one.
+pub(super) fn selected_sources(
+  result: &TextRecognitionResult,
+  ranges: &[TextRange],
+) -> Vec<screenwide_tables::Source> {
   let mut selected = Vec::new();
   for (line_index, line) in result.lines.iter().enumerate() {
     let mut offsets = ranges
@@ -105,10 +118,27 @@ pub(super) fn selected_text(result: &TextRecognitionResult, ranges: &[TextRange]
         merged.push((start, end));
       }
     }
-    let utf16 = line.text.encode_utf16().collect::<Vec<_>>();
-    selected.extend(merged.into_iter().map(|(start, end)| {
-      String::from_utf16_lossy(&utf16[start.min(utf16.len())..end.min(utf16.len())])
-    }));
+    selected.extend(
+      merged
+        .into_iter()
+        .map(|(start, end)| screenwide_tables::Source {
+          line: line_index,
+          start,
+          end,
+        }),
+    );
   }
-  selected.join("\n")
+  selected
+}
+
+/// The text `source` names, cut to its line.
+pub(crate) fn source_text(
+  result: &TextRecognitionResult,
+  source: screenwide_tables::Source,
+) -> String {
+  let utf16 = result.lines[source.line]
+    .text
+    .encode_utf16()
+    .collect::<Vec<_>>();
+  String::from_utf16_lossy(&utf16[source.start.min(utf16.len())..source.end.min(utf16.len())])
 }

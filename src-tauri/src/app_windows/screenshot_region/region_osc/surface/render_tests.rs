@@ -139,3 +139,18 @@ fn the_osc_shader_blends_straight_colour_over_the_target() {
   assert_eq!(draw(&gpu, 6, &constants), [0, 0, 102, 102]);
   assert!(pollster::block_on(errors.pop()).is_none());
 }
+
+#[test]
+fn a_table_text_recognition_found_is_washed_in_its_own_colour() {
+  let gpu = Gpu::new().expect("the region OSC pipeline builds on the shared device");
+  let errors = gpu
+    .device()
+    .device
+    .push_error_scope(wgpu::ErrorFilter::Validation);
+  let mut constants = RenderConstants::new(false);
+  constants.ocr_table = [0.0, 0.0, 1.0, 0.5];
+  let [blue, green, red, alpha] = draw(&gpu, 21, &constants);
+  assert_eq!((green, red), (0, 0));
+  assert!((127..=128).contains(&blue) && (127..=128).contains(&alpha));
+  assert!(pollster::block_on(errors.pop()).is_none());
+}

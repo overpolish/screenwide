@@ -1,0 +1,18 @@
+[
+{"text":"Tables","bounds":{"x":0.12302,"y":0.05897,"width":0.12639,"height":0.07014}},
+{"text":"Cool","bounds":{"x":0.85337,"y":0.05963,"width":0.09384,"height":0.06881}},
+{"text":"Are","bounds":{"x":0.42229,"y":0.06422,"width":0.07038,"height":0.05963}},
+{"text":"right-aligned","bounds":{"x":0.3484,"y":0.20296,"width":0.21263,"height":0.08132}},
+{"text":"$1600","bounds":{"x":0.83267,"y":0.2057,"width":0.11472,"height":0.07025}},
+{"text":"col 3 is","bounds":{"x":0.07625,"y":0.20642,"width":0.12317,"height":0.06422}},
+{"text":"centered","bounds":{"x":0.38095,"y":0.35156,"width":0.15013,"height":0.06752}},
+{"text":"col 2 is","bounds":{"x":0.07613,"y":0.35265,"width":0.1234,"height":0.06534}},
+{"text":"$12","bounds":{"x":0.87097,"y":0.35321,"width":0.07331,"height":0.06881}},
+{"text":"$1","bounds":{"x":0.8915,"y":0.5,"width":0.05279,"height":0.06881}},
+{"text":"zebra stripes","bounds":{"x":0.07331,"y":0.5,"width":0.21994,"height":0.07339}},
+{"text":"are neat","bounds":{"x":0.38389,"y":0.50294,"width":0.14424,"height":0.06294}},
+{"text":"• item1","bounds":{"x":0.09938,"y":0.70476,"width":0.15021,"height":0.07673}},
+{"text":"See the list","bounds":{"x":0.36351,"y":0.75143,"width":0.19087,"height":0.07054}},
+{"text":"from the first collum","bounds":{"x":0.6129,"y":0.75229,"width":0.33138,"height":0.06881}},
+{"text":"• item2","bounds":{"x":0.1021,"y":0.79985,"width":0.1477,"height":0.07461}}
+]

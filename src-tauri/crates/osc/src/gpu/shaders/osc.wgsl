@@ -47,6 +47,7 @@ struct OscGpu {
   window_cutout: vec4<f32>, // the window being picked, px: x, y, width, height
   window_shape: vec4<f32>, // .x corner radius px, .y fade, .z blur px (0: none), .w feather px
   reference: vec4<f32>, // .x pixels per point, .y 1 where the picture has see-through pixels
+  ocr_table: vec4<f32>, // the wash over a table Text Recognition found
 }
 
 @group(0) @binding(0) var<uniform> osc: OscGpu;
@@ -426,10 +427,11 @@ fn ocr_box(kind: u32, uv: vec2<f32>) -> vec4<f32> {
   if (coverage <= 0.0) {
     discard;
   }
-  // Kinds 17-20 read fill/outline pairs 0-1, 2-3, 4-5 and 6-7.
-  let pair = (kind - 17u) * 2u;
-  let fill = osc.ocr_colors[pair];
-  let outline = osc.ocr_colors[pair + 1u];
+  // Kinds 17-20 read fill/outline pairs 0-1, 2-3, 4-5 and 6-7. A table,
+  // kind 21, is a wash with no outline.
+  let pair = min(kind - 17u, 3u) * 2u;
+  let fill = select(osc.ocr_colors[pair], osc.ocr_table, kind == 21u);
+  let outline = select(osc.ocr_colors[pair + 1u], osc.ocr_table, kind == 21u);
   let outline_width = select(1.0, 2.0, kind == 18u);
   let outline_mix = clamp(0.5 + (distance + outline_width) / aa, 0.0, 1.0);
   var color = mix(fill, outline, outline_mix);
@@ -837,7 +839,7 @@ fn fs_main(input: VertexOut) -> @location(0) vec4<f32> {
   if (kind == 45u) {
     return crop_corner(uv);
   }
-  if (kind >= 17u && kind <= 20u) {
+  if (kind >= 17u && kind <= 21u) {
     return ocr_box(kind, uv);
   }
   if (kind == OCR_SWEEP_KIND) {

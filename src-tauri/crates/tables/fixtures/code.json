@@ -1,0 +1,10 @@
+[
+{"text":"fn main() {","bounds":{"x":0.04667,"y":0.1,"width":0.145,"height":0.04}},
+{"text":"let names = vec! [''ana', \"ben', \"chen'];","bounds":{"x":0.1,"y":0.14667,"width":0.50667,"height":0.05667}},
+{"text":"for name in &names {","bounds":{"x":0.09833,"y":0.2,"width":0.26333,"height":0.04}},
+{"text":"println!('hello, {}i, name); // greet","bounds":{"x":0.15,"y":0.24167,"width":0.51667,"height":0.06667}},
+{"text":"let total = names.len();","bounds":{"x":0.09981,"y":0.3431,"width":0.31046,"height":0.0538}},
+{"text":"// count","bounds":{"x":0.485,"y":0.35333,"width":0.175,"height":0.03667}},
+{"text":"if total > 2 {","bounds":{"x":0.09833,"y":0.4,"width":0.18333,"height":0.04}},
+{"text":"println! ('many');","bounds":{"x":0.15,"y":0.44333,"width":0.22167,"height":0.05333}}
+]

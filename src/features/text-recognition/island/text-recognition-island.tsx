@@ -111,9 +111,21 @@ function Found({
             onAction("copy");
           }}
         >
-          {state.selected
-            ? t("text-recognition-island-copy")
-            : t("text-recognition-island-copy-all")}
+          {/* Selecting turns Copy all into Copy and back. The button keeps
+           * the room of the wider label, laid unseen under the one shown,
+           * so the island does not resize at each selection. */}
+          <span className="grid justify-items-center">
+            <span className="col-start-1 row-start-1">
+              {state.selected
+                ? t("text-recognition-island-copy")
+                : t("text-recognition-island-copy-all")}
+            </span>
+            <span aria-hidden className="invisible col-start-1 row-start-1">
+              {state.selected
+                ? t("text-recognition-island-copy-all")
+                : t("text-recognition-island-copy")}
+            </span>
+          </span>
         </Button>
         <Button
           onPress={() => {

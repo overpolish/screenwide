@@ -9,7 +9,6 @@ use screenwide_osc::{
   protocol::{CursorIcon, InputModifiers, InputPhase, OscResult},
 };
 use tauri::Manager;
-use tauri_plugin_clipboard_manager::ClipboardExt;
 
 use super::interaction::TextAction;
 
@@ -105,10 +104,10 @@ pub(crate) fn dispatch_text_input(
     super::adapter::render_window(window, super::visual::RenderPacket::ready(&snapshot));
     super::island::sync_ready(app);
   }
-  if let Some(text) = update.copy_text {
+  if let Some(copied) = update.copied {
     let app = app.clone();
     tauri::async_runtime::spawn(async move {
-      let _ = app.clipboard().write_text(text);
+      let _ = super::interaction::write(&app, copied);
       super::dismiss(&app);
     });
   }

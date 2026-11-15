@@ -77,16 +77,17 @@ fn run(width: u32, height: u32, scale: f64) {
     "Text alone (Vision, with conversion and boxes)",
     || macos::platform::recognize(&image.rgba, image.width, image.height).unwrap(),
   );
-  let (both_lines, both_codes) = timed(&mut rows, "Text and QR codes, as the app reads", || {
+  let both = timed(&mut rows, "Text and QR codes, as the app reads", || {
     tauri::async_runtime::block_on(recognition_worker::recognize(image)).unwrap()
   });
   assert_eq!(
-    texts(&both_lines),
+    texts(&both.lines),
     texts(&lines),
     "the text read with the QR codes"
   );
   assert_eq!(
-    both_codes
+    both
+      .qr_codes
       .iter()
       .map(|code| (code.content.as_str(), code.decode_error.is_some()))
       .collect::<Vec<_>>(),
@@ -103,13 +104,7 @@ fn run(width: u32, height: u32, scale: f64) {
     &mut rows,
     "Install, the marks' packet, the island's state",
     || {
-      let text = texts(&both_lines).join("\n");
-      let result = TextRecognitionResult {
-        lines: both_lines,
-        qr_codes: both_codes,
-        text,
-      };
-      assert!(state.install_result(generation, result));
+      assert!(state.install_result(generation, both));
       let snapshot = state.visual_snapshot(generation).unwrap();
       assert!(state.island_state().is_some());
       visual::RenderPacket::ready(&snapshot).rects.len()

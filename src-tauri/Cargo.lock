@@ -5637,6 +5637,7 @@ dependencies = [
  "screenwide-sound-track",
  "screenwide-speech",
  "screenwide-system-keys",
+ "screenwide-tables",
  "screenwide-text",
  "screenwide-timeline",
  "screenwide-timeline-edit",
@@ -6129,6 +6130,15 @@ dependencies = [
  "core-foundation 0.10.1",
  "core-graphics 0.25.0",
  "windows 0.62.2",
+]
+
+[[package]]
+name = "screenwide-tables"
+version = "1.0.3"
+dependencies = [
+ "image",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]

@@ -11,11 +11,10 @@ const DECODE_ERROR: &str = "QR-like code could not be decoded.";
 
 /// Reads `image`'s text and QR codes at once, as neither needs the other: the
 /// QR codes on a thread of their own, the text where it always was read, so
-/// the wait is the slower of the two rather than both. Both threads say
-/// someone waits on them, as threads Rust spawns start at the default class.
-pub(super) async fn recognize(
-  image: Arc<CapturedImage>,
-) -> Result<(Vec<RecognizedLine>, Vec<RecognizedQrCode>), String> {
+/// the wait is the slower of the two rather than both; then the tables among
+/// the text. Both threads say someone waits on them, as threads Rust spawns
+/// start at the default class.
+pub(super) async fn recognize(image: Arc<CapturedImage>) -> Result<TextRecognitionResult, String> {
   tauri::async_runtime::spawn_blocking(move || {
     let _urgency = crate::user_work::ThreadUrgency::waited();
     let CapturedImage {
@@ -23,7 +22,7 @@ pub(super) async fn recognize(
       width,
       height,
     } = *image;
-    std::thread::scope(|scope| {
+    let (lines, qr_codes) = std::thread::scope(|scope| {
       let qr_codes = scope.spawn(|| {
         let _urgency = crate::user_work::ThreadUrgency::waited();
         read_qr_codes(rgba, width, height)
@@ -33,6 +32,18 @@ pub(super) async fn recognize(
         .join()
         .map_err(|_| "Reading the QR codes failed".to_owned())?;
       lines.map(|lines| (lines, qr_codes))
+    })?;
+    let tables = tables::find(&lines, &image);
+    let text = lines
+      .iter()
+      .map(|line| line.text.as_str())
+      .collect::<Vec<_>>()
+      .join("\n");
+    Ok(TextRecognitionResult {
+      lines,
+      qr_codes,
+      text,
+      tables,
     })
   })
   .await

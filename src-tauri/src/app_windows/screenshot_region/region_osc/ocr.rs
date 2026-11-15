@@ -25,9 +25,10 @@ pub(crate) struct LocalRect {
   pub kind: u8,
 }
 
-/// `1 Line→17, 2 Qr→18, 3 QrError→19, 4 Selection→20`.
+/// `1 Line→17, 2 Qr→18, 3 QrError→19, 4 Selection→20, 5 Table→21`.
 pub(crate) fn rect_kind(kind: u8) -> u32 {
   match kind {
+    5 => 21,
     4 => 20,
     3 => 19,
     2 => 18,

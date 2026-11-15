@@ -25,6 +25,7 @@ fn highlight_kinds_follow_the_shared_visual_kinds() {
   assert_eq!(rect_kind(2), 18);
   assert_eq!(rect_kind(3), 19);
   assert_eq!(rect_kind(4), 20);
+  assert_eq!(rect_kind(5), 21);
   // An unknown kind falls back to a text line, as the macOS ladder did.
   assert_eq!(rect_kind(9), 17);
 }
