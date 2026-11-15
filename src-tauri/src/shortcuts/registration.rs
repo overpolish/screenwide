@@ -22,6 +22,9 @@ pub(super) fn register_binding(
     app
       .global_shortcut()
       .on_shortcut(parsed, move |app, _, event| match event.state() {
+        // Windows repeats a held chord's press; dictation alone is held.
+        ShortcutState::Pressed
+          if action == ShortcutAction::Dictate && !crate::dictation::key_down() => {}
         ShortcutState::Pressed => {
           diagnostics::record(
             "native_shortcut_pressed",

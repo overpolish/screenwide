@@ -43,6 +43,9 @@ struct Dictation {
   /// The microphone chosen on the recording island, by id; the system's
   /// default while none is.
   microphone: Option<String>,
+  /// The Dictate shortcut is down. Windows sends its press again while the
+  /// keys are held, which would otherwise read as a second tap.
+  held: bool,
 }
 
 /// The recording island's microphone changed: dictation listens to the same
@@ -73,6 +76,12 @@ pub(crate) fn is_listening() -> bool {
   state()
     .as_ref()
     .is_some_and(|dictation| dictation.listening.is_some())
+}
+
+/// The Dictate shortcut's keys went down. False for a press Windows repeats
+/// while they are held, which is not a second tap.
+pub(crate) fn key_down() -> bool {
+  !with(|dictation| std::mem::replace(&mut dictation.held, true))
 }
 
 /// The Dictate shortcut was pressed: listening starts, or a tapped
@@ -140,6 +149,7 @@ pub(crate) fn pressed(app: &AppHandle) {
 /// The Dictate shortcut was let go: a hold stops listening.
 pub(crate) fn released(app: &AppHandle) {
   let held = with(|dictation| {
+    dictation.held = false;
     dictation
       .listening
       .as_ref()
