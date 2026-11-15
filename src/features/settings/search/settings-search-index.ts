@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { platformArg, t } from "../../../i18n/i18n";
+import { dictationCommands } from "../sections/dictation-rows";
 import {
   antiFlickerToggle,
   autoZoomToggle,
@@ -168,6 +169,22 @@ export function settingsSearchEntries({
   at("tools", t("settings-section-ocr"))(
     [row(t("settings-ocr-enabled"))],
     t("settings-search-keywords-ocr"),
+  );
+  const dictationKeywords = t("settings-search-keywords-dictation");
+  at("tools")(
+    [
+      row(t("settings-words"), t("settings-words-description")),
+      row(
+        t("settings-dictation-commands"),
+        t("settings-dictation-commands-description"),
+      ),
+    ],
+    dictationKeywords,
+    "group",
+  );
+  at("tools", t("settings-dictation-commands"))(
+    dictationCommands(),
+    dictationKeywords,
   );
 
   // Moments

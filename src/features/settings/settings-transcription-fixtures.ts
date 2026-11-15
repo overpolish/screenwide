@@ -115,6 +115,7 @@ export function transcriptionPreviewApi(
       CAMERA_OBJECTS_MODEL,
     ],
     systemLanguage: "en",
+    words: ["Screenwide", "Overpolish"],
   };
   const listeners = new Set<(next: TranscriptionState) => void>();
   const downloads = new Map<string, number>();
@@ -171,6 +172,10 @@ export function transcriptionPreviewApi(
     },
     setTranscriptionLanguage: (language: string) => {
       publish({ ...state, language });
+      return Promise.resolve(null);
+    },
+    setTranscriptionWords: (words: string[]) => {
+      publish({ ...state, words });
       return Promise.resolve(null);
     },
   };

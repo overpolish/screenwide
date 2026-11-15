@@ -107,6 +107,11 @@ windows = { version = "0.62.2", optional = true, features = [
 # can (`../vendor/README.md`).
 [patch.crates-io]
 tract-linalg = { path = "../vendor/tract-linalg-0.21.4" }
+# Screenwide's fork of transcribe.cpp (overpolish/transcribe.cpp, branch
+# `screenwide`): Hex's Parakeet vocabulary rescoring merged onto upstream
+# 0.4.2, rescoring a stream as it goes, for dictation's word list.
+transcribe-cpp = { git = "https://github.com/overpolish/transcribe.cpp", rev = "e05ac406557283ab7017b88f078b25af863cd5b4" }
+transcribe-cpp-sys = { git = "https://github.com/overpolish/transcribe.cpp", rev = "e05ac406557283ab7017b88f078b25af863cd5b4" }
 
 [profile.release]
 lto = "thin"

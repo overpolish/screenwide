@@ -133,6 +133,7 @@ export {
   listenToTranscription,
   removeTranscriptionModel,
   setTranscriptionLanguage,
+  setTranscriptionWords,
 } from "../transcription/api";
 
 export const browseDefaultLocation = (

@@ -6,7 +6,7 @@ use std::path::PathBuf;
 use serde::Serialize;
 use tauri::{AppHandle, Emitter, Manager};
 
-use super::{download, language};
+use super::{download, language, words};
 use screenwide_speech::catalogue::{self, Model, ModelFile, Purpose, MODELS};
 
 const CHANGED_EVENT: &str = "transcription://changed";
@@ -38,6 +38,8 @@ pub(crate) struct TranscriptionState {
   language: String,
   models: Vec<ModelState>,
   system_language: String,
+  /// The word list, in order.
+  words: Vec<String>,
 }
 
 /// Where models are kept: the computer's own data folder rather than one
@@ -107,6 +109,7 @@ pub(crate) fn state(app: &AppHandle) -> TranscriptionState {
     language: language::current(),
     models,
     system_language: language::system(),
+    words: words::current(),
   }
 }
 

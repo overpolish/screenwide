@@ -18,6 +18,14 @@ dictation-island-typing = Typing
 dictation-island-close = Close
 dictation-island-open-settings = Open Settings
 
+## Words added to or removed from the word list by saying "add word" or "remove word". $word is the word, as spelled.
+
+dictation-island-word-added = Added “{ $word }” to your words.
+dictation-island-word-already-listed = “{ $word }” is already in your words.
+dictation-island-word-removed = Removed “{ $word }” from your words.
+dictation-island-word-not-listed = “{ $word }” is not in your words.
+dictation-island-word-failed = Could not change your words for “{ $word }”.
+
 ## Why dictation could not start or type
 
 dictation-island-no-model = Download the Dictation model in Settings to dictate.

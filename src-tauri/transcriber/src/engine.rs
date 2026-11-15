@@ -22,12 +22,14 @@ pub struct Engine {
 }
 
 impl Engine {
+  /// Transcribes `audio`, in `language` or detected, leaning towards the
+  /// spellings of `words`.
   pub fn transcribe(
     &mut self,
     model: &Path,
     model_id: &str,
     audio: &Path,
-    language: Option<&str>,
+    (language, words): (Option<&str>, &[String]),
     stretches: &[[u64; 2]],
     progress: &mut dyn FnMut(f32),
   ) -> Result<Transcript, String> {
@@ -38,6 +40,7 @@ impl Engine {
     let language = language
       .filter(|code| whisper_rs::get_lang_id(code).is_some())
       .unwrap_or("auto");
+    let prompt = prompt(words);
     // No stretches means the whole audio, as voice notes have it.
     let stretches: Vec<(usize, usize)> = if stretches.is_empty() {
       vec![(0, samples.len())]
@@ -62,6 +65,11 @@ impl Engine {
       // Each stretch is its own recording: nothing said in one should steer
       // the next, nor a voice note the one before it.
       params.set_no_context(true);
+      // The word list, as if said before the audio: Whisper then writes those
+      // words as spelt there. Given to each stretch, which starts afresh.
+      if let Some(prompt) = &prompt {
+        params.set_initial_prompt(prompt);
+      }
       // Keeps "[Music]" and the like, said by nobody, out of the text.
       params.set_suppress_nst(true);
       params.set_print_progress(false);
@@ -177,6 +185,24 @@ impl Engine {
     }
     Ok(&self.loaded.as_ref().expect("loaded above").1)
   }
+}
+
+/// The word list as Whisper's prompt: words in turn, as many as fit well
+/// inside the half of its context a prompt may take, which it would
+/// otherwise cut from the start, losing the words listed first.
+fn prompt(words: &[String]) -> Option<String> {
+  const LONGEST: usize = 400;
+  let mut prompt = String::new();
+  for word in words {
+    if prompt.len() + word.len() + 2 > LONGEST {
+      break;
+    }
+    if !prompt.is_empty() {
+      prompt.push_str(", ");
+    }
+    prompt.push_str(word);
+  }
+  (!prompt.is_empty()).then(|| format!("{prompt}."))
 }
 
 fn threads() -> i32 {

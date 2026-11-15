@@ -21,6 +21,9 @@ export const removeTranscriptionModel = (model: string) =>
 export const setTranscriptionLanguage = (language: string) =>
   invoke<null>("set_transcription_language", { language });
 
+export const setTranscriptionWords = (words: string[]) =>
+  invoke<null>("set_transcription_words", { words });
+
 /** Every change to the models or the language, download progress included,
  * so each window shows one state. */
 const TRANSCRIPTION_CHANGED_EVENT = "transcription://changed";

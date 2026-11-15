@@ -6,16 +6,19 @@
 
 use std::path::PathBuf;
 
-pub use screenwide_transcriber::{DictatedText, SAMPLE_RATE};
+pub use screenwide_transcriber::{DictatedText, DictatedWord, SAMPLE_RATE};
 use screenwide_transcriber::{Job, Reply};
 
 use super::Transcriber;
 
 impl Transcriber {
-  /// Starts a dictation with the streaming model at `model`. Until
+  /// Starts a dictation with the streaming model at `model`, writing `words`
+  /// where the audio fits them better than what was heard. Until
   /// [`Self::finish_dictation`] the helper takes nothing else.
-  pub fn begin_dictation(&mut self, model: PathBuf) -> Result<(), String> {
-    self.dictated(Job::BeginDictation { model }).map(|_| ())
+  pub fn begin_dictation(&mut self, model: PathBuf, words: Vec<String>) -> Result<(), String> {
+    self
+      .dictated(Job::BeginDictation { model, words })
+      .map(|_| ())
   }
 
   /// The text heard once `samples`, 16-bit at the protocol's rate, are heard

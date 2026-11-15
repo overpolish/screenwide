@@ -30,9 +30,11 @@ fn main() {
       break;
     };
     let listening = match job {
-      Job::BeginDictation { model } => dictation.run(id, &model, &mut lines, &mut |reply| {
-        send(&mut stdout, reply)
-      }),
+      Job::BeginDictation { model, words } => {
+        dictation.run(id, (&model, words), &mut lines, &mut |reply| {
+          send(&mut stdout, reply)
+        })
+      }
       _ => send(
         &mut stdout,
         &Reply::Failed {

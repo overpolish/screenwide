@@ -58,6 +58,9 @@ pub enum Job {
     audio: PathBuf,
     /// A language code such as `en`, or nothing to detect it.
     language: Option<String>,
+    /// Names and terms to lean towards the spellings of.
+    #[serde(default)]
+    words: Vec<String>,
     /// The stretches of `audio` to transcribe, as `[start, end)` in samples
     /// at [`SAMPLE_RATE`], sorted and apart. Empty means all of it.
     #[serde(default)]
@@ -201,7 +204,13 @@ pub enum Job {
   /// [`Reply::Dictated`] once it listens. Until [`Job::FinishDictation`] the
   /// dictation takes the helper over: [`Job::FeedDictation`] and
   /// [`Job::FinishDictation`] are the only jobs it answers.
-  BeginDictation { model: PathBuf },
+  BeginDictation {
+    model: PathBuf,
+    /// Names and terms to write where the audio fits them better than
+    /// what was heard, in order of priority.
+    #[serde(default)]
+    words: Vec<String>,
+  },
   /// The next samples of the dictation, at [`SAMPLE_RATE`] as 16-bit PCM,
   /// which keeps each line short. Answered with [`Reply::Dictated`] with the
   /// text heard so far.
@@ -368,14 +377,38 @@ pub enum Reply {
   },
 }
 
-/// A dictation's text, split where it may still change: `settled` only ever
-/// grows, and `unsettled` follows it, rewritten as more is heard. Both are
-/// empty when the dictation has only just begun.
+/// A dictation's text, split where it may still change: `settled` is what
+/// has been heard, and `unsettled` follows it, rewritten as more is heard.
+/// A listed word heard in the last couple of seconds may still rewrite the
+/// end of `settled`. Both are empty when the dictation has only just begun.
+/// `words` are the same text word by word, with when each was said, for
+/// telling a command said on its own from the same words in a sentence.
 #[derive(Clone, Debug, Default, Deserialize, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct DictatedText {
   pub settled: String,
   pub unsettled: String,
+  #[serde(default)]
+  pub words: Vec<DictatedWord>,
+  /// How much of the dictation has been heard, in milliseconds, so a word
+  /// can be told to have silence after it before another is said.
+  #[serde(default)]
+  pub heard_ms: u64,
+  /// Nothing more will be heard: the last word has silence after it.
+  #[serde(default)]
+  pub finished: bool,
+}
+
+/// A word heard in a dictation, with its punctuation, and when it was said
+/// in milliseconds from the dictation's start.
+#[derive(Clone, Debug, Default, Deserialize, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DictatedWord {
+  pub text: String,
+  pub start_ms: u64,
+  pub end_ms: u64,
+  /// Within `settled`, so it will not change.
+  pub settled: bool,
 }
 
 /// The chance that each window of the audio holds speech, 0 to 1, in order.

@@ -22,6 +22,7 @@ import { LevelFill } from "../../recording-controls/island/island-glyphs";
 import type { DictationIslandAction } from "../../../bindings/DictationIslandAction";
 import type { DictationIslandState } from "../../../bindings/DictationIslandState";
 import type { DictationProblem } from "../../../bindings/DictationProblem";
+import type { DictationWordChange } from "../../../bindings/DictationWordChange";
 
 // Dictation on the island, at the top of the screen. Listening, its row
 // names it beside the microphone's glyph, which fills with its level, with
@@ -102,10 +103,43 @@ function HeardWords({ words }: { words: Words }) {
         WORDS_WIDTH,
       )}
     >
-      <Text as="p" variant="body">
+      <Text as="p" className="whitespace-pre-wrap" variant="body">
         {words.settled}
         <span className="text-fg-secondary">{words.unsettled}</span>
       </Text>
+    </div>
+  );
+}
+
+const taughtMessage = ({ outcome, word }: DictationWordChange) => {
+  switch (outcome) {
+    case "added":
+      return t("dictation-island-word-added", { word });
+    case "alreadyListed":
+      return t("dictation-island-word-already-listed", { word });
+    case "removed":
+      return t("dictation-island-word-removed", { word });
+    case "notListed":
+      return t("dictation-island-word-not-listed", { word });
+    case "failed":
+      return t("dictation-island-word-failed", { word });
+  }
+};
+
+/** What came of each word added or removed by voice. */
+function TaughtWords({ taught }: { taught: DictationWordChange[] }) {
+  return (
+    <div aria-live="polite" className={cn("flex flex-col", WORDS_WIDTH)}>
+      {taught.map((change, index) => (
+        <Text
+          as="p"
+          className="px-inset-sm text-fg-secondary"
+          key={`${String(index)}-${change.word}`}
+          variant="caption"
+        >
+          {taughtMessage(change)}
+        </Text>
+      ))}
     </div>
   );
 }
@@ -176,7 +210,7 @@ export function DictationIsland({
           {t("dictation-island-done")}
         </Button>
       </span>
-    ) : state.phase === "problem" ? (
+    ) : state.phase === "problem" || state.phase === "taught" ? (
       <span className="flex" key="problem">
         <Close
           label={t("dictation-island-close")}
@@ -187,6 +221,8 @@ export function DictationIsland({
       </span>
     ) : null;
 
+  const taught =
+    state.phase === "listening" || state.phase === "taught" ? state.taught : [];
   const section =
     state.phase === "problem" ? (
       <div className="w-80" key={`problem-${state.problem}`}>
@@ -208,9 +244,14 @@ export function DictationIsland({
           {problemMessage(state.problem)}
         </Alert>
       </div>
+    ) : state.phase === "taught" ? (
+      <div key="taught">
+        <TaughtWords taught={taught} />
+      </div>
     ) : state.phase === "listening" || words.settled || words.unsettled ? (
-      <div key="words">
+      <div className="flex flex-col gap-inline" key="words">
         <HeardWords words={words} />
+        {taught.length > 0 ? <TaughtWords taught={taught} /> : null}
       </div>
     ) : null;
 

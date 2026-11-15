@@ -189,7 +189,7 @@ fn transcribe(
       model,
       model_id,
       &samples,
-      language.clone(),
+      (language.clone(), crate::transcription::words::current()),
       stretches,
       &mut |fraction| progress(LISTEN_SHARE + fraction * (1.0 - LISTEN_SHARE)),
     )?;

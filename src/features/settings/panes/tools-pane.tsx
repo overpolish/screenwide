@@ -6,12 +6,18 @@ import { type ReactNode, type Ref } from "react";
 import { t } from "../../../i18n/i18n";
 import { SettingsPreview } from "../preview/settings-preview";
 import { AnnotateSettingsPanel } from "../sections/annotate-settings";
+import { DictationSettingsPanel } from "../sections/dictation-settings";
 import {
   GlideSettingsPanel,
   type GlideSubject,
 } from "../sections/glide-settings";
 import { OcrSettingsPanel } from "../sections/ocr-settings";
 import { RulerSettingsPanel } from "../sections/ruler-settings";
+import { DictationPicture } from "../stage/dictation-picture";
+import {
+  type DictationSubject,
+  isDictationSubject,
+} from "../stage/dictation-script";
 import { GlidePicture } from "../stage/glide-picture";
 import { PreviewArea, PreviewStage } from "../stage/preview-stage";
 import { usePreviewSubject } from "../stage/use-preview-subject";
@@ -23,15 +29,17 @@ import type { GlideSettings } from "../../../bindings/GlideSettings";
 import type { OcrSettings } from "../../../bindings/OcrSettings";
 import type { RulerSettings } from "../../../bindings/RulerSettings";
 import type { SettingsPreviewScene } from "../preview/scenes/preview-scenes";
+import type { TranscriptionControls } from "../sections/use-transcription";
 
 // Tools: each tool in a box of its own, what it does then how it behaves,
 // and above them the tool at work, drawn by the tool itself where it can
 // be: Glide's own island moving a window, the Ruler measuring, Annotate
-// drawing in its colour, OCR reading; double-tapping to centre has its own,
-// a window centred. The picture follows the row under the pointer; a tool
-// switched off shows its picture greyed and still.
+// drawing in its colour, OCR reading, dictation's island hearing someone;
+// double-tapping to centre has its own, a window centred, and each spoken
+// command its own, carried out. The picture follows the row under the
+// pointer; a tool switched off shows its picture greyed and still.
 
-type Subject = GlideSubject | "annotate" | "ocr" | "ruler";
+type Subject = GlideSubject | DictationSubject | "annotate" | "ocr" | "ruler";
 
 export type ToolsPaneProps = {
   annotate: AnnotateSettings | null;
@@ -46,6 +54,7 @@ export type ToolsPaneProps = {
   savingGlide: boolean;
   savingOcr: boolean;
   savingRuler: boolean;
+  transcription: TranscriptionControls;
   defaults?: GlideSettings;
   paneRef?: Ref<HTMLElement>;
 };
@@ -70,7 +79,7 @@ export function ToolsPane(props: ToolsPaneProps) {
   const { annotate, glide, ocr, paneRef, ruler } = props;
   const { follow, subject } = usePreviewSubject<Subject>("glide");
 
-  const pictures: Record<Subject, ReactNode> = {
+  const pictures: Record<Exclude<Subject, DictationSubject>, ReactNode> = {
     annotate: annotate && (
       <ToolPicture
         isOn={annotate.enabled}
@@ -106,7 +115,11 @@ export function ToolsPane(props: ToolsPaneProps) {
       <ToolPicture isOn={ruler.enabled} scene={{ kind: "ruler" }} />
     ),
   };
-  const picture = pictures[subject];
+  const picture = isDictationSubject(subject) ? (
+    <DictationPicture subject={subject} />
+  ) : (
+    pictures[subject]
+  );
 
   return (
     <SettingsPane
@@ -154,6 +167,7 @@ export function ToolsPane(props: ToolsPaneProps) {
           />
         </PreviewArea>
       ) : null}
+      <DictationSettingsPanel controls={props.transcription} follow={follow} />
     </SettingsPane>
   );
 }

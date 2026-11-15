@@ -47,13 +47,14 @@ fn main() {
             model_id,
             audio,
             language,
+            words,
             stretches,
           } => engine
             .transcribe(
               model,
               model_id,
               audio,
-              language.as_deref(),
+              (language.as_deref(), words),
               stretches,
               &mut progress,
             )

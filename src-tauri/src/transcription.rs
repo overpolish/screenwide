@@ -21,3 +21,4 @@ pub(crate) mod models;
 pub(crate) mod notes;
 #[cfg(test)]
 mod tests;
+pub(crate) mod words;

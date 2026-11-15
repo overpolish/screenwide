@@ -18,6 +18,7 @@ pub fn initialize(app: &tauri::AppHandle) {
   crate::moments::settings::initialize(app);
   crate::text_recognition::settings::initialize(app);
   crate::transcription::language::initialize(app);
+  crate::transcription::words::initialize(app);
 }
 
 use tauri::{AppHandle, Emitter};

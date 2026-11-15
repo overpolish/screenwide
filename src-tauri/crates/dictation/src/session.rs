@@ -39,10 +39,11 @@ pub enum Event {
   Failed,
 }
 
-/// How a dictation ended: all its text, or why it failed, in English for the
-/// log; and the helper, for the next dictation, while it is still sound.
+/// How a dictation ended: everything heard, which is empty when it was
+/// cancelled, or why it failed, in English for the log; and the helper, for
+/// the next dictation, while it is still sound.
 pub struct Ended {
-  pub text: Result<String, String>,
+  pub heard: Result<DictatedText, String>,
   pub helper: Option<Transcriber>,
 }
 
@@ -61,14 +62,23 @@ pub struct Session {
   worker: JoinHandle<Ended>,
 }
 
+/// What a dictation listens with.
+pub struct Setup {
+  /// The streaming model's file.
+  pub model: PathBuf,
+  /// The microphone's id, or none for the system's default, which also
+  /// stands in for one that is gone.
+  pub microphone: Option<String>,
+  /// Names and terms to write where the audio fits them better than what
+  /// was heard.
+  pub words: Vec<String>,
+}
+
 impl Session {
-  /// Starts listening to the microphone with the id `microphone`, or the
-  /// system's default when there is none or it is gone, with the streaming
-  /// model at `model`, on `helper` if one is kept from an earlier dictation,
-  /// telling `on_event` as it goes.
+  /// Starts listening as `setup` says, on `helper` if one is kept from an
+  /// earlier dictation, telling `on_event` as it goes.
   pub fn start(
-    model: PathBuf,
-    microphone: Option<String>,
+    setup: Setup,
     helper: Option<Transcriber>,
     on_event: impl Fn(Event) + Send + 'static,
   ) -> Self {
@@ -76,8 +86,8 @@ impl Session {
     let worker = std::thread::Builder::new()
       .name("dictation".to_owned())
       .spawn(move || {
-        let ended = listen(&model, microphone.as_deref(), helper, &stops, &on_event);
-        if ended.text.is_err() {
+        let ended = listen(setup, helper, &stops, &on_event);
+        if ended.heard.is_err() {
           on_event(Event::Failed);
         }
         ended
@@ -85,7 +95,7 @@ impl Session {
       .unwrap_or_else(|error| {
         let message = format!("Could not start dictating: {error}");
         std::thread::spawn(move || Ended {
-          text: Err(message),
+          heard: Err(message),
           helper: None,
         })
       });
@@ -105,27 +115,31 @@ impl Session {
   fn end(self, stop: Stop) -> Ended {
     let _ = self.stop.send(stop);
     self.worker.join().unwrap_or_else(|_| Ended {
-      text: Err("Dictation stopped unexpectedly".to_owned()),
+      heard: Err("Dictation stopped unexpectedly".to_owned()),
       helper: None,
     })
   }
 }
 
 fn listen(
-  model: &std::path::Path,
-  microphone: Option<&str>,
+  Setup {
+    model,
+    microphone,
+    words,
+  }: Setup,
   helper: Option<Transcriber>,
   stops: &Receiver<Stop>,
   on_event: &dyn Fn(Event),
 ) -> Ended {
-  let failed = |text: String, helper| Ended {
-    text: Err(text),
+  let failed = |error: String, helper| Ended {
+    heard: Err(error),
     helper,
   };
   let (sender, heard) = mpsc::channel();
   // A microphone chosen and since unplugged gives way to the default, as
   // one not chosen does.
   let microphone = match microphone
+    .as_deref()
     .and_then(|id| Source::resolve(id).ok())
     .map_or_else(|| Source::resolve_or_default(None), Ok)
   {
@@ -149,7 +163,7 @@ fn listen(
     Ok(helper) => helper,
     Err(error) => return failed(error, None),
   };
-  if let Err(error) = helper.begin_dictation(model.to_owned()) {
+  if let Err(error) = helper.begin_dictation(model, words) {
     return failed(error, None);
   }
 
@@ -197,15 +211,11 @@ fn listen(
   }
   match helper.finish_dictation() {
     Ok(_) if matches!(stop, Stop::Cancel) => Ended {
-      text: Ok(String::new()),
+      heard: Ok(DictatedText::default()),
       helper: Some(helper),
     },
-    Ok(text) => Ended {
-      text: Ok(
-        format!("{}{}", text.settled, text.unsettled)
-          .trim()
-          .to_owned(),
-      ),
+    Ok(heard) => Ended {
+      heard: Ok(heard),
       helper: Some(helper),
     },
     Err(error) => failed(error, None),

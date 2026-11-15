@@ -36,4 +36,7 @@ export type TranscriptionState = {
   models: TranscriptionModel[];
   /** The computer's own language, as a code, which `system` stands for. */
   systemLanguage: string;
+  /** The word list: names and terms dictation and transcripts write as
+   * spelled here, in order. */
+  words: string[];
 };

@@ -30,17 +30,27 @@ vi.stubGlobal("document", {
 
 describe("settings search", () => {
   it("finds every row the panes show", async () => {
-    const [general, glide, ruler, ocr, annotate, shortcuts, defaults, moments] =
-      await Promise.all([
-        api.getGeneralSettings(),
-        api.getGlideSettings(),
-        api.getRulerSettings(),
-        api.getOcrSettings(),
-        api.getAnnotateSettings(),
-        api.getShortcutSettings(),
-        api.getShortcutDefaults(),
-        api.getMomentSettings(),
-      ]);
+    const [
+      general,
+      glide,
+      ruler,
+      ocr,
+      annotate,
+      shortcuts,
+      defaults,
+      moments,
+      transcription,
+    ] = await Promise.all([
+      api.getGeneralSettings(),
+      api.getGlideSettings(),
+      api.getRulerSettings(),
+      api.getOcrSettings(),
+      api.getAnnotateSettings(),
+      api.getShortcutSettings(),
+      api.getShortcutDefaults(),
+      api.getMomentSettings(),
+      api.getTranscriptionState(),
+    ]);
     const html = renderToStaticMarkup(
       <SettingsApiContext value={api}>
         <GeneralPane
@@ -68,6 +78,14 @@ describe("settings search", () => {
           savingGlide={false}
           savingOcr={false}
           savingRuler={false}
+          transcription={{
+            cancel: () => undefined,
+            download: () => undefined,
+            remove: () => undefined,
+            setLanguage: () => undefined,
+            setWords: () => undefined,
+            state: transcription,
+          }}
         />
         <ShortcutsPane
           annotate={annotate}

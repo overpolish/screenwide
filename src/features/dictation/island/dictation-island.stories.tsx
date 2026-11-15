@@ -24,7 +24,7 @@ const meta = {
     isShown: true,
     level: 0.55,
     onAction: fn(),
-    state: { phase: "listening", settled: "", unsettled: "" },
+    state: { phase: "listening", settled: "", taught: [], unsettled: "" },
   },
   component: DictationIsland,
   decorators: [
@@ -65,15 +65,39 @@ export const Hearing: Story = {
   args: {
     state: {
       phase: "listening",
-      settled:
-        "Hi Sarah, can you send me the quarterly numbers by Thursday? Actually, make that ",
-      unsettled: "Friday",
+      settled: "Hi Sarah, can you send me the quarterly numbers?\n\n",
+      taught: [],
+      unsettled: "Sent with Screenwide",
+    },
+  },
+};
+
+export const AddingAWord: Story = {
+  args: {
+    state: {
+      phase: "listening",
+      settled: "I recorded the demo with Screenwide.",
+      taught: [{ outcome: "added", word: "Screenwide" }],
+      unsettled: "",
     },
   },
 };
 
 export const Typing: Story = {
   args: { level: 0, state: { phase: "finishing" } },
+};
+
+export const Taught: Story = {
+  args: {
+    level: 0,
+    state: {
+      phase: "taught",
+      taught: [
+        { outcome: "added", word: "Screenwide" },
+        { outcome: "notListed", word: "Overpolish" },
+      ],
+    },
+  },
 };
 
 export const NoModel: Story = {

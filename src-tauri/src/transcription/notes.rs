@@ -220,7 +220,10 @@ fn transcribe(
     model_file,
     model.id,
     &samples,
-    language::resolved(&language::current()),
+    (
+      language::resolved(&language::current()),
+      super::words::current(),
+    ),
     Vec::new(),
     &mut |_| {},
   )?;

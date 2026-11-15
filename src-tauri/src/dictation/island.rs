@@ -3,19 +3,22 @@
 
 //! The island while dictating. It comes out at the top of the screen with
 //! the words as they are heard, says so while the last of them are heard and
-//! pasted, and says why when dictation cannot start or paste. The island
-//! never takes the keyboard, so the app being dictated into keeps it.
+//! pasted, confirms words added to or removed from the word list, and says
+//! why when dictation cannot start or paste. The island never takes the
+//! keyboard, so the app being dictated into keeps it.
 //!
 //! As with Text Recognition, the island shows what it is sent: each change
 //! of state (`dictation://island`), and the microphone's level on its own
 //! (`dictation://level`), as that changes many times a second.
 
 use std::sync::{Mutex, PoisonError};
+use std::time::Duration;
 
 use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Emitter};
 use ts_rs::TS;
 
+use super::taught::DictationWordChange;
 use crate::app_windows::island_placement::IslandPlacement;
 use crate::app_windows::{self, WindowLabel};
 
@@ -27,11 +30,18 @@ const LEVEL_EVENT: &str = "dictation://level";
 #[serde(tag = "phase", rename_all = "camelCase")]
 #[ts(export)]
 pub enum DictationIslandState {
-  /// Listening: the words heard so far, `settled` no longer changing and
-  /// `unsettled` still being heard.
-  Listening { settled: String, unsettled: String },
+  /// Listening: the text so far, its commands carried out, `settled` no
+  /// longer changing and `unsettled` still being heard; and the words this
+  /// dictation has added to or removed from the word list.
+  Listening {
+    settled: String,
+    unsettled: String,
+    taught: Vec<DictationWordChange>,
+  },
   /// Stopped: the last words are being heard and pasted.
   Finishing,
+  /// Pasted, with words added or removed: what came of each, for a moment.
+  Taught { taught: Vec<DictationWordChange> },
   /// Dictation could not start, or could not paste.
   Problem { problem: DictationProblem },
 }
@@ -133,10 +143,42 @@ pub(super) fn withdraw(app: &AppHandle) {
   }
 }
 
-/// Whether the island shows `problem` still.
-pub(super) fn shows(problem: DictationProblem) -> bool {
-  *SHOWN.lock().unwrap_or_else(PoisonError::into_inner)
-    == Some(DictationIslandState::Problem { problem })
+/// Whether the island shows `state` still.
+fn shows(state: &DictationIslandState) -> bool {
+  SHOWN
+    .lock()
+    .unwrap_or_else(PoisonError::into_inner)
+    .as_ref()
+    == Some(state)
+}
+
+/// How long a problem stays on the island unless it is put away first.
+const PROBLEM_SHOWN: Duration = Duration::from_secs(5);
+/// How long the words added or removed stay on the island after a paste.
+const TAUGHT_SHOWN: Duration = Duration::from_secs(3);
+
+pub(super) fn show_problem(app: &AppHandle, problem: DictationProblem) {
+  show_for(
+    app,
+    DictationIslandState::Problem { problem },
+    PROBLEM_SHOWN,
+  );
+}
+
+pub(super) fn show_taught(app: &AppHandle, taught: Vec<DictationWordChange>) {
+  show_for(app, DictationIslandState::Taught { taught }, TAUGHT_SHOWN);
+}
+
+/// Shows `state` for `shown`, unless something else is shown first.
+fn show_for(app: &AppHandle, state: DictationIslandState, shown: Duration) {
+  tell(app, state.clone());
+  let app = app.clone();
+  std::thread::spawn(move || {
+    std::thread::sleep(shown);
+    if shows(&state) {
+      withdraw(&app);
+    }
+  });
 }
 
 #[tauri::command]

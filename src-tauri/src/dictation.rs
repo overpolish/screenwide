@@ -4,33 +4,35 @@
 //! Dictation, wired into the app. The Dictate shortcut starts it; held, it
 //! listens until let go, and tapped, until tapped again, or until the
 //! island's Stop. Escape or the island's Cancel drops it. The island shows
-//! the words as they are heard (`island`), and when it stops the text is
-//! pasted where the caret is (`screenwide_paste`).
+//! the words as they are heard (`island`), its spoken commands carried out,
+//! words added to or removed from the word list by voice confirmed
+//! (`taught`), and when it stops the text is pasted where the caret is
+//! (`screenwide_paste`).
 //!
 //! Dictation's helper is kept for a few minutes after each dictation, with
 //! its model loaded, so the next one starts at once.
 
 pub(crate) mod island;
+mod put_in;
+mod taught;
 
 use std::sync::{Mutex, MutexGuard, PoisonError};
 use std::time::{Duration, Instant};
 
-use screenwide_dictation::{Ended, Event, Session};
-use screenwide_paste::{Refusal, Target};
+use screenwide_dictation::{shape, DictatedText, Ended, Event, Session, Setup};
+use screenwide_paste::Target;
 use screenwide_speech::catalogue::Purpose;
 use screenwide_speech::runner::Transcriber;
 use tauri::AppHandle;
 
 use self::island::{DictationIslandState, DictationProblem};
-use crate::transcription::{language, models};
+use crate::transcription::{language, models, words};
 
 /// A press held at least this long is a hold, and letting go stops
 /// listening; a shorter one is a tap, and listening goes on.
 const HOLD: Duration = Duration::from_millis(350);
 /// How long dictation's helper is kept after a dictation.
 const KEEP_HELPER: Duration = Duration::from_secs(180);
-/// How long a problem stays on the island unless it is put away first.
-const PROBLEM_SHOWN: Duration = Duration::from_secs(5);
 
 #[derive(Default)]
 struct Dictation {
@@ -99,39 +101,37 @@ pub(crate) fn pressed(app: &AppHandle) {
     return;
   }
   if let Some(problem) = problem(app) {
-    show_problem(app, problem);
+    island::show_problem(app, problem);
     return;
   }
   let Some(model) = models::usable(app, Purpose::Dictation)
     .and_then(|model| models::paths(app, model).ok())
     .and_then(|paths| paths.into_iter().next())
   else {
-    show_problem(app, DictationProblem::NoModel);
+    island::show_problem(app, DictationProblem::NoModel);
     return;
   };
   let events = app.clone();
+  taught::reset();
   with(|dictation| {
     let helper = dictation.helper.take();
     dictation.used += 1;
+    let setup = Setup {
+      model,
+      microphone: dictation.microphone.clone(),
+      words: words::current(),
+    };
     dictation.listening = Some(Listening {
-      session: Session::start(model, dictation.microphone.clone(), helper, move |event| {
-        match event {
-          Event::Level(decibels) => island::level(&events, decibels),
-          // Words still arriving as listening stops would show over the
-          // island's Finishing.
-          Event::Heard(text) if is_listening() => island::tell(
-            &events,
-            DictationIslandState::Listening {
-              settled: text.settled,
-              unsettled: text.unsettled,
-            },
-          ),
-          Event::Heard(_) => {}
-          // Said as a problem once the session's end says why.
-          Event::Failed => {
-            let app = events.clone();
-            let _ = events.run_on_main_thread(move || finish(&app));
-          }
+      session: Session::start(setup, helper, move |event| match event {
+        Event::Level(decibels) => island::level(&events, decibels),
+        // Words still arriving as listening stops would show over the
+        // island's Finishing.
+        Event::Heard(heard) if is_listening() => heard_so_far(&events, &heard),
+        Event::Heard(_) => {}
+        // Said as a problem once the session's end says why.
+        Event::Failed => {
+          let app = events.clone();
+          let _ = events.run_on_main_thread(move || finish(&app));
         }
       }),
       pressed_at: Instant::now(),
@@ -143,9 +143,24 @@ pub(crate) fn pressed(app: &AppHandle) {
     DictationIslandState::Listening {
       settled: String::new(),
       unsettled: String::new(),
+      taught: Vec::new(),
     },
   );
   sync_escape(app);
+}
+
+/// Shows what has been heard so far, its commands carried out, and carries
+/// out word list changes as they settle.
+fn heard_so_far(app: &AppHandle, heard: &DictatedText) {
+  let shaped = shape(heard);
+  island::tell(
+    app,
+    DictationIslandState::Listening {
+      taught: taught::apply(app, &shaped.changes),
+      settled: shaped.settled,
+      unsettled: shaped.unsettled,
+    },
+  );
 }
 
 /// The Dictate shortcut was let go: a hold stops listening.
@@ -188,7 +203,7 @@ fn end(app: &AppHandle, cancelled: bool) {
   }
   let app = app.clone();
   std::thread::spawn(move || {
-    let Ended { text, helper } = if cancelled {
+    let Ended { heard, helper } = if cancelled {
       listening.session.cancel()
     } else {
       listening.session.finish()
@@ -198,32 +213,12 @@ fn end(app: &AppHandle, cancelled: bool) {
       with(|dictation| dictation.finishing = false);
       return;
     }
-    let outcome = match text {
-      Ok(text) if text.is_empty() => Ok(()),
-      Ok(text) => {
-        let on_main = |work: Box<dyn FnOnce() + Send>| {
-          let _ = app.run_on_main_thread(work);
-        };
-        screenwide_paste::paste(&text, listening.target, &on_main).map_err(
-          |refusal| match refusal {
-            Refusal::SecureField => DictationProblem::PasswordField,
-            Refusal::Elevated => DictationProblem::Administrator,
-            Refusal::Failed(error) => {
-              eprintln!("Could not paste the dictation: {error}");
-              DictationProblem::Failed
-            }
-          },
-        )
-      }
-      Err(error) => {
-        eprintln!("Dictation failed: {error}");
-        Err(DictationProblem::Failed)
-      }
-    };
+    let outcome = put_in::put_in(&app, heard, listening.target);
     with(|dictation| dictation.finishing = false);
     match outcome {
-      Ok(()) => island::withdraw(&app),
-      Err(problem) => show_problem(&app, problem),
+      Ok(taught) if taught.is_empty() => island::withdraw(&app),
+      Ok(taught) => island::show_taught(&app, taught),
+      Err(problem) => island::show_problem(&app, problem),
     }
   });
 }
@@ -241,17 +236,6 @@ fn problem(app: &AppHandle) -> Option<DictationProblem> {
     return Some(DictationProblem::NoAccessibility);
   }
   None
-}
-
-fn show_problem(app: &AppHandle, problem: DictationProblem) {
-  island::tell(app, DictationIslandState::Problem { problem });
-  let app = app.clone();
-  std::thread::spawn(move || {
-    std::thread::sleep(PROBLEM_SHOWN);
-    if island::shows(problem) {
-      island::withdraw(&app);
-    }
-  });
 }
 
 /// Keeps the helper for the next dictation, and ends it once none has come

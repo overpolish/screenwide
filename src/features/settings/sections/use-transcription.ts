@@ -63,6 +63,9 @@ export function useTranscription(onError: (error: string | null) => void) {
     setLanguage: (language: string) => {
       run(api.setTranscriptionLanguage(language));
     },
+    setWords: (words: string[]) => {
+      run(api.setTranscriptionWords(words));
+    },
     state,
   };
 }

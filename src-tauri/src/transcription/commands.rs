@@ -8,7 +8,7 @@
 use tauri::AppHandle;
 
 use super::models::TranscriptionState;
-use super::{download, language, models, notes};
+use super::{download, language, models, notes, words};
 use screenwide_speech::catalogue;
 
 #[tauri::command]
@@ -42,4 +42,9 @@ pub fn set_transcription_language(app: AppHandle, language: String) -> Result<()
   language::set(&app, &language)?;
   models::changed(&app);
   Ok(())
+}
+
+#[tauri::command]
+pub fn set_transcription_words(app: AppHandle, words: Vec<String>) -> Result<(), String> {
+  words::set(&app, words)
 }

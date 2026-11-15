@@ -68,12 +68,14 @@ impl Transcriber {
     self
   }
 
+  /// Transcribes `audio` in `language`, or detected, leaning towards the
+  /// spellings of `words`.
   pub fn transcribe(
     &mut self,
     model: PathBuf,
     model_id: &str,
     audio: &Samples,
-    language: Option<String>,
+    (language, words): (Option<String>, Vec<String>),
     stretches: Vec<[u64; 2]>,
     progress: &mut dyn FnMut(f32),
   ) -> Result<Transcript, String> {
@@ -84,6 +86,7 @@ impl Transcriber {
         model,
         model_id: model_id.to_owned(),
         stretches,
+        words,
       },
       progress,
     )? {
