@@ -33,6 +33,8 @@ background-generator-currents = Currents
 background-generator-paint = Paint Mixer
 background-generator-ribbons = Ribbons
 background-generator-strata = Strata
+# A dark mesh lit by one warm light from the edge, which moves each time it is chosen again.
+background-ember = Ember
 
 ## Flat colours the app ships with
 

@@ -2,7 +2,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { Background, BackgroundPreset, sameBackground } from "./background";
-import { randomMeshForGenerator } from "./background-random";
+import {
+  isEmberMesh,
+  randomEmberMesh,
+  randomMeshForGenerator,
+} from "./background-random";
 
 /** Where a colour of your own starts when the background in hand gives
  * none: a picture. */
@@ -120,15 +124,17 @@ export function backgroundSelection({
 
 /** What a tile puts on the canvas. A built-in mesh draws its generator
  * under its own colours and a seed made on the spot, so pressing the chosen
- * tile again rolls a new picture; a kept mesh comes back exactly as it was
- * kept. */
+ * tile again rolls a new picture, and Ember places its light somewhere new;
+ * a kept mesh comes back exactly as it was kept. */
 export const presetBackground = (
   preset: BackgroundPreset,
   isKept: boolean,
-): Background =>
-  isKept || preset.background.kind !== "mesh"
-    ? preset.background
+): Background => {
+  if (isKept || preset.background.kind !== "mesh") return preset.background;
+  return isEmberMesh(preset.background)
+    ? randomEmberMesh()
     : randomMeshForGenerator(preset.background.generator);
+};
 
 /** What pressing Custom puts on the canvas: nothing while a background of
  * your own is already there, otherwise the last one built, or a colour

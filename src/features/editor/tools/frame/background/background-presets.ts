@@ -13,6 +13,7 @@ import {
   BackgroundGenerator,
   DEFAULT_GENERATOR_ID,
 } from "./background-generators";
+import { EMBER_COLORS } from "./background-random";
 
 /**
  * The composition tile's blobs, for the tile alone.
@@ -83,16 +84,43 @@ const representative = (
 
 const solid = (color: string): Background => ({ color, kind: "solid" });
 
-/** One tile per generator: the painter under the colours it ships with. */
-const meshPresets = (): BackgroundPreset[] =>
-  BACKGROUND_GENERATORS.map((generator) => {
+/** The Ember tile. Pressing it places its light somewhere new rather than
+ * scattering its blobs as the composition tile does (`presetBackground`). */
+const EMBER_PRESET_ID = "mesh-ember";
+
+/** Ember as its tile shows it, the light low and right of centre. */
+const emberTile = (): BackgroundPreset => ({
+  background: {
+    colors: [...EMBER_COLORS],
+    generator: DEFAULT_GENERATOR_ID,
+    kind: "mesh",
+    lockedColors: EMBER_COLORS.map(() => false),
+    points: [
+      { radiusX: 40, radiusY: 60, rotation: 0, x: 15, y: 20 },
+      { radiusX: 45, radiusY: 70, rotation: -15, x: 40, y: 0 },
+      { radiusX: 70, radiusY: 80, rotation: -10, x: 70, y: 105 },
+      { radiusX: 45, radiusY: 60, rotation: 20, x: 100, y: -5 },
+    ],
+    seed: idSeed(EMBER_PRESET_ID),
+    warpPercent: 8,
+  },
+  id: EMBER_PRESET_ID,
+  name: t("background-ember"),
+});
+
+/** One tile per generator, the painter under the colours it ships with,
+ * then Ember. */
+const meshPresets = (): BackgroundPreset[] => [
+  ...BACKGROUND_GENERATORS.map((generator) => {
     const id = `mesh-${generator.id}`;
     return {
       background: representative(generator, id),
       id,
       name: generator.name(),
     };
-  });
+  }),
+  emberTile(),
+];
 
 const solidPresets = (): BackgroundPreset[] => [
   // A small starting set, two of each: pastels, brights, and darks for

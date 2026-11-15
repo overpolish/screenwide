@@ -90,6 +90,7 @@ export type Messages = {
   "background-color": null;
   "background-colors": null;
   "background-custom": null;
+  "background-ember": null;
   "background-generator-aurora": null;
   "background-generator-currents": null;
   "background-generator-fluid": null;
