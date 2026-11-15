@@ -244,7 +244,11 @@ fn camera(seconds: u64, moved: &[(u64, u64)]) -> Vec<PictureReading> {
       } else {
         0.005 + 0.005 * (tenth % 3) as f32
       };
-      PictureReading { changed, ms, novelty: changed }
+      PictureReading {
+        changed,
+        ms,
+        novelty: changed,
+      }
     })
     .collect()
 }

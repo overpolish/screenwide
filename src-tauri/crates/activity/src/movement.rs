@@ -45,7 +45,8 @@ pub fn movements(readings: &[PictureReading]) -> Vec<Movement> {
   }
   let smoothed: Vec<f32> = (0..readings.len())
     .map(|index| {
-      let around = &readings[index.saturating_sub(SMOOTH / 2)..(index + SMOOTH / 2 + 1).min(readings.len())];
+      let around =
+        &readings[index.saturating_sub(SMOOTH / 2)..(index + SMOOTH / 2 + 1).min(readings.len())];
       around.iter().map(|reading| reading.changed).sum::<f32>() / around.len() as f32
     })
     .collect();
@@ -57,7 +58,9 @@ pub fn movements(readings: &[PictureReading]) -> Vec<Movement> {
     if smoothed[index] < level {
       continue;
     }
-    let end_ms = readings.get(index + 1).map_or(reading.ms + 100, |next| next.ms);
+    let end_ms = readings
+      .get(index + 1)
+      .map_or(reading.ms + 100, |next| next.ms);
     match found.last_mut() {
       Some(last) if reading.ms <= last.end_ms + CALM_MS => last.end_ms = end_ms,
       _ => found.push(Movement {
