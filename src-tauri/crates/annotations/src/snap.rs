@@ -107,7 +107,8 @@ impl SnapResult {
 /// a drag.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct SnapModifiers {
-  /// Holds a counter's tail to the eighth turns.
+  /// Holds a counter's tail and an arrow's tips to the eighth turns, and a
+  /// box being pulled out or resized from a corner to its proportions.
   pub(crate) shift: bool,
   /// Snaps the position to the candidate field.
   pub position: bool,

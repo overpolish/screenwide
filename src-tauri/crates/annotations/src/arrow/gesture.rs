@@ -4,19 +4,37 @@
 //! What moving one of an arrow's grips does to its shape.
 
 use super::bend::{clamp_bend, control_for_bend, control_through_midpoint};
+use crate::counter::model::COUNTER_SNAP_RADIANS;
 use crate::gesture::{AnnotationDragOrigin, AnnotationHandle};
 use crate::snap::{SnapRequest, SnapResult};
 use crate::{Annotation, AnnotationPoint, AnnotationShape};
 
-/// Move one grip of an arrow to `point`. `shift` is unread: an arrow's grips
-/// have nothing to quantise to, where a counter's tail has its eighth turns.
+/// Where a tip dragged to `point` lands with Shift held: on the nearest of
+/// the eight directions from `fixed`, the other tip, a counter's tail's eighth
+/// turns, at the distance the hand is from `fixed`. A drag lands on a line
+/// held level, upright or diagonal however the hand wavers.
+pub(crate) fn on_eighth_turn(fixed: AnnotationPoint, point: AnnotationPoint) -> AnnotationPoint {
+  let (dx, dy) = (point.x - fixed.x, point.y - fixed.y);
+  let reach = dx.hypot(dy);
+  if reach == 0.0 {
+    return point;
+  }
+  let angle = (dy.atan2(dx) / COUNTER_SNAP_RADIANS).round() * COUNTER_SNAP_RADIANS;
+  AnnotationPoint {
+    x: fixed.x + reach * angle.cos(),
+    y: fixed.y + reach * angle.sin(),
+  }
+}
+
+/// Move one grip of an arrow to `point`. `shift` holds a tip to the eighth
+/// turns about the other tip, in place of snapping it.
 #[allow(clippy::too_many_arguments)]
 pub(crate) fn drag(
   annotation: &mut Annotation,
   handle: AnnotationHandle,
   point: AnnotationPoint,
   origin: &AnnotationDragOrigin,
-  _shift: bool,
+  shift: bool,
   snap: Option<SnapRequest<'_>>,
 ) -> SnapResult {
   let mut result = SnapResult::default();
@@ -35,7 +53,16 @@ pub(crate) fn drag(
     // is what an arrow aims with, so it is the only part of one that snaps,
     // and the bend is re-hung from wherever it lands.
     AnnotationHandle::Start | AnnotationHandle::End => {
-      let tip = result.tip(point, snap);
+      let fixed = if handle == AnnotationHandle::Start {
+        *end
+      } else {
+        *start
+      };
+      let tip = if shift {
+        on_eighth_turn(fixed, point)
+      } else {
+        result.tip(point, snap)
+      };
       if handle == AnnotationHandle::Start {
         *start = tip;
       } else {

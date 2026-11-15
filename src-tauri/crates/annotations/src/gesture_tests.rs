@@ -182,6 +182,27 @@ fn dragging_a_tip_keeps_the_bend_against_the_chord() {
   assert!((after.1 - before.1).abs() < 1e-9, "{before:?} {after:?}");
 }
 
+#[test]
+fn shift_holds_a_dragged_tip_level_with_the_other() {
+  let mut annotation = arrow("a");
+  let from = origin(&annotation, 100.0, 0.0);
+  annotation.drag_grip(
+    AnnotationHandle::End,
+    AnnotationPoint { x: 300.0, y: 14.0 },
+    &from,
+    true,
+    None,
+  );
+  let AnnotationShape::Arrow { start, end, .. } = annotation.shape else {
+    unreachable!()
+  };
+  assert!((end.y - start.y).abs() < 1e-9, "{end:?}");
+  assert!(
+    (end.x - 300.33).abs() < 0.01,
+    "keeps the hand's reach: {end:?}"
+  );
+}
+
 /// A chord too short to point anywhere is drawn straight rather than bent
 /// across a direction that does not exist.
 #[test]

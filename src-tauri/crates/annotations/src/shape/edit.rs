@@ -55,11 +55,12 @@ impl super::super::Annotation {
   }
 
   /// Carry the annotation this gesture has just made to `point`: an arrow is
-  /// drawn out from the press, a counter was dropped whole there, a text
-  /// box is carried the way a placed one is moved, so it stays centred under
-  /// the hand it was centred on, and a redaction, a shape or a lens is
-  /// pulled out from the press to the hand, square while
-  /// `shift` is held. `origin` is where the gesture began.
+  /// drawn out from the press, level, upright or diagonal while `shift` is
+  /// held, a counter was dropped whole there, a text box is carried the way
+  /// a placed one is moved, so it stays centred under the hand it was
+  /// centred on, and a redaction, a shape or a lens is pulled out from the
+  /// press to the hand, square while `shift` is held. `origin` is where the
+  /// gesture began.
   #[cfg(any(target_os = "macos", target_os = "windows", test))]
   pub(crate) fn drag_new(
     &mut self,
@@ -69,7 +70,7 @@ impl super::super::Annotation {
     snap: Option<super::super::snap::SnapRequest<'_>>,
   ) -> super::super::snap::SnapResult {
     match self.shape.kind() {
-      AnnotationKind::Arrow => super::super::arrow::snap::drag_new(self, point, snap),
+      AnnotationKind::Arrow => super::super::arrow::snap::drag_new(self, point, shift, snap),
       AnnotationKind::Counter => super::super::counter::snap::drag_new(self, point, snap),
       AnnotationKind::Text => super::super::text::gesture::drag(
         self,

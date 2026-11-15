@@ -9,10 +9,12 @@ use crate::{Annotation, AnnotationPoint, AnnotationShape};
 
 /// A fresh arrow is drawn out from where the press landed: the drag carries
 /// the end grip, and the curve stays straight behind it. It snaps the way
-/// that grip does on an arrow already placed.
+/// that grip does on an arrow already placed, and `shift` holds it to the
+/// eighth turns as it does there.
 pub(crate) fn drag_new(
   annotation: &mut Annotation,
   point: AnnotationPoint,
+  shift: bool,
   snap: Option<SnapRequest<'_>>,
 ) -> SnapResult {
   let mut result = SnapResult::default();
@@ -24,7 +26,11 @@ pub(crate) fn drag_new(
   else {
     return result;
   };
-  let tip = result.tip(point, snap);
+  let tip = if shift {
+    super::gesture::on_eighth_turn(*start, point)
+  } else {
+    result.tip(point, snap)
+  };
   *end = tip;
   *control = AnnotationPoint {
     x: (start.x + tip.x) / 2.0,
