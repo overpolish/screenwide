@@ -25,6 +25,12 @@ import { RecordingError } from "../types";
  * until the pick is over. */
 let isPicking = false;
 
+/** The screenshot session flag is shared through storage, so one left by a
+ * previous run is cleared once per page load. Cleared on every mount, it
+ * would end a session the region overlay had just begun whenever the
+ * controls came back to the island. */
+let hasClearedStaleScreenshot = false;
+
 /** Shows the region overlay as the mode wants. */
 const synchronizeRecordingUi = async (
   mode = useRecordingSourceStore.getState().recordingMode,
@@ -104,9 +110,10 @@ export function useRecordingUiSession() {
   const isToldRef = useRef(false);
 
   useEffect(() => {
-    // Any screenshot session that outlived a previous run belongs to a window
-    // that is gone.
-    setScreenshotCapture(false);
+    if (!hasClearedStaleScreenshot) {
+      hasClearedStaleScreenshot = true;
+      setScreenshotCapture(false);
+    }
     void recordingUiVisible()
       .then((visible) => {
         if (!isToldRef.current) setIsRecordingUiVisible(visible);
