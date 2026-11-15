@@ -173,7 +173,7 @@ fn pixel_aligned_rect_rounds_logical_edges_to_device_pixels() {
 }
 
 #[test]
-fn marquee_dashes_run_in_twelve_pixel_periods_from_the_crop_corner() {
+fn marquee_dashes_run_in_ant_periods_from_the_crop_corner() {
   let mut out = Vec::new();
   let scale = 2.0;
   let half = 1.5 / scale;
@@ -195,7 +195,7 @@ fn marquee_dashes_run_in_twelve_pixel_periods_from_the_crop_corner() {
   let min_x = snap(100.0, scale);
   let max_x = snap(196.0, scale);
   let min_y = snap(50.0, scale);
-  let period = |pixels: f64| (pixels * scale / 12.0) as f32;
+  let period = |pixels: f64| (pixels * scale / ANT_PERIOD) as f32;
   // Each edge reaches half a stroke past the corner, so its pattern starts
   // that far before the period the corner anchors.
   assert_eq!(ants[0].uv, [period(-half), 0.0]);

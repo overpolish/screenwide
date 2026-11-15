@@ -21,6 +21,15 @@ use crate::geometry::{Point, Rect, Size};
 /// Lens edge length in points; the box is this times the display scale.
 pub const MAGNIFIER_BOX_POINTS: f64 = 96.0;
 
+/// The device pixels marching ants repeat over: a dash, then a 3-pixel gap
+/// the shader keeps whatever the period. A Windows screen has far fewer
+/// pixels to the inch than a Retina one, so the dash a Mac draws would read
+/// twice as large there.
+#[cfg(not(target_os = "windows"))]
+const ANT_PERIOD: f64 = 12.0;
+#[cfg(target_os = "windows")]
+const ANT_PERIOD: f64 = 8.0;
+
 impl RenderConstants {
   /// Port of `screenwide_region_magnifier_make`. The box is sized and centred
   /// in physical pixels because the shader reads the fragment position

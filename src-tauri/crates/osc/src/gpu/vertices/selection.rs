@@ -3,9 +3,9 @@
 
 use super::*;
 
-/// A marching-ants edge: `uv` runs along it in periods of 12 drawn pixels,
-/// measured from `origin`, so the pattern stays anchored wherever the edge
-/// starts. The twin of `screenwide_region_osc_add_pattern_quad`.
+/// A marching-ants edge: `uv` runs along it in periods of `ANT_PERIOD` drawn
+/// pixels, measured from `origin`, so the pattern stays anchored wherever the
+/// edge starts. The twin of `screenwide_region_osc_add_pattern_quad`.
 pub(super) fn add_pattern_quad(
   out: &mut Vec<Vertex>,
   view: Size,
@@ -20,8 +20,8 @@ pub(super) fn add_pattern_quad(
   } else {
     (rect.origin.y, rect.bottom())
   };
-  let start = ((low - origin) * scale / 12.0) as f32;
-  let end = ((high - origin) * scale / 12.0) as f32;
+  let start = ((low - origin) * scale / ANT_PERIOD) as f32;
+  let end = ((high - origin) * scale / ANT_PERIOD) as f32;
   let uvs = if horizontal {
     [[start, 0.0], [end, 0.0], [end, 1.0], [start, 1.0]]
   } else {

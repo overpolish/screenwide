@@ -44,7 +44,7 @@ pub fn add_turned_marquee(out: &mut Vec<Vertex>, view: Size, corners: [Point; 4]
     let span = (to.x - from.x).hypot(to.y - from.y);
     // The quad runs half its width past each corner, so the periods are
     // counted from there to keep the pattern anchored on the corner.
-    let periods = |distance: f64| (distance * scale / 12.0) as f32;
+    let periods = |distance: f64| (distance * scale / ANT_PERIOD) as f32;
     add_line_along(
       out,
       view,

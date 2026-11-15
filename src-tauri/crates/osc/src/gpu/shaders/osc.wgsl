@@ -440,10 +440,11 @@ fn ocr_box(kind: u32, uv: vec2<f32>) -> vec4<f32> {
 }
 
 // A marching ant: a capsule a period long, `offset` measured from its middle
-// in pixels along and across, of `radius` pixels round.
-fn ant(along_offset: vec2<f32>, radius: f32) -> vec4<f32> {
+// in pixels along and across, of `radius` pixels round. The capsule leaves a
+// 3-pixel gap before the next, whatever `period` the vertices chose.
+fn ant(along_offset: vec2<f32>, radius: f32, period: f32) -> vec4<f32> {
   var offset = along_offset;
-  let half_segment = 3.0;
+  let half_segment = max(period * 0.5 - radius - 1.5, 0.0);
   offset.x -= clamp(offset.x, -half_segment, half_segment);
   let distance = length(offset) - radius;
   let aa = max(fwidth(distance), 0.0001);
@@ -460,8 +461,8 @@ fn ant(along_offset: vec2<f32>, radius: f32) -> vec4<f32> {
 }
 
 // The crop window's marching ants: a capsule a period, `uv` running along the
-// edge in periods of 12 drawn pixels, so the pattern stays put wherever the
-// edge starts.
+// edge in periods of `ANT_PERIOD` drawn pixels, so the pattern stays put
+// wherever the edge starts.
 fn marquee(kind: u32, uv: vec2<f32>) -> vec4<f32> {
   let horizontal = kind <= 8u;
   let longitudinal = select(uv.y, uv.x, horizontal);
@@ -471,13 +472,14 @@ fn marquee(kind: u32, uv: vec2<f32>) -> vec4<f32> {
   return ant(
     vec2<f32>((fract(longitudinal) - 0.5) * period, (transverse - 0.5) * thickness),
     thickness * 0.5,
+    period,
   );
 }
 
 // A side of a turned marquee band: the same ants along a side that need not
 // run along the pixel grid. Its quad is padded a pixel either side, as
 // `soft_line`'s is, for the ants' rims to anti-alias inside it; `uv.x` runs
-// along it in periods of 12 drawn pixels and `uv.y` across it. Each rate is
+// along it in periods of `ANT_PERIOD` drawn pixels and `uv.y` across it. Each rate is
 // its gradient's length, as `quad_pixels` measures, since `fwidth` would
 // overstate it on a slanted side.
 fn soft_marquee(uv: vec2<f32>) -> vec4<f32> {
@@ -486,6 +488,7 @@ fn soft_marquee(uv: vec2<f32>) -> vec4<f32> {
   return ant(
     vec2<f32>((fract(uv.x) - 0.5) * period, (uv.y - 0.5) * thickness),
     thickness * 0.5 - 1.0,
+    period,
   );
 }
 
