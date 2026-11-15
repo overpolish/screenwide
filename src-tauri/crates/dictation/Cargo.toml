@@ -18,3 +18,4 @@ doctest = false
 [dependencies]
 screenwide-capture.workspace = true
 screenwide-speech.workspace = true
+serde.workspace = true

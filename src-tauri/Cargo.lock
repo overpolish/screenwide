@@ -5824,6 +5824,7 @@ version = "1.0.3"
 dependencies = [
  "screenwide-capture",
  "screenwide-speech",
+ "serde",
 ]
 
 [[package]]

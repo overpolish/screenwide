@@ -5,25 +5,26 @@
 //! its word list changes made, and its text pasted into the app dictated
 //! into.
 
-use screenwide_dictation::{shape, DictatedText};
+use screenwide_dictation::{shape, DictatedText, Phrases};
 use screenwide_paste::{Refusal, Target};
 use tauri::AppHandle;
 
 use super::island::DictationProblem;
 use super::taught::{self, DictationWordChange};
 
-/// Pastes what was heard into `target`, once its commands are carried out.
-/// Answers the words added or removed by voice, or why it could not paste.
+/// Pastes what was heard into `target`, once the commands of `phrases` are
+/// carried out. Answers the words added or removed by voice, or why it
+/// could not paste.
 pub(super) fn put_in(
   app: &AppHandle,
   heard: Result<DictatedText, String>,
-  target: Option<Target>,
+  (target, phrases): (Option<Target>, &Phrases),
 ) -> Result<Vec<DictationWordChange>, DictationProblem> {
   let heard = heard.map_err(|error| {
     eprintln!("Dictation failed: {error}");
     DictationProblem::Failed
   })?;
-  let shaped = shape(&heard);
+  let shaped = shape(&heard, phrases);
   let taught = taught::apply(app, &shaped.changes);
   let text = shaped.text();
   if text.trim().is_empty() {

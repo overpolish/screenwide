@@ -6,6 +6,7 @@
 //! transcriber does. The model stays loaded between dictations, so the app
 //! keeps the helper while dictation may be used again soon.
 
+mod pauses;
 mod stream;
 
 use std::io::{BufRead, Write};
@@ -35,6 +36,23 @@ fn main() {
           send(&mut stdout, reply)
         })
       }
+      Job::BeginDictationAtPauses {
+        model,
+        vad,
+        language,
+        words,
+      } => pauses::run(
+        &mut dictation,
+        id,
+        pauses::AtPauses {
+          model,
+          vad,
+          language,
+          words,
+        },
+        &mut lines,
+        &mut |reply| send(&mut stdout, reply),
+      ),
       _ => send(
         &mut stdout,
         &Reply::Failed {

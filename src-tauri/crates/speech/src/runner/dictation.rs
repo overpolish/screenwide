@@ -21,6 +21,25 @@ impl Transcriber {
       .map(|_| ())
   }
 
+  /// Starts a dictation that writes each stretch of speech once a pause ends
+  /// it, with the model at `model`, finding the pauses with the voice
+  /// activity model at `vad`, in `language`, or detecting it.
+  pub fn begin_dictation_at_pauses(
+    &mut self,
+    (model, vad): (PathBuf, PathBuf),
+    language: Option<String>,
+    words: Vec<String>,
+  ) -> Result<(), String> {
+    self
+      .dictated(Job::BeginDictationAtPauses {
+        model,
+        vad,
+        language,
+        words,
+      })
+      .map(|_| ())
+  }
+
   /// The text heard once `samples`, 16-bit at the protocol's rate, are heard
   /// too.
   pub fn feed_dictation(&mut self, samples: Vec<i16>) -> Result<DictatedText, String> {

@@ -16,3 +16,15 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {};
+
+export const DictatingInFrench: Story = {
+  parameters: {
+    modelSeed: { language: "fr", progress: null, status: "downloaded" },
+  },
+};
+
+export const DictatingInGreek: Story = {
+  parameters: {
+    modelSeed: { language: "el", progress: null, status: "downloaded" },
+  },
+};

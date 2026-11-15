@@ -28,3 +28,15 @@ export const Downloading: Story = {
 export const DictationNeedsAccess: Story = {
   parameters: { withoutAccess: true },
 };
+
+export const DictatingInFrench: Story = {
+  parameters: {
+    modelSeed: { language: "fr", progress: null, status: "downloaded" },
+  },
+};
+
+export const DictatingInJapanese: Story = {
+  parameters: {
+    modelSeed: { language: "ja", progress: null, status: "downloaded" },
+  },
+};

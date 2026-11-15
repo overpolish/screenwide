@@ -116,7 +116,10 @@ export function ToolsPane(props: ToolsPaneProps) {
     ),
   };
   const picture = isDictationSubject(subject) ? (
-    <DictationPicture subject={subject} />
+    <DictationPicture
+      commands={props.transcription.state?.dictationCommands ?? []}
+      subject={subject}
+    />
   ) : (
     pictures[subject]
   );

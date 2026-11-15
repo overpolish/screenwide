@@ -17,48 +17,39 @@ import {
 import { TranscriptionModelActions } from "./transcription-model-actions";
 
 import type { TranscriptionControls } from "./use-transcription";
-import type {
-  TranscriptionModel,
-  TranscriptionState,
-} from "../../transcription/types";
+import type { TranscriptionModel } from "../../transcription/types";
 
-/** Whether speech is taken to be English, all dictation's model hears. */
-const isEnglish = ({ language, systemLanguage }: TranscriptionState) =>
-  language === "en" ||
-  language === "auto" ||
-  (language === "system" && systemLanguage === "en");
-
-/** Dictation's row says what holds dictation back, while anything does: a
- * language other than English, or access not granted. */
+/** Dictation's row: the model for the language transcription is set to,
+ * saying whether words appear as they are spoken, and what holds dictation
+ * back while access is not granted. Where it is the Transcripts model, it
+ * is removed with Transcripts, not here. */
 function DictationRow({
   controls,
+  isShared,
   model,
-  state,
 }: {
   controls: TranscriptionControls;
+  isShared: boolean;
   model: TranscriptionModel;
-  state: TranscriptionState;
 }) {
   const needsAccess = useDictationMissingAccess() !== undefined;
-  const isOffered = isEnglish(state);
-  const isWaiting = model.status === "available";
   return (
     <ControlRow
       description={
-        isWaiting && !isOffered
-          ? t("settings-transcription-dictation-english-only")
-          : needsAccess && model.status !== "downloading"
-            ? t("settings-transcription-dictation-access")
-            : model.description
+        needsAccess && model.status !== "downloading"
+          ? t("settings-transcription-dictation-access")
+          : model.description
       }
       title={model.name}
       titleAccessory={<Badge>{formatBytes(model.sizeBytes)}</Badge>}
     >
-      {() =>
-        isWaiting && !isOffered ? null : (
-          <DictationModelActions controls={controls} model={model} />
-        )
-      }
+      {() => (
+        <DictationModelActions
+          controls={controls}
+          isRemovable={!isShared}
+          model={model}
+        />
+      )}
     </ControlRow>
   );
 }
@@ -96,14 +87,17 @@ export function TranscriptionSettingsPanel({
           model.purpose === "dictation" ? (
             <DictationRow
               controls={controls}
-              key={model.id}
+              isShared={state.models.some(
+                (other) =>
+                  other.purpose === "transcripts" && other.id === model.id,
+              )}
+              key={model.purpose}
               model={model}
-              state={state}
             />
           ) : (
             <ControlRow
               description={model.description}
-              key={model.id}
+              key={model.purpose}
               title={model.name}
               titleAccessory={<Badge>{formatBytes(model.sizeBytes)}</Badge>}
             >

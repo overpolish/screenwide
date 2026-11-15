@@ -21,8 +21,10 @@ pub enum Purpose {
   /// edit and caption by, and moments' voice notes. Both take the accurate
   /// model, so a note reads as well as the transcript.
   Transcripts,
-  /// Dictation: speech typed into any app as it is spoken, which takes a
-  /// model that streams.
+  /// Dictation: speech typed into any app. English takes a model that
+  /// streams, the words appearing as they are spoken; other languages one
+  /// that writes each stretch of speech once a pause ends it
+  /// ([`dictation`]).
   Dictation,
 }
 
@@ -107,6 +109,19 @@ pub const MODELS: &[Model] = &[
       url: "https://huggingface.co/handy-computer/parakeet-unified-en-0.6b-gguf/resolve/843b1b175ace04f5a89d379c79e2518c0d065b25/parakeet-unified-en-0.6b-Q8_0.gguf",
     }],
     id: "parakeet-unified-en-0.6b-q8_0",
+    purpose: Purpose::Dictation,
+  },
+  // Parakeet Ultra from Moondream (CC-BY-4.0), NVIDIA's Parakeet TDT 0.6B v3
+  // trained further, as the transcribe.cpp project converted it to GGUF at 8
+  // bits, at a fixed revision: 25 European languages, written at each pause.
+  Model {
+    files: &[ModelFile {
+      name: "parakeet-ultra-Q8_0.gguf",
+      sha256: "007a59761e9258779f189df396b50d12b83bb5b79e66df4b955c230d2f2a0a59",
+      size_bytes: 740_363_168,
+      url: "https://huggingface.co/handy-computer/parakeet-ultra-gguf/resolve/a1539be1b849ea7463b88343e5277b373d0c4ea9/parakeet-ultra-Q8_0.gguf",
+    }],
+    id: "parakeet-ultra-q8_0",
     purpose: Purpose::Dictation,
   },
   // Sidon v0.1 from the University of Tokyo (MIT), its released TorchScript
@@ -213,7 +228,59 @@ pub fn find(id: &str) -> Result<&'static Model, String> {
     .ok_or_else(|| format!("There is no model called {id}"))
 }
 
-/// The model chosen for `purpose`.
+/// The model chosen for `purpose`; for dictation, English's ([`dictation`]
+/// chooses by language).
 pub fn for_purpose(purpose: Purpose) -> Option<&'static Model> {
   MODELS.iter().find(|model| model.purpose == purpose)
+}
+
+/// When dictation's words appear.
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub enum Writes {
+  /// As they are spoken: the model streams.
+  AsSpoken,
+  /// Each stretch of speech once a pause ends it.
+  AtPauses,
+}
+
+/// What Settings says dictation's model does, by when its words appear and
+/// whether it is the Transcripts model, downloaded once for both.
+pub fn dictation_description(writes: Writes, shared: bool) -> String {
+  match (writes, shared) {
+    (Writes::AsSpoken, _) => screenwide_i18n::t!("settings-transcription-dictation-description"),
+    (Writes::AtPauses, false) => {
+      screenwide_i18n::t!("settings-transcription-dictation-at-pauses-description")
+    }
+    (Writes::AtPauses, true) => {
+      screenwide_i18n::t!("settings-transcription-dictation-shared-description")
+    }
+  }
+}
+
+/// The languages Parakeet Ultra dictates, other than English, which streams,
+/// and Greek, which Whisper writes with under half the mistakes (FLEURS).
+const ULTRA_LANGUAGES: [&str; 23] = [
+  "bg", "cs", "da", "de", "es", "et", "fi", "fr", "hr", "hu", "it", "lt", "lv", "mt", "nl", "pl",
+  "pt", "ro", "ru", "sk", "sl", "sv", "uk",
+];
+
+/// The model dictation takes for `language`, a code such as `fr`, or none
+/// to detect it, and when its words appear: English streams; Parakeet
+/// Ultra's languages take it; every other language, and one to be detected,
+/// takes the Transcripts model, Whisper, which writes them all.
+pub fn dictation(language: Option<&str>) -> (&'static Model, Writes) {
+  let by_id = |id: &str| {
+    MODELS
+      .iter()
+      .find(|model| model.id == id)
+      .expect("the catalogue has every dictation model")
+  };
+  match language {
+    Some("en") => (by_id("parakeet-unified-en-0.6b-q8_0"), Writes::AsSpoken),
+    Some(code) if ULTRA_LANGUAGES.contains(&code) => {
+      (by_id("parakeet-ultra-q8_0"), Writes::AtPauses)
+    }
+    _ => (by_id("large-v3-turbo-q8_0"), Writes::AtPauses),
+  }
 }

@@ -211,6 +211,19 @@ pub enum Job {
     #[serde(default)]
     words: Vec<String>,
   },
+  /// Starts a dictation that writes each stretch of speech once a pause ends
+  /// it, with the model at `model`, which need not stream, finding the
+  /// pauses with the voice activity model at `vad`. Answered and followed as
+  /// [`Job::BeginDictation`] is; each word's time is its stretch's, so a
+  /// command said on its own between pauses can be told apart.
+  BeginDictationAtPauses {
+    model: PathBuf,
+    vad: PathBuf,
+    /// A language code such as `fr`, or nothing to detect it.
+    language: Option<String>,
+    #[serde(default)]
+    words: Vec<String>,
+  },
   /// The next samples of the dictation, at [`SAMPLE_RATE`] as 16-bit PCM,
   /// which keeps each line short. Answered with [`Reply::Dictated`] with the
   /// text heard so far.

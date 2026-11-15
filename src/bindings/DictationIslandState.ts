@@ -5,4 +5,4 @@ import type { DictationWordChange } from "./DictationWordChange";
 /**
  * What the island shows of a dictation.
  */
-export type DictationIslandState = { "phase": "listening", settled: string, unsettled: string, taught: Array<DictationWordChange>, } | { "phase": "finishing" } | { "phase": "taught", taught: Array<DictationWordChange>, } | { "phase": "problem", problem: DictationProblem, };
+export type DictationIslandState = { "phase": "listening", settled: string, unsettled: string, taught: Array<DictationWordChange>, atPauses: boolean, } | { "phase": "finishing" } | { "phase": "taught", taught: Array<DictationWordChange>, } | { "phase": "problem", problem: DictationProblem, };

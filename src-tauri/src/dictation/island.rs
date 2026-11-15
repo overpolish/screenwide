@@ -31,12 +31,15 @@ const LEVEL_EVENT: &str = "dictation://level";
 #[ts(export)]
 pub enum DictationIslandState {
   /// Listening: the text so far, its commands carried out, `settled` no
-  /// longer changing and `unsettled` still being heard; and the words this
-  /// dictation has added to or removed from the word list.
+  /// longer changing and `unsettled` still being heard; the words this
+  /// dictation has added to or removed from the word list; and whether the
+  /// text comes at each pause rather than as it is spoken.
   Listening {
     settled: String,
     unsettled: String,
     taught: Vec<DictationWordChange>,
+    #[serde(rename = "atPauses")]
+    at_pauses: bool,
   },
   /// Stopped: the last words are being heard and pasted.
   Finishing,
@@ -53,8 +56,6 @@ pub enum DictationIslandState {
 pub enum DictationProblem {
   /// The model is not downloaded.
   NoModel,
-  /// Transcription is set to a language other than English.
-  NotEnglish,
   /// Screenwide may not use the microphone.
   NoMicrophone,
   /// Screenwide may not press keys in other apps (macOS's Accessibility).
@@ -72,7 +73,7 @@ impl DictationProblem {
   const fn settings_fix(self) -> bool {
     matches!(
       self,
-      Self::NoModel | Self::NotEnglish | Self::NoMicrophone | Self::NoAccessibility
+      Self::NoModel | Self::NoMicrophone | Self::NoAccessibility
     )
   }
 }

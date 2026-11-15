@@ -92,8 +92,11 @@ function rekey(rows: Row[], words: string[]): Row[] {
 
 export function WordsSettings({
   controls,
+  footnote,
 }: {
   controls: TranscriptionControls;
+  /** How to add a word by voice, in the language dictation is in. */
+  footnote?: string;
 }) {
   const reduce = useReducedMotion() ?? false;
   const [draft, setDraft] = useState("");
@@ -113,7 +116,7 @@ export function WordsSettings({
   return (
     <SettingsGroup
       description={t("settings-words-description")}
-      footnote={t("settings-words-by-voice")}
+      footnote={footnote}
       title={t("settings-words")}
     >
       <div className="flex flex-col">

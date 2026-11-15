@@ -5,6 +5,10 @@ import { t } from "../../../i18n/i18n";
 
 import type { DictationIslandState } from "../../../bindings/DictationIslandState";
 import type { DictationWordChange } from "../../../bindings/DictationWordChange";
+import type {
+  DictationCommand,
+  DictationCommandKind,
+} from "../../transcription/types";
 
 // Dictation in Settings' picture, each row's a timeline read from one
 // clock, as the island shows it while someone talks: what is still being
@@ -80,7 +84,24 @@ function command(
   ];
 }
 
-function script(subject: DictationSubject): Script {
+/** The phrase that does `does` in `commands`, the one typing `mark` among
+ * punctuation, as the island would write it: capitalised. */
+function phrase(
+  commands: DictationCommand[],
+  does: DictationCommandKind,
+  mark?: string,
+): string | undefined {
+  const said = commands.find(
+    (command) =>
+      command.does === does && (mark === undefined || command.mark === mark),
+  )?.said;
+  return said && said.charAt(0).toLocaleUpperCase() + said.slice(1);
+}
+
+function script(
+  subject: DictationSubject,
+  commands: DictationCommand[],
+): Script {
   switch (subject) {
     case "scratch": {
       const before = t("settings-dictation-sample-before");
@@ -89,7 +110,7 @@ function script(subject: DictationSubject): Script {
         steps: [
           ...sentence(before, 0),
           ...command(
-            [`${before} `, t("settings-dictation-sample-scratch")],
+            [`${before} `, phrase(commands, "scratchThat") ?? ""],
             2,
             "",
           ),
@@ -100,30 +121,31 @@ function script(subject: DictationSubject): Script {
     case "newLine":
     case "newParagraph": {
       const greeting = t("settings-dictation-sample-greeting");
-      const isLine = subject === "newLine";
-      const broken = greeting + (isLine ? "\n" : "\n\n");
-      const phrase = isLine
-        ? t("settings-dictation-sample-next-line")
-        : t("settings-dictation-sample-new-paragraph");
+      const broken = greeting + (subject === "newLine" ? "\n" : "\n\n");
       return {
         hold: 2,
         steps: [
           ...sentence(greeting, 0),
-          ...command([`${greeting} `, phrase], 1.4, broken),
+          ...command(
+            [`${greeting} `, phrase(commands, subject) ?? ""],
+            1.4,
+            broken,
+          ),
           ...sentence(t("settings-dictation-sample-thanks"), 3, broken),
         ],
       };
     }
     case "punctuation": {
       const question = t("settings-dictation-sample-question");
+      const mark = phrase(commands, "punctuation", "?") ? "?" : ".";
       return {
         hold: 2,
         steps: [
           ...sentence(question, 0),
           ...command(
-            [`${question} `, t("settings-dictation-sample-question-mark")],
+            [`${question} `, phrase(commands, "punctuation", mark) ?? ""],
             2.6,
-            `${question}?`,
+            `${question}${mark}`,
           ),
         ],
       };
@@ -134,9 +156,9 @@ function script(subject: DictationSubject): Script {
       const draft = isAdding
         ? t("settings-dictation-sample-word")
         : t("settings-dictation-sample-after");
-      const phrase = isAdding
-        ? t("settings-dictation-sample-add-word")
-        : t("settings-dictation-sample-remove-word");
+      const said = phrase(commands, subject);
+      // Without a command to say, only the word written as listed.
+      if (!said) return { hold: 2.6, steps: sentence(draft, 0) };
       const spelled = isAdding
         ? t("settings-dictation-sample-added-spelled")
         : t("settings-dictation-sample-removed-spelled");
@@ -149,8 +171,8 @@ function script(subject: DictationSubject): Script {
         hold: 2.6,
         steps: [
           ...sentence(draft, 0),
-          { at: from, settled, unsettled: phrase },
-          { at: from + 0.7, settled, unsettled: `${phrase} ${spelled}` },
+          { at: from, settled, unsettled: said },
+          { at: from + 0.7, settled, unsettled: `${said} ${spelled}` },
           {
             at: from + 2,
             settled: draft,
@@ -163,17 +185,20 @@ function script(subject: DictationSubject): Script {
   }
 }
 
-/** What the island shows `time` seconds into `subject`'s loop. */
+/** What the island shows `time` seconds into `subject`'s loop, its
+ * commands said as `commands` has them. */
 export function dictationFrame(
   subject: DictationSubject,
   time: number,
+  commands: DictationCommand[],
 ): DictationIslandState {
-  const { hold, steps } = script(subject);
+  const { hold, steps } = script(subject, commands);
   const last = steps[steps.length - 1];
   const at = time % (last.at + hold);
   const reached = steps.filter((each) => each.at <= at);
   const step = reached.length > 0 ? reached[reached.length - 1] : steps[0];
   return {
+    atPauses: false,
     phase: "listening",
     settled: step.settled,
     taught: step.taught ?? [],

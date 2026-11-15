@@ -24,7 +24,13 @@ const meta = {
     isShown: true,
     level: 0.55,
     onAction: fn(),
-    state: { phase: "listening", settled: "", taught: [], unsettled: "" },
+    state: {
+      atPauses: false,
+      phase: "listening",
+      settled: "",
+      taught: [],
+      unsettled: "",
+    },
   },
   component: DictationIsland,
   decorators: [
@@ -61,9 +67,22 @@ type Story = StoryObj<typeof meta>;
 
 export const Listening: Story = {};
 
+export const ListeningAtPauses: Story = {
+  args: {
+    state: {
+      atPauses: true,
+      phase: "listening",
+      settled: "",
+      taught: [],
+      unsettled: "",
+    },
+  },
+};
+
 export const Hearing: Story = {
   args: {
     state: {
+      atPauses: false,
       phase: "listening",
       settled: "Hi Sarah, can you send me the quarterly numbers?\n\n",
       taught: [],
@@ -75,6 +94,7 @@ export const Hearing: Story = {
 export const AddingAWord: Story = {
   args: {
     state: {
+      atPauses: false,
       phase: "listening",
       settled: "I recorded the demo with Screenwide.",
       taught: [{ outcome: "added", word: "Screenwide" }],

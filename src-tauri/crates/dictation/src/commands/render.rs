@@ -7,10 +7,13 @@ use screenwide_speech::runner::dictation::DictatedWord;
 
 use super::{Command, Step, WordChange};
 
-/// Ends a sentence, as "scratch that" counts them.
-const SENTENCE_ENDS: [char; 3] = ['.', '?', '!'];
+/// Ends a sentence, as "scratch that" counts them, full width as Chinese
+/// and Japanese write them too.
+const SENTENCE_ENDS: [char; 6] = ['.', '?', '!', '。', '？', '！'];
 /// What a mark said by name takes the place of at the end of the text.
-const MARKS: [char; 6] = ['.', ',', '?', '!', ':', ';'];
+const MARKS: [char; 13] = [
+  '.', ',', '?', '!', ':', ';', '。', '，', '、', '？', '！', '：', '；',
+];
 
 pub(super) struct Rendered {
   pub text: String,
@@ -18,14 +21,18 @@ pub(super) struct Rendered {
 }
 
 /// The text of `steps` over `words`, taking only those within the first
-/// `upto` words.
-pub(super) fn render(words: &[DictatedWord], steps: &[Step], upto: usize) -> Rendered {
+/// `upto` words, the words `spaced` apart or run together.
+pub(super) fn render(
+  words: &[DictatedWord],
+  steps: &[Step],
+  (upto, spaced): (usize, bool),
+) -> Rendered {
   let mut text = String::new();
   let mut changes = Vec::new();
   for step in steps {
     match step {
       Step::Word(at) if *at < upto => {
-        if !text.is_empty() && !text.ends_with('\n') {
+        if spaced && !text.is_empty() && !text.ends_with('\n') {
           text.push(' ');
         }
         text.push_str(&words[*at].text);
@@ -65,7 +72,8 @@ fn scratch_last_sentence(text: &mut String) {
   let body = text.trim_end_matches(' ');
   let unfinished = body.trim_end_matches(SENTENCE_ENDS);
   let start = unfinished
-    .rfind(|c: char| SENTENCE_ENDS.contains(&c) || c == '\n')
-    .map_or(0, |at| at + 1);
+    .char_indices()
+    .rfind(|&(_, c)| SENTENCE_ENDS.contains(&c) || c == '\n')
+    .map_or(0, |(at, c)| at + c.len_utf8());
   text.truncate(start);
 }

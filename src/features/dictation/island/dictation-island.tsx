@@ -51,8 +51,6 @@ const problemMessage = (problem: DictationProblem) => {
   switch (problem) {
     case "noModel":
       return t("dictation-island-no-model");
-    case "notEnglish":
-      return t("dictation-island-not-english");
     case "noMicrophone":
       return t("dictation-island-no-microphone");
     case "noAccessibility":
@@ -69,7 +67,6 @@ const problemMessage = (problem: DictationProblem) => {
 /** Whether Settings is where `problem` is put right. */
 const isFixedInSettings = (problem: DictationProblem) =>
   problem === "noModel" ||
-  problem === "notEnglish" ||
   problem === "noMicrophone" ||
   problem === "noAccessibility";
 
@@ -85,14 +82,19 @@ function Close({ label, onPress }: { label: string; onPress: () => void }) {
   );
 }
 
-/** The words heard so far, their latest lines in view. */
-function HeardWords({ words }: { words: Words }) {
+/** The words heard so far, their latest lines in view; before any, how to
+ * dictate, which says the text comes at each pause where it does. */
+function HeardWords({ atPauses, words }: { atPauses: boolean; words: Words }) {
   if (!words.settled && !words.unsettled)
     return (
       <IslandKeyHint
         binding="Escape"
         className={WORDS_WIDTH}
-        message={(key) => t("dictation-island-hint", { key })}
+        message={(key) =>
+          atPauses
+            ? t("dictation-island-hint-at-pauses", { key })
+            : t("dictation-island-hint", { key })
+        }
       />
     );
   return (
@@ -250,7 +252,10 @@ export function DictationIsland({
       </div>
     ) : state.phase === "listening" || words.settled || words.unsettled ? (
       <div className="flex flex-col gap-inline" key="words">
-        <HeardWords words={words} />
+        <HeardWords
+          atPauses={state.phase === "listening" && state.atPauses}
+          words={words}
+        />
         {taught.length > 0 ? <TaughtWords taught={taught} /> : null}
       </div>
     ) : null;

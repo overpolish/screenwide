@@ -17,6 +17,7 @@ use std::path::{Path, PathBuf};
 use tauri::{AppHandle, Manager};
 
 use super::{EditorArtifact, EditorState};
+use crate::transcription::models::vad_model;
 use screenwide_export::recording_model::{AudioTrackKind, RecordingAudioTrack};
 
 /// What the speech tools read of the recording open in the editor.
@@ -238,25 +239,6 @@ fn studio_model(app: &AppHandle) -> Option<(PathBuf, PathBuf)> {
     .ok()?
     .into_iter();
   Some((paths.next()?, paths.next()?))
-}
-
-/// The voice activity model, bundled as a resource, or beside the program
-/// when it runs unbundled during development.
-fn vad_model(app: &AppHandle) -> Result<PathBuf, String> {
-  const NAME: &str = "silero-vad.bin";
-  let bundled = app
-    .path()
-    .resource_dir()
-    .ok()
-    .map(|resources| resources.join("models").join(NAME));
-  let beside = std::env::current_exe()
-    .ok()
-    .and_then(|program| program.parent().map(|folder| folder.join(NAME)));
-  bundled
-    .into_iter()
-    .chain(beside)
-    .find(|path| path.is_file())
-    .ok_or_else(|| "The voice activity model is missing from this installation".to_owned())
 }
 
 /// `selection` with each of the `streams` it carries read as it is heard:

@@ -3,4 +3,4 @@
 /**
  * Why dictation could not start or paste.
  */
-export type DictationProblem = "noModel" | "notEnglish" | "noMicrophone" | "noAccessibility" | "passwordField" | "administrator" | "failed";
+export type DictationProblem = "noModel" | "noMicrophone" | "noAccessibility" | "passwordField" | "administrator" | "failed";

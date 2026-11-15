@@ -185,9 +185,10 @@ fn main() {
               .map(|lines| Reply::TextRead { id, lines }),
             None => Err("The text reader is not loaded".to_owned()),
           },
-          Job::BeginDictation { .. } | Job::FeedDictation { .. } | Job::FinishDictation => {
-            Err("Dictation runs in screenwide-dictation".to_owned())
-          }
+          Job::BeginDictation { .. }
+          | Job::BeginDictationAtPauses { .. }
+          | Job::FeedDictation { .. }
+          | Job::FinishDictation => Err("Dictation runs in screenwide-dictation".to_owned()),
         };
         result.unwrap_or_else(|message| Reply::Failed { id, message })
       }

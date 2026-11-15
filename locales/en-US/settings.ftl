@@ -213,22 +213,25 @@ settings-transcription-camera-objects-description = Keeps or removes objects on 
 # The model the recording's transcript and voice notes are made with, named for what it does.
 settings-transcription-transcripts = Transcripts
 settings-transcription-transcripts-description = Turns your recordings and voice notes into text.
-# The model dictation streams with, named for what it does.
+# The model dictation takes in the transcription language, named for what it does.
 settings-transcription-dictation = Dictation
-settings-transcription-dictation-description = Types what you say into any app, in English.
-# Shown in place of the description, and the Download, while the transcription language is not English.
-settings-transcription-dictation-english-only = Set the language to English to dictate.
+# In English, where the words appear as they are spoken.
+settings-transcription-dictation-description = Types what you say into any app as you speak.
+# In a language whose text is written each time the speaker pauses.
+settings-transcription-dictation-at-pauses-description = Types what you say into any app each time you pause.
+# In a language Dictation writes with the Transcripts model, downloaded once for both.
+settings-transcription-dictation-shared-description = Types what you say into any app each time you pause, with the Transcripts model.
 # Shown in place of the description while macOS has not yet given dictation the access it needs.
 settings-transcription-dictation-access = Allow microphone and Accessibility access to dictate.
 settings-transcription-dictation-allow-microphone = Allow Microphone
 settings-transcription-dictation-allow-accessibility = Allow Accessibility
 settings-transcription-language = Language
-settings-transcription-language-description = The language your recordings are spoken in.
-# The group of the Models pane listing names and terms speech is written with.
+settings-transcription-language-description = The language you record and dictate in.
+# The group of Tools' Dictation section listing names and terms speech is written with.
 settings-words = Words
 settings-words-description = Names and terms that dictation and transcripts spell as you do here.
-# Under the list.
-settings-words-by-voice = While dictating, say “add word” and spell a word to add it.
+# Under the list. $phrase is the quoted phrase that adds a word, in the language dictation is in.
+settings-words-by-voice = While dictating, say { $phrase } and spell a word to add it.
 settings-words-new = Add a word
 settings-words-add = Add
 # Names a word's field for assistive technology.
@@ -488,35 +491,28 @@ settings-licences-key-unavailable = Couldn’t reach the licence server. Check y
 settings-licences-remove = Remove the key ending { $hint }
 settings-licences-confirm-remove = Confirm removing the key ending { $hint }
 
-## Tools' Dictation section. Dictation hears only English, so each phrase to say, and the picture's sample of dictating, stays in English.
+## Tools' Dictation section. Each command is named here for what it does; what to say comes from the language dictation is in, which may not be the app's.
 
 settings-dictation-commands = Spoken commands
 settings-dictation-commands-description = Say a command on its own, with a pause before and after.
-settings-dictation-command-scratch = “Scratch that”
-settings-dictation-command-scratch-description = Takes away what you said last.
-settings-dictation-command-new-line = “New line” or “next line”
-settings-dictation-command-new-line-description = Starts a new line.
-settings-dictation-command-new-paragraph = “New paragraph”
-settings-dictation-command-new-paragraph-description = Leaves a blank line and starts a paragraph.
+settings-dictation-command-scratch = Take back the last sentence
+settings-dictation-command-new-line = New line
+settings-dictation-command-new-paragraph = New paragraph
 settings-dictation-command-punctuation = Punctuation
-settings-dictation-command-punctuation-description = Say “comma”, “full stop” or “dot”, “question mark”, “exclamation mark”, “colon” or “semicolon”.
-settings-dictation-command-add-word = “Add word”
-settings-dictation-command-add-word-description = Then spell a word to add it to your words.
-settings-dictation-command-remove-word = “Remove word”
-settings-dictation-command-remove-word-description = Then spell a word to take it off your words.
-# The picture's sample of dictating, as the island shows it while the words are said.
+settings-dictation-command-add-word = Add a word
+settings-dictation-command-remove-word = Remove a word
+# A phrase to say, in the language dictation is in, quoted.
+settings-dictation-command-phrase = “{ $phrase }”
+# What to say for a command. $phrases are the quoted phrases that do it, as a list of alternatives.
+settings-dictation-command-say = Say { $phrases }.
+settings-dictation-command-say-word = Say { $phrases }, then spell or say the word.
+# The picture's sample of dictating, as the island shows it while the words are said. The commands said in it come from the language dictation is in.
 settings-dictation-sample-before = Let's meet on Thursday.
 settings-dictation-sample-after = Let's meet on Friday.
 settings-dictation-sample-greeting = Dear Sam,
 settings-dictation-sample-thanks = Thanks for coming to the review.
 settings-dictation-sample-question = Can you make it on Friday
 settings-dictation-sample-word = I recorded the demo with Screenwide.
-settings-dictation-sample-scratch = Scratch that
-settings-dictation-sample-next-line = Next line
-settings-dictation-sample-new-paragraph = New paragraph
-settings-dictation-sample-question-mark = Question mark
-settings-dictation-sample-add-word = Add word
-settings-dictation-sample-remove-word = Remove word
 # A word spelled out letter by letter, and the word it adds or removes.
 settings-dictation-sample-added-spelled = S C R E E N W I D E
 settings-dictation-sample-added = Screenwide

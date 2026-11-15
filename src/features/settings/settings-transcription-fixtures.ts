@@ -3,6 +3,7 @@
 
 import type { PermissionSnapshot } from "../permissions/types";
 import type {
+  DictationCommand,
   TranscriptionModel,
   TranscriptionState,
 } from "../transcription/types";
@@ -29,17 +30,93 @@ const TRANSCRIPTS_MODEL: TranscriptionModel = {
   purpose: "transcripts",
   sizeBytes: 874_188_075,
   status: "available",
+  writes: null,
 };
 
-/** The Dictation model, at its real download size. */
+/** The Dictation model for English, at its real download size. */
 const DICTATION_MODEL: TranscriptionModel = {
-  description: "Types what you say into any app, in English.",
+  description: "Types what you say into any app as you speak.",
   id: "parakeet-unified-en-0.6b-q8_0",
   name: "Dictation",
   progress: null,
   purpose: "dictation",
   sizeBytes: 731_357_568,
   status: "available",
+  writes: "asSpoken",
+};
+
+/** The Dictation model for European languages, at its real download size. */
+const EUROPEAN_DICTATION_MODEL: TranscriptionModel = {
+  description: "Types what you say into any app each time you pause.",
+  id: "parakeet-ultra-q8_0",
+  name: "Dictation",
+  progress: null,
+  purpose: "dictation",
+  sizeBytes: 740_363_168,
+  status: "available",
+  writes: "atPauses",
+};
+
+/** The languages the European model dictates, as the app's catalogue has
+ * them. */
+const EUROPEAN = new Set(
+  "bg cs da de es et fi fr hr hu it lt lv mt nl pl pt ro ru sk sl sv uk".split(
+    " ",
+  ),
+);
+
+const ENGLISH_COMMANDS: DictationCommand[] = [
+  { does: "scratchThat", said: "scratch that" },
+  { does: "newLine", said: "new line" },
+  { does: "newLine", said: "next line" },
+  { does: "newParagraph", said: "new paragraph" },
+  { does: "punctuation", mark: ",", said: "comma" },
+  { does: "punctuation", mark: ".", said: "full stop" },
+  { does: "punctuation", mark: "?", said: "question mark" },
+  { does: "addWord", said: "add word" },
+  { does: "removeWord", said: "remove word" },
+];
+
+const FRENCH_COMMANDS: DictationCommand[] = [
+  { does: "scratchThat", said: "efface ça" },
+  { does: "newLine", said: "à la ligne" },
+  { does: "newLine", said: "nouvelle ligne" },
+  { does: "newParagraph", said: "nouveau paragraphe" },
+  { does: "punctuation", mark: ",", said: "virgule" },
+  { does: "punctuation", mark: ".", said: "point" },
+  { does: "punctuation", mark: "?", said: "point d'interrogation" },
+  { does: "addWord", said: "ajouter le mot" },
+  { does: "removeWord", said: "supprimer le mot" },
+];
+
+/** Dictation's model and commands for `language` as the app chooses them:
+ * English streams, the European model writes its languages at each pause,
+ * and the Transcripts model every other language. */
+const dictationFor = (
+  language: string,
+  transcripts: TranscriptionModel,
+): Pick<TranscriptionState, "dictationCommands"> & {
+  model: TranscriptionModel;
+} => {
+  const code = language === "system" ? "en" : language;
+  if (code === "en")
+    return { dictationCommands: ENGLISH_COMMANDS, model: DICTATION_MODEL };
+  if (EUROPEAN.has(code))
+    return {
+      dictationCommands: code === "fr" ? FRENCH_COMMANDS : [],
+      model: EUROPEAN_DICTATION_MODEL,
+    };
+  return {
+    dictationCommands: [],
+    model: {
+      ...transcripts,
+      description:
+        "Types what you say into any app each time you pause, with the Transcripts model.",
+      name: "Dictation",
+      purpose: "dictation",
+      writes: "atPauses",
+    },
+  };
 };
 
 /** The Studio sound model, at its real download size, both files together. */
@@ -51,6 +128,7 @@ const STUDIO_SOUND_MODEL: TranscriptionModel = {
   purpose: "studioSound",
   sizeBytes: 1_005_394_589,
   status: "available",
+  writes: null,
 };
 
 /** The Studio ducking model, at its real download size. */
@@ -62,6 +140,7 @@ const STUDIO_DUCKING_MODEL: TranscriptionModel = {
   purpose: "studioDucking",
   sizeBytes: 165_612_636,
   status: "available",
+  writes: null,
 };
 
 /** The background removal model, at its real download size. */
@@ -73,6 +152,7 @@ const CAMERA_BACKGROUND_MODEL: TranscriptionModel = {
   purpose: "cameraBackground",
   sizeBytes: 14_975_696,
   status: "available",
+  writes: null,
 };
 
 /** The object tracking model, at its real download size. */
@@ -84,12 +164,15 @@ const CAMERA_OBJECTS_MODEL: TranscriptionModel = {
   purpose: "cameraObjects",
   sizeBytes: 190_082_794,
   status: "available",
+  writes: null,
 };
 
+/** How the Transcripts model stands, and the language transcription and
+ * dictation are set to, `system` (English) unless given. */
 export type TranscriptionPreviewSeed = Pick<
   TranscriptionModel,
   "progress" | "status"
->;
+> & { language?: string };
 
 /** How long a story's pretend download takes, in milliseconds. */
 const DOWNLOAD_MS = 4_000;
@@ -98,17 +181,24 @@ const TICK_MS = 100;
 /**
  * The transcription side of the Settings stories' API: the models kept in
  * memory, Transcripts as `seed` says and the others not yet downloaded, with
- * downloads that fill over a few seconds. Nothing reaches the app or the
- * network.
+ * downloads that fill over a few seconds; dictation's model and commands
+ * those of the seed's language. Nothing reaches the app or the network.
  */
 export function transcriptionPreviewApi(
   seed: TranscriptionPreviewSeed = { progress: null, status: "downloaded" },
 ) {
+  const { language = "system", ...transcriptsSeed } = seed;
+  const transcripts = { ...TRANSCRIPTS_MODEL, ...transcriptsSeed };
+  const { dictationCommands, model: dictation } = dictationFor(
+    language,
+    transcripts,
+  );
   let state: TranscriptionState = {
-    language: "system",
+    dictationCommands,
+    language,
     models: [
-      { ...TRANSCRIPTS_MODEL, ...seed },
-      DICTATION_MODEL,
+      transcripts,
+      dictation,
       STUDIO_SOUND_MODEL,
       STUDIO_DUCKING_MODEL,
       CAMERA_BACKGROUND_MODEL,
@@ -171,7 +261,21 @@ export function transcriptionPreviewApi(
       return Promise.resolve(null);
     },
     setTranscriptionLanguage: (language: string) => {
-      publish({ ...state, language });
+      const transcripts = state.models.find(
+        (model) => model.purpose === "transcripts",
+      );
+      const { dictationCommands, model: dictation } = dictationFor(
+        language,
+        transcripts ?? TRANSCRIPTS_MODEL,
+      );
+      publish({
+        ...state,
+        dictationCommands,
+        language,
+        models: state.models.map((model) =>
+          model.purpose === "dictation" ? dictation : model,
+        ),
+      });
       return Promise.resolve(null);
     },
     setTranscriptionWords: (words: string[]) => {

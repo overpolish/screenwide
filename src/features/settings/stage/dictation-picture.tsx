@@ -11,6 +11,8 @@ import { StageMenuBar } from "./stage-menu-bar";
 import { StageScreen } from "./stage-screen";
 import { useClock } from "./use-clock";
 
+import type { DictationCommand } from "../../transcription/types";
+
 // The real dictation island at the top of the person's desktop, playing a
 // row's script on a loop (`dictation-script`): words heard and settling, a
 // command carried out, a word added. Nothing on it can be pressed.
@@ -21,7 +23,14 @@ const noop = () => undefined;
 const findIsland = (screen: HTMLElement) =>
   screen.querySelector("[data-island-outline]");
 
-export function DictationPicture({ subject }: { subject: DictationSubject }) {
+export function DictationPicture({
+  commands,
+  subject,
+}: {
+  /** The spoken commands of the language dictation is in. */
+  commands: DictationCommand[];
+  subject: DictationSubject;
+}) {
   const time = useClock(subject);
   const { island: notch } = useDisplayNotches();
   // Someone talking, as the recording island's picture hears them.
@@ -46,7 +55,7 @@ export function DictationPicture({ subject }: { subject: DictationSubject }) {
               level={level}
               notch={notch}
               onAction={noop}
-              state={dictationFrame(subject, time)}
+              state={dictationFrame(subject, time, commands)}
             />
           </div>
         </StageDesktop>

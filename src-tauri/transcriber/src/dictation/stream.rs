@@ -12,7 +12,7 @@ use std::path::{Path, PathBuf};
 use screenwide_transcriber::{DictatedText, DictatedWord, Job, Reply, Request};
 use transcribe_cpp::{
   CommitPolicy, Model, ParakeetBufferedStreamOptions, RunOptions, Session, Stream, StreamExtension,
-  StreamOptions, TimestampKind,
+  StreamOptions, TimestampKind, VadSession,
 };
 
 /// Parakeet Unified's buffered stream re-reads this much of what came before
@@ -20,10 +20,12 @@ use transcribe_cpp::{
 const LEFT_MS: i32 = 5_600;
 
 /// The model last loaded and a session on it, kept for the dictations after:
-/// loading takes far longer than the first words.
+/// loading takes far longer than the first words. And the voice activity
+/// model, for dictations written at each pause.
 #[derive(Default)]
 pub struct Dictation {
   loaded: Option<(PathBuf, Session)>,
+  vad: Option<(PathBuf, VadSession)>,
 }
 
 impl Dictation {
@@ -131,6 +133,27 @@ impl Dictation {
       }
     }
     false
+  }
+
+  /// A session on the model at `model`, and one on the voice activity model
+  /// at `vad`, each loaded unless it is already.
+  pub fn sessions(
+    &mut self,
+    model: &Path,
+    vad: &Path,
+  ) -> Result<(&mut Session, &mut VadSession), String> {
+    self.session(model)?;
+    if !matches!(&self.vad, Some((loaded, _)) if loaded == vad) {
+      self.vad = None;
+      let session = Model::load(vad)
+        .and_then(|model| model.vad_session())
+        .map_err(|error| format!("Could not load the voice activity model: {error}"))?;
+      self.vad = Some((vad.to_owned(), session));
+    }
+    match (&mut self.loaded, &mut self.vad) {
+      (Some((_, session)), Some((_, vad))) => Ok((session, vad)),
+      _ => Err("The dictation models are not loaded".to_owned()),
+    }
   }
 
   fn session(&mut self, path: &Path) -> Result<&mut Session, String> {

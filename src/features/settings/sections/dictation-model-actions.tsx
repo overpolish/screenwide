@@ -20,9 +20,12 @@ import type { TranscriptionModel } from "../../transcription/types";
  */
 export function DictationModelActions({
   controls,
+  isRemovable,
   model,
 }: {
   controls: TranscriptionControls;
+  /** Offers removal once downloaded: not where it is another use's model. */
+  isRemovable: boolean;
   model: TranscriptionModel;
 }) {
   const { grantDictationAccess } = useSettingsApi();
@@ -32,7 +35,7 @@ export function DictationModelActions({
     return (
       <TranscriptionModelActions
         controls={controls}
-        isRemovable
+        isRemovable={isRemovable}
         model={model}
       />
     );

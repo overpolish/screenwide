@@ -64,7 +64,7 @@ pub struct Session {
 
 /// What a dictation listens with.
 pub struct Setup {
-  /// The streaming model's file.
+  /// The model's file.
   pub model: PathBuf,
   /// The microphone's id, or none for the system's default, which also
   /// stands in for one that is gone.
@@ -72,6 +72,17 @@ pub struct Setup {
   /// Names and terms to write where the audio fits them better than what
   /// was heard.
   pub words: Vec<String>,
+  /// For a model that does not stream: how its words are written at each
+  /// pause.
+  pub at_pauses: Option<AtPauses>,
+}
+
+/// How a dictation is written at each pause.
+pub struct AtPauses {
+  /// The voice activity model's file, which finds the pauses.
+  pub vad: PathBuf,
+  /// A language code such as `fr`, or none to detect it.
+  pub language: Option<String>,
 }
 
 impl Session {
@@ -126,6 +137,7 @@ fn listen(
     model,
     microphone,
     words,
+    at_pauses,
   }: Setup,
   helper: Option<Transcriber>,
   stops: &Receiver<Stop>,
@@ -163,7 +175,13 @@ fn listen(
     Ok(helper) => helper,
     Err(error) => return failed(error, None),
   };
-  if let Err(error) = helper.begin_dictation(model, words) {
+  let begun = match at_pauses {
+    None => helper.begin_dictation(model, words),
+    Some(AtPauses { vad, language }) => {
+      helper.begin_dictation_at_pauses((model, vad), language, words)
+    }
+  };
+  if let Err(error) = begun {
     return failed(error, None);
   }
 

@@ -2,10 +2,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 /** What a model is for. Each use has its own, so nobody has to choose one:
- * transcripts and voice notes take the transcription model, dictation its
- * streaming model, Studio sound its restoration model, Studio ducking its
- * music separation model, Remove background its video matting model, and
- * the camera's objects their tracking model. */
+ * transcripts and voice notes take the transcription model, dictation the
+ * model for its language, Studio sound its restoration model, Studio
+ * ducking its music separation model, Remove background its video matting
+ * model, and the camera's objects their tracking model. */
 export type TranscriptionPurpose =
   | "cameraBackground"
   | "cameraObjects"
@@ -27,12 +27,36 @@ export type TranscriptionModel = {
   purpose: TranscriptionPurpose;
   sizeBytes: number;
   status: "available" | "downloaded" | "downloading";
+  /** Dictation's model only: whether its words appear as they are spoken,
+   * or each time the speaker pauses. */
+  writes: "asSpoken" | "atPauses" | null;
+};
+
+/** What a spoken command does. */
+export type DictationCommandKind =
+  | "addWord"
+  | "newLine"
+  | "newParagraph"
+  | "punctuation"
+  | "removeWord"
+  | "scratchThat";
+
+/** A spoken command, as said in the language dictation is in, with the mark
+ * a punctuation command types. */
+export type DictationCommand = {
+  does: DictationCommandKind;
+  said: string;
+  mark?: string | null;
 };
 
 export type TranscriptionState = {
+  /** The spoken commands of the language dictation is in, none in a
+   * language without them. */
+  dictationCommands: DictationCommand[];
   /** `system`, `auto`, or a language code such as `en`. */
   language: string;
-  /** The models something in the app uses, one per purpose. */
+  /** The models something in the app uses, one per purpose. Dictation's is
+   * the one for the language, which may be the Transcripts model. */
   models: TranscriptionModel[];
   /** The computer's own language, as a code, which `system` stands for. */
   systemLanguage: string;

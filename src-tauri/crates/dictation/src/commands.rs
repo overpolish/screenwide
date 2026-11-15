@@ -6,9 +6,13 @@
 //! punctuation mark said by name becomes the mark, and "add word" or "remove
 //! word" followed by a word, spelled or said, changes the word list. A
 //! command is one only when said on its own, with a pause before and after
-//! it; inside a sentence its words are just words.
+//! it; inside a sentence its words are just words. Each language says them
+//! in its own words ([`phrases`]).
 
+mod phrases;
 mod render;
+
+pub use phrases::{phrases, Does, Phrases};
 
 use screenwide_speech::runner::dictation::{DictatedText, DictatedWord};
 
@@ -55,34 +59,8 @@ enum Command {
   RemoveWord,
 }
 
-/// Each command, by its letters as said: the model writes a command's words
-/// apart or run together ("add word", "AdWord"), so they are compared
-/// without the spaces.
-const COMMANDS: &[(&str, Command)] = &[
-  ("scratchthat", Command::ScratchThat),
-  ("newline", Command::Break("\n")),
-  ("nextline", Command::Break("\n")),
-  ("newparagraph", Command::Break("\n\n")),
-  ("comma", Command::Mark(',')),
-  ("fullstop", Command::Mark('.')),
-  ("period", Command::Mark('.')),
-  ("dot", Command::Mark('.')),
-  ("questionmark", Command::Mark('?')),
-  ("exclamationmark", Command::Mark('!')),
-  ("exclamationpoint", Command::Mark('!')),
-  ("colon", Command::Mark(':')),
-  ("semicolon", Command::Mark(';')),
-  ("addword", Command::AddWord),
-  // "Add" said before a pause is often written "ad".
-  ("adword", Command::AddWord),
-  ("removeword", Command::RemoveWord),
-];
-
-/// The most words a command is said in.
-const LONGEST_COMMAND: usize = 2;
-
-/// `heard` with its commands carried out.
-pub fn shape(heard: &DictatedText) -> Shaped {
+/// `heard` with the commands of `phrases` carried out.
+pub fn shape(heard: &DictatedText, phrases: &Phrases) -> Shaped {
   if heard.words.is_empty() {
     return Shaped {
       settled: heard.settled.trim().to_owned(),
@@ -91,9 +69,9 @@ pub fn shape(heard: &DictatedText) -> Shaped {
     };
   }
   let settled_words = heard.words.iter().take_while(|word| word.settled).count();
-  let steps = steps(heard);
-  let all = render::render(&heard.words, &steps, heard.words.len());
-  let settled = render::render(&heard.words, &steps, settled_words);
+  let steps = steps(heard, phrases);
+  let all = render::render(&heard.words, &steps, (heard.words.len(), phrases.spaced));
+  let settled = render::render(&heard.words, &steps, (settled_words, phrases.spaced));
   let common = common_prefix(&settled.text, &all.text);
   Shaped {
     settled: all.text[..common].to_owned(),
@@ -117,14 +95,14 @@ enum Step {
   },
 }
 
-fn steps(heard: &DictatedText) -> Vec<Step> {
+fn steps(heard: &DictatedText, phrases: &Phrases) -> Vec<Step> {
   let words = &heard.words;
   let plain: Vec<String> = words.iter().map(|word| plain(&word.text)).collect();
   let mut steps = Vec::new();
   let mut at = 0;
   while at < words.len() {
     let command = (at == 0 || gap(&words[at - 1], &words[at]) >= PAUSE_MS)
-      .then(|| matched(&plain[at..]))
+      .then(|| matched(&plain[at..], phrases))
       .flatten();
     let Some((command, length)) = command else {
       steps.push(Step::Word(at));
@@ -165,16 +143,41 @@ fn steps(heard: &DictatedText) -> Vec<Step> {
   steps
 }
 
-/// The command `words` start with, and how many words it takes.
-fn matched(words: &[String]) -> Option<(Command, usize)> {
+/// The command `words` start with in `phrases`, and how many words it
+/// takes: the longest that matches, so "point d'interrogation" is not taken
+/// for "point". A doubled letter counts once, as a model may write it once
+/// across a pause ("AdWord" for "add word").
+fn matched(words: &[String], phrases: &Phrases) -> Option<(Command, usize)> {
+  let said: Vec<(String, Command)> = phrases
+    .said
+    .iter()
+    .map(|(said, command)| (single(&plain(said)), *command))
+    .collect();
+  let longest = said.iter().map(|(letters, _)| letters.len()).max()?;
   let mut letters = String::new();
-  for (taken, word) in words.iter().take(LONGEST_COMMAND).enumerate() {
+  let mut found = None;
+  for (taken, word) in words.iter().enumerate() {
     letters.push_str(word);
-    if let Some((_, command)) = COMMANDS.iter().find(|(said, _)| *said == letters) {
-      return Some((*command, taken + 1));
+    let heard = single(&letters);
+    if heard.len() > longest {
+      break;
+    }
+    if let Some((_, command)) = said.iter().find(|(letters, _)| *letters == heard) {
+      found = Some((*command, taken + 1));
     }
   }
-  None
+  found
+}
+
+/// `letters` with each run of one letter taken once.
+fn single(letters: &str) -> String {
+  let mut kept = String::with_capacity(letters.len());
+  for letter in letters.chars() {
+    if !kept.ends_with(letter) {
+      kept.push(letter);
+    }
+  }
+  kept
 }
 
 fn gap(before: &DictatedWord, after: &DictatedWord) -> u64 {
@@ -202,7 +205,8 @@ fn is_letter(word: &str) -> bool {
 
 /// The word `words` name after "add word" or "remove word": spelled letter by
 /// letter, the letters joined and capitalised as a name; said whole, as
-/// written, without the punctuation round it.
+/// written, without the punctuation round it. A spelling may come with two
+/// letters run together where a model heard them as one ("S C RE N").
 fn named(words: &[DictatedWord]) -> Option<String> {
   let pieces: Vec<String> = words
     .iter()
@@ -217,7 +221,8 @@ fn named(words: &[DictatedWord]) -> Option<String> {
   if pieces.is_empty() {
     return None;
   }
-  if pieces.iter().all(|piece| piece.chars().count() == 1) {
+  let letters = |most: usize| pieces.iter().all(|piece| piece.chars().count() <= most);
+  if letters(1) || pieces.len() >= 3 && letters(2) {
     let letters: String = pieces.concat().to_lowercase();
     let mut chars = letters.chars();
     return chars

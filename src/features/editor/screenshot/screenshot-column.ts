@@ -1,7 +1,11 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { type CaptureParts, NO_CAPTURE_PARTS, EditorMode  } from "../toolbar/editor-modes";
+import {
+  type CaptureParts,
+  NO_CAPTURE_PARTS,
+  EditorMode,
+} from "../toolbar/editor-modes";
 import { drawingToolKind } from "../tools/tool-registry";
 
 import type { AnnotationKind } from "../../annotations/types";
