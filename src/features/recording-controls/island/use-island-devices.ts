@@ -22,13 +22,42 @@ import {
   SystemAudioSource,
 } from "../../recording-inputs/types";
 
-import type { IslandInputKind } from "./island-types";
+import type { IslandInputKind, IslandPanel } from "./island-types";
+
+/** How often an open input's devices are read again, in ms. */
+const REFRESH_MS = 2_000;
 
 /** A list that could not be read is empty, as is one the Storybook Tauri
  * mock answers with `null`. */
 const listOrEmpty = async <T>(list: () => Promise<T[]>): Promise<T[]> => {
   const result = await list().catch(() => []);
   return Array.isArray(result) ? result : [];
+};
+
+/** Reads `list` into `apply` now and, while `isPolled`, every `REFRESH_MS`,
+ * skipping a turn while the last read is still going. Returns the effect's
+ * cleanup. */
+const readDevices = <T>(
+  list: () => Promise<T[]>,
+  apply: (devices: T[]) => void,
+  isPolled: boolean,
+) => {
+  let disposed = false;
+  let reading = false;
+  const read = () => {
+    if (reading) return;
+    reading = true;
+    void listOrEmpty(list).then((devices) => {
+      reading = false;
+      if (!disposed) apply(devices);
+    });
+  };
+  read();
+  const interval = isPolled ? window.setInterval(read, REFRESH_MS) : undefined;
+  return () => {
+    disposed = true;
+    window.clearInterval(interval);
+  };
 };
 
 /** The camera chosen, at its largest picture among the modes it offers at
@@ -51,9 +80,11 @@ const firstDefault = <T extends InputDevice>(devices: T[]) =>
 /**
  * The devices behind the island's three inputs, read as the controls open so
  * each input can name what it would record, and an input with nothing chosen
- * yet takes the system's default rather than reading as unset. The cameras
- * are read again when the frame rate or anti-flicker changes in Settings, as
- * the modes they offer follow both.
+ * yet takes the system's default rather than reading as unset. An input's
+ * devices are read again as its panel opens and while it stays open, so one
+ * plugged in or removed shows there. The cameras are read again when the
+ * frame rate or anti-flicker changes in Settings, as the modes they offer
+ * follow both.
  */
 export function useIslandDevices({
   antiFlicker,
@@ -61,12 +92,15 @@ export function useIslandDevices({
   isActive,
   isCameraLocked,
   isMicrophoneLocked,
+  panel,
 }: {
   antiFlicker: boolean;
   fps: RecordingFps;
   isActive: boolean;
   isCameraLocked: boolean;
   isMicrophoneLocked: boolean;
+  /** The part the island has grown into. */
+  panel: IslandPanel;
 }) {
   const [cameras, setCameras] = useState<CameraDevice[]>([]);
   const [microphones, setMicrophones] = useState<InputDevice[]>([]);
@@ -74,60 +108,61 @@ export function useIslandDevices({
     ALL_SYSTEM_AUDIO,
   ]);
   const cadences = cameraRequestFps(fps, antiFlicker).join(" ");
+  const isCameraOpen = panel === "camera";
+  const isMicrophoneOpen = panel === "microphone";
+  const isSystemAudioOpen = panel === "systemAudio";
 
   useEffect(() => {
     if (!isActive || isCameraLocked) return;
-    let disposed = false;
     const requestFps = cadences.split(" ").map(Number);
-    void listOrEmpty(() => listCameras(requestFps)).then((next) => {
-      if (disposed) return;
-      setCameras(next);
-      const state = useRecordingInputStore.getState();
-      const selected = state.selectedCamera;
-      const camera = selected
-        ? findSavedDevice(selected, next)
-        : firstDefault(next);
-      if (!camera) return;
-      // Found again under a new id, it keeps the mirroring chosen for it.
-      const flips = state.cameraFlippedById;
-      if (selected && selected.id in flips && !(camera.id in flips))
-        state.setCameraFlipped(camera.id, flips[selected.id]);
-      selectCamera(camera, requestFps);
-    });
-    return () => {
-      disposed = true;
-    };
-  }, [cadences, isActive, isCameraLocked]);
+    return readDevices(
+      () => listCameras(requestFps),
+      (next) => {
+        setCameras(next);
+        const state = useRecordingInputStore.getState();
+        const selected = state.selectedCamera;
+        const camera = selected
+          ? findSavedDevice(selected, next)
+          : firstDefault(next);
+        if (!camera) return;
+        // Found again under a new id, it keeps the mirroring chosen for it.
+        const flips = state.cameraFlippedById;
+        if (selected && selected.id in flips && !(camera.id in flips))
+          state.setCameraFlipped(camera.id, flips[selected.id]);
+        selectCamera(camera, requestFps);
+      },
+      isCameraOpen,
+    );
+  }, [cadences, isActive, isCameraLocked, isCameraOpen]);
 
   useEffect(() => {
     if (!isActive || isMicrophoneLocked) return;
-    let disposed = false;
-    void listOrEmpty(listMicrophones).then((next) => {
-      if (disposed) return;
-      setMicrophones(next);
-      const state = useRecordingInputStore.getState();
-      const selected = state.selectedMicrophone;
-      const microphone = selected
-        ? findSavedDevice(selected, next)
-        : firstDefault(next);
-      if (microphone && microphone.id !== selected?.id)
-        state.setSelectedMicrophone(microphone);
-    });
-    return () => {
-      disposed = true;
-    };
-  }, [isActive, isMicrophoneLocked]);
+    return readDevices(
+      listMicrophones,
+      (next) => {
+        setMicrophones(next);
+        const state = useRecordingInputStore.getState();
+        const selected = state.selectedMicrophone;
+        const microphone = selected
+          ? findSavedDevice(selected, next)
+          : firstDefault(next);
+        if (microphone && microphone.id !== selected?.id)
+          state.setSelectedMicrophone(microphone);
+      },
+      isMicrophoneOpen,
+    );
+  }, [isActive, isMicrophoneLocked, isMicrophoneOpen]);
 
   useEffect(() => {
     if (!isActive) return;
-    let disposed = false;
-    void listOrEmpty(listSystemAudioSources).then((applications) => {
-      if (!disposed) setAudioSources([ALL_SYSTEM_AUDIO, ...applications]);
-    });
-    return () => {
-      disposed = true;
-    };
-  }, [isActive]);
+    return readDevices(
+      listSystemAudioSources,
+      (applications) => {
+        setAudioSources([ALL_SYSTEM_AUDIO, ...applications]);
+      },
+      isSystemAudioOpen,
+    );
+  }, [isActive, isSystemAudioOpen]);
 
   const changeDevice = useCallback(
     (kind: IslandInputKind, ids: string[]) => {

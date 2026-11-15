@@ -19,7 +19,7 @@ import { type RecordingMonitorSnapshot } from "../use-recording-monitor";
 import { useIslandDevices } from "./use-island-devices";
 import { changeRecordingMode } from "./use-recording-ui-session";
 
-import type { IslandInput, IslandInputKind } from "./island-types";
+import type { IslandInput, IslandInputKind, IslandPanel } from "./island-types";
 
 /** The island's picture box is the size; the picture fills it. */
 const PICTURE_CLASS = "size-full rounded-none";
@@ -41,6 +41,7 @@ export function useIslandInputs({
   isMicrophoneLocked,
   isPreviewActive,
   monitor,
+  panel,
   warnings,
 }: {
   /** Settings' anti-flicker, which the camera is asked for and previewed
@@ -58,6 +59,8 @@ export function useIslandInputs({
   /** The controls are open and idle, so previews may run. */
   isPreviewActive: boolean;
   monitor: RecordingMonitorSnapshot;
+  /** The part the island has grown into, whose devices are kept current. */
+  panel: IslandPanel;
   warnings: Warnings;
 }) {
   const store = useRecordingInputStore((state) => state);
@@ -69,6 +72,7 @@ export function useIslandInputs({
       isActive: isPreviewActive,
       isCameraLocked,
       isMicrophoneLocked,
+      panel,
     },
   );
   const { selectedCamera, selectedCameraMode, selectedSystemAudio } = store;

@@ -88,8 +88,8 @@ function nextChoice(kind: IslandInputKind, input: IslandInput, id: string) {
 }
 
 /** An input's level along the part, as its glyph shows it on the row. Off,
- * it stays at nothing, dimmed with the devices, so the part keeps its
- * shape when the input is switched. */
+ * it stays at nothing, dimmed, so the part keeps its shape when the input is
+ * switched. */
 function PanelLevel({
   isOn,
   kind,
@@ -206,9 +206,6 @@ export function DevicePanel({
             the list would have changed, and the rule picks the next set. */}
         <ListBox
           aria-label={inputName(kind)}
-          // Off, an input's devices are not chosen from; they show what it
-          // would record when switched back on.
-          disabledKeys={input.isOn ? [] : devices.map(({ id }) => id)}
           onSelectionChange={(keys) => {
             if (keys === "all") return;
             const pressed = devices.find(

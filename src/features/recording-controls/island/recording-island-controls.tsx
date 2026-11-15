@@ -144,6 +144,7 @@ export function RecordingIslandControls({
     isMicrophoneLocked,
     isPreviewActive: isOpenAndIdle,
     monitor,
+    panel,
     warnings: {
       camera: availability.cameraWarning,
       microphone: availability.microphoneWarning,
