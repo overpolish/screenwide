@@ -186,7 +186,9 @@ fn gap(before: &DictatedWord, after: &DictatedWord) -> u64 {
 
 /// Whether silence has been heard after `last`, the last word so far.
 fn silent_after(heard: &DictatedText, last: &DictatedWord) -> bool {
-  heard.finished || heard.heard_ms.saturating_sub(last.end_ms) >= PAUSE_MS + LAG_MS
+  heard.finished
+    || heard.paused_after
+    || heard.heard_ms.saturating_sub(last.end_ms) >= PAUSE_MS + LAG_MS
 }
 
 /// A word as compared with a command's: lower case, without punctuation.

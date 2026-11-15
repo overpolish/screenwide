@@ -410,6 +410,11 @@ pub struct DictatedText {
   /// Nothing more will be heard: the last word has silence after it.
   #[serde(default)]
   pub finished: bool,
+  /// Each word is written only once the pause after it is heard, as a
+  /// dictation at pauses writes them: the last word has silence after it
+  /// however little has been heard since.
+  #[serde(default)]
+  pub paused_after: bool,
 }
 
 /// A word heard in a dictation, with its punctuation, and when it was said

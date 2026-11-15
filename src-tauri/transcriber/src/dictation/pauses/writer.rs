@@ -224,6 +224,7 @@ pub fn dictated(written: &Written, heard: usize, finished: bool) -> DictatedText
     words,
     heard_ms: ms(heard),
     finished,
+    paused_after: true,
   }
 }
 

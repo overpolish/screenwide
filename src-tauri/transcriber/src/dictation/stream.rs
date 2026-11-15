@@ -234,5 +234,6 @@ fn text(stream: &Stream<'_>, heard_ms: Option<u64>) -> DictatedText {
     heard_ms: heard_ms.unwrap_or_else(|| words.last().map_or(0, |word| word.end_ms)),
     words,
     finished,
+    paused_after: false,
   }
 }
