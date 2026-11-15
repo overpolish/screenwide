@@ -1,12 +1,12 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-// Builds the speech-to-text helper and puts it where Tauri's externalBin
-// expects it. Cargo decides what needs rebuilding, so an unchanged helper
-// costs about a second. The models bundled for the helper to run, the voice
-// activity model for the microphone tools and, on Windows, the text reading
-// models for Text Recognition, are fetched once, pinned to a revision and
-// checked against their digests.
+// Builds the speech-to-text helpers, the transcriber and dictation's, and
+// puts them where Tauri's externalBin expects them. Cargo decides what needs
+// rebuilding, so unchanged helpers cost about a second. The models bundled
+// for the transcriber to run, the voice activity model for the microphone
+// tools and, on Windows, the text reading models for Text Recognition, are
+// fetched once, pinned to a revision and checked against their digests.
 
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
@@ -155,44 +155,49 @@ const rustHost = execFileSync("rustc", ["-vV"], { encoding: "utf8" }).match(
   /^host: (\S+)$/m,
 )?.[1];
 const crossCompiling = target !== rustHost;
-execFileSync(
-  "cargo",
-  [
-    "build",
-    "--release",
-    "--features",
-    "engine",
-    ...(crossCompiling ? ["--target", target] : []),
-    "--target-dir",
-    targetDirectory,
-  ],
-  { cwd: crate, env: buildEnv, stdio: "inherit" },
-);
+// The transcriber and dictation's helper build separately: each speech
+// engine brings its own copy of ggml, and one program cannot hold both.
+const build = (feature, program) =>
+  execFileSync(
+    "cargo",
+    [
+      "build",
+      "--release",
+      "--features",
+      feature,
+      "--bin",
+      program,
+      ...(crossCompiling ? ["--target", target] : []),
+      "--target-dir",
+      targetDirectory,
+    ],
+    { cwd: crate, env: buildEnv, stdio: "inherit" },
+  );
+build("engine", "screenwide-transcriber");
+build("dictation", "screenwide-dictation");
 
 const extension = requestedPlatform === "win32" ? ".exe" : "";
-const built = resolve(
+const builtDirectory = resolve(
   targetDirectory,
   ...(crossCompiling ? [target] : []),
   "release",
-  `screenwide-transcriber${extension}`,
 );
-const place = async (destination) => {
-  await mkdir(dirname(destination), { recursive: true });
-  await copyFile(built, destination);
-  if (hostPlatform !== "win32") await chmod(destination, 0o755);
-};
-await place(
-  resolve(
-    "src-tauri",
-    "binaries",
-    `screenwide-transcriber-${target}${extension}`,
-  ),
-);
-// Beside the development build too, where the app looks first, as it does
-// for FFmpeg.
-await place(
-  resolve("src-tauri", "target", "debug", `screenwide-transcriber${extension}`),
-);
+const built = resolve(builtDirectory, `screenwide-transcriber${extension}`);
+for (const program of ["screenwide-transcriber", "screenwide-dictation"]) {
+  for (const destination of [
+    resolve("src-tauri", "binaries", `${program}-${target}${extension}`),
+    // Beside the development build too, where the app looks first, as it
+    // does for FFmpeg.
+    resolve("src-tauri", "target", "debug", `${program}${extension}`),
+  ]) {
+    await mkdir(dirname(destination), { recursive: true });
+    await copyFile(
+      resolve(builtDirectory, `${program}${extension}`),
+      destination,
+    );
+    if (hostPlatform !== "win32") await chmod(destination, 0o755);
+  }
+}
 // The GPU library Studio sound runs through, which ONNX Runtime's build keeps
 // out of the helper: beside the development helper, and in binaries, from
 // where tauri.macos.conf.json and tauri.windows.conf.json bundle it where the

@@ -111,6 +111,21 @@ export const openMicrophoneSettings = () =>
 
 export { listMicrophones };
 
+/** Asks for, or opens the system's settings for, access dictation needs. */
+export const grantDictationAccess = (
+  permission: "accessibility" | "microphone",
+  canRequest: boolean,
+) =>
+  canRequest
+    ? requestPermission(permission)
+    : openPermissionSettings(permission);
+
+/** Another window asked Settings to show a pane. */
+export const listenToSectionOpen = (onOpen: (section: string) => void) =>
+  listen<string>("settings://show-section", (event) => {
+    onOpen(event.payload);
+  });
+
 export {
   cancelTranscriptionDownload,
   downloadTranscriptionModel,

@@ -4,6 +4,7 @@
 /transcriber/target/
 /binaries/ffmpeg-*
 /binaries/screenwide-transcriber-*
+/binaries/screenwide-dictation-*
 /binaries/silero-vad.bin
 /binaries/ppocr-*
 /binaries/libwebgpu_dawn.dylib

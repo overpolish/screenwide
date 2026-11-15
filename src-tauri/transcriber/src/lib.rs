@@ -197,6 +197,18 @@ pub enum Job {
     width: u32,
     height: u32,
   },
+  /// Starts a dictation with the streaming model at `model`, answered with
+  /// [`Reply::Dictated`] once it listens. Until [`Job::FinishDictation`] the
+  /// dictation takes the helper over: [`Job::FeedDictation`] and
+  /// [`Job::FinishDictation`] are the only jobs it answers.
+  BeginDictation { model: PathBuf },
+  /// The next samples of the dictation, at [`SAMPLE_RATE`] as 16-bit PCM,
+  /// which keeps each line short. Answered with [`Reply::Dictated`] with the
+  /// text heard so far.
+  FeedDictation { samples: Vec<i16> },
+  /// The dictation's speech has ended: answered with [`Reply::Dictated`] with
+  /// the final text, after which the helper takes other jobs again.
+  FinishDictation,
 }
 
 /// When each camera frame the matte was made from shows: frame `n` of the
@@ -338,6 +350,12 @@ pub enum Reply {
     id: u64,
     lines: Vec<TextLine>,
   },
+  /// What the dictation has heard so far, or all of it in answer to
+  /// [`Job::FinishDictation`].
+  Dictated {
+    id: u64,
+    text: DictatedText,
+  },
   /// How far a long job has got, 0 to 1. Sent any number of times before the
   /// reply that ends the job, which every other kind is.
   Progress {
@@ -348,6 +366,16 @@ pub enum Reply {
     id: u64,
     message: String,
   },
+}
+
+/// A dictation's text, split where it may still change: `settled` only ever
+/// grows, and `unsettled` follows it, rewritten as more is heard. Both are
+/// empty when the dictation has only just begun.
+#[derive(Clone, Debug, Default, Deserialize, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DictatedText {
+  pub settled: String,
+  pub unsettled: String,
 }
 
 /// The chance that each window of the audio holds speech, 0 to 1, in order.

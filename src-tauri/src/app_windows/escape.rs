@@ -79,7 +79,8 @@ const fn should_be_armed(
 
 /// A capture overlay borrows Escape while it is active. Otherwise the visible
 /// recording controls own it even though the island's panel does not take
-/// focus.
+/// focus. A dictation listening takes it before any of them: it is up for a
+/// moment, over whatever else is.
 pub(super) fn arm(app: &AppHandle) {
   if ARMED
     .compare_exchange(false, true, Ordering::AcqRel, Ordering::Acquire)
@@ -106,6 +107,10 @@ pub(super) fn arm(app: &AppHandle) {
 
 /// Hands one Escape press to whoever owns it.
 fn dismiss_owner(app: &AppHandle) {
+  if crate::dictation::is_listening() {
+    crate::dictation::cancel(app);
+    return;
+  }
   let screenshot_session = super::region::SCREENSHOT_REGION_SESSION.load(Ordering::Acquire);
   match owner(
     is_recording_ui_visible(),
@@ -200,14 +205,16 @@ pub(super) fn sync(
     });
     return;
   }
-  if should_be_armed(
-    controls_visible,
-    screenshot_session,
-    crate::screenshots::copied::is_up(),
-    ruler_active,
-    crate::text_recognition::is_active(app),
-    crate::annotate::is_active(app),
-  ) {
+  if crate::dictation::is_listening()
+    || should_be_armed(
+      controls_visible,
+      screenshot_session,
+      crate::screenshots::copied::is_up(),
+      ruler_active,
+      crate::text_recognition::is_active(app),
+      crate::annotate::is_active(app),
+    )
+  {
     arm(app);
   } else {
     disarm(app);

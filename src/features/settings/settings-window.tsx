@@ -20,6 +20,7 @@ import { clearIn } from "./settings-motion";
 import { SettingsPanes } from "./settings-panes";
 import { sectionTitle, type SettingsSection } from "./settings-sections";
 import { settingsSidebarItems } from "./settings-sidebar-items";
+import { useSectionOpen } from "./use-section-open";
 import { useSettingsWindowState } from "./use-settings-window-state";
 
 import type { TranscriptionModel } from "../transcription/types";
@@ -54,6 +55,16 @@ export function SettingsWindow({
     setSection("licences");
   }, [search]);
   useLicencesOpen(openLicences);
+  const openSection = useCallback(
+    (requested: string) => {
+      const item = settingsSidebarItems().find(({ id }) => id === requested);
+      if (!item) return;
+      search.setQuery("");
+      setSection(item.id);
+    },
+    [search],
+  );
+  useSectionOpen(openSection);
 
   return (
     // Settings' motion follows the system's reduced motion: fades stay,

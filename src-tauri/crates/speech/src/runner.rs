@@ -12,6 +12,7 @@ use screenwide_transcriber::{Job, Reply, Request, Speech, Transcript};
 use self::samples::Samples;
 
 mod camera;
+pub mod dictation;
 pub mod samples;
 mod text;
 
@@ -29,7 +30,17 @@ pub struct Transcriber {
 
 impl Transcriber {
   pub fn start() -> Result<Self, String> {
-    let mut child = screenwide_sidecar::transcriber_command()
+    Self::start_program(screenwide_sidecar::transcriber_command())
+  }
+
+  /// Dictation's helper, which answers only [`Self::begin_dictation`] and
+  /// what follows it.
+  pub fn start_dictation() -> Result<Self, String> {
+    Self::start_program(screenwide_sidecar::dictation_command())
+  }
+
+  fn start_program(mut command: std::process::Command) -> Result<Self, String> {
+    let mut child = command
       .stdin(Stdio::piped())
       .stdout(Stdio::piped())
       .stderr(Stdio::inherit())
@@ -226,6 +237,7 @@ impl Transcriber {
       | Reply::FacesFound { id }
       | Reply::TextReaderLoaded { id }
       | Reply::TextRead { id, .. }
+      | Reply::Dictated { id, .. }
       | Reply::Halfway { id }
       | Reply::Progress { id, .. }
       | Reply::Failed { id, .. }) = &answer;

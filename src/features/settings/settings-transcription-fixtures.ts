@@ -1,10 +1,23 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import type { PermissionSnapshot } from "../permissions/types";
 import type {
   TranscriptionModel,
   TranscriptionState,
 } from "../transcription/types";
+
+/** Every permission granted, or none yet asked for, as dictation's row in
+ * Models reads them. */
+export const accessSnapshot = (granted: boolean): PermissionSnapshot => {
+  const status = { canRequest: true, granted };
+  return {
+    accessibility: status,
+    camera: status,
+    microphone: status,
+    screenRecording: status,
+  };
+};
 
 /** The Transcripts model, at its real download size, which also transcribes
  * voice notes. */
@@ -15,6 +28,17 @@ const TRANSCRIPTS_MODEL: TranscriptionModel = {
   progress: null,
   purpose: "transcripts",
   sizeBytes: 874_188_075,
+  status: "available",
+};
+
+/** The Dictation model, at its real download size. */
+const DICTATION_MODEL: TranscriptionModel = {
+  description: "Types what you say into any app, in English.",
+  id: "parakeet-unified-en-0.6b-q8_0",
+  name: "Dictation",
+  progress: null,
+  purpose: "dictation",
+  sizeBytes: 731_357_568,
   status: "available",
 };
 
@@ -84,6 +108,7 @@ export function transcriptionPreviewApi(
     language: "system",
     models: [
       { ...TRANSCRIPTS_MODEL, ...seed },
+      DICTATION_MODEL,
       STUDIO_SOUND_MODEL,
       STUDIO_DUCKING_MODEL,
       CAMERA_BACKGROUND_MODEL,

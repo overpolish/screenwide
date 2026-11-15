@@ -24,7 +24,8 @@ pub(super) const fn action_window(action: ShortcutAction) -> Option<WindowLabel>
     | ShortcutAction::PauseResumeRecording
     | ShortcutAction::RulerOverlay
     | ShortcutAction::SaveReplay
-    | ShortcutAction::ToggleKeepAwake => None,
+    | ShortcutAction::ToggleKeepAwake
+    | ShortcutAction::Dictate => None,
   }
 }
 
@@ -186,6 +187,11 @@ pub(super) fn run_action(app: &AppHandle, action: ShortcutAction) {
     return;
   }
 
+  // Dictation types into whatever is in front, so nothing on screen goes.
+  if action == ShortcutAction::Dictate {
+    crate::dictation::pressed(app);
+    return;
+  }
   crate::capture_overlays::dismiss_except(app, preserved_capture_overlays(action));
   match action {
     ShortcutAction::ToggleRecordingControls
@@ -227,5 +233,6 @@ pub(super) fn run_action(app: &AppHandle, action: ShortcutAction) {
       let _ = crate::recording::replay::save(app);
     }
     ShortcutAction::ToggleKeepAwake => crate::keep_awake::toggle(app),
+    ShortcutAction::Dictate => unreachable!("handled above"),
   }
 }

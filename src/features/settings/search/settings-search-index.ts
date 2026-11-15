@@ -23,6 +23,7 @@ import {
   modifierTitle,
 } from "../sections/glide-rows";
 import {
+  dictationShortcuts,
   keepAwakeShortcuts,
   recordingShortcuts,
   screenshotShortcuts,
@@ -248,6 +249,10 @@ export function settingsSearchEntries({
   );
   at("hotkeys", t("settings-section-ocr"))(
     [row(t("settings-ocr-activate")), ...ocrShortcuts().map(shortcutRow)],
+    shortcut,
+  );
+  at("hotkeys", t("settings-dictation"))(
+    dictationShortcuts().map(shortcutRow),
     shortcut,
   );
   at("hotkeys", t("settings-keep-awake"))(

@@ -7,6 +7,8 @@ import { AnnotateIsland } from "../annotate/island/annotate-island";
 import { useAnnotateRows } from "../annotate/island/annotate-rows";
 import { useAnnotateDrawing } from "../annotate/island/use-annotate-drawing";
 import { useAnnotateEditing } from "../annotate/island/use-annotate-editing";
+import { DictationIsland } from "../dictation/island/dictation-island";
+import { useDictationIsland } from "../dictation/island/use-dictation-island";
 import { RecordingIslandControls } from "../recording-controls/island/recording-island-controls";
 import { selectStatus, useRecordingStore } from "../recording-controls/store";
 import { ReferenceDropIsland } from "../reference/drop/reference-drop-island";
@@ -30,16 +32,17 @@ import { useSystemKeysAnnouncement } from "./use-system-keys-announcement";
 import type { IslandHost } from "./island-window";
 
 /** What the island shows: a scrolling capture while one runs, as it takes
- * the screen over; the hint while a picture is dragged with Option held, as
- * letting go keeps it as a reference; Quick Screenshot's while its overlay
- * waits for an area, over the Ruler, which steps back for it; a screenshot
- * just copied, for a few seconds, before the tool it was taken over comes
- * back; Text Recognition's or the Ruler's tools while either is up, even
- * during a recording, as neither can be used without them; the annotate
- * tools on their own island while the overlay draws with no recording under
- * way; a new version while one is offered, which comes out only while the
- * island is free; and otherwise the recording's, with the annotate tools
- * under its row while the overlay draws. */
+ * the screen over; a dictation while one listens or types, as it is up for
+ * a moment over whatever else is; the hint while a picture is dragged with
+ * Option held, as letting go keeps it as a reference; Quick Screenshot's
+ * while its overlay waits for an area, over the Ruler, which steps back for
+ * it; a screenshot just copied, for a few seconds, before the tool it was
+ * taken over comes back; Text Recognition's or the Ruler's tools while
+ * either is up, even during a recording, as neither can be used without
+ * them; the annotate tools on their own island while the overlay draws with
+ * no recording under way; a new version while one is offered, which comes
+ * out only while the island is free; and otherwise the recording's, with
+ * the annotate tools under its row while the overlay draws. */
 export function IslandContent({ island }: { island: IslandHost }) {
   const isDrawing = useAnnotateDrawing();
   const editing = useAnnotateEditing();
@@ -49,6 +52,7 @@ export function IslandContent({ island }: { island: IslandHost }) {
   const copiedScreenshot = useCopiedScreenshotIsland();
   const referenceDrop = useReferenceDropIsland();
   const textRecognition = useTextRecognitionIsland();
+  const dictation = useDictationIsland();
   const update = useUpdateIsland();
   const status = useRecordingStore(selectStatus);
   const annotate = isDrawing ? editing : null;
@@ -69,21 +73,23 @@ export function IslandContent({ island }: { island: IslandHost }) {
   const swap = useIslandSwap(
     scrolling.isUp
       ? "scrollingCapture"
-      : referenceDrop.isUp
-        ? "referenceDrop"
-        : screenshotPart
-          ? "quickScreenshot"
-          : textRecognition.isUp
-            ? "textRecognition"
-            : ruler.isUp
-              ? "ruler"
-              : status !== "idle"
-                ? "recording"
-                : annotate
-                  ? "annotate"
-                  : update.isUp
-                    ? "update"
-                    : "recording",
+      : dictation.isUp
+        ? "dictation"
+        : referenceDrop.isUp
+          ? "referenceDrop"
+          : screenshotPart
+            ? "quickScreenshot"
+            : textRecognition.isUp
+              ? "textRecognition"
+              : ruler.isUp
+                ? "ruler"
+                : status !== "idle"
+                  ? "recording"
+                  : annotate
+                    ? "annotate"
+                    : update.isUp
+                      ? "update"
+                      : "recording",
     island,
   );
   // The first time one of the system's keys opens a tool, the island it
@@ -122,6 +128,16 @@ export function IslandContent({ island }: { island: IslandHost }) {
         {...swap.host}
         onCancel={scrolling.onCancel}
         state={scrolling.state}
+      />
+    );
+  }
+  if (swap.kind === "dictation" && dictation.state) {
+    return (
+      <DictationIsland
+        {...swap.host}
+        level={dictation.level}
+        onAction={dictation.onAction}
+        state={dictation.state}
       />
     );
   }

@@ -6,7 +6,7 @@ use std::collections::HashSet;
 use super::*;
 
 #[test]
-fn defaults_open_the_controls_save_replays_take_screenshots_and_recognize_text() {
+fn defaults_open_the_controls_save_replays_take_screenshots_recognize_text_and_dictate() {
   let settings = ShortcutSettings::default();
   let assigned = settings
     .bindings
@@ -40,6 +40,7 @@ fn defaults_open_the_controls_save_replays_take_screenshots_and_recognize_text()
         ShortcutAction::AnnotateClear,
         "CommandOrControl+Shift+Backspace"
       ),
+      (ShortcutAction::Dictate, "CommandOrControl+Shift+Space"),
     ]
   );
 }

@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import { DictationMicrophoneSync } from "../features/dictation/dictation-microphone-sync";
 import { IslandContent } from "../features/island/island-content";
 import { IslandWindow } from "../features/island/island-window";
 import { PermissionSync } from "../features/permissions/permission-sync";
@@ -15,6 +16,7 @@ import { RecordingSourceSync } from "../features/recording-sources/recording-sou
 export function IslandEntry() {
   return (
     <>
+      <DictationMicrophoneSync />
       <PermissionSync />
       <PopupPanelSync />
       <RecordingInputSync />

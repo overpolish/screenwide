@@ -24,3 +24,7 @@ export const NotDownloaded: Story = {
 export const Downloading: Story = {
   parameters: { modelSeed: { progress: 0.42, status: "downloading" } },
 };
+
+export const DictationNeedsAccess: Story = {
+  parameters: { withoutAccess: true },
+};

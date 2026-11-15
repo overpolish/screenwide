@@ -20,12 +20,23 @@ pub fn initialize(app: &tauri::AppHandle) {
   crate::transcription::language::initialize(app);
 }
 
-use tauri::AppHandle;
+use tauri::{AppHandle, Emitter};
 
 use crate::app_windows::{self, on_demand, WindowLabel};
 
 pub fn show(app: &AppHandle) {
   show_at(app, None, |_| {});
+}
+
+/// Tells an open Settings which pane to show.
+const SECTION_EVENT: &str = "settings://show-section";
+
+/// Shows Settings on the pane `section` names, as `?section` in the address
+/// of a window built for it, or by `SECTION_EVENT` to one already open.
+pub(crate) fn show_section(app: &AppHandle, section: &'static str) {
+  show_at(app, Some(section), move |app| {
+    let _ = app.emit_to(WindowLabel::Settings.as_str(), SECTION_EVENT, section);
+  });
 }
 
 /// Shows Settings, then runs `then`. Settings built for this opens on the

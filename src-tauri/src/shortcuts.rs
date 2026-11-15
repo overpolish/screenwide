@@ -100,6 +100,8 @@ pub enum ShortcutAction {
   AnnotateClear,
   RulerOverlay,
   ToggleKeepAwake,
+  /// Held, dictates until let go; tapped, until tapped again.
+  Dictate,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize, TS)]

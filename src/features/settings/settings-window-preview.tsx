@@ -5,6 +5,7 @@ import { type ContextType, useState } from "react";
 
 import { isWindows } from "../../lib/platform";
 import { featureStage } from "../../storybook/feature-story-stage";
+import { usePermissionStore } from "../permissions/store";
 
 import { SAMPLE_RUNNING_APPS } from "./capture/hidden-apps-fixtures";
 import {
@@ -15,6 +16,7 @@ import {
 import { SettingsApiContext } from "./settings-api-context";
 import { momentsPreviewApi } from "./settings-moments-fixtures";
 import {
+  accessSnapshot,
   transcriptionPreviewApi,
   type TranscriptionPreviewSeed,
 } from "./settings-transcription-fixtures";
@@ -202,10 +204,12 @@ export function createPreviewApi(
     getRulerSettings: () => Promise.resolve(ruler),
     getShortcutDefaults: () => Promise.resolve(defaults),
     getShortcutSettings: () => Promise.resolve(shortcuts),
+    grantDictationAccess: () => Promise.resolve(undefined),
     hideSettings: () => Promise.resolve(null),
     listRunningApps: () => Promise.resolve(SAMPLE_RUNNING_APPS),
     listenToAnnotateSettings: () => Promise.resolve(() => undefined),
     listenToGeneralSettings: () => Promise.resolve(() => undefined),
+    listenToSectionOpen: () => Promise.resolve(() => undefined),
     minimize: () => Promise.resolve(),
     setAnnotateSettings: (next) => {
       annotate = next;
@@ -256,14 +260,19 @@ export const settingsWindowMeta = {
   },
   // A story picks where the models and licences start through
   // `parameters.modelSeed` and `parameters.licencesSeed`, since they are the
-  // preview's state rather than the window's props.
+  // preview's state rather than the window's props; and, with
+  // `parameters.withoutAccess`, shows the access dictation needs not yet
+  // granted, as on a Mac that has not been asked.
   render: function Render(args, { parameters }) {
-    const [api] = useState(() =>
-      createPreviewApi(
+    const [api] = useState(() => {
+      usePermissionStore
+        .getState()
+        .setPermissions(accessSnapshot(!parameters.withoutAccess));
+      return createPreviewApi(
         isModelSeed(parameters.modelSeed) ? parameters.modelSeed : undefined,
         licencesSeed(parameters.licencesSeed),
-      ),
-    );
+      );
+    });
     const [checked, setChecked] = useState(false);
     return (
       <SettingsApiContext value={api}>

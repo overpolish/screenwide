@@ -43,6 +43,7 @@ screenwide-capture = { path = "crates/capture" }
 screenwide-compositor = { path = "crates/compositor" }
 screenwide-credits = { path = "crates/credits" }
 screenwide-cursor-effects = { path = "crates/cursor_effects" }
+screenwide-dictation = { path = "crates/dictation" }
 screenwide-export = { path = "crates/export" }
 screenwide-gpu = { path = "crates/gpu" }
 screenwide-h264 = { path = "crates/h264" }
@@ -57,6 +58,7 @@ screenwide-moments = { path = "crates/moments" }
 screenwide-openverse = { path = "crates/openverse" }
 screenwide-osc = { path = "crates/osc" }
 screenwide-output = { path = "crates/output" }
+screenwide-paste = { path = "crates/paste" }
 screenwide-placement = { path = "crates/placement" }
 screenwide-project = { path = "crates/project" }
 screenwide-qr = { path = "crates/qr" }
@@ -211,6 +213,7 @@ screenwide-capture.workspace = true
 screenwide-compositor.workspace = true
 screenwide-credits.workspace = true
 screenwide-cursor-effects.workspace = true
+screenwide-dictation.workspace = true
 screenwide-export.workspace = true
 screenwide-gpu.workspace = true
 screenwide-i18n.workspace = true
@@ -225,6 +228,7 @@ screenwide-openverse.workspace = true
 screenwide-osc.workspace = true
 screenwide-workspace.workspace = true
 screenwide-output.workspace = true
+screenwide-paste.workspace = true
 screenwide-project.workspace = true
 screenwide-qr.workspace = true
 screenwide-tables.workspace = true

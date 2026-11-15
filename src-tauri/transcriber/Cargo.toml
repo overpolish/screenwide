@@ -27,6 +27,14 @@ name = "screenwide-transcriber"
 path = "src/main.rs"
 required-features = ["engine"]
 
+# Dictation's helper, a program of its own: transcribe.cpp and whisper.cpp
+# each build their own copy of ggml, and linked into one program the two
+# copies' symbols collide. Built with only `dictation` on, it has transcribe.cpp's.
+[[bin]]
+name = "screenwide-dictation"
+path = "src/dictation/main.rs"
+required-features = ["dictation"]
+
 [features]
 engine = [
   "dep:whisper-rs",
@@ -40,11 +48,15 @@ engine = [
   "dep:tract-pulse",
   "dep:windows",
 ]
+dictation = ["dep:transcribe-cpp"]
 
 [dependencies]
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 whisper-rs = { version = "0.16.0", optional = true }
+# transcribe.cpp for dictation, which streams with Parakeet: whisper.cpp
+# cannot stream. Each platform adds its GPU backend below.
+transcribe-cpp = { version = "=0.4.2", optional = true, default-features = false }
 # DeepFilterNet 3 for Reduce noise, with its model built in. Only on GitHub:
 # the crates.io release predates the inference this needs.
 deep_filter = { git = "https://github.com/Rikorose/DeepFilterNet", rev = "d375b2d8309e0935d165700c91da9de862a99c31", default-features = false, features = ["tract", "default-model"], optional = true }
@@ -66,6 +78,7 @@ realfft = { version = "3.5.0", optional = true }
 
 [target.'cfg(target_os = "macos")'.dependencies]
 whisper-rs = { version = "0.16.0", optional = true, features = ["metal"] }
+transcribe-cpp = { version = "=0.4.2", optional = true, default-features = false, features = ["metal"] }
 # Studio sound on the GPU through WebGPU, which Dawn runs over Metal. Dawn
 # stays a library of its own beside the helper; copy-dylibs puts it beside
 # each build and test, and build.rs tells the helper where to find it. Object
@@ -75,6 +88,7 @@ ort = { version = "=2.0.0-rc.13", optional = true, default-features = false, fea
 
 [target.'cfg(windows)'.dependencies]
 whisper-rs = { version = "0.16.0", optional = true, features = ["vulkan"] }
+transcribe-cpp = { version = "=0.4.2", optional = true, default-features = false, features = ["vulkan"] }
 # Studio sound on the GPU through DirectML, on x64 and ARM64 alike. pyke's
 # WebGPU build brings a DXC of its own that would clash with the app's.
 # DirectML.dll ships beside the helper, which Windows looks in first.

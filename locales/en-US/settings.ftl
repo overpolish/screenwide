@@ -12,6 +12,8 @@ settings-recording = Recording
 settings-screenshots = Screenshots
 # The Shortcuts pane's group for Keep Awake, the tray's switch that keeps the computer awake and its user shown as active.
 settings-keep-awake = Keep Awake
+# The Shortcuts pane's group for dictation, which types what is said into any app.
+settings-dictation = Dictation
 
 ## Sidebar sections, also the window's title
 
@@ -211,6 +213,15 @@ settings-transcription-camera-objects-description = Keeps or removes objects on 
 # The model the recording's transcript and voice notes are made with, named for what it does.
 settings-transcription-transcripts = Transcripts
 settings-transcription-transcripts-description = Turns your recordings and voice notes into text.
+# The model dictation streams with, named for what it does.
+settings-transcription-dictation = Dictation
+settings-transcription-dictation-description = Types what you say into any app, in English.
+# Shown in place of the description, and the Download, while the transcription language is not English.
+settings-transcription-dictation-english-only = Set the language to English to dictate.
+# Shown in place of the description while macOS has not yet given dictation the access it needs.
+settings-transcription-dictation-access = Allow microphone and Accessibility access to dictate.
+settings-transcription-dictation-allow-microphone = Allow Microphone
+settings-transcription-dictation-allow-accessibility = Allow Accessibility
 settings-transcription-language = Language
 settings-transcription-language-description = The language your recordings are spoken in.
 # $language is the computer's own language.
@@ -235,6 +246,8 @@ settings-shortcut-reference-screenshot = Keep a reference
 settings-shortcut-reference-screenshot-description = Choose an area to keep on screen at its true size.
 settings-shortcut-keep-awake = Turn Keep Awake on or off
 settings-shortcut-keep-awake-description = Keeps the computer awake and shows you as active.
+settings-shortcut-dictate = Dictate
+settings-shortcut-dictate-description = Hold to talk, or tap to start and stop.
 # The row of a moment's shortcut in the Shortcuts pane. $moment is the moment's name, which the user chooses.
 settings-shortcut-place-moment = Place { $moment }
 

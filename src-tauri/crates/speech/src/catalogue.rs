@@ -21,6 +21,9 @@ pub enum Purpose {
   /// edit and caption by, and moments' voice notes. Both take the accurate
   /// model, so a note reads as well as the transcript.
   Transcripts,
+  /// Dictation: speech typed into any app as it is spoken, which takes a
+  /// model that streams.
+  Dictation,
 }
 
 impl Purpose {
@@ -32,6 +35,7 @@ impl Purpose {
       Self::CameraBackground => screenwide_i18n::t!("settings-transcription-camera-background"),
       Self::CameraObjects => screenwide_i18n::t!("settings-transcription-camera-objects"),
       Self::Transcripts => screenwide_i18n::t!("settings-transcription-transcripts"),
+      Self::Dictation => screenwide_i18n::t!("settings-transcription-dictation"),
     }
   }
 
@@ -49,6 +53,7 @@ impl Purpose {
         screenwide_i18n::t!("settings-transcription-camera-objects-description")
       }
       Self::Transcripts => screenwide_i18n::t!("settings-transcription-transcripts-description"),
+      Self::Dictation => screenwide_i18n::t!("settings-transcription-dictation-description"),
     }
   }
 }
@@ -90,6 +95,19 @@ pub const MODELS: &[Model] = &[
     }],
     id: "large-v3-turbo-q8_0",
     purpose: Purpose::Transcripts,
+  },
+  // Parakeet Unified EN 0.6B from NVIDIA (NVIDIA Open Model License), as the
+  // transcribe.cpp project converted it to GGUF at 8 bits, at a fixed
+  // revision: English that streams, punctuated as it is said.
+  Model {
+    files: &[ModelFile {
+      name: "parakeet-unified-en-0.6b-Q8_0.gguf",
+      sha256: "4b50b6dd862bf6e346929aaf4f5eaacec003bfa3f56462d6c874b41ef2f38795",
+      size_bytes: 731_357_568,
+      url: "https://huggingface.co/handy-computer/parakeet-unified-en-0.6b-gguf/resolve/843b1b175ace04f5a89d379c79e2518c0d065b25/parakeet-unified-en-0.6b-Q8_0.gguf",
+    }],
+    id: "parakeet-unified-en-0.6b-q8_0",
+    purpose: Purpose::Dictation,
   },
   // Sidon v0.1 from the University of Tokyo (MIT), its released TorchScript
   // converted to ONNX: a speech encoder and the vocoder that speaks again

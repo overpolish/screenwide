@@ -21,14 +21,20 @@ pub(super) fn register_binding(
       .map_err(|error| error.to_string())?;
     app
       .global_shortcut()
-      .on_shortcut(parsed, move |app, _, event| {
-        if event.state() == ShortcutState::Pressed {
+      .on_shortcut(parsed, move |app, _, event| match event.state() {
+        ShortcutState::Pressed => {
           diagnostics::record(
             "native_shortcut_pressed",
             serde_json::json!({"action": action, "capturing": is_capturing()}),
           );
           during_native_callback(|| run_action(app, action));
         }
+        // Dictation alone tells a hold from a tap, by when its keys are let
+        // go.
+        ShortcutState::Released if action == ShortcutAction::Dictate => {
+          during_native_callback(|| crate::dictation::released(app));
+        }
+        ShortcutState::Released => {}
       })
       .map_err(|error| error.to_string())
   })();

@@ -1,8 +1,8 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! The programs bundled beside the app: FFmpeg, FFprobe and the speech-to-text
-//! helper. Finding them, and starting them without a console window.
+//! The programs bundled beside the app: FFmpeg, FFprobe and the speech
+//! helpers. Finding them, and starting them without a console window.
 
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -80,6 +80,12 @@ pub fn ffprobe_command() -> Command {
 /// and started as it is.
 pub fn transcriber_command() -> Command {
   without_console(tool_path("screenwide-transcriber"))
+}
+
+/// Dictation's helper, bundled and started as the transcriber is: a program
+/// of its own, as its speech engine cannot share one with the transcriber's.
+pub fn dictation_command() -> Command {
+  without_console(tool_path("screenwide-dictation"))
 }
 
 fn without_console(program: PathBuf) -> Command {

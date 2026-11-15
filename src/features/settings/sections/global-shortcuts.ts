@@ -49,3 +49,11 @@ export const keepAwakeShortcuts = (): GlobalShortcut[] => [
     label: t("settings-shortcut-keep-awake"),
   },
 ];
+
+export const dictationShortcuts = (): GlobalShortcut[] => [
+  {
+    action: "dictate",
+    description: t("settings-shortcut-dictate-description"),
+    label: t("settings-shortcut-dictate"),
+  },
+];

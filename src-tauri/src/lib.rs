@@ -17,6 +17,7 @@ mod cursor_scrub;
 mod desktop_icons;
 #[cfg(debug_assertions)]
 mod dev_identity;
+mod dictation;
 mod editor;
 mod fault;
 mod file_browser;

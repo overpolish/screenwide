@@ -49,6 +49,12 @@ pub(crate) fn resolved(setting: &str) -> Option<String> {
   }
 }
 
+/// Whether speech is taken to be English, which is all dictation's model
+/// hears: English chosen, or the computer's when it is English, or detected.
+pub(crate) fn is_english() -> bool {
+  resolved(&current()).is_none_or(|code| code == "en")
+}
+
 /// A two- or three-letter code, as Whisper names its languages.
 pub(super) fn is_code(value: &str) -> bool {
   (2..=3).contains(&value.len()) && value.chars().all(|letter| letter.is_ascii_alphabetic())

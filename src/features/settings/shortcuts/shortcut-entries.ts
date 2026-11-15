@@ -6,6 +6,7 @@ import {
   Coffee,
   Flag,
   type LucideIcon,
+  Mic,
   PanelsTopLeft,
   PenLine,
   Ruler,
@@ -20,6 +21,7 @@ import {
   modifierTitle,
 } from "../sections/glide-rows";
 import {
+  dictationShortcuts,
   type GlobalShortcut,
   keepAwakeShortcuts,
   recordingShortcuts,
@@ -264,6 +266,13 @@ export function shortcutEntries(sources: ShortcutSources): ShortcutEntry[] {
       scope: "ocr",
       value: ocr?.bindings[action] ?? null,
     });
+
+  const dictation = t("settings-dictation");
+  entries.push(
+    ...dictationShortcuts().map((item) =>
+      global({ ...item, group: dictation, icon: Mic }),
+    ),
+  );
 
   const keepAwake = t("settings-keep-awake");
   entries.push(
