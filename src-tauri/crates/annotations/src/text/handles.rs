@@ -7,9 +7,11 @@ use std::collections::BTreeMap;
 
 use super::look;
 use super::model::TextControlPoint;
-use crate::handles::{normalised_point, stroke_width, NativeAnnotationHandles};
+use crate::handles::{
+  normalised_point, stroke_width, NativeAnnotationHandles, HANDLE_FLAG_TYPE_ONLY,
+};
 use crate::{AnnotationKind, AnnotationPoint, AnnotationStyle};
-use screenwide_text::{TailShape, TextSpan, TextStyle};
+use screenwide_text::{TailShape, TextBackground, TextSpan, TextStyle};
 
 /// The text a box's grips are read from.
 pub(crate) struct TextGrips<'a> {
@@ -64,7 +66,11 @@ pub(crate) fn grips(
     layer_id: -1,
     index,
     kind: AnnotationKind::Text.raw(),
-    flags: 0,
+    flags: if look.background == TextBackground::Box {
+      0
+    } else {
+      HANDLE_FLAG_TYPE_ONLY
+    },
     start_x,
     start_y,
     middle_x: f64::from(block[0]) * per_output,

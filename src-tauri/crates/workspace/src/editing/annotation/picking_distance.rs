@@ -11,9 +11,10 @@ use screenwide_annotations::arrow::distance::prepared_arrow_distance;
 use screenwide_annotations::arrow::geometry::prepare_arrow;
 use screenwide_annotations::counter::silhouette::counter_distance;
 use screenwide_annotations::freehand::geometry::freehand_distance;
+use screenwide_annotations::handles::HANDLE_FLAG_TYPE_ONLY;
 use screenwide_annotations::highlight::geometry::flow_distance;
 use screenwide_annotations::reveal::AnnotationReveal;
-use screenwide_annotations::text::geometry::text_distance;
+use screenwide_annotations::text::geometry::{text_distance, type_distance};
 use screenwide_annotations::AnnotationPoint;
 
 /// How far a point is from one arrow's drawn shape, in display points: its
@@ -41,10 +42,13 @@ pub(super) fn arrow_distance(
       ) as f32;
     }
     AnnotationKind::Text => {
-      return text_distance(
-        [point.0 as f32, point.1 as f32],
-        &text_geometry(image, item),
-      );
+      let point = [point.0 as f32, point.1 as f32];
+      let geometry = text_geometry(image, item);
+      return if item.flags & HANDLE_FLAG_TYPE_ONLY != 0 {
+        type_distance(point, &geometry)
+      } else {
+        text_distance(point, &geometry)
+      };
     }
     AnnotationKind::Redact | AnnotationKind::Spotlight | AnnotationKind::Focus => {
       return super::redact_chrome::distance(image, item, point)

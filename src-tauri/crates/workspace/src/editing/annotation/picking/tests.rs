@@ -263,6 +263,41 @@ fn a_stroke_is_picked_on_its_line_and_never_by_its_box() {
 }
 
 #[test]
+fn a_line_under_text_with_no_box_is_picked_where_it_runs() {
+  // The arrow along y = 50 under a text whose type runs from (30, 36) to
+  // (190, 66): a press on the line takes the line, and a press on the type
+  // above it the text. A text drawn in a box covers what is under it.
+  let text = |flags| NativeAnnotationHandles {
+    kind: AnnotationKind::Text.raw(),
+    layer_id: 1,
+    index: 1,
+    start_x: 0.1,
+    start_y: 0.3,
+    middle_x: 0.8,
+    middle_y: 0.15,
+    end_x: 0.0,
+    end_y: 0.0,
+    width: 0.1,
+    flags,
+    ..arrow()
+  };
+  let mut state = layered(1, None);
+  state.annotation.handles = vec![
+    NativeAnnotationHandles {
+      layer_id: 1,
+      ..arrow()
+    },
+    text(HANDLE_FLAG_TYPE_ONLY),
+  ];
+  let on_line = crate::editing::turn::selected_layer_point(&state, (100.0, 50.0));
+  let on_type = crate::editing::turn::selected_layer_point(&state, (100.0, 40.0));
+  assert_eq!(shaft_at_point(&state, on_line), Some(0));
+  assert_eq!(shaft_at_point(&state, on_type), Some(1));
+  state.annotation.handles[1] = text(0);
+  assert_eq!(shaft_at_point(&state, on_line), Some(1));
+}
+
+#[test]
 fn the_pen_takes_hold_of_the_chosen_grips_alone() {
   // A chosen straight stroke from (20, 10) to (180, 90) on the layer in hand,
   // its box's corner grip at (180, 90). Select takes hold of its line and

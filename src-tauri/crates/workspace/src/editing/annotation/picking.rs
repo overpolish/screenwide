@@ -11,6 +11,7 @@
 use super::picking_distance::{arrow_distance, draw_distance};
 use super::*;
 use screenwide_annotations::gesture::{drawing_layer, hidden_by_layer_above};
+use screenwide_annotations::handles::HANDLE_FLAG_TYPE_ONLY;
 use screenwide_annotations::magnify::lens::{pick_through, LensView};
 
 /// An annotation belongs to its image, independently of the selected layer. The
@@ -185,7 +186,10 @@ pub(super) fn shaft_at_point(state: &SurfaceState, point: (f64, f64)) -> Option<
 /// What [`shaft_at_point`] picks, and the lenses it is seen through there,
 /// which a press on it is read back through. A lens is pressed through: what
 /// it shows drawn at the press is picked where it shows, and only a press on
-/// nothing drawn there takes the lens (`magnify::lens::pick_through`).
+/// nothing drawn there takes the lens (`magnify::lens::pick_through`). Text
+/// with no box is mostly the space between its letters, so a line or a
+/// stroke drawn under it at the press, such as an underline, is picked
+/// before it.
 pub(super) fn pick_at_point(state: &SurfaceState, point: (f64, f64)) -> Option<(usize, LensView)> {
   let chrome = super::redact_chrome::grabs_inside;
   let pictures = drawn_pictures(state, point);
@@ -199,34 +203,54 @@ pub(super) fn pick_at_point(state: &SurfaceState, point: (f64, f64)) -> Option<(
     let (x, y) = point_on_item_layer(state, &handles[index], point);
     [x, y]
   };
-  pick_through(
-    handles.len(),
-    on_item,
-    |index| {
-      seen(handles[index].layer_id)
-        .then(|| super::magnify_chrome::lens_of(state, index))
-        .flatten()
-    },
-    |lens, index| super::magnify_chrome::under(state, lens, index),
-    |index, [x, y], insides| {
-      let item = &handles[index];
-      if insides && !chrome(state, index, item) {
-        return false;
-      }
-      let drawn = layer_image_rect(state, item.layer_id).is_some_and(|image| {
-        let distance = if item.shape_kind() == AnnotationKind::Draw {
-          draw_distance(state, image, item, (x, y))
-        } else if insides {
-          super::redact_chrome::shape_body_distance(image, item, (x, y))
-        } else {
-          arrow_distance(image, item, (x, y))
-        };
-        distance <= 0.0
-      });
-      drawn && seen(item.layer_id)
-    },
-  )
-  .map(|pick| (pick.index, pick.view))
+  let type_only = |index: usize| {
+    let item = &handles[index];
+    item.shape_kind() == AnnotationKind::Text && item.flags & HANDLE_FLAG_TYPE_ONLY != 0
+  };
+  let pick = |past_type: bool| {
+    pick_through(
+      handles.len(),
+      on_item,
+      |index| {
+        seen(handles[index].layer_id)
+          .then(|| super::magnify_chrome::lens_of(state, index))
+          .flatten()
+      },
+      |lens, index| super::magnify_chrome::under(state, lens, index),
+      |index, [x, y], insides| {
+        let item = &handles[index];
+        if (insides && !chrome(state, index, item)) || (past_type && type_only(index)) {
+          return false;
+        }
+        let drawn = layer_image_rect(state, item.layer_id).is_some_and(|image| {
+          let distance = if item.shape_kind() == AnnotationKind::Draw {
+            draw_distance(state, image, item, (x, y))
+          } else if insides {
+            super::redact_chrome::shape_body_distance(image, item, (x, y))
+          } else {
+            arrow_distance(image, item, (x, y))
+          };
+          distance <= 0.0
+        });
+        drawn && seen(item.layer_id)
+      },
+    )
+  };
+  let picked = pick(false)?;
+  let stroke_under = || {
+    pick(true).filter(|under| {
+      matches!(
+        handles[under.index].shape_kind(),
+        AnnotationKind::Arrow | AnnotationKind::Draw
+      )
+    })
+  };
+  let picked = if type_only(picked.index) {
+    stroke_under().unwrap_or(picked)
+  } else {
+    picked
+  };
+  Some((picked.index, picked.view))
 }
 
 #[cfg(test)]

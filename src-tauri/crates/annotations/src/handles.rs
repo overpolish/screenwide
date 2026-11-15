@@ -61,7 +61,8 @@ pub struct NativeAnnotationHandles {
   pub index: u32,
   /// Zero is an arrow, one a counter: the native `ScreenwideAnnotationKind`.
   pub kind: u32,
-  /// [`HANDLE_FLAG_GROUPED`] where the annotation is one of several chosen.
+  /// [`HANDLE_FLAG_GROUPED`] where the annotation is one of several chosen,
+  /// and [`HANDLE_FLAG_TYPE_ONLY`] where a text draws no box.
   pub flags: u32,
   pub tilt_x: f64,
   pub tilt_y: f64,
@@ -70,6 +71,11 @@ pub struct NativeAnnotationHandles {
 /// The annotation is one of several chosen together, so a press on it carries
 /// the group rather than choosing it: the native `ScreenwideAnnotationFlagGrouped`.
 pub const HANDLE_FLAG_GROUPED: u32 = 1;
+
+/// A text whose look draws no box: it is picked by its type alone, so what
+/// lies in the padding round the type, such as a line drawn under it, can be
+/// taken hold of.
+pub const HANDLE_FLAG_TYPE_ONLY: u32 = 2;
 
 const _: () = assert!(std::mem::size_of::<NativeAnnotationHandles>() == 112);
 

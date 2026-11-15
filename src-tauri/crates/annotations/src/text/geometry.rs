@@ -189,6 +189,19 @@ pub fn text_distance(point: [f32; 2], geometry: &ArrowGeometry) -> f32 {
   smooth_min(body, pointer, geometry.end_head.c[0])
 }
 
+/// How far `point` falls outside the type of a prepared text box, the padding
+/// round it left out: what a text whose look draws no box is picked by, since
+/// nothing is drawn in that padding.
+pub fn type_distance(point: [f32; 2], geometry: &ArrowGeometry) -> f32 {
+  let inset = [PAD_X as f32 * geometry.width, PAD_Y as f32 * geometry.width];
+  rounded_box_distance(
+    point,
+    add(geometry.a, inset),
+    subtract(geometry.b, inset),
+    0.0,
+  )
+}
+
 /// A rounded rectangle's signed distance.
 pub(crate) fn rounded_box_distance(
   point: [f32; 2],
