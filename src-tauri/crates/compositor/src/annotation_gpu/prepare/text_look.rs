@@ -68,19 +68,28 @@ fn dressed(
   drawn
 }
 
-/// The box alone, where `look` has one, of a text whose type is drawn word
-/// by word instead: drawn by [`word_pieces`].
-fn box_alone(
+/// What a text whose type is drawn word by word, by [`word_pieces`], draws
+/// under its words: its box alone, where `look` has one, which wears the
+/// hover halo; otherwise, while it is hovered, a piece with no type of its
+/// own in the type's ink, so the halo goes round the whole box as it does
+/// round type drawn whole rather than round each word.
+fn beneath_words(
   mut arrow: PreviewArrow,
   mut entry: PreparedType,
   look: &NativeTextLook,
 ) -> Option<(PreviewArrow, PreparedType)> {
-  look.boxed.then(|| {
+  if look.boxed {
     arrow.flags |= BARE;
-    entry.text.clear();
-    entry.marks = None;
-    (arrow, entry)
-  })
+  } else if arrow.hover > 0.0 {
+    arrow.flags |= CAPTION;
+    arrow.color = look.ink;
+    arrow.data_count = 0;
+  } else {
+    return None;
+  }
+  entry.text.clear();
+  entry.marks = None;
+  Some((arrow, entry))
 }
 
 /// Draws a text box's record into `prepared` in its look, in its place
@@ -117,7 +126,7 @@ pub(super) fn push(
     return;
   };
   let (moving_text, records_text) = moving;
-  if let Some((arrow, entry)) = box_alone(arrow, entry, look) {
+  if let Some((arrow, entry)) = beneath_words(arrow, entry, look) {
     prepared.types.push(entry);
     prepared.arrows.push(arrow);
   }

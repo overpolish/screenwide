@@ -86,6 +86,37 @@ fn no_hover_leaves_every_arrow_bare() {
 }
 
 #[test]
+fn hovered_text_set_word_by_word_wears_one_halo_round_its_whole_box() {
+  let mut text = arrow(false, (10.0, 10.0), (20.0, 20.0));
+  text.style.width = 24.0;
+  text.shape = AnnotationShape::Text {
+    origin: AnnotationPoint { x: 20.0, y: 20.0 },
+    text: "Overpolished, on purpose.".to_owned(),
+    look: Box::new(screenwide_text::TextTemplateId::from("editorial").shipped_style()),
+    controls: Default::default(),
+    emphasis: vec![screenwide_text::TextSpan { start: 0, end: 13 }],
+    clock: None,
+  };
+  let mut settings = screenwide_output::fixtures::test_output_settings(640, 360);
+  settings.annotations = vec![text];
+  let prepared = prepared_arrows(
+    &settings.annotations,
+    (320, 180),
+    &settings,
+    None,
+    Some((0, 6.0)),
+    None,
+  )
+  .unwrap();
+  let halos: Vec<usize> = (0..prepared.arrows.len())
+    .filter(|&index| prepared.arrows[index].hover == 6.0)
+    .collect();
+  assert!(prepared.arrows.len() > 2, "the text is drawn word by word");
+  assert_eq!(halos, [0], "one halo, under the words");
+  assert!(prepared.types[0].text.is_empty(), "the halo sets no type");
+}
+
+#[test]
 fn a_still_annotation_prepares_no_exposure_samples() {
   let mut settings = screenwide_output::fixtures::test_output_settings(640, 360);
   settings.annotations = vec![arrow(false, (10.0, 10.0), (300.0, 170.0))];
