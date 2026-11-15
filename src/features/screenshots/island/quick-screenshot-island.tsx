@@ -15,6 +15,7 @@ import { cn } from "../../../lib/styling";
 import { Button } from "../../../primitives/button/button";
 import { IconButton } from "../../../primitives/button/icon-button";
 import { Island } from "../../../primitives/island/island";
+import { useAfterLeave } from "../../../primitives/island/island-after-leave";
 import { IslandParts } from "../../../primitives/island/island-parts";
 import { type IslandProps } from "../../../primitives/island/island-props";
 import { IslandRow } from "../../../primitives/island/island-row";
@@ -29,9 +30,13 @@ import type { QuickScreenshotDestination } from "../../../bindings/QuickScreensh
 // other shortcut, pressed meanwhile, changes what it becomes, and the words
 // give way to the new ones. Once copied, the same island reshapes: Copied at
 // the start, Save and Edit before the close at the end, and the picture
-// hanging beneath at the row's width. Save keeps it in Projects and Edit
-// opens it in the editor; either way it stays on the clipboard. Saved, the
-// row says so and its actions go, as there is nothing more to do.
+// hanging beneath at the row's width. The drawing row fades out on the
+// island's shape as it was, and the actions and picture take their room only
+// once it has gone, so the black reshapes once, round what comes next,
+// rather than while the old words are still on it. Save keeps it in
+// Projects and Edit opens it in the editor; either way it stays on the
+// clipboard. Saved, the row says so and its actions go, as there is nothing
+// more to do.
 
 /** A shot just copied, as the island shows it. */
 export type CopiedShot = {
@@ -110,6 +115,11 @@ export function QuickScreenshotIsland({
   onShapeChange,
 }: QuickScreenshotIslandProps) {
   const shown = title(copied, destination);
+  // The shot is rebuilt with every render, so its arrival is timed by
+  // whether there is one. Only the arrival waits: going back to drawing, the
+  // actions and picture fade out at once, with the title.
+  const hasArrived = useAfterLeave(Boolean(copied), { isShown });
+  const picture = hasArrived ? copied : null;
   return (
     <Island
       // Hung from the end, the section holds what it shows to the row's
@@ -128,7 +138,7 @@ export function QuickScreenshotIsland({
               className="flex items-center gap-separate"
               direction="row"
             >
-              {copied && !copied.isSaved ? (
+              {picture && !picture.isSaved ? (
                 <span className="flex items-center gap-1" key="actions">
                   <Button onPress={onSave}>
                     {t("screenshots-copied-save")}
@@ -145,7 +155,10 @@ export function QuickScreenshotIsland({
                     : t("screenshots-quick-cancel")
                 }
                 className="text-fg-secondary enabled:hover:text-fg"
-                key="close"
+                // Its own part in each state, so it fades with the row it
+                // belongs to and comes back with the next, rather than
+                // gliding across as the island reshapes.
+                key={copied ? "close-copied" : "close-drawing"}
                 onPress={onClose}
               >
                 <X aria-hidden className="size-icon" />
@@ -164,23 +177,23 @@ export function QuickScreenshotIsland({
         />
       }
       section={
-        copied || note ? (
+        picture || note ? (
           // Revealed as a part arriving is, once the black has mostly grown
           // round it, rather than as the section first opens. The note takes
           // the width the row sets rather than setting one; the picture sets
           // its own.
           <IslandParts
-            className={cn("flex flex-col", !copied && "w-0 min-w-full")}
+            className={cn("flex flex-col", !picture && "w-0 min-w-full")}
             initial
           >
-            {copied ? (
+            {picture ? (
               <div className="flex justify-center" key="picture">
                 <img
                   alt=""
                   className="rounded-part"
                   draggable={false}
-                  src={copied.src}
-                  style={{ height: copied.height, width: copied.width }}
+                  src={picture.src}
+                  style={{ height: picture.height, width: picture.width }}
                 />
               </div>
             ) : (
