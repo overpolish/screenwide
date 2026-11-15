@@ -156,7 +156,7 @@ export type RecordingIslandProps = {
   onPause?: () => void;
   onReplayChange?: (isOn: boolean) => void;
   onResume?: () => void;
-  onScreenshot?: (action: ScreenshotAction | "delayed" | "save") => void;
+  onScreenshot?: (action: ScreenshotAction | "delayed") => void;
   /** Where the island's parts are, as they move (`Island`). */
   onShapeChange?: (parts: IslandPart[]) => void;
   onStop?: () => void;

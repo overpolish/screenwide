@@ -37,7 +37,7 @@ pub use registration::{
 pub use registration::{begin_shortcut_capture, end_shortcut_capture, initialize};
 
 mod defaults;
-use defaults::merge;
+use defaults::{merge, saved_settings};
 mod feature_availability;
 pub(crate) use feature_availability::{
   sync_annotate_enabled, sync_ocr_enabled, sync_replay_enabled, sync_ruler_enabled,
@@ -91,8 +91,8 @@ pub enum ShortcutAction {
   StartStopRecording,
   PauseResumeRecording,
   SaveReplay,
+  /// Takes an area: it is copied, and a preview of it opens it in the editor.
   TakeScreenshot,
-  TakeScreenshotToClipboard,
   /// A screenshot kept on screen as a reference, at its true size.
   TakeReferenceScreenshot,
   RecognizeText,
@@ -139,7 +139,7 @@ fn load(app: &AppHandle) -> ShortcutSettings {
     settings_path(app)
       .ok()
       .and_then(|path| std::fs::read(path).ok())
-      .and_then(|contents| serde_json::from_slice::<ShortcutSettings>(&contents).ok()),
+      .and_then(|contents| saved_settings(&contents)),
   )
 }
 

@@ -36,11 +36,6 @@ export const screenshotShortcuts = (): GlobalShortcut[] => [
     label: t("settings-shortcut-screenshot"),
   },
   {
-    action: "takeScreenshotToClipboard",
-    description: t("settings-shortcut-copy-screenshot-description"),
-    label: t("settings-shortcut-copy-screenshot"),
-  },
-  {
     action: "takeReferenceScreenshot",
     description: t("settings-shortcut-reference-screenshot-description"),
     label: t("settings-shortcut-reference-screenshot"),

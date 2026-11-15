@@ -41,10 +41,7 @@ const isModelSeed = (value: unknown): value is TranscriptionPreviewSeed =>
 const SYSTEM_SHORTCUTS: Record<"macos" | "windows", SystemShortcut[]> = {
   macos: [
     { action: "takeScreenshot", shortcut: "Super+Shift+Digit4" },
-    {
-      action: "takeScreenshotToClipboard",
-      shortcut: "Super+Control+Shift+Digit4",
-    },
+    { action: "takeScreenshot", shortcut: "Super+Control+Shift+Digit4" },
     { action: "toggleRecordingControls", shortcut: "Super+Shift+Digit5" },
   ],
   windows: [
@@ -123,10 +120,6 @@ export function createPreviewApi(
         shortcut: "CommandOrControl+Shift+Backspace",
       },
       { action: "takeScreenshot", shortcut: "CommandOrControl+Shift+Digit2" },
-      {
-        action: "takeScreenshotToClipboard",
-        shortcut: "CommandOrControl+Shift+Digit1",
-      },
       {
         action: "takeReferenceScreenshot",
         shortcut: "CommandOrControl+Shift+KeyD",

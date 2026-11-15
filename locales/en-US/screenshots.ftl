@@ -26,9 +26,21 @@ screenshots-scrolling-cancel-hint = Press { $key } to cancel.
 
 # Names the island for assistive technology.
 screenshots-quick-island = Quick screenshot
-# The island's title: where the area drawn goes, set by the shortcut pressed.
-screenshots-quick-editor = Draw an area to open in the editor
-screenshots-quick-clipboard = Draw an area to copy
+# The island's title: what the area drawn becomes, set by the shortcut pressed.
+screenshots-quick-screenshot = Draw an area to take a screenshot
 screenshots-quick-reference = Draw an area to keep as a reference
 # Names the close button, which ends the screenshot without taking one.
 screenshots-quick-cancel = Cancel screenshot
+
+## The same island once the screenshot is copied, with the picture under its row
+
+# The island's title: the screenshot is on the clipboard.
+screenshots-copied = Copied
+# The title once Save has kept the screenshot in Projects.
+screenshots-copied-saved = Saved to Projects
+# Keeps the screenshot in Projects without opening it.
+screenshots-copied-save = Save
+# Opens the screenshot in the editor.
+screenshots-copied-edit = Edit
+# Names the close button, which puts the island away; the screenshot stays on the clipboard.
+screenshots-copied-dismiss = Dismiss

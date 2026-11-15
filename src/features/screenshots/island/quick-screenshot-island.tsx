@@ -1,10 +1,18 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { Clipboard, ImageDown, PictureInPicture2, X } from "lucide-react";
+import {
+  ClipboardCheck,
+  FolderCheck,
+  ImageDown,
+  PictureInPicture2,
+  X,
+} from "lucide-react";
 import { type ReactNode } from "react";
 
 import { t } from "../../../i18n/i18n";
+import { cn } from "../../../lib/styling";
+import { Button } from "../../../primitives/button/button";
 import { IconButton } from "../../../primitives/button/icon-button";
 import { Island } from "../../../primitives/island/island";
 import { IslandParts } from "../../../primitives/island/island-parts";
@@ -14,77 +22,174 @@ import { IslandRowTitle } from "../../../primitives/island/row-title/island-row-
 
 import type { QuickScreenshotDestination } from "../../../bindings/QuickScreenshotDestination";
 
-// Quick Screenshot on the island, out while its overlay waits for an area:
-// where the area drawn will go at the row's start, with the glyph the
-// recording island's screenshot choices use for it, and a way to cancel at
-// its end, as Text Recognition's island has while an area is drawn. The
-// other shortcut, pressed meanwhile, changes where it goes, and the words
-// give way to the new ones.
+// Quick Screenshot on the island, from the overlay waiting for an area to
+// the shot copied. While an area is drawn: what it becomes at the row's
+// start, with the glyph the recording island's screenshot choices use for
+// it, and a way to cancel at its end, as Text Recognition's island has. The
+// other shortcut, pressed meanwhile, changes what it becomes, and the words
+// give way to the new ones. Once copied, the same island reshapes: Copied at
+// the start, Save and Edit before the close at the end, and the picture
+// hanging beneath at the row's width. Save keeps it in Projects and Edit
+// opens it in the editor; either way it stays on the clipboard. Saved, the
+// row says so and its actions go, as there is nothing more to do.
+
+/** A shot just copied, as the island shows it. */
+export type CopiedShot = {
+  /** The picture's shown height, in points. */
+  height: number;
+  isSaved: boolean;
+  /** The picture, scaled down. */
+  src: string;
+  /** The picture's shown width, in points. */
+  width: number;
+};
 
 export type QuickScreenshotIslandProps = Pick<
   IslandProps,
-  "isShown" | "notch" | "onHidden" | "onShapeChange"
+  "isShown" | "notch" | "onHidden" | "onHoverChange" | "onShapeChange"
 > & {
   destination: QuickScreenshotDestination;
-  /** Ends the session without a screenshot, as Escape does. */
+  /** Ends the session without a screenshot, or puts the copied shot away. */
   onClose: () => void;
-  /** A hint under the row, such as which keys now open it. */
+  /** The shot just copied; while none, an area is being drawn. */
+  copied?: CopiedShot | null;
+  /** A hint under the title while an area is drawn, such as which keys now
+   * open it, at the row's width. */
   note?: ReactNode;
+  onEdit?: () => void;
+  onSave?: () => void;
 };
 
 const TITLES: Record<QuickScreenshotDestination, () => string> = {
-  clipboard: () => t("screenshots-quick-clipboard"),
-  editor: () => t("screenshots-quick-editor"),
   reference: () => t("screenshots-quick-reference"),
+  screenshot: () => t("screenshots-quick-screenshot"),
 };
 
 const GLYPHS: Record<QuickScreenshotDestination, typeof ImageDown> = {
-  clipboard: Clipboard,
-  editor: ImageDown,
   // A picture standing over the screen, as a reference does.
   reference: PictureInPicture2,
+  screenshot: ImageDown,
 };
 
+function title(
+  copied: CopiedShot | null | undefined,
+  destination: QuickScreenshotDestination,
+) {
+  if (!copied) {
+    const Glyph = GLYPHS[destination];
+    return {
+      glyph: <Glyph aria-hidden />,
+      key: destination,
+      text: TITLES[destination](),
+    };
+  }
+  return copied.isSaved
+    ? {
+        glyph: <FolderCheck aria-hidden />,
+        key: "saved",
+        text: t("screenshots-copied-saved"),
+      }
+    : {
+        glyph: <ClipboardCheck aria-hidden />,
+        key: "copied",
+        text: t("screenshots-copied"),
+      };
+}
+
 export function QuickScreenshotIsland({
+  copied,
   destination,
   isShown = true,
   notch,
   note,
   onClose,
+  onEdit,
   onHidden,
+  onHoverChange,
+  onSave,
   onShapeChange,
 }: QuickScreenshotIslandProps) {
-  const Glyph = GLYPHS[destination];
+  const shown = title(copied, destination);
   return (
     <Island
+      // Hung from the end, the section holds what it shows to the row's
+      // width, so the note wraps across the island from the text column.
+      anchor={copied ? "center" : "end"}
       aria-label={t("screenshots-quick-island")}
-      below={note}
       isShown={isShown}
       notch={notch}
       onHidden={onHidden}
+      onHoverChange={onHoverChange}
       onShapeChange={onShapeChange}
       row={
         <IslandRow
           end={
-            <IconButton
-              aria-label={t("screenshots-quick-cancel")}
-              className="text-fg-secondary enabled:hover:text-fg"
-              onPress={onClose}
+            <IslandParts
+              className="flex items-center gap-separate"
+              direction="row"
             >
-              <X aria-hidden className="size-icon" />
-            </IconButton>
+              {copied && !copied.isSaved ? (
+                <span className="flex items-center gap-1" key="actions">
+                  <Button onPress={onSave}>
+                    {t("screenshots-copied-save")}
+                  </Button>
+                  <Button color="primary" onPress={onEdit}>
+                    {t("screenshots-copied-edit")}
+                  </Button>
+                </span>
+              ) : null}
+              <IconButton
+                aria-label={
+                  copied
+                    ? t("screenshots-copied-dismiss")
+                    : t("screenshots-quick-cancel")
+                }
+                className="text-fg-secondary enabled:hover:text-fg"
+                key="close"
+                onPress={onClose}
+              >
+                <X aria-hidden className="size-icon" />
+              </IconButton>
+            </IslandParts>
           }
           start={
             <IslandParts direction="row">
               <IslandRowTitle
-                glyph={<Glyph aria-hidden />}
-                key={destination}
-                title={<span role="status">{TITLES[destination]()}</span>}
+                glyph={shown.glyph}
+                key={shown.key}
+                title={<span role="status">{shown.text}</span>}
               />
             </IslandParts>
           }
         />
       }
+      section={
+        copied || note ? (
+          // Revealed as a part arriving is, once the black has mostly grown
+          // round it, rather than as the section first opens. The note takes
+          // the width the row sets rather than setting one; the picture sets
+          // its own.
+          <IslandParts
+            className={cn("flex flex-col", !copied && "w-0 min-w-full")}
+            initial
+          >
+            {copied ? (
+              <div className="flex justify-center" key="picture">
+                <img
+                  alt=""
+                  className="rounded-part"
+                  draggable={false}
+                  src={copied.src}
+                  style={{ height: copied.height, width: copied.width }}
+                />
+              </div>
+            ) : (
+              <div key="note">{note}</div>
+            )}
+          </IslandParts>
+        ) : undefined
+      }
+      sectionSpansRow
     />
   );
 }

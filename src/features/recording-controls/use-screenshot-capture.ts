@@ -17,7 +17,6 @@ import { screenshotTarget } from "./recording-request";
 import { ScreenshotAction, ScreenshotState } from "./types";
 
 const SCREENSHOT_FEEDBACK_MS = 2000;
-type StillScreenshotAction = Exclude<ScreenshotAction, "scrolling">;
 
 async function setRegionCaptureFrame(visible: boolean) {
   try {
@@ -39,7 +38,7 @@ export function useScreenshotCapture() {
   const [screenshotFeedback, setScreenshotFeedback] = useState<{
     action: ScreenshotAction;
     state: ScreenshotState;
-  }>({ action: "editor", state: "idle" });
+  }>({ action: "still", state: "idle" });
   const resetRef = useRef<number | undefined>(undefined);
 
   useEffect(
@@ -55,30 +54,28 @@ export function useScreenshotCapture() {
     }, SCREENSHOT_FEEDBACK_MS);
   };
 
-  const takeScreenshot = (destination: StillScreenshotAction) => {
+  const takeScreenshot = () => {
     const target = screenshotTarget(true);
     if (!target) return;
 
+    const action: ScreenshotAction = "still";
     window.clearTimeout(resetRef.current);
-    setScreenshotFeedback({ action: destination, state: "pending" });
+    setScreenshotFeedback({ action, state: "pending" });
     void (async () => {
       if (target.kind === "desktopRegion") await setRegionCaptureFrame(false);
       try {
-        await captureStill({ destination, target });
-        setScreenshotFeedback({
-          action: destination,
-          state: destination === "clipboard" ? "done" : "idle",
-        });
+        await captureStill({ destination: "preview", target });
+        setScreenshotFeedback({ action, state: "done" });
         await dismissAfterScreenshot();
       } catch (error: unknown) {
         console.error("Could not take the screenshot", error);
-        setScreenshotFeedback({ action: destination, state: "failed" });
+        setScreenshotFeedback({ action, state: "failed" });
       } finally {
         // Restore the native state after dismissal so reopening the recording
         // UI later presents its frame immediately. This does not show a hidden
         // Region window.
         if (target.kind === "desktopRegion") await setRegionCaptureFrame(true);
-        resetLater(destination);
+        resetLater(action);
       }
     })();
   };

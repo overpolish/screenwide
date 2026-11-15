@@ -4,6 +4,7 @@
 import { fn } from "storybook/test";
 
 import { ISLAND } from "../../../primitives/island/island-geometry";
+import poster from "../../../site/public/recordings/edit.jpg";
 import { featureStage } from "../../../storybook/feature-story-stage";
 import { PREVIEW_NOTCH } from "../../../storybook/preview-notch";
 import { StoryNotch } from "../../../storybook/story-notch";
@@ -18,9 +19,12 @@ const meta = {
     isShown: { table: { defaultValue: { summary: "true" } } },
   },
   args: {
-    destination: "editor",
+    destination: "screenshot",
     isShown: true,
     onClose: fn(),
+    onEdit: fn(),
+    onHoverChange: fn(),
+    onSave: fn(),
   },
   component: QuickScreenshotIsland,
   decorators: [
@@ -31,7 +35,7 @@ const meta = {
           notch: globals.notch === "off" ? null : PREVIEW_NOTCH,
         },
       }),
-    featureStage({ height: 160, width: 720 }),
+    featureStage({ height: 320, width: 720 }),
   ],
   parameters: {
     controls: { include: ["isShown"] },
@@ -55,12 +59,20 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-export const ToEditor: Story = {};
+export const Screenshot: Story = {};
 
-export const ToClipboard: Story = {
-  args: { destination: "clipboard" },
+export const Reference: Story = {
+  args: { destination: "reference" },
 };
 
 export const OpenedBySystemKeys: Story = {
-  args: { note: <SystemKeysNote keys="Super+Shift+KeyS" /> },
+  args: { note: <SystemKeysNote keys="Super+Shift+KeyS" layout="section" /> },
+};
+
+export const Copied: Story = {
+  args: { copied: { height: 180, isSaved: false, src: poster, width: 320 } },
+};
+
+export const Saved: Story = {
+  args: { copied: { height: 180, isSaved: true, src: poster, width: 320 } },
 };

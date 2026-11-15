@@ -65,10 +65,9 @@ export const setRegionSelectorOpacity = (opacity: number) =>
   invoke<null>("set_region_selector_opacity", { opacity });
 
 /** An area has started being drawn: the overlay is left out of the still
- * where the platform can do that without hiding it, and the screenshot editor
- * is built when the shot goes there. */
-export const beginScreenshotDrawing = (prepareEditor: boolean) =>
-  invoke<null>("begin_screenshot_drawing", { prepareEditor });
+ * where the platform can do that without hiding it. */
+export const beginScreenshotDrawing = () =>
+  invoke<null>("begin_screenshot_drawing");
 
 export const setScreenshotRegionSession = (
   active: boolean,

@@ -226,6 +226,7 @@
           "$APPDATA/text-templates/*/fonts/*",
           "$APPCACHE/background-thumbnails/*",
           "$APPCACHE/export-previews/*",
+          "$APPCACHE/screenshot-previews/*",
           "$APPCACHE/template-previews/*",
           "$TEMP/Screenwide/application-sources/**",
           "$TEMP/Screenwide/camera-objects/*",

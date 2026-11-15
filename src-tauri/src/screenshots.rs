@@ -4,6 +4,7 @@
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 mod annotation_bake;
 mod clipboard;
+pub(crate) mod copied;
 pub(crate) mod delayed;
 pub(crate) mod desktop;
 #[cfg(target_os = "macos")]
@@ -61,14 +62,12 @@ pub enum ScreenshotTarget {
   DesktopRegion { monitor_id: u32, region: Region },
 }
 
-#[derive(Clone, Copy, Debug, Default, Deserialize)]
+#[derive(Clone, Copy, Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum ScreenshotDestination {
-  #[serde(alias = "export")]
-  Editor,
-  #[default]
-  Clipboard,
-  Both,
+  /// Copied, then previewed for a while; the preview, clicked, opens it in
+  /// the editor (`screenshot_preview`).
+  Preview,
   /// Kept on screen at its true size where it was taken (`references`).
   Reference,
 }
@@ -98,13 +97,20 @@ pub(crate) async fn capture(
 ) -> Result<CapturedImage, String> {
   // Read as the shutter fires, the same way a recording reads it as it starts.
   // A preserved ruler is intentionally part of this shot. The screenshot
-  // region and recording controls have already faded out before the shutter;
-  // Quick Screenshot's island steps out here if the shot would take it.
+  // region and recording controls have already faded out before the shutter.
   let include_own_windows =
     include_ruler || crate::settings::current(app).record_screenwide_windows;
-  quick_island::before_shutter(app, include_own_windows);
-
-  capture_content(target, include_own_windows, true, show_cursor).await
+  // Quick Screenshot's island would be taken with them. It stays on screen,
+  // kept out of the shot, as it turns into the shot copied where it is.
+  let keeps_island_out = include_own_windows && quick_island::is_up();
+  if keeps_island_out {
+    crate::app_windows::island_overlay::keep_out_of_captures(app, true).await;
+  }
+  let captured = capture_content(target, include_own_windows, true, show_cursor).await;
+  if keeps_island_out {
+    crate::app_windows::island_overlay::keep_out_of_captures(app, false).await;
+  }
+  captured
 }
 
 /// A still with Screenwide's own windows always left out, whatever the "Record

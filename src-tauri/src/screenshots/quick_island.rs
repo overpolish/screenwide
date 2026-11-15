@@ -3,12 +3,13 @@
 
 //! The island while Quick Screenshot's overlay is up: it comes out at the top
 //! of the screen as the shortcut opens the overlay, says where the area drawn
-//! will go, and tucks away when the session ends, taken or cancelled. Its
-//! close button ends the session as Escape does.
+//! will go, and turns into the copied shot once one is taken, or tucks away
+//! when the session is cancelled. Its close button ends the session as Escape
+//! does.
 //!
 //! A still leaves Screenwide's windows out unless the Ruler is in it or the
-//! user records Screenwide's windows; only then does the island step out of
-//! the shot at once rather than tuck away after it.
+//! user records Screenwide's windows; then the island is kept out of the shot
+//! while it stays on screen (`screenshots::capture`).
 
 use std::sync::{Mutex, PoisonError};
 
@@ -28,8 +29,8 @@ const EVENT: &str = "quick-screenshot://island";
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
 pub enum QuickScreenshotDestination {
-  Editor,
-  Clipboard,
+  /// Copied and previewed.
+  Screenshot,
   Reference,
 }
 
@@ -66,6 +67,9 @@ pub fn show_quick_screenshot_island(app: AppHandle, destination: QuickScreenshot
     return;
   }
   tell(&app, Some(destination));
+  // A shot copied before gives its island to this session, which reshapes
+  // it in place.
+  super::copied::withdraw(&app);
   let shown = app_windows::island::place(&app, IslandPlacement::Top)
     .and_then(|()| app_windows::island::show(&app));
   if let Err(error) = shown {
@@ -88,20 +92,9 @@ pub(crate) fn stand_over_overlay(app: &AppHandle) {
   }
 }
 
-/// The shutter is about to fire. A still that takes Screenwide's windows
-/// would take the island too, so it goes at once.
-pub(crate) fn before_shutter(app: &AppHandle, includes_own_windows: bool) {
-  if !includes_own_windows || !is_up() {
-    return;
-  }
-  if let Err(error) = app_windows::island::hide_at_once(app) {
-    eprintln!("Could not take the island out of the screenshot: {error}");
-  }
-}
-
-/// The session ended. The island tucks away, unless the recording or its
-/// controls keep it, which take it back where they show.
-pub(crate) fn withdraw(app: &AppHandle) {
+/// The shot this session took is copied, and its island takes this one's
+/// place out where it is: only what it says changes.
+pub(crate) fn give_way(app: &AppHandle) {
   if !is_up() {
     return;
   }
@@ -110,6 +103,25 @@ pub(crate) fn withdraw(app: &AppHandle) {
   // owns with it.
   #[cfg(target_os = "windows")]
   app_windows::island_overlay::stand_over(app, None);
+}
+
+/// The session ended. The island tucks away, unless the shot just copied, the
+/// recording or its controls keep it, which take it back where they show.
+pub(crate) fn withdraw(app: &AppHandle) {
+  if !is_up() {
+    return;
+  }
+  // Released before the overlay can close, which would take the island it
+  // owns with it.
+  #[cfg(target_os = "windows")]
+  app_windows::island_overlay::stand_over(app, None);
+  // The copied shot's island takes this one's place, out where it is, once
+  // its picture is made (`give_way`); until then this one keeps saying what
+  // it said, so the island never shows nothing in between.
+  if super::copied::is_up() {
+    return;
+  }
+  tell(app, None);
   let result = if crate::recording::is_idle(app) && !app_windows::is_recording_ui_visible() {
     app_windows::island::hide(app)
   } else {

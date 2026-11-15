@@ -27,10 +27,6 @@ fn defaults_open_the_controls_save_replays_take_screenshots_and_recognize_text()
         "CommandOrControl+Shift+Digit2"
       ),
       (
-        ShortcutAction::TakeScreenshotToClipboard,
-        "CommandOrControl+Shift+Digit1"
-      ),
-      (
         ShortcutAction::TakeReferenceScreenshot,
         "CommandOrControl+Shift+KeyD"
       ),
@@ -97,7 +93,7 @@ fn a_new_default_on_keys_the_user_already_bound_is_left_unbound() {
   let taken = format!("{modifier}+Shift+Digit9");
   let stored = ShortcutSettings {
     bindings: vec![ShortcutBinding {
-      action: ShortcutAction::TakeScreenshotToClipboard,
+      action: ShortcutAction::ToggleKeepAwake,
       shortcut: Some(taken.clone()),
     }],
     ..ShortcutSettings::default()
@@ -112,10 +108,7 @@ fn a_new_default_on_keys_the_user_already_bound_is_left_unbound() {
   };
 
   assert_eq!(shortcut(ShortcutAction::SaveReplay), None);
-  assert_eq!(
-    shortcut(ShortcutAction::TakeScreenshotToClipboard),
-    Some(taken)
-  );
+  assert_eq!(shortcut(ShortcutAction::ToggleKeepAwake), Some(taken));
   // Other new defaults on free keys still arrive.
   assert_eq!(
     shortcut(ShortcutAction::AnnotateOverlay).as_deref(),
@@ -130,10 +123,6 @@ fn a_binding_left_on_a_retired_default_moves_and_a_chosen_one_stays() {
       ShortcutBinding {
         action: ShortcutAction::TakeScreenshot,
         shortcut: Some("CommandOrControl+Shift+Digit8".to_owned()),
-      },
-      ShortcutBinding {
-        action: ShortcutAction::TakeScreenshotToClipboard,
-        shortcut: None,
       },
       // The old default's keys, recorded in the settings window.
       ShortcutBinding {
@@ -166,7 +155,6 @@ fn a_binding_left_on_a_retired_default_moves_and_a_chosen_one_stays() {
   );
   // Cleared, or never given keys: a saved null cannot tell which, so it
   // stays unbound either way.
-  assert_eq!(shortcut(ShortcutAction::TakeScreenshotToClipboard), None);
   assert_eq!(shortcut(ShortcutAction::RecognizeText), None);
 }
 
@@ -220,10 +208,6 @@ fn each_frontend_action_goes_to_the_window_that_performs_it() {
     Some(WindowLabel::RegionSelector.as_str())
   );
   assert_eq!(
-    action_window(ShortcutAction::TakeScreenshotToClipboard).map(WindowLabel::as_str),
-    Some(WindowLabel::RegionSelector.as_str())
-  );
-  assert_eq!(
     action_window(ShortcutAction::RecognizeText).map(WindowLabel::as_str),
     Some(WindowLabel::Island.as_str())
   );
@@ -241,7 +225,6 @@ fn taking_a_screenshot_never_reaches_the_island() {
 fn capture_window_graphs_are_never_changed_inside_shortcut_callbacks() {
   for action in [
     ShortcutAction::TakeScreenshot,
-    ShortcutAction::TakeScreenshotToClipboard,
     ShortcutAction::RecognizeText,
   ] {
     assert!(requires_frontend_turn(action));
@@ -251,15 +234,10 @@ fn capture_window_graphs_are_never_changed_inside_shortcut_callbacks() {
 #[test]
 fn taking_a_screenshot_keeps_the_ruler_and_the_live_annotations() {
   use crate::capture_overlays::CaptureOverlay;
-  for action in [
-    ShortcutAction::TakeScreenshot,
-    ShortcutAction::TakeScreenshotToClipboard,
-  ] {
-    let preserved = preserved_capture_overlays(action);
-    assert!(preserved.contains(&CaptureOverlay::Ruler));
-    assert!(preserved.contains(&CaptureOverlay::Annotate));
-    assert!(!preserved.contains(&CaptureOverlay::TextRecognition));
-  }
+  let preserved = preserved_capture_overlays(ShortcutAction::TakeScreenshot);
+  assert!(preserved.contains(&CaptureOverlay::Ruler));
+  assert!(preserved.contains(&CaptureOverlay::Annotate));
+  assert!(!preserved.contains(&CaptureOverlay::TextRecognition));
   assert_eq!(
     preserved_capture_overlays(ShortcutAction::RulerOverlay),
     &[CaptureOverlay::Ruler]
@@ -299,4 +277,55 @@ fn a_shortcut_saved_for_the_recording_bar_opens_the_controls() {
   .unwrap();
 
   assert_eq!(binding.action, ShortcutAction::ToggleRecordingControls);
+}
+
+#[test]
+fn copy_a_screenshot_passes_its_keys_to_take_a_screenshot_when_they_were_in_use() {
+  let take_default = "CommandOrControl+Shift+Digit2";
+  let copy_default = "CommandOrControl+Shift+Digit1";
+  let cases = [
+    // (Take's saved keys, Copy's saved keys, what Take ends up with)
+    (Some(take_default), Some(copy_default), Some(take_default)),
+    (
+      Some(take_default),
+      Some("Super+Shift+KeyC"),
+      Some("Super+Shift+KeyC"),
+    ),
+    (
+      Some("Super+Shift+KeyX"),
+      Some("Super+Shift+KeyC"),
+      Some("Super+Shift+KeyX"),
+    ),
+    (None, Some(copy_default), Some(copy_default)),
+    (Some(take_default), None, Some(take_default)),
+  ];
+  for (take, copy, expected) in cases {
+    let file = serde_json::json!({
+      "bindings": [
+        { "action": "takeScreenshot", "shortcut": take },
+        { "action": "takeScreenshotToClipboard", "shortcut": copy },
+        { "action": "rulerOverlay", "shortcut": "Super+Shift+KeyM" },
+      ],
+      "replaceSystemKeys": false,
+    });
+    let merged = merge(saved_settings(file.to_string().as_bytes()));
+    let shortcut = |action| {
+      merged
+        .bindings
+        .iter()
+        .find(|binding| binding.action == action)
+        .and_then(|binding| binding.shortcut.clone())
+    };
+    assert_eq!(
+      shortcut(ShortcutAction::TakeScreenshot).as_deref(),
+      expected,
+      "Take {take:?}, Copy {copy:?}"
+    );
+    // The rest of the file is read as saved.
+    assert_eq!(
+      shortcut(ShortcutAction::RulerOverlay).as_deref(),
+      Some("Super+Shift+KeyM")
+    );
+    assert!(!merged.replace_system_keys);
+  }
 }

@@ -1,10 +1,8 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! The Quick Screenshot command: one still, copied, opened in the editor, or
-//! both.
-
-use std::path::PathBuf;
+//! The Quick Screenshot command: one still, copied and previewed, or kept on
+//! screen as a reference.
 
 use chrono::Local;
 use tauri::{image::Image, AppHandle};
@@ -13,15 +11,13 @@ use tauri_plugin_clipboard_manager::ClipboardExt;
 use super::CapturedImage;
 use super::{capture, capture_file_stem, ScreenshotDestination, ScreenshotTarget};
 
-/// Captures a still and either copies it or saves it, returning the path it was
-/// written to when it went to disk.
 #[tauri::command]
 pub async fn capture_still(
   app: AppHandle,
   target: ScreenshotTarget,
   show_cursor: bool,
   destination: ScreenshotDestination,
-) -> Result<Option<PathBuf>, String> {
+) -> Result<(), String> {
   take_still(app, target, show_cursor, destination).await
 }
 
@@ -32,11 +28,14 @@ pub(crate) async fn take_still(
   target: ScreenshotTarget,
   show_cursor: bool,
   destination: ScreenshotDestination,
-) -> Result<Option<PathBuf>, String> {
+) -> Result<(), String> {
   if !crate::recording::is_idle(&app) {
     return Err("A screenshot cannot be taken while a recording is active".to_owned());
   }
   crate::editor::reserve_screenshot_workspace(&app)?;
+  // The preview of the last shot would be in this one wherever Screenwide's
+  // windows are recorded, and this one replaces it anyway.
+  super::copied::withdraw(&app);
   let include_ruler = crate::ruler::is_active(&app);
   // The annotations are kept, not shot: their windows are excluded from the
   // capture, and what the still takes with it is the annotations themselves.
@@ -68,53 +67,37 @@ pub(crate) async fn take_still(
     let opened = keep_as_reference(&app, target, image, annotations).await;
     crate::editor::release_screenshot_workspace(&app);
     let _ = crate::app_windows::hide_recording_ui(app.clone());
-    return opened.map(|()| None);
+    return opened;
   }
 
-  if matches!(
-    destination,
-    ScreenshotDestination::Clipboard | ScreenshotDestination::Both
-  ) {
-    // The clipboard has no layers, so the annotations go into the pixels.
-    #[cfg(any(target_os = "macos", target_os = "windows"))]
-    let copied = super::annotation_bake::bake_annotations(
-      &image,
-      annotations.clone(),
-      super::capture_scale(target),
-    );
-    #[cfg(not(any(target_os = "macos", target_os = "windows")))]
-    let copied: Result<CapturedImage, String> = Ok(image.clone());
-    if let Err(error) = copied.and_then(|copied| {
-      app
-        .clipboard()
-        .write_image(&Image::new(&copied.rgba, copied.width, copied.height))
-        .map_err(|error| error.to_string())
-    }) {
-      crate::editor::release_screenshot_workspace(&app);
-      return Err(error);
-    }
-    if matches!(destination, ScreenshotDestination::Clipboard) {
-      crate::editor::release_screenshot_workspace(&app);
-      let _ = crate::app_windows::hide_recording_ui(app.clone());
-      return Ok(None);
-    }
-  }
-
-  // With the clipboard off, the editor window takes over: the user names the
-  // file and picks where it goes, so nothing is written here. The annotations
-  // arrive as a layer of their own, editable like any the user draws there.
-  if let Err(error) = crate::editor::present_screenshot(
+  // The clipboard has no layers, so the annotations go into the pixels. The
+  // editor gets them as a layer of their own, should the preview open it.
+  let scale = super::capture_scale(target);
+  #[cfg(any(target_os = "macos", target_os = "windows"))]
+  let copied = super::annotation_bake::bake_annotations(&image, annotations.clone(), scale);
+  #[cfg(not(any(target_os = "macos", target_os = "windows")))]
+  let copied: Result<CapturedImage, String> = Ok(image.clone());
+  let copied = copied.and_then(|copied| {
+    app
+      .clipboard()
+      .write_image(&Image::new(&copied.rgba, copied.width, copied.height))
+      .map_err(|error| error.to_string())
+      .map(|()| copied)
+  });
+  crate::editor::release_screenshot_workspace(&app);
+  let copied = copied?;
+  let _ = crate::app_windows::hide_recording_ui(app.clone());
+  super::copied::show(
     &app,
-    image,
-    super::capture_scale(target),
-    annotations,
-    capture_file_stem(Local::now().naive_local()),
-  ) {
-    crate::editor::release_screenshot_workspace(&app);
-    return Err(error);
-  }
-
-  Ok(None)
+    super::copied::Shot {
+      annotations,
+      copied,
+      file_stem: capture_file_stem(Local::now().naive_local()),
+      image,
+      scale,
+    },
+  );
+  Ok(())
 }
 
 /// Keeps the still on screen as a reference where it was taken. The window

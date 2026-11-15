@@ -266,9 +266,7 @@ export function RecordingIslandControls({
             void requestPermission("accessibility");
           else void openPermissionSettings("accessibility");
         } else {
-          screenshot.takeScreenshot(
-            action === "clipboard" ? "clipboard" : "editor",
-          );
+          screenshot.takeScreenshot();
         }
       }}
       onShapeChange={island.onShapeChange}

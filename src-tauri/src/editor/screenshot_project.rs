@@ -8,7 +8,8 @@
 //! Each layer's picture is written to `media/` as it arrives, losslessly, and
 //! the canvas and layers are saved in the project's look as they change, so
 //! the project reopens as it was left. A capture copied to the clipboard
-//! alone never reaches the editor, and makes no project.
+//! makes a project only when its island's Edit opens it here, or its Save
+//! keeps it without opening it (`save_screenshot`).
 
 pub(crate) mod blank;
 pub(crate) mod workspace;
@@ -96,6 +97,26 @@ pub fn present_screenshot(
     },
     Origin::Capture,
   )
+}
+
+/// Keeps a freshly captured still as a project of its own without opening
+/// it, seeding its layer with the live annotations it covered, and says
+/// where.
+pub fn save_screenshot(
+  app: &AppHandle,
+  image: CapturedImage,
+  scale_factor: f64,
+  annotations: Vec<Annotation>,
+  title: &str,
+) -> Result<PathBuf, String> {
+  let item = ScreenshotItem {
+    annotations,
+    blank: false,
+    id: next_id(app),
+    image,
+    scale_factor,
+  };
+  keep_layer(app, None, title, &item)
 }
 
 /// Writes `bytes` as `name` in the project, through a neighbouring file so a

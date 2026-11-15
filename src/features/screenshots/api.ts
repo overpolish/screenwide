@@ -6,11 +6,13 @@ import { emit } from "@tauri-apps/api/event";
 
 import { Region } from "../recording-sources/types";
 
+import type { CopiedScreenshot } from "../../bindings/CopiedScreenshot";
 import type { QuickScreenshotDestination } from "../../bindings/QuickScreenshotDestination";
 import type { ScrollingCaptureIslandState } from "../../bindings/ScrollingCaptureIslandState";
 
-export type ScreenshotDestination =
-  "editor" | "clipboard" | "both" | "reference";
+/** `preview` copies the shot and shows it on the island; `reference` keeps
+ * it on screen. */
+export type ScreenshotDestination = "preview" | "reference";
 
 export type ScreenshotTarget =
   | { kind: "desktopRegion"; monitorId: number; region: Region }
@@ -25,9 +27,8 @@ type CaptureStillOptions = {
   target: ScreenshotTarget;
 };
 
-/** Resolves to the saved file's path, or null when it went to the clipboard. */
 export const captureStill = ({ destination, target }: CaptureStillOptions) =>
-  invoke<string | null>("capture_still", {
+  invoke<null>("capture_still", {
     destination,
     // The pointer is part of what a screenshot is showing, so it is always
     // captured.
@@ -60,6 +61,23 @@ export const cancelQuickScreenshot = () =>
   emit("screenshot-region://dismiss-requested");
 
 /** Hides the recording UI and takes `target` once the Settings delay has run
- * down; the shot always opens in the editor. */
+ * down; the shot is copied and previewed, as every screenshot is. */
 export const startDelayedScreenshot = (target: ScreenshotTarget) =>
   invoke<null>("start_delayed_screenshot", { target });
+
+/** The shot just copied that the island shows, if any. */
+export const getCopiedScreenshot = () =>
+  invoke<CopiedScreenshot | null>("copied_screenshot");
+
+/** The copied shot's time on the island is up: it stays on the clipboard
+ * alone. */
+export const dismissCopiedScreenshot = (id: number) =>
+  invoke<null>("dismiss_copied_screenshot", { id });
+
+/** Opens the copied shot in the editor, which keeps it as a project. */
+export const editCopiedScreenshot = (id: number) =>
+  invoke<null>("edit_copied_screenshot", { id });
+
+/** Keeps the copied shot in Projects without opening it. */
+export const saveCopiedScreenshot = (id: number) =>
+  invoke<null>("save_copied_screenshot", { id });

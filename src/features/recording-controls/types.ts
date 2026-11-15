@@ -24,7 +24,8 @@ export const initialRecordingSnapshot: RecordingSnapshot = {
 
 /** What the screenshot button is currently reflecting. */
 export type ScreenshotState = "done" | "failed" | "idle" | "pending";
-export type ScreenshotAction = "clipboard" | "editor" | "scrolling";
+/** A still, copied and previewed, or a capture of a scrolling region. */
+export type ScreenshotAction = "still" | "scrolling";
 
 type RecordingErrorPhase = "start" | "pause" | "resume" | "stop";
 

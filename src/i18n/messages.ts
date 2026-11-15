@@ -987,7 +987,6 @@ export type Messages = {
   "recording-controls-cancel-countdown": null;
   "recording-controls-cancel-starting": null;
   "recording-controls-confirm-discard": null;
-  "recording-controls-copy-screenshot": null;
   "recording-controls-delayed-screenshot": null;
   "recording-controls-discard": null;
   "recording-controls-displays": null;
@@ -1047,7 +1046,6 @@ export type Messages = {
   "recording-controls-record": null;
   "recording-controls-recording-note": { moment: string | number };
   "recording-controls-resume": null;
-  "recording-controls-save-screenshot": null;
   "recording-controls-screenshot": null;
   "recording-controls-screenshot-options": null;
   "recording-controls-scrolling-screenshot": null;
@@ -1056,6 +1054,7 @@ export type Messages = {
   "recording-controls-stop": null;
   "recording-controls-system-audio": null;
   "recording-controls-system-audio-level": null;
+  "recording-controls-take-screenshot": null;
   "recording-inputs-all-audio": null;
   "recording-inputs-camera-starting": null;
   "reference-close": null;
@@ -1086,11 +1085,15 @@ export type Messages = {
   "ruler-island-tools": null;
   "ruler-island-undo": null;
   "ruler-island-vertical-guide": null;
+  "screenshots-copied": null;
+  "screenshots-copied-dismiss": null;
+  "screenshots-copied-edit": null;
+  "screenshots-copied-save": null;
+  "screenshots-copied-saved": null;
   "screenshots-quick-cancel": null;
-  "screenshots-quick-clipboard": null;
-  "screenshots-quick-editor": null;
   "screenshots-quick-island": null;
   "screenshots-quick-reference": null;
+  "screenshots-quick-screenshot": null;
   "screenshots-scrolling-cancel": null;
   "screenshots-scrolling-cancel-hint": { key: string | number };
   "screenshots-scrolling-capturing": null;
@@ -1323,8 +1326,6 @@ export type Messages = {
   "settings-shortcut-annotate-clear": null;
   "settings-shortcut-annotate-leave": null;
   "settings-shortcut-annotate-undo": null;
-  "settings-shortcut-copy-screenshot": null;
-  "settings-shortcut-copy-screenshot-description": null;
   "settings-shortcut-editor-back-to-select": null;
   "settings-shortcut-editor-confirm-crop": null;
   "settings-shortcut-editor-copy": null;

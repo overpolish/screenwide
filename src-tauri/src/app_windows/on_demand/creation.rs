@@ -80,7 +80,7 @@ fn set_up(app: &AppHandle, label: WindowLabel, window: &WebviewWindow) -> tauri:
     WindowLabel::EditorRecording | WindowLabel::EditorScreenshot => {
       surface = crate::editor::preview_platform::surface_key(window);
       super::super::initialize_editor(window)?;
-      // Built ahead for a screenshot that may never come.
+      // Left hidden with no screenshot in it, it goes after a while.
       if label == WindowLabel::EditorScreenshot {
         super::release::when_unused(app, label, crate::editor::screenshot_window_needed);
       }

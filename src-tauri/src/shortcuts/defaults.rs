@@ -27,11 +27,7 @@ impl Default for ShortcutSettings {
         },
         ShortcutBinding {
           action: ShortcutAction::TakeScreenshot,
-          shortcut: Some("CommandOrControl+Shift+Digit2".to_owned()),
-        },
-        ShortcutBinding {
-          action: ShortcutAction::TakeScreenshotToClipboard,
-          shortcut: Some("CommandOrControl+Shift+Digit1".to_owned()),
+          shortcut: Some(SCREENSHOT_DEFAULT.to_owned()),
         },
         ShortcutBinding {
           action: ShortcutAction::TakeReferenceScreenshot,
@@ -83,6 +79,85 @@ fn is_retired_default(action: ShortcutAction, shortcut: Option<&str>) -> bool {
   RETIRED_DEFAULTS
     .iter()
     .any(|&(retired, keys)| retired == action && shortcut == Some(keys))
+}
+
+const SCREENSHOT_DEFAULT: &str = "CommandOrControl+Shift+Digit2";
+/// Copy a screenshot's default, from before copying became part of Take a
+/// screenshot.
+const COPY_SCREENSHOT_DEFAULT: &str = "CommandOrControl+Shift+Digit1";
+
+/// An action as a saved file names it, including one since merged into
+/// another.
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+enum SavedAction {
+  /// Copy a screenshot, now part of Take a screenshot.
+  TakeScreenshotToClipboard,
+  #[serde(untagged)]
+  Current(ShortcutAction),
+}
+
+#[derive(Deserialize)]
+struct SavedBinding {
+  action: SavedAction,
+  shortcut: Option<String>,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct SavedSettings {
+  bindings: Vec<SavedBinding>,
+  #[serde(default = "replaces_system_keys")]
+  replace_system_keys: bool,
+  #[serde(default)]
+  system_keys_announced: bool,
+}
+
+/// Reads a saved file, which may still hold Copy a screenshot. Its keys
+/// pass to Take a screenshot, which now copies too, when they were the ones
+/// in use: Take a screenshot cleared, or left on its default while Copy a
+/// screenshot's was changed. Keys the user gave Take a screenshot stay.
+pub(super) fn saved_settings(contents: &[u8]) -> Option<ShortcutSettings> {
+  let saved: SavedSettings = serde_json::from_slice(contents).ok()?;
+  let mut copy = None;
+  let mut bindings = Vec::with_capacity(saved.bindings.len());
+  for binding in saved.bindings {
+    match binding.action {
+      SavedAction::Current(action) => bindings.push(ShortcutBinding {
+        action,
+        shortcut: binding.shortcut,
+      }),
+      SavedAction::TakeScreenshotToClipboard => copy = Some(binding.shortcut),
+    }
+  }
+  if let Some(copy) = copy {
+    let take = bindings
+      .iter()
+      .position(|binding| binding.action == ShortcutAction::TakeScreenshot);
+    let take_keys = take.map(|index| bindings[index].shortcut.as_deref());
+    let take_cleared = take_keys == Some(None);
+    let take_left = take_keys.is_none_or(|keys| {
+      keys == Some(SCREENSHOT_DEFAULT) || is_retired_default(ShortcutAction::TakeScreenshot, keys)
+    });
+    let copy_changed = copy
+      .as_deref()
+      .is_some_and(|keys| keys != COPY_SCREENSHOT_DEFAULT);
+    if take_cleared || (take_left && copy_changed) {
+      let inherited = ShortcutBinding {
+        action: ShortcutAction::TakeScreenshot,
+        shortcut: copy,
+      };
+      match take {
+        Some(index) => bindings[index] = inherited,
+        None => bindings.push(inherited),
+      }
+    }
+  }
+  Some(ShortcutSettings {
+    bindings,
+    replace_system_keys: saved.replace_system_keys,
+    system_keys_announced: saved.system_keys_announced,
+  })
 }
 
 /// The saved bindings over the defaults. An action the saved file has never

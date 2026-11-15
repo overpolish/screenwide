@@ -15,9 +15,9 @@ pub(super) const fn action_window(action: ShortcutAction) -> Option<WindowLabel>
     }
     // The overlay opens itself in region-edit mode and captures what the user
     // settles on, so the screenshot never goes near the recording controls.
-    ShortcutAction::TakeScreenshot
-    | ShortcutAction::TakeScreenshotToClipboard
-    | ShortcutAction::TakeReferenceScreenshot => Some(WindowLabel::RegionSelector),
+    ShortcutAction::TakeScreenshot | ShortcutAction::TakeReferenceScreenshot => {
+      Some(WindowLabel::RegionSelector)
+    }
     ShortcutAction::RecognizeText => Some(WindowLabel::Island),
     ShortcutAction::AnnotateClear
     | ShortcutAction::AnnotateOverlay
@@ -106,9 +106,7 @@ pub(super) const fn preserved_capture_overlays(
       &[crate::capture_overlays::CaptureOverlay::Annotate]
     }
     ShortcutAction::RecognizeText => &[crate::capture_overlays::CaptureOverlay::TextRecognition],
-    ShortcutAction::TakeScreenshot
-    | ShortcutAction::TakeScreenshotToClipboard
-    | ShortcutAction::TakeReferenceScreenshot => &[
+    ShortcutAction::TakeScreenshot | ShortcutAction::TakeReferenceScreenshot => &[
       crate::capture_overlays::CaptureOverlay::Annotate,
       crate::capture_overlays::CaptureOverlay::Ruler,
     ],
@@ -130,7 +128,6 @@ pub(super) const fn requires_frontend_turn(action: ShortcutAction) -> bool {
     ShortcutAction::ToggleRecordingControls
       | ShortcutAction::RecognizeText
       | ShortcutAction::TakeScreenshot
-      | ShortcutAction::TakeScreenshotToClipboard
       | ShortcutAction::TakeReferenceScreenshot
   )
 }
@@ -160,9 +157,7 @@ pub(super) fn run_action(app: &AppHandle, action: ShortcutAction) {
   }
   if matches!(
     action,
-    ShortcutAction::TakeScreenshot
-      | ShortcutAction::TakeScreenshotToClipboard
-      | ShortcutAction::TakeReferenceScreenshot
+    ShortcutAction::TakeScreenshot | ShortcutAction::TakeReferenceScreenshot
   ) {
     let reason = if !crate::recording::is_idle(app) {
       Some("recording_not_idle")
@@ -196,7 +191,6 @@ pub(super) fn run_action(app: &AppHandle, action: ShortcutAction) {
     ShortcutAction::ToggleRecordingControls
     | ShortcutAction::RecognizeText
     | ShortcutAction::TakeScreenshot
-    | ShortcutAction::TakeScreenshotToClipboard
     | ShortcutAction::TakeReferenceScreenshot => {
       unreachable!("handled above")
     }

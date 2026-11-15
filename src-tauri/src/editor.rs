@@ -57,7 +57,7 @@ pub use project_open::is_project_file;
 pub use project_open::{
   choose_project, open_kind, open_project, open_project_detached, project_argument,
 };
-pub use screenshot_project::present_screenshot;
+pub use screenshot_project::{present_screenshot, save_screenshot};
 pub(crate) mod project_look;
 mod project_name;
 pub(crate) mod project_thumbnail;
@@ -100,6 +100,7 @@ use screenwide_annotations::Annotation;
 pub use startup::initialize;
 use validation::{validate_camera_resolution_scale, validate_primary_resolution_scale};
 pub use workspace::has_pending_kind as has_pending_workspace_kind;
+pub(crate) use workspace::screenshot_window_needed;
 pub use workspace::{
   focus_if_screenshot_blocked as focus_if_screenshot_workspace_blocked,
   release_recording as release_recording_workspace,
@@ -107,7 +108,6 @@ pub use workspace::{
   reserve_recording as reserve_recording_workspace,
   reserve_screenshot as reserve_screenshot_workspace,
 };
-pub(crate) use workspace::{prepare_screenshot_window, screenshot_window_needed};
 mod window;
 
 use std::path::{Path, PathBuf};

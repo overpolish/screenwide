@@ -21,14 +21,15 @@ import { cancelTextRecognition } from "../text-recognition/api";
 
 import { setRulerScreenshotMode } from "./ruler-screenshot-mode";
 
+import type { QuickScreenshotDestination } from "../../bindings/QuickScreenshotDestination";
 import type { ShortcutAction } from "../../bindings/ShortcutAction";
 
 type ScreenshotShortcutAction = Extract<
   ShortcutAction,
-  "takeReferenceScreenshot" | "takeScreenshot" | "takeScreenshotToClipboard"
+  "takeReferenceScreenshot" | "takeScreenshot"
 >;
 type CleanupStep = () => Promise<unknown>;
-let sessionDestination: ScreenshotDestination = "editor";
+let sessionDestination: ScreenshotDestination = "preview";
 let sessionAction: ScreenshotShortcutAction | null = null;
 let shortcutTransition: Promise<void> = Promise.resolve();
 
@@ -36,8 +37,15 @@ export const screenshotCaptureDestination = () => sessionDestination;
 
 const DESTINATIONS: Record<ScreenshotShortcutAction, ScreenshotDestination> = {
   takeReferenceScreenshot: "reference",
-  takeScreenshot: "editor",
-  takeScreenshotToClipboard: "clipboard",
+  takeScreenshot: "preview",
+};
+
+const ISLAND_DESTINATIONS: Record<
+  ScreenshotDestination,
+  QuickScreenshotDestination
+> = {
+  preview: "screenshot",
+  reference: "reference",
 };
 
 const selectScreenshotAction = (action: ScreenshotShortcutAction) => {
@@ -47,21 +55,16 @@ const selectScreenshotAction = (action: ScreenshotShortcutAction) => {
 
 // The island is advisory: a session goes on without it.
 const showIsland = () =>
-  showQuickScreenshotIsland(
-    sessionDestination === "both" ? "editor" : sessionDestination,
-  ).catch((error: unknown) => {
-    console.error("Could not show the screenshot island", error);
-  });
+  showQuickScreenshotIsland(ISLAND_DESTINATIONS[sessionDestination]).catch(
+    (error: unknown) => {
+      console.error("Could not show the screenshot island", error);
+    },
+  );
 
 /** An area has started being drawn. The overlay is left out of the still now,
- * so the shutter does not wait for that, and when the shot goes to the editor
- * its window is built during the drawing, so the still opens in it at once.
- * Not sooner, as building it beside the overlay slows the overlay. A shot
- * that goes elsewhere, or never comes, leaves an editor that is let go of. */
+ * so the shutter does not wait for that. */
 export const screenshotDrawingStarted = () => {
-  beginScreenshotDrawing(
-    sessionDestination === "editor" || sessionDestination === "both",
-  ).catch((error: unknown) => {
+  beginScreenshotDrawing().catch((error: unknown) => {
     console.error("Could not begin the screenshot drawing", error);
   });
 };
@@ -90,9 +93,7 @@ async function runCleanupSteps(steps: CleanupStep[]) {
 export const isScreenshotShortcut = (
   action: ShortcutAction,
 ): action is ScreenshotShortcutAction =>
-  action === "takeScreenshot" ||
-  action === "takeScreenshotToClipboard" ||
-  action === "takeReferenceScreenshot";
+  action === "takeScreenshot" || action === "takeReferenceScreenshot";
 
 /** The screenshot shortcut this window was just built for, if any. */
 export const takePendingShortcutAction = () =>

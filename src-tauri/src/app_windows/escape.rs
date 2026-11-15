@@ -14,12 +14,14 @@ const DISMISS_REQUESTED_EVENT: &str = "recording-ui://dismiss-requested";
 const SCREENSHOT_DISMISS_REQUESTED_EVENT: &str = "screenshot-region://dismiss-requested";
 const RULER_DISMISS_REQUESTED_EVENT: &str = "ruler://dismiss-requested";
 const TEXT_RECOGNITION_DISMISS_REQUESTED_EVENT: &str = "text-recognition://dismiss-requested";
+const COPIED_SCREENSHOT_DISMISS_REQUESTED_EVENT: &str = "copied-screenshot://dismiss-requested";
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum EscapeOwner {
   Annotate,
   TextRecognition,
   Screenshot,
+  CopiedScreenshot,
   Ruler,
   RecordingControls,
 }
@@ -27,6 +29,7 @@ enum EscapeOwner {
 const fn owner(
   controls_visible: bool,
   screenshot_session: bool,
+  copied_screenshot: bool,
   ruler_active: bool,
   text_recognition_active: bool,
   annotate_active: bool,
@@ -42,6 +45,10 @@ const fn owner(
     // underneath it. Escape must return that borrowed surface first; Ruler
     // becomes the owner again after the screenshot session has ended.
     Some(EscapeOwner::Screenshot)
+  } else if copied_screenshot {
+    // The shot just copied has the island over the Ruler's, which comes back
+    // once it goes.
+    Some(EscapeOwner::CopiedScreenshot)
   } else if ruler_active {
     Some(EscapeOwner::Ruler)
   } else if controls_visible {
@@ -54,6 +61,7 @@ const fn owner(
 const fn should_be_armed(
   controls_visible: bool,
   screenshot_session: bool,
+  copied_screenshot: bool,
   ruler_active: bool,
   text_recognition_active: bool,
   annotate_active: bool,
@@ -61,6 +69,7 @@ const fn should_be_armed(
   owner(
     controls_visible,
     screenshot_session,
+    copied_screenshot,
     ruler_active,
     text_recognition_active,
     annotate_active,
@@ -101,6 +110,7 @@ fn dismiss_owner(app: &AppHandle) {
   match owner(
     is_recording_ui_visible(),
     screenshot_session,
+    crate::screenshots::copied::is_up(),
     crate::ruler::is_active(app),
     crate::text_recognition::is_active(app),
     crate::annotate::is_active(app),
@@ -123,6 +133,14 @@ fn dismiss_owner(app: &AppHandle) {
       let _ = app.emit_to(
         WindowLabel::RegionSelector.as_str(),
         SCREENSHOT_DISMISS_REQUESTED_EVENT,
+        (),
+      );
+      return;
+    }
+    Some(EscapeOwner::CopiedScreenshot) => {
+      let _ = app.emit_to(
+        WindowLabel::Island.as_str(),
+        COPIED_SCREENSHOT_DISMISS_REQUESTED_EVENT,
         (),
       );
       return;
@@ -185,6 +203,7 @@ pub(super) fn sync(
   if should_be_armed(
     controls_visible,
     screenshot_session,
+    crate::screenshots::copied::is_up(),
     ruler_active,
     crate::text_recognition::is_active(app),
     crate::annotate::is_active(app),
@@ -201,40 +220,52 @@ mod tests {
 
   #[test]
   fn screenshot_session_borrows_escape_from_visible_recording_ui() {
-    assert!(should_be_armed(true, true, false, false, false));
-    assert!(should_be_armed(false, true, true, false, false));
-    assert!(should_be_armed(true, false, false, false, false));
-    assert!(!should_be_armed(false, false, false, false, false));
+    assert!(should_be_armed(true, true, false, false, false, false));
+    assert!(should_be_armed(false, true, false, true, false, false));
+    assert!(should_be_armed(true, false, false, false, false, false));
+    assert!(!should_be_armed(false, false, false, false, false, false));
   }
 
   #[test]
   fn text_recognition_borrows_escape_without_recording_controls() {
-    assert!(should_be_armed(false, false, false, true, false));
+    assert!(should_be_armed(false, false, false, false, true, false));
   }
 
   #[test]
   fn ruler_borrows_escape_from_visible_recording_ui() {
-    assert!(should_be_armed(true, false, true, false, false));
-    assert!(should_be_armed(false, false, true, false, false));
+    assert!(should_be_armed(true, false, false, true, false, false));
+    assert!(should_be_armed(false, false, false, true, false, false));
   }
 
   #[test]
   fn screenshot_borrows_escape_before_preserved_ruler() {
     assert_eq!(
-      owner(true, true, true, false, false),
+      owner(true, true, false, true, false, false),
       Some(EscapeOwner::Screenshot)
     );
     assert_eq!(
-      owner(true, false, true, false, false),
+      owner(true, false, false, true, false, false),
       Some(EscapeOwner::Ruler)
     );
   }
 
   #[test]
-  fn the_annotate_overlay_owns_escape_while_it_is_up() {
-    assert!(should_be_armed(false, false, false, false, true));
+  fn a_copied_screenshot_takes_escape_from_the_ruler_after_its_session() {
     assert_eq!(
-      owner(true, true, true, true, true),
+      owner(true, false, true, true, false, false),
+      Some(EscapeOwner::CopiedScreenshot)
+    );
+    assert_eq!(
+      owner(false, true, true, true, false, false),
+      Some(EscapeOwner::Screenshot)
+    );
+  }
+
+  #[test]
+  fn the_annotate_overlay_owns_escape_while_it_is_up() {
+    assert!(should_be_armed(false, false, false, false, false, true));
+    assert_eq!(
+      owner(true, true, true, true, true, true),
       Some(EscapeOwner::Annotate)
     );
   }

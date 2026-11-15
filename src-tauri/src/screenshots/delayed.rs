@@ -132,7 +132,7 @@ async fn run(app: AppHandle, generation: u64, seconds: u8, target: DelayedTarget
   };
   // The pointer is part of what a screenshot is showing, as it is for every
   // other still.
-  if let Err(error) = take_still(app, target, true, ScreenshotDestination::Editor).await {
+  if let Err(error) = take_still(app, target, true, ScreenshotDestination::Preview).await {
     eprintln!("Could not take the delayed screenshot: {error}");
   }
 }

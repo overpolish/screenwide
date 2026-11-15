@@ -12,6 +12,7 @@ use std::sync::{Mutex, PoisonError};
 #[cfg(target_os = "windows")]
 use std::time::{Duration, Instant};
 
+#[cfg(target_os = "windows")]
 use tauri::Manager;
 
 #[cfg(target_os = "windows")]
@@ -53,18 +54,13 @@ pub async fn set_region_selector_opacity(
 
 /// An area has started being drawn. The overlay is left out of captures now,
 /// which shows nothing different on screen; macOS hides it at the shutter
-/// instead. When the shot goes to the editor, its window is built during the
-/// drawing, so the still opens in it at once.
+/// instead.
 #[tauri::command]
-pub fn begin_screenshot_drawing(
-  window: tauri::WebviewWindow,
-  prepare_editor: bool,
-) -> Result<(), String> {
+pub fn begin_screenshot_drawing(window: tauri::WebviewWindow) -> Result<(), String> {
   #[cfg(target_os = "windows")]
   apply_capture_affinity(&window, 0.0)?;
-  if prepare_editor {
-    crate::editor::prepare_screenshot_window(window.app_handle());
-  }
+  #[cfg(not(target_os = "windows"))]
+  let _ = window;
   Ok(())
 }
 

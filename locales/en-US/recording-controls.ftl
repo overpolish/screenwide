@@ -16,8 +16,7 @@ recording-controls-displays = Display to record
 
 recording-controls-screenshot = Screenshot
 recording-controls-screenshot-options = Screenshot options
-recording-controls-save-screenshot = Save screenshot
-recording-controls-copy-screenshot = Copy to clipboard
+recording-controls-take-screenshot = Take screenshot
 recording-controls-delayed-screenshot = Delayed screenshot
 recording-controls-scrolling-screenshot = Capture scrolling region
 recording-controls-record = Record

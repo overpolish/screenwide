@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { Clipboard, Clock, ImageDown, ScrollText } from "lucide-react";
+import { Clock, ImageDown, ScrollText } from "lucide-react";
 
 import { ControlRow } from "../../../composites/control-row/control-row";
 import { t } from "../../../i18n/i18n";
@@ -21,22 +21,17 @@ export function ScreenshotPanel({
   onScreenshot,
 }: {
   canScroll: boolean;
-  onScreenshot: (action: ScreenshotAction | "delayed" | "save") => void;
+  onScreenshot: (action: ScreenshotAction | "delayed") => void;
 }) {
   const items: {
-    action: ScreenshotAction | "delayed" | "save";
+    action: ScreenshotAction | "delayed";
     icon: typeof Clock;
     label: string;
   }[] = [
     {
-      action: "save",
+      action: "still",
       icon: ImageDown,
-      label: t("recording-controls-save-screenshot"),
-    },
-    {
-      action: "clipboard",
-      icon: Clipboard,
-      label: t("recording-controls-copy-screenshot"),
+      label: t("recording-controls-take-screenshot"),
     },
     {
       action: "delayed",

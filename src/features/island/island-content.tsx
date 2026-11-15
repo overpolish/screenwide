@@ -1,6 +1,8 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import { useState } from "react";
+
 import { AnnotateIsland } from "../annotate/island/annotate-island";
 import { useAnnotateRows } from "../annotate/island/annotate-rows";
 import { useAnnotateDrawing } from "../annotate/island/use-annotate-drawing";
@@ -13,6 +15,7 @@ import { RulerIsland } from "../ruler/island/ruler-island";
 import { useRulerIsland } from "../ruler/island/use-ruler-island";
 import { QuickScreenshotIsland } from "../screenshots/island/quick-screenshot-island";
 import { ScrollingCaptureIsland } from "../screenshots/island/scrolling-capture-island";
+import { useCopiedScreenshotIsland } from "../screenshots/island/use-copied-screenshot-island";
 import { useQuickScreenshotIsland } from "../screenshots/island/use-quick-screenshot-island";
 import { useScrollingCaptureIsland } from "../screenshots/island/use-scrolling-capture-island";
 import { TextRecognitionIsland } from "../text-recognition/island/text-recognition-island";
@@ -29,31 +32,46 @@ import type { IslandHost } from "./island-window";
 /** What the island shows: a scrolling capture while one runs, as it takes
  * the screen over; the hint while a picture is dragged with Option held, as
  * letting go keeps it as a reference; Quick Screenshot's while its overlay
- * waits for an area, over the Ruler, which steps back for it; Text
- * Recognition's or the Ruler's tools while either is up, even during a
- * recording, as neither can be used without them; the annotate tools on
- * their own island while the overlay draws with no recording under way; a
- * new version while one is offered, which comes out only while the island
- * is free; and otherwise the recording's, with the annotate tools under its
- * row while the overlay draws. */
+ * waits for an area, over the Ruler, which steps back for it; a screenshot
+ * just copied, for a few seconds, before the tool it was taken over comes
+ * back; Text Recognition's or the Ruler's tools while either is up, even
+ * during a recording, as neither can be used without them; the annotate
+ * tools on their own island while the overlay draws with no recording under
+ * way; a new version while one is offered, which comes out only while the
+ * island is free; and otherwise the recording's, with the annotate tools
+ * under its row while the overlay draws. */
 export function IslandContent({ island }: { island: IslandHost }) {
   const isDrawing = useAnnotateDrawing();
   const editing = useAnnotateEditing();
   const ruler = useRulerIsland();
   const scrolling = useScrollingCaptureIsland();
   const quickScreenshot = useQuickScreenshotIsland();
+  const copiedScreenshot = useCopiedScreenshotIsland();
   const referenceDrop = useReferenceDropIsland();
   const textRecognition = useTextRecognitionIsland();
   const update = useUpdateIsland();
   const status = useRecordingStore(selectStatus);
   const annotate = isDrawing ? editing : null;
   const rows = useAnnotateRows(annotate);
+  // A shot copied takes the place of the session it ended, on the same
+  // island, which tucks away showing whichever it last showed.
+  const screenshotPart = copiedScreenshot.isUp
+    ? "copied"
+    : quickScreenshot.isUp
+      ? "drawing"
+      : null;
+  const [lastScreenshotPart, setLastScreenshotPart] = useState<
+    "copied" | "drawing"
+  >("drawing");
+  if (screenshotPart && screenshotPart !== lastScreenshotPart)
+    setLastScreenshotPart(screenshotPart);
+  const showsCopied = (screenshotPart ?? lastScreenshotPart) === "copied";
   const swap = useIslandSwap(
     scrolling.isUp
       ? "scrollingCapture"
       : referenceDrop.isUp
         ? "referenceDrop"
-        : quickScreenshot.isUp
+        : screenshotPart
           ? "quickScreenshot"
           : textRecognition.isUp
             ? "textRecognition"
@@ -76,9 +94,14 @@ export function IslandContent({ island }: { island: IslandHost }) {
     swap.kind === "textRecognition" ||
     (swap.kind === "recording" && status === "idle" && !annotate);
   const announcement = useSystemKeysAnnouncement(sayer && swap.host.isShown);
+  // Quick Screenshot's row is one long title and a lone close, so its note
+  // hangs as a section under the title rather than centred under the notch.
   const note =
     sayer && announcement.keys ? (
-      <SystemKeysNote keys={announcement.keys} />
+      <SystemKeysNote
+        keys={announcement.keys}
+        layout={swap.kind === "quickScreenshot" ? "section" : "line"}
+      />
     ) : undefined;
   const host = {
     ...swap.host,
@@ -105,13 +128,22 @@ export function IslandContent({ island }: { island: IslandHost }) {
   if (swap.kind === "referenceDrop") {
     return <ReferenceDropIsland {...swap.host} />;
   }
-  if (swap.kind === "quickScreenshot" && quickScreenshot.destination) {
+  if (
+    swap.kind === "quickScreenshot" &&
+    (showsCopied ? copiedScreenshot.shot : quickScreenshot.destination)
+  ) {
     return (
       <QuickScreenshotIsland
         {...host}
-        destination={quickScreenshot.destination}
+        copied={showsCopied ? copiedScreenshot.shot : null}
+        destination={quickScreenshot.destination ?? "screenshot"}
         note={note}
-        onClose={quickScreenshot.onClose}
+        onClose={
+          showsCopied ? copiedScreenshot.onDismiss : quickScreenshot.onClose
+        }
+        onEdit={copiedScreenshot.onEdit}
+        onHoverChange={copiedScreenshot.onHoverChange}
+        onSave={copiedScreenshot.onSave}
       />
     );
   }

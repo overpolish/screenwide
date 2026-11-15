@@ -85,7 +85,7 @@ export function RestingRow({
                 props.screenshotState === "pending" && "text-fg-secondary",
               )}
               isDisabled={!canScreenshot(props)}
-              onPress={() => props.onScreenshot?.("save")}
+              onPress={() => props.onScreenshot?.("still")}
               variant="ghost"
             >
               {/* Status is carried by the glyph alone, as in the recording

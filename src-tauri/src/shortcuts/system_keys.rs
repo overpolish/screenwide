@@ -47,7 +47,7 @@ const TAKEN: &[(SystemKey, &str, ShortcutAction)] = &[
   (
     SystemKey::AreaScreenshotToClipboard,
     "Super+Control+Shift+Digit4",
-    ShortcutAction::TakeScreenshotToClipboard,
+    ShortcutAction::TakeScreenshot,
   ),
   (
     SystemKey::ScreenshotToolbar,
