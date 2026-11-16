@@ -71,13 +71,26 @@ if (!target) {
 }
 
 const crate = resolve("src-tauri", "transcriber");
-// whisper.cpp's Vulkan backend configures its shader generator as a nested
-// CMake project deep inside the build directory, and neither MSBuild nor the
-// MSVC compiler can reach files past MAX_PATH. A short target directory with
-// no triple directory when building for the host, Ninja in place of MSBuild's
-// deeper project layout, and CMake's hashed SHORT intermediate directories
-// together keep the deepest paths under the limit.
-const targetDirectory = resolve("src-tauri", "target", "stt");
+// whisper.cpp's and llama.cpp's Vulkan backends configure their shader
+// generator as a nested CMake project deep inside the build directory, and
+// CMake caps an object's path at 250 characters while MSVC's linker cannot
+// reach files past MAX_PATH, whatever Windows' long path setting. Ninja in
+// place of MSBuild's deeper project layout, CMake's hashed SHORT intermediate
+// directories and no triple directory when building for the host shorten
+// what lies below the target directory; on Windows that directory sits in
+// the user's local data folder rather than the checkout, whose depth varies,
+// named for the checkout so two checkouts keep apart.
+const targetDirectory =
+  hostPlatform === "win32"
+    ? resolve(
+        env.LOCALAPPDATA ?? resolve(env.USERPROFILE ?? ".", "AppData", "Local"),
+        "swb",
+        createHash("sha256")
+          .update(resolve(".").toLowerCase())
+          .digest("hex")
+          .slice(0, 6),
+      )
+    : resolve("src-tauri", "target", "stt");
 const buildEnv = { ...env };
 if (hostPlatform === "win32") {
   const cmakeVersion = execFileSync("cmake", ["--version"], {
