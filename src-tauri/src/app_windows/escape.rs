@@ -107,8 +107,10 @@ pub(super) fn arm(app: &AppHandle) {
 
 /// Hands one Escape press to whoever owns it.
 fn dismiss_owner(app: &AppHandle) {
+  // Escape is the quick way to stop dictating: it pastes, as Done does.
+  // Throwing the words away is the island's Cancel, which asks twice.
   if crate::dictation::is_listening() {
-    crate::dictation::cancel(app);
+    crate::dictation::finish(app);
     return;
   }
   let screenshot_session = super::region::SCREENSHOT_REGION_SESSION.load(Ordering::Acquire);

@@ -3,7 +3,7 @@
 
 //! Dictation, wired into the app. The Dictate shortcut starts it; held, it
 //! listens until let go, and tapped, until tapped again, or until the
-//! island's Stop. Escape or the island's Cancel drops it. It listens in the
+//! island's Done or Escape. The island's Cancel drops it. It listens in the
 //! language transcription is set to (`setup`). The island shows the words
 //! as they are heard (`island`), its spoken commands carried out, its
 //! corrections made in English (`corrections`), words added to or removed
@@ -37,6 +37,11 @@ use self::setup::Spoken;
 const HOLD: Duration = Duration::from_millis(350);
 /// How long dictation's helper is kept after a dictation.
 const KEEP_HELPER: Duration = Duration::from_secs(180);
+/// The least time the island says it is typing before it goes or says how
+/// the paste went: long enough for its row to change over (`leave`, then
+/// `arrive`, in `island-motion.ts`). A paste can land at once, and the island
+/// going while its row still changes snaps in rather than moving.
+const TYPING_SHOWN: Duration = Duration::from_millis(600);
 
 #[derive(Default)]
 struct Dictation {
@@ -224,6 +229,7 @@ fn end(app: &AppHandle, cancelled: bool) {
   } else {
     island::tell(app, DictationIslandState::Finishing);
   }
+  let typing_since = Instant::now();
   let app = app.clone();
   std::thread::spawn(move || {
     let Ended { heard, helper } = if cancelled {
@@ -245,6 +251,7 @@ fn end(app: &AppHandle, cancelled: bool) {
         listening.corrections.as_deref(),
       ),
     );
+    std::thread::sleep(TYPING_SHOWN.saturating_sub(typing_since.elapsed()));
     with(|dictation| dictation.finishing = false);
     match outcome {
       Ok(taught) if taught.is_empty() => island::withdraw(&app),

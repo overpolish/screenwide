@@ -9,9 +9,9 @@ dictation-island = Dictation
 # The row's title while the microphone is heard.
 dictation-island-listening = Listening
 # Before any words are heard. { $key } is the Escape key, drawn as a keycap.
-dictation-island-hint = Speak, and the words go where your cursor is. { $key } cancels.
+dictation-island-hint = Speak, and the words go where your cursor is. { $key } finishes.
 # Before any words are heard, in a language whose text is written at each pause rather than as it is spoken. { $key } is the Escape key, drawn as a keycap.
-dictation-island-hint-at-pauses = Speak, and the text appears each time you pause. { $key } cancels.
+dictation-island-hint-at-pauses = Speak, and the text appears each time you pause. { $key } finishes.
 # Stops listening and types what was heard.
 dictation-island-done = Done
 dictation-island-cancel = Cancel dictation
