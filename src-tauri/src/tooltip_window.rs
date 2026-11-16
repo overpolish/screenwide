@@ -236,6 +236,19 @@ pub fn hide_tooltip(app: AppHandle) -> Result<(), String> {
   platform::hide(&window).map_err(|error| error.to_string())
 }
 
+/// The window `label` is closing or gone: a tooltip it asked for goes with
+/// it. Its page cannot take the tooltip away itself: a closed editor is only
+/// hidden, and a hidden page holds its timers back, so the hide it asks for
+/// would land only once the window is shown again.
+pub(crate) fn window_closing(app: &AppHandle, label: &str) {
+  let owned = pending_tooltip(app).is_some_and(|(_, parent)| parent == label);
+  if owned {
+    if let Err(error) = hide_tooltip(app.clone()) {
+      eprintln!("Could not hide the tooltip of a closing window: {error}");
+    }
+  }
+}
+
 /// What the tooltip should say. Read once on mount; every later tooltip
 /// arrives as an event instead.
 #[tauri::command]

@@ -125,6 +125,7 @@ fn set_up(app: &AppHandle, label: WindowLabel, window: &WebviewWindow) -> tauri:
   let destroyed_app = app.clone();
   window.on_window_event(move |event| {
     if matches!(event, WindowEvent::Destroyed) {
+      crate::tooltip_window::window_closing(&destroyed_app, label.as_str());
       if let Some(surface) = surface {
         crate::editor::preview_platform::forget(surface);
         // What the editor drew and decoded is freed only once the device is

@@ -71,4 +71,5 @@ fn let_go_of_window_work(app: &AppHandle, kind: EditorKind) {
   // A tool panel hangs off this window and stays up through an outside press,
   // so it has to be taken away with the editor it belongs to.
   app_windows::options::close_standalone_listbox_for_parent(app, kind.window_label().as_str());
+  crate::tooltip_window::window_closing(app, kind.window_label().as_str());
 }

@@ -12,6 +12,7 @@ pub fn hide_instead_of_close(app: &AppHandle, label: WindowLabel) {
     window.on_window_event(move |event| {
       if let WindowEvent::CloseRequested { api, .. } = event {
         api.prevent_close();
+        crate::tooltip_window::window_closing(&app, label.as_str());
         match label {
           // Closing an editor window closes only what it holds, which stays
           // in its project to be opened again. The recording editor first
