@@ -183,7 +183,6 @@ tauri-plugin-clipboard-manager = "2.3.2"
 # the plugin does not expose: the files a copy in Finder or Explorer holds.
 arboard = "3.6.1"
 image.workspace = true
-rapidfuzz = "0.5.0"
 rayon.workspace = true
 cpal.workspace = true
 quantette.workspace = true
