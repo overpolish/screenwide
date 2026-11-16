@@ -165,9 +165,10 @@ export type Messages = {
   "dialog-sounds-filter": null;
   "dialog-template-filter": null;
   "dictation-island": null;
-  "dictation-island-administrator": null;
+  "dictation-island-administrator": { key: string | number };
   "dictation-island-cancel": null;
   "dictation-island-close": null;
+  "dictation-island-confirm-cancel": null;
   "dictation-island-done": null;
   "dictation-island-failed": null;
   "dictation-island-hint": { key: string | number };
@@ -176,6 +177,7 @@ export type Messages = {
   "dictation-island-no-accessibility": null;
   "dictation-island-no-microphone": null;
   "dictation-island-no-model": null;
+  "dictation-island-on-clipboard": { key: string | number };
   "dictation-island-open-settings": null;
   "dictation-island-password-field": null;
   "dictation-island-typing": null;

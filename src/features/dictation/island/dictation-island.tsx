@@ -4,7 +4,10 @@
 import { Mic, X } from "lucide-react";
 import { useState } from "react";
 
+import { ConfirmActionButton } from "../../../composites/confirm-action-button/confirm-action-button";
 import { t } from "../../../i18n/i18n";
+import { splitAtPlaceable } from "../../../i18n/split-at-placeable";
+import { hotkeyKeys } from "../../../lib/hotkey";
 import { cn } from "../../../lib/styling";
 import { Alert } from "../../../primitives/alert/alert";
 import { Button } from "../../../primitives/button/button";
@@ -16,6 +19,7 @@ import { IslandParts } from "../../../primitives/island/island-parts";
 import { type IslandProps } from "../../../primitives/island/island-props";
 import { IslandRow } from "../../../primitives/island/island-row";
 import { IslandRowTitle } from "../../../primitives/island/row-title/island-row-title";
+import { Keyboard } from "../../../primitives/keyboard/keyboard";
 import { Text } from "../../../primitives/text/text";
 import { LevelFill } from "../../recording-controls/island/island-glyphs";
 
@@ -47,6 +51,23 @@ export type DictationIslandProps = Pick<
 
 type Words = { settled: string; unsettled: string };
 
+/** A message naming the paste shortcut, drawn as keycaps where the
+ * language puts it. */
+const withPasteKeys = (message: (key: string) => string) => {
+  const [before, after] = splitAtPlaceable(message);
+  return (
+    <>
+      {before}
+      {hotkeyKeys("CommandOrControl+V").map((key) => (
+        <Keyboard className="align-middle" key={key}>
+          {key}
+        </Keyboard>
+      ))}
+      {after}
+    </>
+  );
+};
+
 const problemMessage = (problem: DictationProblem) => {
   switch (problem) {
     case "noModel":
@@ -58,7 +79,13 @@ const problemMessage = (problem: DictationProblem) => {
     case "passwordField":
       return t("dictation-island-password-field");
     case "administrator":
-      return t("dictation-island-administrator");
+      return withPasteKeys((key) =>
+        t("dictation-island-administrator", { key }),
+      );
+    case "onClipboard":
+      return withPasteKeys((key) =>
+        t("dictation-island-on-clipboard", { key }),
+      );
     case "failed":
       return t("dictation-island-failed");
   }
@@ -69,6 +96,10 @@ const isFixedInSettings = (problem: DictationProblem) =>
   problem === "noModel" ||
   problem === "noMicrophone" ||
   problem === "noAccessibility";
+
+/** Whether the dictation waits on the clipboard: not lost, so a warning. */
+const isOnClipboard = (problem: DictationProblem) =>
+  problem === "administrator" || problem === "onClipboard";
 
 function Close({ label, onPress }: { label: string; onPress: () => void }) {
   return (
@@ -197,11 +228,15 @@ export function DictationIsland({
   const end =
     state.phase === "listening" ? (
       <span className="flex items-center gap-1" key="listening">
-        <Close
+        {/* Cancelling throws away everything heard, so it asks twice. */}
+        <ConfirmActionButton
+          confirmLabel={t("dictation-island-confirm-cancel")}
+          icon={<X aria-hidden />}
           label={t("dictation-island-cancel")}
-          onPress={() => {
+          onConfirm={() => {
             onAction("cancel");
           }}
+          variant="ghost"
         />
         <Button
           color="primary"
@@ -240,7 +275,7 @@ export function DictationIsland({
               </Button>
             ) : undefined
           }
-          color="error"
+          color={isOnClipboard(state.problem) ? "warning" : "error"}
           role="alert"
         >
           {problemMessage(state.problem)}

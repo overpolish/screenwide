@@ -36,6 +36,21 @@ pub struct Phrases {
   /// The word said before a word or number to write it as a hashtag
   /// ("closes hashtag 50" as "closes #50"). Only English has it.
   pub(super) hashtag: Option<Hashtag>,
+  /// What is said round a quotation to write it in quotation marks. Only
+  /// English has them.
+  pub(super) quotes: Option<Quotes>,
+}
+
+/// What is said round a quotation, lower case, each said inside a sentence.
+#[derive(Debug)]
+pub(super) struct Quotes {
+  /// Opens a quotation that runs to its close: "open quote".
+  pub open: &'static [&'static str],
+  /// Closes it: "close quote".
+  pub close: &'static [&'static str],
+  /// Opens a quotation that, unless closed first, ends at the next pause
+  /// or the end of its sentence: "and I quote".
+  pub introduce: &'static [&'static str],
 }
 
 /// "Hashtag" said for the mark, and the words round it that make it the
@@ -87,6 +102,7 @@ const NONE: Phrases = Phrases {
   corrections: &[],
   numbers: "",
   hashtag: None,
+  quotes: None,
 };
 
 /// The commands said in `language`, a code such as `fr`.
@@ -154,5 +170,10 @@ const ENGLISH: Phrases = Phrases {
       "to", "for", "in", "on", "at", "of", "and", "or", "is", "was", "are", "with", "from", "that",
       "here", "there",
     ],
+  }),
+  quotes: Some(Quotes {
+    open: &["open quote"],
+    close: &["close quote", "end quote"],
+    introduce: &["and i quote", "in quote marks"],
   }),
 };

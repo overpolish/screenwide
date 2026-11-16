@@ -4,12 +4,13 @@
 //! The text a run of steps comes to, words spaced and commands carried out,
 //! the numbers starting a list's points written as digits, each point on a
 //! line of its own (`points`), "hashtag" said before a word written as the
-//! mark (`hashtags`), and a pause before a word that corrects what was just
-//! said ("at 3 … actually 2") marked with the comma the speech model leaves
-//! out.
+//! mark (`hashtags`), quotations said written in quotation marks
+//! (`quotes`), and a pause before a word that corrects what was just said
+//! ("at 3 … actually 2") marked with the comma the speech model leaves out.
 
 mod hashtags;
 mod points;
+mod quotes;
 
 use std::fmt::Write;
 
@@ -42,6 +43,7 @@ pub(super) fn render(
   let mut last_word = None;
   let points = points::points(words, steps, (upto, phrases));
   let hashtags = hashtags::hashtags(words, steps, (upto, phrases));
+  let quoted = quotes::quotes(words, steps, (upto, phrases));
   let mut after_point = false;
   let mut after_hashtag = false;
   for step in steps {
@@ -49,6 +51,9 @@ pub(super) fn render(
       Step::Word(at) if *at < upto => {
         if hashtags.contains(at) {
           after_hashtag = true;
+          continue;
+        }
+        if quoted.said.contains(at) {
           continue;
         }
         let unpunctuated = text.ends_with(char::is_alphanumeric);
@@ -62,11 +67,18 @@ pub(super) fn render(
           .find(|(place, _)| place == at)
           .map(|&(_, number)| number);
         let line_start = text.is_empty() || text.ends_with('\n');
+        // A quotation opening where a sentence starts starts the sentence,
+        // though the speech model writes on from "open quote" in lower case.
+        let opens_sentence =
+          quoted.opens.contains(at) && (line_start || text.ends_with(['.', '?', '!']));
         if point.is_some() && !line_start {
           // Each point of a list starts a line of its own.
           text.push('\n');
         } else if phrases.spaced && !line_start {
           text.push(' ');
+        }
+        if quoted.opens.contains(at) {
+          text.push('"');
         }
         if std::mem::take(&mut after_hashtag) {
           text.push('#');
@@ -81,12 +93,17 @@ pub(super) fn render(
           // after the comma it goes on the sentence, so it loses its
           // capital. "I" keeps its own.
           push_recased(&mut text, word, char::to_lowercase);
-        } else if follows_point {
+        } else if follows_point || opens_sentence {
           // A point's number set apart with a comma leaves its point
-          // starting in lower case, but the full stop starts a sentence.
+          // starting in lower case, but the full stop starts a sentence, as
+          // does a quotation opening one.
           push_recased(&mut text, word, char::to_uppercase);
         } else {
           text.push_str(word);
+        }
+        if let Some((_, after)) = quoted.closes.iter().find(|(place, _)| place == at) {
+          text.push('"');
+          text.push_str(after);
         }
         last_word = Some(*at);
       }

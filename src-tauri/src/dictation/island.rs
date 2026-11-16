@@ -62,8 +62,11 @@ pub enum DictationProblem {
   NoAccessibility,
   /// A password field had the keyboard.
   PasswordField,
-  /// The app in front runs as administrator.
+  /// The app in front runs as administrator; the text is on the clipboard.
   Administrator,
+  /// Nothing that takes text had the keyboard; the text is on the
+  /// clipboard.
+  OnClipboard,
   /// Something else went wrong.
   Failed,
 }

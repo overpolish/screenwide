@@ -127,3 +127,7 @@ export const NoModel: Story = {
 export const PasswordField: Story = {
   args: { level: 0, state: { phase: "problem", problem: "passwordField" } },
 };
+
+export const OnClipboard: Story = {
+  args: { level: 0, state: { phase: "problem", problem: "onClipboard" } },
+};

@@ -25,6 +25,7 @@ pub(super) const SWEDISH: Phrases = Phrases {
   corrections: &[],
   numbers: "en|ett två tre fyra fem sex sju åtta nio tio",
   hashtag: None,
+  quotes: None,
 };
 
 pub(super) const DANISH: Phrases = Phrases {
@@ -45,6 +46,7 @@ pub(super) const DANISH: Phrases = Phrases {
   corrections: &[],
   numbers: "en|et to tre fire fem seks syv otte ni ti",
   hashtag: None,
+  quotes: None,
 };
 
 pub(super) const NORWEGIAN: Phrases = Phrases {
@@ -65,6 +67,7 @@ pub(super) const NORWEGIAN: Phrases = Phrases {
   corrections: &[],
   numbers: "en|ett|ei|ein|eitt to tre fire fem seks sju|syv åtte ni ti",
   hashtag: None,
+  quotes: None,
 };
 
 pub(super) const FINNISH: Phrases = Phrases {
@@ -85,4 +88,5 @@ pub(super) const FINNISH: Phrases = Phrases {
   corrections: &[],
   numbers: "yksi kaksi kolme neljä viisi kuusi seitsemän kahdeksan yhdeksän kymmenen",
   hashtag: None,
+  quotes: None,
 };

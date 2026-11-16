@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-use super::{OnMain, Refusal};
+use super::{OnMain, Pasted, Refusal};
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(super) struct Target;
@@ -20,7 +20,7 @@ pub(super) const fn is_in_front(_target: Target, _on_main: OnMain<'_>) -> bool {
   false
 }
 
-pub(super) fn paste(_text: &str, _on_main: OnMain<'_>) -> Result<(), Refusal> {
+pub(super) fn paste(_text: &str, _on_main: OnMain<'_>) -> Result<Pasted, Refusal> {
   Err(Refusal::Failed(
     "Pasting is only built for macOS and Windows".to_owned(),
   ))

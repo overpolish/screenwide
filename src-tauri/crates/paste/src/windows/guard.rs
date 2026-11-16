@@ -1,56 +1,20 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! What would refuse a paste on Windows, asked before the clipboard is
-//! touched: a password field with the keyboard, which UI Automation tells,
-//! or an app running as administrator, which Windows shields from the keys
-//! of anything less privileged.
+//! Whether the app in front runs as administrator, which Windows shields
+//! from the keys of anything less privileged.
 
 use windows::Win32::Foundation::{CloseHandle, HANDLE};
 use windows::Win32::Security::{GetTokenInformation, TokenElevation, TOKEN_ELEVATION, TOKEN_QUERY};
-use windows::Win32::System::Com::{
-  CoCreateInstance, CoInitializeEx, CoUninitialize, CLSCTX_INPROC_SERVER, COINIT_MULTITHREADED,
-};
 use windows::Win32::System::Threading::{
   GetCurrentProcess, OpenProcess, OpenProcessToken, PROCESS_QUERY_LIMITED_INFORMATION,
 };
-use windows::Win32::UI::Accessibility::{CUIAutomation, IUIAutomation};
 use windows::Win32::UI::WindowsAndMessaging::{GetForegroundWindow, GetWindowThreadProcessId};
-
-use crate::Refusal;
-
-pub(super) fn check() -> Result<(), Refusal> {
-  if is_password_field() {
-    return Err(Refusal::SecureField);
-  }
-  if is_elevated_above_us() {
-    return Err(Refusal::Elevated);
-  }
-  Ok(())
-}
-
-/// Whether the element with the keyboard is a password field. Unknown counts
-/// as not: most apps do not answer UI Automation at all.
-fn is_password_field() -> bool {
-  // Safety: COM is set up for this thread and released before returning;
-  // the automation object lives inside it.
-  unsafe {
-    let initialized = CoInitializeEx(None, COINIT_MULTITHREADED).is_ok();
-    let password = CoCreateInstance::<_, IUIAutomation>(&CUIAutomation, None, CLSCTX_INPROC_SERVER)
-      .and_then(|automation| automation.GetFocusedElement())
-      .and_then(|element| element.CurrentIsPassword())
-      .is_ok_and(|password| password.as_bool());
-    if initialized {
-      CoUninitialize();
-    }
-    password
-  }
-}
 
 /// Whether the app in front runs elevated while Screenwide does not. One
 /// Windows will not let Screenwide look into is taken as elevated: an app of
 /// the same user, at the same level, can always be looked into.
-fn is_elevated_above_us() -> bool {
+pub(super) fn is_elevated_above_us() -> bool {
   // Safety: the window and process are only queried, and every handle opened
   // here is closed.
   unsafe {

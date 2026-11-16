@@ -3,10 +3,11 @@
 
 //! A finished dictation put where the caret is: its commands carried out,
 //! its corrections made, its word list changes made, and its text pasted
-//! into the app dictated into.
+//! into the app dictated into. The text stays on the clipboard, so a paste
+//! that went nowhere loses nothing.
 
 use screenwide_dictation::{shape, DictatedText, Phrases};
-use screenwide_paste::{Refusal, Target};
+use screenwide_paste::{Pasted, Refusal, Target};
 use tauri::AppHandle;
 
 use super::corrections::Corrections;
@@ -37,14 +38,14 @@ pub(super) fn put_in(
   let on_main = |work: Box<dyn FnOnce() + Send>| {
     let _ = app.run_on_main_thread(work);
   };
-  screenwide_paste::paste(&text, target, &on_main)
-    .map(|()| taught)
-    .map_err(|refusal| match refusal {
-      Refusal::SecureField => DictationProblem::PasswordField,
-      Refusal::Elevated => DictationProblem::Administrator,
-      Refusal::Failed(error) => {
-        eprintln!("Could not paste the dictation: {error}");
-        DictationProblem::Failed
-      }
-    })
+  match screenwide_paste::paste(&text, target, &on_main) {
+    Ok(Pasted::Typed) => Ok(taught),
+    Ok(Pasted::OnClipboard) => Err(DictationProblem::OnClipboard),
+    Err(Refusal::SecureField) => Err(DictationProblem::PasswordField),
+    Err(Refusal::Elevated) => Err(DictationProblem::Administrator),
+    Err(Refusal::Failed(error)) => {
+      eprintln!("Could not paste the dictation: {error}");
+      Err(DictationProblem::Failed)
+    }
+  }
 }

@@ -193,6 +193,48 @@ fn hashtag_said_before_a_word_is_written_as_the_mark() {
 }
 
 #[test]
+fn a_quotation_said_is_written_in_quotation_marks() {
+  assert_eq!(
+    text("He said open quote see you at noon close quote and left."),
+    "He said \"see you at noon\" and left."
+  );
+  assert_eq!(
+    text("Let's try. | Open quote, this is the best. | I love it. | Close quote."),
+    "Let's try. \"This is the best. I love it.\""
+  );
+  assert_eq!(
+    text("Type open quote hello close quote."),
+    "Type \"hello\"."
+  );
+  assert_eq!(
+    text("Instead of saying, and I quote, it's on your clipboard. Just say moved."),
+    "Instead of saying, \"it's on your clipboard.\" Just say moved."
+  );
+  assert_eq!(
+    text("Label it in quote marks draft | for now."),
+    "Label it \"draft\" for now."
+  );
+  // A quotation never closed ends with the words.
+  assert_eq!(text("He wrote open quote not yet"), "He wrote \"not yet\"");
+}
+
+#[test]
+fn words_for_quotations_with_nothing_to_quote_are_written_as_heard() {
+  for said in [
+    "Put it in quote marks.",
+    "Close quote.",
+    "The quote was open quote.",
+  ] {
+    assert_eq!(text(said), said);
+  }
+  let french = shape(
+    &finished("Il a dit open quote bonjour"),
+    phrases(Some("fr")),
+  );
+  assert_eq!(french.text(), "Il a dit open quote bonjour");
+}
+
+#[test]
 fn each_language_takes_its_own_commands() {
   let french = shape(
     &finished("Bonjour Claire | À la ligne. | Tu viens | point d'interrogation"),

@@ -14,7 +14,7 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::time::Instant;
 
-use screenwide_dictation::correct::{kept, said_lines, Prompt, GEMMA_4, S1_MINI, SPEAKOFLOW_MINI};
+use screenwide_dictation::correct::{as_said, kept, Prompt, GEMMA_4, S1_MINI, SPEAKOFLOW_MINI};
 use screenwide_dictation::{phrases, shape};
 use screenwide_speech::runner::Transcriber;
 
@@ -141,7 +141,7 @@ fn corrected(cases: &[Case], prompt: Prompt, path: &Path) -> Result<Vec<Answer>,
     .iter()
     .map(|case| {
       let started = Instant::now();
-      let text = said_lines(&case.heard, &correct(&case.heard)?);
+      let text = as_said(&case.heard, &correct(&case.heard)?);
       Ok(Answer {
         kept: kept(&case.heard, &text),
         milliseconds: started.elapsed().as_millis(),

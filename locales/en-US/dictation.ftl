@@ -15,6 +15,8 @@ dictation-island-hint-at-pauses = Speak, and the text appears each time you paus
 # Stops listening and types what was heard.
 dictation-island-done = Done
 dictation-island-cancel = Cancel dictation
+# Shown once Cancel dictation is pressed: pressing again throws away what was heard.
+dictation-island-confirm-cancel = Confirm discarding
 # The row's title once listening stops, while the last words are heard and typed.
 dictation-island-typing = Typing
 dictation-island-close = Close
@@ -34,5 +36,8 @@ dictation-island-no-model = Download the Dictation model in Settings to dictate.
 dictation-island-no-microphone = Screenwide needs access to the microphone to dictate.
 dictation-island-no-accessibility = Screenwide needs Accessibility access to type for you.
 dictation-island-password-field = Dictation does not type into password fields.
-dictation-island-administrator = Windows does not let Screenwide type into apps running as administrator.
+# { $key } is the paste shortcut, drawn as keycaps.
+dictation-island-administrator = Windows does not let Screenwide type into apps running as administrator. Dictation moved to clipboard. Use { $key } to paste it.
+# Nothing that takes text had the keyboard when dictation pasted. { $key } is the paste shortcut, drawn as keycaps.
+dictation-island-on-clipboard = Couldn't insert your dictation into the focused app. Dictation moved to clipboard. Use { $key } to paste it.
 dictation-island-failed = Dictation stopped. Try again.

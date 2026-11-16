@@ -36,6 +36,7 @@ pub(super) const JAPANESE: Phrases = Phrases {
   corrections: &[],
   numbers: "",
   hashtag: None,
+  quotes: None,
 };
 
 pub(super) const CHINESE: Phrases = Phrases {
@@ -56,6 +57,7 @@ pub(super) const CHINESE: Phrases = Phrases {
   corrections: &[],
   numbers: "",
   hashtag: None,
+  quotes: None,
 };
 
 pub(super) const KOREAN: Phrases = Phrases {
@@ -76,4 +78,5 @@ pub(super) const KOREAN: Phrases = Phrases {
   corrections: &[],
   numbers: "",
   hashtag: None,
+  quotes: None,
 };

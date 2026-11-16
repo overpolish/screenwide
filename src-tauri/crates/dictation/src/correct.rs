@@ -3,17 +3,18 @@
 
 //! Corrections a speaker makes as they speak ("coffee at 2, actually 3"),
 //! applied by a small language model after recognition, with the line
-//! breaks the speaker said and no others (`lines`), and the check its answer
-//! must pass to be used: a model that loses a word the speaker said, or
-//! answers with nothing, is not trusted, and the text stands as heard.
+//! breaks and quotation marks the speaker said and no others (`said`), and
+//! the check its answer must pass to be used: a model that loses a word the
+//! speaker said, or answers with nothing, is not trusted, and the text
+//! stands as heard.
 
 mod corrector;
 mod draft;
 mod kept;
-mod lines;
 mod prompts;
+mod said;
 
 pub use corrector::{CleanupModel, Corrector};
 pub use kept::kept;
-pub use lines::said_lines;
 pub use prompts::{Prompt, GEMMA_4, S1_MINI, SPEAKOFLOW_MINI};
+pub use said::as_said;

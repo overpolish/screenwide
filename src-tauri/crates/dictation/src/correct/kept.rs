@@ -68,10 +68,14 @@ const NUMBERS: [&str; 31] = [
 ];
 
 /// Whether `corrected` keeps everything said in `heard` but what the speaker
-/// replaced, its line breaks too, which were said as commands, and is not
-/// empty where something was said.
+/// replaced, its line breaks and quotation marks too, which were said as
+/// commands, and is not empty where something was said. A correction that
+/// replaced a word holding a quotation mark has lost the mark, and its pair
+/// would stand alone.
 pub fn kept(heard: &str, corrected: &str) -> bool {
-  if corrected.trim().matches('\n').count() < heard.trim().matches('\n').count() {
+  if corrected.trim().matches('\n').count() < heard.trim().matches('\n').count()
+    || corrected.matches('"').count() != heard.matches('"').count()
+  {
     return false;
   }
   let said = words(heard);

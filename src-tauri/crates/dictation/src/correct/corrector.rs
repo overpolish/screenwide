@@ -13,7 +13,7 @@ use std::time::Instant;
 use screenwide_speech::runner::Transcriber;
 
 use super::draft::Draft;
-use super::{kept, said_lines, Prompt};
+use super::{as_said, kept, Prompt};
 
 /// The cleanup model, and how it is asked.
 pub struct CleanupModel {
@@ -115,9 +115,9 @@ impl Drop for Corrector {
 }
 
 /// Corrects what is wanted until the dictation is over, then answers the
-/// helper, or none if it failed. An answer takes the line breaks of what
-/// was heard ([`said_lines`]); one that then fails the lost-word check
-/// ([`kept`]), or does not come, leaves the text as heard.
+/// helper, or none if it failed. An answer takes the line breaks and
+/// quotation marks of what was heard ([`as_said`]); one that then fails the
+/// lost-word check ([`kept`]), or does not come, leaves the text as heard.
 fn work(
   shared: &Shared,
   model: &CleanupModel,
@@ -156,7 +156,7 @@ fn work(
       )
       .inspect_err(|error| eprintln!("Could not correct the dictation: {error}"))
       .ok()
-      .map(|answer| said_lines(said, &answer))
+      .map(|answer| as_said(said, &answer))
       .filter(|answer| kept(said, answer));
     let lead = &open[..open.len() - open.trim_start().len()];
     let trail = &open[open.trim_end().len()..];
