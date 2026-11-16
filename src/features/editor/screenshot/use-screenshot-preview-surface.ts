@@ -11,13 +11,6 @@ import {
 } from "../annotations/annotation-defaults";
 import { AnnotationStyle } from "../annotations/annotations";
 import {
-  layoutScreenshotPreviewSurface,
-  refreshScreenshotPreviewSources,
-  setScreenshotPreviewEditorSuspended,
-  startScreenshotPreview,
-  stopScreenshotPreview,
-} from "../api";
-import {
   updatePreviewBackdropMasks,
   viewportCorners,
 } from "../preview/preview-backdrop";
@@ -31,6 +24,13 @@ import {
   screenshotOutputDimensions,
   ScreenshotWorkspaceOutputSettings,
 } from "./screenshot-output";
+import {
+  layoutScreenshotPreviewSurface,
+  refreshScreenshotPreviewSources,
+  setScreenshotPreviewEditorSuspended,
+  startScreenshotPreview,
+  stopScreenshotPreview,
+} from "./screenshot-preview-api";
 import {
   ScreenshotAnnotationChangeEvent,
   ScreenshotSelectionGestureEvent,

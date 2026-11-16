@@ -19,6 +19,7 @@ use std::{
 use super::tween_completion as completion;
 use super::tween_motion::{self as motion, STEP_INTERVAL, TWEEN_SECONDS};
 use super::tween_settle::{settle, FitContext};
+use super::tween_timing::Timing;
 use super::{activity::BusyLease, grown_to_min, GlideFrame};
 use crate::glide::region_rect::{Gravity, RegionGravity};
 
@@ -112,16 +113,6 @@ struct Tween {
   _completion: completion::Ticket,
   // TEMPORARY(#22): frame timing for the laggy-resize investigation.
   timing: Timing,
-}
-
-// TEMPORARY(#22): per-tween frame timing, printed with SCREENWIDE_GLIDE_TRACE.
-#[derive(Default)]
-struct Timing {
-  frames: u32,
-  last_written: Option<Instant>,
-  place_total_ms: f64,
-  place_max_ms: f64,
-  gap_max_ms: f64,
 }
 
 /// The one tween in flight, if any. Never held across a window call: the
@@ -234,26 +225,17 @@ fn step() {
   if !is_current(tween.generation) {
     return;
   }
-  // TEMPORARY(#22): how long the window's application holds each write, and
-  // how far apart the writes really land.
-  let began = Instant::now();
-  let gap_ms = tween
-    .timing
-    .last_written
-    .map_or(0.0, |last| (began - last).as_secs_f64() * 1000.0);
-  let placed = tween.target.place(frame, tween.resizes, settling);
-  let place_ms = began.elapsed().as_secs_f64() * 1000.0;
-  let timing = &mut tween.timing;
-  timing.frames += 1;
-  timing.last_written = Some(began);
-  timing.place_total_ms += place_ms;
-  timing.place_max_ms = timing.place_max_ms.max(place_ms);
-  timing.gap_max_ms = timing.gap_max_ms.max(gap_ms);
-  timing_log(format!(
-    "frame {} resizes={} progress={progress:.2} place={place_ms:.1}ms gap={gap_ms:.1}ms \
-       size={:.0}x{:.0} took={placed}",
-    timing.frames, tween.resizes, frame.width, frame.height
-  ));
+  let resizes = tween.resizes;
+  let placed = tween.timing.frame(
+    || tween.target.place(frame, resizes, settling),
+    |frames, place_ms, gap_ms, placed| {
+      format!(
+        "frame {frames} resizes={resizes} progress={progress:.2} place={place_ms:.1}ms \
+         gap={gap_ms:.1}ms size={:.0}x{:.0} took={placed}",
+        frame.width, frame.height
+      )
+    },
+  );
   if !placed {
     return;
   }
@@ -263,30 +245,20 @@ fn step() {
     // any point.
     if let Some(context) = tween.fit.take() {
       let generation = tween.generation;
-      let settle_began = Instant::now();
-      settle(
-        tween.target.as_mut(),
-        tween.requested,
-        || is_current(generation),
-        &context,
-      );
-      timing_log(format!(
-        "settle {:.1}ms",
-        settle_began.elapsed().as_secs_f64() * 1000.0
-      ));
+      Timing::settle(|| {
+        settle(
+          tween.target.as_mut(),
+          tween.requested,
+          || is_current(generation),
+          &context,
+        );
+      });
     }
-    let timing = &tween.timing;
-    timing_log(format!(
-      "done resizes={} frames={} took={:.0}ms (planned {:.0}ms) place avg={:.1}ms max={:.1}ms \
-         gap max={:.1}ms",
-      tween.resizes,
-      timing.frames,
+    tween.timing.done(
+      resizes,
       tween.started_at.elapsed().as_secs_f64() * 1000.0,
       TWEEN_SECONDS * 1000.0,
-      timing.place_total_ms / f64::from(timing.frames.max(1)),
-      timing.place_max_ms,
-      timing.gap_max_ms
-    ));
+    );
     return;
   }
   if let Ok(mut slot) = TWEEN.lock() {
@@ -300,18 +272,4 @@ fn step() {
 /// preceded by this: a retarget that landed meanwhile owns the window now.
 fn is_current(generation: u64) -> bool {
   GENERATION.load(Ordering::Relaxed) == generation
-}
-
-/// TEMPORARY(#22): appends a line to `screenwide-glide-tween.log` in the
-/// temporary directory, so the timing is kept however the app was started.
-fn timing_log(line: String) {
-  use std::io::Write;
-  let path = std::env::temp_dir().join("screenwide-glide-tween.log");
-  if let Ok(mut file) = std::fs::OpenOptions::new()
-    .create(true)
-    .append(true)
-    .open(path)
-  {
-    let _ = writeln!(file, "{line}");
-  }
 }

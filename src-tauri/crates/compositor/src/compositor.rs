@@ -13,6 +13,7 @@ mod canvas_features;
 #[cfg(test)]
 mod canvas_features_tests;
 mod canvas_modules;
+mod canvas_pass;
 mod canvas_pipelines;
 mod canvas_variants;
 /// A caption style's preview, drawn as the export draws it.

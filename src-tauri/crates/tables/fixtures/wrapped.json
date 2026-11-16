@@ -1,20 +1,129 @@
 [
-{"text":"Price","bounds":{"x":0.18895,"y":0.08684,"width":0.05087,"height":0.03421}},
-{"text":"Notes","bounds":{"x":0.51015,"y":0.1262,"width":0.05382,"height":0.03445}},
-{"text":"Plan","bounds":{"x":0.06105,"y":0.12632,"width":0.04506,"height":0.03421}},
-{"text":"Monthly","bounds":{"x":0.13761,"y":0.15973,"width":0.07948,"height":0.04348}},
-{"text":"Yearly","bounds":{"x":0.2311,"y":0.16316,"width":0.06105,"height":0.03947}},
-{"text":"$90","bounds":{"x":0.2311,"y":0.23421,"width":0.03488,"height":0.03684}},
-{"text":"$9","bounds":{"x":0.13663,"y":0.23684,"width":0.02471,"height":0.03421}},
-{"text":"One seat, community support only","bounds":{"x":0.30814,"y":0.23684,"width":0.2936,"height":0.04211}},
-{"text":"Starter","bounds":{"x":0.04506,"y":0.23947,"width":0.05814,"height":0.02895}},
-{"text":"Up to ten seats with shared projects and priority email","bounds":{"x":0.30417,"y":0.30075,"width":0.46667,"height":0.05282}},
-{"text":"$290","bounds":{"x":0.23104,"y":0.33129,"width":0.04519,"height":0.0348}},
-{"text":"$29","bounds":{"x":0.13663,"y":0.33158,"width":0.03488,"height":0.03421}},
-{"text":"Team","bounds":{"x":0.0442,"y":0.33266,"width":0.04974,"height":0.03609}},
-{"text":"support","bounds":{"x":0.30833,"y":0.35338,"width":0.07083,"height":0.03759}},
-{"text":"Unlimited seats","bounds":{"x":0.30417,"y":0.42105,"width":0.14167,"height":0.03759}},
-{"text":"$790","bounds":{"x":0.2311,"y":0.42368,"width":0.04506,"height":0.03684}},
-{"text":"Business","bounds":{"x":0.04503,"y":0.42611,"width":0.07854,"height":0.03461}},
-{"text":"$79","bounds":{"x":0.13663,"y":0.42632,"width":0.03488,"height":0.03421}}
+  {
+    "text": "Price",
+    "bounds": {
+      "x": 0.18895,
+      "y": 0.08684,
+      "width": 0.05087,
+      "height": 0.03421
+    }
+  },
+  {
+    "text": "Notes",
+    "bounds": { "x": 0.51015, "y": 0.1262, "width": 0.05382, "height": 0.03445 }
+  },
+  {
+    "text": "Plan",
+    "bounds": {
+      "x": 0.06105,
+      "y": 0.12632,
+      "width": 0.04506,
+      "height": 0.03421
+    }
+  },
+  {
+    "text": "Monthly",
+    "bounds": {
+      "x": 0.13761,
+      "y": 0.15973,
+      "width": 0.07948,
+      "height": 0.04348
+    }
+  },
+  {
+    "text": "Yearly",
+    "bounds": { "x": 0.2311, "y": 0.16316, "width": 0.06105, "height": 0.03947 }
+  },
+  {
+    "text": "$90",
+    "bounds": { "x": 0.2311, "y": 0.23421, "width": 0.03488, "height": 0.03684 }
+  },
+  {
+    "text": "$9",
+    "bounds": {
+      "x": 0.13663,
+      "y": 0.23684,
+      "width": 0.02471,
+      "height": 0.03421
+    }
+  },
+  {
+    "text": "One seat, community support only",
+    "bounds": { "x": 0.30814, "y": 0.23684, "width": 0.2936, "height": 0.04211 }
+  },
+  {
+    "text": "Starter",
+    "bounds": {
+      "x": 0.04506,
+      "y": 0.23947,
+      "width": 0.05814,
+      "height": 0.02895
+    }
+  },
+  {
+    "text": "Up to ten seats with shared projects and priority email",
+    "bounds": {
+      "x": 0.30417,
+      "y": 0.30075,
+      "width": 0.46667,
+      "height": 0.05282
+    }
+  },
+  {
+    "text": "$290",
+    "bounds": { "x": 0.23104, "y": 0.33129, "width": 0.04519, "height": 0.0348 }
+  },
+  {
+    "text": "$29",
+    "bounds": {
+      "x": 0.13663,
+      "y": 0.33158,
+      "width": 0.03488,
+      "height": 0.03421
+    }
+  },
+  {
+    "text": "Team",
+    "bounds": { "x": 0.0442, "y": 0.33266, "width": 0.04974, "height": 0.03609 }
+  },
+  {
+    "text": "support",
+    "bounds": {
+      "x": 0.30833,
+      "y": 0.35338,
+      "width": 0.07083,
+      "height": 0.03759
+    }
+  },
+  {
+    "text": "Unlimited seats",
+    "bounds": {
+      "x": 0.30417,
+      "y": 0.42105,
+      "width": 0.14167,
+      "height": 0.03759
+    }
+  },
+  {
+    "text": "$790",
+    "bounds": { "x": 0.2311, "y": 0.42368, "width": 0.04506, "height": 0.03684 }
+  },
+  {
+    "text": "Business",
+    "bounds": {
+      "x": 0.04503,
+      "y": 0.42611,
+      "width": 0.07854,
+      "height": 0.03461
+    }
+  },
+  {
+    "text": "$79",
+    "bounds": {
+      "x": 0.13663,
+      "y": 0.42632,
+      "width": 0.03488,
+      "height": 0.03421
+    }
+  }
 ]

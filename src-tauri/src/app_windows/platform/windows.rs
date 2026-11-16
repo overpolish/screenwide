@@ -4,5 +4,6 @@
 pub(super) mod band_guard;
 pub(super) mod composition;
 pub(super) mod island_window;
+pub(super) mod passthrough;
 pub(super) mod window_frame;
 pub(super) mod windows_api;

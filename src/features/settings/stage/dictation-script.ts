@@ -17,7 +17,7 @@ import type {
 // of the finished draft.
 
 /** The rows of Dictation that each have a picture. */
-export const DICTATION_SUBJECTS = [
+const DICTATION_SUBJECTS = [
   "scratch",
   "newLine",
   "newParagraph",

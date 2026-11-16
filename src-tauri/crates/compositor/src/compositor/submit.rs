@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+use super::canvas_pass::Variant;
 use super::canvas_pipelines::Target;
 use super::lens_ground::{GroundPlan, LensGround};
 use super::pipeline::{buffer, texture};
@@ -229,29 +230,10 @@ impl Compositor {
         .canvas
         .remember(layer.redaction_slot, canvas_target, kinds, features);
     }
-    let canvas_pass = |encoder: &mut wgpu::CommandEncoder,
-                       view: &wgpu::TextureView,
-                       viewport: (u32, u32),
-                       load: wgpu::LoadOp<wgpu::Color>,
-                       pipeline: Target,
-                       bindings: &wgpu::BindGroup| {
-      let mut pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-        label: Some("Screenwide preview canvas"),
-        color_attachments: &[Some(wgpu::RenderPassColorAttachment {
-          view,
-          depth_slice: None,
-          resolve_target: None,
-          ops: wgpu::Operations {
-            load,
-            store: wgpu::StoreOp::Store,
-          },
-        })],
-        ..Default::default()
-      });
-      pass.set_viewport(0.0, 0.0, viewport.0 as f32, viewport.1 as f32, 0.0, 1.0);
-      pass.set_pipeline(&self.canvas.get(pipeline, kinds, every, features));
-      pass.set_bind_group(0, bindings, &[]);
-      pass.draw(0..3, 0..1);
+    let variant = Variant {
+      kinds,
+      every,
+      features,
     };
     match &focus {
       // A focused frame: what lies under the focus into the chain, blurred
@@ -260,13 +242,14 @@ impl Compositor {
         let [under, over] = &self.focus.constants;
         let chain_size = super::focus::FocusPlan::chain_size(frame, layer.placement.is_some());
         let chain = self.focus.chain(gpu, chain_size, layer.redaction_slot)?;
-        canvas_pass(
+        let clear = wgpu::LoadOp::Clear(wgpu::Color::TRANSPARENT);
+        let under = bind(under, layers);
+        self.canvas_pass(
           &mut encoder,
-          &chain,
-          chain_size,
-          wgpu::LoadOp::Clear(wgpu::Color::TRANSPARENT),
+          (&chain, chain_size, clear),
           canvas_target,
-          &bind(under, layers),
+          variant,
+          &under,
         );
         self.focus.record(
           gpu,
@@ -281,24 +264,21 @@ impl Compositor {
           },
         )?;
         if plan.draws_over(&values, &annotations, keyboard.is_some()) {
-          canvas_pass(
-            &mut encoder,
-            target,
-            frame,
-            wgpu::LoadOp::Load,
-            Target::Layer,
-            &bind(over, layers),
-          );
+          let over = bind(over, layers);
+          let to = (target, frame, wgpu::LoadOp::Load);
+          self.canvas_pass(&mut encoder, to, Target::Layer, variant, &over);
         }
       }
-      None => canvas_pass(
-        &mut encoder,
-        target,
-        frame,
-        load,
-        canvas_target,
-        &bind(&self.constants, layers),
-      ),
+      None => {
+        let bindings = bind(&self.constants, layers);
+        self.canvas_pass(
+          &mut encoder,
+          (target, frame, load),
+          canvas_target,
+          variant,
+          &bindings,
+        );
+      }
     }
     gpu.queue.submit([encoder.finish()]);
     Ok(source_view)

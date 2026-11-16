@@ -299,8 +299,8 @@ fn many_fresh_badges_stay_within_wire_slot_bounds() {
     let Some(overlay) = compositor.evaluate(position_ms, Default::default()) else {
       continue;
     };
-    for index in 0..overlay.key_count as usize {
-      assert!(overlay.keys[index].slot < 32);
+    for key in &overlay.keys[..overlay.key_count as usize] {
+      assert!(key.slot < 32);
     }
   }
 }

@@ -16,7 +16,7 @@ use windows::Win32::{
 };
 
 use super::super::initialize_overlay;
-use super::windows_api::passthrough_style;
+use super::passthrough::passthrough_style;
 
 /// The island: an overlay like the rest, never activated, and without the
 /// rounded corner the other panels take, as it draws its own shape and

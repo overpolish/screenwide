@@ -6,7 +6,7 @@ import { usePermissionStore } from "../../permissions/store";
 /** What macOS asks of dictation before its model is worth downloading:
  * hearing the microphone, and pressing the paste keys in other apps. Windows
  * asks neither, and reports both granted. */
-export const DICTATION_ACCESS = ["microphone", "accessibility"] as const;
+const DICTATION_ACCESS = ["microphone", "accessibility"] as const;
 
 /** The first access dictation still needs, if any. */
 export const useDictationMissingAccess = () =>

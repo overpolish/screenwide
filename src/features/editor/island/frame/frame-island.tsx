@@ -56,7 +56,7 @@ export type FrameIslandProps = {
 };
 
 /** A recording's scenes, as the Frame island sets a scene's background. */
-export type FrameScene = {
+type FrameScene = {
   /** Whether the scene under the playhead has a background of its own. */
   hasOwnBackground: boolean;
   /** Whether the playhead is in a scene. Outside one the island keeps the

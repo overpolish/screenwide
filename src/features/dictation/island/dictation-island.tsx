@@ -6,8 +6,6 @@ import { useState } from "react";
 
 import { ConfirmActionButton } from "../../../composites/confirm-action-button/confirm-action-button";
 import { t } from "../../../i18n/i18n";
-import { splitAtPlaceable } from "../../../i18n/split-at-placeable";
-import { hotkeyKeys } from "../../../lib/hotkey";
 import { cn } from "../../../lib/styling";
 import { Alert } from "../../../primitives/alert/alert";
 import { Button } from "../../../primitives/button/button";
@@ -19,13 +17,17 @@ import { IslandParts } from "../../../primitives/island/island-parts";
 import { type IslandProps } from "../../../primitives/island/island-props";
 import { IslandRow } from "../../../primitives/island/island-row";
 import { IslandRowTitle } from "../../../primitives/island/row-title/island-row-title";
-import { Keyboard } from "../../../primitives/keyboard/keyboard";
 import { Text } from "../../../primitives/text/text";
 import { LevelFill } from "../../recording-controls/island/island-glyphs";
 
+import {
+  isFixedInSettings,
+  isOnClipboard,
+  problemMessage,
+} from "./dictation-problem";
+
 import type { DictationIslandAction } from "../../../bindings/DictationIslandAction";
 import type { DictationIslandState } from "../../../bindings/DictationIslandState";
-import type { DictationProblem } from "../../../bindings/DictationProblem";
 import type { DictationWordChange } from "../../../bindings/DictationWordChange";
 
 // Dictation on the island, at the top of the screen. Listening, its row
@@ -50,56 +52,6 @@ export type DictationIslandProps = Pick<
 };
 
 type Words = { settled: string; unsettled: string };
-
-/** A message naming the paste shortcut, drawn as keycaps where the
- * language puts it. */
-const withPasteKeys = (message: (key: string) => string) => {
-  const [before, after] = splitAtPlaceable(message);
-  return (
-    <>
-      {before}
-      {hotkeyKeys("CommandOrControl+V").map((key) => (
-        <Keyboard className="align-middle" key={key}>
-          {key}
-        </Keyboard>
-      ))}
-      {after}
-    </>
-  );
-};
-
-const problemMessage = (problem: DictationProblem) => {
-  switch (problem) {
-    case "noModel":
-      return t("dictation-island-no-model");
-    case "noMicrophone":
-      return t("dictation-island-no-microphone");
-    case "noAccessibility":
-      return t("dictation-island-no-accessibility");
-    case "passwordField":
-      return t("dictation-island-password-field");
-    case "administrator":
-      return withPasteKeys((key) =>
-        t("dictation-island-administrator", { key }),
-      );
-    case "onClipboard":
-      return withPasteKeys((key) =>
-        t("dictation-island-on-clipboard", { key }),
-      );
-    case "failed":
-      return t("dictation-island-failed");
-  }
-};
-
-/** Whether Settings is where `problem` is put right. */
-const isFixedInSettings = (problem: DictationProblem) =>
-  problem === "noModel" ||
-  problem === "noMicrophone" ||
-  problem === "noAccessibility";
-
-/** Whether the dictation waits on the clipboard: not lost, so a warning. */
-const isOnClipboard = (problem: DictationProblem) =>
-  problem === "administrator" || problem === "onClipboard";
 
 function Close({ label, onPress }: { label: string; onPress: () => void }) {
   return (

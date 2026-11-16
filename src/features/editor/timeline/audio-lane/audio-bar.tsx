@@ -66,13 +66,7 @@ export function AudioBar({
 
 /** The title, at most `maxWidth` px wide, fading out at its end only where
  * it is cut. */
-export function FadingTitle({
-  maxWidth,
-  title,
-}: {
-  maxWidth: number;
-  title: string;
-}) {
+function FadingTitle({ maxWidth, title }: { maxWidth: number; title: string }) {
   const ref = useRef<HTMLSpanElement>(null);
   const [isCut, setIsCut] = useState(false);
   useLayoutEffect(() => {

@@ -39,7 +39,7 @@ export function normalizedScreenshotSelection(
 /** How the select tool's gizmo finds a layer turned: by its own turn, upright
  * where it has none. The crop tool reframes the layer upright, with no gizmo,
  * so its selection carries none. */
-export const screenshotLayerTurn = (
+const screenshotLayerTurn = (
   output: ScreenshotOutputSettings,
   cropMode: boolean,
 ) => (cropMode ? {} : { rotation: output.rotation ?? UPRIGHT_ROTATION });

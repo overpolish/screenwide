@@ -161,8 +161,8 @@ pub(super) fn render(
   // colours, and reads neither the blobs nor the warp.
   if generator.id != 0 {
     let last = colors.last().copied().unwrap_or([0, 0, 0, u8::MAX]);
-    for index in 0..MAX_POINTS {
-      uniforms.colors[index] = color(colors.get(index).unwrap_or(&last));
+    for (index, slot) in uniforms.colors.iter_mut().enumerate() {
+      *slot = color(colors.get(index).unwrap_or(&last));
     }
     let pixels = renderer()?.render(width, height, &uniforms)?;
     return image::RgbaImage::from_raw(width, height, pixels)

@@ -1,11 +1,63 @@
 [
-{"text":"def summarize(rows, key=\"total\"):","bounds":{"x":0.04493,"y":0.10222,"width":0.43018,"height":0.06492}},
-{"text":"'''''Sum each group and return the largest.''''''","bounds":{"x":0.09583,"y":0.15179,"width":0.58333,"height":0.0625}},
-{"text":"groups = ir","bounds":{"x":0.09801,"y":0.21683,"width":0.14569,"height":0.04753}},
-{"text":"for row in rows:","bounds":{"x":0.09821,"y":0.26559,"width":0.20696,"height":0.04886}},
-{"text":"name = row[''name\"]","bounds":{"x":0.15,"y":0.31786,"width":0.23333,"height":0.04643}},
-{"text":"groups[name] = groups.get(name, 0) + row[key]","bounds":{"x":0.14991,"y":0.3702,"width":0.5852,"height":0.06578}},
-{"text":"best = max(groups, key=groups.get)","bounds":{"x":0.09833,"y":0.42857,"width":0.44167,"height":0.05714}},
-{"text":"return best, groups [best]","bounds":{"x":0.1,"y":0.48214,"width":0.32333,"height":0.05714}},
-{"text":"print(summarize(data)) # ('north', 44860)","bounds":{"x":0.04652,"y":0.57151,"width":0.54538,"height":0.07737}}
+  {
+    "text": "def summarize(rows, key=\"total\"):",
+    "bounds": {
+      "x": 0.04493,
+      "y": 0.10222,
+      "width": 0.43018,
+      "height": 0.06492
+    }
+  },
+  {
+    "text": "'''''Sum each group and return the largest.''''''",
+    "bounds": { "x": 0.09583, "y": 0.15179, "width": 0.58333, "height": 0.0625 }
+  },
+  {
+    "text": "groups = ir",
+    "bounds": {
+      "x": 0.09801,
+      "y": 0.21683,
+      "width": 0.14569,
+      "height": 0.04753
+    }
+  },
+  {
+    "text": "for row in rows:",
+    "bounds": {
+      "x": 0.09821,
+      "y": 0.26559,
+      "width": 0.20696,
+      "height": 0.04886
+    }
+  },
+  {
+    "text": "name = row[''name\"]",
+    "bounds": { "x": 0.15, "y": 0.31786, "width": 0.23333, "height": 0.04643 }
+  },
+  {
+    "text": "groups[name] = groups.get(name, 0) + row[key]",
+    "bounds": { "x": 0.14991, "y": 0.3702, "width": 0.5852, "height": 0.06578 }
+  },
+  {
+    "text": "best = max(groups, key=groups.get)",
+    "bounds": {
+      "x": 0.09833,
+      "y": 0.42857,
+      "width": 0.44167,
+      "height": 0.05714
+    }
+  },
+  {
+    "text": "return best, groups [best]",
+    "bounds": { "x": 0.1, "y": 0.48214, "width": 0.32333, "height": 0.05714 }
+  },
+  {
+    "text": "print(summarize(data)) # ('north', 44860)",
+    "bounds": {
+      "x": 0.04652,
+      "y": 0.57151,
+      "width": 0.54538,
+      "height": 0.07737
+    }
+  }
 ]

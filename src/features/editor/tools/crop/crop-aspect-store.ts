@@ -29,6 +29,16 @@ export const useCropAspectStore = create<CropAspectStore>()((set) => ({
 export const cropAspectKey = (workspace: EditorKind, layer: number | string) =>
   `${workspace}:${String(layer)}`;
 
+/** The shape chosen for `layer`'s crop in `workspace`; none for no layer,
+ * or where nothing was chosen. */
+export const useCropAspect = (
+  workspace: EditorKind,
+  layer: number | string | null,
+) =>
+  useCropAspectStore((state) =>
+    layer === null ? undefined : state.aspects[cropAspectKey(workspace, layer)],
+  );
+
 /** Which of a recording's crops a shape belongs to: the camera's, or the
  * screen's, which over the scene `sceneId` is that scene's own. */
 export const recordingCropAspectKey = (

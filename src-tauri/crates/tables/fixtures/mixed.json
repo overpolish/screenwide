@@ -1,13 +1,71 @@
 [
-{"text":"Here are the results from the last three runs. The second one used the new cache, which explains the drop","bounds":{"x":0.03485,"y":0.071,"width":0.77768,"height":0.04019}},
-{"text":"in time.","bounds":{"x":0.03431,"y":0.1082,"width":0.06375,"height":0.04045}},
-{"text":"Run Time Memory Result","bounds":{"x":0.0436,"y":0.20238,"width":0.27326,"height":0.04524}},
-{"text":"4.2 s 512 MB Passed","bounds":{"x":0.09593,"y":0.27368,"width":0.21948,"height":0.03947}},
-{"text":"1","bounds":{"x":0.04651,"y":0.27632,"width":0.01017,"height":0.03158}},
-{"text":"1.9 s 530 MB Passed","bounds":{"x":0.09729,"y":0.34379,"width":0.21828,"height":0.04376}},
-{"text":"2","bounds":{"x":0.04506,"y":0.35,"width":0.01163,"height":0.03158}},
-{"text":"3 2.1 s 498 MB Failed","bounds":{"x":0.0436,"y":0.4131,"width":0.26744,"height":0.04524}},
-{"text":"Let me know if you want the raw logs as well.","bounds":{"x":0.03488,"y":0.5131,"width":0.34738,"height":0.03954}},
-{"text":"• Cache hit rate: 81%","bounds":{"x":0.06522,"y":0.58392,"width":0.17334,"height":0.04491}},
-{"text":"• Disk reads: 1,204","bounds":{"x":0.06541,"y":0.63158,"width":0.15407,"height":0.03158}}
+  {
+    "text": "Here are the results from the last three runs. The second one used the new cache, which explains the drop",
+    "bounds": { "x": 0.03485, "y": 0.071, "width": 0.77768, "height": 0.04019 }
+  },
+  {
+    "text": "in time.",
+    "bounds": { "x": 0.03431, "y": 0.1082, "width": 0.06375, "height": 0.04045 }
+  },
+  {
+    "text": "Run Time Memory Result",
+    "bounds": { "x": 0.0436, "y": 0.20238, "width": 0.27326, "height": 0.04524 }
+  },
+  {
+    "text": "4.2 s 512 MB Passed",
+    "bounds": {
+      "x": 0.09593,
+      "y": 0.27368,
+      "width": 0.21948,
+      "height": 0.03947
+    }
+  },
+  {
+    "text": "1",
+    "bounds": {
+      "x": 0.04651,
+      "y": 0.27632,
+      "width": 0.01017,
+      "height": 0.03158
+    }
+  },
+  {
+    "text": "1.9 s 530 MB Passed",
+    "bounds": {
+      "x": 0.09729,
+      "y": 0.34379,
+      "width": 0.21828,
+      "height": 0.04376
+    }
+  },
+  {
+    "text": "2",
+    "bounds": { "x": 0.04506, "y": 0.35, "width": 0.01163, "height": 0.03158 }
+  },
+  {
+    "text": "3 2.1 s 498 MB Failed",
+    "bounds": { "x": 0.0436, "y": 0.4131, "width": 0.26744, "height": 0.04524 }
+  },
+  {
+    "text": "Let me know if you want the raw logs as well.",
+    "bounds": { "x": 0.03488, "y": 0.5131, "width": 0.34738, "height": 0.03954 }
+  },
+  {
+    "text": "• Cache hit rate: 81%",
+    "bounds": {
+      "x": 0.06522,
+      "y": 0.58392,
+      "width": 0.17334,
+      "height": 0.04491
+    }
+  },
+  {
+    "text": "• Disk reads: 1,204",
+    "bounds": {
+      "x": 0.06541,
+      "y": 0.63158,
+      "width": 0.15407,
+      "height": 0.03158
+    }
+  }
 ]

@@ -131,7 +131,7 @@ export const isEmberMesh = (mesh: Mesh) =>
  * inside. The light sits on an edge so it reads as light falling in from
  * outside rather than a patch on the canvas.
  */
-export const randomEmberPoints = (): BackgroundMeshPoint[] => {
+const randomEmberPoints = (): BackgroundMeshPoint[] => {
   const lightX = random(10, 90);
   const isLow = Math.random() < 0.5;
   const edge = (low: boolean) => (low ? random(98, 110) : random(-10, 2));

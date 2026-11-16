@@ -86,10 +86,7 @@ export function placedClip(
 
 /** The room a song has between the songs either side of it, which it may
  * touch but not cross; a sound effect's is the whole timeline. */
-export function songRoom(
-  clips: RecordingAudioClip[],
-  clip: RecordingAudioClip,
-) {
+function songRoom(clips: RecordingAudioClip[], clip: RecordingAudioClip) {
   const others =
     clip.kind === "music"
       ? clips.filter((other) => other.kind === "music" && other.id !== clip.id)

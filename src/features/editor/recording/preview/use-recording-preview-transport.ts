@@ -23,8 +23,9 @@ import { useRecordingScenes } from "../scenes/use-recording-scenes";
 import { useSceneReframeDisplay } from "../scenes/use-scene-reframe-display";
 import { useRecordingPreviewPlayer } from "../use-recording-preview-player";
 
-import { isOverlayLayer, OverlayLayerId } from "./overlay-layers";
+import { OverlayLayerId } from "./overlay-layers";
 import { RecordingCanvasTool } from "./recording-canvas-tool";
+import { pressedPane } from "./recording-pane-press";
 import { usePausedPreviewPosition } from "./use-paused-preview-position";
 import { useRecordingCropPreview } from "./use-recording-crop-preview";
 import { useRecordingPreviewPanes } from "./use-recording-preview-panes";
@@ -167,28 +168,19 @@ export function useRecordingPreviewTransport(
       trimPreview.onPosition(positionMs);
       if (!previewPlayingRef.current) setPreviewPositionMs(positionMs);
     },
-    onSelectionChange: (paneIndex) => {
-      // Nothing chosen with Select in hand lets go of everything at once:
-      // the annotations, the track, and with it the Screen or Camera mode
-      // it opened. The engine reports it as one change, so the editor never
-      // draws the track chosen without its annotations in between.
-      if (paneIndex === null) {
-        if (canvasTool !== "select") return;
+    onSelectionChange: pressedPane({
+      activeVideoTrack,
+      canvasTool,
+      clearAnnotations: () => {
         clearAnnotationRef.current();
-        if (activeVideoTrack !== null) onSelectedTrackChange?.(null);
-        return;
-      }
-      // An overlay takes its size and place from its tool, so a press on it
-      // chooses it and opens that tool rather than taking up a pane.
-      if (isOverlayLayer(paneIndex)) {
-        pressOverlayRef.current(paneIndex);
-        return;
-      }
-      clearAnnotationRef.current();
-      clearOverlaySelection();
-      const trackId = paneIndex === 0 ? "primary" : "camera";
-      if (composedVideoTracks.has(trackId)) onSelectedTrackChange?.(trackId);
-    },
+      },
+      clearOverlaySelection,
+      composedVideoTracks,
+      onSelectedTrackChange,
+      pressOverlay: (layerId) => {
+        pressOverlayRef.current(layerId);
+      },
+    }),
     onSelectionGesture: selection.applyGesture,
     recordingOutput: drawn.recordingOutput,
     screenCanvasRef,

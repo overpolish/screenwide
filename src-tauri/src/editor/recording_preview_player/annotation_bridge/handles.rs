@@ -215,8 +215,7 @@ impl PreviewPlayerManager {
     let mut selected = if in_hand.is_some() { -2 } else { -1 };
     #[cfg(any(target_os = "macos", target_os = "windows"))]
     let mut group_boxes = Vec::new();
-    for pane in 0..sources.playback_layout.panes.len().min(2) {
-      let source = &sources.playback_layout.panes[pane];
+    for (pane, source) in sources.playback_layout.panes.iter().take(2).enumerate() {
       let output = if pane == 1 {
         &composition.recording_output.camera
       } else {

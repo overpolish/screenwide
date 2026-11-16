@@ -8,15 +8,18 @@
   "knip": {
     "ignoreBinaries": [
       "cmake",
+      "ffmpeg",
       "ninja",
       "otool",
       "rustc",
+      "say",
       "xcode-select"
     ],
     "workspaces": {
       ".": {
         "entry": [
-          "scripts/build-ffmpeg-windows.mjs"
+          "scripts/build-ffmpeg-windows.mjs",
+          "src-tauri/crates/dictation/evaluation/*.mjs"
         ],
         "ignore": [
           "src-tauri/target/**"
@@ -36,7 +39,7 @@
     "bindings:check": "node scripts/check-bindings.mjs",
     "build-storybook": "storybook build",
     "classes:check": "node scripts/check-classes.mjs",
-    "check": "pnpm native:prepare && pnpm license:check && pnpm bindings:check && pnpm i18n:check && pnpm architecture:check && pnpm classes:check && pnpm --filter screenwide-license-worker typecheck && pnpm knip && pnpm format:check && pnpm test && pnpm build && pnpm build-storybook && cargo clippy --manifest-path src-tauri/Cargo.toml --workspace --all-targets --all-features -- -D warnings && pnpm test:rust && cargo build --manifest-path src-tauri/Cargo.toml",
+    "check": "pnpm native:prepare && pnpm license:check && pnpm bindings:check && pnpm i18n:check && pnpm architecture:check && pnpm classes:check && pnpm --filter screenwide-license-worker --filter screenwide-openverse-worker typecheck && pnpm knip && pnpm format:check && pnpm test && pnpm build && pnpm build-storybook && cargo clippy --manifest-path src-tauri/Cargo.toml --workspace --all-targets --all-features -- -D warnings && pnpm test:rust && cargo build --manifest-path src-tauri/Cargo.toml",
     "dev": "pnpm native:prepare && vite",
     "docs:dev": "python3 -m http.server 4173 --directory docs",
     "dev:permissions": "node scripts/dev-permissions-preview.mjs",

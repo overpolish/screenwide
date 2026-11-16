@@ -36,11 +36,7 @@ import { useEditorWindowShortcuts } from "../shortcuts/use-editor-window-shortcu
 import { usePublishEditorModes } from "../title-bar/editor-title-modes";
 import { NO_CAPTURE_PARTS } from "../toolbar/editor-modes";
 import { EditorToolColumn } from "../toolbar/editor-tool-column";
-import {
-  cropAspectKey,
-  keepsShape,
-  useCropAspectStore,
-} from "../tools/crop/crop-aspect-store";
+import { keepsShape, useCropAspect } from "../tools/crop/crop-aspect-store";
 import { drawingToolKind, isAnnotationTool } from "../tools/tool-registry";
 
 import { ChromeSetBack } from "./chrome-set-back";
@@ -143,11 +139,9 @@ export function ScreenshotSection({
   });
   // Crop goes with the last picture (`screenshotLayersInHand`).
   if (tool === "crop" && !hasPicture) setActiveTool("select");
-  const cropLayer = selectedItemId ?? newestItemId;
-  const cropAspect = useCropAspectStore((state) =>
-    cropLayer === null
-      ? undefined
-      : state.aspects[cropAspectKey("screenshot", cropLayer)],
+  const cropAspect = useCropAspect(
+    "screenshot",
+    selectedItemId ?? newestItemId,
   );
   const { deleteLayer: deleteSelectedLayer, moveLayer: moveSelectedLayer } =
     useScreenshotLayerActions({

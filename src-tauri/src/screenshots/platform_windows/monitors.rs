@@ -247,7 +247,12 @@ fn read(device: &Device, pool: &Direct3D11CaptureFramePool) -> Result<CapturedIm
         row,
       )
     };
-    for (to, from) in target.chunks_exact_mut(4).zip(source.chunks_exact(4)) {
+    for (to, from) in target
+      .as_chunks_mut::<4>()
+      .0
+      .iter_mut()
+      .zip(source.as_chunks::<4>().0)
+    {
       to.copy_from_slice(&[from[2], from[1], from[0], from[3]]);
     }
   }

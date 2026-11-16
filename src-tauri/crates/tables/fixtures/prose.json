@@ -1,13 +1,71 @@
 [
-{"text":"Field notes","bounds":{"x":0.03634,"y":0.07105,"width":0.125,"height":0.03728}},
-{"text":"We counted forty-two swallows before lunch,","bounds":{"x":0.47917,"y":0.14286,"width":0.36667,"height":0.05263}},
-{"text":"The morning started with a slow walk along the","bounds":{"x":0.03634,"y":0.18929,"width":0.38663,"height":0.03703}},
-{"text":"more than the whole of last week, and two","bounds":{"x":0.4782,"y":0.19474,"width":0.34302,"height":0.03741}},
-{"text":"ridge, where the fog sat low over the valley and","bounds":{"x":0.03627,"y":0.22616,"width":0.38094,"height":0.04213}},
-{"text":"buzzards circling above the old quarry. The wind","bounds":{"x":0.4782,"y":0.22857,"width":0.39826,"height":0.03985}},
-{"text":"hid the river entirely. By nine the sun had","bounds":{"x":0.03625,"y":0.2624,"width":0.33884,"height":0.03943}},
-{"text":"turned in the afternoon and brought rain from","bounds":{"x":0.475,"y":0.2631,"width":0.3875,"height":0.04524}},
-{"text":"burned most of it away and the birds began to","bounds":{"x":0.03333,"y":0.29286,"width":0.38333,"height":0.04549}},
-{"text":"the west.","bounds":{"x":0.47801,"y":0.31156,"width":0.07596,"height":0.02916}},
-{"text":"move between the hedges.","bounds":{"x":0.03615,"y":0.3368,"width":0.21558,"height":0.04303}}
+  {
+    "text": "Field notes",
+    "bounds": { "x": 0.03634, "y": 0.07105, "width": 0.125, "height": 0.03728 }
+  },
+  {
+    "text": "We counted forty-two swallows before lunch,",
+    "bounds": {
+      "x": 0.47917,
+      "y": 0.14286,
+      "width": 0.36667,
+      "height": 0.05263
+    }
+  },
+  {
+    "text": "The morning started with a slow walk along the",
+    "bounds": {
+      "x": 0.03634,
+      "y": 0.18929,
+      "width": 0.38663,
+      "height": 0.03703
+    }
+  },
+  {
+    "text": "more than the whole of last week, and two",
+    "bounds": { "x": 0.4782, "y": 0.19474, "width": 0.34302, "height": 0.03741 }
+  },
+  {
+    "text": "ridge, where the fog sat low over the valley and",
+    "bounds": {
+      "x": 0.03627,
+      "y": 0.22616,
+      "width": 0.38094,
+      "height": 0.04213
+    }
+  },
+  {
+    "text": "buzzards circling above the old quarry. The wind",
+    "bounds": { "x": 0.4782, "y": 0.22857, "width": 0.39826, "height": 0.03985 }
+  },
+  {
+    "text": "hid the river entirely. By nine the sun had",
+    "bounds": { "x": 0.03625, "y": 0.2624, "width": 0.33884, "height": 0.03943 }
+  },
+  {
+    "text": "turned in the afternoon and brought rain from",
+    "bounds": { "x": 0.475, "y": 0.2631, "width": 0.3875, "height": 0.04524 }
+  },
+  {
+    "text": "burned most of it away and the birds began to",
+    "bounds": {
+      "x": 0.03333,
+      "y": 0.29286,
+      "width": 0.38333,
+      "height": 0.04549
+    }
+  },
+  {
+    "text": "the west.",
+    "bounds": {
+      "x": 0.47801,
+      "y": 0.31156,
+      "width": 0.07596,
+      "height": 0.02916
+    }
+  },
+  {
+    "text": "move between the hedges.",
+    "bounds": { "x": 0.03615, "y": 0.3368, "width": 0.21558, "height": 0.04303 }
+  }
 ]

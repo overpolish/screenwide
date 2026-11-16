@@ -2,6 +2,7 @@ dist
 storybook-static
 node_modules
 pnpm-lock.yaml
+src-tauri/binaries
 src-tauri/gen
 src-tauri/target
 src-tauri/transcriber/target

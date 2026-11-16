@@ -38,12 +38,14 @@ screenwide-timeline-edit.workspace = true
 screenwide-transcriber.workspace = true
 serde.workspace = true
 serde_json.workspace = true
-tauri.workspace = true
 ts-rs.workspace = true
 wgpu.workspace = true
 
 [target.'cfg(target_os = "macos")'.dependencies]
 cidre.workspace = true
+# AVFoundation's track loading is async; the decoders wait on it with
+# Tauri's runtime.
+tauri.workspace = true
 
 [target.'cfg(target_os = "windows")'.dependencies]
 screenwide-h264.workspace = true
