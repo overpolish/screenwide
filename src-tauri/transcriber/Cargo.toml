@@ -35,6 +35,13 @@ name = "screenwide-dictation"
 path = "src/dictation/main.rs"
 required-features = ["dictation"]
 
+# Dictation's cleanup helper, a program of its own for the same reason:
+# llama.cpp builds its own ggml too.
+[[bin]]
+name = "screenwide-cleanup"
+path = "src/cleanup/main.rs"
+required-features = ["cleanup"]
+
 [features]
 engine = [
   "dep:whisper-rs",
@@ -49,10 +56,14 @@ engine = [
   "dep:windows",
 ]
 dictation = ["dep:transcribe-cpp"]
+cleanup = ["dep:llama-cpp-2"]
 
 [dependencies]
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+# llama.cpp for dictation's cleanup, which runs a small language model on
+# what was heard. Each platform adds its GPU backend below.
+llama-cpp-2 = { version = "=0.1.161", optional = true, default-features = false }
 whisper-rs = { version = "0.16.0", optional = true }
 # transcribe.cpp for dictation, which streams with Parakeet: whisper.cpp
 # cannot stream. Each platform adds its GPU backend below.
@@ -79,6 +90,7 @@ realfft = { version = "3.5.0", optional = true }
 [target.'cfg(target_os = "macos")'.dependencies]
 whisper-rs = { version = "0.16.0", optional = true, features = ["metal"] }
 transcribe-cpp = { version = "=0.4.2", optional = true, default-features = false, features = ["metal"] }
+llama-cpp-2 = { version = "=0.1.161", optional = true, default-features = false, features = ["metal"] }
 # Studio sound on the GPU through WebGPU, which Dawn runs over Metal. Dawn
 # stays a library of its own beside the helper; copy-dylibs puts it beside
 # each build and test, and build.rs tells the helper where to find it. Object
@@ -89,6 +101,7 @@ ort = { version = "=2.0.0-rc.13", optional = true, default-features = false, fea
 [target.'cfg(windows)'.dependencies]
 whisper-rs = { version = "0.16.0", optional = true, features = ["vulkan"] }
 transcribe-cpp = { version = "=0.4.2", optional = true, default-features = false, features = ["vulkan"] }
+llama-cpp-2 = { version = "=0.1.161", optional = true, default-features = false, features = ["vulkan"] }
 # Studio sound on the GPU through DirectML, on x64 and ARM64 alike. pyke's
 # WebGPU build brings a DXC of its own that would clash with the app's.
 # DirectML.dll ships beside the helper, which Windows looks in first.

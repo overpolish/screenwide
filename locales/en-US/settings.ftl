@@ -225,6 +225,9 @@ settings-transcription-dictation-shared-description = Types what you say into an
 settings-transcription-dictation-access = Allow microphone and Accessibility access to dictate.
 settings-transcription-dictation-allow-microphone = Allow Microphone
 settings-transcription-dictation-allow-accessibility = Allow Accessibility
+# The model that applies corrections the speaker makes while dictating in English, such as "at 2, actually 3".
+settings-transcription-dictation-cleanup = Dictation corrections
+settings-transcription-dictation-cleanup-description = Applies corrections you make as you speak, such as “2, actually 3”.
 settings-transcription-language = Language
 settings-transcription-language-description = The language you record and dictate in.
 # The group of Tools' Dictation section listing names and terms speech is written with.

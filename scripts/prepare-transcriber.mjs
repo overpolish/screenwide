@@ -1,8 +1,8 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-// Builds the speech-to-text helpers, the transcriber and dictation's, and
-// puts them where Tauri's externalBin expects them. Cargo decides what needs
+// Builds the helpers, the transcriber, dictation's and dictation's cleanup,
+// and puts them where Tauri's externalBin expects them. Cargo decides what needs
 // rebuilding, so unchanged helpers cost about a second. The models bundled
 // for the transcriber to run, the voice activity model for the microphone
 // tools and, on Windows, the text reading models for Text Recognition, are
@@ -155,8 +155,9 @@ const rustHost = execFileSync("rustc", ["-vV"], { encoding: "utf8" }).match(
   /^host: (\S+)$/m,
 )?.[1];
 const crossCompiling = target !== rustHost;
-// The transcriber and dictation's helper build separately: each speech
-// engine brings its own copy of ggml, and one program cannot hold both.
+// The transcriber, dictation's helper and its cleanup helper build
+// separately: each engine brings its own copy of ggml, and one program
+// cannot hold two.
 const build = (feature, program) =>
   execFileSync(
     "cargo",
@@ -175,6 +176,7 @@ const build = (feature, program) =>
   );
 build("engine", "screenwide-transcriber");
 build("dictation", "screenwide-dictation");
+build("cleanup", "screenwide-cleanup");
 
 const extension = requestedPlatform === "win32" ? ".exe" : "";
 const builtDirectory = resolve(
@@ -183,7 +185,11 @@ const builtDirectory = resolve(
   "release",
 );
 const built = resolve(builtDirectory, `screenwide-transcriber${extension}`);
-for (const program of ["screenwide-transcriber", "screenwide-dictation"]) {
+for (const program of [
+  "screenwide-transcriber",
+  "screenwide-dictation",
+  "screenwide-cleanup",
+]) {
   for (const destination of [
     resolve("src-tauri", "binaries", `${program}-${target}${extension}`),
     // Beside the development build too, where the app looks first, as it

@@ -39,6 +39,12 @@ impl Transcriber {
     Self::start_program(screenwide_sidecar::dictation_command())
   }
 
+  /// Dictation's cleanup helper, which answers only
+  /// [`Self::correct_text`].
+  pub fn start_cleanup() -> Result<Self, String> {
+    Self::start_program(screenwide_sidecar::cleanup_command())
+  }
+
   fn start_program(mut command: std::process::Command) -> Result<Self, String> {
     let mut child = command
       .stdin(Stdio::piped())
@@ -241,6 +247,7 @@ impl Transcriber {
       | Reply::TextReaderLoaded { id }
       | Reply::TextRead { id, .. }
       | Reply::Dictated { id, .. }
+      | Reply::Corrected { id, .. }
       | Reply::Halfway { id }
       | Reply::Progress { id, .. }
       | Reply::Failed { id, .. }) = &answer;

@@ -1,11 +1,13 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! The text a run of steps comes to, words spaced and commands carried out.
+//! The text a run of steps comes to, words spaced and commands carried out,
+//! and a pause before a word that corrects what was just said ("at 3 …
+//! actually 2") marked with the comma the speech model leaves out.
 
 use screenwide_speech::runner::dictation::DictatedWord;
 
-use super::{Command, Step, WordChange};
+use super::{gap, plain, Command, Phrases, Step, WordChange, PAUSE_MS};
 
 /// Ends a sentence, as "scratch that" counts them, full width as Chinese
 /// and Japanese write them too.
@@ -21,21 +23,39 @@ pub(super) struct Rendered {
 }
 
 /// The text of `steps` over `words`, taking only those within the first
-/// `upto` words, the words `spaced` apart or run together.
+/// `upto` words, written as `phrases` writes them.
 pub(super) fn render(
   words: &[DictatedWord],
   steps: &[Step],
-  (upto, spaced): (usize, bool),
+  (upto, phrases): (usize, &Phrases),
 ) -> Rendered {
   let mut text = String::new();
   let mut changes = Vec::new();
+  let mut last_word = None;
   for step in steps {
     match step {
       Step::Word(at) if *at < upto => {
-        if spaced && !text.is_empty() && !text.ends_with('\n') {
+        let unpunctuated = text.ends_with(char::is_alphanumeric);
+        let set_apart = unpunctuated
+          && last_word.is_some_and(|before| corrects_after_pause(words, (before, *at), phrases));
+        if set_apart {
+          text.push(',');
+        }
+        if phrases.spaced && !text.is_empty() && !text.ends_with('\n') {
           text.push(' ');
         }
-        text.push_str(&words[*at].text);
+        let word = &words[*at].text;
+        // The speech model starts what follows a pause as a sentence; after
+        // the comma it goes on the sentence, so it loses its capital. "I"
+        // keeps its own.
+        if set_apart && plain(word) != "i" {
+          let mut letters = word.chars();
+          text.extend(letters.next().into_iter().flat_map(char::to_lowercase));
+          text.push_str(letters.as_str());
+        } else {
+          text.push_str(word);
+        }
+        last_word = Some(*at);
       }
       Step::Command {
         command, to, word, ..
@@ -64,6 +84,22 @@ pub(super) fn render(
     }
   }
   Rendered { text, changes }
+}
+
+/// Whether the speaker paused between the words at `before` and `at`, and
+/// what they say from `at` corrects what they said before it.
+fn corrects_after_pause(
+  words: &[DictatedWord],
+  (before, at): (usize, usize),
+  phrases: &Phrases,
+) -> bool {
+  gap(&words[before], &words[at]) >= PAUSE_MS
+    && phrases.corrections.iter().any(|said| {
+      let mut heard = words[at..].iter().map(|word| plain(&word.text));
+      said
+        .split(' ')
+        .all(|part| heard.next().is_some_and(|word| word == part))
+    })
 }
 
 /// Takes the last sentence away, back to where the one before it ended or

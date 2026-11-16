@@ -28,12 +28,15 @@ fn tool_path(name: &str) -> PathBuf {
     name.to_owned()
   };
   // Alongside the app first: a bundled copy is the one this build was tested
-  // against. A test runs from `target/debug/deps`, one folder below where
-  // `pnpm ffmpeg:prepare` puts the debug app's copy.
+  // against. A test runs from `target/debug/deps`, and an example from
+  // `target/debug/examples`, one folder below where `pnpm ffmpeg:prepare`
+  // puts the debug app's copy.
   if let Ok(current) = std::env::current_exe() {
     let beside = current.parent();
     let debug_app = beside
-      .filter(|directory| cfg!(debug_assertions) && directory.ends_with("deps"))
+      .filter(|directory| {
+        cfg!(debug_assertions) && (directory.ends_with("deps") || directory.ends_with("examples"))
+      })
       .and_then(Path::parent);
     for directory in [beside, debug_app].into_iter().flatten() {
       let bundled = directory.join(&executable);
@@ -86,6 +89,13 @@ pub fn transcriber_command() -> Command {
 /// of its own, as its speech engine cannot share one with the transcriber's.
 pub fn dictation_command() -> Command {
   without_console(tool_path("screenwide-dictation"))
+}
+
+/// Dictation's cleanup helper, bundled and started as the transcriber is: a
+/// program of its own, as llama.cpp cannot share one with either speech
+/// engine.
+pub fn cleanup_command() -> Command {
+  without_console(tool_path("screenwide-cleanup"))
 }
 
 fn without_console(program: PathBuf) -> Command {

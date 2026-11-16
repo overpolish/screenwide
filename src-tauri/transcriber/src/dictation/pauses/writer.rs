@@ -36,6 +36,9 @@ pub struct Written {
   open_stretches: Vec<Stretch>,
   /// Where the speech not yet fixed begins, in samples.
   open_from: usize,
+  /// The audio the text covers, its last stretch's tail included, in
+  /// samples.
+  pub covered: usize,
   pub failed: Option<String>,
 }
 
@@ -104,6 +107,7 @@ fn write_stretch(
   let mut written = lock(written);
   written.open = open;
   written.open_stretches = stretches;
+  written.covered = (stretch.end + TAIL).max(written.covered);
   if pcm.len() > FIX_AFTER {
     let open = std::mem::take(&mut written.open);
     written.fixed.extend(open);

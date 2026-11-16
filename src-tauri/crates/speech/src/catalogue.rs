@@ -1,6 +1,9 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+mod dictation;
+
+pub use dictation::{dictation, dictation_cleanup, dictation_description, Writes};
 use serde::Serialize;
 
 /// What a model is for. Each use has its own model, chosen for it.
@@ -26,6 +29,9 @@ pub enum Purpose {
   /// that writes each stretch of speech once a pause ends it
   /// ([`dictation`]).
   Dictation,
+  /// Dictation's corrections: what the speaker corrected as they spoke
+  /// ("at 2, actually 3") put right, in English.
+  DictationCleanup,
 }
 
 impl Purpose {
@@ -38,6 +44,7 @@ impl Purpose {
       Self::CameraObjects => screenwide_i18n::t!("settings-transcription-camera-objects"),
       Self::Transcripts => screenwide_i18n::t!("settings-transcription-transcripts"),
       Self::Dictation => screenwide_i18n::t!("settings-transcription-dictation"),
+      Self::DictationCleanup => screenwide_i18n::t!("settings-transcription-dictation-cleanup"),
     }
   }
 
@@ -56,6 +63,9 @@ impl Purpose {
       }
       Self::Transcripts => screenwide_i18n::t!("settings-transcription-transcripts-description"),
       Self::Dictation => screenwide_i18n::t!("settings-transcription-dictation-description"),
+      Self::DictationCleanup => {
+        screenwide_i18n::t!("settings-transcription-dictation-cleanup-description")
+      }
     }
   }
 }
@@ -85,6 +95,16 @@ impl Model {
   }
 }
 
+/// Parakeet Ultra from Moondream (CC-BY-4.0), NVIDIA's Parakeet TDT 0.6B v3
+/// trained further, as the transcribe.cpp project converted it to GGUF at 8
+/// bits, at a fixed revision: 25 European languages, written at each pause.
+const PARAKEET_ULTRA: ModelFile = ModelFile {
+  name: "parakeet-ultra-Q8_0.gguf",
+  sha256: "007a59761e9258779f189df396b50d12b83bb5b79e66df4b955c230d2f2a0a59",
+  size_bytes: 740_363_168,
+  url: "https://huggingface.co/handy-computer/parakeet-ultra-gguf/resolve/a1539be1b849ea7463b88343e5277b373d0c4ea9/parakeet-ultra-Q8_0.gguf",
+};
+
 pub const MODELS: &[Model] = &[
   // Whisper large-v3-turbo, quantised to 8 bits by the whisper.cpp project,
   // at a fixed revision: accurate enough to edit by, and quick for its size.
@@ -100,29 +120,43 @@ pub const MODELS: &[Model] = &[
   },
   // Parakeet Unified EN 0.6B from NVIDIA (NVIDIA Open Model License), as the
   // transcribe.cpp project converted it to GGUF at 8 bits, at a fixed
-  // revision: English that streams, punctuated as it is said.
+  // revision: English that streams, punctuated as it is said. With it,
+  // Parakeet Ultra writes each stretch again once a pause ends it, hearing
+  // the words after each word as the stream cannot: half the mistakes on the
+  // dictations in `crates/dictation/evaluation`, about 40 ms a stretch.
   Model {
-    files: &[ModelFile {
-      name: "parakeet-unified-en-0.6b-Q8_0.gguf",
-      sha256: "4b50b6dd862bf6e346929aaf4f5eaacec003bfa3f56462d6c874b41ef2f38795",
-      size_bytes: 731_357_568,
-      url: "https://huggingface.co/handy-computer/parakeet-unified-en-0.6b-gguf/resolve/843b1b175ace04f5a89d379c79e2518c0d065b25/parakeet-unified-en-0.6b-Q8_0.gguf",
-    }],
+    files: &[
+      ModelFile {
+        name: "parakeet-unified-en-0.6b-Q8_0.gguf",
+        sha256: "4b50b6dd862bf6e346929aaf4f5eaacec003bfa3f56462d6c874b41ef2f38795",
+        size_bytes: 731_357_568,
+        url: "https://huggingface.co/handy-computer/parakeet-unified-en-0.6b-gguf/resolve/843b1b175ace04f5a89d379c79e2518c0d065b25/parakeet-unified-en-0.6b-Q8_0.gguf",
+      },
+      PARAKEET_ULTRA,
+    ],
     id: "parakeet-unified-en-0.6b-q8_0",
     purpose: Purpose::Dictation,
   },
-  // Parakeet Ultra from Moondream (CC-BY-4.0), NVIDIA's Parakeet TDT 0.6B v3
-  // trained further, as the transcribe.cpp project converted it to GGUF at 8
-  // bits, at a fixed revision: 25 European languages, written at each pause.
   Model {
-    files: &[ModelFile {
-      name: "parakeet-ultra-Q8_0.gguf",
-      sha256: "007a59761e9258779f189df396b50d12b83bb5b79e66df4b955c230d2f2a0a59",
-      size_bytes: 740_363_168,
-      url: "https://huggingface.co/handy-computer/parakeet-ultra-gguf/resolve/a1539be1b849ea7463b88343e5277b373d0c4ea9/parakeet-ultra-Q8_0.gguf",
-    }],
+    files: &[PARAKEET_ULTRA],
     id: "parakeet-ultra-q8_0",
     purpose: Purpose::Dictation,
+  },
+  // SpeakoFlow Mini 0.8B from SpeakoFlow (Apache-2.0), Qwen3.5 0.8B trained
+  // to clean up dictation, in its authors' GGUF at 8 bits, at a fixed
+  // revision: it applies the corrections a speaker makes as they speak and
+  // leaves clean text alone. It scored best of the models tried on the
+  // dictations in `crates/dictation/evaluation`, and at 8 bits better than
+  // at 4.
+  Model {
+    files: &[ModelFile {
+      name: "SpeakoFlow-Mini-0.8B-Q8_0.gguf",
+      sha256: "696769bb6911f51bc231b112926e934cf7bfc760e6cdfa24212907bc5ad41fc9",
+      size_bytes: 833_591_776,
+      url: "https://huggingface.co/SpeakoFlow/speakoflow-mini/resolve/835431771f72820251fe6c6b4b07f12b000e2647/SpeakoFlow-Mini-0.8B-Q8_0.gguf",
+    }],
+    id: "speakoflow-mini-0.8b-q8_0",
+    purpose: Purpose::DictationCleanup,
   },
   // Sidon v0.1 from the University of Tokyo (MIT), its released TorchScript
   // converted to ONNX: a speech encoder and the vocoder that speaks again
@@ -232,55 +266,4 @@ pub fn find(id: &str) -> Result<&'static Model, String> {
 /// chooses by language).
 pub fn for_purpose(purpose: Purpose) -> Option<&'static Model> {
   MODELS.iter().find(|model| model.purpose == purpose)
-}
-
-/// When dictation's words appear.
-#[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub enum Writes {
-  /// As they are spoken: the model streams.
-  AsSpoken,
-  /// Each stretch of speech once a pause ends it.
-  AtPauses,
-}
-
-/// What Settings says dictation's model does, by when its words appear and
-/// whether it is the Transcripts model, downloaded once for both.
-pub fn dictation_description(writes: Writes, shared: bool) -> String {
-  match (writes, shared) {
-    (Writes::AsSpoken, _) => screenwide_i18n::t!("settings-transcription-dictation-description"),
-    (Writes::AtPauses, false) => {
-      screenwide_i18n::t!("settings-transcription-dictation-at-pauses-description")
-    }
-    (Writes::AtPauses, true) => {
-      screenwide_i18n::t!("settings-transcription-dictation-shared-description")
-    }
-  }
-}
-
-/// The languages Parakeet Ultra dictates, other than English, which streams,
-/// and Greek, which Whisper writes with under half the mistakes (FLEURS).
-const ULTRA_LANGUAGES: [&str; 23] = [
-  "bg", "cs", "da", "de", "es", "et", "fi", "fr", "hr", "hu", "it", "lt", "lv", "mt", "nl", "pl",
-  "pt", "ro", "ru", "sk", "sl", "sv", "uk",
-];
-
-/// The model dictation takes for `language`, a code such as `fr`, or none
-/// to detect it, and when its words appear: English streams; Parakeet
-/// Ultra's languages take it; every other language, and one to be detected,
-/// takes the Transcripts model, Whisper, which writes them all.
-pub fn dictation(language: Option<&str>) -> (&'static Model, Writes) {
-  let by_id = |id: &str| {
-    MODELS
-      .iter()
-      .find(|model| model.id == id)
-      .expect("the catalogue has every dictation model")
-  };
-  match language {
-    Some("en") => (by_id("parakeet-unified-en-0.6b-q8_0"), Writes::AsSpoken),
-    Some(code) if ULTRA_LANGUAGES.contains(&code) => {
-      (by_id("parakeet-ultra-q8_0"), Writes::AtPauses)
-    }
-    _ => (by_id("large-v3-turbo-q8_0"), Writes::AtPauses),
-  }
 }

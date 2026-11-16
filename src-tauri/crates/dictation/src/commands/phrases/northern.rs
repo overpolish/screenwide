@@ -22,6 +22,7 @@ pub(super) const SWEDISH: Phrases = Phrases {
     ("ta bort ord", RemoveWord),
   ],
   spaced: true,
+  corrections: &[],
 };
 
 pub(super) const DANISH: Phrases = Phrases {
@@ -39,6 +40,7 @@ pub(super) const DANISH: Phrases = Phrases {
     ("fjern ord", RemoveWord),
   ],
   spaced: true,
+  corrections: &[],
 };
 
 pub(super) const NORWEGIAN: Phrases = Phrases {
@@ -56,6 +58,7 @@ pub(super) const NORWEGIAN: Phrases = Phrases {
     ("fjern ord", RemoveWord),
   ],
   spaced: true,
+  corrections: &[],
 };
 
 pub(super) const FINNISH: Phrases = Phrases {
@@ -73,4 +76,5 @@ pub(super) const FINNISH: Phrases = Phrases {
     ("poista sana", RemoveWord),
   ],
   spaced: true,
+  corrections: &[],
 };

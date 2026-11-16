@@ -72,8 +72,8 @@ pub struct Setup {
   /// Names and terms to write where the audio fits them better than what
   /// was heard.
   pub words: Vec<String>,
-  /// For a model that does not stream: how its words are written at each
-  /// pause.
+  /// How words are written at each pause: by a model that does not stream,
+  /// or again after the streaming model.
   pub at_pauses: Option<AtPauses>,
 }
 
@@ -83,6 +83,10 @@ pub struct AtPauses {
   pub vad: PathBuf,
   /// A language code such as `fr`, or none to detect it.
   pub language: Option<String>,
+  /// The file of the model that writes each stretch again, the setup's
+  /// model streaming the words as they are spoken until it has; none for
+  /// the setup's model to write each stretch itself.
+  pub rewriter: Option<PathBuf>,
 }
 
 impl Session {
@@ -177,9 +181,16 @@ fn listen(
   };
   let begun = match at_pauses {
     None => helper.begin_dictation(model, words),
-    Some(AtPauses { vad, language }) => {
-      helper.begin_dictation_at_pauses((model, vad), language, words)
-    }
+    Some(AtPauses {
+      vad,
+      language,
+      rewriter: None,
+    }) => helper.begin_dictation_at_pauses((model, vad), language, words),
+    Some(AtPauses {
+      vad,
+      language,
+      rewriter: Some(rewriter),
+    }) => helper.begin_dictation_rewritten((model, rewriter, vad), language, words),
   };
   if let Err(error) = begun {
     return failed(error, None);

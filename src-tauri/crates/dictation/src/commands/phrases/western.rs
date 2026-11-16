@@ -25,6 +25,7 @@ pub(super) const FRENCH: Phrases = Phrases {
     ("supprimez le mot", RemoveWord),
   ],
   spaced: true,
+  corrections: &[],
 };
 
 pub(super) const GERMAN: Phrases = Phrases {
@@ -43,6 +44,7 @@ pub(super) const GERMAN: Phrases = Phrases {
     ("Wort entfernen", RemoveWord),
   ],
   spaced: true,
+  corrections: &[],
 };
 
 pub(super) const SPANISH: Phrases = Phrases {
@@ -63,6 +65,7 @@ pub(super) const SPANISH: Phrases = Phrases {
     ("eliminar palabra", RemoveWord),
   ],
   spaced: true,
+  corrections: &[],
 };
 
 pub(super) const ITALIAN: Phrases = Phrases {
@@ -81,6 +84,7 @@ pub(super) const ITALIAN: Phrases = Phrases {
     ("rimuovi parola", RemoveWord),
   ],
   spaced: true,
+  corrections: &[],
 };
 
 pub(super) const PORTUGUESE: Phrases = Phrases {
@@ -99,6 +103,7 @@ pub(super) const PORTUGUESE: Phrases = Phrases {
     ("remover palavra", RemoveWord),
   ],
   spaced: true,
+  corrections: &[],
 };
 
 pub(super) const DUTCH: Phrases = Phrases {
@@ -116,4 +121,5 @@ pub(super) const DUTCH: Phrases = Phrases {
     ("woord verwijderen", RemoveWord),
   ],
   spaced: true,
+  corrections: &[],
 };

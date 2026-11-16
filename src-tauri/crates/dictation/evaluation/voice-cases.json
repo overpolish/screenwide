@@ -1,0 +1,165 @@
+{
+  "about": "Sentences for a person to read, recorded by record-voice.mjs, for choosing how English dictation is recognised. `say` is what to read, word for word; `expect` is the text it should become once its corrections are applied. Heavy on the sounds a speech model confuses (three and free, thirty and forty, letters said alone) and on corrections said with and without a marking word.",
+  "cases": [
+    {
+      "id": "coffee-correction",
+      "say": "Let's get coffee at three, actually at two.",
+      "expect": "Let's get coffee at two."
+    },
+    {
+      "id": "thursday-thirteenth",
+      "say": "The meeting moved to Thursday the thirteenth.",
+      "expect": "The meeting moved to Thursday the thirteenth."
+    },
+    {
+      "id": "thirty-three",
+      "say": "I think there are thirty three people coming.",
+      "expect": "I think there are thirty three people coming."
+    },
+    {
+      "id": "thanks-both",
+      "say": "Thanks for both of the drafts, they look great.",
+      "expect": "Thanks for both of the drafts, they look great."
+    },
+    {
+      "id": "three-free",
+      "say": "Three free tickets arrived this morning.",
+      "expect": "Three free tickets arrived this morning."
+    },
+    {
+      "id": "third-fourth",
+      "say": "Send the invoice on the third, no, the fourth of March.",
+      "expect": "Send the invoice on the fourth of March."
+    },
+    {
+      "id": "thirty-forty",
+      "say": "We need thirty, I mean forty chairs for the hall.",
+      "expect": "We need forty chairs for the hall."
+    },
+    {
+      "id": "nothing-month",
+      "say": "Nothing else is needed this month.",
+      "expect": "Nothing else is needed this month."
+    },
+    {
+      "id": "theatre-gate",
+      "say": "The theatre is through the gate on the left.",
+      "expect": "The theatre is through the gate on the left."
+    },
+    {
+      "id": "thirtieth",
+      "say": "My birthday is on the thirtieth of June.",
+      "expect": "My birthday is on the thirtieth of June."
+    },
+    {
+      "id": "three-thirty",
+      "say": "Call me at three fifteen, sorry, three thirty.",
+      "expect": "Call me at three thirty."
+    },
+    {
+      "id": "threw-fence",
+      "say": "They threw the ball over the fence.",
+      "expect": "They threw the ball over the fence."
+    },
+    {
+      "id": "free-thursday",
+      "say": "Is it free on Thursday at three?",
+      "expect": "Is it free on Thursday at three?"
+    },
+    {
+      "id": "thread-replies",
+      "say": "The thread on the forum has three thousand replies.",
+      "expect": "The thread on the forum has three thousand replies."
+    },
+    {
+      "id": "thomas-theo",
+      "say": "Ask Thomas and Theo to join the call.",
+      "expect": "Ask Thomas and Theo to join the call."
+    },
+    {
+      "id": "options-letters",
+      "say": "We can choose option A, option B or option C.",
+      "expect": "We can choose option A, option B or option C."
+    },
+    {
+      "id": "letters-not",
+      "say": "Let's go with A and B, not C.",
+      "expect": "Let's go with A and B, not C."
+    },
+    {
+      "id": "nine-ten",
+      "say": "The flight leaves at nine, wait, at ten tomorrow.",
+      "expect": "The flight leaves at ten tomorrow."
+    },
+    {
+      "id": "counting-teens",
+      "say": "Fourteen, fifteen, sixteen, seventeen.",
+      "expect": "Fourteen, fifteen, sixteen, seventeen."
+    },
+    {
+      "id": "three-degrees",
+      "say": "The temperature fell to three degrees overnight.",
+      "expect": "The temperature fell to three degrees overnight."
+    },
+    {
+      "id": "their-theory",
+      "say": "Their team thinks the theory is worth testing.",
+      "expect": "Their team thinks the theory is worth testing."
+    },
+    {
+      "id": "fifth-sixth",
+      "say": "Put it on the fifth floor, no, the sixth floor.",
+      "expect": "Put it on the sixth floor."
+    },
+    {
+      "id": "rather-meant",
+      "say": "I'd rather meet in the morning than the evening.",
+      "expect": "I'd rather meet in the morning than the evening."
+    },
+    {
+      "id": "actually-meant",
+      "say": "I actually think that's a good idea.",
+      "expect": "I actually think that's a good idea."
+    },
+    {
+      "id": "three-weeks",
+      "say": "With three weeks to go, there's no time to waste.",
+      "expect": "With three weeks to go, there's no time to waste."
+    },
+    {
+      "id": "breathe",
+      "say": "Breathe in for three seconds, then breathe out.",
+      "expect": "Breathe in for three seconds, then breathe out."
+    },
+    {
+      "id": "free-trial",
+      "say": "The free trial ends after thirty days.",
+      "expect": "The free trial ends after thirty days."
+    },
+    {
+      "id": "thursday-friday",
+      "say": "Thursday works, Friday doesn't.",
+      "expect": "Thursday works, Friday doesn't."
+    },
+    {
+      "id": "mouth-month",
+      "say": "Mouth, month and moth all sound alike.",
+      "expect": "Mouth, month and moth all sound alike."
+    },
+    {
+      "id": "third-time",
+      "say": "That's the third time this week.",
+      "expect": "That's the third time this week."
+    },
+    {
+      "id": "coffee-unmarked",
+      "say": "Let's meet at three, at half past three.",
+      "expect": "Let's meet at half past three."
+    },
+    {
+      "id": "coffee-pause",
+      "say": "Coffee at three … actually at two.",
+      "expect": "Coffee at two."
+    }
+  ]
+}

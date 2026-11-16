@@ -21,11 +21,13 @@ const LEFT_MS: i32 = 5_600;
 
 /// The model last loaded and a session on it, kept for the dictations after:
 /// loading takes far longer than the first words. And the voice activity
-/// model, for dictations written at each pause.
+/// model, for dictations written at each pause, and the model that writes
+/// each stretch again for one that streams and is then written again.
 #[derive(Default)]
 pub struct Dictation {
   loaded: Option<(PathBuf, Session)>,
   vad: Option<(PathBuf, VadSession)>,
+  rewriter: Option<(PathBuf, Session)>,
 }
 
 impl Dictation {
@@ -44,31 +46,9 @@ impl Dictation {
       Ok(session) => session,
       Err(message) => return send(&Reply::Failed { id: begin, message }),
     };
-    let chunk_ms = chunk_ms(&session.model());
-    let options = StreamOptions {
-      commit_policy: CommitPolicy::Auto,
-      family: Some(StreamExtension::ParakeetBuffered(
-        ParakeetBufferedStreamOptions {
-          chunk_ms: Some(chunk_ms),
-          left_ms: Some(LEFT_MS),
-          right_ms: Some(chunk_ms),
-        },
-      )),
-      ..StreamOptions::default()
-    };
-    let run = RunOptions {
-      timestamps: TimestampKind::Word,
-      vocabulary: words,
-      ..RunOptions::default()
-    };
-    let mut stream = match session.stream(&run, &options) {
+    let mut stream = match start(session, words) {
       Ok(stream) => stream,
-      Err(error) => {
-        return send(&Reply::Failed {
-          id: begin,
-          message: format!("Could not start dictating: {error}"),
-        })
-      }
+      Err(message) => return send(&Reply::Failed { id: begin, message }),
     };
     if !send(&Reply::Dictated {
       id: begin,
@@ -156,6 +136,27 @@ impl Dictation {
     }
   }
 
+  /// Sessions on the streaming model at `model`, on the model at `rewriter`
+  /// that writes each stretch again, and on the voice activity model at
+  /// `vad`, each loaded unless it is already.
+  pub fn rewriting_sessions(
+    &mut self,
+    (model, rewriter, vad): (&Path, &Path, &Path),
+  ) -> Result<(&mut Session, &mut Session, &mut VadSession), String> {
+    self.sessions(model, vad)?;
+    if !matches!(&self.rewriter, Some((loaded, _)) if loaded == rewriter) {
+      self.rewriter = None;
+      let session = Model::load(rewriter)
+        .and_then(|model| model.session())
+        .map_err(|error| format!("Could not load the dictation model: {error}"))?;
+      self.rewriter = Some((rewriter.to_owned(), session));
+    }
+    match (&mut self.loaded, &mut self.rewriter, &mut self.vad) {
+      (Some((_, session)), Some((_, rewriter)), Some((_, vad))) => Ok((session, rewriter, vad)),
+      _ => Err("The dictation models are not loaded".to_owned()),
+    }
+  }
+
   fn session(&mut self, path: &Path) -> Result<&mut Session, String> {
     if !matches!(&self.loaded, Some((loaded, _)) if loaded == path) {
       self.loaded = None;
@@ -172,6 +173,31 @@ impl Dictation {
   }
 }
 
+/// A stream on `session`, writing `words` where the audio fits them better
+/// than what was heard.
+pub fn start(session: &mut Session, words: Vec<String>) -> Result<Stream<'_>, String> {
+  let chunk_ms = chunk_ms(&session.model());
+  let options = StreamOptions {
+    commit_policy: CommitPolicy::Auto,
+    family: Some(StreamExtension::ParakeetBuffered(
+      ParakeetBufferedStreamOptions {
+        chunk_ms: Some(chunk_ms),
+        left_ms: Some(LEFT_MS),
+        right_ms: Some(chunk_ms),
+      },
+    )),
+    ..StreamOptions::default()
+  };
+  let run = RunOptions {
+    timestamps: TimestampKind::Word,
+    vocabulary: words,
+    ..RunOptions::default()
+  };
+  session
+    .stream(&run, &options)
+    .map_err(|error| format!("Could not start dictating: {error}"))
+}
+
 /// How much audio each step hears, and so how far the words lag behind the
 /// voice: twice this. A GPU keeps up with the shortest step that stays
 /// accurate, 160 ms; on the CPU each step re-reads the left context, so it
@@ -186,23 +212,30 @@ fn chunk_ms(model: &Model) -> i32 {
 
 /// What the stream has heard, and when each word of it was said. A stream
 /// times its tokens alone, so words are put together from them: a token
-/// starting with a space starts a word. A word ends with its last letter or
-/// digit: the model writes a full stop only once the pause after it has
-/// passed. A word is settled while its place in the text falls within the
-/// settled part. `heard_ms` is how much has been heard; none once the
-/// stream is finished. The text is the stream's whole hypothesis, which
-/// writes a listed word in place of the words heard as soon as the audio
-/// fits it better: the stream's committed text only ever grows, so it
-/// cannot show that.
-fn text(stream: &Stream<'_>, heard_ms: Option<u64>) -> DictatedText {
+/// starting with a space starts a word, as does the token after a space
+/// alone, which is how the model writes the space before a number. A word
+/// ends with its last letter or digit: the model writes a full stop only
+/// once the pause after it has passed. A word is settled while its place in
+/// the text falls within the settled part. `heard_ms` is how much has been
+/// heard; none once the stream is finished. The text is the stream's whole
+/// hypothesis, which writes a listed word in place of the words heard as
+/// soon as the audio fits it better: the stream's committed text only ever
+/// grows, so it cannot show that.
+pub fn text(stream: &Stream<'_>, heard_ms: Option<u64>) -> DictatedText {
   let mut heard = stream.text();
   let finished = heard_ms.is_none();
   heard.committed = heard.full.trim().to_owned();
   heard.tentative.clear();
   let mut words: Vec<DictatedWord> = Vec::new();
+  let mut after_space = false;
   for token in stream.snapshot().tokens {
-    let starts = token.text.starts_with([' ', '\u{2581}']);
+    let starts = after_space || token.text.starts_with([' ', '\u{2581}']);
     let piece = token.text.trim_start_matches([' ', '\u{2581}']);
+    if piece.is_empty() {
+      after_space = starts;
+      continue;
+    }
+    after_space = false;
     let start_ms = u64::try_from(token.t0_ms).unwrap_or(0);
     let end_ms = u64::try_from(token.t1_ms).unwrap_or(0);
     match words.last_mut() {
@@ -212,7 +245,6 @@ fn text(stream: &Stream<'_>, heard_ms: Option<u64>) -> DictatedText {
           word.end_ms = end_ms;
         }
       }
-      _ if piece.is_empty() => {}
       _ => words.push(DictatedWord {
         text: piece.to_owned(),
         start_ms,

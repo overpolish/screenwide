@@ -5825,6 +5825,7 @@ dependencies = [
  "screenwide-capture",
  "screenwide-speech",
  "serde",
+ "serde_json",
 ]
 
 [[package]]

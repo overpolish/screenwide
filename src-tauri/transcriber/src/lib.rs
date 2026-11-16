@@ -224,6 +224,22 @@ pub enum Job {
     #[serde(default)]
     words: Vec<String>,
   },
+  /// Starts a dictation that streams with the model at `model`, so words
+  /// appear as they are spoken, and writes each stretch of speech again once
+  /// a pause ends it with the model at `rewriter`, which hears the whole
+  /// stretch, the words after each word included, and so mishears fewer;
+  /// its text takes the streamed words' place. The pauses are found with the
+  /// voice activity model at `vad`. Answered and followed as
+  /// [`Job::BeginDictation`] is.
+  BeginDictationRewritten {
+    model: PathBuf,
+    rewriter: PathBuf,
+    vad: PathBuf,
+    /// A language code such as `en`, or nothing to detect it.
+    language: Option<String>,
+    #[serde(default)]
+    words: Vec<String>,
+  },
   /// The next samples of the dictation, at [`SAMPLE_RATE`] as 16-bit PCM,
   /// which keeps each line short. Answered with [`Reply::Dictated`] with the
   /// text heard so far.
@@ -231,6 +247,14 @@ pub enum Job {
   /// The dictation's speech has ended: answered with [`Reply::Dictated`] with
   /// the final text, after which the helper takes other jobs again.
   FinishDictation,
+  /// Dictated text corrected by the language model at `model`, told what to
+  /// do by `instructions`, answered with [`Reply::Corrected`]. Only the
+  /// cleanup helper answers it.
+  CorrectText {
+    model: PathBuf,
+    instructions: String,
+    text: String,
+  },
 }
 
 /// When each camera frame the matte was made from shows: frame `n` of the
@@ -377,6 +401,11 @@ pub enum Reply {
   Dictated {
     id: u64,
     text: DictatedText,
+  },
+  /// Text corrected, in answer to [`Job::CorrectText`].
+  Corrected {
+    id: u64,
+    text: String,
   },
   /// How far a long job has got, 0 to 1. Sent any number of times before the
   /// reply that ends the job, which every other kind is.

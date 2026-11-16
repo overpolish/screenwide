@@ -21,6 +21,11 @@ pub struct Phrases {
   pub(super) said: &'static [(&'static str, Command)],
   /// Whether words are written apart: not in Chinese or Japanese.
   pub(super) spaced: bool,
+  /// Words a speaker says to replace what they just said ("at 2, actually
+  /// 3"), lower case. Paused before, they are set apart with a comma the
+  /// speech model leaves out, which tells the cleanup model a correction
+  /// follows. Only English has them, the one language corrections run in.
+  pub(super) corrections: &'static [&'static str],
 }
 
 /// What a spoken command does, as Settings lists them.
@@ -58,6 +63,7 @@ const NEW_PARAGRAPH: Command = Break("\n\n");
 const NONE: Phrases = Phrases {
   said: &[],
   spaced: true,
+  corrections: &[],
 };
 
 /// The commands said in `language`, a code such as `fr`.
@@ -105,4 +111,13 @@ const ENGLISH: Phrases = Phrases {
     ("remove word", RemoveWord),
   ],
   spaced: true,
+  corrections: &[
+    "actually",
+    "no",
+    "sorry",
+    "wait",
+    "i mean",
+    "or rather",
+    "make that",
+  ],
 };

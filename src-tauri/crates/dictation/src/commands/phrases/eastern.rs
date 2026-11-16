@@ -21,6 +21,7 @@ pub(super) const POLISH: Phrases = Phrases {
     ("usuń słowo", RemoveWord),
   ],
   spaced: true,
+  corrections: &[],
 };
 
 pub(super) const CZECH: Phrases = Phrases {
@@ -38,6 +39,7 @@ pub(super) const CZECH: Phrases = Phrases {
     ("odebrat slovo", RemoveWord),
   ],
   spaced: true,
+  corrections: &[],
 };
 
 pub(super) const RUSSIAN: Phrases = Phrases {
@@ -55,6 +57,7 @@ pub(super) const RUSSIAN: Phrases = Phrases {
     ("удалить слово", RemoveWord),
   ],
   spaced: true,
+  corrections: &[],
 };
 
 pub(super) const UKRAINIAN: Phrases = Phrases {
@@ -72,6 +75,7 @@ pub(super) const UKRAINIAN: Phrases = Phrases {
     ("видалити слово", RemoveWord),
   ],
   spaced: true,
+  corrections: &[],
 };
 
 pub(super) const TURKISH: Phrases = Phrases {
@@ -89,4 +93,5 @@ pub(super) const TURKISH: Phrases = Phrases {
     ("kelime sil", RemoveWord),
   ],
   spaced: true,
+  corrections: &[],
 };

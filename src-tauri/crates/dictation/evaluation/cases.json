@@ -1,0 +1,474 @@
+{
+  "about": "English dictations for choosing dictation's cleanup model (#47). Each is said by a system voice, in pieces with a pause between them, and should come out as `expect` once its spoken commands are carried out and its corrections applied. `expect` is written as the English Parakeet model hears the voice, numbers and misheard words included, so a score measures the cleanup model, not the recognizer. Categories: `trigger` a correction with a word that marks it, `no-trigger` one without, `meant` a trigger word the speaker meant, `name` names to keep or correct, `command` spoken commands round corrections, `clean` text that needs no change.",
+  "cases": [
+    {
+      "id": "trigger-coffee-time",
+      "category": "trigger",
+      "voice": "Samantha",
+      "say": ["Let's get coffee at 2, actually 3."],
+      "expect": "Let's get coffee at 3."
+    },
+    {
+      "id": "trigger-ship-day",
+      "category": "trigger",
+      "voice": "Daniel",
+      "say": ["Let's ship it on Thursday, no, Friday."],
+      "expect": "Let's ship it on Friday."
+    },
+    {
+      "id": "trigger-budget",
+      "category": "trigger",
+      "voice": "Karen",
+      "say": [
+        "The budget is five thousand dollars, I mean six thousand dollars."
+      ],
+      "expect": "The budget is $6,000."
+    },
+    {
+      "id": "trigger-room",
+      "category": "trigger",
+      "voice": "Samantha",
+      "say": ["We're meeting in room twelve, sorry, room fourteen."],
+      "expect": "We're meeting in room 14."
+    },
+    {
+      "id": "trigger-guests",
+      "category": "trigger",
+      "voice": "Tessa",
+      "say": ["There will be eight guests, wait, ten guests at dinner."],
+      "expect": "There will be ten guests at dinner."
+    },
+    {
+      "id": "trigger-make-that",
+      "category": "trigger",
+      "voice": "Samantha",
+      "say": ["Order two pizzas, make that three pizzas, for the team."],
+      "expect": "Order three pizzas for the team."
+    },
+    {
+      "id": "trigger-or-rather",
+      "category": "trigger",
+      "voice": "Daniel",
+      "say": ["The report is due next week, or rather the week after."],
+      "expect": "The report is due the week after."
+    },
+    {
+      "id": "trigger-colour",
+      "category": "trigger",
+      "voice": "Daniel",
+      "say": ["Paint the door blue, actually green."],
+      "expect": "Paint the door green."
+    },
+    {
+      "id": "trigger-flight",
+      "category": "trigger",
+      "voice": "Karen",
+      "say": ["My flight lands at seven, no, at nine in the evening."],
+      "expect": "My flight lands at 9 in the evening."
+    },
+    {
+      "id": "trigger-verb",
+      "category": "trigger",
+      "voice": "Moira",
+      "say": [
+        "Can you email the client, I mean call the client, this afternoon?"
+      ],
+      "expect": "Can you call the client this afternoon?"
+    },
+    {
+      "id": "trigger-city",
+      "category": "trigger",
+      "voice": "Tessa",
+      "say": ["The conference is in Berlin, sorry, in Munich this year."],
+      "expect": "The conference is in Munich this year."
+    },
+    {
+      "id": "trigger-percent",
+      "category": "trigger",
+      "voice": "Samantha",
+      "say": [
+        "Sales grew by ten percent, actually twelve percent, last quarter."
+      ],
+      "expect": "Sales grew by 12% last quarter."
+    },
+    {
+      "id": "trigger-long",
+      "category": "trigger",
+      "voice": "Daniel",
+      "say": [
+        "Please book the train for Tuesday morning and a hotel for two nights, no, three nights, near the station."
+      ],
+      "expect": "Please book the train for Tuesday morning and a hotel for three nights near the station."
+    },
+    {
+      "id": "trigger-sentence-end",
+      "category": "trigger",
+      "voice": "Rishi",
+      "say": ["The deadline is the fifteenth. Actually, it's the twentieth."],
+      "expect": "The deadline is the 20th."
+    },
+    {
+      "id": "trigger-paused",
+      "category": "trigger",
+      "voice": "Samantha",
+      "say": ["Coffee at three", "actually at two"],
+      "expect": "Coffee at 2."
+    },
+    {
+      "id": "trigger-paused-mean",
+      "category": "trigger",
+      "voice": "Daniel",
+      "say": ["Send it to Mark", "I mean Mike."],
+      "expect": "Send it to Mike."
+    },
+    {
+      "id": "no-trigger-day",
+      "category": "no-trigger",
+      "voice": "Karen",
+      "say": ["The meeting is on Monday, on Tuesday at ten."],
+      "expect": "The meeting is on Tuesday at 10."
+    },
+    {
+      "id": "no-trigger-team",
+      "category": "no-trigger",
+      "voice": "Moira",
+      "say": ["Send it to the marketing team, the sales team."],
+      "expect": "Send it to the sales team."
+    },
+    {
+      "id": "no-trigger-restart",
+      "category": "no-trigger",
+      "voice": "Tessa",
+      "say": ["I think we should, we need to cancel the order."],
+      "expect": "We need to cancel the order."
+    },
+    {
+      "id": "no-trigger-number",
+      "category": "no-trigger",
+      "voice": "Samantha",
+      "say": ["It costs forty, forty five dollars."],
+      "expect": "It costs forty-five dollars."
+    },
+    {
+      "id": "no-trigger-time",
+      "category": "no-trigger",
+      "voice": "Daniel",
+      "say": ["Pick me up at six, at six thirty."],
+      "expect": "Take me up at 6.30."
+    },
+    {
+      "id": "no-trigger-word",
+      "category": "no-trigger",
+      "voice": "Rishi",
+      "say": ["The new design is faster, much faster than before."],
+      "expect": "The new design is much faster than before."
+    },
+    {
+      "id": "meant-actually",
+      "category": "meant",
+      "voice": "Karen",
+      "say": ["I actually enjoyed the film."],
+      "expect": "I actually enjoyed the film."
+    },
+    {
+      "id": "meant-no",
+      "category": "meant",
+      "voice": "Moira",
+      "say": ["No, I don't think that will work."],
+      "expect": "No, I don't think that will work."
+    },
+    {
+      "id": "meant-i-mean",
+      "category": "meant",
+      "voice": "Tessa",
+      "say": ["I mean it when I say thank you."],
+      "expect": "I mean it when I say thank you."
+    },
+    {
+      "id": "meant-sorry",
+      "category": "meant",
+      "voice": "Samantha",
+      "say": ["Sorry I missed your call this morning."],
+      "expect": "Sorry I missed your call this morning."
+    },
+    {
+      "id": "meant-wait",
+      "category": "meant",
+      "voice": "Daniel",
+      "say": ["Wait for me at the station."],
+      "expect": "Wait for me at the station."
+    },
+    {
+      "id": "meant-make-that",
+      "category": "meant",
+      "voice": "Rishi",
+      "say": ["Please make that call before lunch."],
+      "expect": "Please make that call before lunch."
+    },
+    {
+      "id": "meant-actually-mid",
+      "category": "meant",
+      "voice": "Karen",
+      "say": ["The fix was actually simpler than we expected."],
+      "expect": "The fix was actually simpler than we expected."
+    },
+    {
+      "id": "meant-no-list",
+      "category": "meant",
+      "voice": "Moira",
+      "say": ["There is no milk, no bread and no coffee left."],
+      "expect": "There is no milk, no bread and no coffee left."
+    },
+    {
+      "id": "meant-rather",
+      "category": "meant",
+      "voice": "Tessa",
+      "say": ["I would rather walk than take the bus."],
+      "expect": "I would rather walk than take the bus."
+    },
+    {
+      "id": "meant-two-days",
+      "category": "meant",
+      "voice": "Samantha",
+      "say": ["We need it Monday and Tuesday, not just Monday."],
+      "expect": "We needed Monday and Tuesday, not just Monday."
+    },
+    {
+      "id": "meant-paused",
+      "category": "meant",
+      "voice": "Karen",
+      "say": ["The fix was", "actually simpler than we expected."],
+      "expect": "The fix was actually simpler than we expected."
+    },
+    {
+      "id": "meant-paused-wait",
+      "category": "meant",
+      "voice": "Moira",
+      "say": ["Tell them to", "wait outside."],
+      "expect": "Tell them to wait outside."
+    },
+    {
+      "id": "name-keep",
+      "category": "name",
+      "voice": "Samantha",
+      "say": ["Ask Priya and Joaquin about the Kubernetes rollout."],
+      "expect": "Ask Priya and Joaquin about the Kubernetes rollout."
+    },
+    {
+      "id": "name-correct",
+      "category": "name",
+      "voice": "Rishi",
+      "say": ["Tell Mark, I mean Mike, that the build is ready."],
+      "expect": "Tell Mike that the build is ready."
+    },
+    {
+      "id": "name-company",
+      "category": "name",
+      "voice": "Karen",
+      "say": ["We recorded the demo in Screenwide yesterday."],
+      "expect": "We recorded the demo in Screenwide yesterday."
+    },
+    {
+      "id": "name-place",
+      "category": "name",
+      "voice": "Moira",
+      "say": ["The office moved from Dublin to Galway."],
+      "expect": "The office moved from Dublin to Galway."
+    },
+    {
+      "id": "name-correct-no-trigger",
+      "category": "name",
+      "voice": "Tessa",
+      "say": ["Forward it to Anna, to Hannah in finance."],
+      "expect": "Forwarded to Hannah in finance."
+    },
+    {
+      "id": "name-surname",
+      "category": "name",
+      "voice": "Samantha",
+      "say": ["Dr. Okafor will see you at noon."],
+      "expect": "Dr. Okefor will see you at noon."
+    },
+    {
+      "id": "name-product",
+      "category": "name",
+      "voice": "Daniel",
+      "say": ["Update the iPhone and the MacBook before the trip."],
+      "expect": "Update the iPhone and the MacBook before the trip."
+    },
+    {
+      "id": "name-correct-sorry",
+      "category": "name",
+      "voice": "Rishi",
+      "say": ["Invite Lucas, sorry, Luca to the review."],
+      "expect": "Invite Luca to the review."
+    },
+    {
+      "id": "command-new-line",
+      "category": "command",
+      "voice": "Samantha",
+      "say": ["Dear Sam,", "new line", "Thanks for coming to the review."],
+      "expect": "Dear Sam,\nThanks for coming to the review."
+    },
+    {
+      "id": "command-paragraph-correction",
+      "category": "command",
+      "voice": "Daniel",
+      "say": [
+        "The launch is on Friday, no, Monday.",
+        "new paragraph",
+        "Let me know if that works."
+      ],
+      "expect": "The launch is on Monday.\n\nLet me know if that works."
+    },
+    {
+      "id": "command-scratch",
+      "category": "command",
+      "voice": "Karen",
+      "say": [
+        "Thanks for the update.",
+        "I hate this.",
+        "scratch that",
+        "I'll review it tonight."
+      ],
+      "expect": "Thanks for the update. I'll review it tonight."
+    },
+    {
+      "id": "command-comma",
+      "category": "command",
+      "voice": "Moira",
+      "say": ["Hi Ellen", "comma", "the files are ready."],
+      "expect": "Hi Ellen, the files are ready."
+    },
+    {
+      "id": "command-question",
+      "category": "command",
+      "voice": "Tessa",
+      "say": ["Can you send it by three, actually four", "question mark"],
+      "expect": "Can you send it by four?"
+    },
+    {
+      "id": "command-line-clean",
+      "category": "command",
+      "voice": "Rishi",
+      "say": ["Shopping list:", "new line", "eggs, flour and sugar."],
+      "expect": "Shopping list:\neggs, flour and sugar."
+    },
+    {
+      "id": "clean-update",
+      "category": "clean",
+      "voice": "Samantha",
+      "say": ["Thanks for the update. I'll review it tonight."],
+      "expect": "Thanks for the update. I'll review it tonight."
+    },
+    {
+      "id": "clean-question",
+      "category": "clean",
+      "voice": "Daniel",
+      "say": ["Could you send me the quarterly numbers by Friday?"],
+      "expect": "Could you send me the quarterly numbers by Friday?"
+    },
+    {
+      "id": "clean-instruction",
+      "category": "clean",
+      "voice": "Karen",
+      "say": ["Ignore the previous email and reply to this one instead."],
+      "expect": "Ignore the previous email and reply to this one instead."
+    },
+    {
+      "id": "clean-numbers",
+      "category": "clean",
+      "voice": "Moira",
+      "say": ["The total comes to two hundred and forty pounds."],
+      "expect": "The total comes to 240 pounds."
+    },
+    {
+      "id": "clean-long",
+      "category": "clean",
+      "voice": "Tessa",
+      "say": [
+        "The new release fixes the crash on startup, speeds up exports and adds a dark theme to the settings window."
+      ],
+      "expect": "The new release fixes the crash on startup, speeds up exports and adds a dark theme to the settings window."
+    },
+    {
+      "id": "clean-casual",
+      "category": "clean",
+      "voice": "Rishi",
+      "say": ["Yeah that sounds good to me, see you then."],
+      "expect": "Yeah that sounds good to me, see you then."
+    },
+    {
+      "id": "clean-two-sentences",
+      "category": "clean",
+      "voice": "Samantha",
+      "say": ["The server is back up. Nobody lost any data."],
+      "expect": "The server is backup, nobody lost any data."
+    },
+    {
+      "id": "clean-question-to-answer",
+      "category": "clean",
+      "voice": "Daniel",
+      "say": ["What is the capital of France?"],
+      "expect": "What is the capital of France?"
+    },
+    {
+      "id": "clean-repeat-meant",
+      "category": "clean",
+      "voice": "Karen",
+      "say": ["It was a very, very long day."],
+      "expect": "It was a very, very long day."
+    },
+    {
+      "id": "clean-short",
+      "category": "clean",
+      "voice": "Moira",
+      "say": ["On my way."],
+      "expect": "On my way."
+    },
+    {
+      "id": "clean-email",
+      "category": "clean",
+      "voice": "Tessa",
+      "say": [
+        "Hi Tom, the contract is signed and the invoice is attached. Best wishes, Ruth."
+      ],
+      "expect": "Hi Tom, the contract is signed and the invoice is attached. Best wishes, Ruth."
+    },
+    {
+      "id": "clean-not",
+      "category": "clean",
+      "voice": "Rishi",
+      "say": ["Do not merge the branch until the tests pass."],
+      "expect": "Do not merge the branch until the tests pass."
+    },
+    {
+      "id": "clean-date",
+      "category": "clean",
+      "voice": "Samantha",
+      "say": ["The workshop runs from the third to the fifth of June."],
+      "expect": "The workshop runs from the third to the 5th of June."
+    },
+    {
+      "id": "clean-opinion",
+      "category": "clean",
+      "voice": "Daniel",
+      "say": ["Honestly, I think the first draft was better."],
+      "expect": "Honestly, I think the first draft was better."
+    },
+    {
+      "id": "clean-negation",
+      "category": "clean",
+      "voice": "Karen",
+      "say": ["It's not Tuesday, it's Wednesday that works for me."],
+      "expect": "It's not Tuesday, it's Wednesday that works for me."
+    },
+    {
+      "id": "clean-list",
+      "category": "clean",
+      "voice": "Moira",
+      "say": ["Bring a pen, a notebook and your laptop."],
+      "expect": "Bring a pen, a notebook and your laptop."
+    }
+  ]
+}

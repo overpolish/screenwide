@@ -33,6 +33,7 @@ pub(super) const JAPANESE: Phrases = Phrases {
     ("単語を削除", RemoveWord),
   ],
   spaced: false,
+  corrections: &[],
 };
 
 pub(super) const CHINESE: Phrases = Phrases {
@@ -50,6 +51,7 @@ pub(super) const CHINESE: Phrases = Phrases {
     ("删除词语", RemoveWord),
   ],
   spaced: false,
+  corrections: &[],
 };
 
 pub(super) const KOREAN: Phrases = Phrases {
@@ -67,4 +69,5 @@ pub(super) const KOREAN: Phrases = Phrases {
     ("단어 삭제", RemoveWord),
   ],
   spaced: true,
+  corrections: &[],
 };

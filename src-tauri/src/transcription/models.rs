@@ -123,14 +123,26 @@ pub(crate) fn dictation() -> (&'static Model, Writes) {
   catalogue::dictation(language::resolved(&language::current()).as_deref())
 }
 
+/// The model that corrects dictation in the language transcription is set
+/// to, if it is one the model corrects.
+pub(crate) fn dictation_cleanup() -> Option<&'static Model> {
+  catalogue::dictation_cleanup(language::resolved(&language::current()).as_deref())
+}
+
 /// Each model in the catalogue's order, dictation's being the one for the
 /// language transcription is set to, which may be the Transcripts model
-/// listed again under Dictation.
+/// listed again under Dictation, and dictation's cleanup model only for a
+/// language it corrects.
 pub(crate) fn state(app: &AppHandle) -> TranscriptionState {
   let (dictation, writes) = dictation();
+  let cleanup = dictation_cleanup();
   let mut models = Vec::new();
   for model in MODELS {
-    if model.purpose != Purpose::Dictation {
+    if model.purpose == Purpose::DictationCleanup {
+      if cleanup.is_some_and(|cleanup| cleanup.id == model.id) {
+        models.push(model_state(app, model, model.purpose.description()));
+      }
+    } else if model.purpose != Purpose::Dictation {
       models.push(model_state(app, model, model.purpose.description()));
     } else if !models
       .iter()

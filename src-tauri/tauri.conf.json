@@ -243,7 +243,8 @@
     "externalBin": [
       "binaries/ffmpeg",
       "binaries/screenwide-transcriber",
-      "binaries/screenwide-dictation"
+      "binaries/screenwide-dictation",
+      "binaries/screenwide-cleanup"
     ],
     "fileAssociations": [
       {
@@ -271,6 +272,7 @@
       "assets/Inter-OFL-1.1.txt": "licenses/Inter-OFL-1.1.txt",
       "assets/Inter-VariableFont_opsz,wght.ttf": "fonts/Inter-VariableFont_opsz,wght.ttf",
       "assets/libwebp-BSD-3-Clause.txt": "licenses/libwebp-BSD-3-Clause.txt",
+      "assets/llama.cpp-MIT.txt": "licenses/llama.cpp-MIT.txt",
       "assets/MelBandRoformer-MIT.txt": "licenses/MelBandRoformer-MIT.txt",
       "assets/ParakeetUnified-NVIDIA-Open-Model-License.txt": "licenses/ParakeetUnified-NVIDIA-Open-Model-License.txt",
       "assets/ParakeetUltra-CC-BY-4.0.txt": "licenses/ParakeetUltra-CC-BY-4.0.txt",
@@ -278,6 +280,7 @@
       "assets/RobotoMono-VariableFont_wght.ttf": "fonts/RobotoMono-VariableFont_wght.ttf",
       "assets/onnxruntime-MIT.txt": "licenses/onnxruntime-MIT.txt",
       "assets/Sidon-MIT.txt": "licenses/Sidon-MIT.txt",
+      "assets/SpeakoFlowMini-Apache-2.0.txt": "licenses/SpeakoFlowMini-Apache-2.0.txt",
       "assets/silero-vad-MIT.txt": "licenses/silero-vad-MIT.txt",
       "assets/transcribe.cpp-MIT.txt": "licenses/transcribe.cpp-MIT.txt",
       "assets/whisper.cpp-MIT.txt": "licenses/whisper.cpp-MIT.txt",

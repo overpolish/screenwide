@@ -119,6 +119,29 @@ fn words_still_being_heard_are_unsettled() {
 }
 
 #[test]
+fn a_pause_before_a_correction_takes_a_comma() {
+  assert_eq!(
+    text("Coffee at free | actually at two"),
+    "Coffee at free, actually at two"
+  );
+  assert_eq!(
+    text("Coffee at three | Actually at two"),
+    "Coffee at three, actually at two"
+  );
+  assert_eq!(text("Tell Mark | I mean Mike"), "Tell Mark, I mean Mike");
+  // Said without a pause, or already punctuated, it is left as heard.
+  assert_eq!(text("I actually enjoyed it"), "I actually enjoyed it");
+  assert_eq!(
+    text("Coffee at three, | actually at two"),
+    "Coffee at three, actually at two"
+  );
+  // A pause before a word that only starts one is no correction.
+  assert_eq!(text("I said | I would"), "I said I would");
+  let french = shape(&finished("Café à trois | actually"), phrases(Some("fr")));
+  assert_eq!(french.text(), "Café à trois actually");
+}
+
+#[test]
 fn each_language_takes_its_own_commands() {
   let french = shape(
     &finished("Bonjour Claire | À la ligne. | Tu viens | point d'interrogation"),

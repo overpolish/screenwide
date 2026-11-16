@@ -1469,6 +1469,8 @@ export type Messages = {
   "settings-transcription-dictation-allow-accessibility": null;
   "settings-transcription-dictation-allow-microphone": null;
   "settings-transcription-dictation-at-pauses-description": null;
+  "settings-transcription-dictation-cleanup": null;
+  "settings-transcription-dictation-cleanup-description": null;
   "settings-transcription-dictation-description": null;
   "settings-transcription-dictation-shared-description": null;
   "settings-transcription-download": null;

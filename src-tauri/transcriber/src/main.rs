@@ -187,8 +187,10 @@ fn main() {
           },
           Job::BeginDictation { .. }
           | Job::BeginDictationAtPauses { .. }
+          | Job::BeginDictationRewritten { .. }
           | Job::FeedDictation { .. }
           | Job::FinishDictation => Err("Dictation runs in screenwide-dictation".to_owned()),
+          Job::CorrectText { .. } => Err("Corrections run in screenwide-cleanup".to_owned()),
         };
         result.unwrap_or_else(|message| Reply::Failed { id, message })
       }

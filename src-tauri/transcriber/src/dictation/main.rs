@@ -53,6 +53,25 @@ fn main() {
         &mut lines,
         &mut |reply| send(&mut stdout, reply),
       ),
+      Job::BeginDictationRewritten {
+        model,
+        rewriter,
+        vad,
+        language,
+        words,
+      } => pauses::rewritten::run(
+        &mut dictation,
+        id,
+        pauses::rewritten::Rewritten {
+          model,
+          rewriter,
+          vad,
+          language,
+          words,
+        },
+        &mut lines,
+        &mut |reply| send(&mut stdout, reply),
+      ),
       _ => send(
         &mut stdout,
         &Reply::Failed {

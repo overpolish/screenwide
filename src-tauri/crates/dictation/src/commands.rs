@@ -70,8 +70,8 @@ pub fn shape(heard: &DictatedText, phrases: &Phrases) -> Shaped {
   }
   let settled_words = heard.words.iter().take_while(|word| word.settled).count();
   let steps = steps(heard, phrases);
-  let all = render::render(&heard.words, &steps, (heard.words.len(), phrases.spaced));
-  let settled = render::render(&heard.words, &steps, (settled_words, phrases.spaced));
+  let all = render::render(&heard.words, &steps, (heard.words.len(), phrases));
+  let settled = render::render(&heard.words, &steps, (settled_words, phrases));
   let common = common_prefix(&settled.text, &all.text);
   Shaped {
     settled: all.text[..common].to_owned(),
@@ -182,6 +182,14 @@ fn single(letters: &str) -> String {
 
 fn gap(before: &DictatedWord, after: &DictatedWord) -> u64 {
   after.start_ms.saturating_sub(before.end_ms)
+}
+
+/// Whether the speaker has paused after the last word heard so far.
+pub fn paused(heard: &DictatedText) -> bool {
+  heard
+    .words
+    .last()
+    .is_some_and(|last| silent_after(heard, last))
 }
 
 /// Whether silence has been heard after `last`, the last word so far.

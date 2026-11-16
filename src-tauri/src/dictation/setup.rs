@@ -2,10 +2,13 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 //! What a dictation listens with: the model for the language transcription
-//! is set to, streaming in English and written at each pause otherwise, the
-//! voice activity model that finds those pauses, the word list, and the
-//! spoken commands of that language.
+//! is set to, streaming in English, each stretch then written again once a
+//! pause ends it, and written at each pause otherwise; the voice activity
+//! model that finds those pauses, the word list, the spoken commands of that
+//! language, and in English, once downloaded, the model that corrects what
+//! the speaker corrected as they spoke.
 
+use screenwide_dictation::correct::{CleanupModel, SPEAKOFLOW_MINI};
 use screenwide_dictation::{phrases, AtPauses, Phrases, Setup};
 use screenwide_speech::catalogue::Writes;
 use tauri::AppHandle;
@@ -21,31 +24,38 @@ pub(super) struct Spoken {
   pub at_pauses: bool,
 }
 
-/// The setup for a dictation on `microphone`, or why there can be none.
+/// The setup for a dictation on `microphone`, and its cleanup model if it
+/// has one, or why there can be none.
 pub(super) fn setup(
   app: &AppHandle,
   microphone: Option<String>,
-) -> Result<(Setup, Spoken), DictationProblem> {
+) -> Result<(Setup, Spoken, Option<CleanupModel>), DictationProblem> {
   let language = language::resolved(&language::current());
   let (model, writes) = models::dictation();
-  let path = models::is_downloaded(app, model)
+  let mut paths = models::is_downloaded(app, model)
     .then(|| models::paths(app, model).ok())
     .flatten()
-    .and_then(|paths| paths.into_iter().next())
-    .ok_or(DictationProblem::NoModel)?;
-  let at_pauses = match writes {
-    Writes::AsSpoken => None,
-    Writes::AtPauses => Some(AtPauses {
+    .ok_or(DictationProblem::NoModel)?
+    .into_iter();
+  let path = paths.next().ok_or(DictationProblem::NoModel)?;
+  // A streaming model's second file is the model that writes each stretch
+  // again once a pause ends it.
+  let rewriter = paths.next().filter(|_| writes == Writes::AsSpoken);
+  let at_pauses = if writes == Writes::AtPauses || rewriter.is_some() {
+    Some(AtPauses {
       vad: models::vad_model(app).map_err(|error| {
         eprintln!("Could not dictate: {error}");
         DictationProblem::Failed
       })?,
       language: language.clone(),
-    }),
+      rewriter,
+    })
+  } else {
+    None
   };
   let spoken = Spoken {
     phrases: phrases(language.as_deref()),
-    at_pauses: at_pauses.is_some(),
+    at_pauses: writes == Writes::AtPauses,
   };
   let setup = Setup {
     model: path,
@@ -53,5 +63,13 @@ pub(super) fn setup(
     words: words::current(),
     at_pauses,
   };
-  Ok((setup, spoken))
+  let cleanup = models::dictation_cleanup()
+    .filter(|model| models::is_downloaded(app, model))
+    .and_then(|model| models::paths(app, model).ok())
+    .and_then(|paths| paths.into_iter().next())
+    .map(|path| CleanupModel {
+      path,
+      prompt: SPEAKOFLOW_MINI,
+    });
+  Ok((setup, spoken, cleanup))
 }

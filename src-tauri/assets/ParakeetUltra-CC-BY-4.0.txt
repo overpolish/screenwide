@@ -1,5 +1,6 @@
 Screenwide downloads the transcribe.cpp project's GGUF conversion of Moondream's Parakeet Ultra
-speech recognition model for dictation in European languages, from
+speech recognition model for dictation in European languages, and to write English dictation
+again at each pause, from
 https://huggingface.co/handy-computer/parakeet-ultra-gguf. Parakeet Ultra
 (https://huggingface.co/moondream/parakeet-ultra) is a post-trained version of NVIDIA's
 Parakeet TDT 0.6B v3, converted to GGUF and quantised to 8 bits without other changes. Its

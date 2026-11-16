@@ -5,27 +5,30 @@
 //! listens until let go, and tapped, until tapped again, or until the
 //! island's Stop. Escape or the island's Cancel drops it. It listens in the
 //! language transcription is set to (`setup`). The island shows the words
-//! as they are heard (`island`), its spoken commands carried out, words
-//! added to or removed from the word list by voice confirmed (`taught`),
-//! and when it stops the text is pasted where the caret is
-//! (`screenwide_paste`).
+//! as they are heard (`island`), its spoken commands carried out, its
+//! corrections made in English (`corrections`), words added to or removed
+//! from the word list by voice confirmed (`taught`), and when it stops the
+//! text is pasted where the caret is (`screenwide_paste`).
 //!
 //! Dictation's helper is kept for a few minutes after each dictation, with
 //! its model loaded, so the next one starts at once.
 
+mod corrections;
+mod front;
 pub(crate) mod island;
 mod put_in;
 mod setup;
 mod taught;
 
-use std::sync::{Mutex, MutexGuard, PoisonError};
+use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 use std::time::{Duration, Instant};
 
 use screenwide_dictation::{shape, DictatedText, Ended, Event, Session};
-use screenwide_paste::Target;
 use screenwide_speech::runner::Transcriber;
 use tauri::AppHandle;
 
+use self::corrections::Corrections;
+use self::front::Front;
 use self::island::{DictationIslandState, DictationProblem};
 use self::setup::Spoken;
 
@@ -62,9 +65,10 @@ pub fn set_dictation_microphone(microphone: Option<String>) {
 struct Listening {
   session: Session,
   pressed_at: Instant,
-  /// The app dictated into: the one in front as listening started.
-  target: Option<Target>,
+  /// The app dictated into (`front`).
+  front: Front,
   spoken: Spoken,
+  corrections: Option<Arc<Corrections>>,
 }
 
 static DICTATION: Mutex<Option<Dictation>> = Mutex::new(None);
@@ -106,7 +110,7 @@ pub(crate) fn pressed(app: &AppHandle) {
     || setup::setup(app, with(|dictation| dictation.microphone.clone())),
     Err,
   );
-  let (setup, spoken) = match started {
+  let (setup, spoken, cleanup) = match started {
     Ok(started) => started,
     Err(problem) => {
       island::show_problem(app, problem);
@@ -114,16 +118,23 @@ pub(crate) fn pressed(app: &AppHandle) {
     }
   };
   let events = app.clone();
+  let corrections = cleanup.map(|model| Corrections::start(app, model));
+  let heard_corrections = corrections.clone();
   taught::reset();
   with(|dictation| {
     let helper = dictation.helper.take();
     dictation.used += 1;
     dictation.listening = Some(Listening {
       session: Session::start(setup, helper, move |event| match event {
-        Event::Level(decibels) => island::level(&events, decibels),
+        Event::Level(decibels) => {
+          island::level(&events, decibels);
+          front::follow(&events);
+        }
         // Words still arriving as listening stops would show over the
         // island's Finishing.
-        Event::Heard(heard) if is_listening() => heard_so_far(&events, &heard, spoken),
+        Event::Heard(heard) if is_listening() => {
+          heard_so_far(&events, &heard, spoken, heard_corrections.as_deref());
+        }
         Event::Heard(_) => {}
         // Said as a problem once the session's end says why.
         Event::Failed => {
@@ -132,8 +143,9 @@ pub(crate) fn pressed(app: &AppHandle) {
         }
       }),
       pressed_at: Instant::now(),
-      target: Target::current(),
+      front: Front::now(),
       spoken,
+      corrections,
     });
   });
   island::tell(
@@ -148,19 +160,26 @@ pub(crate) fn pressed(app: &AppHandle) {
   sync_escape(app);
 }
 
-/// Shows what has been heard so far, its commands carried out, and carries
-/// out word list changes as they settle.
-fn heard_so_far(app: &AppHandle, heard: &DictatedText, spoken: Spoken) {
+/// Shows what has been heard so far, its commands carried out and its
+/// corrections made, and carries out word list changes as they settle.
+fn heard_so_far(
+  app: &AppHandle,
+  heard: &DictatedText,
+  spoken: Spoken,
+  corrections: Option<&Corrections>,
+) {
   let shaped = shape(heard, spoken.phrases);
-  island::tell(
-    app,
-    DictationIslandState::Listening {
-      taught: taught::apply(app, &shaped.changes),
-      settled: shaped.settled,
-      unsettled: shaped.unsettled,
-      at_pauses: spoken.at_pauses,
-    },
-  );
+  let state = DictationIslandState::Listening {
+    taught: taught::apply(app, &shaped.changes),
+    settled: shaped.settled,
+    unsettled: shaped.unsettled,
+    at_pauses: spoken.at_pauses,
+  };
+  let state = match corrections {
+    Some(corrections) => corrections.heard(heard, state),
+    None => state,
+  };
+  island::tell(app, state);
 }
 
 /// The Dictate shortcut was let go: a hold stops listening.
@@ -188,6 +207,10 @@ pub(crate) fn cancel(app: &AppHandle) {
 }
 
 fn end(app: &AppHandle, cancelled: bool) {
+  // The app switched to in the moments since it was last looked at.
+  if !cancelled {
+    front::look();
+  }
   let Some(listening) = with(|dictation| {
     let listening = dictation.listening.take();
     dictation.finishing = listening.is_some();
@@ -213,7 +236,15 @@ fn end(app: &AppHandle, cancelled: bool) {
       with(|dictation| dictation.finishing = false);
       return;
     }
-    let outcome = put_in::put_in(&app, heard, (listening.target, listening.spoken.phrases));
+    let outcome = put_in::put_in(
+      &app,
+      heard,
+      (
+        listening.front.target(),
+        listening.spoken.phrases,
+        listening.corrections.as_deref(),
+      ),
+    );
     with(|dictation| dictation.finishing = false);
     match outcome {
       Ok(taught) if taught.is_empty() => island::withdraw(&app),

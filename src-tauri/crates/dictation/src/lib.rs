@@ -10,9 +10,10 @@
 //! (`commands`). Pasting the text is `screenwide-paste`'s.
 
 mod commands;
+pub mod correct;
 mod resample;
 mod session;
 
-pub use commands::{phrases, shape, Does, Phrases, Shaped, WordChange};
+pub use commands::{paused, phrases, shape, Does, Phrases, Shaped, WordChange};
 pub use screenwide_speech::runner::dictation::DictatedText;
 pub use session::{AtPauses, Ended, Event, Session, Setup};
