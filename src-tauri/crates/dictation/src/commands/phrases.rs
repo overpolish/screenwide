@@ -13,7 +13,7 @@ mod western;
 
 use serde::Serialize;
 
-use super::Command::{self, AddWord, Break, Mark, RemoveWord, ScratchThat};
+use super::Command::{self, AddWord, Break, EndList, Mark, RemoveWord, ScratchThat};
 
 /// A language's commands, each as said, how its words are written, and the
 /// numbers that start a list's points.
@@ -71,6 +71,7 @@ pub enum Does {
   ScratchThat,
   NewLine,
   NewParagraph,
+  EndList,
   Punctuation,
   AddWord,
   RemoveWord,
@@ -84,6 +85,7 @@ impl Phrases {
       ScratchThat => (said, Does::ScratchThat, None),
       Break(lines) if lines.len() > 1 => (said, Does::NewParagraph, None),
       Break(_) => (said, Does::NewLine, None),
+      EndList => (said, Does::EndList, None),
       Mark(mark) => (said, Does::Punctuation, Some(mark)),
       AddWord => (said, Does::AddWord, None),
       RemoveWord => (said, Does::RemoveWord, None),
@@ -93,6 +95,7 @@ impl Phrases {
 
 const NEW_LINE: Command = Break("\n");
 const NEW_PARAGRAPH: Command = Break("\n\n");
+const END_LIST: Command = EndList;
 
 /// No commands, words written apart: a language without commands, or one
 /// still to be detected.
@@ -137,6 +140,8 @@ const ENGLISH: Phrases = Phrases {
     ("new line", NEW_LINE),
     ("next line", NEW_LINE),
     ("new paragraph", NEW_PARAGRAPH),
+    ("end list", END_LIST),
+    ("end of list", END_LIST),
     ("comma", Mark(',')),
     ("full stop", Mark('.')),
     ("period", Mark('.')),

@@ -509,6 +509,8 @@ settings-dictation-commands-description = Say a command on its own, with a pause
 settings-dictation-command-scratch = Take back the last sentence
 settings-dictation-command-new-line = New line
 settings-dictation-command-new-paragraph = New paragraph
+# Ends a numbered list, so what follows starts a new paragraph instead of running on in its last point.
+settings-dictation-command-end-list = End a list
 settings-dictation-command-punctuation = Punctuation
 settings-dictation-command-add-word = Add a word
 settings-dictation-command-remove-word = Remove a word
@@ -523,6 +525,9 @@ settings-dictation-sample-after = Let's meet on Friday.
 settings-dictation-sample-greeting = Dear Sam,
 settings-dictation-sample-thanks = Thanks for coming to the review.
 settings-dictation-sample-question = Can you make it on Friday
+# The two points of a numbered list, each written after its number.
+settings-dictation-sample-list-first = Book the room.
+settings-dictation-sample-list-second = Send the agenda.
 settings-dictation-sample-word = I recorded the demo with Screenwide.
 # A word spelled out letter by letter, and the word it adds or removes.
 settings-dictation-sample-added-spelled = S C R E E N W I D E

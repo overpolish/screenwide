@@ -49,7 +49,7 @@ pub(super) fn points(
         starts_sentence = text.ends_with(SENTENCE_ENDS);
       }
       Step::Command { command, to, .. } if to <= upto => match command {
-        Command::ScratchThat | Command::Break(_) => starts_sentence = true,
+        Command::ScratchThat | Command::Break(_) | Command::EndList => starts_sentence = true,
         Command::Mark(mark) => starts_sentence = SENTENCE_ENDS.contains(&mark),
         Command::AddWord | Command::RemoveWord => {}
       },

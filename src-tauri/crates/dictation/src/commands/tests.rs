@@ -163,6 +163,38 @@ fn numbers_starting_the_points_of_a_list_are_written_as_digits() {
 }
 
 #[test]
+fn end_list_closes_the_last_point_so_what_follows_starts_a_paragraph() {
+  assert_eq!(
+    text("The agenda. One, review the build. Two, ship it. | End list. | He said hi."),
+    "The agenda.\n1. Review the build.\n2. Ship it.\n\nHe said hi."
+  );
+  assert_eq!(
+    text(
+      "The agenda. One, review the build. Two, test dictation. Three, ship it. | End list. | He \
+       said open quote see you at noon close quote and left."
+    ),
+    "The agenda.\n1. Review the build.\n2. Test dictation.\n3. Ship it.\n\nHe said \"see you at \
+     noon\" and left."
+  );
+  assert_eq!(
+    text("Ship it. | New paragraph. | He said open quote see you at noon close quote and left."),
+    "Ship it.\n\nHe said \"see you at noon\" and left."
+  );
+  assert_eq!(
+    text("Ship it. | End list. | He said, open quote, see you at noon, close quote, and left."),
+    "Ship it.\n\nHe said, \"see you at noon,\" and left."
+  );
+  let french = shape(
+    &finished("Un, acheter du pain. Deux, appeler Sam. | Fin de liste. | Merci."),
+    phrases(Some("fr")),
+  );
+  assert_eq!(
+    french.text(),
+    "1. Acheter du pain.\n2. Appeler Sam.\n\nMerci."
+  );
+}
+
+#[test]
 fn numbers_that_start_no_list_are_written_as_heard() {
   for said in [
     "One of them came. Three days later, two more.",

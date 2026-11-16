@@ -111,12 +111,8 @@ pub(super) fn render(
         command, to, word, ..
       } if *to <= upto => match command {
         Command::ScratchThat => scratch_last_sentence(&mut text),
-        Command::Break(lines) => {
-          text.truncate(text.trim_end_matches(' ').len());
-          if !text.is_empty() {
-            text.push_str(lines);
-          }
-        }
+        Command::Break(lines) => push_break(&mut text, lines),
+        Command::EndList => push_break(&mut text, "\n\n"),
         Command::Mark(mark) => {
           text.truncate(
             text
@@ -141,6 +137,14 @@ fn push_recased<I: Iterator<Item = char>>(text: &mut String, word: &str, recase:
   let mut letters = word.chars();
   text.extend(letters.next().into_iter().flat_map(recase));
   text.push_str(letters.as_str());
+}
+
+/// Ends the line with `lines`, unless nothing is written yet.
+fn push_break(text: &mut String, lines: &str) {
+  text.truncate(text.trim_end_matches(' ').len());
+  if !text.is_empty() {
+    text.push_str(lines);
+  }
 }
 
 /// Whether the speaker paused between the words at `before` and `at`, and

@@ -12,6 +12,7 @@ const KINDS: { does: DictationCommandKind; subject: DictationSubject }[] = [
   { does: "scratchThat", subject: "scratch" },
   { does: "newLine", subject: "newLine" },
   { does: "newParagraph", subject: "newParagraph" },
+  { does: "endList", subject: "endList" },
   { does: "punctuation", subject: "punctuation" },
   { does: "addWord", subject: "addWord" },
   { does: "removeWord", subject: "removeWord" },
@@ -25,6 +26,8 @@ const title = (does: DictationCommandKind) => {
       return t("settings-dictation-command-new-line");
     case "newParagraph":
       return t("settings-dictation-command-new-paragraph");
+    case "endList":
+      return t("settings-dictation-command-end-list");
     case "punctuation":
       return t("settings-dictation-command-punctuation");
     case "addWord":

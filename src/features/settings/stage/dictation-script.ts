@@ -21,6 +21,7 @@ export const DICTATION_SUBJECTS = [
   "scratch",
   "newLine",
   "newParagraph",
+  "endList",
   "punctuation",
   "addWord",
   "removeWord",
@@ -132,6 +133,22 @@ function script(
             broken,
           ),
           ...sentence(t("settings-dictation-sample-thanks"), 3, broken),
+        ],
+      };
+    }
+    case "endList": {
+      const list = `1. ${t("settings-dictation-sample-list-first")}\n2. ${t("settings-dictation-sample-list-second")}`;
+      const ended = `${list}\n\n`;
+      return {
+        hold: 2,
+        steps: [
+          ...sentence(list, 0),
+          ...command(
+            [`${list} `, phrase(commands, "endList") ?? ""],
+            1.6,
+            ended,
+          ),
+          ...sentence(t("settings-dictation-sample-thanks"), 3.2, ended),
         ],
       };
     }

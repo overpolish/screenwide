@@ -5,7 +5,7 @@
 //! their marks full width and their words without spaces.
 
 use super::super::Command::{AddWord, Mark, RemoveWord, ScratchThat};
-use super::{Phrases, NEW_LINE, NEW_PARAGRAPH};
+use super::{Phrases, END_LIST, NEW_LINE, NEW_PARAGRAPH};
 
 // Whisper writes some Japanese commands said on their own as words that
 // sound alike (開業 for 改行), so each has a phrase it writes as said: 次の
@@ -18,6 +18,8 @@ pub(super) const JAPANESE: Phrases = Phrases {
     ("次の行", NEW_LINE),
     ("改段落", NEW_PARAGRAPH),
     ("新しい段落", NEW_PARAGRAPH),
+    ("リスト終わり", END_LIST),
+    ("箇条書き終わり", END_LIST),
     ("読点", Mark('、')),
     ("てん", Mark('、')),
     ("句点", Mark('。')),
@@ -44,6 +46,8 @@ pub(super) const CHINESE: Phrases = Phrases {
     ("撤销", ScratchThat),
     ("换行", NEW_LINE),
     ("新段落", NEW_PARAGRAPH),
+    ("列表结束", END_LIST),
+    ("结束列表", END_LIST),
     ("逗号", Mark('，')),
     ("句号", Mark('。')),
     ("问号", Mark('？')),
@@ -65,6 +69,7 @@ pub(super) const KOREAN: Phrases = Phrases {
     ("방금 거 지워", ScratchThat),
     ("줄 바꿈", NEW_LINE),
     ("새 단락", NEW_PARAGRAPH),
+    ("목록 끝", END_LIST),
     ("쉼표", Mark(',')),
     ("마침표", Mark('.')),
     ("물음표", Mark('?')),

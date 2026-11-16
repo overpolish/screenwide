@@ -54,6 +54,9 @@ pub enum WordChange {
 enum Command {
   ScratchThat,
   Break(&'static str),
+  /// Ends a list: its last point's line closes, and what follows starts a
+  /// paragraph of its own rather than running on in that point.
+  EndList,
   Mark(char),
   AddWord,
   RemoveWord,

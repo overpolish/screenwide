@@ -42,6 +42,7 @@ export type TranscriptionModel = {
 /** What a spoken command does. */
 export type DictationCommandKind =
   | "addWord"
+  | "endList"
   | "newLine"
   | "newParagraph"
   | "punctuation"

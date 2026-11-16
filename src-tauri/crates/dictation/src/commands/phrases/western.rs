@@ -4,7 +4,7 @@
 //! The commands of French, German, Spanish, Italian, Portuguese and Dutch.
 
 use super::super::Command::{AddWord, Mark, RemoveWord, ScratchThat};
-use super::{Phrases, NEW_LINE, NEW_PARAGRAPH};
+use super::{Phrases, END_LIST, NEW_LINE, NEW_PARAGRAPH};
 
 pub(super) const FRENCH: Phrases = Phrases {
   said: &[
@@ -12,6 +12,7 @@ pub(super) const FRENCH: Phrases = Phrases {
     ("à la ligne", NEW_LINE),
     ("nouvelle ligne", NEW_LINE),
     ("nouveau paragraphe", NEW_PARAGRAPH),
+    ("fin de liste", END_LIST),
     ("virgule", Mark(',')),
     ("point", Mark('.')),
     ("point final", Mark('.')),
@@ -37,6 +38,8 @@ pub(super) const GERMAN: Phrases = Phrases {
     ("lösch das", ScratchThat),
     ("neue Zeile", NEW_LINE),
     ("neuer Absatz", NEW_PARAGRAPH),
+    ("Ende der Liste", END_LIST),
+    ("Liste beenden", END_LIST),
     ("Komma", Mark(',')),
     ("Punkt", Mark('.')),
     ("Fragezeichen", Mark('?')),
@@ -58,6 +61,7 @@ pub(super) const SPANISH: Phrases = Phrases {
     ("borra eso", ScratchThat),
     ("nueva línea", NEW_LINE),
     ("nuevo párrafo", NEW_PARAGRAPH),
+    ("fin de lista", END_LIST),
     ("coma", Mark(',')),
     ("punto", Mark('.')),
     ("punto final", Mark('.')),
@@ -83,6 +87,8 @@ pub(super) const ITALIAN: Phrases = Phrases {
     ("a capo", NEW_LINE),
     ("nuova riga", NEW_LINE),
     ("nuovo paragrafo", NEW_PARAGRAPH),
+    ("fine elenco", END_LIST),
+    ("fine della lista", END_LIST),
     ("virgola", Mark(',')),
     ("punto", Mark('.')),
     ("punto interrogativo", Mark('?')),
@@ -104,6 +110,7 @@ pub(super) const PORTUGUESE: Phrases = Phrases {
     ("apaga isso", ScratchThat),
     ("nova linha", NEW_LINE),
     ("novo parágrafo", NEW_PARAGRAPH),
+    ("fim da lista", END_LIST),
     ("vírgula", Mark(',')),
     ("ponto", Mark('.')),
     ("ponto final", Mark('.')),
@@ -126,6 +133,8 @@ pub(super) const DUTCH: Phrases = Phrases {
     ("schrap dat", ScratchThat),
     ("nieuwe regel", NEW_LINE),
     ("nieuwe alinea", NEW_PARAGRAPH),
+    ("einde lijst", END_LIST),
+    ("einde van de lijst", END_LIST),
     ("komma", Mark(',')),
     ("punt", Mark('.')),
     ("vraagteken", Mark('?')),

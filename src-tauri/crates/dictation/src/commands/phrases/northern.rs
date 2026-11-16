@@ -4,13 +4,14 @@
 //! The commands of Swedish, Danish, Norwegian and Finnish.
 
 use super::super::Command::{AddWord, Mark, RemoveWord, ScratchThat};
-use super::{Phrases, NEW_LINE, NEW_PARAGRAPH};
+use super::{Phrases, END_LIST, NEW_LINE, NEW_PARAGRAPH};
 
 pub(super) const SWEDISH: Phrases = Phrases {
   said: &[
     ("stryk det", ScratchThat),
     ("ny rad", NEW_LINE),
     ("nytt stycke", NEW_PARAGRAPH),
+    ("slut på listan", END_LIST),
     ("kommatecken", Mark(',')),
     ("komma", Mark(',')),
     ("punkt", Mark('.')),
@@ -33,6 +34,7 @@ pub(super) const DANISH: Phrases = Phrases {
     ("slet det", ScratchThat),
     ("ny linje", NEW_LINE),
     ("nyt afsnit", NEW_PARAGRAPH),
+    ("slut på listen", END_LIST),
     ("komma", Mark(',')),
     ("punktum", Mark('.')),
     ("spørgsmålstegn", Mark('?')),
@@ -54,6 +56,7 @@ pub(super) const NORWEGIAN: Phrases = Phrases {
     ("slett det", ScratchThat),
     ("ny linje", NEW_LINE),
     ("nytt avsnitt", NEW_PARAGRAPH),
+    ("slutt på listen", END_LIST),
     ("komma", Mark(',')),
     ("punktum", Mark('.')),
     ("spørsmålstegn", Mark('?')),
@@ -75,6 +78,8 @@ pub(super) const FINNISH: Phrases = Phrases {
     ("poista se", ScratchThat),
     ("uusi rivi", NEW_LINE),
     ("uusi kappale", NEW_PARAGRAPH),
+    ("lista loppuu", END_LIST),
+    ("luettelo loppuu", END_LIST),
     ("pilkku", Mark(',')),
     ("piste", Mark('.')),
     ("kysymysmerkki", Mark('?')),

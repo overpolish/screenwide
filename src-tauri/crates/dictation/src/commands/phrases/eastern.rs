@@ -4,13 +4,14 @@
 //! The commands of Polish, Czech, Russian, Ukrainian and Turkish.
 
 use super::super::Command::{AddWord, Mark, RemoveWord, ScratchThat};
-use super::{Phrases, NEW_LINE, NEW_PARAGRAPH};
+use super::{Phrases, END_LIST, NEW_LINE, NEW_PARAGRAPH};
 
 pub(super) const POLISH: Phrases = Phrases {
   said: &[
     ("usuń to", ScratchThat),
     ("nowa linia", NEW_LINE),
     ("nowy akapit", NEW_PARAGRAPH),
+    ("koniec listy", END_LIST),
     ("przecinek", Mark(',')),
     ("kropka", Mark('.')),
     ("znak zapytania", Mark('?')),
@@ -32,6 +33,7 @@ pub(super) const CZECH: Phrases = Phrases {
     ("smaž to", ScratchThat),
     ("nový řádek", NEW_LINE),
     ("nový odstavec", NEW_PARAGRAPH),
+    ("konec seznamu", END_LIST),
     ("čárka", Mark(',')),
     ("tečka", Mark('.')),
     ("otazník", Mark('?')),
@@ -53,6 +55,7 @@ pub(super) const RUSSIAN: Phrases = Phrases {
     ("удали это", ScratchThat),
     ("новая строка", NEW_LINE),
     ("новый абзац", NEW_PARAGRAPH),
+    ("конец списка", END_LIST),
     ("запятая", Mark(',')),
     ("точка", Mark('.')),
     ("вопросительный знак", Mark('?')),
@@ -74,6 +77,7 @@ pub(super) const UKRAINIAN: Phrases = Phrases {
     ("видали це", ScratchThat),
     ("новий рядок", NEW_LINE),
     ("новий абзац", NEW_PARAGRAPH),
+    ("кінець списку", END_LIST),
     ("кома", Mark(',')),
     ("крапка", Mark('.')),
     ("знак питання", Mark('?')),
@@ -95,6 +99,7 @@ pub(super) const TURKISH: Phrases = Phrases {
     ("bunu sil", ScratchThat),
     ("yeni satır", NEW_LINE),
     ("yeni paragraf", NEW_PARAGRAPH),
+    ("liste sonu", END_LIST),
     ("virgül", Mark(',')),
     ("nokta", Mark('.')),
     ("soru işareti", Mark('?')),

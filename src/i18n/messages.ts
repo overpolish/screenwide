@@ -1182,6 +1182,7 @@ export type Messages = {
   "settings-default-folder": null;
   "settings-dictation": null;
   "settings-dictation-command-add-word": null;
+  "settings-dictation-command-end-list": null;
   "settings-dictation-command-new-line": null;
   "settings-dictation-command-new-paragraph": null;
   "settings-dictation-command-phrase": { phrase: string | number };
@@ -1197,6 +1198,8 @@ export type Messages = {
   "settings-dictation-sample-after": null;
   "settings-dictation-sample-before": null;
   "settings-dictation-sample-greeting": null;
+  "settings-dictation-sample-list-first": null;
+  "settings-dictation-sample-list-second": null;
   "settings-dictation-sample-question": null;
   "settings-dictation-sample-removed": null;
   "settings-dictation-sample-removed-spelled": null;
