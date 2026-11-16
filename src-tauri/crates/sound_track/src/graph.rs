@@ -139,10 +139,13 @@ fn chain(piece: &Piece, path: &Path, (from_ms, to_ms): (u64, u64)) -> String {
 }
 
 /// `labels` summed into `[out]`. `normalize=0`, as for the recorded tracks:
-/// a sound effect starting must not make the song under it quieter.
+/// a sound effect starting must not make the song under it quieter. Every
+/// input starts at the window's start, so the mix is stamped again by its
+/// samples: after a delayed piece, amix stamps its first frame far in the
+/// future, and Media Foundation then cannot open the file.
 fn mixed(labels: &[String], then: &str, out: &str) -> String {
   format!(
-    "{}amix=inputs={}:normalize=0:dropout_transition=0{then}[{out}]",
+    "{}amix=inputs={}:normalize=0:dropout_transition=0,asetpts=N/SR/TB{then}[{out}]",
     labels.concat(),
     labels.len()
   )
