@@ -4,9 +4,10 @@
 //! What has the keyboard in the app in front, as Accessibility tells it. A
 //! field, a text view or a terminal says it is text, or has a value that can
 //! be set or a selection in its text, or sits inside an editable web element;
-//! a web page or Finder's list of files says none of that. An Electron app
-//! that has not been asked for its accessibility says nothing at all, and is
-//! taken to have pasted, as it most often has.
+//! a web page that can be edited nowhere, Screenwide's own pages among them,
+//! or Finder's list of files says none of that. An Electron app that has not
+//! been asked for its accessibility says nothing at all, and is taken to have
+//! pasted, as it most often has.
 
 use cidre::{ax, cf};
 
@@ -17,6 +18,8 @@ const ANSWER: f32 = 0.25;
 /// A web element inside one the person can edit, which Safari and Chrome
 /// tell for every node of a content-editable area.
 const EDITABLE_ANCESTOR: &str = "AXEditableAncestor";
+/// A web page itself, which has the keyboard when none of its fields does.
+const WEB_AREA: &str = "AXWebArea";
 
 /// What has the keyboard in the app whose process is `pid`. That app's own
 /// element is asked: the system-wide element answered that it could not
@@ -38,20 +41,22 @@ pub(super) fn focus(pid: i32) -> Focus {
 }
 
 fn takes_text(element: &ax::UiElement) -> bool {
-  let text_role = element.role().is_ok_and(|role| {
-    [
-      ax::role::text_field(),
-      ax::role::text_area(),
-      ax::role::combo_box(),
-    ]
-    .into_iter()
-    .any(|text| role.equal(text))
-  });
+  let role = element.role().ok();
+  let is = |kind: &ax::Role| role.as_ref().is_some_and(|role| role.equal(kind));
   let editable_ancestor = cf::String::from_str(EDITABLE_ANCESTOR);
-  text_role
-    || element.is_settable(ax::attr::value()).unwrap_or(false)
-    || element.attr_value(ax::attr::selected_text_range()).is_ok()
+  let editable = element.is_settable(ax::attr::value()).unwrap_or(false)
     || element
       .attr_value(ax::Attr::with_string(&editable_ancestor))
-      .is_ok()
+      .is_ok();
+  // A page tells its caret's place for reading even where nothing on it can
+  // be edited, so only being editable makes a page take text.
+  let web_area = cf::String::from_str(WEB_AREA);
+  if is(ax::Role::with_string(&web_area)) {
+    return editable;
+  }
+  is(ax::role::text_field())
+    || is(ax::role::text_area())
+    || is(ax::role::combo_box())
+    || editable
+    || element.attr_value(ax::attr::selected_text_range()).is_ok()
 }

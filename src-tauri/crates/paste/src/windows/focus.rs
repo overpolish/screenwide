@@ -3,10 +3,11 @@
 
 //! What has the keyboard, as UI Automation tells it: a password field, which
 //! nothing typed for may pass through the clipboard, and otherwise whether
-//! it takes text. An edit box, a document or a combo box does, as does
-//! anything with a value that can be set or text to read; a list of files
-//! does not. An app that does not answer is taken to have pasted, as it most
-//! often has.
+//! it takes text. Anything with a value says so by whether the value can be
+//! set; without one, an edit box, a document, a combo box or anything with
+//! text to read does, as a terminal or an editable web element; a list of
+//! files does not. An app that does not answer is taken to have pasted, as
+//! it most often has.
 
 use windows::Win32::System::Com::{
   CoCreateInstance, CoInitializeEx, CoUninitialize, CLSCTX_INPROC_SERVER, COINIT_MULTITHREADED,
@@ -51,6 +52,21 @@ unsafe fn classify(element: &IUIAutomationElement) -> Seen {
     {
       return Seen::Password;
     }
+    // A value said to be read-only settles it: a web page's own document,
+    // which Chromium and WebView2 report as a read-only document with text
+    // to read whenever no field on it has the keyboard, or a field that is
+    // read-only. Notepad's editor and every field typed into say writable.
+    let read_only = element
+      .GetCurrentPatternAs::<IUIAutomationValuePattern>(UIA_ValuePatternId)
+      .and_then(|value| value.CurrentIsReadOnly())
+      .map(|read_only| read_only.as_bool());
+    if let Ok(read_only) = read_only {
+      return Seen::Focus(if read_only {
+        Focus::Elsewhere
+      } else {
+        Focus::TakesText
+      });
+    }
     let text_control = element.CurrentControlType().is_ok_and(|kind| {
       [
         UIA_EditControlTypeId,
@@ -59,12 +75,8 @@ unsafe fn classify(element: &IUIAutomationElement) -> Seen {
       ]
       .contains(&kind)
     });
-    let settable_value = element
-      .GetCurrentPatternAs::<IUIAutomationValuePattern>(UIA_ValuePatternId)
-      .and_then(|value| value.CurrentIsReadOnly())
-      .is_ok_and(|read_only| !read_only.as_bool());
     let text = element.GetCurrentPattern(UIA_TextPatternId).is_ok();
-    Seen::Focus(if text_control || settable_value || text {
+    Seen::Focus(if text_control || text {
       Focus::TakesText
     } else {
       Focus::Elsewhere
