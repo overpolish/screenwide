@@ -36,7 +36,7 @@ On an Apple M4 Pro, each model on the GPU through llama.cpp, the model loaded be
 | Superwhisper S1-mini, 4 bits | 22/27 | 36/37 | 0/37 | 3 | 4 | 21/27 | 37/37 | 0 | 96 | 148 |
 | Gemma 4 E2B, 4 bits | 18/27 | 35/37 | 33/37 | 4 | 13 | 18/27 | 37/37 | 0 | 204 | 341 |
 
-Applied counts the dictations needing a correction that came out as expected, ignoring case and punctuation; Unchanged, those needing none whose words came back as heard, and Exactly, character for character. Words lost counts words both heard and expected that the answer left out. Checked is what dictation pastes: the answer when it passes the lost-word check (`src/correct/kept.rs`), and the text as heard when it does not.
+Each answer is scored with the line breaks of the text as heard and no others (`src/correct/lines.rs`), as dictation takes it. Applied counts the dictations needing a correction that came out as expected, ignoring case and punctuation; Unchanged, those needing none whose words came back as heard, and Exactly, character for character. Words lost counts words both heard and expected that the answer left out. Checked is what dictation pastes: the answer when it passes the lost-word check (`src/correct/kept.rs`), and the text as heard when it does not.
 
 - S1-mini changed one clean word ("third" to "3rd") but punctuates every answer, so none comes back exactly; it missed corrections without a marking word.
 - Gemma 4 E2B, a general model, left most corrections without a marking word undone and answered a dictated question ("Paris").

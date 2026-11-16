@@ -69,8 +69,7 @@ const NUMBERS: [&str; 31] = [
 
 /// Whether `corrected` keeps everything said in `heard` but what the speaker
 /// replaced, its line breaks too, which were said as commands, and is not
-/// empty where something was said. A correction may break lines the speaker
-/// did not, as in a letter's greeting.
+/// empty where something was said.
 pub fn kept(heard: &str, corrected: &str) -> bool {
   if corrected.trim().matches('\n').count() < heard.trim().matches('\n').count() {
     return false;
@@ -150,7 +149,7 @@ fn is_number(word: &str) -> bool {
 /// Each heard word's place among the corrected words, where it has one: the
 /// longest run of words the two share, a heard word repeated later taken as
 /// the one kept, since a speaker replaces what they said first.
-fn lined_up(said: &[String], wrote: &[String]) -> Vec<Option<usize>> {
+pub(super) fn lined_up(said: &[String], wrote: &[String]) -> Vec<Option<usize>> {
   let (n, m) = (said.len(), wrote.len());
   // shared[i][j]: how many words said[i..] and wrote[j..] share in order.
   let mut shared = vec![vec![0_usize; m + 1]; n + 1];
@@ -183,17 +182,20 @@ fn lined_up(said: &[String], wrote: &[String]) -> Vec<Option<usize>> {
 fn words(text: &str) -> Vec<String> {
   text
     .split_whitespace()
-    .map(|word| {
-      word
-        .chars()
-        .filter(|letter| letter.is_alphanumeric() || *letter == '\'')
-        .flat_map(char::to_lowercase)
-        .collect::<String>()
-        .trim_matches('\'')
-        .to_owned()
-    })
+    .map(word)
     .filter(|word| !word.is_empty())
     .collect()
+}
+
+/// One word as compared, empty if it is only punctuation.
+pub(super) fn word(written: &str) -> String {
+  written
+    .chars()
+    .filter(|letter| letter.is_alphanumeric() || *letter == '\'')
+    .flat_map(char::to_lowercase)
+    .collect::<String>()
+    .trim_matches('\'')
+    .to_owned()
 }
 
 #[cfg(test)]
@@ -209,10 +211,6 @@ mod tests {
     assert!(kept(
       "The new design is faster, much faster than before",
       "The new design is much faster than before"
-    ));
-    assert!(kept(
-      "Dear Sam,\nThanks for coming to the review",
-      "Dear Sam,\n\nThanks for coming to the review"
     ));
     assert!(kept(
       "The meeting is on Monday, on Tuesday at ten.",

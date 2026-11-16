@@ -18,7 +18,7 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::time::Instant;
 
-use screenwide_dictation::correct::{kept, SPEAKOFLOW_MINI};
+use screenwide_dictation::correct::{kept, said_lines, SPEAKOFLOW_MINI};
 use screenwide_dictation::{phrases, shape};
 use screenwide_speech::runner::Transcriber;
 
@@ -227,11 +227,14 @@ fn corrected(recordings: &[Recording], heard: &mut [Heard], model: &Path) -> Res
     if !recording.own {
       continue;
     }
-    let answer = cleanup.correct_text(
-      model.to_owned(),
-      instructions.clone(),
-      SPEAKOFLOW_MINI.message(&heard.text),
-    )?;
+    let answer = said_lines(
+      &heard.text,
+      &cleanup.correct_text(
+        model.to_owned(),
+        instructions.clone(),
+        SPEAKOFLOW_MINI.message(&heard.text),
+      )?,
+    );
     heard.corrected = Some(if kept(&heard.text, &answer) {
       answer
     } else {

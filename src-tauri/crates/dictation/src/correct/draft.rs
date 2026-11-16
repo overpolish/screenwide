@@ -22,9 +22,10 @@ pub(super) struct Draft {
   /// Heard text whose correction will not change, and that correction.
   settled_heard: String,
   settled_text: String,
-  /// Counts the times the settled text was let go, when what was heard no
-  /// longer begins with it ("scratch that"), so an answer for it is not
-  /// taken for one about the text after.
+  /// Counts the times the settled text changed: let go when what was heard
+  /// no longer begins with it ("scratch that"), or grown by an answer. An
+  /// answer asked for in an earlier round was about open text that has
+  /// since moved, and is not taken.
   round: u64,
   /// The open text last corrected, and its correction.
   answered: Option<(String, String)>,
@@ -82,9 +83,14 @@ impl Draft {
     }
   }
 
-  /// Takes `answer` as the correction of `open`, settling all but its last
-  /// sentence.
-  pub fn answer(&mut self, open: &str, answer: String) {
+  /// Takes `answer`, asked for in `round`, as the correction of `open`,
+  /// settling all but its last sentence. The same open text can be asked
+  /// for again while its first answer is on its way; once that answer has
+  /// settled sentences, the second is stale and would settle them twice.
+  pub fn answer(&mut self, round: u64, open: &str, answer: String) {
+    if round != self.round {
+      return;
+    }
     let heard_starts = sentence_starts(open);
     let answer_starts = sentence_starts(&answer);
     if let (Some(&heard), Some(&written), true) = (
@@ -95,10 +101,12 @@ impl Draft {
       self.settled_heard.push_str(&open[..heard]);
       self.settled_text.push_str(&answer[..written]);
       self.answered = Some((open[heard..].to_owned(), answer[written..].to_owned()));
+      self.round += 1;
     } else if open.split_whitespace().count() > MOST_OPEN_WORDS {
       self.settled_heard.push_str(open);
       self.settled_text.push_str(&answer);
       self.answered = None;
+      self.round += 1;
     } else {
       self.answered = Some((open.to_owned(), answer));
     }
@@ -135,7 +143,7 @@ mod tests {
   fn all_but_the_last_sentence_settles() {
     let mut draft = Draft::default();
     let open = draft.open("At 2, actually 3. Then lunch, no").to_owned();
-    draft.answer(&open, "At 3. Then lunch, no".to_owned());
+    draft.answer(draft.round(), &open, "At 3. Then lunch, no".to_owned());
     assert_eq!(draft.settled_text, "At 3. ");
     assert_eq!(
       draft
@@ -152,7 +160,7 @@ mod tests {
   #[test]
   fn the_stream_punctuates_after_a_correction() {
     let mut draft = Draft::default();
-    draft.answer("At 2, actually 3", "At 3.".to_owned());
+    draft.answer(draft.round(), "At 2, actually 3", "At 3.".to_owned());
     assert_eq!(
       draft.corrected("At 2, actually 3, then lunch").0,
       "At 3, then lunch"
@@ -161,6 +169,18 @@ mod tests {
       draft.corrected("At 2, actually 3."),
       ("At 3.".to_owned(), true)
     );
+  }
+
+  #[test]
+  fn an_answer_asked_again_while_the_first_was_coming_is_not_taken() {
+    let mut draft = Draft::default();
+    let text = "At 2, actually 3. Then lunch";
+    let round = draft.round();
+    let open = draft.open(text).to_owned();
+    draft.answer(round, &open, "At 3. Then lunch".to_owned());
+    draft.answer(round, &open, "At 3. Then lunch".to_owned());
+    assert_eq!(draft.corrected(text).0, "At 3. Then lunch");
+    assert_eq!(draft.open(text), "Then lunch");
   }
 
   #[test]

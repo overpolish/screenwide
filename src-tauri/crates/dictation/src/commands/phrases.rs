@@ -15,7 +15,8 @@ use serde::Serialize;
 
 use super::Command::{self, AddWord, Break, Mark, RemoveWord, ScratchThat};
 
-/// A language's commands, each as said, and how its words are written.
+/// A language's commands, each as said, how its words are written, and the
+/// numbers that start a list's points.
 #[derive(Debug)]
 pub struct Phrases {
   pub(super) said: &'static [(&'static str, Command)],
@@ -26,6 +27,26 @@ pub struct Phrases {
   /// speech model leaves out, which tells the cleanup model a correction
   /// follows. Only English has them, the one language corrections run in.
   pub(super) corrections: &'static [&'static str],
+  /// One to ten as said, in order and as compared: lower case, without
+  /// apostrophes, each form a number takes joined by `|` ("un|une"). Said on
+  /// their own to start the points of a list, they are written as digits.
+  /// Chinese, Japanese and Korean have none: their numbers are single
+  /// syllables that are as often words of their own or parts of others.
+  pub(super) numbers: &'static str,
+  /// The word said before a word or number to write it as a hashtag
+  /// ("closes hashtag 50" as "closes #50"). Only English has it.
+  pub(super) hashtag: Option<Hashtag>,
+}
+
+/// "Hashtag" said for the mark, and the words round it that make it the
+/// noun instead ("add a hashtag to the post"), lower case.
+#[derive(Debug)]
+pub(super) struct Hashtag {
+  pub said: &'static str,
+  /// Said before it: "a hashtag", "the hashtag", "which hashtag".
+  pub before_it: &'static [&'static str],
+  /// Said after it: "hashtag to", "hashtag is".
+  pub after_it: &'static [&'static str],
 }
 
 /// What a spoken command does, as Settings lists them.
@@ -64,6 +85,8 @@ const NONE: Phrases = Phrases {
   said: &[],
   spaced: true,
   corrections: &[],
+  numbers: "",
+  hashtag: None,
 };
 
 /// The commands said in `language`, a code such as `fr`.
@@ -120,4 +143,16 @@ const ENGLISH: Phrases = Phrases {
     "or rather",
     "make that",
   ],
+  numbers: "one two three four five six seven eight nine ten",
+  hashtag: Some(Hashtag {
+    said: "hashtag",
+    before_it: &[
+      "a", "an", "the", "this", "that", "each", "every", "any", "no", "one", "my", "your", "our",
+      "their", "his", "her", "its", "which", "what", "new",
+    ],
+    after_it: &[
+      "to", "for", "in", "on", "at", "of", "and", "or", "is", "was", "are", "with", "from", "that",
+      "here", "there",
+    ],
+  }),
 };

@@ -22,6 +22,8 @@ pub(super) const POLISH: Phrases = Phrases {
   ],
   spaced: true,
   corrections: &[],
+  numbers: "jeden|jedna|jedno dwa|dwie trzy cztery pięć sześć siedem osiem dziewięć dziesięć",
+  hashtag: None,
 };
 
 pub(super) const CZECH: Phrases = Phrases {
@@ -40,6 +42,8 @@ pub(super) const CZECH: Phrases = Phrases {
   ],
   spaced: true,
   corrections: &[],
+  numbers: "jeden|jedna|jedno dva|dvě tři čtyři pět šest sedm osm devět deset",
+  hashtag: None,
 };
 
 pub(super) const RUSSIAN: Phrases = Phrases {
@@ -58,6 +62,8 @@ pub(super) const RUSSIAN: Phrases = Phrases {
   ],
   spaced: true,
   corrections: &[],
+  numbers: "один|одна|одно два|две три четыре пять шесть семь восемь девять десять",
+  hashtag: None,
 };
 
 pub(super) const UKRAINIAN: Phrases = Phrases {
@@ -76,6 +82,8 @@ pub(super) const UKRAINIAN: Phrases = Phrases {
   ],
   spaced: true,
   corrections: &[],
+  numbers: "один|одна|одне два|дві три чотири пять шість сім вісім девять десять",
+  hashtag: None,
 };
 
 pub(super) const TURKISH: Phrases = Phrases {
@@ -94,4 +102,6 @@ pub(super) const TURKISH: Phrases = Phrases {
   ],
   spaced: true,
   corrections: &[],
+  numbers: "bir iki üç dört beş altı yedi sekiz dokuz on",
+  hashtag: None,
 };

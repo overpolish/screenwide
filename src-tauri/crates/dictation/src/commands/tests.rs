@@ -142,6 +142,57 @@ fn a_pause_before_a_correction_takes_a_comma() {
 }
 
 #[test]
+fn numbers_starting_the_points_of_a_list_are_written_as_digits() {
+  assert_eq!(
+    text("One. The transcript goes into a file. | Three. It is read. | 4. It is checked."),
+    "1. The transcript goes into a file.\n3. It is read.\n4. It is checked."
+  );
+  assert_eq!(
+    text("Two steps. One, the transcript goes into a file. Two, it is read."),
+    "Two steps.\n1. The transcript goes into a file.\n2. It is read."
+  );
+  assert_eq!(
+    text("Shopping | new line. | One, eggs. | New line. | Two, flour."),
+    "Shopping\n1. Eggs.\n2. Flour."
+  );
+  let german = shape(
+    &finished("Eins, Eier kaufen. Zwei, Mehl holen."),
+    phrases(Some("de")),
+  );
+  assert_eq!(german.text(), "1. Eier kaufen.\n2. Mehl holen.");
+}
+
+#[test]
+fn numbers_that_start_no_list_are_written_as_heard() {
+  for said in [
+    "One of them came. Three days later, two more.",
+    "One, two, three, go. One, two, three, stop.",
+    "How many do we need? Two. That should do.",
+    "We started in 2023. 2024, we grew. 2025, we hired.",
+  ] {
+    assert_eq!(text(said), said);
+  }
+  let chinese = shape(&finished("一. 你好。 二. 谢谢。"), phrases(Some("zh")));
+  assert_eq!(chinese.text(), "一.你好。二.谢谢。");
+}
+
+#[test]
+fn hashtag_said_before_a_word_is_written_as_the_mark() {
+  assert_eq!(text("Closes hashtag 50."), "Closes #50.");
+  assert_eq!(text("Hashtag launch week is on."), "#launch week is on.");
+  for said in [
+    "Add a hashtag to the post.",
+    "Which hashtag do we use?",
+    "The hashtag is trending.",
+    "Nobody said hashtag.",
+  ] {
+    assert_eq!(text(said), said);
+  }
+  let french = shape(&finished("Ferme hashtag 50."), phrases(Some("fr")));
+  assert_eq!(french.text(), "Ferme hashtag 50.");
+}
+
+#[test]
 fn each_language_takes_its_own_commands() {
   let french = shape(
     &finished("Bonjour Claire | À la ligne. | Tu viens | point d'interrogation"),

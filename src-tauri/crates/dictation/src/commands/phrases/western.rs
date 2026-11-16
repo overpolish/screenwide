@@ -26,6 +26,8 @@ pub(super) const FRENCH: Phrases = Phrases {
   ],
   spaced: true,
   corrections: &[],
+  numbers: "un|une deux trois quatre cinq six sept huit neuf dix",
+  hashtag: None,
 };
 
 pub(super) const GERMAN: Phrases = Phrases {
@@ -45,6 +47,8 @@ pub(super) const GERMAN: Phrases = Phrases {
   ],
   spaced: true,
   corrections: &[],
+  numbers: "eins zwei|zwo drei vier fünf sechs sieben acht neun zehn",
+  hashtag: None,
 };
 
 pub(super) const SPANISH: Phrases = Phrases {
@@ -66,6 +70,8 @@ pub(super) const SPANISH: Phrases = Phrases {
   ],
   spaced: true,
   corrections: &[],
+  numbers: "uno|una dos tres cuatro cinco seis siete ocho nueve diez",
+  hashtag: None,
 };
 
 pub(super) const ITALIAN: Phrases = Phrases {
@@ -85,6 +91,8 @@ pub(super) const ITALIAN: Phrases = Phrases {
   ],
   spaced: true,
   corrections: &[],
+  numbers: "uno|una due tre quattro cinque sei sette otto nove dieci",
+  hashtag: None,
 };
 
 pub(super) const PORTUGUESE: Phrases = Phrases {
@@ -104,6 +112,8 @@ pub(super) const PORTUGUESE: Phrases = Phrases {
   ],
   spaced: true,
   corrections: &[],
+  numbers: "um|uma dois|duas três quatro cinco seis sete oito nove dez",
+  hashtag: None,
 };
 
 pub(super) const DUTCH: Phrases = Phrases {
@@ -122,4 +132,6 @@ pub(super) const DUTCH: Phrases = Phrases {
   ],
   spaced: true,
   corrections: &[],
+  numbers: "een|één twee drie vier vijf zes zeven acht negen tien",
+  hashtag: None,
 };
