@@ -3,6 +3,7 @@
 
 use super::ring::{fill_ring, Keep};
 use super::*;
+use crate::listening::Heard;
 
 impl RawSink {
   pub(super) fn start(
@@ -15,6 +16,7 @@ impl RawSink {
     let (path, ring) = match &keep {
       Keep::File(path) => (Some(path.clone()), None),
       Keep::Ring(ring) => (None, Some(Arc::clone(ring))),
+      Keep::Listened(..) => (None, None),
     };
     let worker = thread::Builder::new()
       .name("screenwide-windows-audio-writer".to_owned())
@@ -22,6 +24,20 @@ impl RawSink {
         Keep::File(path) => write_raw(path, sample_rate, channels, &origin, packets).map(Some),
         Keep::Ring(ring) => {
           fill_ring(&ring, sample_rate, channels, &origin, packets);
+          Ok(None)
+        }
+        Keep::Listened(listener, source) => {
+          for mut packet in packets {
+            if let Some(origin) = on_timeline(&mut packet, &origin, sample_rate, channels) {
+              listener(Heard {
+                source,
+                samples: packet.samples,
+                channels,
+                sample_rate,
+                at: packet.captured_at.saturating_duration_since(origin),
+              });
+            }
+          }
           Ok(None)
         }
       })

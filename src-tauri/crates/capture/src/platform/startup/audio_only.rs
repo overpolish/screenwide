@@ -9,8 +9,34 @@ use super::microphone_stream;
 use super::writer_thread::{spawn_replay_writer, WriterThread};
 use super::Sink;
 use crate::encoding::FailureReport;
+use crate::listening::Listener;
 use crate::monitor::RecordingMonitor;
 use crate::SystemAudioSelection;
+
+/// What an audio-only capture makes of what it hears.
+pub(in super::super) enum AudioSink {
+  /// What a capture of the screen would make of it.
+  Written(Sink),
+  /// Handed to a listener as it arrives, nothing kept.
+  Listened(Listener),
+}
+
+/// Listens to the microphone and the computer's audio as `listening` says,
+/// handing what is heard to `listener` and writing nothing.
+pub(in super::super) async fn listen(
+  listening: crate::listening::Listening,
+  listener: Listener,
+) -> Result<CaptureStart, String> {
+  begin(
+    listening.microphone_id,
+    listening.monitor,
+    listening.on_failure,
+    PathBuf::new(),
+    listening.system_audio,
+    AudioSink::Listened(listener),
+  )
+  .await
+}
 
 pub(super) async fn begin(
   microphone_id: Option<String>,
@@ -18,7 +44,7 @@ pub(super) async fn begin(
   on_failure: FailureReport,
   path: PathBuf,
   system_audio: SystemAudioSelection,
-  sink: Sink,
+  sink: AudioSink,
 ) -> Result<CaptureStart, String> {
   let microphone_source = microphone_id
     .as_deref()
@@ -27,9 +53,10 @@ pub(super) async fn begin(
   let microphone_format = microphone_source.as_ref().map(MicrophoneSource::format);
   let stats = Arc::new(CaptureStats::default());
   let timeline_origin = Arc::new(OnceLock::new());
-  let holds_notes = matches!(sink, Sink::Movie);
+  let holds_notes = matches!(sink, AudioSink::Written(Sink::Movie));
   let (commands, first_framed, worker) = match sink {
-    Sink::Movie => {
+    AudioSink::Listened(listener) => super::super::listening::spawn(listener, microphone_format)?,
+    AudioSink::Written(Sink::Movie) => {
       let (commands, inbox) = mpsc::sync_channel(FRAME_QUEUE_DEPTH);
       let (first_frame, first_framed) = mpsc::channel();
       let writer = AudioWriter::new(
@@ -45,7 +72,7 @@ pub(super) async fn begin(
         .map_err(|error| error.to_string())?;
       (commands, first_framed, worker)
     }
-    Sink::Replay { length } => {
+    AudioSink::Written(Sink::Replay { length }) => {
       let WriterThread {
         commands,
         first_frame,

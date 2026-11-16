@@ -7,6 +7,7 @@ import {
   Flag,
   type LucideIcon,
   Mic,
+  NotebookPen,
   PanelsTopLeft,
   PenLine,
   Ruler,
@@ -24,6 +25,7 @@ import {
   dictationShortcuts,
   type GlobalShortcut,
   keepAwakeShortcuts,
+  notesShortcuts,
   recordingShortcuts,
   screenshotShortcuts,
 } from "../sections/global-shortcuts";
@@ -271,6 +273,13 @@ export function shortcutEntries(sources: ShortcutSources): ShortcutEntry[] {
   entries.push(
     ...dictationShortcuts().map((item) =>
       global({ ...item, group: dictation, icon: Mic }),
+    ),
+  );
+
+  const notes = t("settings-notes");
+  entries.push(
+    ...notesShortcuts().map((item) =>
+      global({ ...item, group: notes, icon: NotebookPen }),
     ),
   );
 

@@ -23,6 +23,7 @@ mod framer;
 pub mod heard;
 pub mod noise;
 mod pause_gate;
+pub mod resample;
 pub mod runner;
 pub mod silences;
 pub mod studio;

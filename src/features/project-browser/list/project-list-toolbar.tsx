@@ -14,6 +14,7 @@ const kindItems = (): { id: KindFilter; label: string }[] => [
   { id: "camera", label: t("project-browser-kind-camera") },
   { id: "audio", label: t("project-browser-kind-audio") },
   { id: "screenshot", label: t("project-browser-kind-screenshot") },
+  { id: "notes", label: t("project-browser-kind-notes") },
 ];
 
 export type ProjectListToolbarProps = {

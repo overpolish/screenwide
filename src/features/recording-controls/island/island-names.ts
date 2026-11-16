@@ -28,6 +28,7 @@ export const inputName = (kind: IslandInputKind) =>
 export const modeName = (mode: IslandMode) =>
   ({
     none: t("recording-controls-island-mode-none"),
+    notes: t("recording-controls-island-mode-notes"),
     region: t("recording-controls-mode-region"),
     screen: t("recording-controls-mode-screen"),
     window: t("recording-controls-mode-window"),

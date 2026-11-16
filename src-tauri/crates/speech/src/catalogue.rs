@@ -32,6 +32,9 @@ pub enum Purpose {
   /// Dictation's corrections: what the speaker corrected as they spoke
   /// ("at 2, actually 3") put right, in English.
   DictationCleanup,
+  /// Meeting notes: a call's speech written out, the other speakers told
+  /// apart.
+  Notes,
 }
 
 impl Purpose {
@@ -45,6 +48,7 @@ impl Purpose {
       Self::Transcripts => screenwide_i18n::t!("settings-transcription-transcripts"),
       Self::Dictation => screenwide_i18n::t!("settings-transcription-dictation"),
       Self::DictationCleanup => screenwide_i18n::t!("settings-transcription-dictation-cleanup"),
+      Self::Notes => screenwide_i18n::t!("settings-transcription-notes"),
     }
   }
 
@@ -66,6 +70,7 @@ impl Purpose {
       Self::DictationCleanup => {
         screenwide_i18n::t!("settings-transcription-dictation-cleanup-description")
       }
+      Self::Notes => screenwide_i18n::t!("settings-transcription-notes-description"),
     }
   }
 }
@@ -157,6 +162,31 @@ pub const MODELS: &[Model] = &[
     }],
     id: "speakoflow-mini-0.8b-q8_0",
     purpose: Purpose::DictationCleanup,
+  },
+  // Meeting notes: Parakeet Ultra writes each stretch of a call, and NVIDIA's
+  // Nemotron 3 Diarization (OpenMDW-1.1, its own 8-bit GGUF at a fixed
+  // revision) tells up to eight voices apart over the whole call, twelve
+  // minutes in under two seconds on an M4 Pro. A call with more is told apart
+  // in windows joined by each voice's fingerprint from 3D-Speaker's CAM++
+  // (English, VoxCeleb; Apache-2.0), in sherpa-onnx's ONNX export.
+  Model {
+    files: &[
+      PARAKEET_ULTRA,
+      ModelFile {
+        name: "Nemotron-3-Diarization.q8_0.gguf",
+        sha256: "08456d9e22cd9a323c0364d98375f3746d6e68507ebb705cd46438c534c7a3a1",
+        size_bytes: 107_012_128,
+        url: "https://huggingface.co/nvidia/Nemotron-3-Diarization/resolve/52a432672732425e4c19765b9fec9b5810e6f4ba/Nemotron-3-Diarization.q8_0.gguf",
+      },
+      ModelFile {
+        name: "3dspeaker_speech_campplus_sv_en_voxceleb_16k.onnx",
+        sha256: "357a834f702b80161e5b981182c038e18553c1f2ca752ed6cec2052365d4129b",
+        size_bytes: 29_596_978,
+        url: "https://github.com/k2-fsa/sherpa-onnx/releases/download/speaker-recongition-models/3dspeaker_speech_campplus_sv_en_voxceleb_16k.onnx",
+      },
+    ],
+    id: "notes-ultra-nemotron-3-diarization-q8_0",
+    purpose: Purpose::Notes,
   },
   // Sidon v0.1 from the University of Tokyo (MIT), its released TorchScript
   // converted to ONNX: a speech encoder and the vocoder that speaks again

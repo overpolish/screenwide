@@ -1,9 +1,9 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import { locations } from "./project-browser-location-fixtures";
 import {
   DELETED,
-  type ProjectLocation,
   type ProjectSummary,
   type ProjectTracks,
   type ScrubStrip,
@@ -11,39 +11,6 @@ import {
 
 // Sample projects for the browser's stories: a library of every kind of
 // project, with stills drawn as small pictures of what each recorded.
-
-/** The projects folder, a folder beside it, one on an external drive, and
- * one on a drive that is not connected, which the sidebar shows disabled. */
-export const locations: ProjectLocation[] = [
-  {
-    available: true,
-    isDefault: true,
-    name: "Screenwide",
-    onOtherDrive: false,
-    path: "/Users/demo/Movies/Screenwide",
-  },
-  {
-    available: true,
-    isDefault: false,
-    name: "Tutorials",
-    onOtherDrive: false,
-    path: "/Users/demo/Documents/Tutorials",
-  },
-  {
-    available: true,
-    isDefault: false,
-    name: "Client work",
-    onOtherDrive: true,
-    path: "/Volumes/Archive/Client work",
-  },
-  {
-    available: false,
-    isDefault: false,
-    name: "Old drive",
-    onOtherDrive: true,
-    path: "/Volumes/Old drive/Recordings",
-  },
-];
 
 /** Times relative to today, so the date groups and the cards' dates read
  * the same whenever the story is opened. */
@@ -76,6 +43,7 @@ const project = (
   kind: "screen",
   // Last edited when it was recorded, unless a project says otherwise.
   modifiedMs: overrides.createdMs ?? daysAgo(0, 10),
+  notesOpening: null,
   replay: false,
   sizeBytes: 148_000_000,
   title,
@@ -139,11 +107,20 @@ export const projects = [
     modifiedMs: daysAgo(0, 11),
     sizeBytes: 22_000_000,
   }),
+  project("Notes 2026-10-06 at 14.00.00", {
+    createdMs: daysAgo(2, 14),
+    durationMs: 1_820_000,
+    kind: "notes",
+    notesOpening:
+      "# Notes 2026-10-06 at 14.00.00\n\n**Me:** Thanks for joining. Let's go through the launch plan for the beta.\n\n**Speaker 1:** The build is ready. We are waiting on the store review, which usually takes two days.\n\n**Speaker 2:** Marketing needs the final screenshots by Thursday.\n",
+    sizeBytes: 4_800,
+    tracks: null,
+  }),
 ];
 
 /** Recent: the projects most recently opened first, which is not the order
  * they were recorded in. */
-export const recentProjects = [8, 0, 3, 1, 6, 2, 4, 5, 7].map(
+export const recentProjects = [8, 0, 9, 3, 1, 6, 2, 4, 5, 7].map(
   (index) => projects[index],
 );
 

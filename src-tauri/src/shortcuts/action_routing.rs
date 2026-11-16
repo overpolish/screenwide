@@ -10,9 +10,9 @@ use super::*;
 /// these events and each listener has to match on the action itself.
 pub(super) const fn action_window(action: ShortcutAction) -> Option<WindowLabel> {
   match action {
-    ShortcutAction::ToggleRecordingControls | ShortcutAction::StartStopRecording => {
-      Some(WindowLabel::Island)
-    }
+    ShortcutAction::ToggleRecordingControls
+    | ShortcutAction::StartStopRecording
+    | ShortcutAction::TakeNotes => Some(WindowLabel::Island),
     // The overlay opens itself in region-edit mode and captures what the user
     // settles on, so the screenshot never goes near the recording controls.
     ShortcutAction::TakeScreenshot | ShortcutAction::TakeReferenceScreenshot => {
@@ -192,6 +192,17 @@ pub(super) fn run_action(app: &AppHandle, action: ShortcutAction) {
     crate::dictation::pressed(app);
     return;
   }
+  // Notes listen to a call and draw nothing, so nothing on screen goes
+  // either. They start from the island's choice of microphone and system
+  // audio, which only its page holds.
+  if action == ShortcutAction::TakeNotes {
+    if crate::notes::is_taking() {
+      crate::notes::stop(app);
+    } else {
+      notify_frontend(app, action);
+    }
+    return;
+  }
   crate::capture_overlays::dismiss_except(app, preserved_capture_overlays(action));
   match action {
     ShortcutAction::ToggleRecordingControls
@@ -233,6 +244,6 @@ pub(super) fn run_action(app: &AppHandle, action: ShortcutAction) {
       let _ = crate::recording::replay::save(app);
     }
     ShortcutAction::ToggleKeepAwake => crate::keep_awake::toggle(app),
-    ShortcutAction::Dictate => unreachable!("handled above"),
+    ShortcutAction::Dictate | ShortcutAction::TakeNotes => unreachable!("handled above"),
   }
 }

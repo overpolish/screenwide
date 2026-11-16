@@ -57,3 +57,11 @@ export const dictationShortcuts = (): GlobalShortcut[] => [
     label: t("settings-shortcut-dictate"),
   },
 ];
+
+export const notesShortcuts = (): GlobalShortcut[] => [
+  {
+    action: "takeNotes",
+    description: t("settings-shortcut-take-notes-description"),
+    label: t("settings-shortcut-take-notes"),
+  },
+];

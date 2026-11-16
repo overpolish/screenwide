@@ -1,0 +1,20 @@
+# SPDX-FileCopyrightText: 2026 overpolish
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+[package]
+name = "screenwide-notes"
+description = "Notes from a call: what the microphone and the computer's audio heard, written as a Markdown transcript with its speakers told apart, keeping no audio"
+version.workspace = true
+authors.workspace = true
+license.workspace = true
+edition.workspace = true
+
+[lints]
+workspace = true
+
+[lib]
+doctest = false
+
+[dependencies]
+screenwide-capture.workspace = true
+screenwide-speech.workspace = true

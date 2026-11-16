@@ -6,6 +6,7 @@
 //! pause ends is written on a thread of its own, so the app's feeds are
 //! answered at once with whatever is written by then.
 
+pub mod notes;
 pub mod rewritten;
 mod stretches;
 mod writer;

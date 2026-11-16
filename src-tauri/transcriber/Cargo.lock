@@ -1703,7 +1703,7 @@ dependencies = [
 [[package]]
 name = "transcribe-cpp"
 version = "0.4.2"
-source = "git+https://github.com/overpolish/transcribe.cpp?rev=e05ac406557283ab7017b88f078b25af863cd5b4#e05ac406557283ab7017b88f078b25af863cd5b4"
+source = "git+https://github.com/overpolish/transcribe.cpp?rev=ef7df188c9b80978b1df0c56c2d21612691f7434#ef7df188c9b80978b1df0c56c2d21612691f7434"
 dependencies = [
  "log",
  "thiserror 2.0.21",
@@ -1713,7 +1713,7 @@ dependencies = [
 [[package]]
 name = "transcribe-cpp-sys"
 version = "0.4.2"
-source = "git+https://github.com/overpolish/transcribe.cpp?rev=e05ac406557283ab7017b88f078b25af863cd5b4#e05ac406557283ab7017b88f078b25af863cd5b4"
+source = "git+https://github.com/overpolish/transcribe.cpp?rev=ef7df188c9b80978b1df0c56c2d21612691f7434#ef7df188c9b80978b1df0c56c2d21612691f7434"
 dependencies = [
  "cmake",
  "serde_json",

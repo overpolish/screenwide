@@ -45,6 +45,7 @@ project-browser-kind-screen = Screen
 project-browser-kind-camera = Camera
 project-browser-kind-audio = Audio
 project-browser-kind-screenshot = Screenshots
+project-browser-kind-notes = Notes
 project-browser-project-count =
     { $count ->
         [one] { $count } project

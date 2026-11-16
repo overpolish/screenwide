@@ -63,3 +63,5 @@ export const NoScreenInputsOff: Story = {
     systemAudio: { isOn: false },
   },
 };
+
+export const Notes: Story = { args: { initialMode: "notes" } };

@@ -21,6 +21,7 @@ const project = (title: string, createdMs: number | null): ProjectSummary => ({
   file: `/projects/${title}.screenwide`,
   kind: "screen",
   modifiedMs: null,
+  notesOpening: null,
   replay: false,
   sizeBytes: null,
   title,

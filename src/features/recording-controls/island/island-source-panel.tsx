@@ -141,6 +141,10 @@ export function SourcePanel({
         ) : (
           <PromptRow prompt={t("recording-controls-island-pick-region")} />
         )
+      ) : mode === "notes" ? (
+        <Text className="rounded-control rounded-b-(--island-list-radius) bg-fill px-inset py-separate">
+          {t("recording-controls-island-notes")}
+        </Text>
       ) : (
         <Text className="rounded-control rounded-b-(--island-list-radius) bg-fill px-inset py-separate">
           {t("recording-controls-island-no-screen", {

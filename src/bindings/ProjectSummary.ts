@@ -3,7 +3,8 @@ import type { ProjectKind } from "./ProjectKind";
 import type { ProjectTracks } from "./ProjectTracks";
 
 /**
- * A project as the browser lists it, read from its manifest alone.
+ * A project as the browser lists it, read from its manifest alone, and for
+ * notes from the start of their Markdown file.
  */
 export type ProjectSummary = { 
 /**
@@ -39,4 +40,9 @@ replay: boolean, title: string,
 /**
  * None for a screenshot, and for a project that could not be read.
  */
-tracks: ProjectTracks | null, };
+tracks: ProjectTracks | null, 
+/**
+ * The start of a notes project's Markdown, for its card to show what
+ * was said; None for other kinds.
+ */
+notesOpening: string | null, };

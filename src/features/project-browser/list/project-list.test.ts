@@ -25,6 +25,7 @@ const project = (
   file: `/projects/${title}.screenwide`,
   kind: "screen",
   modifiedMs: null,
+  notesOpening: null,
   replay: false,
   sizeBytes: null,
   title,

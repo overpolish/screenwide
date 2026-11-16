@@ -44,8 +44,13 @@ import { useUndoDelete } from "./use-undo-delete";
 const message = (cause: unknown) =>
   cause instanceof Error ? cause.message : String(cause);
 
-/** The project browser, kept in step with what is on disk. */
-export function ProjectBrowserWindow() {
+/** The project browser, kept in step with what is on disk. A notes project
+ * opens in place of the projects through `onOpenNotes`, by its manifest. */
+export function ProjectBrowserWindow({
+  onOpenNotes,
+}: {
+  onOpenNotes: (project: string) => void;
+}) {
   const [locations, setLocations] = useState<ProjectLocation[]>([]);
   const [selected, setSelected] = useState(RECENT);
   const [projects, setProjects] = useState<ProjectSummary[] | null>(null);
@@ -139,6 +144,7 @@ export function ProjectBrowserWindow() {
   useEffect(() => {
     for (const project of projects ?? []) {
       const key = `${project.file}@${String(project.modifiedMs)}`;
+      if (project.kind === "notes") continue;
       if (!project.available || requestedRef.current.has(key)) continue;
       requestedRef.current.add(key);
       loadThumbnailRef.current(project.file, key);
@@ -234,6 +240,10 @@ export function ProjectBrowserWindow() {
             }
       }
       onOpen={(file) => {
+        if (projects?.find((one) => one.file === file)?.kind === "notes") {
+          onOpenNotes(file);
+          return;
+        }
         run(opening(openProjectFile(file)));
       }}
       onOpenFile={() => {

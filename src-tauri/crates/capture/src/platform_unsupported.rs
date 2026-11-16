@@ -50,3 +50,20 @@ pub fn begin_blocking(config: CaptureStartupConfig) -> Result<CaptureStart, Stri
 
   Err("Screen recording is not yet implemented on Windows".to_owned())
 }
+
+pub enum ListeningSession {}
+
+impl ListeningSession {
+  pub fn stop(self) {
+    match self {}
+  }
+}
+
+pub fn begin_listening_blocking(
+  listening: super::listening::Listening,
+  listener: super::listening::Listener,
+) -> Result<ListeningSession, String> {
+  let _ = (listening, listener);
+
+  Err("Listening is not implemented on this system".to_owned())
+}

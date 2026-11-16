@@ -6,6 +6,7 @@ import {
   type LucideIcon,
   Monitor,
   MonitorOff,
+  NotebookPen,
   SquareDashed,
 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
@@ -145,6 +146,7 @@ function ProblemDot({ isShown }: { isShown: boolean }) {
 
 const MODE_ICONS: Record<IslandMode, LucideIcon> = {
   none: MonitorOff,
+  notes: NotebookPen,
   region: SquareDashed,
   screen: Monitor,
   window: AppWindow,

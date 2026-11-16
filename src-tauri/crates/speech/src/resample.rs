@@ -1,20 +1,20 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! The microphone brought to what the speech model hears: one channel at
-//! 16 kHz, as 16-bit samples. Everything above what 16 kHz can carry is taken
-//! out first, so it does not fold back into the voice.
+//! Audio brought to what the speech models hear: one channel at 16 kHz, as
+//! 16-bit samples. Everything above what 16 kHz can carry is taken out
+//! first, so it does not fold back into the voice. Dictation and meeting
+//! notes bring their microphones and the computer's audio to it.
 
 use std::f64::consts::PI;
 
-use screenwide_speech::runner::dictation::SAMPLE_RATE;
+use crate::runner::dictation::SAMPLE_RATE;
 
 /// Where the low pass starts to cut, under half of 16 kHz with room for its
 /// slope.
 const CUTOFF_HZ: f64 = 7_000.0;
 
-/// The microphone's samples, as it delivers them, turned into the speech
-/// model's.
+/// A source's samples, as it delivers them, turned into the speech model's.
 pub struct ToSpeech {
   channels: usize,
   /// How far the input moves for each sample out, in input samples.

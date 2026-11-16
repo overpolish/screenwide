@@ -42,9 +42,15 @@ pub fn initialize(app: &AppHandle) {
     load_screenshot_delete_project_after_export(app);
   crate::projects_folder::sweep_cancelled(app);
   // Off the launch path: what has waited 30 days in Recently Deleted goes to
-  // the Trash, which can take a moment for a large project.
+  // the Trash, which can take a moment for a large project, and voice clips
+  // kept a week with notes whose speakers were never named are deleted.
   let expiring = app.clone();
-  tauri::async_runtime::spawn_blocking(move || screenwide_project::expire(&expiring));
+  tauri::async_runtime::spawn_blocking(move || {
+    screenwide_project::expire(&expiring);
+    if let Ok(projects) = crate::projects_folder::projects_directory(&expiring) {
+      screenwide_notes::clips::expire(&projects);
+    }
+  });
   if let Ok(data) = app.path().app_data_dir() {
     screenwide_images::store::initialize(&data);
     screenwide_sound_track::store::initialize(&data);

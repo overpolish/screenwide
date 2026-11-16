@@ -102,6 +102,8 @@ pub enum ShortcutAction {
   ToggleKeepAwake,
   /// Held, dictates until let go; tapped, until tapped again.
   Dictate,
+  /// Starts notes of a call; pressed while they are taken, stops them.
+  TakeNotes,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize, TS)]

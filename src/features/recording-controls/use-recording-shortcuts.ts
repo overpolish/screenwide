@@ -4,11 +4,12 @@
 import { listen, UnlistenFn } from "@tauri-apps/api/event";
 import { useEffect } from "react";
 
+import { startNotes } from "../notes/api";
 import { hideRecordingUi, toggleRecordingUi } from "../recording-sources/api";
 import { startTextRecognition } from "../text-recognition/api";
 
 import { startRecording } from "./api";
-import { startRecordingOptions } from "./recording-request";
+import { notesOptions, startRecordingOptions } from "./recording-request";
 
 import type { ShortcutAction } from "../../bindings/ShortcutAction";
 
@@ -38,6 +39,14 @@ export function useRecordingShortcuts() {
           await startTextRecognition();
         })().catch((error: unknown) => {
           console.error("Could not start text recognition", error);
+        });
+        return;
+      }
+      // Rust stops notes being taken itself; only a start comes here, as the
+      // island's inputs are chosen in this page.
+      if (payload === "takeNotes") {
+        startNotes(notesOptions()).catch((error: unknown) => {
+          console.error("Could not start taking notes", error);
         });
         return;
       }

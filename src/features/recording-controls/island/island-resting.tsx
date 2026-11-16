@@ -1,7 +1,14 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { Check, Circle, ImageDown, OctagonAlert, X } from "lucide-react";
+import {
+  Check,
+  Circle,
+  ImageDown,
+  NotebookPen,
+  OctagonAlert,
+  X,
+} from "lucide-react";
 
 import { t } from "../../../i18n/i18n";
 import { cn } from "../../../lib/styling";
@@ -55,16 +62,25 @@ export function RestingRow({
           }
         : undefined;
   // Record is the island's one primary action: the primary pill, a little
-  // wider than the circles round it.
+  // wider than the circles round it. Notes take their own glyph, so the
+  // press says it takes notes rather than records.
   const record = (
     <Button
-      aria-label={t("recording-controls-record")}
+      aria-label={
+        mode === "notes"
+          ? t("recording-controls-take-notes")
+          : t("recording-controls-record")
+      }
       className="w-12 px-0"
       color="primary"
       isDisabled={!canRecord(props)}
       onPress={props.onRecord}
     >
-      <Circle aria-hidden className="size-icon" />
+      {mode === "notes" ? (
+        <NotebookPen aria-hidden className="size-icon" />
+      ) : (
+        <Circle aria-hidden className="size-icon" />
+      )}
     </Button>
   );
   return (

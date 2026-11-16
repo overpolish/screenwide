@@ -1,0 +1,110 @@
+// SPDX-FileCopyrightText: 2026 overpolish
+// SPDX-License-Identifier: GPL-3.0-or-later
+
+import { useEffect, useState } from "react";
+import { fn } from "storybook/test";
+
+import { featureStage } from "../../../storybook/feature-story-stage";
+import { parseNotes } from "../document/notes-document";
+
+import { NotesView } from "./notes-view";
+import { useNotesHistory } from "./use-notes-history";
+
+import type { Meta, StoryObj } from "@storybook/react-vite";
+
+const NOTES = parseNotes(`# Notes 2026-05-04 at 10.30.00
+
+**Me:** Thanks for joining. Let's go through the launch plan for the beta.
+
+**Speaker 1:** The build is ready. We are waiting on the store review, which usually takes two days.
+
+**Speaker 1:** If it comes back clean we can ship on Monday.
+
+**Speaker 2:** Marketing needs the final screenshots by Thursday, and the release notes a day before.
+
+**Me:** I can send those tomorrow morning.
+
+**Speaker 1:** Great. Then we ship on Monday.
+`);
+
+const meta = {
+  args: {
+    document: NOTES,
+    isTaking: false,
+    onBack: fn(),
+    onChange: fn(),
+    onClose: fn(),
+    onCopyPath: fn(),
+    onHearVoice: fn(),
+    onMinimize: fn(),
+    onRedo: fn(),
+    onRename: fn(),
+    onUndo: fn(),
+    playingVoice: null,
+    title: "Notes 2026-05-04 at 10.30.00",
+    voices: [1, 2],
+  },
+  component: NotesView,
+  decorators: [featureStage({ window: "projects" })],
+  parameters: {
+    controls: {
+      exclude: [
+        "document",
+        "onBack",
+        "onChange",
+        "onClose",
+        "onCopyPath",
+        "onHearVoice",
+        "onMinimize",
+        "onRedo",
+        "onRename",
+        "onUndo",
+      ],
+    },
+  },
+  // Edits, renames, Undo and the voice playing stay in the story, as they
+  // would in the app.
+  render: function Render(args) {
+    const history = useNotesHistory();
+    const { reset } = history;
+    const [playing, setPlaying] = useState(args.playingVoice);
+    useEffect(() => {
+      reset(args.document);
+    }, [args.document, reset]);
+    return (
+      <NotesView
+        {...args}
+        document={history.document}
+        onChange={(document, typing) => {
+          history.change(document, typing);
+          args.onChange(document, typing);
+        }}
+        onHearVoice={(number) => {
+          setPlaying((current) => (current === number ? null : number));
+          args.onHearVoice(number);
+        }}
+        onRedo={() => {
+          history.redo();
+          args.onRedo();
+        }}
+        onUndo={() => {
+          history.undo();
+          args.onUndo();
+        }}
+        playingVoice={playing}
+      />
+    );
+  },
+  title: "Features/Notes/View/States",
+} satisfies Meta<typeof NotesView>;
+
+export default meta;
+type Story = StoryObj<typeof meta>;
+
+export const Default: Story = {};
+
+export const StillTaking: Story = { args: { isTaking: true } };
+
+export const SaveFailed: Story = {
+  args: { saveError: "The disk is full" },
+};

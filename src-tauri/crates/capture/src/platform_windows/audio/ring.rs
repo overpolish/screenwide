@@ -9,6 +9,7 @@ use std::sync::Mutex;
 
 use super::raw::on_timeline;
 use super::*;
+use crate::listening::{HeardSource, Listener};
 use crate::replay_ring::{AudioChunk, AudioRing};
 
 /// A packet that starts this close after where the ring's audio ends is
@@ -24,6 +25,8 @@ pub(crate) enum AudioDestination<'a> {
   Sidecars(&'a Path),
   /// Memory, for as far back as a replay clip can reach.
   Rings { horizon_ns: i64 },
+  /// Handed to a listener as it arrives, nothing kept.
+  Listened(&'a Listener),
 }
 
 impl AudioDestination<'_> {
@@ -35,6 +38,14 @@ impl AudioDestination<'_> {
         sample_rate,
         horizon_ns,
       )))),
+      Self::Listened(listener) => Keep::Listened(
+        Arc::clone(listener),
+        if kind == "microphone" {
+          HeardSource::Microphone
+        } else {
+          HeardSource::System
+        },
+      ),
     }
   }
 }
@@ -42,6 +53,7 @@ impl AudioDestination<'_> {
 pub(super) enum Keep {
   File(PathBuf),
   Ring(Arc<Mutex<AudioRing>>),
+  Listened(Listener, HeardSource),
 }
 
 /// Fills `ring` with `packets` for as long as the capture runs.

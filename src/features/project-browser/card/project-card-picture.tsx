@@ -8,6 +8,7 @@ import {
   ImageIcon,
   Mic,
   Monitor,
+  NotebookPen,
   Video,
   Volume2,
 } from "lucide-react";
@@ -23,6 +24,7 @@ import {
 } from "../../../lib/picture-tone";
 import { cn, elementFocusVisible, focusStyles } from "../../../lib/styling";
 import { Checkbox } from "../../../primitives/checkbox/checkbox";
+import { NotesCardPage } from "../../notes/card/notes-card-page";
 
 import {
   type CapturedTrack,
@@ -37,6 +39,7 @@ import type { ProjectKind, ProjectSummary, ScrubStrip } from "../types";
 const kindIcons: Record<ProjectKind, typeof Monitor> = {
   audio: AudioLines,
   camera: Video,
+  notes: NotebookPen,
   screen: Monitor,
   screenshot: ImageIcon,
 };
@@ -115,7 +118,8 @@ export function ProjectCardPicture({
   const KindIcon = project.available
     ? kindIcons[project.kind ?? "screen"]
     : FileQuestion;
-  const isPicture = thumbnail !== null && project.kind !== "audio";
+  const isPicture =
+    thumbnail !== null && project.kind !== "audio" && project.kind !== "notes";
   // How light the picture is under each corner something is drawn over,
   // once it has loaded; until then, or with no picture, they take the
   // window's own appearance.
@@ -125,7 +129,8 @@ export function ProjectCardPicture({
   const canScrub =
     project.available &&
     project.durationMs !== null &&
-    project.kind !== "screenshot";
+    project.kind !== "screenshot" &&
+    project.kind !== "notes";
   const strip = canScrub && isPicture ? scrubStrip : null;
   const { tracks } = project;
   const captured =
@@ -212,6 +217,8 @@ export function ProjectCardPicture({
               }}
               src={thumbnail}
             />
+          ) : project.kind === "notes" && project.notesOpening ? (
+            <NotesCardPage markdown={project.notesOpening} />
           ) : (
             <KindIcon className="absolute inset-0 m-auto size-icon-lg" />
           )}

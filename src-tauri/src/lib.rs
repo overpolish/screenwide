@@ -33,6 +33,7 @@ mod licensing;
 mod microsoft_store;
 mod moments;
 mod monitor_topology;
+mod notes;
 mod osc;
 mod permissions;
 mod plugins;

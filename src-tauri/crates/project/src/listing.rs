@@ -1,7 +1,8 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! What the browser shows of each project, read from its manifest alone.
+//! What the browser shows of each project, read from its manifest alone,
+//! and for notes from the start of their Markdown file.
 
 use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -19,6 +20,7 @@ use crate::PrimaryRecordingKind;
 pub enum SummaryKind {
   Audio,
   Camera,
+  Notes,
   Screen,
   Screenshot,
 }
@@ -58,7 +60,8 @@ impl From<&RecordingManifest> for ProjectTracks {
   }
 }
 
-/// A project as the browser lists it, read from its manifest alone.
+/// A project as the browser lists it, read from its manifest alone, and for
+/// notes from the start of their Markdown file.
 #[derive(Clone, Debug, PartialEq, Serialize, TS)]
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
@@ -87,6 +90,26 @@ pub struct ProjectSummary {
   pub title: String,
   /// None for a screenshot, and for a project that could not be read.
   pub tracks: Option<ProjectTracks>,
+  /// The start of a notes project's Markdown, for its card to show what
+  /// was said; None for other kinds.
+  pub notes_opening: Option<String>,
+}
+
+/// How much of a notes file its card is given, in bytes.
+const NOTES_OPENING_BYTES: usize = 1_200;
+
+/// The start of the notes file `name` names in the project at `file`, cut
+/// at a character's edge.
+fn notes_opening(file: &Path, name: &str) -> Option<String> {
+  let mut text = std::fs::read_to_string(super::resolve(file, name).ok()?).ok()?;
+  if text.len() > NOTES_OPENING_BYTES {
+    let mut end = NOTES_OPENING_BYTES;
+    while !text.is_char_boundary(end) {
+      end -= 1;
+    }
+    text.truncate(end);
+  }
+  Some(text)
 }
 
 /// Milliseconds since the epoch, for a time the file system gave.
@@ -118,12 +141,15 @@ pub fn summarize(file: &Path) -> ProjectSummary {
       ProjectSummary {
         available: true,
         expires_ms: None,
-        duration_ms: recording.and_then(|recording| recording.duration_ms),
+        duration_ms: recording
+          .and_then(|recording| recording.duration_ms)
+          .or_else(|| manifest.notes.as_ref().and_then(|notes| notes.duration_ms)),
         created_ms,
         file: file.to_path_buf(),
         kind: match manifest.kind {
           ProjectKind::Recording => recording.map(|recording| recording.primary_kind.into()),
           ProjectKind::Screenshot => Some(SummaryKind::Screenshot),
+          ProjectKind::Notes => Some(SummaryKind::Notes),
         },
         modified_ms,
         size_bytes: file.parent().map(folder_size),
@@ -131,6 +157,11 @@ pub fn summarize(file: &Path) -> ProjectSummary {
         // A name given while it is open stands until its folder takes it.
         title: manifest.title.clone().unwrap_or(title),
         tracks: recording.map(ProjectTracks::from),
+        notes_opening: manifest
+          .notes
+          .as_ref()
+          .filter(|_| manifest.kind == ProjectKind::Notes)
+          .and_then(|notes| notes_opening(file, &notes.file)),
       }
     }
     Err(_) => ProjectSummary {
@@ -145,6 +176,7 @@ pub fn summarize(file: &Path) -> ProjectSummary {
       replay: false,
       title,
       tracks: None,
+      notes_opening: None,
     },
   }
 }

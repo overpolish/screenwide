@@ -865,6 +865,34 @@ export type Messages = {
   "macos-audio-capture-usage": null;
   "macos-camera-usage": null;
   "macos-microphone-usage": null;
+  "notes-island": null;
+  "notes-island-close": null;
+  "notes-island-confirm-discard": null;
+  "notes-island-discard": null;
+  "notes-island-done": null;
+  "notes-island-elapsed": { time: string | number };
+  "notes-island-failed": null;
+  "notes-island-finishing": null;
+  "notes-island-no-microphone": null;
+  "notes-island-no-model": null;
+  "notes-island-no-system-audio": null;
+  "notes-island-open": null;
+  "notes-island-open-settings": null;
+  "notes-island-saved": null;
+  "notes-island-taking": null;
+  "notes-view-back": null;
+  "notes-view-copy-path": null;
+  "notes-view-paragraph": null;
+  "notes-view-said-by": { speaker: string | number };
+  "notes-view-said-by-menu": null;
+  "notes-view-save-failed": null;
+  "notes-view-speaker-hear": { speaker: string | number };
+  "notes-view-speaker-name": { speaker: string | number };
+  "notes-view-speaker-share": { share: string | number };
+  "notes-view-speakers": null;
+  "notes-view-still-taking": null;
+  "notes-view-turn": { speaker: string | number };
+  "notes-view-voices-kept": null;
   "overlay-ruler-balanced": null;
   "overlay-ruler-clear-edges": null;
   "overlay-ruler-subtle-edges": null;
@@ -943,6 +971,7 @@ export type Messages = {
   "project-browser-kind-all": null;
   "project-browser-kind-audio": null;
   "project-browser-kind-camera": null;
+  "project-browser-kind-notes": null;
   "project-browser-kind-screen": null;
   "project-browser-kind-screenshot": null;
   "project-browser-loading": null;
@@ -1032,7 +1061,9 @@ export type Messages = {
   "recording-controls-island-input-options": { input: string | number };
   "recording-controls-island-microphone-locked": null;
   "recording-controls-island-mode-none": null;
+  "recording-controls-island-mode-notes": null;
   "recording-controls-island-no-screen": { inputs: string | number };
+  "recording-controls-island-notes": null;
   "recording-controls-island-paused": { time: string | number };
   "recording-controls-island-pick-region": null;
   "recording-controls-island-pick-window": null;
@@ -1075,6 +1106,7 @@ export type Messages = {
   "recording-controls-stop": null;
   "recording-controls-system-audio": null;
   "recording-controls-system-audio-level": null;
+  "recording-controls-take-notes": null;
   "recording-controls-take-screenshot": null;
   "recording-inputs-all-audio": null;
   "recording-inputs-camera-starting": null;
@@ -1239,6 +1271,7 @@ export type Messages = {
   };
   "settings-moments-footnote": null;
   "settings-new-moment": null;
+  "settings-notes": null;
   "settings-ocr-activate": null;
   "settings-ocr-copy": null;
   "settings-ocr-copy-description": null;
@@ -1403,6 +1436,8 @@ export type Messages = {
   "settings-shortcut-screenshot": null;
   "settings-shortcut-screenshot-description": null;
   "settings-shortcut-start-stop": null;
+  "settings-shortcut-take-notes": null;
+  "settings-shortcut-take-notes-description": null;
   "settings-shortcut-toggle-controls": null;
   "settings-shortcuts-assigned": {
     keys: string | number;
@@ -1478,6 +1513,8 @@ export type Messages = {
   "settings-transcription-language": null;
   "settings-transcription-language-description": null;
   "settings-transcription-local": null;
+  "settings-transcription-notes": null;
+  "settings-transcription-notes-description": null;
   "settings-transcription-remove": { model: string | number };
   "settings-transcription-studio-ducking": null;
   "settings-transcription-studio-ducking-description": null;
@@ -1540,6 +1577,9 @@ export type Messages = {
   "site-privacy-intro": null;
   "site-privacy-licence": null;
   "site-privacy-models": null;
+  "site-privacy-notes": null;
+  "site-privacy-notes-consent": null;
+  "site-privacy-notes-title": null;
   "site-privacy-online-search": null;
   "site-privacy-questions": { email: string | number };
   "site-privacy-retention": null;

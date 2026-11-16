@@ -134,7 +134,10 @@ pub(super) fn withdraw(app: &AppHandle) {
     EVENT,
     None::<DictationIslandState>,
   );
-  let result = if crate::recording::is_idle(app) && !app_windows::is_recording_ui_visible() {
+  let keeps = !crate::recording::is_idle(app)
+    || app_windows::is_recording_ui_visible()
+    || crate::notes::island::is_shown();
+  let result = if !keeps {
     app_windows::island::hide(app)
   } else {
     app_windows::island::hand_over(app, IslandPlacement::Top)

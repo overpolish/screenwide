@@ -16,6 +16,10 @@ import {
 const STORE_NAME = "screenwide-recording-source";
 
 type RecordingSourceStore = {
+  /** Notes are chosen on the island: Record takes notes of a call, and the
+   * recorder itself stands in its audio mode, showing nothing on the
+   * screen. */
+  isNotes: boolean;
   /**
    * A shortcut-initiated screenshot borrows the region overlay, whatever the
    * recording mode happens to be, and hands the region straight to a capture.
@@ -30,6 +34,7 @@ type RecordingSourceStore = {
   selectedMonitor: MonitorDetails | null;
   selectedWindow: WindowDetails | null;
   setMonitorThumbnails: (thumbnails: MonitorThumbnail[]) => void;
+  setNotes: (isNotes: boolean) => void;
   setRecordingMode: (mode: RecordingMode) => void;
   setRegion: (region: Region) => void;
   setRegionAspectRatio: (ratio: number | undefined) => void;
@@ -59,6 +64,7 @@ export const mergeRecordingSourceState = <
 export const useRecordingSourceStore = create<RecordingSourceStore>()(
   persist(
     (set) => ({
+      isNotes: false,
       isScreenshotCapture: false,
       monitorThumbnails: {},
       recordingMode: "screen",
@@ -80,6 +86,9 @@ export const useRecordingSourceStore = create<RecordingSourceStore>()(
             ]),
           ),
         });
+      },
+      setNotes: (isNotes) => {
+        set({ isNotes });
       },
       setRecordingMode: (recordingMode) => {
         set({ recordingMode });

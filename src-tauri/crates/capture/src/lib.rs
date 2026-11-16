@@ -25,6 +25,7 @@ pub mod desktop_capture;
 pub mod devices;
 pub mod encoding;
 pub mod keyboard;
+pub mod listening;
 pub mod microphone;
 pub mod monitor;
 pub mod note_gate;

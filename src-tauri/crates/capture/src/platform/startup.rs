@@ -27,6 +27,8 @@ pub(super) enum Sink {
   Replay { length: Duration },
 }
 
+pub(super) use audio_only::listen;
+
 pub(super) async fn begin(
   config: CaptureStartupConfig,
   sink: Sink,
@@ -43,6 +45,7 @@ pub(super) async fn begin(
     system_audio,
   } = config;
   if matches!(primary, PrimaryCaptureSource::Audio) {
+    let sink = audio_only::AudioSink::Written(sink);
     return audio_only::begin(microphone_id, monitor, on_failure, path, system_audio, sink).await;
   }
   let camera_primary = matches!(primary, PrimaryCaptureSource::Camera);

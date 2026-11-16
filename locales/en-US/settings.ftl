@@ -14,6 +14,8 @@ settings-screenshots = Screenshots
 settings-keep-awake = Keep Awake
 # The Shortcuts pane's group for dictation, which types what is said into any app.
 settings-dictation = Dictation
+# The Shortcuts pane's group for notes of a call.
+settings-notes = Notes
 
 ## Sidebar sections, also the window's title
 
@@ -228,6 +230,8 @@ settings-transcription-dictation-allow-accessibility = Allow Accessibility
 # The model that applies corrections the speaker makes while dictating in English, such as "at 2, actually 3".
 settings-transcription-dictation-cleanup = Dictation corrections
 settings-transcription-dictation-cleanup-description = Applies corrections you make as you speak, such as “2, actually 3”.
+settings-transcription-notes = Meeting notes
+settings-transcription-notes-description = Writes notes of your calls and tells the speakers apart.
 settings-transcription-language = Language
 settings-transcription-language-description = The language you record and dictate in.
 # The group of Tools' Dictation section listing names and terms speech is written with.
@@ -264,6 +268,8 @@ settings-shortcut-keep-awake = Turn Keep Awake on or off
 settings-shortcut-keep-awake-description = Keeps the computer awake and shows you as active.
 settings-shortcut-dictate = Dictate
 settings-shortcut-dictate-description = Hold to talk, or tap to start and stop.
+settings-shortcut-take-notes = Take notes
+settings-shortcut-take-notes-description = Starts notes of a call, or stops them.
 # The row of a moment's shortcut in the Shortcuts pane. $moment is the moment's name, which the user chooses.
 settings-shortcut-place-moment = Place { $moment }
 

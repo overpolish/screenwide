@@ -11,12 +11,12 @@ import { featureStage } from "../../storybook/feature-story-stage";
 import { ProjectBrowser, type ProjectBrowserProps } from "./project-browser";
 import { readings } from "./project-browser-activity-fixtures";
 import {
-  locations,
   recentProjects,
   scrubStrips,
   thumbnails,
 } from "./project-browser-fixtures";
 import { LiveProjectBrowser } from "./project-browser-live-preview";
+import { locations } from "./project-browser-location-fixtures";
 import { RECENT } from "./types";
 
 import type { Meta } from "@storybook/react-vite";

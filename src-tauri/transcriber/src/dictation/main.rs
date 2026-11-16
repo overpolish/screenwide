@@ -72,6 +72,27 @@ fn main() {
         &mut lines,
         &mut |reply| send(&mut stdout, reply),
       ),
+      Job::BeginNotes {
+        model,
+        vad,
+        speakers,
+        voices,
+        language,
+        words,
+      } => pauses::notes::run(
+        &mut dictation,
+        id,
+        pauses::notes::Notes {
+          model,
+          vad,
+          speakers,
+          voices,
+          language,
+          words,
+        },
+        &mut lines,
+        &mut |reply| send(&mut stdout, reply),
+      ),
       _ => send(
         &mut stdout,
         &Reply::Failed {

@@ -20,6 +20,8 @@ recording-controls-take-screenshot = Take screenshot
 recording-controls-delayed-screenshot = Delayed screenshot
 recording-controls-scrolling-screenshot = Capture scrolling region
 recording-controls-record = Record
+# The Record button's name while the recording type is Notes.
+recording-controls-take-notes = Take Notes
 recording-controls-open-permissions = Open permissions
 # The island's switch for the replay buffer, in its recording options.
 recording-controls-island-replay = Replay buffer
@@ -78,6 +80,10 @@ recording-controls-island-region-displays =
     }
 # The island's mode that records no screen, only the inputs that are on.
 recording-controls-island-mode-none = No screen
+# The recording type that writes notes of a call without recording it.
+recording-controls-island-mode-notes = Notes
+# Under the recording types while Notes is chosen.
+recording-controls-island-notes = Captures notes from your microphone and the computer's audio.
 # In the No screen mode, what will be recorded, from the inputs that are on;
 # with none on, what to do instead.
 recording-controls-island-no-screen =

@@ -4,14 +4,16 @@
 /** What a model is for. Each use has its own, so nobody has to choose one:
  * transcripts and voice notes take the transcription model, dictation the
  * model for its language and, in English, the model that applies the
- * speaker's corrections, Studio sound its restoration model, Studio ducking
- * its music separation model, Remove background its video matting model,
- * and the camera's objects their tracking model. */
+ * speaker's corrections, meeting notes their writing and speaker models,
+ * Studio sound its restoration model, Studio ducking its music separation
+ * model, Remove background its video matting model, and the camera's
+ * objects their tracking model. */
 export type TranscriptionPurpose =
   | "cameraBackground"
   | "cameraObjects"
   | "dictation"
   | "dictationCleanup"
+  | "notes"
   | "studioDucking"
   | "studioSound"
   | "transcripts";

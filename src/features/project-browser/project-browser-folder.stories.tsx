@@ -1,7 +1,8 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { locations, projects, projectsFor } from "./project-browser-fixtures";
+import { projects, projectsFor } from "./project-browser-fixtures";
+import { locations } from "./project-browser-location-fixtures";
 import { goToCard, projectBrowserMeta } from "./project-browser-story-meta";
 
 import type { ProjectBrowser } from "./project-browser";

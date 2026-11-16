@@ -5625,6 +5625,7 @@ dependencies = [
  "screenwide-lexicon",
  "screenwide-licensing",
  "screenwide-moments",
+ "screenwide-notes",
  "screenwide-openverse",
  "screenwide-osc",
  "screenwide-output",
@@ -5973,6 +5974,14 @@ dependencies = [
  "serde_json",
  "tauri-plugin-global-shortcut",
  "ts-rs",
+]
+
+[[package]]
+name = "screenwide-notes"
+version = "1.0.3"
+dependencies = [
+ "screenwide-capture",
+ "screenwide-speech",
 ]
 
 [[package]]

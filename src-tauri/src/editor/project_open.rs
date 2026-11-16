@@ -93,8 +93,15 @@ fn open(app: &AppHandle, file: &Path) -> Result<(), OpenFailure> {
   let settled = super::project_name::settle_name(app, file);
   let file = settled.as_path();
   let manifest = screenwide_project::read(file)?;
-  if manifest.kind == screenwide_project::ProjectKind::Screenshot {
-    return super::screenshot_project::open(app, file);
+  match manifest.kind {
+    screenwide_project::ProjectKind::Screenshot => {
+      return super::screenshot_project::open(app, file);
+    }
+    // Notes have no editor: they are read and edited in the projects window.
+    screenwide_project::ProjectKind::Notes => {
+      return crate::notes::view::show(app, file).map_err(OpenFailure::from);
+    }
+    _ => {}
   }
   let screenwide_project::RecordingManifest {
     duration_ms: _,

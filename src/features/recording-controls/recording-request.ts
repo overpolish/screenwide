@@ -8,6 +8,8 @@ import { getGeneralSettings } from "../settings/api";
 
 import { StartRecordingOptions } from "./types";
 
+import type { StartNotesOptions } from "../../bindings/StartNotesOptions";
+
 /** What a recording started now records, from the controls' choices and
  * the stored settings: the frame rate and anti-flicker are read as it
  * starts, so a change in Settings reaches the next recording. */
@@ -65,6 +67,26 @@ export const startRecordingOptions =
       windowId: selectedWindow?.id ?? null,
     };
   };
+
+/** What notes started now listen to: the island's microphone, and its
+ * system audio apps, or all of the computer's audio. Notes always hear both,
+ * whatever the island's switches say: a call has two sides. */
+export const notesOptions = (): StartNotesOptions => {
+  const { selectedMicrophone, selectedSystemAudio } =
+    useRecordingInputStore.getState();
+  const applications = selectedSystemAudio.some(
+    (source) => source.kind === "all",
+  )
+    ? []
+    : selectedSystemAudio.filter((source) => source.kind === "application");
+  return {
+    microphoneId: selectedMicrophone?.id ?? null,
+    systemAudioApplicationIds: applications.map((source) => source.id),
+    systemAudioProcessIds: applications.flatMap(
+      (source) => source.processIds ?? [],
+    ),
+  };
+};
 
 /** Mirrors how `startRecordingOptions` pairs a region with its monitor. */
 export const screenshotTarget = (

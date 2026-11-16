@@ -55,7 +55,8 @@ engine = [
   "dep:tract-pulse",
   "dep:windows",
 ]
-dictation = ["dep:transcribe-cpp"]
+# The notes' voice fingerprints run CAM++ in tract, on Kaldi features.
+dictation = ["dep:transcribe-cpp", "dep:realfft", "dep:tract-onnx"]
 cleanup = ["dep:llama-cpp-2"]
 
 [dependencies]
@@ -121,10 +122,12 @@ windows = { version = "0.62.2", optional = true, features = [
 [patch.crates-io]
 tract-linalg = { path = "../vendor/tract-linalg-0.21.4" }
 # Screenwide's fork of transcribe.cpp (overpolish/transcribe.cpp, branch
-# `screenwide`): Hex's Parakeet vocabulary rescoring merged onto upstream
-# 0.4.2, rescoring a stream as it goes, for dictation's word list.
-transcribe-cpp = { git = "https://github.com/overpolish/transcribe.cpp", rev = "e05ac406557283ab7017b88f078b25af863cd5b4" }
-transcribe-cpp-sys = { git = "https://github.com/overpolish/transcribe.cpp", rev = "e05ac406557283ab7017b88f078b25af863cd5b4" }
+# `hex/parakeet-vocabulary-tree`): Hex's Parakeet vocabulary rescoring merged
+# onto upstream 0.4.2, rescoring a stream as it goes, for dictation's word
+# list, and NVIDIA's Nemotron 3 Diarization loaded from NVIDIA's own GGUF,
+# for the notes' speakers.
+transcribe-cpp = { git = "https://github.com/overpolish/transcribe.cpp", rev = "ef7df188c9b80978b1df0c56c2d21612691f7434" }
+transcribe-cpp-sys = { git = "https://github.com/overpolish/transcribe.cpp", rev = "ef7df188c9b80978b1df0c56c2d21612691f7434" }
 
 [profile.release]
 lto = "thin"

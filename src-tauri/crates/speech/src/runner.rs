@@ -13,6 +13,7 @@ use self::samples::Samples;
 
 mod camera;
 pub mod dictation;
+pub mod notes;
 pub mod samples;
 mod text;
 
@@ -247,6 +248,8 @@ impl Transcriber {
       | Reply::TextReaderLoaded { id }
       | Reply::TextRead { id, .. }
       | Reply::Dictated { id, .. }
+      | Reply::Noted { id, .. }
+      | Reply::NotesFinished { id, .. }
       | Reply::Corrected { id, .. }
       | Reply::Halfway { id }
       | Reply::Progress { id, .. }

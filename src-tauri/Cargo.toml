@@ -55,6 +55,7 @@ screenwide-keyboard-effects = { path = "crates/keyboard_effects" }
 screenwide-lexicon = { path = "crates/lexicon" }
 screenwide-licensing = { path = "crates/licensing" }
 screenwide-moments = { path = "crates/moments" }
+screenwide-notes = { path = "crates/notes" }
 screenwide-openverse = { path = "crates/openverse" }
 screenwide-osc = { path = "crates/osc" }
 screenwide-output = { path = "crates/output" }
@@ -224,6 +225,7 @@ screenwide-keyboard-effects.workspace = true
 screenwide-lexicon.workspace = true
 screenwide-licensing.workspace = true
 screenwide-moments.workspace = true
+screenwide-notes.workspace = true
 screenwide-openverse.workspace = true
 screenwide-osc.workspace = true
 screenwide-workspace.workspace = true

@@ -77,9 +77,10 @@ export type IslandFailure = { id: number; message: string; title: string };
 export type IslandReplay = { status: "off" | "on" | "starting" };
 
 /** What is recorded: a display, a window, a region, or no screen at all,
- * only the inputs that are on. The island's own modes; whoever drives it
- * maps no screen onto the recorder's camera or audio mode. */
-export type IslandMode = "none" | "region" | "screen" | "window";
+ * only the inputs that are on; or notes of a call, which keep no recording
+ * at all. The island's own modes; whoever drives it maps no screen onto the
+ * recorder's camera or audio mode. */
+export type IslandMode = "none" | "notes" | "region" | "screen" | "window";
 
 /** What the island has grown to show. */
 export type IslandPanel = IslandInputKind | "record" | "screenshot" | "source";

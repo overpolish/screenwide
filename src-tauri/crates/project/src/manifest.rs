@@ -4,6 +4,8 @@
 //! The `.screenwide` manifest: what a project holds, and reading and writing
 //! it without ever leaving a half-written one behind.
 
+mod recording;
+
 use std::fs::File;
 use std::io::Write;
 use std::path::{Component, Path, PathBuf};
@@ -14,6 +16,7 @@ use ts_rs::TS;
 
 use screenwide_timeline_edit::PersistedTimelineEdit;
 
+pub use self::recording::{RecordingManifest, RecordingMedia, RecordingOrigin};
 use crate::ReadError;
 
 const FORMAT_VERSION: u16 = 1;
@@ -45,6 +48,7 @@ pub enum PrimaryRecordingKind {
 pub enum ProjectKind {
   Recording,
   Screenshot,
+  Notes,
 }
 
 #[derive(Deserialize, Serialize)]
@@ -58,6 +62,9 @@ pub struct Manifest {
   /// The pictures taken, for a screenshot project.
   #[serde(default, skip_serializing_if = "Option::is_none")]
   pub screenshot: Option<ScreenshotManifest>,
+  /// The notes taken, for a notes project.
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  pub notes: Option<NotesManifest>,
   /// The edit, from the editor's first save on. A project that has never
   /// been edited has none.
   #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -83,6 +90,7 @@ impl Manifest {
       kind: ProjectKind::Recording,
       recording: Some(recording),
       screenshot: None,
+      notes: None,
       timeline: None,
       look: None,
       title: None,
@@ -95,6 +103,20 @@ impl Manifest {
       kind: ProjectKind::Screenshot,
       recording: None,
       screenshot: Some(screenshot),
+      notes: None,
+      timeline: None,
+      look: None,
+      title: None,
+    }
+  }
+
+  pub fn notes(notes: NotesManifest) -> Self {
+    Self {
+      version: FORMAT_VERSION,
+      kind: ProjectKind::Notes,
+      recording: None,
+      screenshot: None,
+      notes: Some(notes),
       timeline: None,
       look: None,
       title: None,
@@ -118,6 +140,16 @@ pub struct ScreenshotManifest {
   pub layers: Vec<ScreenshotLayer>,
 }
 
+/// A notes project's notes: the Markdown file they are written in, relative
+/// to the project folder, and how long the call they were taken from ran.
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct NotesManifest {
+  pub file: String,
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  pub duration_ms: Option<u64>,
+}
+
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ScreenshotLayer {
@@ -135,92 +167,6 @@ pub struct ScreenshotLayer {
   /// on a blank canvas and is never drawn or chosen as a picture.
   #[serde(default, skip_serializing_if = "std::ops::Not::not")]
   pub blank: bool,
-}
-
-/// What the capture knew that the movie itself cannot say.
-#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct RecordingManifest {
-  /// How long the recording is, once it has stopped. Kept here so the project
-  /// browser can say it without opening the movie.
-  #[serde(default, skip_serializing_if = "Option::is_none")]
-  pub duration_ms: Option<u64>,
-  pub has_microphone: bool,
-  pub has_system_audio: bool,
-  pub media: RecordingMedia,
-  pub primary_kind: PrimaryRecordingKind,
-  /// The captured pixels per logical display point, which decides the export
-  /// sizes offered.
-  pub source_scale_factor: f32,
-  /// A window's own corner radius, in the movie's pixels, which has it black.
-  #[serde(default, skip_serializing_if = "Option::is_none")]
-  pub corner_radius: Option<f32>,
-  /// How the recording was made, which the browser marks.
-  #[serde(default)]
-  pub origin: RecordingOrigin,
-}
-
-/// Recorded from start to stop, or kept from the replay buffer.
-#[derive(Clone, Copy, Debug, Default, Deserialize, PartialEq, Eq, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub enum RecordingOrigin {
-  #[default]
-  Capture,
-  Replay,
-}
-
-/// Each track, relative to the project folder with `/` between parts.
-#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct RecordingMedia {
-  pub primary: String,
-  #[serde(default, skip_serializing_if = "Option::is_none")]
-  pub camera: Option<String>,
-  #[serde(default, skip_serializing_if = "Option::is_none")]
-  pub cursor: Option<String>,
-  #[serde(default, skip_serializing_if = "Option::is_none")]
-  pub keyboard: Option<String>,
-  #[serde(default, skip_serializing_if = "Option::is_none")]
-  pub moments: Option<String>,
-}
-
-impl RecordingMedia {
-  /// Names absolute track paths inside the project whose manifest is `file`.
-  pub fn relative_to(
-    file: &Path,
-    primary: &Path,
-    camera: Option<&Path>,
-    cursor: Option<&Path>,
-    keyboard: Option<&Path>,
-    moments: Option<&Path>,
-  ) -> Result<Self, String> {
-    let root = file
-      .parent()
-      .ok_or_else(|| "The project has no folder".to_owned())?;
-    let name = |path: &Path| relative(root, path);
-    Ok(Self {
-      primary: name(primary)?,
-      camera: camera.map(name).transpose()?,
-      cursor: cursor.map(name).transpose()?,
-      keyboard: keyboard.map(name).transpose()?,
-      moments: moments.map(name).transpose()?,
-    })
-  }
-}
-
-fn relative(root: &Path, path: &Path) -> Result<String, String> {
-  let inside = path
-    .strip_prefix(root)
-    .map_err(|_| format!("{} is outside its project", path.display()))?;
-  let parts = inside
-    .components()
-    .map(|component| match component {
-      Component::Normal(part) => part.to_str().map(str::to_owned),
-      _ => None,
-    })
-    .collect::<Option<Vec<_>>>()
-    .ok_or_else(|| format!("{} cannot be named in a project", path.display()))?;
-  Ok(parts.join("/"))
 }
 
 /// The absolute path of a track named in the manifest at `file`. A name that

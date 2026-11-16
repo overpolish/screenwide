@@ -44,6 +44,7 @@ export function useProjectReadings(projects: readonly ProjectSummary[] | null) {
       (project) =>
         project.available &&
         project.kind !== "screenshot" &&
+        project.kind !== "notes" &&
         !askedRef.current.has(keyOf(project)),
     );
     for (const project of queue) askedRef.current.add(keyOf(project));

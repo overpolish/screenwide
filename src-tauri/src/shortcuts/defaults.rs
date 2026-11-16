@@ -57,6 +57,10 @@ impl Default for ShortcutSettings {
           action: ShortcutAction::Dictate,
           shortcut: Some("CommandOrControl+Shift+Space".to_owned()),
         },
+        ShortcutBinding {
+          action: ShortcutAction::TakeNotes,
+          shortcut: Some("CommandOrControl+Shift+Digit1".to_owned()),
+        },
       ],
       replace_system_keys: true,
       system_keys_announced: false,

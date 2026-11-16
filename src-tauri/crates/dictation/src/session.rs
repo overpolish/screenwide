@@ -13,10 +13,9 @@ use std::thread::JoinHandle;
 use std::time::{Duration, Instant};
 
 use screenwide_capture::microphone::{Buffer, Source};
+use screenwide_speech::resample::ToSpeech;
 use screenwide_speech::runner::dictation::DictatedText;
 use screenwide_speech::runner::Transcriber;
-
-use crate::resample::ToSpeech;
 
 /// How much speech is gathered before the helper hears it: 80 ms, the
 /// model's own step, so words follow the voice without the helper being

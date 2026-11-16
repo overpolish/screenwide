@@ -25,11 +25,9 @@ import {
   cancelRecording,
   pauseRecording,
   resumeRecording,
-  startRecording,
   stopRecording,
 } from "../api";
 import { canStartRecording, type RecordingReadiness } from "../can-record";
-import { startRecordingOptions } from "../recording-request";
 import { selectSnapshot, useRecordingStore } from "../store";
 import { type RecordingStatus } from "../types";
 import { useElapsedTime } from "../use-elapsed-time";
@@ -41,6 +39,7 @@ import { useRecordingWrittenBytes } from "../use-recording-written-bytes";
 import { useReplayBuffer } from "../use-replay-buffer";
 import { useScreenshotCapture } from "../use-screenshot-capture";
 
+import { chooseIslandMode, recordOrTakeNotes } from "./island-actions";
 import { RecordingIsland } from "./recording-island";
 import { regionDisplays } from "./region-displays";
 import { useIslandInputs } from "./use-island-inputs";
@@ -48,7 +47,6 @@ import { useIslandSources } from "./use-island-sources";
 import { useRecordingFailure } from "./use-recording-failure";
 import {
   cancelWindowPick,
-  changeRecordingMode,
   chooseWindow,
   useRecordingUiSession,
 } from "./use-recording-ui-session";
@@ -68,9 +66,11 @@ const phaseOf = (status: RecordingStatus, countdown: number): IslandPhase => {
   return status;
 };
 
-/** No screen records the camera when it is on, and the audio alone when not. */
-const islandModeOf = (mode: RecordingMode): IslandMode =>
-  mode === "camera" || mode === "audio" ? "none" : mode;
+/** No screen records the camera when it is on, and the audio alone when not;
+ * Notes stands the recorder in its audio mode, so nothing shows on the
+ * screen. */
+const islandModeOf = (mode: RecordingMode, isNotes: boolean): IslandMode =>
+  isNotes ? "notes" : mode === "camera" || mode === "audio" ? "none" : mode;
 
 /** The recording controls, as the island shows them: what it records and
  * with what, from the stores, and the recording, from Rust. While Annotate
@@ -207,7 +207,7 @@ export function RecordingIslandControls({
       hasConfidenceChecks={hasConfidenceChecks}
       isScreenLocked={readiness.isScreenLocked}
       isShown={island.isShown}
-      mode={islandModeOf(recordingMode)}
+      mode={islandModeOf(recordingMode, sources.isNotes)}
       moment={moment}
       notch={island.notch}
       note={note}
@@ -232,15 +232,7 @@ export function RecordingIslandControls({
         if (display) sources.setSelectedMonitor(display);
       }}
       onHidden={island.onHidden}
-      onModeChange={(mode) => {
-        changeRecordingMode(
-          mode === "none"
-            ? inputStore.inputs.camera
-              ? "camera"
-              : "audio"
-            : mode,
-        );
-      }}
+      onModeChange={chooseIslandMode}
       onOpenPermissions={() => {
         void openPermissionsWindow();
       }}
@@ -248,9 +240,7 @@ export function RecordingIslandControls({
       onPause={() => {
         pauseRecording().catch(report("pause"));
       }}
-      onRecord={() => {
-        startRecordingOptions().then(startRecording).catch(report("start"));
-      }}
+      onRecord={recordOrTakeNotes}
       onReplayChange={setReplayOn}
       onResume={() => {
         resumeRecording().catch(report("resume"));

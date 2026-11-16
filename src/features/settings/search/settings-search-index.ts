@@ -26,6 +26,7 @@ import {
 import {
   dictationShortcuts,
   keepAwakeShortcuts,
+  notesShortcuts,
   recordingShortcuts,
   screenshotShortcuts,
 } from "../sections/global-shortcuts";
@@ -270,6 +271,10 @@ export function settingsSearchEntries({
   );
   at("hotkeys", t("settings-dictation"))(
     dictationShortcuts().map(shortcutRow),
+    shortcut,
+  );
+  at("hotkeys", t("settings-notes"))(
+    notesShortcuts().map(shortcutRow),
     shortcut,
   );
   at("hotkeys", t("settings-keep-awake"))(

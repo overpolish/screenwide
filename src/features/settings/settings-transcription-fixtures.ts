@@ -82,6 +82,19 @@ const CAMERA_OBJECTS_MODEL: TranscriptionModel = {
   writes: null,
 };
 
+/** The meeting notes models, Parakeet Ultra and the speaker model, at their
+ * real download size together. */
+const NOTES_MODEL: TranscriptionModel = {
+  description: "Writes notes of your calls and tells the speakers apart.",
+  id: "notes-ultra-nemotron-3-diarization-q8_0",
+  name: "Meeting notes",
+  progress: null,
+  purpose: "notes",
+  sizeBytes: 876_972_274,
+  status: "available",
+  writes: null,
+};
+
 /** How the Transcripts model stands, and the language transcription and
  * dictation are set to, `system` (English) unless given. */
 export type TranscriptionPreviewSeed = Pick<
@@ -114,6 +127,7 @@ export function transcriptionPreviewApi(
     models: [
       transcripts,
       ...dictation,
+      NOTES_MODEL,
       STUDIO_SOUND_MODEL,
       STUDIO_DUCKING_MODEL,
       CAMERA_BACKGROUND_MODEL,

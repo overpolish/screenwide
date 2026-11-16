@@ -6,7 +6,7 @@ use std::collections::HashSet;
 use super::*;
 
 #[test]
-fn defaults_open_the_controls_save_replays_take_screenshots_recognize_text_and_dictate() {
+fn defaults_cover_the_controls_replays_screenshots_text_dictation_and_notes() {
   let settings = ShortcutSettings::default();
   let assigned = settings
     .bindings
@@ -41,6 +41,7 @@ fn defaults_open_the_controls_save_replays_take_screenshots_recognize_text_and_d
         "CommandOrControl+Shift+Backspace"
       ),
       (ShortcutAction::Dictate, "CommandOrControl+Shift+Space"),
+      (ShortcutAction::TakeNotes, "CommandOrControl+Shift+Digit1"),
     ]
   );
 }
@@ -320,6 +321,13 @@ fn copy_a_screenshot_passes_its_keys_to_take_a_screenshot_when_they_were_in_use(
     assert_eq!(
       shortcut(ShortcutAction::TakeScreenshot).as_deref(),
       expected,
+      "Take {take:?}, Copy {copy:?}"
+    );
+    // Notes arrive on Copy a screenshot's old keys, unless Take a screenshot
+    // took them over.
+    assert_eq!(
+      shortcut(ShortcutAction::TakeNotes).as_deref(),
+      (expected != Some(copy_default)).then_some(copy_default),
       "Take {take:?}, Copy {copy:?}"
     );
     // The rest of the file is read as saved.

@@ -255,6 +255,38 @@ pub enum Job {
     instructions: String,
     text: String,
   },
+  /// Starts taking notes: the microphone and the computer's audio, each
+  /// written a stretch at a time once a pause ends it, with the model at
+  /// `model`, finding the pauses with the voice activity model at `vad`, in
+  /// `language`, or detecting it. Answered with [`Reply::Noted`] once it
+  /// listens. Until [`Job::FinishNotes`] the notes take the helper over:
+  /// [`Job::FeedNotes`] and [`Job::FinishNotes`] are the only jobs they
+  /// answer.
+  BeginNotes {
+    model: PathBuf,
+    vad: PathBuf,
+    /// The speaker model, which tells the voices in the computer's audio
+    /// apart once the notes finish.
+    speakers: PathBuf,
+    /// The voice model, whose fingerprints join the voices of a call with
+    /// more of them than the speaker model has room for.
+    voices: PathBuf,
+    language: Option<String>,
+    #[serde(default)]
+    words: Vec<String>,
+  },
+  /// The next samples of one source, at [`SAMPLE_RATE`] as 16-bit PCM,
+  /// starting `at_ms` after the notes began: a source that stops sending in
+  /// a silence picks up at its time again. Answered with [`Reply::Noted`]
+  /// with the lines written since the last answer.
+  FeedNotes {
+    source: NoteSource,
+    at_ms: u64,
+    samples: Vec<i16>,
+  },
+  /// The call has ended: answered with [`Reply::NotesFinished`], after which
+  /// the helper takes other jobs again.
+  FinishNotes,
 }
 
 /// When each camera frame the matte was made from shows: frame `n` of the
@@ -402,6 +434,21 @@ pub enum Reply {
     id: u64,
     text: DictatedText,
   },
+  /// The lines of notes written since the last answer.
+  Noted {
+    id: u64,
+    lines: Vec<NoteLine>,
+  },
+  /// The notes' last lines, in answer to [`Job::FinishNotes`], when each
+  /// voice in the computer's audio spoke over the whole call, and a clip of
+  /// each voice to tell who it is by.
+  NotesFinished {
+    id: u64,
+    lines: Vec<NoteLine>,
+    turns: Vec<SpeakerTurn>,
+    #[serde(default)]
+    voices: Vec<VoiceClip>,
+  },
   /// Text corrected, in answer to [`Job::CorrectText`].
   Corrected {
     id: u64,
@@ -444,6 +491,62 @@ pub struct DictatedText {
   /// however little has been heard since.
   #[serde(default)]
   pub paused_after: bool,
+}
+
+/// Where a line of notes was heard.
+#[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub enum NoteSource {
+  /// The person taking the notes.
+  Microphone,
+  /// Everyone else on the call.
+  System,
+}
+
+/// A stretch of speech written out, and when it was said, in milliseconds
+/// from the notes' start.
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct NoteLine {
+  pub source: NoteSource,
+  pub start_ms: u64,
+  pub end_ms: u64,
+  pub text: String,
+  /// The computer's audio's words with when each was said, so a stretch two
+  /// voices spoke in can be shared out between them; none from the
+  /// microphone.
+  #[serde(default)]
+  pub words: Vec<NoteWord>,
+}
+
+/// A word of the notes, and when it was said, in milliseconds from the
+/// notes' start.
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct NoteWord {
+  pub text: String,
+  pub start_ms: u64,
+  pub end_ms: u64,
+}
+
+/// When one of the voices in the computer's audio spoke, `speaker` being the
+/// speaker model's number for that voice.
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SpeakerTurn {
+  pub start_ms: u64,
+  pub end_ms: u64,
+  pub speaker: u32,
+}
+
+/// A few seconds of one voice in the computer's audio speaking alone, at
+/// [`SAMPLE_RATE`] as 16-bit PCM, `speaker` being the speaker model's number
+/// for it.
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct VoiceClip {
+  pub speaker: u32,
+  pub samples: Vec<i16>,
 }
 
 /// A word heard in a dictation, with its punctuation, and when it was said

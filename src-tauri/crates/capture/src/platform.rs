@@ -29,6 +29,7 @@ mod audio_writer;
 mod camera;
 mod desktop_compositor;
 mod desktop_stream;
+mod listening;
 mod media;
 mod output;
 mod replay;
@@ -59,6 +60,7 @@ use super::microphone::{
   Buffer as MicrophoneBuffer, Format as MicrophoneFormat, Source as MicrophoneSource,
 };
 use super::{CameraCaptureMode, CaptureStartupConfig, PrimaryCaptureSource};
+pub use listening::{begin_listening_blocking, ListeningSession};
 #[cfg(test)]
 use media::microphone_buffer_from_origin;
 use media::{even, frame_status, time_to_ns, VideoEncoder};

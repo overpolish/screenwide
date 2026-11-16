@@ -23,7 +23,7 @@ import type { IslandDisplay, IslandMode } from "./island-types";
 // The parts the mode panel is built from: the modes, the displays, and a row
 // for what a mode has chosen or still needs.
 
-const MODES: IslandMode[] = ["screen", "window", "region", "none"];
+const MODES: IslandMode[] = ["screen", "window", "region", "none", "notes"];
 
 /** The modes, the chosen one on a raised card that slides to the next one
  * chosen, as a pill group's knob does; its text follows the card's arrival.
@@ -40,7 +40,7 @@ export function ModeCards({
   return (
     <ToggleButtonGroup
       aria-label={t("recording-controls-mode")}
-      className="grid grid-cols-4 gap-1"
+      className="grid grid-cols-5 gap-1"
       disallowEmptySelection
       onSelectionChange={(keys) => {
         for (const key of keys) onModeChange(key as IslandMode);

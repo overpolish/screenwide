@@ -11,6 +11,7 @@ mod audio;
 mod camera;
 mod capture;
 mod desktop_compositor;
+mod listening;
 mod replay;
 mod writer;
 
@@ -22,6 +23,7 @@ mod startup_support;
 #[cfg(test)]
 mod tests;
 mod window_corner;
+pub use listening::{begin_listening_blocking, ListeningSession};
 pub use replay::{begin_replay_blocking, ReplayCapture, ReplaySession};
 use source_plan::{resolve_source, ResolvedSource};
 pub use startup::begin_blocking;
