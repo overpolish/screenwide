@@ -6,19 +6,15 @@ import { useRef, useState } from "react";
 import { type TimelineScale } from "../timeline-scale";
 
 import { ShortcutChip, type TimelineShortcut } from "./shortcut-chip";
+import { placeShortcutKeys } from "./shortcut-placement";
 
 // The shortcuts pressed while recording, a lane over the beats, each its
-// keys with a tick under them where it was pressed. Pressed close together,
-// a shortcut's keys are set after the keys before them, a clear gap apart,
-// so they sit side by side as separate shortcuts rather than over each
-// other or run together; near the strip's end they are set back so they
-// end at it. Its tick stays where it was pressed.
+// keys with a tick under them where it was pressed, the keys set clear of
+// each other and kept on the strip (`placeShortcutKeys`). Its tick stays
+// where it was pressed.
 // Pressing one chooses it; with Shift, it is taken in or left out of what
 // is chosen. Delete or Backspace deletes what is chosen.
 
-/** The room, in px, kept between one shortcut's keys and the next's: wider
- * than the room between keys, so each reads as its own. */
-const GAP_PX = 10;
 /** How wide, in px, keys are taken to be until they are drawn. */
 const KEYS_PX = 40;
 
@@ -58,26 +54,19 @@ export function ShortcutLane({
     }
     return measure;
   };
-  // Each one's tick where it was pressed, and its keys clear of the last.
-  let reached = -Infinity;
-  const placed = [...shortcuts]
-    .sort((first, second) => first.start - second.start)
-    .map((shortcut) => {
-      const x = scale.toX(shortcut.start) * width;
-      const keysPx = widths[shortcut.id] ?? KEYS_PX;
-      const from = Math.max(x, reached + GAP_PX);
-      reached = from + keysPx;
-      return { from, keysPx, shortcut, x };
-    });
-  // Keys pressed in the last moments would run past the strip's end, as if
-  // there were more recording there, so they end at it instead, and those
-  // before them are drawn back to stay clear; each tick stays where it was.
-  let limit = width;
-  for (let index = placed.length - 1; index >= 0; index -= 1) {
-    const each = placed[index];
-    each.from = Math.min(each.from, limit - each.keysPx);
-    limit = each.from - GAP_PX;
-  }
+  const sorted = [...shortcuts].sort(
+    (first, second) => first.start - second.start,
+  );
+  const ticks = sorted.map((shortcut) => ({
+    keysPx: widths[shortcut.id] ?? KEYS_PX,
+    x: scale.toX(shortcut.start) * width,
+  }));
+  const starts = placeShortcutKeys(ticks, width);
+  const placed = sorted.map((shortcut, index) => ({
+    from: starts[index],
+    shortcut,
+    x: ticks[index].x,
+  }));
 
   return (
     <div

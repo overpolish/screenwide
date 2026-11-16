@@ -96,3 +96,16 @@ export const AtTheEnd: Story = {
     ],
   },
 };
+
+// More shortcuts than the strip holds stay on it, the first drawn over each
+// other at its start rather than past it.
+export const Overfull: Story = {
+  args: {
+    shortcuts: Array.from({ length: 24 }, (_, index) => ({
+      end: 41 + index,
+      id: `key-${String(index)}`,
+      keys: ["Command", "Z"],
+      start: 40 + index,
+    })),
+  },
+};
