@@ -84,6 +84,24 @@ export function SiteTiles() {
   return (
     <section className="grid gap-x-8 gap-y-12 md:grid-cols-2 lg:grid-cols-3">
       <Tile
+        body={t("site-sound-body")}
+        clip="sound"
+        label={t("site-sound-recording")}
+        title={t("site-sound-title")}
+      />
+      <Tile
+        body={t("site-dictate-body")}
+        clip="dictation"
+        label={t("site-dictate-recording")}
+        title={t("site-dictate-title")}
+      />
+      <Tile
+        body={t("site-notes-body")}
+        clip="notes"
+        label={t("site-notes-recording")}
+        title={t("site-notes-title")}
+      />
+      <Tile
         body={t("site-read-body")}
         clip="text-recognition"
         label={t("site-read-recording")}

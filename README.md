@@ -36,9 +36,27 @@ Magnify a detail, put one part in focus, spotlight or redact it, and add arrows,
 	</tr>
 </table>
 
+## Sound
+
+Put songs and sound effects on their own track. Find free music and effects in the Library, by mood, tempo and vocals, and drop them on the timeline. Songs that meet are beat-matched and blended, and everything sits under the voice.
+
+<img alt="A song from the Library dropped onto the sound track under a recording" src="./.github/assets/sound.gif" />
+
+## Dictation
+
+Hold a shortcut and speak, and the words are typed wherever your cursor is, in any app. Say "new line", "comma" or "scratch that", and in English correct yourself as you go: "at 2, actually 3". It runs on your computer.
+
+<img alt="Words typed into a note as they are spoken, the dictation island showing them at the top of the screen" src="./.github/assets/dictation.gif" />
+
+## Meeting notes
+
+Take notes of a call: what you and everyone else said, written into a Markdown file with each speaker told apart. They are made on your computer, and no audio is kept.
+
+<img alt="Notes taken during a call, then opened with each speaker's lines told apart" src="./.github/assets/notes.gif" />
+
 ## Free and paid
 
-Recording, editing, screenshots and text recognition are free. Ruler, Annotate, Glide and References are paid tools: each is free for 14 days, then a one-off purchase from Settings › Licences, on its own or all together.
+Recording, editing, screenshots, text recognition, dictation and meeting notes are free. Ruler, Annotate, Glide and References are paid tools: each is free for 14 days, then a one-off purchase from Settings › Licences, on its own or all together.
 
 <table>
 	<tr>

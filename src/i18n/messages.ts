@@ -1554,6 +1554,9 @@ export type Messages = {
   "site-buy": null;
   "site-buy-bundle": null;
   "site-buy-tool": { tool: string | number };
+  "site-dictate-body": null;
+  "site-dictate-recording": null;
+  "site-dictate-title": null;
   "site-download-macos": null;
   "site-download-windows": null;
   "site-edit-recording": null;
@@ -1571,6 +1574,9 @@ export type Messages = {
   "site-hero-title": null;
   "site-name": null;
   "site-nav-source": null;
+  "site-notes-body": null;
+  "site-notes-recording": null;
+  "site-notes-title": null;
   "site-privacy-app-title": null;
   "site-privacy-buying": null;
   "site-privacy-buying-title": null;
@@ -1604,6 +1610,9 @@ export type Messages = {
   "site-ruler-body": null;
   "site-ruler-recording": null;
   "site-ruler-title": null;
+  "site-sound-body": null;
+  "site-sound-recording": null;
+  "site-sound-title": null;
   "site-tools-body": null;
   "site-tools-title": null;
   "text-recognition-island": null;

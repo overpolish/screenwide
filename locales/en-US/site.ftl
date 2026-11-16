@@ -7,7 +7,7 @@ site-name = Screenwide
 # A link at the top of the page.
 site-nav-source = Source code
 site-hero-title = Everything screen.
-site-hero-lede = Record your screen and edit it, read text off it, draw on it and measure it. For macOS and Windows.
+site-hero-lede = Record your screen and edit it, dictate into any app, take notes of your calls, and read, draw on and measure what is on screen. For macOS and Windows.
 site-download-macos = Download for macOS
 site-download-windows = Download for Windows
 # Under the download buttons.
@@ -15,11 +15,23 @@ site-hero-note = Free and open source. Tools sold separately.
 # Names the recording of the editor at work, for assistive technology.
 site-edit-recording = A recording playing in the editor, zooming in where the clicks and typing are
 site-free-title = Free and open source
-site-free-body = Recording, editing, screenshots and text recognition, under the GPL.
+site-free-body = Recording, editing, screenshots, text recognition, dictation and meeting notes, under the GPL.
 site-read-title = Read
 site-read-body = Select part of the screen and copy the text in it.
 # Names the recording of Text Recognition at work, for assistive technology.
 site-read-recording = Text Recognition reading a photographed page and pasting it into a note
+site-dictate-title = Dictate
+site-dictate-body = Speak, and the words are typed wherever your cursor is, in any app.
+# Names the recording of dictation at work, for assistive technology.
+site-dictate-recording = Words typed into a note as they are spoken, the dictation island showing them at the top of the screen
+site-notes-title = Meeting notes
+site-notes-body = Notes of your calls with each speaker told apart, made on your computer.
+# Names the recording of meeting notes at work, for assistive technology.
+site-notes-recording = Notes taken during a call, then opened with each speaker's lines told apart
+site-sound-title = Sound
+site-sound-body = Songs and sound effects from the Library, beat-matched and levelled under your voice.
+# Names the recording of the sound track at work, for assistive technology.
+site-sound-recording = A song from the Library dropped onto the sound track under a recording
 site-annotate-title = Annotate
 site-annotate-body = Draw on your screen, live, as you present or record. Annotating in the editor is free.
 # Names the recording of Annotate at work, for assistive technology.
