@@ -17,10 +17,15 @@ pub fn get_transcription_state(app: AppHandle) -> TranscriptionState {
 }
 
 /// Settles when the model is in place, the download is cancelled, or it
-/// fails, so a failure reaches whoever asked.
+/// fails, so a failure reaches whoever asked. `again` fetches a downloaded
+/// model's files afresh, each replacing its copy once it arrives whole.
 #[tauri::command]
-pub async fn download_transcription_model(app: AppHandle, model: String) -> Result<(), String> {
-  download::run(&app, catalogue::find(&model)?).await
+pub async fn download_transcription_model(
+  app: AppHandle,
+  model: String,
+  again: bool,
+) -> Result<(), String> {
+  download::run(&app, catalogue::find(&model)?, again).await
 }
 
 #[tauri::command]

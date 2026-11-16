@@ -1511,6 +1511,7 @@ export type Messages = {
   "settings-transcription-dictation-description": null;
   "settings-transcription-dictation-shared-description": null;
   "settings-transcription-download": null;
+  "settings-transcription-download-again": { model: string | number };
   "settings-transcription-downloading": { model: string | number };
   "settings-transcription-language": null;
   "settings-transcription-language-description": null;

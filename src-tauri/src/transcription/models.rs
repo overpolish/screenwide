@@ -29,6 +29,8 @@ struct ModelState {
   /// 0 to 1 while downloading.
   progress: Option<f32>,
   purpose: Purpose,
+  /// What the model takes once downloaded; while downloading, what this
+  /// download fetches; before, what is left to fetch.
   size_bytes: u64,
   status: Status,
   /// For dictation's model: when its words appear.
@@ -81,15 +83,18 @@ pub(crate) fn paths(app: &AppHandle, model: &Model) -> Result<Vec<PathBuf>, Stri
     .collect()
 }
 
-/// Whether every file of `model` is on this computer. Each checksum was
-/// checked as the file arrived and a download only takes the final name
-/// once it passes, so the size alone tells a whole file from anything else.
+/// Whether every file of `model` is on this computer.
 pub(crate) fn is_downloaded(app: &AppHandle, model: &Model) -> bool {
-  model.files.iter().all(|file| {
-    file_path(app, file)
-      .and_then(|path| std::fs::metadata(path).map_err(|error| error.to_string()))
-      .is_ok_and(|metadata| metadata.len() == file.size_bytes)
-  })
+  model.files.iter().all(|file| is_whole(app, file))
+}
+
+/// Whether `file` is on this computer. Its checksum was checked as it
+/// arrived and a download only takes the final name once it passes, so the
+/// size alone tells a whole file from anything else.
+pub(super) fn is_whole(app: &AppHandle, file: &ModelFile) -> bool {
+  file_path(app, file)
+    .and_then(|path| std::fs::metadata(path).map_err(|error| error.to_string()))
+    .is_ok_and(|metadata| metadata.len() == file.size_bytes)
 }
 
 /// The model `purpose` runs with, once it is on this computer.
@@ -174,21 +179,35 @@ pub(crate) fn state(app: &AppHandle) -> TranscriptionState {
 }
 
 fn model_state(app: &AppHandle, model: &'static Model, description: String) -> ModelState {
-  let progress = download::progress(model.id);
-  let status = if progress.is_some() {
+  let download = download::progress(model.id);
+  let downloaded = download.is_none() && is_downloaded(app, model);
+  let status = if download.is_some() {
     Status::Downloading
-  } else if is_downloaded(app, model) {
+  } else if downloaded {
     Status::Downloaded
   } else {
     Status::Available
+  };
+  // The bytes that matter where the model is shown: what is on disk once
+  // downloaded, what this download fetches while one runs, and before that
+  // what is left to fetch, which files shared with another model may cut.
+  let size_bytes = match download {
+    Some((_, total)) => total,
+    None if downloaded => model.size_bytes(),
+    None => model
+      .files
+      .iter()
+      .filter(|file| !is_whole(app, file))
+      .map(|file| file.size_bytes)
+      .sum(),
   };
   ModelState {
     description,
     id: model.id,
     name: model.purpose.name(),
-    progress,
+    progress: download.map(|(progress, _)| progress),
     purpose: model.purpose,
-    size_bytes: model.size_bytes(),
+    size_bytes,
     status,
     writes: None,
   }
@@ -199,9 +218,17 @@ pub(super) fn changed(app: &AppHandle) {
   let _ = app.emit(CHANGED_EVENT, state(app));
 }
 
+/// Deletes `model`'s files, keeping any another downloaded model uses too.
 pub(super) fn remove(app: &AppHandle, model: &Model) -> Result<(), String> {
-  for path in paths(app, model)? {
-    match std::fs::remove_file(path) {
+  let shared = |file: &ModelFile| {
+    MODELS.iter().any(|other| {
+      other.id != model.id
+        && other.files.iter().any(|its| its.name == file.name)
+        && is_downloaded(app, other)
+    })
+  };
+  for file in model.files.iter().filter(|file| !shared(file)) {
+    match std::fs::remove_file(file_path(app, file)?) {
       Ok(()) => {}
       Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
       Err(error) => return Err(format!("Could not remove the model: {error}")),

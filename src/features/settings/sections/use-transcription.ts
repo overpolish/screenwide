@@ -57,6 +57,9 @@ export function useTranscription(onError: (error: string | null) => void) {
     download: (model: string) => {
       run(api.downloadTranscriptionModel(model));
     },
+    downloadAgain: (model: string) => {
+      run(api.downloadTranscriptionModel(model, true));
+    },
     remove: (model: string) => {
       run(api.removeTranscriptionModel(model));
     },

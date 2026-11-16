@@ -250,6 +250,8 @@ settings-transcription-detect = Detect Automatically
 settings-transcription-download = Download
 settings-transcription-cancel = Cancel
 settings-transcription-downloading = Downloading the { $model } model
+# Fetches a fresh copy of a downloaded model, for one that misbehaves.
+settings-transcription-download-again = Download the { $model } model again
 settings-transcription-remove = Remove the { $model } model
 settings-transcription-confirm-remove = Confirm removing the { $model } model
 

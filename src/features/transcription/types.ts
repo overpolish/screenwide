@@ -29,6 +29,9 @@ export type TranscriptionModel = {
   /** 0 to 1 while downloading; null otherwise. */
   progress: number | null;
   purpose: TranscriptionPurpose;
+  /** What it takes once downloaded; while downloading, what the download
+   * fetches; before, what is left to fetch, less any files another model
+   * has already brought. */
   sizeBytes: number;
   status: "available" | "downloaded" | "downloading";
   /** Dictation's model only: whether its words appear as they are spoken,

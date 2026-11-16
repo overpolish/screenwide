@@ -81,6 +81,7 @@ describe("settings search", () => {
           transcription={{
             cancel: () => undefined,
             download: () => undefined,
+            downloadAgain: () => undefined,
             remove: () => undefined,
             setLanguage: () => undefined,
             setWords: () => undefined,

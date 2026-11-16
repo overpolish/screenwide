@@ -1,11 +1,12 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { Trash2 } from "lucide-react";
+import { RotateCw, Trash2 } from "lucide-react";
 
 import { ConfirmActionButton } from "../../../composites/confirm-action-button/confirm-action-button";
 import { t } from "../../../i18n/i18n";
 import { Button } from "../../../primitives/button/button";
+import { IconButton } from "../../../primitives/button/icon-button";
 import { ProgressBar } from "../../../primitives/progress-bar/progress-bar";
 
 import type { TranscriptionControls } from "./use-transcription";
@@ -13,7 +14,8 @@ import type { TranscriptionModel } from "../../transcription/types";
 
 /**
  * What can be done with a model where it is shown: download it, follow and
- * cancel its download, or, where models are managed, remove it.
+ * cancel its download, or, where models are managed, download it again or
+ * remove it.
  */
 export function TranscriptionModelActions({
   controls,
@@ -22,7 +24,8 @@ export function TranscriptionModelActions({
 }: {
   controls: TranscriptionControls;
   model: TranscriptionModel;
-  /** Offers removal once downloaded; only Settings › Transcription does. */
+  /** Offers downloading again and removal once downloaded; only Settings ›
+   * Transcription does. */
   isRemovable?: boolean;
 }) {
   if (model.status === "available")
@@ -56,16 +59,31 @@ export function TranscriptionModelActions({
     );
   if (!isRemovable) return null;
   return (
-    <ConfirmActionButton
-      confirmLabel={t("settings-transcription-confirm-remove", {
-        model: model.name,
-      })}
-      icon={<Trash2 />}
-      label={t("settings-transcription-remove", { model: model.name })}
-      onConfirm={() => {
-        controls.remove(model.id);
-      }}
-      variant="ghost"
-    />
+    <div className="flex items-center gap-separate">
+      {/* Fetches a fresh copy beside the one in use, for a model that
+          misbehaves; the copy replaces it only once it arrives whole. */}
+      <IconButton
+        aria-label={t("settings-transcription-download-again", {
+          model: model.name,
+        })}
+        onPress={() => {
+          controls.downloadAgain(model.id);
+        }}
+        variant="ghost"
+      >
+        <RotateCw aria-hidden className="size-icon" />
+      </IconButton>
+      <ConfirmActionButton
+        confirmLabel={t("settings-transcription-confirm-remove", {
+          model: model.name,
+        })}
+        icon={<Trash2 />}
+        label={t("settings-transcription-remove", { model: model.name })}
+        onConfirm={() => {
+          controls.remove(model.id);
+        }}
+        variant="ghost"
+      />
+    </div>
   );
 }

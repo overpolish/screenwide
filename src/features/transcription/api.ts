@@ -9,8 +9,10 @@ import type { TranscriptionState } from "./types";
 export const getTranscriptionState = () =>
   invoke<TranscriptionState>("get_transcription_state");
 
-export const downloadTranscriptionModel = (model: string) =>
-  invoke<null>("download_transcription_model", { model });
+/** `again` fetches a downloaded model afresh, replacing each file only once
+ * its copy arrives whole. */
+export const downloadTranscriptionModel = (model: string, again = false) =>
+  invoke<null>("download_transcription_model", { again, model });
 
 export const cancelTranscriptionDownload = (model: string) =>
   invoke<null>("cancel_transcription_download", { model });
