@@ -6,9 +6,24 @@
 //! the GPU cannot take the model.
 
 use std::path::Path;
+use std::sync::LazyLock;
 
+use ort::environment::Environment;
 use ort::ep::ExecutionProviderDispatch;
 use ort::session::{builder::SessionBuilder, Session};
+
+/// ONNX Runtime's environment, every session's. ort allows one a process,
+/// and refuses a second even once the first is gone, so it is made once and
+/// kept for the helper's life.
+static ENVIRONMENT: LazyLock<Result<Environment, String>> =
+  LazyLock::new(|| ort::init().build().map_err(|error| error.to_string()));
+
+fn builder() -> ort::Result<SessionBuilder> {
+  match &*ENVIRONMENT {
+    Ok(environment) => Session::builder(environment),
+    Err(error) => Err(ort::Error::new(error.clone())),
+  }
+}
 
 /// Whether DirectML may fuse the model's graph into one piece of GPU work.
 /// Fused, a large model can hold the GPU for long enough that Windows resets
@@ -50,7 +65,7 @@ pub(crate) fn gpu_session(path: &Path, what: &str, fusion: Fusion) -> Option<Ses
 /// Loads the model at `path` for the feature named `what` on the CPU, for a
 /// model a GPU backend takes but answers wrongly.
 pub(crate) fn on_cpu(path: &Path, what: &str) -> Result<Session, String> {
-  Session::builder()
+  builder()
     .and_then(|mut builder| builder.commit_from_file(path))
     .map_err(|error| format!("Could not load the {what} model: {error}"))
 }
@@ -59,7 +74,7 @@ pub(crate) fn on_cpu(path: &Path, what: &str) -> Result<Session, String> {
 /// `threads` of its own, for running several sessions side by side.
 pub(crate) fn on_cpu_threads(path: &Path, what: &str, threads: usize) -> Result<Session, String> {
   let failed = |error: String| format!("Could not load the {what} model: {error}");
-  let builder = Session::builder()
+  let builder = builder()
     .map_err(|error| failed(error.to_string()))?
     .with_intra_threads(threads)
     .map_err(|error| failed(error.to_string()))?;
@@ -113,7 +128,7 @@ fn platform_gpu(path: &Path, cache: &Path) -> Option<ort::Result<Session>> {
     .with_model_cache_dir(cache.display())
     .build();
   let load = || -> ort::Result<Session> {
-    Session::builder()?
+    builder()?
       .with_execution_providers([coreml.error_on_failure()])?
       .commit_from_file(path)
   };
@@ -131,7 +146,7 @@ fn platform_gpu(_path: &Path, _cache: &Path) -> Option<ort::Result<Session>> {
 }
 
 fn gpu_builder(backend: ExecutionProviderDispatch, fusion: Fusion) -> ort::Result<SessionBuilder> {
-  let builder = Session::builder()?;
+  let builder = builder()?;
   // DirectML takes neither of these, and refuses the session if they are on.
   #[cfg(windows)]
   let builder = builder

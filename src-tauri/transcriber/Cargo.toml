@@ -82,7 +82,7 @@ tract-pulse = { version = "=0.21.4", optional = true }
 # ONNX Runtime for Studio sound, whose speech restoration model is too large
 # for tract to run at a usable speed. Linked in statically from pyke's builds;
 # each platform adds its GPU backend below.
-ort = { version = "=2.0.0-rc.13", optional = true, default-features = false, features = ["std", "download-binaries", "tls-native", "api-24"] }
+ort = { version = "=2.0.0-rc.15", optional = true, default-features = false, features = ["std", "download-binaries", "tls-native", "api-24"] }
 # The restoration model's input features and the separation model's spectrum
 # are computed here rather than by a Python library: the same FFT the app
 # uses.
@@ -97,7 +97,7 @@ llama-cpp-2 = { version = "=0.1.161", optional = true, default-features = false,
 # each build and test, and build.rs tells the helper where to find it. Object
 # following runs through CoreML, which answers it correctly and fast where
 # WebGPU does not.
-ort = { version = "=2.0.0-rc.13", optional = true, default-features = false, features = ["webgpu", "coreml", "copy-dylibs"] }
+ort = { version = "=2.0.0-rc.15", optional = true, default-features = false, features = ["webgpu", "coreml", "copy-dylibs"] }
 
 [target.'cfg(windows)'.dependencies]
 whisper-rs = { version = "0.16.0", optional = true, features = ["vulkan"] }
@@ -106,7 +106,7 @@ llama-cpp-2 = { version = "=0.1.161", optional = true, default-features = false,
 # Studio sound on the GPU through DirectML, on x64 and ARM64 alike. pyke's
 # WebGPU build brings a DXC of its own that would clash with the app's.
 # DirectML.dll ships beside the helper, which Windows looks in first.
-ort = { version = "=2.0.0-rc.13", optional = true, default-features = false, features = ["directml", "copy-dylibs"] }
+ort = { version = "=2.0.0-rc.15", optional = true, default-features = false, features = ["directml", "copy-dylibs"] }
 # Other programs' use of the GPU, read before each step of a model, and the
 # graphics driver a GPU reset is remembered against (`shared_gpu`).
 windows = { version = "0.62.2", optional = true, features = [
