@@ -1,0 +1,9 @@
+# SPDX-FileCopyrightText: 2026 overpolish
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+# The Rust every build uses, here and in CI, so a new stable release cannot
+# break main overnight: move it on deliberately, with `pnpm check` passing.
+[toolchain]
+channel = "1.100.0"
+components = ["clippy", "rustfmt"]
+profile = "minimal"

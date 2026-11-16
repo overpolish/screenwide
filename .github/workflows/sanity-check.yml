@@ -74,10 +74,10 @@ jobs:
           cache: pnpm
           node-version-file: .nvmrc
 
-      - name: Install Rust stable
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          components: clippy, rustfmt
+      # rustup is on every runner image already; this installs the toolchain
+      # rust-toolchain.toml pins, with its components.
+      - name: Install Rust
+        run: rustup toolchain install
 
       # The transcriber's engine draws on the GPU through Vulkan on Windows,
       # and builds its shaders with the SDK's compiler.
