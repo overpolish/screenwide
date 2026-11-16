@@ -77,13 +77,17 @@ const crate = resolve("src-tauri", "transcriber");
 // reach files past MAX_PATH, whatever Windows' long path setting. Ninja in
 // place of MSBuild's deeper project layout, CMake's hashed SHORT intermediate
 // directories and no triple directory when building for the host shorten
-// what lies below the target directory; on Windows that directory sits in
-// the user's local data folder rather than the checkout, whose depth varies,
-// named for the checkout so two checkouts keep apart.
+// what lies below the target directory, which leaves llama.cpp's deepest
+// path about 190 characters below it. On Windows that directory is a short
+// one of the same length on every computer, in ProgramData, where any user
+// may make a folder: a folder in the checkout or the user's profile varies
+// with their depth and the user's name, and llama.cpp's build already fails
+// from a runner's local data folder. It is named for the checkout so two
+// checkouts keep apart.
 const targetDirectory =
   hostPlatform === "win32"
     ? resolve(
-        env.LOCALAPPDATA ?? resolve(env.USERPROFILE ?? ".", "AppData", "Local"),
+        env.ProgramData ?? "C:\\ProgramData",
         "swb",
         createHash("sha256")
           .update(resolve(".").toLowerCase())

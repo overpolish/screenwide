@@ -41,9 +41,9 @@ Then fully restart the terminal app (Windows Terminal, VS Code and so on) so `VU
 
 Building the helper also downloads a prebuilt ONNX Runtime with DirectML, which runs the Studio sound and Studio ducking models on the GPU, links it in, and puts `DirectML.dll` beside the helper.
 
-The helpers build in `%LOCALAPPDATA%\swb\<hash of the checkout's path>` rather than in the checkout: the GPU shader builds nest CMake projects deep enough that a checkout's own path would take them past Windows' path limits, which turning on long paths does not lift. Delete that folder to start the helpers' build afresh.
+The helpers build in `%ProgramData%\swb\<hash of the checkout's path>` rather than in the checkout: the GPU shader builds nest CMake projects deep enough that a longer folder, such as one in the checkout or in your profile, takes them past Windows' path limits, which turning on long paths does not lift. Delete that folder to start the helpers' build afresh.
 
-Windows Defender scans every file a build writes, which can make Rust builds several times slower. Build from a [Dev Drive](https://learn.microsoft.com/windows/dev-drive/), whose performance mode defers those scans, or exclude the repository's `src-tauri\target`, `%LOCALAPPDATA%\swb`, `%USERPROFILE%\.cargo` and `%USERPROFILE%\.rustup` folders from real-time protection.
+Windows Defender scans every file a build writes, which can make Rust builds several times slower. Build from a [Dev Drive](https://learn.microsoft.com/windows/dev-drive/), whose performance mode defers those scans, or exclude the repository's `src-tauri\target`, `%ProgramData%\swb`, `%USERPROFILE%\.cargo` and `%USERPROFILE%\.rustup` folders from real-time protection.
 
 ## Run
 
