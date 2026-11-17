@@ -3,15 +3,33 @@
 
 name: Release
 
+# A pushed tag builds every platform into a draft release. Started by hand,
+# it builds only the platforms asked for, from the branch it runs on, into
+# the release of the tag given, replacing their files there: a macOS fix to
+# a release whose Windows package the Microsoft Store already has.
 on:
   push:
     tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag to rebuild into, such as v1.1.0
+        required: true
+      platforms:
+        description: Platforms to rebuild
+        required: true
+        type: choice
+        default: macos
+        options: [macos, windows, all]
 
 permissions:
   contents: write
 
+env:
+  RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
+
 concurrency:
-  group: release-${{ github.ref_name }}
+  group: release-${{ inputs.tag || github.ref_name }}
   cancel-in-progress: false
 
 jobs:
@@ -20,6 +38,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       release_id: ${{ steps.create_release.outputs.release_id }}
+      platforms: ${{ steps.platforms.outputs.platforms }}
     steps:
       # Every tag, so the notes can find the last release to compare with.
       - name: Check out repository
@@ -31,7 +50,7 @@ jobs:
         id: create_release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAG_NAME: ${{ github.ref_name }}
+          TAG_NAME: ${{ env.RELEASE_TAG }}
         run: |
           release_id="$(gh release view "$TAG_NAME" --json databaseId --jq .databaseId 2>/dev/null || true)"
           if [ -z "$release_id" ]; then
@@ -46,28 +65,28 @@ jobs:
           fi
           echo "release_id=$release_id" >> "$GITHUB_OUTPUT"
 
+      - name: Choose the platforms
+        id: platforms
+        env:
+          PLATFORMS: ${{ inputs.platforms || 'all' }}
+        run: |
+          all='[
+            {"name": "macOS Apple Silicon", "platform": "macos", "os": "macos-15", "target": "aarch64-apple-darwin", "args": "--target aarch64-apple-darwin --bundles app,dmg"},
+            {"name": "Windows x64", "platform": "windows", "os": "windows-latest", "target": "x86_64-pc-windows-msvc", "args": "--target x86_64-pc-windows-msvc --no-bundle"},
+            {"name": "Windows ARM64", "platform": "windows", "os": "windows-11-arm", "target": "aarch64-pc-windows-msvc", "args": "--target aarch64-pc-windows-msvc --no-bundle"}
+          ]'
+          echo "platforms=$(jq -c --arg only "$PLATFORMS" 'map(select($only == "all" or .platform == $only))' <<< "$all")" >> "$GITHUB_OUTPUT"
+
   build:
     name: ${{ matrix.name }}
     needs: prepare
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
+      # Windows is released through the Microsoft Store only: its jobs build
+      # the app for the Store package and attach no installer.
       matrix:
-        include:
-          - name: macOS Apple Silicon
-            os: macos-15
-            target: aarch64-apple-darwin
-            args: --target aarch64-apple-darwin --bundles app,dmg
-          # Windows is released through the Microsoft Store only: its jobs
-          # build the app for the Store package and attach no installer.
-          - name: Windows x64
-            os: windows-latest
-            target: x86_64-pc-windows-msvc
-            args: --target x86_64-pc-windows-msvc --no-bundle
-          - name: Windows ARM64
-            os: windows-11-arm
-            target: aarch64-pc-windows-msvc
-            args: --target aarch64-pc-windows-msvc --no-bundle
+        include: ${{ fromJSON(needs.prepare.outputs.platforms) }}
 
     steps:
       - name: Check out repository
@@ -101,7 +120,7 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Verify release version
-        run: pnpm release:check-version ${{ github.ref_name }}
+        run: pnpm release:check-version ${{ env.RELEASE_TAG }}
 
       - name: Build and upload signed bundles
         if: runner.os == 'macOS'
@@ -120,7 +139,7 @@ jobs:
           args: ${{ matrix.args }}
           releaseId: ${{ needs.prepare.outputs.release_id }}
           releaseDraft: true
-          tagName: ${{ github.ref_name }}
+          tagName: ${{ env.RELEASE_TAG }}
           uploadUpdaterJson: true
           # No version in the names, so the website can link to
           # releases/latest/download/Screenwide_aarch64.dmg. latest.json
@@ -141,13 +160,13 @@ jobs:
       # Center takes it from there by hand, and the Store signs it. The Store
       # takes plain versions only, so a prerelease has none.
       - name: Pack and attach the Microsoft Store package
-        if: runner.os == 'Windows' && !contains(github.ref_name, '-')
+        if: runner.os == 'Windows' && !contains(env.RELEASE_TAG, '-')
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           pnpm msix:package --target ${{ matrix.target }}
-          gh release upload "${{ github.ref_name }}" \
+          gh release upload "${{ env.RELEASE_TAG }}" \
             src-tauri/target/${{ matrix.target }}/release/bundle/msix/*.msix --clobber
 
   verify:
@@ -157,7 +176,6 @@ jobs:
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       RELEASE_ID: ${{ needs.prepare.outputs.release_id }}
-      RELEASE_TAG: ${{ github.ref_name }}
     steps:
       - name: Download updater manifest
         run: |
