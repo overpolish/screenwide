@@ -9,8 +9,9 @@
 
 use std::time::Instant;
 
-#[derive(Default)]
 pub(super) struct Timing {
+  /// The window's application, where the platform can name it.
+  app: Option<String>,
   frames: u32,
   last_written: Option<Instant>,
   place_total_ms: f64,
@@ -19,6 +20,17 @@ pub(super) struct Timing {
 }
 
 impl Timing {
+  pub(super) fn new(app: Option<String>) -> Self {
+    Self {
+      app,
+      frames: 0,
+      last_written: None,
+      place_total_ms: 0.0,
+      place_max_ms: 0.0,
+      gap_max_ms: 0.0,
+    }
+  }
+
   /// Times one write, `place`, and logs the line `describe` makes of the
   /// frame's number, the write's milliseconds, the gap since the last write
   /// and whether the window took it.
@@ -55,8 +67,9 @@ impl Timing {
   /// Logs the tween's summary once it has settled.
   pub(super) fn done(&self, resizes: bool, took_ms: f64, planned_ms: f64) {
     log(&format!(
-      "done resizes={resizes} frames={} took={took_ms:.0}ms (planned {planned_ms:.0}ms) place \
-       avg={:.1}ms max={:.1}ms gap max={:.1}ms",
+      "done app={} resizes={resizes} frames={} took={took_ms:.0}ms (planned {planned_ms:.0}ms) \
+       place avg={:.1}ms max={:.1}ms gap max={:.1}ms",
+      self.app.as_deref().unwrap_or("-"),
       self.frames,
       self.place_total_ms / f64::from(self.frames.max(1)),
       self.place_max_ms,

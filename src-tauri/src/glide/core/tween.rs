@@ -78,6 +78,11 @@ pub(crate) trait GlideWindow: Send + 'static {
 
   fn minimize(&mut self);
 
+  /// TEMPORARY(#22): the window's application, named in the frame timing log.
+  fn app_name(&self) -> Option<String> {
+    None
+  }
+
   /// Puts the window back where a session found it, at `original`.
   fn restore(&self, original: GlideFrame)
   where
@@ -131,9 +136,21 @@ pub(crate) fn start() {
   }
 }
 
+// Steps are paced against fixed deadlines rather than by sleeping a whole
+// interval after each one: a window's application can hold a write for
+// several milliseconds, and sleeping after it would add that to every frame's
+// gap. A step that overruns its deadline drops the ticks it missed instead of
+// writing them back to back.
 fn run() {
+  let mut next = Instant::now();
   loop {
-    std::thread::sleep(STEP_INTERVAL);
+    next += STEP_INTERVAL;
+    let now = Instant::now();
+    if next > now {
+      std::thread::sleep(next - now);
+    } else {
+      next = now;
+    }
     step();
   }
 }
@@ -180,6 +197,7 @@ pub(crate) fn animate_to(
     }
   };
   let generation = GENERATION.fetch_add(1, Ordering::Relaxed) + 1;
+  let timing = Timing::new(target.app_name());
   if let Ok(mut slot) = TWEEN.lock() {
     *slot = Some(Tween {
       target: Box::new(target),
@@ -192,7 +210,7 @@ pub(crate) fn animate_to(
       fit,
       _busy: BusyLease::acquire(),
       _completion: completion::begin(),
-      timing: Timing::default(),
+      timing,
     });
   }
 }

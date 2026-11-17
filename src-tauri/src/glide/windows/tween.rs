@@ -3,6 +3,18 @@
 
 //! A captured HWND as the shared Glide tween drives it, in physical pixels.
 
+use windows::{
+  core::PWSTR,
+  Win32::{
+    Foundation::CloseHandle,
+    System::Threading::{
+      OpenProcess, QueryFullProcessImageNameW, PROCESS_NAME_WIN32,
+      PROCESS_QUERY_LIMITED_INFORMATION,
+    },
+    UI::WindowsAndMessaging::GetWindowThreadProcessId,
+  },
+};
+
 use super::target::WindowTarget;
 use crate::glide::core::{tween::GlideWindow, GlideFrame};
 
@@ -59,5 +71,25 @@ impl GlideWindow for WindowTarget {
 
   fn restore(&self, _original: GlideFrame) {
     WindowTarget::restore(*self);
+  }
+
+  fn app_name(&self) -> Option<String> {
+    let mut process_id = 0;
+    unsafe { GetWindowThreadProcessId(self.native_hwnd(), Some(&mut process_id)) };
+    let image = unsafe {
+      let process = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, false, process_id).ok()?;
+      let mut buffer = [0_u16; 1024];
+      let mut length = buffer.len() as u32;
+      let result = QueryFullProcessImageNameW(
+        process,
+        PROCESS_NAME_WIN32,
+        PWSTR::from_raw(buffer.as_mut_ptr()),
+        &mut length,
+      );
+      let _ = CloseHandle(process);
+      result.ok()?;
+      String::from_utf16_lossy(&buffer[..length as usize])
+    };
+    image.rsplit('\\').next().map(str::to_owned)
   }
 }
