@@ -477,13 +477,17 @@ fn copies_beside_the_saved_movie_rather_than_onto_it() {
   // A sibling, so the rename that publishes it cannot cross a volume - the
   // destination is wherever the user chose, which is often an external disk.
   assert_eq!(temporary.parent(), destination.parent());
-  assert_eq!(temporary.extension().unwrap(), "part");
-  // Not something the user has to look at while it is being written.
-  assert!(temporary
+  // Its own extension, by which AVFoundation opens it to check it, but
+  // plainly unfinished, and not something the user has to look at while it
+  // is being written.
+  assert_eq!(temporary.extension().unwrap(), "mp4");
+  let name = temporary
     .file_name()
     .unwrap()
     .to_string_lossy()
-    .starts_with('.'));
+    .into_owned();
+  assert!(name.contains(".part."));
+  assert!(name.starts_with('.'));
   // Two saves at once still write to files of their own.
   assert_ne!(remux_temp_path(destination), temporary);
 }

@@ -39,15 +39,25 @@ static REMUX_ATTEMPTS: AtomicU64 = AtomicU64::new(0);
 ///
 /// A sibling of the destination rather than a temp directory, so the rename
 /// cannot cross a volume - the destination is wherever the user chose to save,
-/// which is routinely an external disk.
+/// which is routinely an external disk. It ends in the destination's own
+/// extension, which AVFoundation goes by to open it when the finished file is
+/// checked: under another it reads nothing, and the check would fall back on
+/// FFprobe, which Screenwide does not bundle.
 pub(crate) fn remux_temp_path(destination: &Path) -> PathBuf {
   let attempt = REMUX_ATTEMPTS.fetch_add(1, Ordering::Relaxed);
-  let name = destination.file_name().map_or_else(
+  let stem = destination.file_stem().map_or_else(
     || "recording".to_owned(),
-    |name| name.to_string_lossy().into_owned(),
+    |stem| stem.to_string_lossy().into_owned(),
   );
+  let extension = destination
+    .extension()
+    .map(|extension| format!(".{}", extension.to_string_lossy()))
+    .unwrap_or_default();
 
-  destination.with_file_name(format!(".{name}.{}.{attempt}.part", std::process::id()))
+  destination.with_file_name(format!(
+    ".{stem}.{}.{attempt}.part{extension}",
+    std::process::id()
+  ))
 }
 
 pub(crate) fn remux_error(stderr: &[u8]) -> String {
