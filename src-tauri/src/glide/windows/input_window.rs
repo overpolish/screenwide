@@ -29,12 +29,14 @@ const TIMER_ID: usize = 1;
 const USAGE_PAGE_GENERIC_DESKTOP: u16 = 0x01;
 const USAGE_PAGE_DIGITIZER: u16 = 0x0d;
 const USAGE_MOUSE: u16 = 0x02;
-const USAGE_KEYBOARD: u16 = 0x06;
 const USAGE_TOUCHPAD: u16 = 0x05;
 static WINDOW_CLASS: OnceLock<u16> = OnceLock::new();
 
-/// Listens for Glide's gestures: raw input sinks on a message-only window,
-/// plus the low-level keyboard and wheel hooks.
+/// Listens for Glide's gestures: raw mouse and touchpad input sinks on a
+/// message-only window, plus the process's keyboard hook and the wheel hook.
+/// Keys come only through the keyboard hook: while the process registers raw
+/// keyboard input, Windows calls none of its low-level keyboard hooks for
+/// keys typed into one of Screenwide's own windows.
 ///
 /// None of these see anything while an elevated, high-integrity window such
 /// as Task Manager owns the foreground: User Interface Privilege Isolation
@@ -74,10 +76,11 @@ pub(super) fn run(app: AppHandle, ready: std::sync::mpsc::SyncSender<Result<(), 
       return;
     }
   };
-  let devices = [
-    raw_input_device(USAGE_PAGE_GENERIC_DESKTOP, USAGE_MOUSE, window),
-    raw_input_device(USAGE_PAGE_GENERIC_DESKTOP, USAGE_KEYBOARD, window),
-  ];
+  let devices = [raw_input_device(
+    USAGE_PAGE_GENERIC_DESKTOP,
+    USAGE_MOUSE,
+    window,
+  )];
   if let Err(error) =
     unsafe { RegisterRawInputDevices(&devices, std::mem::size_of::<RAWINPUTDEVICE>() as u32) }
   {

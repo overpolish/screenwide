@@ -5615,6 +5615,7 @@ dependencies = [
  "screenwide-imaging",
  "screenwide-keep-awake",
  "screenwide-keyboard-effects",
+ "screenwide-keyboard-hook",
  "screenwide-lexicon",
  "screenwide-licensing",
  "screenwide-moments",
@@ -5748,6 +5749,7 @@ dependencies = [
  "screenwide-gpu",
  "screenwide-h264",
  "screenwide-keep-awake",
+ "screenwide-keyboard-hook",
  "screenwide-osc",
  "screenwide-project",
  "screenwide-records",
@@ -5934,6 +5936,13 @@ dependencies = [
  "serde",
  "serde_json",
  "ts-rs",
+]
+
+[[package]]
+name = "screenwide-keyboard-hook"
+version = "1.1.1"
+dependencies = [
+ "windows 0.62.2",
 ]
 
 [[package]]
@@ -6155,6 +6164,7 @@ version = "1.1.1"
 dependencies = [
  "core-foundation 0.10.1",
  "core-graphics 0.25.0",
+ "screenwide-keyboard-hook",
  "windows 0.62.2",
 ]
 

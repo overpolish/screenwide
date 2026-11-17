@@ -9,13 +9,10 @@ use std::{
   },
 };
 
+use screenwide_keyboard_hook::{KeyEvent, Phase, Priority, Registration, Route};
 use windows::Win32::{
-  Foundation::{HWND, LPARAM, LRESULT, WPARAM},
-  UI::WindowsAndMessaging::{
-    CallNextHookEx, PostMessageW, SetWindowsHookExW, UnhookWindowsHookEx, HC_ACTION, HHOOK,
-    KBDLLHOOKSTRUCT, LLKHF_INJECTED, WH_KEYBOARD_LL, WM_APP, WM_KEYDOWN, WM_KEYUP, WM_SYSKEYDOWN,
-    WM_SYSKEYUP,
-  },
+  Foundation::{HWND, LPARAM, WPARAM},
+  UI::WindowsAndMessaging::{PostMessageW, WM_APP},
 };
 
 use super::{native_settings, session, titlebar, InputKind};
@@ -23,6 +20,8 @@ use super::{native_settings, session, titlebar, InputKind};
 pub(super) const WM_GLIDE_KEY: u32 = WM_APP + 3;
 pub(super) const WM_GLIDE_SHORTCUT: u32 = WM_APP + 7;
 static TARGET: AtomicIsize = AtomicIsize::new(0);
+/// Mouse buttons Glide took, so their release is kept from the system too.
+/// The keyboard hook keeps a taken key's own.
 #[derive(Default)]
 pub(super) struct Reservation {
   keys: HashSet<u32>,
@@ -61,53 +60,52 @@ pub(super) fn reserve(key: u32, pressed: bool, eligible: bool, posted: bool) -> 
     .is_ok_and(|mut reservation| reservation.transition(key, pressed, eligible, posted))
 }
 
-pub(super) struct KeyHook(HHOOK);
+/// Glide's place on the process's keyboard hook, which hands Glide every key
+/// the overlays and the system keys leave, injected ones included: a
+/// remote-desktop or streaming host types that way.
+pub(super) struct KeyHook {
+  _registration: Registration,
+}
 
 impl Drop for KeyHook {
   fn drop(&mut self) {
-    let _ = unsafe { UnhookWindowsHookEx(self.0) };
     TARGET.store(0, Ordering::Release);
   }
 }
 
 pub(super) fn install(target: HWND) -> Result<KeyHook, String> {
   TARGET.store(target.0 as isize, Ordering::Release);
-  match unsafe { SetWindowsHookExW(WH_KEYBOARD_LL, Some(callback), None, 0) } {
-    Ok(hook) => Ok(KeyHook(hook)),
+  match screenwide_keyboard_hook::take(Priority::Glide, route) {
+    Ok(registration) => Ok(KeyHook {
+      _registration: registration,
+    }),
     Err(error) => {
       TARGET.store(0, Ordering::Release);
-      Err(error.to_string())
+      Err(error)
     }
   }
 }
 
-unsafe extern "system" fn callback(code: i32, wparam: WPARAM, lparam: LPARAM) -> LRESULT {
-  if code == HC_ACTION as i32 {
-    let packet = unsafe { &*(lparam.0 as *const KBDLLHOOKSTRUCT) };
-    if !packet.flags.contains(LLKHF_INJECTED) {
-      let message = wparam.0 as u32;
-      let pressed = matches!(message, WM_KEYDOWN | WM_SYSKEYDOWN);
-      let released = matches!(message, WM_KEYUP | WM_SYSKEYUP);
-      if pressed || released {
-        super::release_tracker::hook(packet.vkCode, pressed, packet.time);
-        if super::deliberate::types(packet.vkCode, pressed) {
-          return unsafe { CallNextHookEx(None, code, wparam, lparam) };
-        }
-        native_settings::observe(packet.vkCode, pressed);
-        let configured = configured(packet.vkCode);
-        let escaped = packet.vkCode
-          == u32::from(windows::Win32::UI::Input::KeyboardAndMouse::VK_ESCAPE.0)
-          && (session::active_input().is_some() || super::spaces::active_input().is_some())
-          && !configured;
-        let eligible = suppresses(packet.vkCode) || escaped;
-        let posted = (configured || escaped) && forward(packet.vkCode, pressed);
-        if reserve(packet.vkCode, pressed, eligible, posted) {
-          return LRESULT(1);
-        }
-      }
-    }
+/// Posts Glide's keys to its input window and takes a control's press while
+/// it drives Glide.
+fn route(event: &KeyEvent) -> Route {
+  let key = event.key;
+  let pressed = event.phase != Phase::Release;
+  if super::deliberate::types(key, pressed) {
+    return Route::Pass;
   }
-  unsafe { CallNextHookEx(None, code, wparam, lparam) }
+  native_settings::observe(key, pressed);
+  let configured = configured(key);
+  let escaped = key == u32::from(windows::Win32::UI::Input::KeyboardAndMouse::VK_ESCAPE.0)
+    && (session::active_input().is_some() || super::spaces::active_input().is_some())
+    && !configured;
+  let eligible = event.may_take && (suppresses(key) || escaped);
+  let posted = (configured || escaped) && forward(key, pressed);
+  if pressed && eligible && posted {
+    Route::Take
+  } else {
+    Route::Pass
+  }
 }
 
 pub(super) fn configured(key: u32) -> bool {

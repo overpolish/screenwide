@@ -1,7 +1,19 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+use std::cell::{Cell, RefCell};
+
+use screenwide_keyboard_hook::{KeyEvent, Modifiers, Phase, Route};
+
 use super::*;
+
+thread_local! {
+  /// Keys the Ruler took, so their repeats and release are posted to it too.
+  /// Only the hook's thread routes keys, and tests their own.
+  static CONSUMED: RefCell<[bool; 256]> = const { RefCell::new([false; 256]) };
+  /// The overlay `CONSUMED` belongs to.
+  static CONSUMED_FOR: Cell<u32> = const { Cell::new(0) };
+}
 
 pub(super) fn active_overlay() -> Option<Overlay> {
   match OVERLAY.load(Ordering::Acquire) {
@@ -16,23 +28,8 @@ pub(super) fn post_alt_transition(down: bool) -> bool {
   if previous == down {
     return false;
   }
-  let target = TARGET.load(Ordering::Acquire);
-  let mut flags = FLAG_MODIFIER;
-  if down {
-    flags |= FLAG_ALT_DOWN;
-  } else {
-    flags |= FLAG_RELEASE;
-  }
-  if target != 0 {
-    let _ = unsafe {
-      PostMessageW(
-        Some(HWND(target as *mut _)),
-        OVERLAY_KEY_EVENT,
-        WPARAM(VK_MENU.0 as usize),
-        LPARAM(flags),
-      )
-    };
-  }
+  let flags = FLAG_MODIFIER | if down { FLAG_ALT_DOWN } else { FLAG_RELEASE };
+  post(u32::from(VK_MENU.0), flags);
   true
 }
 
@@ -41,117 +38,88 @@ pub(super) fn post_alt_transition(down: bool) -> bool {
 /// without releasing Alt or stealing its Ruler meaning. This is only needed
 /// for virtual-input paths that update async state without reaching our hook.
 pub(super) fn cancel_alt_menu_activation() {
-  let key = KEYBDINPUT {
-    wVk: VIRTUAL_KEY(0xe8),
-    ..Default::default()
-  };
-  let inputs = [
-    INPUT {
-      r#type: INPUT_KEYBOARD,
-      Anonymous: INPUT_0 { ki: key },
-    },
-    INPUT {
-      r#type: INPUT_KEYBOARD,
-      Anonymous: INPUT_0 {
-        ki: KEYBDINPUT {
-          dwFlags: KEYEVENTF_KEYUP,
-          ..key
-        },
-      },
-    },
-  ];
-  let _ = unsafe { SendInput(&inputs, size_of::<INPUT>() as i32) };
+  screenwide_keyboard_hook::send_mask_key();
 }
 
-pub(super) unsafe extern "system" fn hook_proc(
-  code: i32,
-  wparam: WPARAM,
-  lparam: LPARAM,
-) -> LRESULT {
-  if code == HC_ACTION as i32 {
-    let data = unsafe { *(lparam.0 as *const KBDLLHOOKSTRUCT) };
-    let down = matches!(wparam.0 as u32, WM_KEYDOWN | WM_SYSKEYDOWN);
-    let up = matches!(wparam.0 as u32, WM_KEYUP | WM_SYSKEYUP);
-    if down || up {
-      let (modifiers, repeat) = update_pressed(data.vkCode, down);
-      let overlay = active_overlay();
-      let alt = overlay == Some(Overlay::Ruler) && matches!(data.vkCode, 0x12 | 0xa4 | 0xa5);
-      if alt {
-        LAST_ALT_HOOK.with(|at| *at.borrow_mut() = Some(Instant::now()));
-        let _ = post_alt_transition(down);
-        let target = TARGET.load(Ordering::Acquire);
-        if target != 0 {
-          return LRESULT(1);
-        }
-      }
-      if overlay
-        .is_some_and(|overlay| routes_to_overlay(overlay, data.vkCode, modifiers, repeat, down, up))
-      {
-        let target = TARGET.load(Ordering::Acquire);
-        if target != 0 {
-          let mut flags = 0;
-          if modifiers & 2 != 0 {
-            flags |= FLAG_COMMAND;
-          }
-          if modifiers & 8 != 0 {
-            flags |= FLAG_SHIFT;
-          }
-          if modifiers & 4 != 0 {
-            flags |= FLAG_ALT_DOWN;
-          }
-          if modifiers & 1 != 0 {
-            flags |= FLAG_SUPER_DOWN;
-          }
-          if modifiers & 2 != 0 {
-            flags |= FLAG_CONTROL_DOWN;
-          }
-          if repeat {
-            flags |= FLAG_REPEAT;
-          }
-          if up {
-            flags |= FLAG_RELEASE;
-          }
-          let posted = unsafe {
-            PostMessageW(
-              Some(HWND(target as *mut _)),
-              OVERLAY_KEY_EVENT,
-              WPARAM(data.vkCode as usize),
-              LPARAM(flags),
-            )
-          }
-          .is_ok();
-          if posted {
-            // Match the macOS event monitor: an overlay command is consumed
-            // and does not type into whichever app was behind it.
-            return LRESULT(1);
-          }
-        }
-      }
+/// The overlay's handler on the process's keyboard hook.
+pub(super) fn route(event: &KeyEvent) -> Route {
+  if !event.may_take && !event.owned {
+    return Route::Pass;
+  }
+  let generation = GENERATION.load(Ordering::Acquire);
+  if CONSUMED_FOR.replace(generation) != generation {
+    CONSUMED.with(|consumed| consumed.borrow_mut().fill(false));
+  }
+  let vk = event.key;
+  let up = event.phase == Phase::Release;
+  let down = !up;
+  let repeat = event.phase == Phase::Repeat;
+  let modifiers = modifier_bits(with_own_key(event));
+  let overlay = active_overlay();
+  if overlay == Some(Overlay::Ruler) && matches!(vk, 0x12 | 0xa4 | 0xa5) {
+    if let Ok(mut at) = LAST_ALT_HOOK.lock() {
+      *at = Some(Instant::now());
+    }
+    let _ = post_alt_transition(down);
+    if TARGET.load(Ordering::Acquire) != 0 {
+      return Route::Take;
     }
   }
-  unsafe { CallNextHookEx(None, code, wparam, lparam) }
+  if !overlay.is_some_and(|overlay| routes_to_overlay(overlay, vk, modifiers, repeat, down, up)) {
+    return Route::Pass;
+  }
+  let mut flags = 0;
+  if modifiers & 2 != 0 {
+    flags |= FLAG_COMMAND | FLAG_CONTROL_DOWN;
+  }
+  if modifiers & 8 != 0 {
+    flags |= FLAG_SHIFT;
+  }
+  if modifiers & 4 != 0 {
+    flags |= FLAG_ALT_DOWN;
+  }
+  if modifiers & 1 != 0 {
+    flags |= FLAG_SUPER_DOWN;
+  }
+  if repeat {
+    flags |= FLAG_REPEAT;
+  }
+  if up {
+    flags |= FLAG_RELEASE;
+  }
+  // Match the macOS event monitor: an overlay command is consumed and does
+  // not type into whichever app was behind it.
+  if post(vk, flags) {
+    Route::Take
+  } else {
+    Route::Pass
+  }
+}
+
+/// The modifiers with the event's own key applied, as the overlays' key
+/// tables read them: a modifier counts from its own press.
+fn with_own_key(event: &KeyEvent) -> Modifiers {
+  let mut modifiers = event.modifiers;
+  let down = event.phase != Phase::Release;
+  match event.key {
+    0x10 | 0xa0 | 0xa1 => modifiers.shift = down,
+    0x11 | 0xa2 | 0xa3 => modifiers.control = down,
+    0x12 | 0xa4 | 0xa5 => modifiers.alt = down,
+    0x5b | 0x5c => modifiers.win = down,
+    _ => {}
+  }
+  modifiers
+}
+
+fn modifier_bits(modifiers: Modifiers) -> u32 {
+  (u32::from(modifiers.control) * 2)
+    | (u32::from(modifiers.shift) * 8)
+    | (u32::from(modifiers.alt) * 4)
+    | u32::from(modifiers.win)
 }
 
 pub(crate) fn alt_pressed() -> bool {
   ALT_DOWN.load(Ordering::Acquire)
-}
-
-pub(super) fn update_pressed(vk: u32, down: bool) -> (u32, bool) {
-  PRESSED.with(|pressed| {
-    let mut pressed = pressed.borrow_mut();
-    let index = (vk as usize).min(pressed.len() - 1);
-    let repeat = down && pressed[index];
-    pressed[index] = down;
-    let control = pressed[0x11] || pressed[0xa2] || pressed[0xa3];
-    let shift = pressed[0x10] || pressed[0xa0] || pressed[0xa1];
-    let alt = pressed[0x12] || pressed[0xa4] || pressed[0xa5];
-    let super_key = pressed[0x5b] || pressed[0x5c];
-    let modifiers = (u32::from(control) * 2)
-      | (u32::from(shift) * 8)
-      | (u32::from(alt) * 4)
-      | u32::from(super_key);
-    (modifiers, repeat)
-  })
 }
 
 pub(super) fn routes_to_overlay(

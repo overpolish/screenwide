@@ -64,12 +64,6 @@ pub(super) fn types(key: u32, pressed: bool) -> bool {
   outcome.types
 }
 
-/// Whether raw input should leave this key alone: the keyboard hook has
-/// already passed it on as typing.
-pub(super) fn is_typing(key: u32) -> bool {
-  guard::is_typing(key)
-}
-
 pub(super) fn note_click() {
   if let Some(pointer) = cursor() {
     guard::note_click(pointer);

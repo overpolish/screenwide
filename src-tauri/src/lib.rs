@@ -74,7 +74,14 @@ pub fn run() {
   let context = tauri::generate_context!();
   #[cfg(debug_assertions)]
   let context = dev_identity::apply(context);
-  let builder = plugins::with_plugins(tauri::Builder::default());
+  let builder = plugins::with_plugins(tauri::Builder::default())
+    // tao otherwise registers the process for raw keyboard and mouse input.
+    // While the process holds a raw keyboard registration, Windows calls none
+    // of its low-level keyboard hooks for keys typed into its own windows
+    // (tauri-apps/wry#1761), and the keyboard hook (`screenwide_keyboard_hook`)
+    // has to hear those. Nothing here reads tao's device events; Glide's input
+    // window holds the process's raw mouse registration (`raw_mouse`).
+    .device_event_filter(tauri::DeviceEventFilter::Always);
   #[cfg(any(target_os = "macos", target_os = "windows"))]
   let builder = builder.manage(glide::settings::GlideSettingsState::default());
   let app = builder

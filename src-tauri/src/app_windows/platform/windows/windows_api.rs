@@ -48,8 +48,8 @@ pub fn prepare_to_show(window: &WebviewWindow) -> tauri::Result<()> {
 
 /// The region overlay, never activated by a click: drawing a screenshot's
 /// area would otherwise make it the foreground window, and once it is hidden
-/// Windows is left with none, which leaves the system-keys hook unseen until
-/// another window is focused, so the next Win+Shift+S opens Snipping Tool.
+/// Windows is left with none, so the keyboard stays with Screenwide instead
+/// of going back to the app the user was capturing until they click it.
 /// tao is told it cannot take focus before the window is first shown, so its
 /// rewrites of the extended style keep `WS_EX_NOACTIVATE`. A region gesture
 /// and a window pick, which want the keyboard, activate it themselves.

@@ -11,7 +11,7 @@ use windows::Win32::Foundation::HANDLE;
 use windows::Win32::UI::{
   Input::{
     GetRawInputData, HRAWINPUT, MOUSE_MOVE_ABSOLUTE, MOUSE_VIRTUAL_DESKTOP, RAWINPUT,
-    RAWINPUTHEADER, RAWMOUSE, RID_INPUT, RIM_TYPEHID, RIM_TYPEKEYBOARD, RIM_TYPEMOUSE,
+    RAWINPUTHEADER, RAWMOUSE, RID_INPUT, RIM_TYPEHID, RIM_TYPEMOUSE,
   },
   WindowsAndMessaging::{
     GetMessageTime, GetSystemMetrics, RI_MOUSE_BUTTON_1_DOWN, RI_MOUSE_BUTTON_2_DOWN,
@@ -48,71 +48,9 @@ pub(crate) fn handle_raw_input(handle: HRAWINPUT) {
   if input.header.dwType == RIM_TYPEMOUSE.0 {
     let mouse = unsafe { input.data.mouse };
     handle_mouse(input.header.hDevice, mouse);
-  } else if input.header.dwType == RIM_TYPEKEYBOARD.0 {
-    handle_keyboard(unsafe { input.data.keyboard });
   } else if input.header.dwType == RIM_TYPEHID.0 {
     let hid = unsafe { &input.data.hid };
     native_trackpad::handle_raw_input(&input.header, hid, read as usize);
-  }
-}
-
-fn handle_keyboard(keyboard_input: windows::Win32::UI::Input::RAWKEYBOARD) {
-  let key = normalize_key(
-    keyboard_input.VKey,
-    keyboard_input.MakeCode,
-    keyboard_input.Flags,
-  );
-  let released = matches!(
-    keyboard_input.Message,
-    windows::Win32::UI::WindowsAndMessaging::WM_KEYUP
-      | windows::Win32::UI::WindowsAndMessaging::WM_SYSKEYUP
-  );
-  if released {
-    let timestamp = unsafe { windows::Win32::UI::WindowsAndMessaging::GetMessageTime() } as u32;
-    if super::release_tracker::raw_release(key, timestamp) {
-      super::native_settings::observe(key, false);
-      key_hook::reserve(key, false, false, false);
-      keyboard::handle_transition(key, false, true);
-    }
-  } else {
-    if super::deliberate::is_typing(key) {
-      return;
-    }
-    let timestamp = unsafe { windows::Win32::UI::WindowsAndMessaging::GetMessageTime() } as u32;
-    if super::release_tracker::raw_press(key, timestamp) {
-      super::native_settings::observe(key, true);
-      keyboard::handle_transition(key, true, false);
-    }
-  }
-}
-
-fn normalize_key(vkey: u16, make_code: u16, flags: u16) -> u32 {
-  match vkey {
-    0x10 => {
-      if make_code == 0x36 {
-        0xA1
-      } else {
-        0xA0
-      }
-    }
-    0x11 => {
-      if flags & 0x02 != 0 {
-        0xA3
-      } else {
-        0xA2
-      }
-    }
-    0x12 => {
-      if flags & 0x02 != 0 {
-        0xA5
-      } else {
-        0xA4
-      }
-    }
-    _ => {
-      let _ = make_code;
-      u32::from(vkey)
-    }
   }
 }
 
@@ -207,19 +145,4 @@ fn absolute_position(mouse: RAWMOUSE) -> (i32, i32) {
     left + (f64::from(mouse.lLastX) * f64::from(width) / ABSOLUTE_RANGE).round() as i32,
     top + (f64::from(mouse.lLastY) * f64::from(height) / ABSOLUTE_RANGE).round() as i32,
   )
-}
-
-#[cfg(test)]
-mod tests {
-  use super::normalize_key;
-
-  #[test]
-  fn raw_modifier_normalization_uses_make_code_and_e0() {
-    assert_eq!(normalize_key(0x10, 0x2a, 0), 0xa0);
-    assert_eq!(normalize_key(0x10, 0x36, 0x01), 0xa1);
-    assert_eq!(normalize_key(0x11, 0, 0), 0xa2);
-    assert_eq!(normalize_key(0x11, 0, 0x02), 0xa3);
-    assert_eq!(normalize_key(0x12, 0, 0), 0xa4);
-    assert_eq!(normalize_key(0x12, 0, 0x02), 0xa5);
-  }
 }

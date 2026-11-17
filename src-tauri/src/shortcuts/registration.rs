@@ -76,6 +76,10 @@ pub fn begin_shortcut_capture(app: AppHandle) -> Result<(), String> {
       .unregister_all()
       .map_err(|error| error.to_string())?;
     CAPTURING.store(true, Ordering::Release);
+    // The field needs every key, the system's screenshot keys and Glide's
+    // controls included.
+    #[cfg(target_os = "windows")]
+    screenwide_keyboard_hook::set_taking_paused(true);
     Ok(())
   })();
   diagnostics::record(
@@ -91,6 +95,8 @@ pub fn end_shortcut_capture(app: AppHandle) -> Result<(), String> {
   diagnostics::record("capture_end_requested", serde_json::json!({}));
   let result = (|| {
     CAPTURING.store(false, Ordering::Release);
+    #[cfg(target_os = "windows")]
+    screenwide_keyboard_hook::set_taking_paused(false);
     let settings = app
       .state::<ShortcutSettingsState>()
       .0

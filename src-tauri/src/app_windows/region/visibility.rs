@@ -6,8 +6,8 @@
 //! `SW_SHOW`, and any change it makes to a shown window's flags shows it
 //! again the same way, each time activating it once Windows lets the app take
 //! the foreground, as it does after the overlay's first click. Activated, the
-//! overlay's web view takes Win+Shift+S before the system-keys hook sees it,
-//! so Snipping Tool opens instead of the session closing. The overlay is
+//! overlay would be left the foreground window, and hiding it would leave
+//! Windows with none (see `initialize_region_selector`). The overlay is
 //! shown without activation, its clicks are switched in place, and it is
 //! focused only where the keyboard is wanted: a region gesture and a window
 //! pick. tao's own record then says the window is hidden while it is shown,
