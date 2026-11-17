@@ -6,9 +6,9 @@ use std::path::{Path, PathBuf};
 const LIBRARY: &str = "dxcompiler.dll";
 
 /// The bundle installs DXC beside the executable, and `pnpm dxc:prepare`
-/// puts a copy beside the debug app. Test executables run from `deps`, so a
-/// debug build also accepts the prepared copy in `src-tauri/binaries`, two
-/// folders above this crate.
+/// puts a copy beside the debug app. Test executables run from cargo's build
+/// folder, so a debug build also accepts the prepared copy in
+/// `src-tauri/binaries`, two folders above this crate.
 pub(in super::super) fn library_path() -> Result<String, String> {
   let beside = std::env::current_exe()
     .ok()

@@ -28,16 +28,26 @@ fn tool_path(name: &str) -> PathBuf {
     name.to_owned()
   };
   // Alongside the app first: a bundled copy is the one this build was tested
-  // against. A test runs from `target/debug/deps`, and an example from
-  // `target/debug/examples`, one folder below where `pnpm ffmpeg:prepare`
-  // puts the debug app's copy.
+  // against. In a debug build, a test or an example runs from below the
+  // folder where `pnpm ffmpeg:prepare` puts the debug app's copy: a test from
+  // `target/debug/build/<package>/<hash>/out`, an example from
+  // `target/debug/examples`.
   if let Ok(current) = std::env::current_exe() {
     let beside = current.parent();
     let debug_app = beside
-      .filter(|directory| {
-        cfg!(debug_assertions) && (directory.ends_with("deps") || directory.ends_with("examples"))
-      })
-      .and_then(Path::parent);
+      .filter(|_| cfg!(debug_assertions))
+      .and_then(|directory| {
+        if directory.ends_with("examples") {
+          directory.parent()
+        } else if directory.ends_with("out") {
+          let build = directory.ancestors().nth(3);
+          build
+            .filter(|build| build.ends_with("build"))
+            .and_then(Path::parent)
+        } else {
+          None
+        }
+      });
     for directory in [beside, debug_app].into_iter().flatten() {
       let bundled = directory.join(&executable);
       if bundled.is_file() {

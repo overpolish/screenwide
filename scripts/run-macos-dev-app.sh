@@ -15,9 +15,19 @@ esac
 # Only the app gets a bundle. Cargo runs test binaries through this runner
 # too, and a bundle around one would register a second app with this
 # identifier, which Launch Services may then hand the files the app opens.
+# A test runs from `target/<profile>/build/<package>/<hash>/out`, below the
+# profile's folder where libraries such as the transcriber's Dawn are copied.
 case "$(basename -- "$binary")" in
   screenwide) ;;
-  *) exec "$binary" "$@" ;;
+  *)
+    case "$binary" in
+      */build/*/*/out/*)
+        DYLD_FALLBACK_LIBRARY_PATH="$(CDPATH= cd -- "$(dirname -- "$binary")/../../../.." && pwd)"
+        export DYLD_FALLBACK_LIBRARY_PATH
+        ;;
+    esac
+    exec "$binary" "$@"
+    ;;
 esac
 
 script_directory=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
