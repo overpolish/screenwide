@@ -3,9 +3,10 @@
 
 # Hands a published release to the Microsoft Store: both architectures'
 # packages in one bundle, replacing the last release's, with the release notes
-# as What's new. Partner Center shows a submission's API changes only once it
-# is committed, and committing starts certification; the submission is kept on
-# manual publishing, so it waits after certification for Publish now.
+# as What's new. The submission is left uncommitted, so the listing can be
+# changed in Partner Center before Submit for certification is pressed there
+# by hand; committing is what starts certification. It is kept on manual
+# publishing, so after certification it also waits for Publish now.
 name: Microsoft Store
 
 on:
@@ -101,9 +102,7 @@ jobs:
           msstore submission update $env:PRODUCT_ID ($submission | ConvertTo-Json -Depth 100 -Compress)
           if ($LASTEXITCODE -ne 0) { throw "Could not update the submission" }
 
-      - name: Commit the submission for certification
+      - name: Leave the submission for certification by hand
         shell: pwsh
         run: |
-          msstore submission publish $env:PRODUCT_ID
-          if ($LASTEXITCODE -ne 0) { throw "Could not commit the submission" }
-          "$env:TAG is in certification. Once it passes, Partner Center waits for Publish now." >> $env:GITHUB_STEP_SUMMARY
+          "$env:TAG is uploaded to a draft submission with its What's new. Change the listing if needed, then press Submit for certification in Partner Center; once it passes, it waits for Publish now." >> $env:GITHUB_STEP_SUMMARY
