@@ -29,13 +29,31 @@ pub(super) fn union_rect(
 /// engine's counterpart of `reflow_recording_workspace_panes`: the row keeps
 /// its gesture-start gaps and side ordering while every pane stays centred on
 /// the row, so growing one canvas pushes its neighbours instead of
-/// overlapping them.
+/// overlapping them. Panes that started in the dragged pane's own box are
+/// layers of the same canvas, as the screenshot workspace lays one pane per
+/// layer over its canvas, and take its new box with it: left at their start
+/// box, each would draw its canvas, already composed at the new size, squeezed
+/// into the old one.
 pub(super) fn reflow_workspace_panes(
   starts: &[(usize, PreviewSurfaceRect)],
   selected: usize,
   resized: PreviewSurfaceRect,
 ) -> Vec<(usize, PreviewSurfaceRect)> {
-  let mut order = (0..starts.len()).collect::<Vec<_>>();
+  let mut next = starts.to_vec();
+  let Some(&(_, selected_start)) = starts.iter().find(|(index, _)| *index == selected) else {
+    return next;
+  };
+  let stacked = |position: usize| {
+    let (index, start) = starts[position];
+    index != selected
+      && start.x == selected_start.x
+      && start.y == selected_start.y
+      && start.width == selected_start.width
+      && start.height == selected_start.height
+  };
+  let mut order = (0..starts.len())
+    .filter(|position| !stacked(*position))
+    .collect::<Vec<_>>();
   order.sort_by(|left, right| {
     starts[*left]
       .1
@@ -43,7 +61,6 @@ pub(super) fn reflow_workspace_panes(
       .partial_cmp(&starts[*right].1.x)
       .unwrap_or(std::cmp::Ordering::Equal)
   });
-  let mut next = starts.to_vec();
   let Some(selected_position) = order
     .iter()
     .position(|position| starts[*position].0 == selected)
@@ -69,6 +86,11 @@ pub(super) fn reflow_workspace_panes(
     let following = order[position + 1];
     let gap = starts[following].1.x - (starts[index].1.x + starts[index].1.width);
     next[index].1.x = next[following].1.x - gap - next[index].1.width;
+  }
+  for (position, pane) in next.iter_mut().enumerate() {
+    if stacked(position) {
+      pane.1 = resized;
+    }
   }
   next
 }

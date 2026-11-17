@@ -38,6 +38,24 @@ fn a_resized_pane_pushes_its_row_and_keeps_the_gaps() {
 }
 
 #[test]
+fn layers_stacked_on_the_resized_canvas_take_its_new_box() {
+  // The screenshot workspace lays one pane per layer over the same canvas.
+  let canvas = rect(0.0, 0.0, 100.0, 80.0);
+  let starts = vec![(0, canvas), (1, canvas)];
+  let grown = rect(0.0, 0.0, 100.0, 160.0);
+
+  let reflowed = reflow_workspace_panes(&starts, 0, grown);
+
+  assert_eq!(
+    reflowed
+      .iter()
+      .map(|(index, rect)| (*index, rect.x, rect.y, rect.width, rect.height))
+      .collect::<Vec<_>>(),
+    vec![(0, 0.0, 0.0, 100.0, 160.0), (1, 0.0, 0.0, 100.0, 160.0)]
+  );
+}
+
+#[test]
 fn a_mismatched_canvas_is_centred_in_its_box_and_a_matching_one_is_untouched() {
   let fitted = aspect_fit_rect(rect(10.0, 20.0, 200.0, 100.0), (100, 100));
   assert_eq!(
