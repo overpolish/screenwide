@@ -71,10 +71,10 @@ fn constants_take_their_colors_from_the_shared_tokens() {
   assert_eq!(dark.control_colors[0], control_palette(false).fill);
   assert_eq!(dark.control_colors[1], control_palette(false).outline);
   assert_eq!(dark.overlay_shade, overlay_palette().shade);
-  assert_eq!(
-    dark.ruler_colors,
-    [ruler_palette(false).primary, ruler_palette(false).info]
-  );
+  // The Ruler's primary is the operating system's accent, which two reads can
+  // disagree on (a Windows runner returned black, then its blue, within this
+  // test), so only its token colour is compared.
+  assert_eq!(dark.ruler_colors[1], ruler_palette(false).info);
   assert_eq!(dark.ocr_colors[0], ocr_palette(false).primary_fill);
   assert_eq!(dark.ocr_colors[7], ocr_palette(false).selection_outline);
   assert_eq!(dark.action_fills, [[0.0; 4]; 2]);
