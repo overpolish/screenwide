@@ -49,7 +49,7 @@ fn gaussian(source: &CapturedImage, sigma: f64) -> Vec<[f64; 3]> {
 }
 
 #[test]
-#[cfg_attr(all(screenwide_no_gpu, windows), ignore = "requires a hardware GPU")]
+#[cfg_attr(screenwide_no_gpu, ignore = "requires a hardware GPU")]
 fn blur_is_a_gaussian_over_the_box_alone() {
   let source = picture(1);
   let output = identity();
@@ -97,7 +97,7 @@ fn blur_is_a_gaussian_over_the_box_alone() {
 /// invisible under a blur or a classic pixelation: a transparent pixel is
 /// averaged as the surface it shows against, whatever it carries.
 #[test]
-#[cfg_attr(all(screenwide_no_gpu, windows), ignore = "requires a hardware GPU")]
+#[cfg_attr(screenwide_no_gpu, ignore = "requires a hardware GPU")]
 fn colour_hidden_under_zero_alpha_never_reaches_the_averages() {
   let hidden = |red: u8| {
     let mut image = picture(1);
@@ -137,7 +137,7 @@ fn outside(x: u32, y: u32, radius: f64) -> f64 {
 /// than one pixel wholly outside it keeps its picture, and the pixels
 /// between - each wholly outside the outline - lie between the two.
 #[test]
-#[cfg_attr(all(screenwide_no_gpu, windows), ignore = "requires a hardware GPU")]
+#[cfg_attr(screenwide_no_gpu, ignore = "requires a hardware GPU")]
 fn a_rounded_box_covers_whole_pixels_and_blends_only_outside_itself() {
   const FILL: [u8; 3] = [0x12, 0x34, 0x56];
   let source = picture(1);

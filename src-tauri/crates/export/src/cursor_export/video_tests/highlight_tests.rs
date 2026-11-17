@@ -129,7 +129,7 @@ fn luminance(rgb: [u8; 3]) -> f64 {
 }
 
 #[test]
-#[cfg_attr(all(screenwide_no_gpu, windows), ignore = "requires a hardware GPU")]
+#[cfg_attr(screenwide_no_gpu, ignore = "requires a hardware GPU")]
 fn a_dark_page_turns_the_highlights_colour_with_its_text_inked_dark() {
   let source = page([24, 26, 30], [235, 235, 235]);
   let image = composed(
@@ -163,7 +163,7 @@ fn a_dark_page_turns_the_highlights_colour_with_its_text_inked_dark() {
 }
 
 #[test]
-#[cfg_attr(all(screenwide_no_gpu, windows), ignore = "requires a hardware GPU")]
+#[cfg_attr(screenwide_no_gpu, ignore = "requires a hardware GPU")]
 fn a_light_page_turns_the_highlights_colour_and_keeps_its_text_dark() {
   let source = page([250, 250, 248], [20, 20, 20]);
   let image = composed(
@@ -189,7 +189,7 @@ fn a_light_page_turns_the_highlights_colour_and_keeps_its_text_dark() {
 }
 
 #[test]
-#[cfg_attr(all(screenwide_no_gpu, windows), ignore = "requires a hardware GPU")]
+#[cfg_attr(screenwide_no_gpu, ignore = "requires a hardware GPU")]
 fn a_tint_marks_light_like_a_highlighter_and_lifts_dark() {
   // A light page takes the colour, and the text on it stays well darker than
   // the colour around it.
@@ -231,7 +231,7 @@ fn drawn_to(high: f32) -> AnnotationReveal {
 }
 
 #[test]
-#[cfg_attr(all(screenwide_no_gpu, windows), ignore = "requires a hardware GPU")]
+#[cfg_attr(screenwide_no_gpu, ignore = "requires a hardware GPU")]
 fn a_highlight_half_drawn_in_leads_with_its_first_line() {
   let source = page([250, 250, 248], [20, 20, 20]);
   let mut annotation = highlight(HighlightTone::default(), false);
@@ -266,7 +266,7 @@ fn clean_box() -> Annotation {
 }
 
 #[test]
-#[cfg_attr(all(screenwide_no_gpu, windows), ignore = "requires a hardware GPU")]
+#[cfg_attr(screenwide_no_gpu, ignore = "requires a hardware GPU")]
 fn a_clean_box_has_no_notch_where_two_strokes_meet() {
   let source = page([250, 250, 248], [20, 20, 20]);
   let image = composed(&source, vec![clean_box()]);
@@ -279,7 +279,7 @@ fn a_clean_box_has_no_notch_where_two_strokes_meet() {
 }
 
 #[test]
-#[cfg_attr(all(screenwide_no_gpu, windows), ignore = "requires a hardware GPU")]
+#[cfg_attr(screenwide_no_gpu, ignore = "requires a hardware GPU")]
 fn a_box_of_many_strokes_draws_each_at_a_hands_pace() {
   let source = page([250, 250, 248], [20, 20, 20]);
   let mut annotation = clean_box();
@@ -300,7 +300,7 @@ fn reach(image: &CapturedImage, y: u32) -> u32 {
 }
 
 #[test]
-#[cfg_attr(all(screenwide_no_gpu, windows), ignore = "requires a hardware GPU")]
+#[cfg_attr(screenwide_no_gpu, ignore = "requires a hardware GPU")]
 fn a_highlight_lands_on_its_end_rather_than_jumping_out_to_it() {
   let source = page([250, 250, 248], [20, 20, 20]);
   let frame = |high: f32| {
@@ -316,7 +316,7 @@ fn a_highlight_lands_on_its_end_rather_than_jumping_out_to_it() {
 }
 
 #[test]
-#[cfg_attr(all(screenwide_no_gpu, windows), ignore = "requires a hardware GPU")]
+#[cfg_attr(screenwide_no_gpu, ignore = "requires a hardware GPU")]
 fn a_hand_drawn_highlight_stays_on_its_lines() {
   let source = page([24, 26, 30], [235, 235, 235]);
   let image = composed(
@@ -350,7 +350,7 @@ fn a_hand_drawn_highlight_stays_on_its_lines() {
 }
 
 #[test]
-#[cfg_attr(all(screenwide_no_gpu, windows), ignore = "requires a hardware GPU")]
+#[cfg_attr(screenwide_no_gpu, ignore = "requires a hardware GPU")]
 fn an_arrow_is_drawn_over_a_highlight_rather_than_recoloured_by_it() {
   let source = page([250, 250, 248], [20, 20, 20]);
   let mut arrow = new_arrow(

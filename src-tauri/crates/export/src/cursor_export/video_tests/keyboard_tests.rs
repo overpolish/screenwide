@@ -24,7 +24,7 @@ fn keyboard_output(width: u32, height: u32) -> screenwide_output::ScreenshotOutp
 }
 
 #[test]
-#[cfg_attr(all(screenwide_no_gpu, windows), ignore = "requires a hardware GPU")]
+#[cfg_attr(screenwide_no_gpu, ignore = "requires a hardware GPU")]
 fn keeps_a_five_hundred_percent_keyboard_edge_sharp_at_4k() {
   use screenwide_keyboard_effects::KeyboardOverlay;
 

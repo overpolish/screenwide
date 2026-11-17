@@ -13,7 +13,7 @@ use std::process::Command;
 pub(super) use crate::render_tests::output;
 
 #[test]
-#[cfg_attr(all(screenwide_no_gpu, windows), ignore = "requires a hardware GPU")]
+#[cfg_attr(screenwide_no_gpu, ignore = "requires a hardware GPU")]
 fn composites_keyboard_pixels_into_a_gpu_still() {
   use screenwide_keyboard_effects::KeyboardOverlay;
 

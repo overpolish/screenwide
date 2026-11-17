@@ -141,7 +141,7 @@ mod tests {
   }
 
   #[test]
-  #[cfg_attr(all(screenwide_no_gpu, windows), ignore = "requires a hardware GPU")]
+  #[cfg_attr(screenwide_no_gpu, ignore = "requires a hardware GPU")]
   fn the_arrow_lands_in_the_still_at_its_own_pixels() {
     let baked = bake_annotations(&black(200, 200), vec![arrow(8.0)], 1.0).unwrap();
 
