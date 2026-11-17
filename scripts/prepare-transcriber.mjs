@@ -144,27 +144,52 @@ if (hostPlatform === "win32") {
     buildEnv[pathKey] = `${dirname(ninja)};${buildEnv[pathKey] ?? ""}`;
   }
 }
-// whisper.cpp otherwise tunes itself to the processor that builds it, and a
-// release is built on GitHub's runners, not on the computers that run it: an
+// ggml otherwise tunes itself to the processor that builds it, and a release
+// is built on GitHub's runners, not on the computers that run it: an
 // instruction the runner has and a customer's processor lacks crashes the
-// helper there. With native tuning off, x64 gets ggml's own baseline (AVX2,
-// FMA and F16C, no AVX-512).
+// helper there. x64's baseline is AVX2, FMA, F16C and BMI2, no AVX-512, named
+// outright rather than left to ggml's defaults: those default off while
+// native tuning is on, and a build directory configured that way keeps them
+// off in its cache once native tuning is turned off. The ARM baseline is the
+// Snapdragon 850's, the oldest processor Windows 11 runs on ARM: dot product
+// and half floats, no SVE or i8mm.
+const ggmlOptions = {};
 if (requestedPlatform === "win32") {
-  buildEnv.GGML_NATIVE = "OFF";
+  ggmlOptions.GGML_NATIVE = "OFF";
+}
+if (target === "x86_64-pc-windows-msvc") {
+  for (const option of [
+    "GGML_SSE42",
+    "GGML_AVX",
+    "GGML_AVX2",
+    "GGML_FMA",
+    "GGML_F16C",
+    "GGML_BMI2",
+  ]) {
+    ggmlOptions[option] = "ON";
+  }
 }
 // MSVC's compiler cannot build Windows ARM64's native parts: whisper.cpp's CPU
 // backend refuses it on ARM, and tract's kernels are GNU assembly it cannot
 // read. LLVM's clang-cl builds them all instead; it must be on PATH, as it is
 // on GitHub's Windows ARM64 runners. The cmake crate's flags replace CMake's
 // default /EHsc, which MSVC only warns about losing and clang-cl needs for
-// whisper.cpp's exceptions. The ARM baseline is the Snapdragon 850's, the
-// oldest processor Windows 11 runs on ARM: dot product and half floats, no
-// SVE or i8mm.
+// whisper.cpp's exceptions.
 if (target === "aarch64-pc-windows-msvc") {
   buildEnv.CC_aarch64_pc_windows_msvc = "clang-cl";
   buildEnv.CXX_aarch64_pc_windows_msvc = "clang-cl";
   buildEnv.CXXFLAGS_aarch64_pc_windows_msvc = "/EHsc";
-  buildEnv.GGML_CPU_ARM_ARCH = "armv8.2-a+dotprod+fp16";
+  ggmlOptions.GGML_CPU_ARM_ARCH = "armv8.2-a+dotprod+fp16";
+}
+// whisper.cpp's and llama.cpp's build scripts pass every GGML_ variable on
+// to CMake; transcribe.cpp's reads none of them and takes its CMake options
+// from TRANSCRIBE_CMAKE_ARGS alone, so dictation's helper needs them there or
+// it is tuned to the runner.
+if (Object.keys(ggmlOptions).length > 0) {
+  Object.assign(buildEnv, ggmlOptions);
+  buildEnv.TRANSCRIBE_CMAKE_ARGS = Object.entries(ggmlOptions)
+    .map(([name, value]) => `-D${name}=${value}`)
+    .join(" ");
 }
 // Node's own architecture can differ from Rust's host under emulation, so
 // ask rustc.
