@@ -71,6 +71,15 @@ pub fn compiling_wgsl<R>(make: impl FnOnce() -> R) -> R {
   made
 }
 
+/// Whether CI asked for every shader compiled from WGSL, by setting
+/// `SCREENWIDE_WGSL_ONLY`: a picture that draws right this way but wrong
+/// from the precompiled libraries tells which is at fault on the runner's
+/// virtual GPU. Only builds made with `--cfg screenwide_no_gpu`, as CI's
+/// are, read it.
+fn wgsl_only_on_ci() -> bool {
+  cfg!(screenwide_no_gpu) && std::env::var_os("SCREENWIDE_WGSL_ONLY").is_some()
+}
+
 impl Shader {
   /// `precompiled` where the build compiled it against `layout`, otherwise
   /// `wgsl` compiled now.
@@ -102,6 +111,7 @@ impl Shader {
       );
       precompiled.fingerprint == layout.fingerprint()
         && !WGSL_ONLY.get()
+        && !wgsl_only_on_ci()
         && device
           .features()
           .contains(wgpu::Features::PASSTHROUGH_SHADERS)

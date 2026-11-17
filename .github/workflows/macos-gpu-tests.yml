@@ -4,10 +4,16 @@
 name: macOS GPU Tests
 
 # The tests that draw on the GPU, run on GitHub's macOS runner at the commits
-# asked for, each on a runner of its own. The runner's GPU is a virtual one,
-# which the sanity check leaves these tests running on; this finds the commit
-# where one of them starts failing there without waiting for a whole sanity
-# check per commit.
+# asked for, each commit and mode on a runner of its own. The runner's GPU is
+# a virtual one, which the sanity check leaves these tests running on; this
+# finds where and how one of them starts failing there without waiting for a
+# whole sanity check per try.
+#
+# A mode is how the tests run: `parallel` as the sanity check runs them,
+# `serial` one test at a time, and `wgsl` with every shader compiled from
+# WGSL rather than taken from the precompiled libraries; `wgsl-serial` is
+# both. Each runs the tests `runs` times over, and the job's summary lists
+# every run's result.
 on:
   workflow_dispatch:
     inputs:
@@ -15,6 +21,14 @@ on:
         description: Commits, branches or tags to test, separated by spaces
         required: true
         default: main
+      modes:
+        description: "Modes, separated by spaces: parallel, serial, wgsl, wgsl-serial"
+        required: true
+        default: parallel
+      runs:
+        description: How many times each mode runs the tests
+        required: true
+        default: "1"
 
 permissions:
   contents: read
@@ -25,6 +39,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       commits: ${{ steps.list.outputs.commits }}
+      modes: ${{ steps.list.outputs.modes }}
     steps:
       - name: Check out repository
         uses: actions/checkout@v7
@@ -37,6 +52,7 @@ jobs:
         id: list
         env:
           REFS: ${{ inputs.refs }}
+          MODES: ${{ inputs.modes }}
         run: |
           commits='[]'
           for ref in $REFS; do
@@ -44,15 +60,17 @@ jobs:
             commits=$(jq -c --arg name "$ref" --arg sha "$sha" '. + [{name: $name, sha: $sha}]' <<< "$commits")
           done
           echo "commits=$commits" >> "$GITHUB_OUTPUT"
+          echo "modes=$(jq -cn --arg modes "$MODES" '$modes | split(" ") | map(select(length > 0))')" >> "$GITHUB_OUTPUT"
 
   gpu-tests:
-    name: ${{ matrix.commit.name }}
+    name: ${{ matrix.commit.name }}, ${{ matrix.mode }}
     needs: refs
     runs-on: macos-latest
     strategy:
       fail-fast: false
       matrix:
         commit: ${{ fromJSON(needs.refs.outputs.commits) }}
+        mode: ${{ fromJSON(needs.refs.outputs.modes) }}
     # The sanity check's build, so the same tests are ignored as there.
     env:
       RUSTFLAGS: --cfg screenwide_no_gpu
@@ -91,13 +109,34 @@ jobs:
       - name: Build the tests
         run: cargo test --manifest-path src-tauri/Cargo.toml -p screenwide-compositor -p screenwide-export --lib --no-run
 
-      # Each test's own output is kept, so a picture that came out black
-      # shows next to the graphics adapter that drew it.
-      - name: Compositor tests
-        if: ${{ !cancelled() }}
-        run: cargo test --manifest-path src-tauri/Cargo.toml -p screenwide-compositor --lib --no-fail-fast -- --nocapture
-
-      # The export's drawing tests; its video tests need the prepared FFmpeg.
-      - name: Export render tests
-        if: ${{ !cancelled() }}
-        run: cargo test --manifest-path src-tauri/Cargo.toml -p screenwide-export --lib --no-fail-fast -- render_tests composites_keyboard_pixels_into_a_gpu_still --nocapture
+      # The export's video tests are left out: they need the prepared
+      # FFmpeg.
+      - name: Run the tests
+        env:
+          MODE: ${{ matrix.mode }}
+          RUNS: ${{ inputs.runs }}
+        run: |
+          set -o pipefail
+          threads=()
+          case "$MODE" in *serial*) threads=(--test-threads=1) ;; esac
+          case "$MODE" in *wgsl*) export SCREENWIDE_WGSL_ONLY=1 ;; esac
+          echo "| Run | Tests | Result |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| --- | --- | --- |" >> "$GITHUB_STEP_SUMMARY"
+          status=0
+          for run in $(seq 1 "$RUNS"); do
+            for suite in compositor export; do
+              if [ "$suite" = compositor ]; then
+                filters=()
+              else
+                filters=(render_tests composites_keyboard_pixels_into_a_gpu_still)
+              fi
+              echo "::group::Run $run, $suite tests"
+              cargo test --manifest-path src-tauri/Cargo.toml -p "screenwide-$suite" --lib --no-fail-fast \
+                -- "${filters[@]}" "${threads[@]}" 2>&1 | tee run.log || status=1
+              echo "::endgroup::"
+              result=$(grep -E '^test result:' run.log | tail -1)
+              echo "Run $run, $suite tests: ${result:-no result}"
+              echo "| $run | $suite | ${result:-no result} |" >> "$GITHUB_STEP_SUMMARY"
+            done
+          done
+          exit "$status"
