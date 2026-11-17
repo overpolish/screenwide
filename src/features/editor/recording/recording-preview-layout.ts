@@ -5,6 +5,12 @@ import { invoke } from "@tauri-apps/api/core";
 
 import { normalizedCameraOverlay } from "../preview/preview-settings-normalization";
 import {
+  createResizeTimer,
+  readyLayoutTiming,
+  type ReadyLayoutTiming,
+  type ResizeTiming,
+} from "../preview/resize-timing";
+import {
   normalizedScreenshotOutput,
   type RecordingOutputSettings,
 } from "../screenshot/screenshot-output";
@@ -42,6 +48,8 @@ export type RecordingPreviewLayout = {
   /** The picture stays where it is on screen as the viewport changes: only
    * its bottom edge moved, as the strip under it grew or shrank. */
   keepView?: boolean;
+  /** TEMPORARY(#12): what the frontend spent before sending this layout. */
+  resizeTiming?: ResizeTiming;
   /** Whether ⌘ (Ctrl) holds Select over the tool: the chosen layer's chrome
    * stands down and a press on it draws a band. */
   selectHeld?: boolean;
@@ -105,12 +113,18 @@ export function createRecordingLayoutQueue({
   let disposed = false;
   let inFlight = false;
   let last = "";
-  let pending: { layout: RecordingPreviewLayout; window: Size } | null = null;
+  let pending: {
+    layout: RecordingPreviewLayout;
+    ready: ReadyLayoutTiming;
+    window: Size;
+  } | null = null;
   let sent: { viewport: Box; window: Size } | null = null;
+  // TEMPORARY(#12)
+  const resizeTimer = createResizeTimer();
 
   const flush = () => {
     if (disposed || inFlight || !pending) return;
-    const { layout, window: size } = pending;
+    const { layout, ready, window: size } = pending;
     const { viewport } = layout;
     const keepView =
       sent !== null &&
@@ -123,11 +137,17 @@ export function createRecordingLayoutQueue({
     sent = { viewport, window: size };
     pending = null;
     inFlight = true;
-    void layoutRecordingPreviewSurface({ ...layout, keepView })
+    const { settled, timing } = resizeTimer.send(ready);
+    void layoutRecordingPreviewSurface({
+      ...layout,
+      keepView,
+      resizeTiming: timing,
+    })
       .catch((cause: unknown) => {
         if (!disposed) onError(String(cause));
       })
       .finally(() => {
+        settled();
         inFlight = false;
         flush();
       });
@@ -143,6 +163,7 @@ export function createRecordingLayoutQueue({
       last = next;
       pending = {
         layout: { ...layout, requestId: nextRequestId() },
+        ready: readyLayoutTiming(next.length),
         window: { height: window.innerHeight, width: window.innerWidth },
       };
       flush();

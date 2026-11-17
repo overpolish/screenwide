@@ -14,6 +14,7 @@ import {
 
 import type { TextStyle } from "../../../bindings/TextStyle";
 import type { AnnotationTool } from "../annotations/annotation-defaults";
+import type { ResizeTiming } from "../preview/resize-timing";
 
 // The screenshot workspace's native preview: started on an artifact, laid out
 // as the page lays the viewport out, refreshed when its sources change, put
@@ -70,6 +71,8 @@ export const layoutScreenshotPreviewSurface = ({
   /** How many times a fresh lens enlarges: whatever the last lens was set
    * to. */
   annotationZoom?: number | null;
+  /** TEMPORARY(#12): what the frontend spent before sending this layout. */
+  resizeTiming?: ResizeTiming;
   /** Every annotation chosen on the selected layer. */
   selectedAnnotationIds?: readonly string[];
   selection?: PreviewSelectionLayout | null;

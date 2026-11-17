@@ -20,6 +20,7 @@ import {
   effectiveBackdrop,
 } from "../recording/use-recording-preview-surface";
 
+import { createScreenshotLayoutQueue } from "./screenshot-layout-queue";
 import {
   screenshotOutputDimensions,
   ScreenshotWorkspaceOutputSettings,
@@ -212,24 +213,9 @@ export function useScreenshotPreviewSurface({
 
   useEffect(() => {
     if (!isEnabled) return;
-    let disposed = false;
-    let inFlight = false;
-    let lastLayout = "";
-    let pendingLayout:
-      Parameters<typeof layoutScreenshotPreviewSurface>[0] | null = null;
-    const flush = () => {
-      if (disposed || inFlight || !pendingLayout) return;
-      const next = pendingLayout;
-      pendingLayout = null;
-      inFlight = true;
-      void layoutScreenshotPreviewSurface(next)
-        .catch(() => undefined)
-        .finally(() => {
-          inFlight = false;
-          flush();
-        });
-    };
+    const layouts = createScreenshotLayoutQueue();
     const measure = () => {
+      const measureStartedAt = performance.now();
       const marker = canvasRef.current;
       const currentOutput = outputRef.current;
       if (
@@ -290,12 +276,7 @@ export function useScreenshotPreviewSurface({
           // session behind it is new and holds no selection yet. Keying the
           // dedupe on the session makes the first layout of every session
           // reach the surface.
-          const nextLayout = JSON.stringify(layout);
-          if (nextLayout !== lastLayout) {
-            lastLayout = nextLayout;
-            pendingLayout = layout;
-            flush();
-          }
+          layouts.queue(layout, measureStartedAt);
         }
       }
     };
@@ -305,7 +286,7 @@ export function useScreenshotPreviewSurface({
     if (marker) observer.observe(marker);
     measure();
     return () => {
-      disposed = true;
+      layouts.dispose();
       observer.disconnect();
       measureRef.current = () => undefined;
     };

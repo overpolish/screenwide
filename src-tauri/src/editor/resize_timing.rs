@@ -5,7 +5,10 @@
 //! size, appended to `screenwide-editor-resize.log` in the temporary
 //! directory so a release build keeps it however the app was started. It
 //! separates the frontend's cadence (`gap`) from the time the layout command
-//! spends, and on Windows that time's draws and compositor waits.
+//! spends, splits that time into the command's phases and, on Windows, counts
+//! its draws and compositor waits. The frontend's own share before the
+//! command (measuring the page, waiting behind the layout in flight, the
+//! round trip of the one before) rides in with the layout.
 
 use std::sync::Mutex;
 use std::time::{Duration, Instant};
@@ -14,11 +17,13 @@ use std::time::{Duration, Instant};
 struct State {
   size: Option<(i64, i64)>,
   last_at: Option<Instant>,
-  /// Whether a size-changing layout is under way, so only its draws and
-  /// commits are counted.
+  /// Whether a size-changing layout is under way, so only its draws,
+  /// commits and phases are counted.
   measuring: bool,
   draw: Spent,
   commit: Spent,
+  phase_at: Option<Instant>,
+  phases: Vec<(&'static str, Duration)>,
 }
 
 #[derive(Default)]
@@ -49,6 +54,38 @@ impl Spent {
   }
 }
 
+/// What the frontend spent on a layout before sending it, in milliseconds.
+#[derive(serde::Deserialize, Clone, Copy)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct FrontendTiming {
+  /// Measuring the page and building the layout.
+  measure_ms: Option<f64>,
+  /// From the layout being ready to it being sent: the wait behind the
+  /// layout in flight.
+  queued_ms: f64,
+  /// From the previous layout's answer to this one being sent.
+  idle_ms: Option<f64>,
+  /// The previous layout's invoke, from sending it to its answer.
+  previous_round_trip_ms: Option<f64>,
+  /// The layout's size as JSON, in characters.
+  payload_chars: u64,
+}
+
+impl FrontendTiming {
+  fn describe(&self) -> String {
+    let optional =
+      |value: Option<f64>| value.map_or_else(|| "-".to_owned(), |value| format!("{value:.1}ms"));
+    format!(
+      "measure={} queued={:.1}ms idle={} prev-roundtrip={} payload={}",
+      optional(self.measure_ms),
+      self.queued_ms,
+      optional(self.idle_ms),
+      optional(self.previous_round_trip_ms),
+      self.payload_chars
+    )
+  }
+}
+
 static STATE: Mutex<Option<State>> = Mutex::new(None);
 
 /// Writes its layout's line when dropped, at the end of the command.
@@ -57,11 +94,17 @@ pub(crate) struct Layout {
   size: (i64, i64),
   gap: Option<Duration>,
   began: Instant,
+  frontend: Option<FrontendTiming>,
 }
 
 /// Starts timing a layout command whose viewport is `width` by `height`
 /// logical points. Answers `None` when the size is the one last laid out.
-pub(crate) fn begin(kind: &'static str, width: f64, height: f64) -> Option<Layout> {
+pub(crate) fn begin(
+  kind: &'static str,
+  width: f64,
+  height: f64,
+  frontend: Option<FrontendTiming>,
+) -> Option<Layout> {
   let size = (width.round() as i64, height.round() as i64);
   let began = Instant::now();
   let mut slot = STATE.lock().ok()?;
@@ -75,12 +118,27 @@ pub(crate) fn begin(kind: &'static str, width: f64, height: f64) -> Option<Layou
   state.measuring = true;
   state.draw = Spent::default();
   state.commit = Spent::default();
+  state.phase_at = Some(began);
+  state.phases.clear();
   Some(Layout {
     kind,
     size,
     gap,
     began,
+    frontend,
   })
+}
+
+/// Ends the command's phase named `name` here; the next one starts.
+pub(crate) fn mark(name: &'static str) {
+  let now = Instant::now();
+  if let Ok(mut slot) = STATE.lock() {
+    if let Some(state) = slot.as_mut().filter(|state| state.measuring) {
+      if let Some(at) = state.phase_at.replace(now) {
+        state.phases.push((name, now - at));
+      }
+    }
+  }
 }
 
 /// One workspace draw: the swap chain matched to the viewport, the scene
@@ -107,19 +165,30 @@ fn record(took: Duration, spent: impl FnOnce(&mut State) -> &mut Spent) {
 
 impl Drop for Layout {
   fn drop(&mut self) {
+    mark("rest");
     let command = self.began.elapsed();
-    let Some((draw, commit)) = STATE.lock().ok().and_then(|mut slot| {
+    let Some((draw, commit, phases)) = STATE.lock().ok().and_then(|mut slot| {
       let state = slot.as_mut()?;
       state.measuring = false;
-      Some((state.draw.describe(), state.commit.describe()))
+      let phases = state
+        .phases
+        .iter()
+        .map(|(name, took)| format!("{name}:{:.1}", ms(*took)))
+        .collect::<Vec<_>>()
+        .join(" ");
+      Some((state.draw.describe(), state.commit.describe(), phases))
     }) else {
       return;
     };
     let gap = self
       .gap
       .map_or_else(|| "-".to_owned(), |gap| format!("{:.1}ms", ms(gap)));
+    let frontend = self
+      .frontend
+      .map_or_else(|| "-".to_owned(), |frontend| frontend.describe());
     write(format!(
-      "{} size={}x{} gap={gap} command={:.1}ms draw={draw} commit={commit}",
+      "{} size={}x{} gap={gap} command={:.1}ms draw={draw} commit={commit} phases=[{phases}] \
+       frontend=[{frontend}]",
       self.kind,
       self.size.0,
       self.size.1,

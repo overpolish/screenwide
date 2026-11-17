@@ -46,6 +46,8 @@ pub async fn layout_screenshot_preview_surface(
   output: ScreenshotWorkspaceOutputSettings,
   panes: Vec<ScreenshotSurfacePane>,
   scale: f64,
+  // TEMPORARY(#12): what the frontend spent before sending this layout.
+  resize_timing: Option<crate::editor::resize_timing::FrontendTiming>,
   selected_annotation_ids: Vec<String>,
   // Whether ⌘ (Ctrl) holds Select over the tool, as the editor's choice
   // model has it.
@@ -58,7 +60,12 @@ pub async fn layout_screenshot_preview_surface(
   viewport_corners: PreviewSurfaceCorners,
 ) -> Result<(), String> {
   // TEMPORARY(#12)
-  let _timing = crate::editor::resize_timing::begin("screenshot", viewport.width, viewport.height);
+  let _timing = crate::editor::resize_timing::begin(
+    "screenshot",
+    viewport.width,
+    viewport.height,
+    resize_timing,
+  );
   let scale = if scale.is_finite() && scale > 0.0 {
     scale
   } else {
@@ -162,6 +169,7 @@ pub async fn layout_screenshot_preview_surface(
       hover_cleared,
     )
   };
+  crate::editor::resize_timing::mark("state");
   #[cfg(any(target_os = "macos", target_os = "windows"))]
   if hover_cleared {
     super::start_callbacks::emit_annotation_hover(&app, session_id, None);
@@ -212,6 +220,7 @@ pub async fn layout_screenshot_preview_surface(
   // No interaction view exists off the two native preview backends.
   #[cfg(not(any(target_os = "macos", target_os = "windows")))]
   let _ = native_editor;
+  crate::editor::resize_timing::mark("chrome");
   // Lay out first with the pane frames held back, then present: the batch
   // applies the deferred frames in the same Core Animation transaction as the
   // freshly composed drawables. Presenting before layout does not achieve
@@ -246,6 +255,7 @@ pub async fn layout_screenshot_preview_surface(
   // frames and the fresh layer presents all land in one commit - on Windows
   // that is also the invoke's single compositor wait.
   surface.finish_layout();
+  crate::editor::resize_timing::mark("layout");
   if will_present {
     // Source refresh and structural layout are separate IPC calls. Snapshot
     // only after the new pane views exist so a newly captured screenshot can
@@ -269,6 +279,8 @@ pub async fn layout_screenshot_preview_surface(
       }
     }
   }
+  crate::editor::resize_timing::mark("present");
   drop(batch);
+  crate::editor::resize_timing::mark("flush");
   Ok(())
 }

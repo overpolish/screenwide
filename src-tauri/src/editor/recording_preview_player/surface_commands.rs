@@ -63,4 +63,7 @@ pub struct RecordingPreviewSurfaceLayout {
   /// under it grows or shrinks, and not when the window was resized.
   #[serde(default)]
   keep_view: bool,
+  // TEMPORARY(#12): what the frontend spent before sending this layout.
+  #[serde(default)]
+  resize_timing: Option<crate::editor::resize_timing::FrontendTiming>,
 }
