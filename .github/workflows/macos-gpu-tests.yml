@@ -1,0 +1,103 @@
+# SPDX-FileCopyrightText: 2026 overpolish
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+name: macOS GPU Tests
+
+# The tests that draw on the GPU, run on GitHub's macOS runner at the commits
+# asked for, each on a runner of its own. The runner's GPU is a virtual one,
+# which the sanity check leaves these tests running on; this finds the commit
+# where one of them starts failing there without waiting for a whole sanity
+# check per commit.
+on:
+  workflow_dispatch:
+    inputs:
+      refs:
+        description: Commits, branches or tags to test, separated by spaces
+        required: true
+        default: main
+
+permissions:
+  contents: read
+
+jobs:
+  refs:
+    name: Commits to test
+    runs-on: ubuntu-latest
+    outputs:
+      commits: ${{ steps.list.outputs.commits }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      # Checkout takes a full commit hash or a branch or tag, not a short
+      # hash, so each is resolved here and named as it was given.
+      - name: Resolve the commits
+        id: list
+        env:
+          REFS: ${{ inputs.refs }}
+        run: |
+          commits='[]'
+          for ref in $REFS; do
+            sha=$(git rev-parse --verify "$ref^{commit}" 2>/dev/null || git rev-parse --verify "origin/$ref^{commit}")
+            commits=$(jq -c --arg name "$ref" --arg sha "$sha" '. + [{name: $name, sha: $sha}]' <<< "$commits")
+          done
+          echo "commits=$commits" >> "$GITHUB_OUTPUT"
+
+  gpu-tests:
+    name: ${{ matrix.commit.name }}
+    needs: refs
+    runs-on: macos-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        commit: ${{ fromJSON(needs.refs.outputs.commits) }}
+    # The sanity check's build, so the same tests are ignored as there.
+    env:
+      RUSTFLAGS: --cfg screenwide_no_gpu
+
+    steps:
+      - name: Check out the commit
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ matrix.commit.sha }}
+
+      - name: Describe the commit and the GPU
+        run: |
+          git log -1 --format='%H %s'
+          system_profiler SPDisplaysDataType
+
+      # A commit from before rust-toolchain.toml pinned the toolchain builds
+      # with the runner's stable.
+      - name: Install Rust
+        run: |
+          if [ -f rust-toolchain.toml ]; then
+            rustup toolchain install
+          else
+            rustup toolchain install stable
+          fi
+
+      - name: Restore cargo's downloads
+        uses: actions/cache@v6
+        with:
+          path: |
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            ~/.cargo/git
+          key: macos-gpu-tests-cargo-${{ hashFiles('src-tauri/Cargo.lock') }}
+          restore-keys: macos-gpu-tests-cargo-
+
+      - name: Build the tests
+        run: cargo test --manifest-path src-tauri/Cargo.toml -p screenwide-compositor -p screenwide-export --lib --no-run
+
+      # Each test's own output is kept, so a picture that came out black
+      # shows next to the graphics adapter that drew it.
+      - name: Compositor tests
+        if: ${{ !cancelled() }}
+        run: cargo test --manifest-path src-tauri/Cargo.toml -p screenwide-compositor --lib --no-fail-fast -- --nocapture
+
+      # The export's drawing tests; its video tests need the prepared FFmpeg.
+      - name: Export render tests
+        if: ${{ !cancelled() }}
+        run: cargo test --manifest-path src-tauri/Cargo.toml -p screenwide-export --lib --no-fail-fast -- render_tests composites_keyboard_pixels_into_a_gpu_still --nocapture
