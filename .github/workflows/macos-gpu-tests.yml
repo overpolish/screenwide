@@ -5,15 +5,13 @@ name: macOS GPU Tests
 
 # The tests that draw on the GPU, run on GitHub's macOS runner at the commits
 # asked for, each commit and mode on a runner of its own. The runner's GPU is
-# a virtual one, which the sanity check leaves these tests running on; this
-# finds where and how one of them starts failing there without waiting for a
-# whole sanity check per try.
+# a virtual one that draws many of them black at random, so the sanity check
+# skips them there (`screenwide_no_gpu`); this runs them anyway, to see
+# whether a newer runner image draws them right.
 #
-# A mode is how the tests run: `parallel` as the sanity check runs them,
-# `serial` one test at a time, and `wgsl` with every shader compiled from
-# WGSL rather than taken from the precompiled libraries; `wgsl-serial` is
-# both. Each runs the tests `runs` times over, and the job's summary lists
-# every run's result.
+# A mode is how the tests run: `parallel` as `cargo test` runs them, or
+# `serial` one test at a time. Each runs the tests `runs` times over, and the
+# job's summary lists every run's result.
 on:
   workflow_dispatch:
     inputs:
@@ -22,7 +20,7 @@ on:
         required: true
         default: main
       modes:
-        description: "Modes, separated by spaces: parallel, serial, wgsl, wgsl-serial"
+        description: "Modes, separated by spaces: parallel, serial"
         required: true
         default: parallel
       runs:
@@ -71,10 +69,6 @@ jobs:
       matrix:
         commit: ${{ fromJSON(needs.refs.outputs.commits) }}
         mode: ${{ fromJSON(needs.refs.outputs.modes) }}
-    # The sanity check's build, so the same tests are ignored as there.
-    env:
-      RUSTFLAGS: --cfg screenwide_no_gpu
-
     steps:
       - name: Check out the commit
         uses: actions/checkout@v7
@@ -106,8 +100,12 @@ jobs:
           key: macos-gpu-tests-cargo-${{ hashFiles('src-tauri/Cargo.lock') }}
           restore-keys: macos-gpu-tests-cargo-
 
+      # Built as each suite runs, one package at a time, so the runs below
+      # build nothing again.
       - name: Build the tests
-        run: cargo test --manifest-path src-tauri/Cargo.toml -p screenwide-compositor -p screenwide-export --lib --no-run
+        run: |
+          cargo test --manifest-path src-tauri/Cargo.toml -p screenwide-compositor --lib --no-run
+          cargo test --manifest-path src-tauri/Cargo.toml -p screenwide-export --lib --no-run
 
       # The export's video tests are left out: they need the prepared
       # FFmpeg.
@@ -119,7 +117,6 @@ jobs:
           set -o pipefail
           threads=()
           case "$MODE" in *serial*) threads=(--test-threads=1) ;; esac
-          case "$MODE" in *wgsl*) export SCREENWIDE_WGSL_ONLY=1 ;; esac
           echo "| Run | Tests | Result |" >> "$GITHUB_STEP_SUMMARY"
           echo "| --- | --- | --- |" >> "$GITHUB_STEP_SUMMARY"
           status=0
