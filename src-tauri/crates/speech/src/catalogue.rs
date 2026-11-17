@@ -2,8 +2,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 mod dictation;
+mod retired;
 
 pub use dictation::{dictation, dictation_cleanup, dictation_description, Writes};
+pub use retired::{RETIRED_FILES, RETIRED_FOLDER_PREFIXES};
 use serde::Serialize;
 
 /// What a model is for. Each use has its own model, chosen for it.
@@ -279,11 +281,6 @@ pub const MODELS: &[Model] = &[
     purpose: Purpose::CameraObjects,
   },
 ];
-
-/// Files models no longer in the catalogue were kept in, removed so they do
-/// not take room for nothing: HT Demucs, which Studio ducking ran before,
-/// whose weights are licensed for research only.
-pub const RETIRED_FILES: &[&str] = &["htdemucs.onnx"];
 
 pub fn find(id: &str) -> Result<&'static Model, String> {
   MODELS

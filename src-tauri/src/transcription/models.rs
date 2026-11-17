@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use serde::Serialize;
 use tauri::{AppHandle, Emitter, Manager};
@@ -9,6 +9,7 @@ use tauri::{AppHandle, Emitter, Manager};
 use super::{download, language, words};
 use screenwide_dictation::{phrases, Does};
 use screenwide_speech::catalogue::{self, Model, ModelFile, Purpose, Writes, MODELS};
+use screenwide_transcriber::compiled_model_prefix;
 
 const CHANGED_EVENT: &str = "transcription://changed";
 
@@ -218,7 +219,8 @@ pub(super) fn changed(app: &AppHandle) {
   let _ = app.emit(CHANGED_EVENT, state(app));
 }
 
-/// Deletes `model`'s files, keeping any another downloaded model uses too.
+/// Deletes `model`'s files, keeping any another downloaded model uses too,
+/// and what CoreML compiled from them.
 pub(super) fn remove(app: &AppHandle, model: &Model) -> Result<(), String> {
   let shared = |file: &ModelFile| {
     MODELS.iter().any(|other| {
@@ -227,18 +229,21 @@ pub(super) fn remove(app: &AppHandle, model: &Model) -> Result<(), String> {
         && is_downloaded(app, other)
     })
   };
+  let directory = directory(app)?;
   for file in model.files.iter().filter(|file| !shared(file)) {
     match std::fs::remove_file(file_path(app, file)?) {
       Ok(()) => {}
       Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
       Err(error) => return Err(format!("Could not remove the model: {error}")),
     }
+    remove_folders(&directory, &compiled_model_prefix(file.name));
   }
   Ok(())
 }
 
 /// Deletes the files of models the catalogue no longer has, so a model
-/// replaced by another takes no room once the app updates.
+/// replaced by another takes no room once the app updates, and the folders
+/// of compiles kept under names no longer used.
 pub(crate) fn remove_retired(app: &AppHandle) {
   let Ok(directory) = directory(app) else {
     return;
@@ -248,6 +253,25 @@ pub(crate) fn remove_retired(app: &AppHandle) {
       Ok(()) => {}
       Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
       Err(error) => eprintln!("Could not remove the retired model {name}: {error}"),
+    }
+  }
+  for prefix in catalogue::RETIRED_FOLDER_PREFIXES {
+    remove_folders(&directory, prefix);
+  }
+}
+
+/// Deletes every folder in `directory` whose name starts with `prefix`.
+fn remove_folders(directory: &Path, prefix: &str) {
+  let Ok(entries) = std::fs::read_dir(directory) else {
+    return;
+  };
+  for entry in entries.flatten() {
+    let name = entry.file_name();
+    let is_folder = entry.file_type().is_ok_and(|kind| kind.is_dir());
+    if is_folder && name.to_string_lossy().starts_with(prefix) {
+      if let Err(error) = std::fs::remove_dir_all(entry.path()) {
+        eprintln!("Could not remove {}: {error}", name.to_string_lossy());
+      }
     }
   }
 }

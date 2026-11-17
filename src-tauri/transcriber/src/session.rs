@@ -5,12 +5,14 @@
 //! times faster than the CPU and giving the same result, and on the CPU when
 //! the GPU cannot take the model.
 
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::sync::LazyLock;
 
 use ort::environment::Environment;
 use ort::ep::ExecutionProviderDispatch;
-use ort::session::{builder::SessionBuilder, Session};
+use ort::session::builder::{AutoDevicePolicy, SessionBuilder};
+use ort::session::Session;
+use screenwide_transcriber::compiled_model_prefix;
 
 /// ONNX Runtime's environment, every session's. ort allows one a process,
 /// and refuses a second even once the first is gone, so it is made once and
@@ -18,9 +20,16 @@ use ort::session::{builder::SessionBuilder, Session};
 static ENVIRONMENT: LazyLock<Result<Environment, String>> =
   LazyLock::new(|| ort::init().build().map_err(|error| error.to_string()));
 
+/// A session builder that places the model where it is told. ort's own
+/// builder asks ONNX Runtime to pick the most efficient device for a session
+/// given no backend, which on a Mac is CoreML on the Neural Engine, and that
+/// computes global pooling wrongly: Background removal's matte came out with
+/// the room in it. A session given no backend runs on the CPU instead.
 fn builder() -> ort::Result<SessionBuilder> {
   match &*ENVIRONMENT {
-    Ok(environment) => Session::builder(environment),
+    Ok(environment) => {
+      Ok(Session::builder(environment)?.with_auto_device(AutoDevicePolicy::PreferCPU)?)
+    }
     Err(error) => Err(ort::Error::new(error.clone())),
   }
 }
@@ -84,22 +93,6 @@ pub(crate) fn on_cpu_threads(path: &Path, what: &str, threads: usize) -> Result<
     .map_err(|error| failed(error.to_string()))
 }
 
-/// The model at `path` for the feature named `what` on the GPU through
-/// DirectML, on Windows where ONNX Runtime can take it there. Elsewhere, or
-/// where it cannot, nothing, and the caller runs the model on the CPU.
-pub(crate) fn on_directml(path: &Path, what: &str) -> Option<Session> {
-  if !cfg!(windows) {
-    return None;
-  }
-  match on_gpu(path, gpu()?, Fusion::On) {
-    Ok(session) => Some(session),
-    Err(error) => {
-      eprintln!("{what} runs on the CPU: {BACKEND} could not take it: {error}");
-      None
-    }
-  }
-}
-
 /// The model at `path` for the feature named `what` on the GPU through the
 /// platform's own machine learning layer, CoreML on macOS and DirectML on
 /// Windows, or nothing where ONNX Runtime cannot take it there. CoreML
@@ -116,6 +109,41 @@ pub(crate) fn on_platform_gpu(path: &Path, what: &str, cache: &Path) -> Option<S
       None
     }
   }
+}
+
+/// Where CoreML keeps the `graphs` it compiles: beside them, in a folder
+/// named after the first ([`compiled_model_prefix`]) and a hash of the ONNX
+/// Runtime build that compiled them and each graph's size and modification
+/// time. ONNX Runtime finds a compiled graph by its file's path alone, so one
+/// compiled before a graph was replaced at that path, as a newer download
+/// does, fails to run rather than being compiled again; and one compiled by
+/// another build does too. The other folders for the same first graph,
+/// compiled for what is gone, are taken away.
+pub(crate) fn coreml_cache(graphs: &[&Path]) -> PathBuf {
+  use std::hash::{Hash, Hasher};
+  let mut hasher = std::collections::hash_map::DefaultHasher::new();
+  ort::info().hash(&mut hasher);
+  for graph in graphs {
+    let made = std::fs::metadata(graph).ok();
+    made.as_ref().map(std::fs::Metadata::len).hash(&mut hasher);
+    made.and_then(|made| made.modified().ok()).hash(&mut hasher);
+  }
+  let first = graphs
+    .first()
+    .copied()
+    .unwrap_or_else(|| Path::new("model"));
+  let folder = first.parent().unwrap_or_else(|| Path::new("."));
+  let prefix = compiled_model_prefix(&first.file_name().unwrap_or_default().to_string_lossy());
+  let name = format!("{prefix}{:016x}", hasher.finish());
+  if let Ok(entries) = std::fs::read_dir(folder) {
+    for entry in entries.flatten() {
+      let other = entry.file_name().to_string_lossy().into_owned();
+      if other.starts_with(&prefix) && other != name {
+        let _ = std::fs::remove_dir_all(entry.path());
+      }
+    }
+  }
+  folder.join(name)
 }
 
 #[cfg(target_os = "macos")]

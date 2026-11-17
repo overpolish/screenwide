@@ -18,12 +18,15 @@
 //! the room for them there. A chunk's matte is the same whichever chunks
 //! were matted before it, so the app can ask for them in any order.
 //!
-//! On Windows the model runs on the GPU through DirectML where it can, which
-//! answers as the CPU does and twice as fast, and takes the chunks one at a
-//! time, sharing the GPU with whatever else the computer is doing
-//! (`shared_gpu`). Otherwise several chunks are matted side by side, one
-//! model each on a share of the CPU. Each chunk's frames are cleaned up on
-//! several threads ([`in_order`]), which otherwise take longer than the model.
+//! The model runs on the GPU where it can, through the platform's own
+//! machine learning layer (`session::on_platform_gpu`), sharing it with
+//! whatever else the computer is doing (`shared_gpu`). On macOS that is
+//! CoreML, and several chunks are matted side by side, each on a session of
+//! its own. On Windows it is DirectML, which answers as the CPU does and
+//! twice as fast, and takes the chunks one at a time. Without a GPU several
+//! chunks are matted side by side, one model each on a share of the CPU.
+//! Each chunk's frames are cleaned up on several threads ([`in_order`]),
+//! which otherwise take longer than the model.
 
 mod cleanup;
 mod compose;
@@ -48,15 +51,21 @@ use self::decode::Decoder;
 use self::encode::Encoder;
 use self::in_order::{clean_in_order, Matted};
 use self::model::Matting;
-use crate::session::{on_cpu_threads, on_directml};
+use crate::session::{coreml_cache, on_cpu_threads, on_platform_gpu};
 use screenwide_transcriber::{MatteChunk, MatteTimings};
 
 /// The feature's name in what the helper reports.
 const WHAT: &str = "Background removal";
 /// How much each chunk but the first sees before it keeps a frame.
 const WARM_UP_MS: u64 = 3_000;
-/// The most chunks matted side by side on the CPU.
+/// The most chunks matted side by side.
 const MOST_SIDE_BY_SIDE: usize = 4;
+/// Whether chunks are matted side by side on the GPU too, each on a session
+/// of its own. One CoreML session runs a chunk at about half the speed of a
+/// share of the CPU, while four side by side matte a 3-minute camera in
+/// three quarters of the CPU's time on little over half its processor time.
+/// DirectML takes one chunk at a time.
+const GPU_SIDE_BY_SIDE: bool = cfg!(target_os = "macos");
 /// The most threads a chunk cleans its frames up on: four keep up with the
 /// model on the GPU.
 const MOST_CLEANERS: usize = 4;
@@ -82,17 +91,29 @@ pub fn matte_camera(
     return Ok(());
   }
   let cores = std::thread::available_parallelism().map_or(4, usize::from);
-  let shared = Shared::open(model, WHAT, || on_directml(model, WHAT));
-  let mut gpu = shared.has_gpu().then_some(shared);
-  let count = if gpu.is_some() {
+  let cache = coreml_cache(&[model]);
+  let open = || Shared::open(model, WHAT, || on_platform_gpu(model, WHAT, &cache));
+  let first = open();
+  let on_gpu = first.has_gpu();
+  let count = if on_gpu && !GPU_SIDE_BY_SIDE {
     1
   } else {
     (cores / 3).clamp(1, MOST_SIDE_BY_SIDE).min(chunks.len())
   };
+  // Opened one after another, so the first load alone compiles the model
+  // into the cache and the rest read it.
+  let sessions: Vec<Option<Shared>> = if on_gpu {
+    std::iter::once(first)
+      .chain((1..count).map(|_| open()))
+      .map(Some)
+      .collect()
+  } else {
+    (0..count).map(|_| None).collect()
+  };
   let threads = (cores / count).max(1);
   // A chunk's model and its cleanup share its threads; on the GPU, the model
   // takes none of them.
-  let cleaners = if gpu.is_some() {
+  let cleaners = if on_gpu {
     threads.saturating_sub(2)
   } else {
     threads / 4
@@ -114,9 +135,9 @@ pub fn matte_camera(
   };
   let (finished, written) = mpsc::channel::<usize>();
   let results = std::thread::scope(|scope| {
-    let running = (0..count)
-      .map(|_| {
-        let session = gpu.take();
+    let running = sessions
+      .into_iter()
+      .map(|session| {
         let (next, finished) = (&next, finished.clone());
         scope.spawn(move || job.run(chunks, next, session, &finished))
       })

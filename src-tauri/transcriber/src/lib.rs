@@ -10,7 +10,9 @@ use std::path::PathBuf;
 
 use serde::{Deserialize, Serialize};
 
+mod compiled;
 mod text;
+pub use compiled::compiled_model_prefix;
 pub use text::TextLine;
 
 /// Audio is handed over as a file of 32-bit float samples in native byte

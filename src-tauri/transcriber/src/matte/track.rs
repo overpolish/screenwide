@@ -33,6 +33,7 @@ use self::follower::{quarter, Follower};
 use self::sam::Sam;
 use self::slots::Slots;
 use super::decode::Decoder;
+use crate::session::coreml_cache;
 
 pub(super) const WHAT: &str = "Object tracking";
 /// How many frames are decoded at once going backwards, which decoding can
@@ -101,7 +102,7 @@ pub fn follow_objects(
       .collect::<Result<Vec<_>, String>>()?
   };
   let graphs = [encode.as_path(), read.as_path(), memorise.as_path()];
-  let mut cutie = Cutie::load(graphs, &cache(&graphs));
+  let mut cutie = Cutie::load(graphs, &coreml_cache(&graphs));
   let mut done = 0_usize;
   let total = frames.len() + 1;
   let mut tell = |more: usize| {
@@ -209,38 +210,6 @@ fn backwards(
   // Where every object was gone, the rest of the way is left empty.
   tell(end);
   follower.finish(cutie, slots, tell)
-}
-
-/// Where CoreML keeps the Cutie `graphs` it compiles: beside them, under
-/// the ONNX Runtime build that compiled them and each graph's size and
-/// modification time. ONNX Runtime finds a compiled graph by its file's path
-/// alone, so one compiled before a graph was replaced at that path, as a
-/// newer download does, fails to run rather than being compiled again; and
-/// one compiled by another build does too. Those compiled for what is gone
-/// are taken away.
-fn cache(graphs: &[&Path]) -> PathBuf {
-  use std::hash::{Hash, Hasher};
-  let mut hasher = std::collections::hash_map::DefaultHasher::new();
-  ort::info().hash(&mut hasher);
-  for graph in graphs {
-    let made = std::fs::metadata(graph).ok();
-    made.as_ref().map(std::fs::Metadata::len).hash(&mut hasher);
-    made.and_then(|made| made.modified().ok()).hash(&mut hasher);
-  }
-  let folder = graphs
-    .first()
-    .and_then(|graph| graph.parent())
-    .unwrap_or_else(|| Path::new("."));
-  let name = format!("coreml-cache-{:016x}", hasher.finish());
-  if let Ok(entries) = std::fs::read_dir(folder) {
-    for entry in entries.flatten() {
-      let other = entry.file_name().to_string_lossy().into_owned();
-      if other.starts_with("coreml-cache-") && other != name {
-        let _ = std::fs::remove_dir_all(entry.path());
-      }
-    }
-  }
-  folder.join(name)
 }
 
 fn start(job: &Follow<'_>, from_ms: f64, size: (u32, u32)) -> Result<Decoder, String> {
