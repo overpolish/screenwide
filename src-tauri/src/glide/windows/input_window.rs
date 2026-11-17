@@ -88,6 +88,9 @@ pub(super) fn run(app: AppHandle, ready: std::sync::mpsc::SyncSender<Result<(), 
     let _ = ready.send(Err(format!("Could not register Glide raw input: {error}")));
     return;
   }
+  // This window holds the process's one raw mouse registration and hands
+  // every report on to `raw_mouse`, for the features that subscribe there.
+  crate::raw_mouse::set_registered(true);
   let touchpad = [raw_input_device(
     USAGE_PAGE_DIGITIZER,
     USAGE_TOUCHPAD,
@@ -119,6 +122,7 @@ pub(super) fn run(app: AppHandle, ready: std::sync::mpsc::SyncSender<Result<(), 
       DispatchMessageW(&message);
     }
   }
+  crate::raw_mouse::set_registered(false);
   end_session(&app);
   drop(precision_touchpad);
   drop(key_hook);

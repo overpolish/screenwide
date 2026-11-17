@@ -47,6 +47,7 @@ pub(crate) fn handle_raw_input(handle: HRAWINPUT) {
 
   if input.header.dwType == RIM_TYPEMOUSE.0 {
     let mouse = unsafe { input.data.mouse };
+    crate::raw_mouse::deliver(&crate::raw_mouse::MouseReport::of(&mouse));
     handle_mouse(input.header.hDevice, mouse);
   } else if input.header.dwType == RIM_TYPEHID.0 {
     let hid = unsafe { &input.data.hid };

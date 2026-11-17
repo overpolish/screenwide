@@ -42,6 +42,8 @@ mod projects_folder;
 mod precompiled_shaders {
   include!(concat!(env!("OUT_DIR"), "/precompiled_shaders.rs"));
 }
+#[cfg(target_os = "windows")]
+mod raw_mouse;
 mod recording;
 mod recording_inputs;
 mod recording_sources;
