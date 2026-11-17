@@ -1,12 +1,13 @@
 # SPDX-FileCopyrightText: 2026 overpolish
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-# Hands a published release to the Microsoft Store: both architectures'
-# packages in one bundle, replacing the last release's, with the release notes
-# as What's new. The submission is left uncommitted, so the listing can be
-# changed in Partner Center before Submit for certification is pressed there
-# by hand; committing is what starts certification. It is kept on manual
-# publishing, so after certification it also waits for Publish now.
+# Bundles a published release's packages for the Microsoft Store: both
+# architectures in one .msixbundle, saved on the run for uploading in Partner
+# Center by hand, with the release notes in the run's summary for What's new.
+# Nothing is sent to the Store: its API processes an upload only when the
+# submission is committed, and committing submits it for certification, so a
+# submission that is checked before Submit is pressed has to be filled in by
+# hand.
 name: Microsoft Store
 
 on:
@@ -15,26 +16,21 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: Release tag to submit, such as v1.0.1
+        description: Release tag to bundle, such as v1.0.1
         required: true
 
 permissions:
   contents: read
 
-concurrency:
-  group: store
-  cancel-in-progress: false
-
 jobs:
-  submit:
-    name: Submit to the Store
+  bundle:
+    name: Bundle for the Store
     # The Store takes plain versions only, so a prerelease has no package.
     if: github.event_name == 'workflow_dispatch' || !github.event.release.prerelease
     runs-on: windows-latest
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       TAG: ${{ github.event.release.tag_name || inputs.tag }}
-      PRODUCT_ID: 9MSN8CRH5W0F
     steps:
       - name: Download the release's packages
         shell: pwsh
@@ -44,8 +40,8 @@ jobs:
           if ($packages.Count -ne 2) { throw "Expected the x64 and ARM64 packages, found $($packages.Count)" }
           $packages | ForEach-Object { $_.Name }
 
-      # One upload per submission: a second would replace the first, so both
-      # architectures go up together as a bundle.
+      # Once a release has shipped as a bundle, every later submission must
+      # carry one, so both architectures go up together in it.
       - name: Bundle both architectures
         shell: pwsh
         run: |
@@ -55,31 +51,18 @@ jobs:
           New-Item -ItemType Directory -Force upload | Out-Null
           & $makeappx.FullName bundle /d msix /p "upload\Screenwide_$version.msixbundle" /bv $version /o
           if ($LASTEXITCODE -ne 0) { throw "makeappx failed" }
-          Compress-Archive -Path "upload\Screenwide_$version.msixbundle" -DestinationPath "Screenwide_$version.zip"
-          Move-Item "Screenwide_$version.zip" "Screenwide_$version.msixupload"
-          "UPLOAD=$PWD\Screenwide_$version.msixupload" >> $env:GITHUB_ENV
+          "VERSION=$version" >> $env:GITHUB_ENV
 
-      - name: Install the Microsoft Store Developer CLI
-        uses: microsoft/setup-msstore-cli@v1
+      - name: Save the bundle on the run
+        uses: actions/upload-artifact@v7
+        with:
+          name: Screenwide_${{ env.VERSION }}.msixbundle
+          path: upload/Screenwide_${{ env.VERSION }}.msixbundle
+          # The packages inside are compressed already.
+          compression-level: 0
+          if-no-files-found: error
 
-      - name: Sign in to Partner Center
-        shell: pwsh
-        run: |
-          msstore settings --enableTelemetry false
-          msstore reconfigure `
-            --tenantId "${{ secrets.MSSTORE_TENANT_ID }}" `
-            --sellerId "${{ secrets.MSSTORE_SELLER_ID }}" `
-            --clientId "${{ secrets.MSSTORE_CLIENT_ID }}" `
-            --clientSecret "${{ secrets.MSSTORE_CLIENT_SECRET }}"
-
-      # `publish` recreates the draft from the last published submission, so it
-      # runs before the submission is changed, and leaves it uncommitted so the
-      # changes go in with the package.
-      - name: Upload the bundle to a new submission
-        shell: pwsh
-        run: msstore publish $env:UPLOAD -id $env:PRODUCT_ID --noCommit
-
-      - name: Set What's new and replace the last release's packages
+      - name: Write the steps and What's new to the summary
         shell: pwsh
         run: |
           # PowerShell captures each line of a command's output as an array
@@ -87,22 +70,13 @@ jobs:
           $notes = (gh release view $env:TAG --repo $env:GITHUB_REPOSITORY --json body --jq .body) -join "`n"
           # The Store takes plain text of at most 1500 characters.
           if ($notes.Length -gt 1500) { $notes = $notes.Substring(0, 1500) }
-          $submission = msstore submission get $env:PRODUCT_ID | ConvertFrom-Json
-          if ($LASTEXITCODE -ne 0) { throw "Could not read the submission" }
-          foreach ($language in $submission.Listings.PSObject.Properties) {
-            $language.Value.BaseListing.ReleaseNotes = $notes
-          }
-          # msstore removes only packages of the uploaded file's own extension,
-          # so the last release's .msix packages would otherwise ship beside it.
-          foreach ($package in $submission.ApplicationPackages) {
-            if ($package.FileStatus -eq 'Uploaded') { $package.FileStatus = 'PendingDelete' }
-          }
-          # Certification is followed by a wait for Publish now, not a release.
-          $submission.TargetPublishMode = 'Manual'
-          msstore submission update $env:PRODUCT_ID ($submission | ConvertTo-Json -Depth 100 -Compress)
-          if ($LASTEXITCODE -ne 0) { throw "Could not update the submission" }
-
-      - name: Leave the submission for certification by hand
-        shell: pwsh
-        run: |
-          "$env:TAG is uploaded to a draft submission with its What's new. Change the listing if needed, then press Submit for certification in Partner Center; once it passes, it waits for Publish now." >> $env:GITHUB_STEP_SUMMARY
+          $fence = '````'
+          @(
+            "Download Screenwide_$env:VERSION.msixbundle from this run's artifacts and unzip it. In Partner Center, start an update, drag the bundle onto Packages and remove the last release's package, paste What's new below into each listing, then press Submit for certification. Set Publishing to manual if it should wait for Publish now after certification.",
+            '',
+            "What's new:",
+            '',
+            $fence,
+            $notes,
+            $fence
+          ) -join "`n" >> $env:GITHUB_STEP_SUMMARY

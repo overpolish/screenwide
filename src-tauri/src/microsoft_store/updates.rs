@@ -14,8 +14,7 @@ use serde::Deserialize;
 use windows::ApplicationModel::Package;
 use windows::Services::Store::StoreContext;
 
-/// Screenwide's page in the Store app, by the product ID
-/// `.github/workflows/store.yml` publishes to.
+/// Screenwide's page in the Store app, by its product ID.
 pub const STORE_PAGE_URL: &str = "ms-windows-store://pdp/?productid=9MSN8CRH5W0F";
 
 /// The product's record in every market at once, with the packages each SKU
