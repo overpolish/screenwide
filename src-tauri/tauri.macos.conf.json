@@ -1,6 +1,7 @@
 {
   "bundle": {
     "macOS": {
+      "entitlements": "./Entitlements.plist",
       "frameworks": ["binaries/libwebgpu_dawn.dylib"]
     },
     "resources": {
