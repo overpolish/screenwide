@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use std::ffi::c_int;
+use std::io::Write;
 
 use super::CapturedImage;
 
@@ -15,7 +16,7 @@ const WEBP_MAX_SIDE: u32 = 16_383;
 /// The image as a lossy WebP. Unlike a JPEG it keeps what the image leaves
 /// see-through, such as rounded corners; an opaque image is written without
 /// an alpha channel.
-pub fn encode_webp(image: &CapturedImage) -> Result<Vec<u8>, String> {
+pub fn write_webp(image: &CapturedImage, mut out: impl Write) -> Result<(), String> {
   if image.width > WEBP_MAX_SIDE || image.height > WEBP_MAX_SIDE {
     return Err(format!(
       "WebP cannot hold a picture over {WEBP_MAX_SIDE} pixels on a side; this one is {} by {}",
@@ -29,8 +30,8 @@ pub fn encode_webp(image: &CapturedImage) -> Result<Vec<u8>, String> {
   let mut output = std::ptr::null_mut();
   // Safety: the pixels are `width` by `height` RGBA rows of `width * 4`
   // bytes, checked above, and both sides fit a C int. libwebp allocates the
-  // output, which is copied and then freed with its own allocator.
-  unsafe {
+  // output, which is written out and then freed with its own allocator.
+  let encoded = unsafe {
     let size = libwebp_sys::WebPEncodeRGBA(
       image.rgba.as_ptr(),
       image.width as c_int,
@@ -42,8 +43,9 @@ pub fn encode_webp(image: &CapturedImage) -> Result<Vec<u8>, String> {
     if size == 0 || output.is_null() {
       return Err("The screenshot could not be encoded as WebP".to_owned());
     }
-    let bytes = std::slice::from_raw_parts(output, size).to_vec();
+    let written = out.write_all(std::slice::from_raw_parts(output, size));
     libwebp_sys::WebPFree(output.cast());
-    Ok(bytes)
-  }
+    written
+  };
+  encoded.map_err(|error| error.to_string())
 }

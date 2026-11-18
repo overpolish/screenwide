@@ -23,27 +23,17 @@
 //! blurs what lies under it; the shade below it only darkens.
 
 mod pipeline;
+mod plan;
+
+pub(super) use plan::{reach, Plan};
 
 use std::sync::Mutex;
 
 use super::*;
-use crate::annotation_gpu::PreviewArrow;
-use screenwide_annotations::AnnotationKind;
 
 /// What the layers hold: the annotations' layer is a signed difference, kept
 /// beyond eight bits so a faint edge survives the blur.
 pub(super) const LAYER_FORMAT: wgpu::TextureFormat = wgpu::TextureFormat::Rgba16Float;
-
-/// How many layer texels one deviation of the blur spans.
-const TEXELS_PER_DEVIATION: f32 = 2.0;
-
-/// The longest side the layers are laid at, which only a blur narrower than
-/// half a canvas pixel on a very large canvas reaches.
-const LARGEST_SIDE: f32 = 4096.0;
-
-/// The `annotation_blur` modes of the canvas pass that draws each layer.
-const DRAWING_MARKS: f32 = 1.0;
-const DRAWING_CURSOR: f32 = 3.0;
 
 /// The twin of `MarkBlur` in `annotation_blur.wgsl`.
 #[repr(C)]
@@ -52,91 +42,6 @@ struct Axis {
   direction: [i32; 2],
   sigma: f32,
   reach: i32,
-}
-
-/// Where and how one draw's layers are laid.
-#[derive(Clone, Copy)]
-pub(super) struct Plan {
-  /// Layer texels per canvas pixel.
-  scale: f32,
-  size: (u32, u32),
-  /// The deviation in layer texels.
-  sigma: f32,
-  /// The spotlight whose shade the blurred annotations lie under, where any
-  /// annotation does.
-  spotlight: Option<u32>,
-  cursor: bool,
-}
-
-impl Plan {
-  /// The layers `values` call for over `arrows` on a canvas `size`, or
-  /// `None` where no spotlight blurs or there is nothing for it to blur.
-  pub(super) fn of(values: &Constants, arrows: &[PreviewArrow], size: (u32, u32)) -> Option<Self> {
-    let [_, _, deviation, strength] = values.cursor_blur;
-    // A deviation that is not a number blurs nothing, as the shader reads it.
-    let blurs = deviation.is_finite() && deviation >= 0.5;
-    if !blurs || strength <= 0.0 || size.0 == 0 || size.1 == 0 {
-      return None;
-    }
-    let below = (values.annotation_options[0] as usize).min(arrows.len());
-    let total = (values.annotation_options[1] as usize).min(arrows.len());
-    // While a scene crosses the order over, the blur layer follows the
-    // nearer order, as the shader draws that layer.
-    let camera_between = values.camera_effects[1] != 0.0 && values.camera_effects[3] >= 0.5;
-    let topmost = |first: usize, last: usize| {
-      (first..last)
-        .rev()
-        .find(|&index| arrows[index].kind == AnnotationKind::Spotlight.raw())
-    };
-    let spotlight = match topmost(below, total) {
-      Some(index) => (index > 0 || camera_between).then_some(index),
-      None => topmost(0, below).filter(|&index| index > 0),
-    };
-    let cursor = values.cursor_options[1] != 0;
-    if spotlight.is_none() && !cursor {
-      return None;
-    }
-    let scale = (TEXELS_PER_DEVIATION / deviation).min(LARGEST_SIDE / size.0.max(size.1) as f32);
-    let side = |length: u32| ((length as f32 * scale).ceil() as u32).max(1);
-    Some(Self {
-      scale,
-      size: (side(size.0), side(size.1)),
-      sigma: deviation * scale,
-      spotlight: spotlight.map(|index| index as u32),
-      cursor,
-    })
-  }
-
-  fn spotlight_word(self) -> f32 {
-    self.spotlight.map_or(-1.0, |index| index as f32)
-  }
-
-  /// The canvas pass's `annotation_blur` row while it reads the layers.
-  pub(super) fn reading(self) -> [f32; 4] {
-    [
-      self.scale,
-      2.0,
-      self.spotlight_word(),
-      f32::from(u8::from(self.cursor)),
-    ]
-  }
-
-  /// `values` as the pass that draws the annotations' layer (`0`) or the
-  /// cursor's (`1`) takes them: the whole canvas laid over the layer, every
-  /// edge feathered over one of its texels.
-  pub(super) fn drawing(self, mut values: Constants, layer: usize) -> Constants {
-    let mode = if layer == 0 {
-      DRAWING_MARKS
-    } else {
-      DRAWING_CURSOR
-    };
-    values.placement = [0.0, 0.0, 1.0 / self.scale, 1.0 / self.scale];
-    values.motion[2] = 1.0 / self.scale;
-    values.annotation_blur = [self.scale, mode, self.spotlight_word(), 0.0];
-    // The layers are the canvas's own size; nothing past its edge is in them.
-    values.overflow = [0.0; 4];
-    values
-  }
 }
 
 /// The two layers, then the textures their rows are blurred into, all one

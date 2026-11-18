@@ -8,6 +8,7 @@
 
 mod background_image;
 mod capture;
+mod decoding;
 pub mod encoding;
 #[cfg(any(test, feature = "test-support"))]
 pub mod fixtures;
@@ -36,7 +37,8 @@ pub use background_image::{
   background_image_canvas, background_image_swatch, load as load_background_image,
 };
 pub use capture::Capture;
-pub use encoding::{encode_jpeg, encode_png, encode_webp, is_opaque, rounded_corners};
+pub use decoding::read_rgba;
+pub use encoding::{encode_png, is_opaque, rounded_corners, write_jpeg, write_png, write_webp};
 pub use hex_colour::parse_hex_colour;
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 pub use mesh::validate_mesh;

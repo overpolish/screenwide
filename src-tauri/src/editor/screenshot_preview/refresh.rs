@@ -19,14 +19,11 @@ pub async fn refresh_screenshot_preview_sources(
   artifact_id: u64,
   session_id: u64,
 ) -> Result<(), String> {
-  let existing = {
-    let manager = state
-      .0
-      .lock()
-      .map_err(|_| "The screenshot preview is unavailable".to_owned())?;
-    manager.require_session(session_id)?;
-    manager.sources.clone()
-  };
+  state
+    .0
+    .lock()
+    .map_err(|_| "The screenshot preview is unavailable".to_owned())?
+    .require_session(session_id)?;
   let sources = {
     let editor_state = app.state::<EditorState>();
     let artifact = editor_state
@@ -44,13 +41,7 @@ pub async fn refresh_screenshot_preview_sources(
       .iter()
       .map(|item| PreviewSource {
         id: item.id,
-        image: existing
-          .iter()
-          .find(|source| source.id == item.id)
-          .map_or_else(
-            || Arc::new(item.image.clone()),
-            |source| Arc::clone(&source.image),
-          ),
+        image: Arc::clone(&item.image),
         capture: item.capture(),
       })
       .collect::<Vec<_>>()

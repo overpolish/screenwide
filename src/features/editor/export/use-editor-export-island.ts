@@ -121,6 +121,7 @@ export function useEditorExportIsland(
         resolutionScalePercent: props.resolutionScalePercent ?? 100,
         screenshotFormat: props.screenshotFormat ?? "png",
         subtitles: props.subtitles ?? "none",
+        unavailableScreenshotFormats: props.unavailableScreenshotFormats ?? [],
       },
     });
   // Out with GIF chosen, the strip stays in reach for the GIF's range.

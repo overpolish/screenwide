@@ -9,8 +9,13 @@
 
 struct Lens {
   box_rect: vec4<f32>, // x/y/width/height in drawn pixels
-  source: vec4<f32>, // source width/height in pixels
-  sample: vec4<f32>, // anchor u/v inside the source
+  // Source width/height in pixels; `w` how many of them a texel of the
+  // picture's texture spans where it holds only a window of the source
+  // (zero where it holds all of it at its own size).
+  source: vec4<f32>,
+  // Anchor u/v inside the source, then where that window starts in it, in
+  // its pixels.
+  sample: vec4<f32>,
   source_range: vec4<f32>, // min u/v, max u/v
   flags: vec4<u32>, // edges bitmask, active, light mode
 }
@@ -62,7 +67,12 @@ fn lens_color(lens: Lens, position: vec2<f32>, picture: texture_2d<f32>,
       all(sample_uv >= lens.source_range.xy) && all(sample_uv <= lens.source_range.zw);
   var pixel = vec4<f32>(0.15, 0.15, 0.16, 1.0);
   if (in_source) {
-    pixel = textureSampleLevel(picture, nearest, (sample_point + 0.5) / source_dimensions, 0.0);
+    var uv = (sample_point + 0.5) / source_dimensions;
+    if (lens.source.w > 0.0) {
+      uv = (sample_point + 0.5 - lens.sample.zw) /
+          (vec2<f32>(textureDimensions(picture)) * lens.source.w);
+    }
+    pixel = textureSampleLevel(picture, nearest, uv, 0.0);
   }
   let edges = lens.flags.x;
   let shade = ((edges & 1u) != 0u && local.x < half_size.x) ||

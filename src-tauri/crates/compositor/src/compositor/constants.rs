@@ -100,10 +100,15 @@ pub(super) struct Constants {
   pub(super) overflow: [f32; 4],
   /// The source's own shape: how round its corners are, in canvas pixels
   /// (`x`), which its picture is cut to before anything else rounds it. A
-  /// window recorded on its own has them black in its movie. The rest are
-  /// spare.
+  /// window recorded on its own has them black in its movie. Then whether
+  /// the source texture holds only a window of the picture (`y`), and where
+  /// that window starts in it, in source pixels (`zw`).
   pub(super) source_shape: [f32; 4],
   /// The background giving way while a scene's blooms in over it, and the
   /// bloom; empty, with no background giving way.
   pub(super) turn: super::background_turn::TurnRows,
+  /// Where the spotlights' blur layers start on the canvas, in canvas pixels
+  /// (`xy`): a band of a canvas too large for the device lays them over the
+  /// part it draws. The rest are spare.
+  pub(super) annotation_blur_origin: [f32; 4],
 }

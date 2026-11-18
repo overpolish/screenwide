@@ -223,11 +223,25 @@ fn compose(
     } else {
       None
     };
+    // A picture larger than the device takes is drawn from the window of it
+    // the view needs.
+    let rect = [
+      placement.x as f32,
+      placement.y as f32,
+      placement.width,
+      placement.height,
+    ];
+    let (source, window) = layer.source.drawn_from(
+      &state.compositor,
+      (&layer.settings, geometry, &prepared),
+      rect,
+      size,
+    )?;
     // The bottom layer is drawn whole even when it is only a foreground:
     // there is nothing under it to lay it over.
     let picture = state.compositor.draw_layer(
       &view,
-      effected.as_ref().unwrap_or(&layer.source.texture),
+      effected.as_ref().unwrap_or(&source),
       &layer.settings,
       geometry,
       ComposedFrame {
@@ -242,15 +256,9 @@ fn compose(
       None,
       &prepared,
       LayerDraw {
-        placement: Some(LayerPlacement {
-          rect: [
-            placement.x as f32,
-            placement.y as f32,
-            placement.width,
-            placement.height,
-          ],
-          target: size,
-        }),
+        placement: Some(LayerPlacement { rect, target: size }),
+        band: None,
+        source_window: window,
         clear: false,
         redaction_slot: index,
         // The scene holds every picture it draws, so nothing writes into one
@@ -274,17 +282,16 @@ fn compose(
           .camera
           .as_ref()
           .and_then(|camera| camera.picture.as_ref())
-          .map(|camera| (camera.texture.view.clone(), camera.texture.size))
+          .map(|camera| (camera.texture.view.clone(), camera.texture.size, None))
       } else {
-        Some((picture, layer.source.texture.size))
+        Some((picture, layer.source.texture.size, window))
       }
       .map(|picture| (magnifier, picture));
     }
   }
-  if let Some((magnifier, (picture, picture_size))) = loupe {
-    state
-      .loupe
-      .draw(gpu, &view, size, magnifier, &picture, picture_size);
+  if let Some((magnifier, (picture, picture_size, window))) = loupe {
+    let drawn = (&picture, picture_size, window);
+    state.loupe.draw(gpu, &view, size, magnifier, drawn);
   }
   Ok(())
 }

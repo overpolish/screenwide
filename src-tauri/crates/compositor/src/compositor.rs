@@ -8,6 +8,8 @@
 
 mod background;
 mod background_turn;
+mod band_needs;
+mod bands;
 mod camera;
 mod canvas_features;
 #[cfg(test)]
@@ -48,9 +50,10 @@ mod tiles;
 pub mod video_planes;
 mod whole_blur;
 
+pub use band_needs::picture_needed;
 pub use camera::CameraComposition;
 pub use canvas_pipelines::EveryAnnotationKind;
-pub use layer::{CanvasGeometry, LayerDraw, LayerPlacement};
+pub use layer::{CanvasBand, CanvasGeometry, LayerDraw, LayerPlacement, SourceWindow};
 pub use source::PictureLook;
 
 use self::constants::Constants;
@@ -208,6 +211,8 @@ fn generator_shift(seed: u32) -> [f32; 4] {
 type ArtworkConstants = ([f32; 4], [f32; 4], [u32; 4]);
 
 #[cfg(all(test, any(target_os = "macos", target_os = "windows")))]
+mod band_render_tests;
+#[cfg(all(test, any(target_os = "macos", target_os = "windows")))]
 mod caption_render_tests;
 #[cfg(all(test, target_os = "windows"))]
 mod crop_preview_tests;
@@ -229,6 +234,8 @@ mod render_tests;
 mod scene_turn_tests;
 #[cfg(all(test, any(target_os = "macos", target_os = "windows")))]
 mod shadow_strength_tests;
+#[cfg(all(test, any(target_os = "macos", target_os = "windows")))]
+mod window_render_tests;
 
 /// Where a baked camera sits in the frame being composed: its crop and its
 /// frame in output pixels, and the corner radius it is drawn with.

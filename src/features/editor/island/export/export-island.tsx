@@ -133,25 +133,40 @@ export function exportIsland({
     key: "export",
     section: (
       <div className="flex flex-col gap-separate">
-        <ExportFileLine
-          directory={settings.directory}
-          extension={settings.extension}
-          fileStem={settings.fileStem}
-          onBrowse={() => {
-            onPatch({ browse: true });
-          }}
-          onFileStemChange={(fileStem) => {
-            onPatch({ fileStem });
-          }}
-          onRecordingFormatChange={(recordingFormat) => {
-            onPatch({ recordingFormat });
-          }}
-          onScreenshotFormatChange={(screenshotFormat) => {
-            onPatch({ screenshotFormat });
-          }}
-          recordingFormat={settings.recordingFormat}
-          screenshotFormat={settings.screenshotFormat}
-        />
+        <div className="flex flex-col gap-inline">
+          <ExportFileLine
+            directory={settings.directory}
+            extension={settings.extension}
+            fileStem={settings.fileStem}
+            onBrowse={() => {
+              onPatch({ browse: true });
+            }}
+            onFileStemChange={(fileStem) => {
+              onPatch({ fileStem });
+            }}
+            onRecordingFormatChange={(recordingFormat) => {
+              onPatch({ recordingFormat });
+            }}
+            onScreenshotFormatChange={(screenshotFormat) => {
+              onPatch({ screenshotFormat });
+            }}
+            recordingFormat={settings.recordingFormat}
+            screenshotFormat={settings.screenshotFormat}
+            unavailableScreenshotFormats={settings.unavailableScreenshotFormats}
+          />
+          {settings.unavailableScreenshotFormats.length > 0 ? (
+            <Text
+              className="w-0 min-w-full px-inset-sm text-fg-secondary"
+              variant="caption"
+            >
+              {t("editor-export-format-too-large", {
+                formats: settings.unavailableScreenshotFormats.includes("jpeg")
+                  ? "jpeg-webp"
+                  : "webp",
+              })}
+            </Text>
+          ) : null}
+        </div>
         <ExportOptions onPatch={onPatch} settings={settings} />
       </div>
     ),

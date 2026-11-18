@@ -1,7 +1,6 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { getCurrentWindow } from "@tauri-apps/api/window";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import {
@@ -11,10 +10,6 @@ import {
   saveExport,
   setExportDirectory,
 } from "./api";
-import {
-  NATIVE_POINTER_EVENT,
-  type NativePointerEvent,
-} from "./choice/use-select-hold";
 import {
   closeEditorWindow,
   minimizeEditorWindow,
@@ -38,11 +33,13 @@ import {
   defaultCameraOverlay,
   recordingSavePlan,
 } from "./export/recording-export-settings";
+import { screenshotFormatChoice } from "./export/screenshot-format";
 import { useExportMeasures } from "./export/use-export-measures";
 import { useExportProgress } from "./export/use-export-progress";
 import { useRecordingFormat } from "./export/use-recording-format";
 import { openProjectActions } from "./open-project-actions";
 import { EditorPanel } from "./panel/editor-panel";
+import { useNativePressBlur } from "./preview/use-native-press-blur";
 import { usePointerAway } from "./preview/use-pointer-away";
 import { recordingOutputForEdit } from "./recording/recording-output-edit";
 import {
@@ -146,21 +143,7 @@ export function EditorWindow() {
   const [isSaving, setIsSaving] = useState(false);
   const [isCancelingSave, setIsCancelingSave] = useState(false);
 
-  useEffect(() => {
-    let unlisten: (() => void) | undefined;
-    void getCurrentWindow()
-      .listen<NativePointerEvent>(NATIVE_POINTER_EVENT, ({ payload }) => {
-        if (!payload.down) return;
-        if (document.activeElement instanceof HTMLElement) {
-          document.activeElement.blur();
-        }
-        window.getSelection()?.removeAllRanges();
-      })
-      .then((dispose) => {
-        unlisten = dispose;
-      });
-    return () => unlisten?.();
-  }, []);
+  useNativePressBlur();
   usePointerAway();
   const [trackSelection, setTrackSelection] = useState<{
     artifactId: number;
@@ -366,10 +349,18 @@ export function EditorWindow() {
     recordingTimelineEdit: exportEdits.timelineEdit,
     resolutionScalePercent,
   };
+  // A canvas too large for the chosen format is saved as a PNG.
+  const screenshotFormats = screenshotFormatChoice(
+    screenshotFormat,
+    screenshotOutput,
+  );
   const { exportCompare, lookQualities } = useExportMeasures(exportInputs, {
     cameraOutput,
     recordingFormat,
-    screenshot: { format: screenshotFormat, output: screenshotOutput },
+    screenshot: {
+      format: screenshotFormats.selected,
+      output: screenshotOutput,
+    },
   });
 
   const onEnabledTracksChange = useCallback(
@@ -639,7 +630,7 @@ export function EditorWindow() {
             deleteProjectAfterExport,
             fileStem,
             ...recordingFormatPayload(),
-            screenshotFormat,
+            screenshotFormat: screenshotFormats.selected,
             screenshotOutput,
             subtitles,
             timelineEdit: exportEdits.timelineEdit,
@@ -684,11 +675,12 @@ export function EditorWindow() {
         recordingPreviewTracks={recordingPreviewTracks}
         recordingTimelineEdit={recordingTimelineEdit}
         resolutionScalePercent={resolutionScalePercent}
-        screenshotFormat={screenshotFormat}
+        screenshotFormat={screenshotFormats.selected}
         screenshotOutput={screenshotOutput}
         selectedScreenshotItemId={selectedScreenshotItemId}
         selectedTrack={selectedTrackId}
         subtitles={subtitles}
+        unavailableScreenshotFormats={screenshotFormats.unavailable}
       />
     </EditorEditGestureContext>
   );

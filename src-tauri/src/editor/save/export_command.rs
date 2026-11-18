@@ -114,8 +114,7 @@ pub async fn save_export(
             &|candidate| candidate.exists(),
           );
           let composed = compose_screenshot_workspace(items, &screenshot_output)?;
-          let bytes = screenshot_format.encode(&composed)?;
-          std::fs::write(&path, bytes).map_err(|error| error.to_string())?;
+          screenshot_format.write(&composed, &path)?;
           Ok(Some(path))
         }
         EditorArtifact::Recording { .. } => export_job::save_recording_artifact(

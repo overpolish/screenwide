@@ -11,6 +11,12 @@ use super::*;
 use screenwide_cursor_effects::GpuCursor;
 use screenwide_imaging::CapturedImage;
 
+mod layers;
+
+pub use layers::compose_layers;
+#[cfg(test)]
+pub(super) use layers::compose_layers_within;
+
 /// The camera bubble a still carries: its frame, the part of it shown, and
 /// where that sits on the canvas, in output pixels.
 pub struct StillCamera<'a> {
@@ -130,57 +136,7 @@ pub fn compose_still_on(
   read_rgba(gpu, &target, opaque)
 }
 
-/// Screenshot items composed onto one canvas, the first with the canvas's
-/// background and the rest laid over it, as the editor shows them. The
-/// canvas keeps its alpha past its rounded corners.
-pub fn compose_layers(
-  layers: &[(&CapturedImage, ScreenshotOutputSettings)],
-) -> Result<CapturedImage, String> {
-  let (_, first) = layers
-    .first()
-    .ok_or_else(|| "The screenshot workspace is empty".to_owned())?;
-  let stills = stills()?;
-  let compositor = stills
-    .lock()
-    .map_err(|_| "The still compositor is unavailable".to_owned())?;
-  let gpu = compositor.gpu();
-  let size = screenwide_output::output_dimensions(first)?;
-  let target = canvas_target(gpu, size);
-  let view = target.create_view(&Default::default());
-  for (index, (image, settings)) in layers.iter().enumerate() {
-    if screenwide_output::output_dimensions(settings)? != size {
-      return Err("The screenshot layers do not share a canvas size".to_owned());
-    }
-    let mut source = compositor.screenshot_source(image)?;
-    source.picture = Some(std::sync::Arc::new((*image).clone()));
-    // The export never carries a halo, nor a caret.
-    let prepared = crate::annotation_gpu::prepared_arrows(
-      &settings.annotations,
-      (image.width, image.height),
-      settings,
-      Some(*image),
-      None,
-      None,
-    )?;
-    compositor.draw_with_camera(
-      &view,
-      &source,
-      settings,
-      ComposedFrame {
-        cursor: None,
-        keyboard: None,
-        foreground_only: index > 0,
-        seconds: 0.0,
-      },
-      None,
-      None,
-      &prepared,
-    )?;
-  }
-  read_rgba(gpu, &target, false)
-}
-
-fn canvas_target(gpu: &Gpu, (width, height): (u32, u32)) -> wgpu::Texture {
+pub(super) fn canvas_target(gpu: &Gpu, (width, height): (u32, u32)) -> wgpu::Texture {
   gpu.device.create_texture(&wgpu::TextureDescriptor {
     label: Some("Screenwide still canvas"),
     size: wgpu::Extent3d {

@@ -139,6 +139,8 @@ impl Compositor {
       &prepared,
       LayerDraw {
         placement: None,
+        band: None,
+        source_window: None,
         clear: true,
         redaction_slot: REDACTION_SLOTS + slot,
         retained_source: retained,

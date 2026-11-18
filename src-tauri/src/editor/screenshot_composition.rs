@@ -11,7 +11,7 @@ pub(super) fn compose_screenshot_workspace(
     .items
     .iter()
     .filter_map(|item_output| items.iter().find(|item| item.id == item_output.id))
-    .map(|item| (&item.image, output.output_for(item, items)))
+    .map(|item| (item.image.as_ref(), output.output_for(item, items)))
     .collect::<Vec<_>>();
   #[cfg(any(target_os = "macos", target_os = "windows"))]
   {

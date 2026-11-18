@@ -108,4 +108,6 @@ export type EditorPanelProps = {
   selectedTrack?: RecordingTrackId | null;
   /** The subtitle file an export writes beside a recording's video. */
   subtitles?: ExportSubtitles;
+  /** The picture formats too small to hold the screenshot's canvas. */
+  unavailableScreenshotFormats?: ScreenshotFormat[];
 };

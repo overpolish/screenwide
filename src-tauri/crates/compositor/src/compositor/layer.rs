@@ -58,12 +58,36 @@ pub struct LayerPlacement {
   pub target: (u32, u32),
 }
 
+/// Part of a canvas an unplaced draw's target holds, in canvas pixels: a
+/// canvas larger than the device draws is drawn a band at a time.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct CanvasBand {
+  pub origin: (u32, u32),
+  pub size: (u32, u32),
+}
+
+/// What part of a picture larger than the device takes a source texture
+/// holds, and how finely: where its first texel lies in the picture, and how
+/// many of the picture's pixels a texel spans each way. The texture's `size`
+/// is still the whole picture's.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct SourceWindow {
+  pub origin: (u32, u32),
+  pub scale: u32,
+}
+
 /// How one composition is drawn into its target.
 #[derive(Clone, Copy)]
 pub struct LayerDraw {
   /// Where the canvas lands; `None` draws it at its own size from the
   /// target's corner.
   pub placement: Option<LayerPlacement>,
+  /// The part of the canvas the target holds, where it is drawn unplaced and
+  /// holds less than all of it.
+  pub band: Option<CanvasBand>,
+  /// The part of the picture the source texture holds, where it holds less
+  /// than all of it at its own size.
+  pub source_window: Option<SourceWindow>,
   /// Whether the whole target is cleared first, rather than drawn over.
   pub clear: bool,
   /// The redacted copy the draw leaves its picture in. Layers drawn into one
@@ -74,22 +98,38 @@ pub struct LayerDraw {
   pub retained_source: bool,
 }
 
+impl LayerDraw {
+  /// The size of the target the canvas is drawn into, for a canvas `canvas`
+  /// pixels in size.
+  pub(super) fn frame(&self, canvas: (u32, u32)) -> (u32, u32) {
+    match (self.placement, self.band) {
+      (Some(placement), _) => placement.target,
+      (None, Some(band)) => band.size,
+      (None, None) => canvas,
+    }
+  }
+
+  /// The `Canvas.placement` row: where the canvas's corner lies in the
+  /// target, and the canvas pixels one target pixel covers.
+  pub(super) fn placement_row(&self, canvas: (u32, u32)) -> [f32; 4] {
+    match (self.placement, self.band) {
+      (Some(placement), _) => {
+        let [x, y, width, height] = placement.rect;
+        [
+          x,
+          y,
+          canvas.0 as f32 / width.max(1.0),
+          canvas.1 as f32 / height.max(1.0),
+        ]
+      }
+      (None, Some(band)) => [-(band.origin.0 as f32), -(band.origin.1 as f32), 1.0, 1.0],
+      (None, None) => [0.0, 0.0, 1.0, 1.0],
+    }
+  }
+}
+
 impl LayerPlacement {
   /// How opaque what lies past the canvas's edge is drawn: faded, so it reads
   /// as off the canvas and not exported.
   pub(super) const OVERFLOW_OPACITY: f32 = 0.55;
-
-  /// The `Canvas.placement` row: the rectangle's corner, and the canvas
-  /// pixels one target pixel covers.
-  pub(super) fn row(placement: Option<Self>, canvas: (u32, u32)) -> [f32; 4] {
-    placement.map_or([0.0, 0.0, 1.0, 1.0], |placement| {
-      let [x, y, width, height] = placement.rect;
-      [
-        x,
-        y,
-        canvas.0 as f32 / width.max(1.0),
-        canvas.1 as f32 / height.max(1.0),
-      ]
-    })
-  }
 }

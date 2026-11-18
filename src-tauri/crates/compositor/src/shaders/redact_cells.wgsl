@@ -22,14 +22,19 @@ fn fs_main(@builtin(position) position: vec4<f32>) -> @location(0) vec4<f32> {
   let surface = vec3<u32>(round(saturate(redact.color.rgb) * 255.0));
   var sum = vec3<u32>(0u);
   var count = 0u;
+  // A cell is only read whole where the window holds all of it; one the
+  // window cuts lies past what this window paints.
+  let held = redact_held();
   for (var y = 0u; y < span.y; y++) {
     for (var x = 0u; x < span.x; x++) {
       let local = low + vec2<u32>(x, y);
-      if (any(redact_cell_of(local) != cell)) {
+      let at = vec2<i32>(local);
+      if (any(redact_cell_of(local) != cell) || at.x < held.x || at.x > held.y || at.y < held.z ||
+          at.y > held.w) {
         continue;
       }
       let texel = vec2<i32>(redact.bounds.xy + local);
-      let pixel = vec4<u32>(round(saturate(textureLoad(redact_source, texel, 0)) * 255.0));
+      let pixel = vec4<u32>(round(saturate(redact_read(texel)) * 255.0));
       sum += (pixel.rgb * pixel.a + surface * (255u - pixel.a) + 127u) / 255u;
       count += 1u;
     }

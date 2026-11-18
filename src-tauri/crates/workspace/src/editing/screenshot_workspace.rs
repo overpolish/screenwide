@@ -14,7 +14,11 @@ impl WorkspaceEditor {
   #[allow(clippy::type_complexity)]
   pub fn present_screenshot_workspace(
     &self,
-    layers: &[(u64, &CapturedImage, ScreenshotOutputSettings)],
+    layers: &[(
+      u64,
+      &std::sync::Arc<CapturedImage>,
+      ScreenshotOutputSettings,
+    )],
     // The hovered arrow's halo: its layer, its place in that layer's list,
     // and the halo's width in canvas pixels. It never reaches the export.
     hover: Option<(u64, usize, f32)>,

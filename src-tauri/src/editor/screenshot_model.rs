@@ -10,6 +10,8 @@ use ts_rs::TS;
 /// the webview only ever needs this identity and the scene metadata added in
 /// the next slice. `annotations` are the live annotations the shot covered,
 /// in its pixels: the item's first annotations, seeded into its layer once.
+/// The pixels are shared, so a copy of the item, the preview and an export
+/// all read the one picture, however long a scrolling capture made it.
 #[derive(Clone)]
 pub struct ScreenshotItem {
   pub annotations: Vec<Annotation>,
@@ -17,7 +19,7 @@ pub struct ScreenshotItem {
   /// on a blank canvas, and is never drawn or chosen as a picture.
   pub blank: bool,
   pub id: u64,
-  pub image: CapturedImage,
+  pub image: Arc<CapturedImage>,
   /// The display scale the image was captured at: how many of its pixels one
   /// logical point spans. One for a picture with no display behind it, such
   /// as one pasted from the clipboard.
@@ -31,11 +33,11 @@ impl ScreenshotItem {
       annotations: Vec::new(),
       blank: true,
       id,
-      image: CapturedImage {
+      image: Arc::new(CapturedImage {
         rgba: vec![0; width as usize * height as usize * 4],
         width,
         height,
-      },
+      }),
       scale_factor: 1.0,
     }
   }

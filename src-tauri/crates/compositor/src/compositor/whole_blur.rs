@@ -44,6 +44,7 @@ impl Compositor {
         gpu,
         &mut encoder,
         source,
+        None,
         &records,
         FIRST_SLOT + slot,
         false,

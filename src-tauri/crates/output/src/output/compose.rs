@@ -9,7 +9,10 @@ use super::super::recenter::{foreground_bounds, output_inset_layer};
 use super::super::{
   background_image_canvas, mesh::mesh_canvas, parse_hex_colour, rounded_corners, CapturedImage,
 };
-use super::{output_dimensions, ScreenshotOutputSettings, MAX_OUTPUT_PIXELS};
+use super::{output_dimensions, ScreenshotOutputSettings};
+
+/// The most pixels the CPU resamples a picture to, all of them at once.
+const MAX_RESIZED_PIXELS: u64 = 480_000_000;
 
 // Windows composes screenshots on the GPU surface instead of this CPU path.
 #[cfg_attr(target_os = "windows", allow(dead_code))]
@@ -31,7 +34,7 @@ pub fn compose_screenshot(
   // The CPU resamples to whole pixels.
   let image_width = placement.image_width.round() as u32;
   let image_height = placement.image_height.round() as u32;
-  if u64::from(image_width) * u64::from(image_height) > MAX_OUTPUT_PIXELS * 4 {
+  if u64::from(image_width) * u64::from(image_height) > MAX_RESIZED_PIXELS {
     return Err("The scaled screenshot is too large".to_owned());
   }
   let image_x = placement.image_x;

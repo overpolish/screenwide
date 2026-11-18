@@ -36,8 +36,6 @@ pub use hit_test::hit_test_display;
 pub use limits::{
   FRAME_EDGE_BOTTOM, FRAME_EDGE_CENTERED, FRAME_EDGE_LEFT, FRAME_EDGE_RIGHT, FRAME_EDGE_TOP,
 };
-#[cfg(test)]
-use limits::{FRAME_MAX_AREA, FRAME_MIN_SIZE};
 pub use magnifier::crop_magnifier_anchor;
 pub use scene::{FrameId, LayerId, WorkspaceFrame, WorkspaceKind, WorkspaceLayer, WorkspaceScene};
 pub use selection_resize::{selection_resize, SelectionResize};

@@ -4,7 +4,7 @@
 use super::{
   limits::{
     FRAME_EDGE_BOTTOM, FRAME_EDGE_CENTERED, FRAME_EDGE_LEFT, FRAME_EDGE_RIGHT, FRAME_EDGE_TOP,
-    FRAME_MAX_AREA, FRAME_MIN_SIZE,
+    FRAME_MIN_SIZE,
   },
   FrameId, NormalizedRect, WorkspaceScene, WorldRect,
 };
@@ -58,17 +58,11 @@ pub fn resize_frame(
   );
 
   // Frame dimensions correspond to output pixels. Round before applying the
-  // safety bounds so macOS and Windows receive identical integer sizes.
+  // smallest size so macOS and Windows receive identical integer sizes.
   width = width.round().max(FRAME_MIN_SIZE);
   height = height.round().max(FRAME_MIN_SIZE);
-  let area = width * height;
-  if area > FRAME_MAX_AREA {
-    let factor = (FRAME_MAX_AREA / area).sqrt();
-    width = (width * factor).floor().max(FRAME_MIN_SIZE);
-    height = (height * factor).floor().max(FRAME_MIN_SIZE);
-  }
   // Re-anchor the opposite edge (or the center for centered resizing) after
-  // integer rounding and max-area limiting.
+  // integer rounding and the smallest size.
   x = anchored_origin(
     old_frame.rect.x,
     old_frame.rect.width,

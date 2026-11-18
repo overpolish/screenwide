@@ -4,6 +4,9 @@
 //! The pictures layers are drawn from, and the one place where what a
 //! platform's decoders hand over meets the shared scene.
 
+use std::sync::Arc;
+
+use super::large_picture::LargePicture;
 use screenwide_compositor::compositor::{Compositor, SourceTexture};
 use screenwide_imaging::CapturedImage;
 
@@ -19,14 +22,17 @@ pub type DecodedTexture<'a> = (
   (u32, u32),
 );
 
-/// A picture a layer is drawn from: a decoded image; on macOS a CoreVideo
-/// buffer a decoder vends, which is drawn from without a copy; on Windows a
-/// frame a Media Foundation decoder holds, copied into the texture the scene
-/// keeps for the layer; or, where the decoder had no new frame for the layer
-/// this time, the picture the scene already holds for it.
+/// A picture a layer is drawn from: a decoded image; a screenshot's own
+/// pixels, shared with the editor, which a picture larger than the device
+/// takes is drawn from a window of; on macOS a CoreVideo buffer a decoder
+/// vends, which is drawn from without a copy; on Windows a frame a Media
+/// Foundation decoder holds, copied into the texture the scene keeps for the
+/// layer; or, where the decoder had no new frame for the layer this time, the
+/// picture the scene already holds for it.
 #[derive(Clone, Copy)]
 pub enum LayerPicture<'a> {
   Image(&'a CapturedImage),
+  Screenshot(&'a Arc<CapturedImage>),
   #[cfg(target_os = "macos")]
   Pixels(*mut std::ffi::c_void),
   #[cfg(target_os = "windows")]
@@ -38,10 +44,14 @@ pub enum LayerPicture<'a> {
 /// from: the scene holds the buffer, so its decoder cannot hand it to another
 /// frame.
 pub(super) struct ScenePicture {
+  /// The whole picture, scaled down where it is larger than the device takes.
   pub(super) texture: SourceTexture,
   /// Whether its pixels never change under it, so what is drawn from them
   /// can be kept. A texture decoded frames are copied into is refilled.
   pub(super) retained: bool,
+  /// A screenshot larger than the device takes, and the window of it the
+  /// view last needed.
+  pub(super) large: Option<LargePicture>,
   #[cfg(target_os = "macos")]
   _pixels: Option<arc::R<cv::PixelBuf>>,
 }
@@ -59,9 +69,23 @@ impl ScenePicture {
       LayerPicture::Image(image) => Ok(Self {
         texture: compositor.screenshot_source(image)?,
         retained: true,
+        large: None,
         #[cfg(target_os = "macos")]
         _pixels: None,
       }),
+      LayerPicture::Screenshot(image) => {
+        let (large, texture) = match LargePicture::new(compositor, image)? {
+          Some((large, overview)) => (Some(large), overview),
+          None => (None, compositor.screenshot_source(image)?),
+        };
+        Ok(Self {
+          texture,
+          retained: true,
+          large,
+          #[cfg(target_os = "macos")]
+          _pixels: None,
+        })
+      }
       #[cfg(target_os = "macos")]
       LayerPicture::Pixels(pointer) => {
         let pixels = unsafe { pointer.cast::<cv::PixelBuf>().as_ref() }
@@ -70,6 +94,7 @@ impl ScenePicture {
           screenwide_gpu::macos::bgra_buffer_texture(compositor.gpu(), pixels, "workspace frame")?;
         Ok(Self {
           retained: true,
+          large: None,
           texture: SourceTexture {
             size: (texture.width(), texture.height()),
             view: texture.create_view(&Default::default()),
@@ -89,6 +114,7 @@ impl ScenePicture {
         Ok(Self {
           texture,
           retained: false,
+          large: None,
         })
       }
       LayerPicture::Held => Err("The workspace holds no picture for this layer yet".to_owned()),
@@ -106,7 +132,7 @@ impl ScenePicture {
       LayerPicture::Decoded((_, _, size)) => self.texture.size == size,
       #[cfg(target_os = "macos")]
       LayerPicture::Pixels(_) => false,
-      LayerPicture::Image(_) => false,
+      LayerPicture::Image(_) | LayerPicture::Screenshot(_) => false,
     }
   }
 
@@ -131,6 +157,7 @@ impl LayerPicture<'_> {
   pub(super) fn size(self) -> (u32, u32) {
     match self {
       Self::Image(image) => (image.width, image.height),
+      Self::Screenshot(image) => (image.width, image.height),
       #[cfg(target_os = "macos")]
       Self::Pixels(pointer) => unsafe { pointer.cast::<cv::PixelBuf>().as_ref() }
         .map_or((0, 0), |pixels| {

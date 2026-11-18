@@ -112,11 +112,20 @@ struct Canvas {
   // shift, else none.
   overflow: vec4<f32>,
   // `x`: how round the source's own corners are, in canvas pixels, which its
-  // picture is cut to (`screen_layer`).
+  // picture is cut to (`screen_layer`). `y` is how many of the picture's
+  // pixels a texel of the source texture spans each way where it holds only
+  // a window of the picture, zero where it holds all of it at its own size,
+  // and `zw` where that window's first texel lies in the picture, in its
+  // pixels: a picture larger than the device takes is drawn from a window
+  // of it (`source_texture_uv`).
   source_shape: vec4<f32>,
   // The background giving way while a scene's blooms in over it, and the
   // bloom: `canvas_background.wgsl`.
   turn: BackgroundTurn,
+  // Where the spotlights' blur layers start on the canvas, in canvas pixels
+  // (`xy`): a band of a canvas too large for the device lays them over the
+  // part it draws.
+  annotation_blur_origin: vec4<f32>,
 }
 
 fn focus_mode() -> u32 {
@@ -296,7 +305,41 @@ fn annotation_magnify_placement() -> AnnotationMagnifyPlacement {
 }
 
 fn annotation_magnify_fetch(texel: vec2<i32>) -> vec4<f32> {
-  return textureLoad(source_image, texel, 0);
+  return textureLoad(source_image, source_texture_texel(texel), 0);
+}
+
+// Whether the source texture holds only a window of the picture.
+fn source_windowed() -> bool {
+  return canvas.source_shape.y != 0.0;
+}
+
+// How many of the picture's pixels a texel of the source texture spans.
+fn source_texel_span() -> f32 {
+  return select(1.0, canvas.source_shape.y, source_windowed());
+}
+
+// The picture's own `uv` where the source texture reads it.
+fn source_texture_uv(uv: vec2<f32>) -> vec2<f32> {
+  if (!source_windowed()) {
+    return uv;
+  }
+  return (uv * canvas.output_source.zw - canvas.source_shape.zw) /
+      (vec2<f32>(textureDimensions(source_image)) * canvas.source_shape.y);
+}
+
+// The picture's own `texel` where the source texture holds it.
+fn source_texture_texel(texel: vec2<i32>) -> vec2<i32> {
+  if (!source_windowed()) {
+    return texel;
+  }
+  return vec2<i32>(floor((vec2<f32>(texel) - canvas.source_shape.zw) / canvas.source_shape.y));
+}
+
+// The picture's size in its own texels, whatever part of it the source
+// texture holds.
+fn source_picture_size() -> vec2<f32> {
+  return select(vec2<f32>(textureDimensions(source_image)), canvas.output_source.zw,
+                source_windowed());
 }
 
 // What the target held before this layer was drawn, copied for a lens on a
@@ -332,8 +375,9 @@ fn lens_under_at(pixel: vec2<f32>) -> vec4<f32> {
 // drawn pixel of spans `lens_span` canvas pixels.
 fn lens_source(uv: vec2<f32>) -> vec4<f32> {
   let size = vec2<f32>(textureDimensions(source_image));
-  let per = size / max(canvas.image_rect.zw, vec2<f32>(1e-4));
-  let centred = uv * size - 0.5;
+  let per = source_picture_size() / source_texel_span() /
+      max(canvas.image_rect.zw, vec2<f32>(1e-4));
+  let centred = source_texture_uv(uv) * size - 0.5;
   let base = floor(centred);
   let footprint = min(max(lens_span * per, vec2<f32>(1e-4)), vec2<f32>(1.0));
   let blend = saturate((centred - base - 0.5) / footprint + 0.5);
@@ -501,7 +545,7 @@ fn crop_preview_layer(result_in: vec4<f32>, pixel: vec2<f32>) -> vec4<f32> {
   }
   if (coverage > 0.0) {
     let uv = (pixel - canvas.image_rect.xy) / canvas.image_rect.zw;
-    let video = textureSample(source_image, linear_sampler, uv);
+    let video = textureSample(source_image, linear_sampler, source_texture_uv(uv));
     result = mix(result, vec4<f32>(video.rgb, 1.0), video.a * coverage);
   }
   return result;
@@ -727,9 +771,11 @@ fn annotation_blur_spotlight() -> u32 {
   return u32(max(canvas.annotation_blur.z, 0.0));
 }
 
-// The point in a blur layer, which covers the canvas, that `point` falls on.
+// The point in a blur layer, which covers the canvas from
+// `annotation_blur_origin`, that `point` falls on.
 fn annotation_blur_at(point: vec2<f32>, layer: texture_2d<f32>) -> vec2<f32> {
-  return point * canvas.annotation_blur.x / vec2<f32>(textureDimensions(layer));
+  return (point - canvas.annotation_blur_origin.xy) * canvas.annotation_blur.x /
+      vec2<f32>(textureDimensions(layer));
 }
 
 // What the annotations under that shade add to the canvas at `point`,
@@ -882,17 +928,17 @@ fn screen_layer(result_in: vec4<f32>, box_pixel: vec2<f32>, image_pixel: vec2<f3
     if (single && any(lens_span > vec2<f32>(0.0))) {
       video = lens_source(uv);
     } else if (single) {
-      video = textureSampleLevel(source_image, linear_sampler, uv, 0.0);
+      video = textureSampleLevel(source_image, linear_sampler, source_texture_uv(uv), 0.0);
       if (canvas.source_flags.x > 0.5 &&
           is_enlarged(canvas.image_rect.zw, canvas.output_source.zw)) {
-        video = vec4<f32>(fsr_easu(source_image, uv), video.a);
+        video = vec4<f32>(fsr_easu(source_image, source_texture_uv(uv)), video.a);
       }
     } else {
       // A turned screen squeezes the picture along the side it turns away
       // from: one canvas pixel spans several source pixels there, so the
       // picture is averaged over that whole footprint, two taps across the
       // pixel's short way and one for each source pixel along the long way.
-      let source_size = vec2<f32>(textureDimensions(source_image));
+      let source_size = source_picture_size();
       let step_x = span_x * source_size;
       let step_y = span_y * source_size;
       let long_x = length(step_x) >= length(step_y);
@@ -904,7 +950,8 @@ fn screen_layer(result_in: vec4<f32>, box_pixel: vec2<f32>, image_pixel: vec2<f3
         let along = major * ((f32(step) + 0.5) / f32(count) - 0.5);
         for (var side = 0u; side < 2u; side++) {
           let offset = along + minor * select(-0.25, 0.25, side == 1u);
-          total += textureSampleLevel(source_image, linear_sampler, uv + offset / source_size, 0.0);
+          total += textureSampleLevel(source_image, linear_sampler,
+                                      source_texture_uv(uv + offset / source_size), 0.0);
         }
       }
       video = total / f32(2u * count);
@@ -1231,7 +1278,7 @@ fn crop_magnifier(result: vec4<f32>, pixel: vec2<f32>) -> vec4<f32> {
     let in_effective_source = all(source_uv >= bounds.xy) && all(source_uv <= bounds.xy + bounds.zw);
     if (all(source_pixel >= vec2<f32>(0.0)) && all(source_pixel < dimensions) &&
         in_effective_source) {
-      lens = textureSample(source_image, point_sampler, source_uv);
+      lens = textureSample(source_image, point_sampler, source_texture_uv(source_uv));
     }
   }
   let edges = u32(options.y);

@@ -290,24 +290,6 @@ fn centered_resize_keeps_frame_center() {
   assert_eq!(result.new_rect, r(80.0, 100.0, 240.0, 200.0));
 }
 #[test]
-fn frame_resize_respects_max_area() {
-  let s = WorkspaceScene::screenshot(
-    r(0.0, 0.0, 20_000.0, 20_000.0),
-    r(0.0, 0.0, 12_000.0, 12_000.0),
-    vec![],
-  )
-  .unwrap();
-  let result = s
-    .resized_frame(
-      FrameId(0),
-      FRAME_EDGE_RIGHT | FRAME_EDGE_BOTTOM,
-      (10_000.0, 10_000.0),
-    )
-    .unwrap();
-  assert!(result.new_rect.width * result.new_rect.height <= FRAME_MAX_AREA);
-  assert!(result.output_size.0 >= FRAME_MIN_SIZE as u32);
-}
-#[test]
 fn frame_resize_holds_layers_in_place() {
   // A near-edge drag moves the frame's origin. What the frame holds does not
   // move on screen: the layer keeps its world position and size, so its

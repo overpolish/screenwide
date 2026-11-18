@@ -125,6 +125,9 @@ export type ToolPanelExport = {
   /** The subtitle file beside the video, made of the transcript; null while
    * there is no transcript to make it of. */
   subtitles: ExportSubtitles | null;
+  /** The picture formats too small to hold the screenshot, which stay
+   * offered but cannot be chosen; none for a recording. */
+  unavailableScreenshotFormats: ScreenshotFormat[];
 };
 
 /** What the Export island asks the editor for: a setting at a time, or a

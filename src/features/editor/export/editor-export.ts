@@ -47,6 +47,7 @@ export type EditorExportSettings = {
   resolutionScalePercent: number;
   screenshotFormat: ScreenshotFormat;
   subtitles: ExportSubtitles;
+  unavailableScreenshotFormats: ScreenshotFormat[];
 };
 
 type Recording = Extract<EditorArtifact, { kind: "recording" }>;
@@ -210,6 +211,9 @@ export function exportIslandSnapshot({
     recordingFormat,
     screenshotFormat: recording ? null : settings.screenshotFormat,
     subtitles: recording && hasTranscript && !isGif ? settings.subtitles : null,
+    unavailableScreenshotFormats: recording
+      ? []
+      : settings.unavailableScreenshotFormats,
   };
 }
 

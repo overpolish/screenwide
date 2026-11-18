@@ -19,8 +19,6 @@ use super::NormalizedSourceRect;
 use super::{mesh::MeshGradientPoint, mesh_generator::default_generator};
 use screenwide_annotations::Annotation;
 
-const MAX_OUTPUT_PIXELS: u64 = 120_000_000;
-
 /// One layer's canvas and its placement in it.
 ///
 /// Placement is in output pixels rather than in shares of the canvas, so the

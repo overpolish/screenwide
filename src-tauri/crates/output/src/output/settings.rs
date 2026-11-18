@@ -3,7 +3,7 @@
 
 //! What a layer's settings say of themselves.
 
-use super::{ScreenshotOutputSettings, MAX_OUTPUT_PIXELS};
+use super::ScreenshotOutputSettings;
 
 impl ScreenshotOutputSettings {
   /// Whether this carries a placement at all. Settings written before
@@ -26,11 +26,10 @@ impl ScreenshotOutputSettings {
   }
 }
 
+/// The canvas's size. It has no ceiling: a canvas larger than the device
+/// draws is composed a band at a time, so only memory holds it back.
 pub fn output_dimensions(settings: &ScreenshotOutputSettings) -> Result<(u32, u32), String> {
-  if settings.width < 64
-    || settings.height < 64
-    || u64::from(settings.width) * u64::from(settings.height) > MAX_OUTPUT_PIXELS
-  {
+  if settings.width < 64 || settings.height < 64 {
     return Err("The screenshot output dimensions are not valid".to_owned());
   }
   Ok((settings.width, settings.height))

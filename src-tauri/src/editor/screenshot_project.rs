@@ -39,7 +39,7 @@ pub fn present_screenshot(
     annotations,
     blank: false,
     id: next_id(app),
-    image,
+    image: Arc::new(image),
     scale_factor,
   };
   let state = app.state::<EditorState>();
@@ -113,23 +113,29 @@ pub fn save_screenshot(
     annotations,
     blank: false,
     id: next_id(app),
-    image,
+    image: Arc::new(image),
     scale_factor,
   };
   keep_layer(app, None, title, &item)
 }
 
-/// Writes `bytes` as `name` in the project, through a neighbouring file so a
-/// reader never sees half a picture.
-fn write_picture(project: &Path, name: &str, bytes: &[u8]) -> Result<(), String> {
+/// Writes `image` as the PNG `name` in the project, through a neighbouring
+/// file so a reader never sees half a picture.
+fn write_picture(project: &Path, name: &str, image: &CapturedImage) -> Result<(), String> {
   let target = screenwide_project::resolve(project, name)?;
   let partial = target.with_extension("png.part");
-  std::fs::write(&partial, bytes)
-    .and_then(|()| std::fs::rename(&partial, &target))
-    .map_err(|error| {
-      let _ = std::fs::remove_file(&partial);
-      format!("The screenshot could not be kept: {error}")
+  let written = std::fs::File::create(&partial)
+    .map_err(|error| error.to_string())
+    .and_then(|file| {
+      let mut out = std::io::BufWriter::new(file);
+      screenwide_output::encoding::write_truecolor_png(image, &mut out)?;
+      std::io::Write::flush(&mut out).map_err(|error| error.to_string())
     })
+    .and_then(|()| std::fs::rename(&partial, &target).map_err(|error| error.to_string()));
+  written.map_err(|error| {
+    let _ = std::fs::remove_file(&partial);
+    format!("The screenshot could not be kept: {error}")
+  })
 }
 
 fn layer(item: &ScreenshotItem, image: String) -> ScreenshotLayer {
@@ -153,7 +159,6 @@ pub(super) fn keep_layer(
   title: &str,
   item: &ScreenshotItem,
 ) -> Result<PathBuf, String> {
-  let png = screenwide_output::encoding::encode_truecolor_png(&item.image)?;
   if let Some(file) = project {
     let mut written = Ok(());
     screenwide_project::update(file, |manifest| {
@@ -162,7 +167,7 @@ pub(super) fn keep_layer(
         return false;
       };
       let name = format!("media/layer-{}.png", screenshot.layers.len() + 1);
-      written = write_picture(file, &name, &png);
+      written = write_picture(file, &name, &item.image);
       if written.is_ok() {
         screenshot.layers.push(layer(item, name));
       }
@@ -172,7 +177,7 @@ pub(super) fn keep_layer(
   }
   let created = crate::projects_folder::create(app, title)?;
   let name = "media/layer-1.png".to_owned();
-  let kept = write_picture(&created.file, &name, &png).and_then(|()| {
+  let kept = write_picture(&created.file, &name, &item.image).and_then(|()| {
     screenwide_project::write(
       &created.file,
       &screenwide_project::Manifest::screenshot(ScreenshotManifest {
@@ -220,9 +225,8 @@ pub(super) fn open(app: &AppHandle, file: &Path) -> Result<(), OpenFailure> {
     .iter()
     .map(|layer| {
       let path = screenwide_project::resolve(file, &layer.image).map_err(OpenFailure::damaged)?;
-      let image = image::open(&path)
-        .map_err(|error| OpenFailure::picture_unreadable(format!("{}: {error}", path.display())))?
-        .into_rgba8();
+      let image = screenwide_output::read_rgba(&path)
+        .map_err(|error| OpenFailure::picture_unreadable(format!("{}: {error}", path.display())))?;
       Ok(ScreenshotItem {
         annotations: if seeds_layers {
           layer
@@ -234,11 +238,7 @@ pub(super) fn open(app: &AppHandle, file: &Path) -> Result<(), OpenFailure> {
           Vec::new()
         },
         id: next_id(app),
-        image: CapturedImage {
-          width: image.width(),
-          height: image.height(),
-          rgba: image.into_raw(),
-        },
+        image: Arc::new(image),
         scale_factor: layer.scale_factor,
         blank: layer.blank,
       })

@@ -40,6 +40,8 @@ impl Compositor {
         annotations,
         LayerDraw {
           placement: None,
+          band: None,
+          source_window: None,
           clear: !composition.foreground_only,
           redaction_slot: 0,
           retained_source: source.picture.is_some(),
@@ -210,7 +212,7 @@ impl Compositor {
       cursor_model,
       // Laid out in `submit`, once the counters' numbers are known.
       annotation_tiles: [0; 4],
-      placement: LayerPlacement::row(layer.placement, geometry.size),
+      placement: layer.placement_row(geometry.size),
       // Planned in `submit`, which decides whether the layer is drawn.
       annotation_blur: [0.0; 4],
       scene_motion,
@@ -251,15 +253,23 @@ impl Compositor {
         0.0,
       ],
       // The source's own round corners, in canvas pixels: a window recorded
-      // on its own, black outside them in its movie.
-      source_shape: [
-        (settings.capture_corner_radius * placement.image_width / f64::from(source.size.0.max(1)))
-          as f32,
-        0.0,
-        0.0,
-        0.0,
-      ],
+      // on its own, black outside them in its movie. Then how many of the
+      // picture's pixels a texel of the source texture spans, where it holds
+      // only a window of the picture, and where that window starts.
+      source_shape: {
+        let window = layer.source_window;
+        let (origin_x, origin_y) = window.map_or((0, 0), |window| window.origin);
+        [
+          (settings.capture_corner_radius * placement.image_width / f64::from(source.size.0.max(1)))
+            as f32,
+          window.map_or(0.0, |window| window.scale.max(1) as f32),
+          origin_x as f32,
+          origin_y as f32,
+        ]
+      },
       turn,
+      // Planned in `submit`, which lays the blur layers.
+      annotation_blur_origin: [0.0; 4],
     };
     self.submit(
       target,

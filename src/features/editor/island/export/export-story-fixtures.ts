@@ -78,6 +78,7 @@ export const VIDEO: ToolPanelExport = {
   revealWhenDone: true,
   screenshotFormat: null,
   subtitles: "srt",
+  unavailableScreenshotFormats: [],
 };
 
 export const SCREENSHOT: ToolPanelExport = {

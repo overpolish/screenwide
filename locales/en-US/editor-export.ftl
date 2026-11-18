@@ -17,6 +17,12 @@ editor-export-format = Format
 editor-export-format-png = PNG
 editor-export-format-jpeg = JPEG
 editor-export-format-webp = WebP
+# Under the format choice, for a screenshot too large for some formats, which cannot be chosen. $formats is webp where only WebP cannot hold it, jpeg-webp where JPEG cannot either.
+editor-export-format-too-large =
+    { $formats ->
+        [webp] WebP can't hold a picture this large.
+       *[jpeg-webp] JPEG and WebP can't hold a picture this large.
+    }
 # Names the four looks, which trade the file's size against its quality.
 editor-export-quality = Quality
 editor-export-look-smallest = Smallest

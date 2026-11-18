@@ -47,6 +47,11 @@ pub struct SnapBox {
 }
 
 impl SnapBox {
+  /// Its left, top, right and bottom edges.
+  pub fn edges(&self) -> [f64; 4] {
+    [self.x, self.y, self.x + self.width, self.y + self.height]
+  }
+
   /// A counter's disc, which is the whole of what a counter aligns by: its
   /// tail is a point subject of its own rather than part of the box.
   pub(crate) fn disc(center: AnnotationPoint, radius: f64) -> Self {

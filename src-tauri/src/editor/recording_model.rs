@@ -80,12 +80,25 @@ impl ScreenshotFormat {
     }
   }
 
-  pub fn encode(self, image: &CapturedImage) -> Result<Vec<u8>, String> {
-    match self {
-      Self::Png => screenwide_output::encode_png(image),
-      Self::Jpeg => screenwide_output::encode_jpeg(image),
-      Self::Webp => screenwide_output::encode_webp(image),
+  /// Writes `image` in this format to a new file at `path`, straight from
+  /// the encoder, so the file is never held whole in memory. A file a
+  /// failure leaves half written is removed.
+  pub fn write(self, image: &CapturedImage, path: &std::path::Path) -> Result<(), String> {
+    let written = std::fs::File::create(path)
+      .map_err(|error| error.to_string())
+      .and_then(|file| {
+        let mut out = std::io::BufWriter::new(file);
+        match self {
+          Self::Png => screenwide_output::write_png(image, &mut out),
+          Self::Jpeg => screenwide_output::write_jpeg(image, &mut out),
+          Self::Webp => screenwide_output::write_webp(image, &mut out),
+        }?;
+        std::io::Write::flush(&mut out).map_err(|error| error.to_string())
+      });
+    if written.is_err() {
+      let _ = std::fs::remove_file(path);
     }
+    written
   }
 }
 

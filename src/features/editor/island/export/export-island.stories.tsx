@@ -234,6 +234,14 @@ export const AudioOnly: Story = { args: { export: AUDIO } };
 
 export const ScreenshotPng: Story = { args: { export: SCREENSHOT } };
 
+// A scrolling capture too tall for JPEG and WebP, which stay in the choice
+// but cannot be picked.
+export const ScreenshotTooLargeForJpegAndWebp: Story = {
+  args: {
+    export: { ...SCREENSHOT, unavailableScreenshotFormats: ["jpeg", "webp"] },
+  },
+};
+
 // A JPEG is compared with the screenshot as drawn; a PNG is written as
 // drawn, so it has nothing to compare.
 export const ScreenshotJpeg: Story = {

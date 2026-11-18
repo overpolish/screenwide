@@ -16,8 +16,9 @@
 // Assembled ahead of `redact_cells.wgsl`, `redact_rows.wgsl` and
 // `redact_paint.wgsl`, each its own module with its own `fs_main`.
 
-// The twin of `RedactRecord` in
-// `src-tauri/crates/annotations/src/redact/records.rs`.
+// The twin of `GpuRedaction` in `compositor/redact_pipeline.rs`: a
+// `RedactRecord` (`src-tauri/crates/annotations/src/redact/records.rs`),
+// then the window it is applied in.
 struct Redaction {
   bounds: vec4<u32>, // [x0, y0, x1, y1) in whole source pixels
   source_width: u32,
@@ -32,6 +33,16 @@ struct Redaction {
   padding_0: u32,
   padding_1: u32,
   padding_2: u32,
+  // Where the texture the passes read and draw over starts in the picture
+  // (`xy`), and where the rows a blur's first pass wrote start (`zw`), both
+  // in source pixels. A picture larger than the device takes is redacted a
+  // window at a time; a whole one starts both at the corner.
+  window: vec4<u32>,
+  // `x`: how many of the picture's pixels a texel of those textures spans
+  // each way, where the window holds the picture at less than its own size.
+  // Every pass still works in the picture's pixels, reading each from the
+  // texel it falls in.
+  scale: vec4<u32>,
 }
 
 @group(0) @binding(0) var<uniform> redact: Redaction;
@@ -39,6 +50,33 @@ struct Redaction {
 @group(0) @binding(2) var<storage, read> redact_zones: array<vec2<f32>>;
 @group(0) @binding(3) var redact_cells: texture_2d<f32>;
 @group(0) @binding(4) var redact_rows: texture_2d<f32>;
+
+// How many of the picture's pixels a texel spans each way.
+fn redact_span() -> u32 {
+  return max(redact.scale.x, 1u);
+}
+
+// The source's pixel `pixel`, in the picture's own pixels, from the window
+// of it the passes read.
+fn redact_read(pixel: vec2<i32>) -> vec4<f32> {
+  return textureLoad(redact_source, (pixel - vec2<i32>(redact.window.xy)) / i32(redact_span()),
+                     0);
+}
+
+// The picture's pixel the texel at `position` of a target starting at
+// `start` stands for: the middle one of those it spans.
+fn redact_pixel(position: vec2<f32>, start: vec2<u32>) -> vec2<u32> {
+  let span = redact_span();
+  return start + vec2<u32>(position) * span + span / 2u;
+}
+
+// The first and last of the box's own columns (`x`, `y`) and rows (`z`,
+// `w`) the window holds: a blur's taps stop at them as at the box's edge.
+fn redact_held() -> vec4<i32> {
+  let low = vec2<i32>(redact.window.xy) - vec2<i32>(redact.bounds.xy);
+  let high = low + vec2<i32>(textureDimensions(redact_source) * redact_span()) - 1;
+  return vec4<i32>(low.x, high.x, low.y, high.y);
+}
 
 // The share of blocks left the plain surface colour, as the gaps between
 // words and lines leave pixelated text.

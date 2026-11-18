@@ -54,9 +54,12 @@ impl Compositor {
     let every = self
       .every_annotation_kind
       .load(std::sync::atomic::Ordering::Relaxed);
-    let blur = super::mark_blur::Plan::of(&values, &annotations, size);
+    // A band of an unplaced canvas lays the blur layers over its own part.
+    let part = layer.band.filter(|_| layer.placement.is_none());
+    let blur = super::mark_blur::Plan::of(&values, &annotations, size, part);
     if let Some(plan) = blur {
       values.annotation_blur = plan.reading();
+      values.annotation_blur_origin = plan.origin();
       for (layer, constants) in self.mark_blur.constants.iter().enumerate() {
         gpu.queue.write_buffer(
           constants,
@@ -77,7 +80,7 @@ impl Compositor {
           .write_buffer(constants, 0, bytemuck::bytes_of(&plan.pass(values, part)));
       }
     }
-    let frame = layer.placement.map_or(size, |placement| placement.target);
+    let frame = layer.frame(size);
     // Where each lens's ground lies, written into its record before upload.
     let focused = focus.is_some();
     let grounds = GroundPlan::of(kinds, &mut annotations, prepared, &values, focused, frame);
@@ -106,6 +109,7 @@ impl Compositor {
         gpu,
         &mut encoder,
         source,
+        layer.source_window,
         &prepared.redactions,
         layer.redaction_slot,
         layer.retained_source,
@@ -240,7 +244,10 @@ impl Compositor {
       // into the target, then what lies over it laid sharp on top.
       Some(plan) => {
         let [under, over] = &self.focus.constants;
-        let chain_size = super::focus::FocusPlan::chain_size(frame, layer.placement.is_some());
+        // A band starts part way into the canvas, so its chain is held to
+        // the coarse texels as a placed canvas's is.
+        let moved = layer.placement.is_some() || layer.band.is_some();
+        let chain_size = super::focus::FocusPlan::chain_size(frame, moved);
         let chain = self.focus.chain(gpu, chain_size, layer.redaction_slot)?;
         let clear = wgpu::LoadOp::Clear(wgpu::Color::TRANSPARENT);
         let under = bind(under, layers);

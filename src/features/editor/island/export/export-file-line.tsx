@@ -16,7 +16,8 @@ import type { ToolPanelRecordingFormat } from "../../tools/tool-panel-export";
  * place; the folder it goes in, which is chosen again from its button; and
  * its format: a screenshot's picture format, or a recording's video or its
  * sound alone. A recording with one format, such as one with no sound, shows
- * it chosen and disabled. */
+ * it chosen and disabled, and a screenshot's formats too small to hold it
+ * stay in the choice disabled. */
 export function ExportFileLine({
   directory,
   extension,
@@ -27,6 +28,7 @@ export function ExportFileLine({
   onScreenshotFormatChange,
   recordingFormat,
   screenshotFormat,
+  unavailableScreenshotFormats,
 }: {
   /** Null before a folder is known. */
   directory: string | null;
@@ -40,6 +42,7 @@ export function ExportFileLine({
   recordingFormat: ToolPanelRecordingFormat | null;
   /** Null for a recording. */
   screenshotFormat: ScreenshotFormat | null;
+  unavailableScreenshotFormats: ScreenshotFormat[];
 }) {
   return (
     <div className="flex items-center gap-separate">
@@ -54,6 +57,7 @@ export function ExportFileLine({
         <PillGroup
           aria-label={t("editor-export-format")}
           className="ms-auto"
+          disabledIds={unavailableScreenshotFormats}
           items={[
             { id: "png", label: t("editor-export-format-png") },
             { id: "jpeg", label: t("editor-export-format-jpeg") },

@@ -232,6 +232,7 @@ export type Messages = {
   "editor-export-format": null;
   "editor-export-format-jpeg": null;
   "editor-export-format-png": null;
+  "editor-export-format-too-large": { formats: string | number };
   "editor-export-format-webp": null;
   "editor-export-gif-range": { seconds: string | number };
   "editor-export-gif-too-long": { seconds: string | number };

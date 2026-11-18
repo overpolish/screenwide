@@ -11,12 +11,15 @@
 //! box drawn over another averages what the first left. Two targets take
 //! turns being that copy.
 
-use super::redact_pipeline::{draw, pipeline, records_buffer, RECORD_STRIDE};
+use super::redact_pipeline::{
+  bind_group, draw, pipeline, records_buffer, windowed_passes, GpuRedaction, WindowedPass,
+  RECORD_STRIDE,
+};
 use super::redact_targets::{target, Scratch, Target};
 use super::*;
 use crate::precompiled_shaders::{REDACT_CELLS, REDACT_PAINT, REDACT_ROWS};
 use screenwide_annotations::redact::records::{
-  RedactRecord, RedactRecords, REDACT_BLUR, REDACT_MOSAIC, REDACT_SPOTLIGHT,
+  RedactRecords, REDACT_BLUR, REDACT_MOSAIC, REDACT_SPOTLIGHT,
 };
 use screenwide_gpu::Shader;
 
@@ -102,12 +105,15 @@ impl Redactor {
   /// cover anything, else `None` and the source's own. The copy is `slot`'s,
   /// which only the next pass in that slot draws over. `retained` says the
   /// source's pixels never change under it, which lets a source redrawn with
-  /// the same redactions reuse the copy it left.
+  /// the same redactions reuse the copy it left. A source texture holding a
+  /// `window` of the picture is redacted where the window holds each box.
+  #[allow(clippy::too_many_arguments)]
   pub(super) fn apply(
     &self,
     gpu: &Gpu,
     encoder: &mut wgpu::CommandEncoder,
     source: &SourceTexture,
+    window: Option<SourceWindow>,
     redactions: &RedactRecords,
     slot: usize,
     retained: bool,
@@ -122,7 +128,11 @@ impl Redactor {
       .find(|(held, _)| *held == format)
       .ok_or_else(|| format!("A {format:?} source cannot be redacted"))?
       .1;
-    let size = source.size;
+    let size = (source.texture.width(), source.texture.height());
+    let passes = windowed_passes(&redactions.records, window, size);
+    if passes.is_empty() {
+      return Ok(None);
+    }
     let mut slots = self
       .work
       .lock()
@@ -148,30 +158,22 @@ impl Redactor {
     }
     // Whatever is kept is about to be drawn over.
     work.kept = None;
-    let records = self.write_records(gpu, &redactions.records)?;
+    let records = self.write_records(gpu, passes.iter().map(|pass| &pass.redaction))?;
     let zones = self.zones.write(gpu, &redactions.zones)?;
     let mut last = (&source.texture, &source.view);
     let mut index = 0;
-    for (pass, record) in redactions.records.iter().enumerate() {
-      index = pass % 2;
+    for (index_of_pass, pass) in passes.iter().enumerate() {
+      index = index_of_pass % 2;
       let copy = &work.copies[index];
       encoder.copy_texture_to_texture(
         last.0.as_image_copy(),
         copy.texture.as_image_copy(),
         copy.texture.size(),
       );
-      let offset = (pass as u64 * RECORD_STRIDE) as u32;
-      let [cells, rows] = self.prepare(gpu, encoder, record, &records, offset, &zones, last.1)?;
-      let bindings = self.bind_group(gpu, &records, last.1, &zones, &cells, &rows);
-      let [x0, y0, x1, y1] = record.bounds;
-      draw(
-        encoder,
-        &copy.view,
-        [x0 as f32, y0 as f32, (x1 - x0) as f32, (y1 - y0) as f32],
-        paint,
-        &bindings,
-        offset,
-      );
+      let offset = (index_of_pass as u64 * RECORD_STRIDE) as u32;
+      let [cells, rows] = self.prepare(gpu, encoder, pass, &records, offset, &zones, last.1)?;
+      let bindings = bind_group(gpu, &self.layout, &records, &zones, [last.1, &cells, &rows]);
+      draw(encoder, &copy.view, pass.viewport, paint, &bindings, offset);
       last = (&copy.texture, &copy.view);
     }
     if retained {
@@ -180,32 +182,34 @@ impl Redactor {
     Ok(Some(last.1.clone()))
   }
 
-  /// Records the pass `record` needs before it is painted - a classic
-  /// pixelation's cells or a blur's rows - from `from`, and answers the cells
-  /// and rows the paint pass reads.
+  /// Records the pass `pass` needs before it is painted - a classic
+  /// pixelation's cells or a blur's rows, over the part of its box the
+  /// window holds - from `from`, and answers the cells and rows the paint
+  /// pass reads.
   #[allow(clippy::too_many_arguments)]
   fn prepare(
     &self,
     gpu: &Gpu,
     encoder: &mut wgpu::CommandEncoder,
-    record: &RedactRecord,
+    pass: &WindowedPass,
     records: &wgpu::Buffer,
     offset: u32,
     zones: &wgpu::Buffer,
     from: &wgpu::TextureView,
   ) -> Result<[wgpu::TextureView; 2], String> {
-    let [x0, y0, x1, y1] = record.bounds;
+    let record = &pass.redaction.record;
     let (scratch, size, pipeline) = match record.mode {
       REDACT_MOSAIC => (
         &self.cells,
         (record.grid[0], record.grid[1]),
         &self.cells_pipeline,
       ),
-      REDACT_BLUR | REDACT_SPOTLIGHT => (&self.rows, (x1 - x0, y1 - y0), &self.rows_pipeline),
+      REDACT_BLUR | REDACT_SPOTLIGHT => (&self.rows, pass.rows, &self.rows_pipeline),
       _ => return Ok([self.unused.clone(), self.unused.clone()]),
     };
     let view = scratch.view(gpu, size)?;
-    let bindings = self.bind_group(gpu, records, from, zones, &self.unused, &self.unused);
+    let unused = &self.unused;
+    let bindings = bind_group(gpu, &self.layout, records, zones, [from, unused, unused]);
     draw(
       encoder,
       &view,
@@ -221,64 +225,29 @@ impl Redactor {
     })
   }
 
-  /// Writes every record at its own stride, growing the buffer first when
+  /// Writes every redaction at its own stride, growing the buffer first when
   /// they do not fit.
-  fn write_records(&self, gpu: &Gpu, records: &[RedactRecord]) -> Result<wgpu::Buffer, String> {
+  fn write_records<'a>(
+    &self,
+    gpu: &Gpu,
+    redactions: impl ExactSizeIterator<Item = &'a GpuRedaction>,
+  ) -> Result<wgpu::Buffer, String> {
     let mut buffer = self
       .records
       .lock()
       .map_err(|_| "The redaction records are poisoned".to_owned())?;
-    let needed = records.len() as u64 * RECORD_STRIDE;
+    let count = redactions.len();
+    let needed = count as u64 * RECORD_STRIDE;
     if needed > buffer.size() {
-      *buffer = records_buffer(gpu, records.len().next_power_of_two() as u64);
+      *buffer = records_buffer(gpu, count.next_power_of_two() as u64);
     }
     let mut bytes = vec![0_u8; needed as usize];
-    for (index, record) in records.iter().enumerate() {
+    for (index, redaction) in redactions.enumerate() {
       let start = index * RECORD_STRIDE as usize;
-      bytes[start..start + size_of::<RedactRecord>()].copy_from_slice(bytemuck::bytes_of(record));
+      bytes[start..start + size_of::<GpuRedaction>()]
+        .copy_from_slice(bytemuck::bytes_of(redaction));
     }
     gpu.queue.write_buffer(&buffer, 0, &bytes);
     Ok(buffer.clone())
-  }
-
-  fn bind_group(
-    &self,
-    gpu: &Gpu,
-    records: &wgpu::Buffer,
-    source: &wgpu::TextureView,
-    zones: &wgpu::Buffer,
-    cells: &wgpu::TextureView,
-    rows: &wgpu::TextureView,
-  ) -> wgpu::BindGroup {
-    gpu.device.create_bind_group(&wgpu::BindGroupDescriptor {
-      label: Some("Screenwide redaction bindings"),
-      layout: &self.layout,
-      entries: &[
-        wgpu::BindGroupEntry {
-          binding: 0,
-          resource: wgpu::BindingResource::Buffer(wgpu::BufferBinding {
-            buffer: records,
-            offset: 0,
-            size: wgpu::BufferSize::new(size_of::<RedactRecord>() as u64),
-          }),
-        },
-        wgpu::BindGroupEntry {
-          binding: 1,
-          resource: wgpu::BindingResource::TextureView(source),
-        },
-        wgpu::BindGroupEntry {
-          binding: 2,
-          resource: zones.as_entire_binding(),
-        },
-        wgpu::BindGroupEntry {
-          binding: 3,
-          resource: wgpu::BindingResource::TextureView(cells),
-        },
-        wgpu::BindGroupEntry {
-          binding: 4,
-          resource: wgpu::BindingResource::TextureView(rows),
-        },
-      ],
-    })
   }
 }

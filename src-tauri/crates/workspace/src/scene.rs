@@ -15,6 +15,7 @@ mod effects;
 // gestures.
 #[cfg_attr(target_os = "windows", allow(dead_code))]
 mod gestures;
+mod large_picture;
 mod layers;
 mod loupe;
 mod overlay_bounds;

@@ -4,6 +4,7 @@
 //! The crop tool's loupe, drawn into the workspace drawable over every layer
 //! from the picture the layer it magnifies was drawn from.
 
+use screenwide_compositor::compositor::SourceWindow;
 use screenwide_gpu::{Gpu, RenderStages, Shader};
 pub(super) use screenwide_osc::gpu::magnifier::NativeMagnifier;
 
@@ -65,16 +66,17 @@ impl Loupe {
     }
   }
 
-  /// Draws `magnifier` into `target`, `size` drawable pixels, reading
-  /// `picture`.
+  /// Draws `magnifier` into `target`, `size` drawable pixels, reading a
+  /// picture `picture_size` pixels in size from `picture`, which holds the
+  /// part of it `window` says where it holds less than all of it at its own
+  /// size.
   pub(super) fn draw(
     &self,
     gpu: &Gpu,
     target: &wgpu::TextureView,
     size: (u32, u32),
     magnifier: &NativeMagnifier,
-    picture: &wgpu::TextureView,
-    picture_size: (u32, u32),
+    (picture, picture_size, window): (&wgpu::TextureView, (u32, u32), Option<SourceWindow>),
   ) {
     let [x, y] = magnifier.box_origin.map(i64::from);
     let [width, height] = magnifier.box_size.map(i64::from);
@@ -85,10 +87,21 @@ impl Loupe {
     if right <= left || bottom <= top || picture_size.0 == 0 || picture_size.1 == 0 {
       return;
     }
+    let (origin, scale) = window.map_or(((0, 0), 0), |window| (window.origin, window.scale));
     let constants = LensConstants {
       box_rect: [x as f32, y as f32, width as f32, height as f32],
-      source: [picture_size.0 as f32, picture_size.1 as f32, 0.0, 0.0],
-      sample: [magnifier.sample[0], magnifier.sample[1], 0.0, 0.0],
+      source: [
+        picture_size.0 as f32,
+        picture_size.1 as f32,
+        0.0,
+        scale as f32,
+      ],
+      sample: [
+        magnifier.sample[0],
+        magnifier.sample[1],
+        origin.0 as f32,
+        origin.1 as f32,
+      ],
       source_range: [
         magnifier.source_min[0],
         magnifier.source_min[1],

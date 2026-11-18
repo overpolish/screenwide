@@ -54,7 +54,7 @@ impl PreviewManager {
         let source = sources.iter().find(|source| source.id == item_output.id)?;
         Some((
           item_output.id,
-          source.image.as_ref(),
+          &source.image,
           output.output_for_id(item_output.id, source.capture, &source_width),
         ))
       })

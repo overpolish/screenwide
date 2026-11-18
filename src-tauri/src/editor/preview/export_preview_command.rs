@@ -268,7 +268,7 @@ pub async fn preview_screenshot_export(
     )
     .map_err(|error| error.to_string())?;
     let exported = frame_path(&directory, ExportPreviewSide::Export, format.extension())?;
-    std::fs::write(&exported, format.encode(&composed)?).map_err(|error| error.to_string())?;
+    format.write(&composed, &exported)?;
     if cancelled.load(Ordering::Acquire) {
       return Ok(None);
     }

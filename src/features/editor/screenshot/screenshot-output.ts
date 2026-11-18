@@ -136,7 +136,6 @@ export type ScreenshotCanvasBounds = {
 };
 
 const CENTERED_RESIZE_EDGE = 1 << 16;
-const MAXIMUM_CANVAS_PIXELS = 120_000_000;
 const MINIMUM_CANVAS_SIZE = 64;
 
 /**
@@ -207,33 +206,20 @@ export const resizeScreenshotWorkspaceCanvasEdges = ({
   };
   const startWidth = Math.max(1, settings.width);
   const startHeight = Math.max(1, settings.height);
-  const horizontalActive = (edges & 3) !== 0;
-  const verticalActive = (edges & 12) !== 0;
-  let width = Math.max(
+  const width = Math.max(
     MINIMUM_CANVAS_SIZE,
     resizeAxis(startWidth, deltaX * startWidth, {
       far: (edges & 2) !== 0,
       near: (edges & 1) !== 0,
     }),
   );
-  let height = Math.max(
+  const height = Math.max(
     MINIMUM_CANVAS_SIZE,
     resizeAxis(startHeight, deltaY * startHeight, {
       far: (edges & 8) !== 0,
       near: (edges & 4) !== 0,
     }),
   );
-  if (width * height > MAXIMUM_CANVAS_PIXELS) {
-    if (horizontalActive && verticalActive) {
-      const factor = Math.sqrt(MAXIMUM_CANVAS_PIXELS / (width * height));
-      width = Math.floor(width * factor);
-      height = Math.floor(MAXIMUM_CANVAS_PIXELS / width);
-    } else if (horizontalActive) {
-      width = Math.floor(MAXIMUM_CANVAS_PIXELS / height);
-    } else if (verticalActive) {
-      height = Math.floor(MAXIMUM_CANVAS_PIXELS / width);
-    }
-  }
   // The drag moved the near edges by what the size did not absorb at the
   // far ones: the origin shifts by that, and the layers shift with it so
   // they hold their place on screen, as they did while the drag was live.

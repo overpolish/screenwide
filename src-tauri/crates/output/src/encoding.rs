@@ -5,10 +5,10 @@
 mod tests;
 mod webp;
 
-pub use webp::encode_webp;
+pub use webp::write_webp;
 
 use std::collections::HashMap;
-use std::io::Cursor;
+use std::io::{Cursor, Write};
 
 use image::codecs::png::{CompressionType, FilterType, PngEncoder};
 use image::{ExtendedColorType, ImageEncoder};
@@ -16,6 +16,17 @@ use quantette::deps::palette::{cast::from_component_slice, Srgb};
 use quantette::{ImageRef, Pipeline, QuantizeMethod};
 
 use super::CapturedImage;
+
+/// An empty vector with room for `length` values, or an error where there is
+/// not the memory for them. A screenshot is as large as a scrolling capture
+/// made it, so a buffer the size of one is asked for, not assumed.
+pub fn reserved<T>(length: usize) -> Result<Vec<T>, String> {
+  let mut values = Vec::new();
+  values
+    .try_reserve_exact(length)
+    .map_err(|_| "There is not enough memory to hold the screenshot".to_owned())?;
+  Ok(values)
+}
 
 /// The largest palette an 8-bit indexed PNG can carry.
 const MAX_PALETTE: usize = 256;
@@ -75,34 +86,40 @@ pub fn is_opaque(rgba: &[u8]) -> bool {
     .all(|pixel| pixel[3] == u8::MAX)
 }
 
-fn rgb_from_rgba(rgba: &[u8]) -> Vec<u8> {
-  let mut rgb = Vec::with_capacity(rgba.len() / 4 * 3);
+fn rgb_from_rgba(rgba: &[u8]) -> Result<Vec<u8>, String> {
+  let mut rgb = reserved(rgba.len() / 4 * 3)?;
   for pixel in rgba.as_chunks::<4>().0.iter() {
     rgb.extend_from_slice(&pixel[..3]);
   }
-  rgb
+  Ok(rgb)
 }
+
+/// A palette of up to 256 colours, and each pixel's place in it.
+type Indexed = (Vec<[u8; 3]>, Vec<u8>);
 
 /// An exact palette, for a still that already fits inside 256 colours.
 ///
 /// A terminal, a solid window or a flat UI is bit-exact this way, rather than
 /// being handed to a quantizer that can only approximate it. Anything richer
 /// bails on the 257th colour, which for a real screenshot happens within the
-/// first handful of pixels, so this costs nothing in the common case.
-fn exact_palette(rgb: &[u8]) -> Option<(Vec<[u8; 3]>, Vec<u8>)> {
+/// first handful of pixels, so this costs nothing in the common case. The
+/// alpha `rgba` carries is passed over: only an opaque still is indexed.
+fn exact_palette(rgba: &[u8]) -> Result<Option<Indexed>, String> {
   let mut palette: Vec<[u8; 3]> = Vec::new();
   let mut index_of: HashMap<[u8; 3], u8> = HashMap::new();
-  let mut indices = Vec::with_capacity(rgb.len() / 3);
+  let mut indices = reserved(rgba.len() / 4)?;
 
-  for pixel in rgb.as_chunks::<3>().0.iter() {
+  for pixel in rgba.as_chunks::<4>().0.iter() {
     let colour = [pixel[0], pixel[1], pixel[2]];
     let index = match index_of.get(&colour) {
       Some(index) => *index,
       None => {
-        if palette.len() >= MAX_PALETTE {
-          return None;
-        }
-        let index = u8::try_from(palette.len()).ok()?;
+        let Some(index) = u8::try_from(palette.len())
+          .ok()
+          .filter(|_| palette.len() < MAX_PALETTE)
+        else {
+          return Ok(None);
+        };
         palette.push(colour);
         index_of.insert(colour, index);
         index
@@ -111,7 +128,7 @@ fn exact_palette(rgb: &[u8]) -> Option<(Vec<[u8; 3]>, Vec<u8>)> {
     indices.push(index);
   }
 
-  Some((palette, indices))
+  Ok(Some((palette, indices)))
 }
 
 /// Reduces the still to a 256-colour palette.
@@ -120,7 +137,7 @@ fn exact_palette(rgb: &[u8]) -> Option<(Vec<[u8; 3]>, Vec<u8>)> {
 /// wallpapers and photos from banding, and k-means is both markedly more
 /// faithful than Wu and, run in parallel, faster than encoding the image
 /// losslessly would have been.
-fn quantized_palette(rgb: &[u8], width: u32, height: u32) -> Option<(Vec<[u8; 3]>, Vec<u8>)> {
+fn quantized_palette(rgb: &[u8], width: u32, height: u32) -> Option<Indexed> {
   let colours = from_component_slice::<Srgb<u8>>(rgb);
   let image = ImageRef::new(width, height, colours).ok()?;
   let (palette, indices) = Pipeline::new()
@@ -139,43 +156,39 @@ fn quantized_palette(rgb: &[u8], width: u32, height: u32) -> Option<(Vec<[u8; 3]
   ))
 }
 
-fn encode_indexed_png(
+fn write_indexed_png(
   palette: &[[u8; 3]],
   indices: &[u8],
-  width: u32,
-  height: u32,
-) -> Result<Vec<u8>, String> {
-  let mut png = Vec::new();
-  {
-    let mut encoder = png::Encoder::new(Cursor::new(&mut png), width, height);
-    encoder.set_color(png::ColorType::Indexed);
-    encoder.set_depth(png::BitDepth::Eight);
-    encoder.set_compression(png::Compression::High);
-    encoder.set_palette(palette.iter().flatten().copied().collect::<Vec<u8>>());
-    let mut writer = encoder.write_header().map_err(|error| error.to_string())?;
-    writer
-      .write_image_data(indices)
-      .map_err(|error| error.to_string())?;
-  }
+  (width, height): (u32, u32),
+  out: impl Write,
+) -> Result<(), String> {
+  let mut encoder = png::Encoder::new(out, width, height);
+  encoder.set_color(png::ColorType::Indexed);
+  encoder.set_depth(png::BitDepth::Eight);
+  encoder.set_compression(png::Compression::High);
+  encoder.set_palette(palette.iter().flatten().copied().collect::<Vec<u8>>());
+  let mut writer = encoder.write_header().map_err(|error| error.to_string())?;
+  writer
+    .write_image_data(indices)
+    .map_err(|error| error.to_string())?;
+  writer.finish().map_err(|error| error.to_string())
+}
 
-  Ok(png)
+/// The image as a lossless PNG, every channel kept, written to `out`.
+pub fn write_truecolor_png(image: &CapturedImage, out: impl Write) -> Result<(), String> {
+  PngEncoder::new_with_quality(out, CompressionType::Default, FilterType::Sub)
+    .write_image(
+      &image.rgba,
+      image.width,
+      image.height,
+      ExtendedColorType::Rgba8,
+    )
+    .map_err(|error| error.to_string())
 }
 
 pub fn encode_truecolor_png(image: &CapturedImage) -> Result<Vec<u8>, String> {
   let mut png = Vec::new();
-  PngEncoder::new_with_quality(
-    Cursor::new(&mut png),
-    CompressionType::Default,
-    FilterType::Sub,
-  )
-  .write_image(
-    &image.rgba,
-    image.width,
-    image.height,
-    ExtendedColorType::Rgba8,
-  )
-  .map_err(|error| error.to_string())?;
-
+  write_truecolor_png(image, &mut png)?;
   Ok(png)
 }
 
@@ -214,7 +227,7 @@ pub fn encode_animated_png(
   Ok(png)
 }
 
-/// Encodes a still as PNG bytes.
+/// Writes a still as a PNG to `out`.
 ///
 /// Deliberately one function, so the compression backend can be swapped
 /// without capture or saving noticing. A screen capture is almost always fully
@@ -225,46 +238,49 @@ pub fn encode_animated_png(
 ///
 /// Measured on a synthetic 3456x2234 desktop: 4.57 MB originally, 2.78 MB
 /// losslessly, 0.57 MB here, in ~390ms.
-pub fn encode_png(image: &CapturedImage) -> Result<Vec<u8>, String> {
+pub fn write_png(image: &CapturedImage, out: impl Write) -> Result<(), String> {
   if !is_opaque(&image.rgba) {
-    return encode_truecolor_png(image);
+    return write_truecolor_png(image, out);
   }
-
-  let rgb = rgb_from_rgba(&image.rgba);
-  let (palette, indices) = exact_palette(&rgb)
-    .or_else(|| quantized_palette(&rgb, image.width, image.height))
+  let size = (image.width, image.height);
+  if let Some((palette, indices)) = exact_palette(&image.rgba)? {
+    return write_indexed_png(&palette, &indices, size, out);
+  }
+  let rgb = rgb_from_rgba(&image.rgba)?;
+  let (palette, indices) = quantized_palette(&rgb, image.width, image.height)
     .ok_or_else(|| "The capture could not be reduced to a palette".to_owned())?;
+  drop(rgb);
+  write_indexed_png(&palette, &indices, size, out)
+}
 
-  encode_indexed_png(&palette, &indices, image.width, image.height)
+/// A still as PNG bytes; see [`write_png`].
+pub fn encode_png(image: &CapturedImage) -> Result<Vec<u8>, String> {
+  let mut png = Vec::new();
+  write_png(image, &mut png)?;
+  Ok(png)
 }
 
 /// How finely a screenshot saved as a JPEG keeps its detail: high enough
 /// that text keeps clean edges, where the size still falls well below a PNG.
 const JPEG_QUALITY: u8 = 90;
 
-/// The image as a JPEG. JPEG has no transparency, so whatever the image
-/// leaves see-through, such as rounded corners, is laid over white.
-pub fn encode_jpeg(image: &CapturedImage) -> Result<Vec<u8>, String> {
+/// Writes the image as a JPEG to `out`. JPEG has no transparency, so
+/// whatever the image leaves see-through, such as rounded corners, is laid
+/// over white.
+pub fn write_jpeg(image: &CapturedImage, out: impl Write) -> Result<(), String> {
   let over_white = |channel: u8, alpha: u8| {
     let (channel, alpha) = (u32::from(channel), u32::from(alpha));
     ((channel * alpha + 255 * (255 - alpha) + 127) / 255) as u8
   };
-  let rgb: Vec<u8> = image
-    .rgba
-    .as_chunks::<4>()
-    .0
-    .iter()
-    .flat_map(|&[red, green, blue, alpha]| {
-      [
-        over_white(red, alpha),
-        over_white(green, alpha),
-        over_white(blue, alpha),
-      ]
-    })
-    .collect();
-  let mut bytes = Vec::new();
-  image::codecs::jpeg::JpegEncoder::new_with_quality(&mut bytes, JPEG_QUALITY)
+  let mut rgb = reserved(image.rgba.len() / 4 * 3)?;
+  for &[red, green, blue, alpha] in image.rgba.as_chunks::<4>().0 {
+    rgb.extend_from_slice(&[
+      over_white(red, alpha),
+      over_white(green, alpha),
+      over_white(blue, alpha),
+    ]);
+  }
+  image::codecs::jpeg::JpegEncoder::new_with_quality(out, JPEG_QUALITY)
     .write_image(&rgb, image.width, image.height, ExtendedColorType::Rgb8)
-    .map_err(|error| error.to_string())?;
-  Ok(bytes)
+    .map_err(|error| error.to_string())
 }

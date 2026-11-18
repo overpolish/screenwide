@@ -6,8 +6,6 @@ use std::sync::Arc;
 use super::{super::fixed_regions, reconstruct};
 use screenwide_imaging::CapturedImage;
 
-const MAX_OUTPUT_PIXELS: u64 = 64_000_000;
-
 #[derive(Default)]
 pub(super) struct Crop {
   pub(super) bottom: u32,
@@ -59,9 +57,7 @@ pub(super) fn compose(tiles: Vec<Tile>) -> Result<CapturedImage, String> {
     .map_err(|_| "The scrolling capture width is invalid".to_owned())?;
   let height = u32::try_from(max_y - i64::from(min_y))
     .map_err(|_| "The scrolling capture height is invalid".to_owned())?;
-  if u64::from(width) * u64::from(height) > MAX_OUTPUT_PIXELS {
-    return Err("The scrolling capture is too large".to_owned());
-  }
+  let pixels = width as usize * height as usize;
 
   let has_vertical_movement = tiles.windows(2).any(|pair| pair[0].y != pair[1].y);
   let right_edge_width = if has_vertical_movement {
@@ -79,12 +75,12 @@ pub(super) fn compose(tiles: Vec<Tile>) -> Result<CapturedImage, String> {
     0
   };
   let tile_count = tiles.len();
-  let mut rgba = vec![0_u8; width as usize * height as usize * 4];
+  let mut rgba = filled(pixels * 4, 0_u8)?;
   // Mask fills are only a stand-in for a rail's background: where a later tile
   // carries real pixels for the same document row - the footer that replaces a
   // sticky sidebar at the page bottom - those must win. Real pixels still take
   // the first writer, so ordinary overlap seams are unaffected.
-  let mut is_placeholder = vec![false; width as usize * height as usize];
+  let mut is_placeholder = filled(pixels, false)?;
   for (tile_index, tile) in tiles.iter().enumerate() {
     let destination_x = (tile.x - min_x) as u32;
     let destination_y = (tile.y - min_y) as u32;
@@ -153,4 +149,15 @@ pub(super) fn compose(tiles: Vec<Tile>) -> Result<CapturedImage, String> {
     rgba,
     width,
   })
+}
+
+/// `length` copies of `value`, or an error where there is not the memory to
+/// hold them: a capture is as long as the page, and nothing else bounds it.
+fn filled<T: Clone>(length: usize, value: T) -> Result<Vec<T>, String> {
+  let mut values = Vec::new();
+  values
+    .try_reserve_exact(length)
+    .map_err(|_| "There is not enough memory to hold the scrolling capture".to_owned())?;
+  values.resize(length, value);
+  Ok(values)
 }

@@ -12,18 +12,22 @@ fn redact_cell(cell: vec2<i32>) -> vec3<f32> {
 }
 
 // The blur's second pass at the box's pixel `gid`: the Gaussian down its
-// column of what the rows pass wrote, within the box, back out of
-// premultiplied colour.
+// column of what the rows pass wrote, within the box and the rows the window
+// holds, back out of premultiplied colour.
 fn redact_blur(gid: vec2<u32>) -> vec3<f32> {
   let tall = i32(redact.bounds.w - redact.bounds.y);
   let reach = redact_reach(redact.size);
+  // The rows target's first texel, in the box's own pixels.
+  let first = vec2<i32>(redact.window.zw) - vec2<i32>(redact.bounds.xy);
+  let span = i32(redact_span());
+  let held = first.y + i32(textureDimensions(redact_rows).y) * span - 1;
   var sum = vec4<f32>(0.0);
   var total = 0.0;
   let row = i32(gid.y);
-  let last = min(row + reach, tall - 1);
-  for (var y = max(row - reach, 0); y <= last; y++) {
+  let last = min(min(row + reach, tall - 1), held);
+  for (var y = max(max(row - reach, 0), first.y); y <= last; y++) {
     let weight = redact_weight(y - row, redact.size);
-    sum += weight * textureLoad(redact_rows, vec2<i32>(i32(gid.x), y), 0);
+    sum += weight * textureLoad(redact_rows, (vec2<i32>(i32(gid.x), y) - first) / span, 0);
     total += weight;
   }
   let average = sum / total;
@@ -84,11 +88,12 @@ fn redact_spotlight_share(probe: vec2<f32>) -> f32 {
   return max(saturate(redact.color.a) - lit, 0.0);
 }
 
-// The viewport is the box, so every pixel drawn is one of its own. A pixel
-// the box does not take is discarded, which leaves the copy's own there.
+// The viewport is the box, where the window holds it, so every pixel drawn is
+// one of its own. A pixel the box does not take is discarded, which leaves
+// the copy's own there.
 @fragment
 fn fs_main(@builtin(position) position: vec4<f32>) -> @location(0) vec4<f32> {
-  let pixel = vec2<u32>(position.xy);
+  let pixel = redact_pixel(position.xy, redact.window.xy);
   if (any(pixel < redact.bounds.xy) || any(pixel >= redact.bounds.zw)) {
     discard;
   }
@@ -106,7 +111,7 @@ fn fs_main(@builtin(position) position: vec4<f32>) -> @location(0) vec4<f32> {
   if (cover <= 0.0) {
     discard;
   }
-  let original = textureLoad(redact_source, vec2<i32>(pixel), 0);
+  let original = redact_read(vec2<i32>(pixel));
   // What the spotlights' blur softens keeps its own alpha: it is the same
   // picture, only less sharp.
   var painted = vec4<f32>(round(saturate(redact_colour(gid)) * 255.0) / 255.0,

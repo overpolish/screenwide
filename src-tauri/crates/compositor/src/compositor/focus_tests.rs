@@ -364,6 +364,8 @@ fn drawn_placed(corner: [f32; 2]) -> Vec<u8> {
           rect: [corner[0], corner[1], 1920.0 * 4.0, 1080.0 * 4.0],
           target: (1920, 1080),
         }),
+        band: None,
+        source_window: None,
         clear: true,
         redaction_slot: 0,
         retained_source: true,

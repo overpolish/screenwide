@@ -24,7 +24,7 @@ impl WorkspaceScene {
   #[allow(clippy::type_complexity)]
   pub fn stage_screenshot(
     &self,
-    layers: &[(u64, &CapturedImage, ScreenshotOutputSettings)],
+    layers: &[(u64, &Arc<CapturedImage>, ScreenshotOutputSettings)],
     hover: Option<(u64, usize, f32)>,
   ) -> Result<(), String> {
     let staged = layers
@@ -38,8 +38,8 @@ impl WorkspaceScene {
         // resolving the selected retained source.
         layer_id: u32::try_from(index).unwrap_or(u32::MAX - 1),
         source_token: *source_token,
-        source: LayerPicture::Image(source),
-        redaction_picture: Some(source),
+        source: LayerPicture::Screenshot(source),
+        redaction_picture: Some(source.as_ref()),
         settings,
         seconds: 0.0,
         cursor: None,

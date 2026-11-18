@@ -11,4 +11,3 @@ pub const FRAME_EDGE_TOP: u32 = 1 << 2;
 pub const FRAME_EDGE_BOTTOM: u32 = 1 << 3;
 pub const FRAME_EDGE_CENTERED: u32 = 1 << 16;
 pub(super) const FRAME_MIN_SIZE: f64 = 64.0;
-pub(super) const FRAME_MAX_AREA: f64 = 120_000_000.0;
