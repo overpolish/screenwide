@@ -239,6 +239,10 @@ fn a_quotation_said_is_written_in_quotation_marks() {
     "Type \"hello\"."
   );
   assert_eq!(
+    text("She said start quote fine end quote."),
+    "She said \"fine\"."
+  );
+  assert_eq!(
     text("Instead of saying, and I quote, it's on your clipboard. Just say moved."),
     "Instead of saying, \"it's on your clipboard.\" Just say moved."
   );

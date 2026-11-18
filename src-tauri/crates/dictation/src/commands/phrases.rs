@@ -177,7 +177,7 @@ const ENGLISH: Phrases = Phrases {
     ],
   }),
   quotes: Some(Quotes {
-    open: &["open quote"],
+    open: &["open quote", "start quote", "begin quote"],
     close: &["close quote", "end quote"],
     introduce: &["and i quote", "in quote marks"],
   }),

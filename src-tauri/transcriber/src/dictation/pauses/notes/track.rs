@@ -13,7 +13,7 @@ use screenwide_transcriber::SAMPLE_RATE;
 use transcribe_cpp::{Model, VadSession};
 
 use super::super::found;
-use super::super::stretches::{Pauses, Stretch};
+use super::super::stretches::{Pauses, Said, Stretch};
 use super::super::writer::lock;
 
 /// A track's audio, as 16-bit samples from the notes' start: half the memory
@@ -61,7 +61,7 @@ impl Track {
       .vad
       .stream_feed(&pcm)
       .map_err(|error| format!("Could not hear the notes: {error}"))?;
-    Ok(found(&mut self.pauses, &heard))
+    Ok(stretches(found(&mut self.pauses, &heard)))
   }
 
   /// The stretches still open as the notes end.
@@ -69,9 +69,15 @@ impl Track {
     let mut last = self
       .vad
       .stream_flush()
-      .map(|heard| found(&mut self.pauses, &heard))
+      .map(|heard| stretches(found(&mut self.pauses, &heard)))
       .unwrap_or_default();
     last.extend(self.pauses.end());
     last
   }
+}
+
+/// The stretches of `said`: notes are written stretch by stretch and timed
+/// by what each was written as, so they take no runs.
+fn stretches(said: Vec<Said>) -> Vec<Stretch> {
+  said.into_iter().map(|said| said.stretch).collect()
 }

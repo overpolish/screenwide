@@ -5,9 +5,10 @@
 //! since the last fixed point is written again as a whole each time, so a
 //! sentence broken by a pause reads as one and a short stretch, such as a
 //! spoken command, is heard in context; it is fixed once it runs past
-//! [`FIX_AFTER`]. What was written is shared out among the stretches by
-//! when each word, or Whisper's each segment, was said, so a command said
-//! on its own between pauses stays on its own.
+//! [`FIX_AFTER`]. Each word written is timed by the run of speech it was
+//! said in, so a command said between shorter silences than a pause still
+//! stands apart from the words round it, as it does while the words stream;
+//! the model's own word times run on into the silences and show none.
 
 use std::sync::mpsc::Receiver;
 use std::sync::{Mutex, MutexGuard, PoisonError};
@@ -15,7 +16,7 @@ use std::sync::{Mutex, MutexGuard, PoisonError};
 use screenwide_transcriber::{DictatedText, DictatedWord, SAMPLE_RATE};
 use transcribe_cpp::{RunOptions, Session, TimestampKind, Transcript};
 
-use super::stretches::Stretch;
+use super::stretches::{Said, Stretch};
 
 /// Audio after a stretch's speech written with it, as the voice fades past
 /// where the voice activity model put its end: 300 ms.
@@ -30,10 +31,10 @@ const CONTEXT_CHARS: usize = 240;
 /// the app.
 #[derive(Debug, Default)]
 pub struct Written {
-  fixed: Vec<Piece>,
-  /// The speech since the last fixed point, a piece for each stretch.
-  open: Vec<Piece>,
-  open_stretches: Vec<Stretch>,
+  fixed: Vec<Word>,
+  /// The words of the speech since the last fixed point, and its stretches.
+  open: Vec<Word>,
+  open_stretches: Vec<Said>,
   /// Where the speech not yet fixed begins, in samples.
   open_from: usize,
   /// The audio the text covers, its last stretch's tail included, in
@@ -42,11 +43,12 @@ pub struct Written {
   pub failed: Option<String>,
 }
 
-/// What one stretch of speech was written as.
+/// A word written, and the run of speech it was said in, in samples of the
+/// dictation; the whole stretch where the model times no words.
 #[derive(Debug)]
-struct Piece {
+struct Word {
   text: String,
-  stretch: Stretch,
+  said: Stretch,
 }
 
 /// How each stretch is written.
@@ -60,23 +62,23 @@ pub struct Writing {
 /// until `stretches` closes or writing fails.
 pub fn write(
   session: &mut Session,
-  stretches: &Receiver<Stretch>,
+  stretches: &Receiver<Said>,
   audio: &Mutex<Vec<f32>>,
   written: &Mutex<Written>,
   writing: &Writing,
 ) {
-  for stretch in stretches {
-    if let Err(error) = write_stretch(session, stretch, audio, written, writing) {
+  for said in stretches {
+    if let Err(error) = write_stretch(session, said, audio, written, writing) {
       lock(written).failed = Some(error);
       return;
     }
   }
 }
 
-/// Writes the speech since the last fixed point again, `stretch` with it.
+/// Writes the speech since the last fixed point again, `said` with it.
 fn write_stretch(
   session: &mut Session,
-  stretch: Stretch,
+  said: Said,
   audio: &Mutex<Vec<f32>>,
   written: &Mutex<Written>,
   writing: &Writing,
@@ -89,7 +91,8 @@ fn write_stretch(
       context(&written),
     )
   };
-  stretches.push(stretch);
+  let stretch = said.stretch;
+  stretches.push(said);
   // Copied out, so the microphone's samples keep arriving while it is
   // written.
   let pcm = {
@@ -118,47 +121,47 @@ fn write_stretch(
 }
 
 /// `transcript`, of the audio from sample `from`, shared out among
-/// `stretches`: each word, or each segment where the model times no words,
-/// goes to the stretch its time overlaps most, or the nearest where it
-/// overlaps none. Whisper's segments run on into the pauses round them, so
-/// where one starts says little; how much of it is spent in each stretch
-/// says where it was spoken.
-fn shared_out(transcript: &Transcript, from: usize, stretches: &[Stretch]) -> Vec<Piece> {
-  let timed: Vec<(i64, i64, &str)> = if transcript.words.is_empty() {
-    transcript
-      .segments
-      .iter()
-      .map(|segment| (segment.t0_ms, segment.t1_ms, segment.text.as_str()))
-      .collect()
-  } else {
+/// `stretches`: each word goes to the stretch its time overlaps most, or the
+/// nearest where it overlaps none, and within it to the run of speech it
+/// overlaps most. Where the model times no words, each segment goes to a
+/// stretch so, and its words take the stretch's time: Whisper's segments
+/// run on into the pauses round them, so where one starts says little; how
+/// much of it is spent in each stretch says where it was spoken.
+fn shared_out(transcript: &Transcript, from: usize, stretches: &[Said]) -> Vec<Word> {
+  let by_word = !transcript.words.is_empty();
+  let timed: Vec<(i64, i64, &str)> = if by_word {
     transcript
       .words
       .iter()
       .map(|word| (word.t0_ms, word.t1_ms, word.text.as_str()))
       .collect()
+  } else {
+    transcript
+      .segments
+      .iter()
+      .map(|segment| (segment.t0_ms, segment.t1_ms, segment.text.as_str()))
+      .collect()
   };
   let samples_per_ms = (SAMPLE_RATE / 1_000) as usize;
   let at = |ms: i64| from + usize::try_from(ms).unwrap_or(0) * samples_per_ms;
-  let mut texts = vec![String::new(); stretches.len()];
+  let whole: Vec<Stretch> = stretches.iter().map(|said| said.stretch).collect();
+  let mut words = Vec::new();
   for (t0_ms, t1_ms, text) in timed {
-    let (start, end) = (at(t0_ms), at(t1_ms).max(at(t0_ms)));
-    let Some(index) = stretch_of((start, end), stretches) else {
+    let span = (at(t0_ms), at(t1_ms).max(at(t0_ms)));
+    let Some(index) = stretch_of(span, &whole) else {
       continue;
     };
-    let text = text.trim();
-    if !text.is_empty() {
-      if !texts[index].is_empty() {
-        texts[index].push(' ');
-      }
-      texts[index].push_str(text);
-    }
+    let runs = &stretches[index].runs;
+    let said = by_word
+      .then(|| stretch_of(span, runs).map(|run| runs[run]))
+      .flatten()
+      .unwrap_or(whole[index]);
+    words.extend(text.split_whitespace().map(|text| Word {
+      text: text.to_owned(),
+      said,
+    }));
   }
-  texts
-    .into_iter()
-    .zip(stretches)
-    .filter(|(text, _)| !text.is_empty())
-    .map(|(text, &stretch)| Piece { text, stretch })
-    .collect()
+  words
 }
 
 /// Which of `stretches` the span `[start, end)` was spoken in: the one it
@@ -191,7 +194,7 @@ fn context(written: &Written) -> String {
   let text = written
     .fixed
     .iter()
-    .map(|piece| piece.text.as_str())
+    .map(|word| word.text.as_str())
     .collect::<Vec<_>>()
     .join(" ");
   let start = text
@@ -202,26 +205,24 @@ fn context(written: &Written) -> String {
   text[start..].to_owned()
 }
 
-/// The text written so far, word by word: the words of each stretch share
-/// its time, so a pause falls only between stretches, where one was heard.
+/// The text written so far, word by word.
 pub fn dictated(written: &Written, heard: usize, finished: bool) -> DictatedText {
   let ms = |samples: usize| samples as u64 * 1_000 / u64::from(SAMPLE_RATE);
-  let pieces: Vec<&Piece> = written.fixed.iter().chain(&written.open).collect();
-  let words = pieces
+  let words: Vec<DictatedWord> = written
+    .fixed
     .iter()
-    .flat_map(|piece| {
-      piece.text.split_whitespace().map(|word| DictatedWord {
-        text: word.to_owned(),
-        start_ms: ms(piece.stretch.start),
-        end_ms: ms(piece.stretch.end),
-        settled: true,
-      })
+    .chain(&written.open)
+    .map(|word| DictatedWord {
+      text: word.text.clone(),
+      start_ms: ms(word.said.start),
+      end_ms: ms(word.said.end),
+      settled: true,
     })
     .collect();
   DictatedText {
-    settled: pieces
+    settled: words
       .iter()
-      .map(|piece| piece.text.as_str())
+      .map(|word| word.text.as_str())
       .collect::<Vec<_>>()
       .join(" "),
     unsettled: String::new(),
@@ -235,3 +236,6 @@ pub fn dictated(written: &Written, heard: usize, finished: bool) -> DictatedText
 pub fn lock<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {
   mutex.lock().unwrap_or_else(PoisonError::into_inner)
 }
+
+#[cfg(test)]
+mod tests;

@@ -18,7 +18,7 @@ use std::sync::{mpsc, Mutex};
 use screenwide_transcriber::{Job, Reply, Request};
 use transcribe_cpp::{Feature, RunOptions, Session, VadResult, VadSession};
 
-use self::stretches::{Pauses, Stretch};
+use self::stretches::{Pauses, Said};
 use self::writer::{dictated, lock, Writing, Written};
 use crate::stream::Dictation;
 
@@ -71,7 +71,7 @@ fn listen<B: BufRead>(
   let audio = Mutex::new(Vec::new());
   let written = Mutex::new(Written::default());
   std::thread::scope(|scope| {
-    let (stretches, to_write) = mpsc::channel::<Stretch>();
+    let (stretches, to_write) = mpsc::channel::<Said>();
     let (shared_audio, shared_written) = (&audio, &written);
     let writer = scope.spawn(move || {
       writer::write(session, &to_write, shared_audio, shared_written, writing);
@@ -106,11 +106,11 @@ fn listen<B: BufRead>(
           }
         }
         Job::FinishDictation => {
-          let mut last: Vec<Stretch> = vad
+          let mut last: Vec<Said> = vad
             .stream_flush()
             .map(|heard| found(&mut pauses, &heard))
             .unwrap_or_default();
-          last.extend(pauses.end());
+          last.extend(pauses.end().map(|stretch| pauses.said(stretch)));
           if let Some(stretches) = stretches.take() {
             for stretch in last {
               let _ = stretches.send(stretch);
@@ -130,15 +130,16 @@ fn listen<B: BufRead>(
   })
 }
 
-/// The stretches the frames in `heard` end.
-fn found(pauses: &mut Pauses, heard: &VadResult) -> Vec<Stretch> {
+/// The stretches the frames in `heard` end, with their runs of speech.
+fn found(pauses: &mut Pauses, heard: &VadResult) -> Vec<Said> {
   let first = usize::try_from(heard.first_frame).unwrap_or(0);
-  heard
-    .probs
-    .iter()
-    .enumerate()
-    .filter_map(|(at, &speech)| pauses.hear(first + at, speech))
-    .collect()
+  let mut said = Vec::new();
+  for (at, &speech) in heard.probs.iter().enumerate() {
+    if let Some(stretch) = pauses.hear(first + at, speech) {
+      said.push(pauses.said(stretch));
+    }
+  }
+  said
 }
 
 fn answer(id: u64, written: &Mutex<Written>, heard: usize, finished: bool) -> Reply {

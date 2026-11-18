@@ -17,7 +17,7 @@ use screenwide_transcriber::{DictatedText, DictatedWord, Job, Reply, Request, SA
 use transcribe_cpp::{Feature, RunOptions, Session, Stream, VadSession};
 
 use super::found;
-use super::stretches::{Pauses, Stretch};
+use super::stretches::{Pauses, Said};
 use super::writer::{self, dictated, lock, Writing, Written};
 use crate::stream::{self, Dictation};
 
@@ -79,7 +79,7 @@ fn listen<B: BufRead>(
   let audio = Mutex::new(Vec::new());
   let written = Mutex::new(Written::default());
   std::thread::scope(|scope| {
-    let (stretches, to_write) = mpsc::channel::<Stretch>();
+    let (stretches, to_write) = mpsc::channel::<Said>();
     let (shared_audio, shared_written) = (&audio, &written);
     let writer = scope.spawn(move || {
       writer::write(rewriter, &to_write, shared_audio, shared_written, writing);
@@ -118,11 +118,11 @@ fn listen<B: BufRead>(
         }
         Job::FinishDictation => {
           let streamed = stream.finalize();
-          let mut last: Vec<Stretch> = vad
+          let mut last: Vec<Said> = vad
             .stream_flush()
             .map(|heard| found(&mut pauses, &heard))
             .unwrap_or_default();
-          last.extend(pauses.end());
+          last.extend(pauses.end().map(|stretch| pauses.said(stretch)));
           if let Some(stretches) = stretches.take() {
             for stretch in last {
               let _ = stretches.send(stretch);
