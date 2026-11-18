@@ -114,10 +114,14 @@ pub(super) fn set_pane_geometry(
   rect: PreviewSurfaceRect,
   scale: f64,
 ) {
-  let (x, right) = pixels::scaled_edges(viewport.x + rect.x, rect.width, scale);
-  let (y, bottom) = pixels::scaled_edges(viewport.y + rect.y, rect.height, scale);
-  pane.position = (x, y);
-  pane.display_size = ((right - x).max(2), (bottom - y).max(2));
+  pane.position = (
+    ((viewport.x + rect.x) * scale).round() as i32,
+    ((viewport.y + rect.y) * scale).round() as i32,
+  );
+  pane.display_size = (
+    (rect.width * scale).max(2.0),
+    (rect.height * scale).max(2.0),
+  );
   pane.scale = scale;
 }
 

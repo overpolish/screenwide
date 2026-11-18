@@ -24,7 +24,11 @@ pub struct Pane {
   pub base_rect: PreviewSurfaceRect,
   /// The size of the canvas last presented.
   pub content_size: (u32, u32),
-  pub display_size: (i32, i32),
+  /// The box's size in physical pixels, unrounded, so the canvas fitted into
+  /// it takes the scale the selection overlay draws it at. Rounded, a tall
+  /// canvas's box loses up to a pixel across, and fitting into that shortens
+  /// the picture by as many pixels as the canvas is times taller than wide.
+  pub display_size: (f64, f64),
   pub settings: Option<ScreenshotOutputSettings>,
   pub position: (i32, i32),
   /// The last present changed the composed canvas size. The selection overlay
@@ -59,7 +63,7 @@ impl Default for Pane {
         y: 0.0,
       },
       content_size: (2, 2),
-      display_size: (2, 2),
+      display_size: (2.0, 2.0),
       settings: None,
       position: (0, 0),
       selection_stale: false,

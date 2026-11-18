@@ -117,10 +117,7 @@ fn placement(pane: &Pane, origin: (i32, i32)) -> NativeWorkspacePlacement {
     f64::from(pane.content_size.0.max(1)),
     f64::from(pane.content_size.1.max(1)),
   );
-  let display = (
-    f64::from(pane.display_size.0.max(1)),
-    f64::from(pane.display_size.1.max(1)),
-  );
+  let display = (pane.display_size.0.max(1.0), pane.display_size.1.max(1.0));
   let scale = (display.0 / content.0).min(display.1 / content.1);
   let width = content.0 * scale;
   let height = content.1 * scale;
@@ -129,5 +126,39 @@ fn placement(pane: &Pane, origin: (i32, i32)) -> NativeWorkspacePlacement {
     y: (f64::from(pane.position.1 - origin.1) + (display.1 - height) / 2.0).round() as i32,
     width: width as f32,
     height: height as f32,
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use super::{placement, set_pane_geometry, Pane, PreviewSurfaceRect};
+
+  #[test]
+  fn a_tall_canvas_fills_its_box_where_the_box_rounds_narrower() {
+    // At 125%, the box's edges round to 13 and 820 across: 807 pixels for
+    // 807.5. Fitted into that, a canvas forty times taller than wide came out
+    // 20 pixels short, centred, leaving a gap under the selection's top edge.
+    let rect = |x, y, width, height| PreviewSurfaceRect {
+      x,
+      y,
+      width,
+      height,
+    };
+    let mut pane = Pane {
+      content_size: (1_600, 64_000),
+      ..Pane::default()
+    };
+    let scale = 1.25;
+    let viewport = rect(0.0, 0.0, 1_200.0, 800.0);
+    set_pane_geometry(
+      &mut pane,
+      viewport,
+      rect(10.3, 20.0, 646.0, 25_840.0),
+      scale,
+    );
+    let placed = placement(&pane, (0, 0));
+    assert!((f64::from(placed.width) - 646.0 * scale).abs() < 1.0);
+    assert!((f64::from(placed.height) - 25_840.0 * scale).abs() < 1.0);
+    assert_eq!((placed.x, placed.y), (13, 25));
   }
 }
