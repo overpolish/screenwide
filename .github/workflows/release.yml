@@ -156,9 +156,10 @@ jobs:
         if: runner.os == 'Windows'
         run: pnpm transcriber:check-clean --target ${{ matrix.target }}
 
-      # The Microsoft Store package. It goes to the draft release; Partner
-      # Center takes it from there by hand, and the Store signs it. The Store
-      # takes plain versions only, so a prerelease has none.
+      # The Microsoft Store package. It goes to the draft release; for a
+      # release chosen for the Store, the Microsoft Store workflow, started by
+      # hand, submits it, and the Store signs it. The Store takes plain
+      # versions only, so a prerelease has none.
       - name: Pack and attach the Microsoft Store package
         if: runner.os == 'Windows' && !contains(env.RELEASE_TAG, '-')
         shell: bash
