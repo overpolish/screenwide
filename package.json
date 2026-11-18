@@ -22,7 +22,8 @@
           "src-tauri/crates/dictation/evaluation/*.mjs"
         ],
         "ignore": [
-          "src-tauri/target/**"
+          "src-tauri/target/**",
+          "src-tauri/transcriber/target/**"
         ]
       },
       "workers/*": {},

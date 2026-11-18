@@ -13,7 +13,7 @@ export type FoundRange = { from: number; isCurrent: boolean; to: number };
 
 /** The attribute that numbers a piece of a find that may be private, by its
  * place in the turn's finds, so a right click can tell which it fell on. */
-export const SENSITIVE_ATTRIBUTE = "data-sensitive";
+const SENSITIVE_ATTRIBUTE = "data-sensitive";
 
 /** `text` with what a search found in it tinted as the Script transcript
  * tints it, the match gone to on the surface of a choice instead, and what
