@@ -19,7 +19,6 @@ use std::{
 use super::tween_completion as completion;
 use super::tween_motion::{self as motion, STEP_INTERVAL, TWEEN_SECONDS};
 use super::tween_settle::{settle, FitContext};
-use super::tween_timing::Timing;
 use super::{activity::BusyLease, grown_to_min, GlideFrame};
 use crate::glide::region_rect::{Gravity, RegionGravity};
 
@@ -78,11 +77,6 @@ pub(crate) trait GlideWindow: Send + 'static {
 
   fn minimize(&mut self);
 
-  /// TEMPORARY(#22): the window's application, named in the frame timing log.
-  fn app_name(&self) -> Option<String> {
-    None
-  }
-
   /// Puts the window back where a session found it, at `original`.
   fn restore(&self, original: GlideFrame)
   where
@@ -116,8 +110,6 @@ struct Tween {
   fit: Option<FitContext>,
   _busy: BusyLease,
   _completion: completion::Ticket,
-  // TEMPORARY(#22): frame timing for the laggy-resize investigation.
-  timing: Timing,
 }
 
 /// The one tween in flight, if any. Never held across a window call: the
@@ -197,7 +189,6 @@ pub(crate) fn animate_to(
     }
   };
   let generation = GENERATION.fetch_add(1, Ordering::Relaxed) + 1;
-  let timing = Timing::new(target.app_name());
   if let Ok(mut slot) = TWEEN.lock() {
     *slot = Some(Tween {
       target: Box::new(target),
@@ -210,7 +201,6 @@ pub(crate) fn animate_to(
       fit,
       _busy: BusyLease::acquire(),
       _completion: completion::begin(),
-      timing,
     });
   }
 }
@@ -240,21 +230,7 @@ fn step() {
     motion::interpolate(tween.start, tween.destination, motion::eased(progress))
   };
 
-  if !is_current(tween.generation) {
-    return;
-  }
-  let resizes = tween.resizes;
-  let placed = tween.timing.frame(
-    || tween.target.place(frame, resizes, settling),
-    |frames, place_ms, gap_ms, placed| {
-      format!(
-        "frame {frames} resizes={resizes} progress={progress:.2} place={place_ms:.1}ms \
-         gap={gap_ms:.1}ms size={:.0}x{:.0} took={placed}",
-        frame.width, frame.height
-      )
-    },
-  );
-  if !placed {
+  if !is_current(tween.generation) || !tween.target.place(frame, tween.resizes, settling) {
     return;
   }
   if settling {
@@ -263,20 +239,13 @@ fn step() {
     // any point.
     if let Some(context) = tween.fit.take() {
       let generation = tween.generation;
-      Timing::settle(|| {
-        settle(
-          tween.target.as_mut(),
-          tween.requested,
-          || is_current(generation),
-          &context,
-        );
-      });
+      settle(
+        tween.target.as_mut(),
+        tween.requested,
+        || is_current(generation),
+        &context,
+      );
     }
-    tween.timing.done(
-      resizes,
-      tween.started_at.elapsed().as_secs_f64() * 1000.0,
-      TWEEN_SECONDS * 1000.0,
-    );
     return;
   }
   if let Ok(mut slot) = TWEEN.lock() {

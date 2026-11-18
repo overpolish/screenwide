@@ -28,7 +28,6 @@ pub(crate) mod tween;
 pub(crate) mod tween_completion;
 pub(crate) mod tween_motion;
 pub(crate) mod tween_settle;
-mod tween_timing;
 pub(crate) mod typing_guard;
 
 pub(crate) use detector::{GlideDetection, GlideDetector, GlideSample};
