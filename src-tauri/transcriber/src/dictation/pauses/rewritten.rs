@@ -11,14 +11,16 @@
 
 use std::io::{BufRead, Lines};
 use std::path::PathBuf;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{mpsc, Mutex};
 
 use screenwide_transcriber::{DictatedText, DictatedWord, Job, Reply, Request, SAMPLE_RATE};
-use transcribe_cpp::{Feature, RunOptions, Session, Stream, VadSession};
+use transcribe_cpp::{Feature, RunOptions, Stream, VadSession};
 
 use super::found;
 use super::stretches::{Pauses, Said};
 use super::writer::{self, dictated, lock, Writing, Written};
+use crate::rewriter::Rewriter;
 use crate::stream::{self, Dictation};
 
 /// What a dictation written again at pauses was begun with.
@@ -49,13 +51,10 @@ pub fn run<B: BufRead>(
     Err(message) => return send(&Reply::Failed { id: begin, message }),
   };
   vad.stream_reset();
-  let writing = Writing {
-    takes_context: rewriter.model().supports(Feature::ContextPrompt),
-    run: RunOptions {
-      language: rewritten.language,
-      vocabulary: rewritten.words.clone(),
-      ..RunOptions::default()
-    },
+  let run = RunOptions {
+    language: rewritten.language,
+    vocabulary: rewritten.words.clone(),
+    ..RunOptions::default()
   };
   let mut stream = match stream::start(session, rewritten.words) {
     Ok(stream) => stream,
@@ -67,82 +66,113 @@ pub fn run<B: BufRead>(
   }) {
     return false;
   }
-  listen((&mut stream, rewriter, vad), &writing, lines, send)
+  listen((&mut stream, rewriter, vad), run, lines, send)
 }
 
 fn listen<B: BufRead>(
-  (stream, rewriter, vad): (&mut Stream<'_>, &mut Session, &mut VadSession),
-  writing: &Writing,
+  (stream, rewriter, vad): (&mut Stream<'_>, &mut Rewriter, &mut VadSession),
+  run: RunOptions,
   lines: &mut Lines<B>,
   send: &mut dyn FnMut(&Reply) -> bool,
 ) -> bool {
   let audio = Mutex::new(Vec::new());
   let written = Mutex::new(Written::default());
+  // Set as the dictation ends, so stretches still waiting for the model to
+  // load stay as streamed rather than holding up the last words.
+  let finished = AtomicBool::new(false);
   std::thread::scope(|scope| {
     let (stretches, to_write) = mpsc::channel::<Said>();
-    let (shared_audio, shared_written) = (&audio, &written);
+    let (shared_audio, shared_written, shared_finished) = (&audio, &written, &finished);
     let writer = scope.spawn(move || {
-      writer::write(rewriter, &to_write, shared_audio, shared_written, writing);
-    });
-    let mut pauses = Pauses::default();
-    let mut stretches = Some(stretches);
-    let mut pcm = Vec::new();
-    for line in lines {
-      let Ok(line) = line else { return false };
-      if line.trim().is_empty() {
-        continue;
-      }
-      let Ok(Request { id, job }) = serde_json::from_str::<Request>(&line) else {
-        return false;
+      let Some(session) = rewriter.session(shared_finished) else {
+        return;
       };
-      let reply = match job {
-        Job::FeedDictation { samples } => {
-          pcm.clear();
-          pcm.extend(samples.iter().map(|&sample| f32::from(sample) / 32_768.0));
-          lock(&audio).extend_from_slice(&pcm);
-          let streamed = stream.feed(&pcm);
-          let heard = vad.stream_feed(&pcm);
-          match (streamed, heard, &stretches) {
-            (Ok(update), Ok(heard), Some(stretches)) => {
-              for stretch in found(&mut pauses, &heard) {
-                let _ = stretches.send(stretch);
-              }
-              let heard_ms = u64::try_from(update.input_received_ms).unwrap_or(0);
-              answer(id, &written, stream::text(stream, Some(heard_ms)))
-            }
-            (Err(error), _, _) | (_, Err(error), _) => {
-              failed(id, format!("Could not hear the dictation: {error}"))
-            }
-            (Ok(_), Ok(_), None) => failed(id, "The dictation has finished".to_owned()),
-          }
-        }
-        Job::FinishDictation => {
-          let streamed = stream.finalize();
-          let mut last: Vec<Said> = vad
-            .stream_flush()
-            .map(|heard| found(&mut pauses, &heard))
-            .unwrap_or_default();
-          last.extend(pauses.end().map(|stretch| pauses.said(stretch)));
-          if let Some(stretches) = stretches.take() {
-            for stretch in last {
+      let writing = Writing {
+        takes_context: session.model().supports(Feature::ContextPrompt),
+        run,
+      };
+      writer::write(session, &to_write, shared_audio, shared_written, &writing);
+    });
+    let listening = hear(
+      (stream, vad, Some(stretches)),
+      (&audio, &written, &finished),
+      writer,
+      lines,
+      send,
+    );
+    finished.store(true, Ordering::Release);
+    listening
+  })
+}
+
+/// Feeds the stream and the voice activity model, sending each stretch a
+/// pause ends to be written again, until the dictation finishes. False once
+/// the app has stopped listening.
+fn hear<B: BufRead>(
+  (stream, vad, mut stretches): (&mut Stream<'_>, &mut VadSession, Option<mpsc::Sender<Said>>),
+  (audio, written, finished): (&Mutex<Vec<f32>>, &Mutex<Written>, &AtomicBool),
+  writer: std::thread::ScopedJoinHandle<'_, ()>,
+  lines: &mut Lines<B>,
+  send: &mut dyn FnMut(&Reply) -> bool,
+) -> bool {
+  let mut pauses = Pauses::default();
+  let mut pcm = Vec::new();
+  for line in lines {
+    let Ok(line) = line else { return false };
+    if line.trim().is_empty() {
+      continue;
+    }
+    let Ok(Request { id, job }) = serde_json::from_str::<Request>(&line) else {
+      return false;
+    };
+    let reply = match job {
+      Job::FeedDictation { samples } => {
+        pcm.clear();
+        pcm.extend(samples.iter().map(|&sample| f32::from(sample) / 32_768.0));
+        lock(audio).extend_from_slice(&pcm);
+        let streamed = stream.feed(&pcm);
+        let heard = vad.stream_feed(&pcm);
+        match (streamed, heard, &stretches) {
+          (Ok(update), Ok(heard), Some(stretches)) => {
+            for stretch in found(&mut pauses, &heard) {
               let _ = stretches.send(stretch);
             }
+            let heard_ms = u64::try_from(update.input_received_ms).unwrap_or(0);
+            answer(id, written, stream::text(stream, Some(heard_ms)))
           }
-          let _ = writer.join();
-          let reply = match streamed {
-            Ok(_) => answer(id, &written, stream::text(stream, None)),
-            Err(error) => failed(id, format!("Could not finish the dictation: {error}")),
-          };
-          return send(&reply);
+          (Err(error), _, _) | (_, Err(error), _) => {
+            failed(id, format!("Could not hear the dictation: {error}"))
+          }
+          (Ok(_), Ok(_), None) => failed(id, "The dictation has finished".to_owned()),
         }
-        _ => failed(id, "A dictation is under way".to_owned()),
-      };
-      if !send(&reply) {
-        return false;
       }
+      Job::FinishDictation => {
+        let streamed = stream.finalize();
+        let mut last: Vec<Said> = vad
+          .stream_flush()
+          .map(|heard| found(&mut pauses, &heard))
+          .unwrap_or_default();
+        last.extend(pauses.end().map(|stretch| pauses.said(stretch)));
+        if let Some(stretches) = stretches.take() {
+          for stretch in last {
+            let _ = stretches.send(stretch);
+          }
+        }
+        finished.store(true, Ordering::Release);
+        let _ = writer.join();
+        let reply = match streamed {
+          Ok(_) => answer(id, written, stream::text(stream, None)),
+          Err(error) => failed(id, format!("Could not finish the dictation: {error}")),
+        };
+        return send(&reply);
+      }
+      _ => failed(id, "A dictation is under way".to_owned()),
+    };
+    if !send(&reply) {
+      return false;
     }
-    false
-  })
+  }
+  false
 }
 
 fn answer(id: u64, written: &Mutex<Written>, streamed: DictatedText) -> Reply {

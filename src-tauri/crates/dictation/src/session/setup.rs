@@ -37,13 +37,17 @@ pub struct AtPauses {
 }
 
 impl Setup {
-  /// The model files the helper loads for this setup.
+  /// The model files the helper loads before this setup's dictation
+  /// listens. The model that writes each stretch again loads while it
+  /// does, so it is not among them.
   pub(super) fn files(&self) -> Vec<PathBuf> {
     let mut files = vec![self.model.clone()];
-    if let Some(at_pauses) = &self.at_pauses {
-      files.push(at_pauses.vad.clone());
-      files.extend(at_pauses.rewriter.clone());
-    }
+    files.extend(
+      self
+        .at_pauses
+        .as_ref()
+        .map(|at_pauses| at_pauses.vad.clone()),
+    );
     files
   }
 }

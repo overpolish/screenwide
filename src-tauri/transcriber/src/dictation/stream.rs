@@ -15,6 +15,8 @@ use transcribe_cpp::{
   StreamOptions, TimestampKind, VadSession,
 };
 
+use crate::rewriter::Rewriter;
+
 /// Parakeet Unified's buffered stream re-reads this much of what came before
 /// each chunk, the only left context it was trained with.
 const LEFT_MS: i32 = 5_600;
@@ -27,7 +29,7 @@ const LEFT_MS: i32 = 5_600;
 pub struct Dictation {
   loaded: Option<(PathBuf, Session)>,
   vad: Option<(PathBuf, VadSession)>,
-  rewriter: Option<(PathBuf, Session)>,
+  rewriter: Option<Rewriter>,
 }
 
 impl Dictation {
@@ -136,23 +138,24 @@ impl Dictation {
     }
   }
 
-  /// Sessions on the streaming model at `model`, on the model at `rewriter`
-  /// that writes each stretch again, and on the voice activity model at
-  /// `vad`, each loaded unless it is already.
+  /// Sessions on the streaming model at `model` and on the voice activity
+  /// model at `vad`, each loaded unless it is already, and the model at
+  /// `rewriter` that writes each stretch again, loading from now unless it
+  /// is already.
   pub fn rewriting_sessions(
     &mut self,
     (model, rewriter, vad): (&Path, &Path, &Path),
-  ) -> Result<(&mut Session, &mut Session, &mut VadSession), String> {
+  ) -> Result<(&mut Session, &mut Rewriter, &mut VadSession), String> {
     self.sessions(model, vad)?;
-    if !matches!(&self.rewriter, Some((loaded, _)) if loaded == rewriter) {
-      self.rewriter = None;
-      let session = Model::load(rewriter)
-        .and_then(|model| model.session())
-        .map_err(|error| format!("Could not load the dictation model: {error}"))?;
-      self.rewriter = Some((rewriter.to_owned(), session));
+    if !self
+      .rewriter
+      .as_ref()
+      .is_some_and(|loaded| loaded.is_for(rewriter))
+    {
+      self.rewriter = Some(Rewriter::load(rewriter));
     }
     match (&mut self.loaded, &mut self.rewriter, &mut self.vad) {
-      (Some((_, session)), Some((_, rewriter)), Some((_, vad))) => Ok((session, rewriter, vad)),
+      (Some((_, session)), Some(rewriter), Some((_, vad))) => Ok((session, rewriter, vad)),
       _ => Err("The dictation models are not loaded".to_owned()),
     }
   }

@@ -7,6 +7,7 @@
 //! keeps the helper while dictation may be used again soon.
 
 mod pauses;
+mod rewriter;
 mod stream;
 
 use std::io::{BufRead, Write};
