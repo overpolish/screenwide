@@ -3,7 +3,9 @@
 
 //! Where a voice speaks alone, no other voice over it: what its fingerprint
 //! is taken from, and the clip of it the notes keep so whoever took them can
-//! hear who a speaker is and name them, after which the clip is deleted.
+//! hear who a speaker is and name them, after which the clip is deleted. A
+//! voice never alone for a second is clipped where it speaks longest, over
+//! another or not, so every speaker in the notes can be heard.
 
 use screenwide_transcriber::{SpeakerTurn, VoiceClip};
 
@@ -39,8 +41,8 @@ pub fn stretches(turns: &[SpeakerTurn], speaker: u32) -> Vec<(u64, u64)> {
   alone
 }
 
-/// A clip of each voice in `turns` from its longest stretch alone in
-/// `audio`, none for a voice never alone for a second.
+/// A clip of each voice in `turns` in `audio`: from its longest stretch
+/// alone, or from its longest turn where it is never alone for a second.
 pub fn clips(audio: &[i16], turns: &[SpeakerTurn]) -> Vec<VoiceClip> {
   let mut speakers: Vec<u32> = turns.iter().map(|turn| turn.speaker).collect();
   speakers.sort_unstable();
@@ -48,7 +50,10 @@ pub fn clips(audio: &[i16], turns: &[SpeakerTurn]) -> Vec<VoiceClip> {
   speakers
     .into_iter()
     .filter_map(|speaker| {
-      let &(start, end) = stretches(turns, speaker).first()?;
+      let (start, end) = stretches(turns, speaker)
+        .first()
+        .copied()
+        .or_else(|| longest_turn(turns, speaker))?;
       let start = if end - start >= CLIP_MS + CLIP_LEAD_MS {
         start + CLIP_LEAD_MS
       } else {
@@ -58,10 +63,22 @@ pub fn clips(audio: &[i16], turns: &[SpeakerTurn]) -> Vec<VoiceClip> {
       let from = (start * RATE) as usize;
       let to = ((end * RATE) as usize).min(audio.len());
       let mut samples = audio.get(from..to)?.to_vec();
+      if samples.is_empty() {
+        return None;
+      }
       faded(&mut samples);
       Some(VoiceClip { speaker, samples })
     })
     .collect()
+}
+
+/// `speaker`'s longest turn in `turns`, whoever else speaks over it.
+fn longest_turn(turns: &[SpeakerTurn], speaker: u32) -> Option<(u64, u64)> {
+  turns
+    .iter()
+    .filter(|turn| turn.speaker == speaker && turn.end_ms > turn.start_ms)
+    .map(|turn| (turn.start_ms, turn.end_ms))
+    .max_by_key(|(start, end)| end - start)
 }
 
 fn faded(samples: &mut [i16]) {
@@ -131,12 +148,35 @@ mod tests {
       .map(|clip| (clip.speaker, clip.samples.len()))
       .collect();
     // Speaker 1 alone longest from 12 s to 20 s: five seconds from 12.25 s.
-    // Speaker 2 alone from 3 s to 10 s. Speaker 3 never for a second.
+    // Speaker 2 alone from 3 s to 10 s. Speaker 3 never for a second, so
+    // the whole of their one turn.
     assert_eq!(
       lengths,
-      vec![(1, CLIP_MS as usize * 16), (2, CLIP_MS as usize * 16)]
+      vec![
+        (1, CLIP_MS as usize * 16),
+        (2, CLIP_MS as usize * 16),
+        (3, 500 * 16)
+      ]
     );
     assert_eq!(clips[0].samples[0], 0);
     assert_eq!(clips[0].samples[FADE], 1_000);
+  }
+
+  #[test]
+  fn a_voice_only_heard_over_another_is_clipped_where_it_speaks_longest() {
+    let turns = [
+      turn(0, 10_000, 1),
+      turn(2_000, 2_800, 2),
+      turn(4_000, 7_000, 2),
+    ];
+    let audio = vec![1_000i16; 10_000 * RATE as usize];
+    let clips = clips(&audio, &turns);
+    let spans: Vec<(u32, usize)> = clips
+      .iter()
+      .map(|clip| (clip.speaker, clip.samples.len()))
+      .collect();
+    // Speaker 2 speaks only while speaker 1 does: their longer turn, 4 s to
+    // 7 s.
+    assert_eq!(spans[1], (2, 3_000 * 16));
   }
 }

@@ -541,9 +541,9 @@ pub struct SpeakerTurn {
   pub speaker: u32,
 }
 
-/// A few seconds of one voice in the computer's audio speaking alone, at
-/// [`SAMPLE_RATE`] as 16-bit PCM, `speaker` being the speaker model's number
-/// for it.
+/// A few seconds of one voice in the computer's audio, alone where it ever
+/// speaks alone for a second, at [`SAMPLE_RATE`] as 16-bit PCM, `speaker`
+/// being the speaker model's number for it.
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct VoiceClip {
