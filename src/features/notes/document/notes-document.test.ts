@@ -7,6 +7,7 @@ import {
   assignRun,
   editTurn,
   parseNotes,
+  removeTurns,
   renameSpeaker,
   runsOf,
   speakerName,
@@ -89,5 +90,20 @@ describe("notes", () => {
       { name: "Speaker 1", share: 7 / 14 },
       { name: "Speaker 2", share: 1 / 14 },
     ]);
+  });
+
+  it("leave a cleared turn out of the file, speaker and all", () => {
+    const cleared = editTurn(parseNotes(NOTES), 3, "  ");
+    const written = writeNotes(cleared);
+    expect(written).not.toContain("Speaker 2");
+    expect(speakersOf(parseNotes(written))).toEqual(["Me", "Speaker 1"]);
+  });
+
+  it("remove a run of turns and leave a speaker with none out", () => {
+    const notes = parseNotes(NOTES);
+    const [, speakerOne] = runsOf(notes);
+    const removed = removeTurns(notes, speakerOne.start, speakerOne.end);
+    expect(speakersOf(removed)).toEqual(["Me", "Speaker 2"]);
+    expect(writeNotes(removed)).not.toContain("Friday");
   });
 });

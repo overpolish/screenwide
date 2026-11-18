@@ -23,6 +23,7 @@ export function EditableTitle({
   found,
   label,
   onChange,
+  selectsAllOnFocus = false,
   title,
 }: {
   /** The field's accessible name, such as "Project name". */
@@ -32,8 +33,22 @@ export function EditableTitle({
   className?: string;
   /** Search text, marked in the name. */
   found?: string;
+  /** Selects the whole name when editing starts, so typing replaces it:
+   * for a name given as a placeholder rather than chosen. */
+  selectsAllOnFocus?: boolean;
 }) {
   const titleRef = useRef<HTMLSpanElement>(null);
+  // A press places the caret and moves it with the pointer until let go, so
+  // a name focused by a press is selected as the press ends.
+  const pressingRef = useRef(false);
+  const selectsOnReleaseRef = useRef(false);
+  const selectAll = (element: HTMLElement) => {
+    const range = document.createRange();
+    range.selectNodeContents(element);
+    const selection = window.getSelection();
+    selection?.removeAllRanges();
+    selection?.addRange(range);
+  };
   useEffect(() => {
     const blurEditable = () => {
       const active = document.activeElement;
@@ -109,6 +124,11 @@ export function EditableTitle({
         event.currentTarget.textContent = next;
         if (next !== title) onChange(next);
       }}
+      onFocus={(event) => {
+        if (!selectsAllOnFocus) return;
+        if (pressingRef.current) selectsOnReleaseRef.current = true;
+        else selectAll(event.currentTarget);
+      }}
       onKeyDown={(event) => {
         if (event.nativeEvent.isComposing) return;
         if (event.key === "Enter" || event.key === "Escape") {
@@ -137,6 +157,21 @@ export function EditableTitle({
         range.collapse(true);
         selection.removeAllRanges();
         selection.addRange(range);
+      }}
+      onPointerDown={(event) => {
+        if (!selectsAllOnFocus || event.button !== 0) return;
+        pressingRef.current = true;
+        const element = event.currentTarget;
+        window.addEventListener(
+          "pointerup",
+          () => {
+            pressingRef.current = false;
+            if (!selectsOnReleaseRef.current) return;
+            selectsOnReleaseRef.current = false;
+            if (document.activeElement === element) selectAll(element);
+          },
+          { capture: true, once: true },
+        );
       }}
       ref={titleRef}
       role="textbox"

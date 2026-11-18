@@ -120,5 +120,10 @@ export function useNotesHistory() {
     }),
     [],
   );
-  return { ...actions, document: history.present };
+  return {
+    ...actions,
+    canRedo: history.future.length > 0,
+    canUndo: history.past.length > 0,
+    document: history.present,
+  };
 }

@@ -32,6 +32,8 @@ const meta = {
         page={
           opened ? (
             <NotesView
+              canRedo={false}
+              canUndo={false}
               document={parseNotes(opened.notesOpening ?? "")}
               isTaking={false}
               onBack={() => {

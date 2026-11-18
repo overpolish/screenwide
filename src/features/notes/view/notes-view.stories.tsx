@@ -2,10 +2,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { useEffect, useState } from "react";
-import { fn } from "storybook/test";
+import { fn, userEvent, within } from "storybook/test";
 
+import { t } from "../../../i18n/i18n";
 import { featureStage } from "../../../storybook/feature-story-stage";
-import { parseNotes } from "../document/notes-document";
+import { parseNotes, renameSpeaker } from "../document/notes-document";
 
 import { NotesView } from "./notes-view";
 import { useNotesHistory } from "./use-notes-history";
@@ -29,6 +30,8 @@ const NOTES = parseNotes(`# Notes 2026-05-04 at 10.30.00
 
 const meta = {
   args: {
+    canRedo: false,
+    canUndo: false,
     document: NOTES,
     isTaking: false,
     onBack: fn(),
@@ -49,6 +52,8 @@ const meta = {
   parameters: {
     controls: {
       exclude: [
+        "canRedo",
+        "canUndo",
         "document",
         "onBack",
         "onChange",
@@ -74,6 +79,8 @@ const meta = {
     return (
       <NotesView
         {...args}
+        canRedo={history.canRedo}
+        canUndo={history.canUndo}
         document={history.document}
         onChange={(document, typing) => {
           history.change(document, typing);
@@ -107,4 +114,52 @@ export const StillTaking: Story = { args: { isTaking: true } };
 
 export const SaveFailed: Story = {
   args: { saveError: "The disk is full" },
+};
+
+export const Replacing: Story = {
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.type(
+      await canvas.findByRole("searchbox", { name: t("notes-view-search") }),
+      "monday{Enter}",
+    );
+    await userEvent.click(
+      await canvas.findByRole("button", { name: t("notes-view-find") }),
+    );
+  },
+};
+
+export const Searching: Story = {
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.type(
+      await canvas.findByRole("searchbox", { name: t("notes-view-search") }),
+      "monday{Enter}",
+    );
+  },
+};
+
+export const Filtered: Story = {
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(
+      await canvas.findByRole("button", {
+        name: t("notes-view-speaker-filter", {
+          share: "50%",
+          speaker: "Speaker 1",
+        }),
+      }),
+    );
+  },
+};
+
+export const NamedSpeakers: Story = {
+  args: {
+    document: renameSpeaker(
+      renameSpeaker(NOTES, "Speaker 1", "Priya Shah"),
+      "Speaker 2",
+      "Tom",
+    ),
+    voices: [],
+  },
 };

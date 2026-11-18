@@ -1,7 +1,6 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { Volume2 } from "lucide-react";
 import { useNumberFormatter } from "react-aria";
 
 import { EditableTitle } from "../../../composites/editable-title/editable-title";
@@ -9,24 +8,32 @@ import { t } from "../../../i18n/i18n";
 import { IconToggleButton } from "../../../primitives/button/icon-button";
 import { Text } from "../../../primitives/text/text";
 
-import { SpeakerAvatar } from "./speaker-avatar";
 import { voiceNumber } from "./use-voice-clips";
+import { VoiceAvatar } from "./voice-avatar";
 
 // Who was on the call, above the notes: each speaker as a pill of their
 // avatar, their name and how much of the talking was theirs, in the order
 // they first spoke. A name is edited where it stands and renames them
 // throughout, as the name over their words does. A speaker not yet named
-// can be heard, to tell who they are, until they are.
+// can be heard, to tell who they are, until they are: their avatar plays
+// their voice, and clicking their name selects it whole to type over. Their
+// share is a toggle that shows only what the chosen speakers said.
 
 export function SpeakersStrip({
+  chosen,
   isReadOnly,
+  onChoose,
   onHearVoice,
   onRename,
   playingVoice,
   speakers,
   voices,
 }: {
+  /** The speakers whose words alone are shown; none shows everyone's. */
+  chosen: readonly string[];
   isReadOnly: boolean;
+  /** Chooses `name`, or lets them go if they were chosen. */
+  onChoose: (name: string) => void;
   onHearVoice: (number: number) => void;
   onRename: (from: string, to: string) => void;
   /** The speaker whose voice is playing, by number; null when none is. */
@@ -46,15 +53,28 @@ export function SpeakersStrip({
         aria-label={t("notes-view-speakers")}
         className="flex flex-wrap gap-inline"
       >
-        {speakers.map(({ name, share }) => {
+        {speakers.map(({ name, share }, index) => {
           const voice = voiceNumber(name);
           const canHear = voice !== null && voices.includes(voice);
           return (
+            // Keyed by place, which a rename keeps, so the pill renamed is
+            // the same pill and its avatar can change over where it stands.
             <li
-              className="flex items-center gap-inline rounded-full bg-fill py-1 ps-1 pe-inset"
-              key={name}
+              className="flex items-center gap-inline rounded-full bg-fill p-1"
+              // eslint-disable-next-line @eslint-react/no-array-index-key
+              key={index}
             >
-              <SpeakerAvatar name={name} />
+              <VoiceAvatar
+                isPlaying={canHear && playingVoice === voice}
+                name={name}
+                onHear={
+                  canHear
+                    ? () => {
+                        onHearVoice(voice);
+                      }
+                    : undefined
+                }
+              />
               {isReadOnly ? (
                 <span className="text-label text-fg" dir="auto">
                   {name}
@@ -66,30 +86,27 @@ export function SpeakersStrip({
                   onChange={(to) => {
                     onRename(name, to);
                   }}
+                  selectsAllOnFocus={voice !== null}
                   title={name}
                 />
               )}
-              <Text
-                aria-label={t("notes-view-speaker-share", {
+              {/* The share as a pill the avatar's height at the pill's
+                  other end, padded as the island pads its pills, which is
+                  tighter than a button. */}
+              <IconToggleButton
+                aria-label={t("notes-view-speaker-filter", {
                   share: percent.format(share),
+                  speaker: name,
                 })}
-                className="tabular-nums"
-                variant="caption"
+                className="h-7 rounded-full px-inset-sm tabular-nums"
+                isSelected={chosen.includes(name)}
+                label={percent.format(share)}
+                onChange={() => {
+                  onChoose(name);
+                }}
               >
-                {percent.format(share)}
-              </Text>
-              {canHear ? (
-                <IconToggleButton
-                  aria-label={t("notes-view-speaker-hear", { speaker: name })}
-                  className="-me-2 rounded-full"
-                  isSelected={playingVoice === voice}
-                  onChange={() => {
-                    onHearVoice(voice);
-                  }}
-                >
-                  <Volume2 aria-hidden className="size-icon-sm" />
-                </IconToggleButton>
-              ) : null}
+                {null}
+              </IconToggleButton>
             </li>
           );
         })}

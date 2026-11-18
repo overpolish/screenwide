@@ -49,13 +49,17 @@ export function parseNotes(markdown: string): NotesDocument {
  * another, so lines it holds are kept but never left blank between. */
 const asParagraph = (text: string) => text.replace(/\n(?:[ \t]*\n)+/g, "\n");
 
+/** The notes as their Markdown file. A turn whose words were all cleared is
+ * left out, so clearing a turn removes it once the notes are saved. */
 export function writeNotes({ title, turns }: NotesDocument): string {
-  const paragraphs = turns.map(({ speaker, text }) => {
-    const paragraph = asParagraph(text);
-    return speaker === null
-      ? paragraph
-      : `**${speaker}:** ${paragraph}`.trimEnd();
-  });
+  const paragraphs = turns
+    .filter(({ text }) => text.trim() !== "")
+    .map(({ speaker, text }) => {
+      const paragraph = asParagraph(text);
+      return speaker === null
+        ? paragraph
+        : `**${speaker}:** ${paragraph}`.trimEnd();
+    });
   return `${[...(title === null ? [] : [`# ${title}`]), ...paragraphs].join("\n\n")}\n`;
 }
 
@@ -142,5 +146,17 @@ export function editTurn(
     turns: document.turns.map((turn, at) =>
       at === index ? { ...turn, text } : turn,
     ),
+  };
+}
+
+/** The notes without the turns `[start, end)`. */
+export function removeTurns(
+  document: NotesDocument,
+  start: number,
+  end: number,
+): NotesDocument {
+  return {
+    ...document,
+    turns: document.turns.filter((_, index) => index < start || index >= end),
   };
 }

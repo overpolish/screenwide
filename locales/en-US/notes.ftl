@@ -41,8 +41,15 @@ notes-view-still-taking = These notes are still being taken. Stop them to edit.
 notes-view-speaker-name = Name for { $speaker } throughout the notes
 # The speakers across the head of the notes, for screen readers.
 notes-view-speakers = Speakers
-# A speaker's share of the talking, for screen readers. $share is a percentage.
-notes-view-speaker-share = { $share } of the talking
+# A speaker's share of the talking, a toggle that shows only what the chosen
+# speakers said. $share is a percentage.
+notes-view-speaker-filter = Show only what { $speaker } said, { $share } of the talking
+# In place of other speakers' paragraphs while some speakers are chosen; shows them.
+notes-view-hidden =
+    { $count ->
+        [one] 1 paragraph hidden
+       *[other] { $count } paragraphs hidden
+    }
 # Plays a few seconds of a speaker not yet named, to tell who they are.
 notes-view-speaker-hear = Hear { $speaker }
 # Under the speakers while any can still be heard.
@@ -56,3 +63,15 @@ notes-view-turn = What { $speaker } said
 # A paragraph with no speaker, for screen readers.
 notes-view-paragraph = Paragraph
 notes-view-save-failed = Could not save the notes.
+notes-view-undo = Undo
+notes-view-redo = Redo
+# The button beside a speaker's name that removes what they said there.
+notes-view-remove-run = Remove what { $speaker } said here
+# The search at the top of the notes, over what was said.
+notes-view-search = Search notes
+# Beside the search: opens and closes Replace under it.
+notes-view-find = Find and Replace
+notes-view-replace-field = Replace with
+# Replaces the match gone to with what was typed.
+notes-view-replace = Replace
+notes-view-replace-all = Replace All

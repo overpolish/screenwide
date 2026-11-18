@@ -1,11 +1,12 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import { listen } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { useEffect, useRef, useState } from "react";
 
 import { renameProject } from "../../project-browser/api";
-import { copyNotesPath, readNotes, saveNotes } from "../api";
+import { copyNotesPath, NOTES_MOVED_EVENT, readNotes, saveNotes } from "../api";
 import { parseNotes, writeNotes } from "../document/notes-document";
 import { useVoiceClips } from "../speakers/use-voice-clips";
 
@@ -23,7 +24,8 @@ const projectTitle = (project: string) =>
 
 /** The notes of the project whose manifest is `project`, read from their
  * Markdown file and saved back to it as they are edited. Renamed, the
- * project moves, and `onRenamed` is told where to. */
+ * project moves, and `onRenamed` is told where to: at once, or once the
+ * notes are finished when they are renamed while being taken. */
 export function NotesViewWindow({
   onBack,
   onClose,
@@ -38,24 +40,30 @@ export function NotesViewWindow({
   const history = useNotesHistory();
   const { document, reset } = history;
   const [isTaking, setIsTaking] = useState(false);
+  const [title, setTitle] = useState(() => projectTitle(project));
   const voices = useVoiceClips(project);
   const { setVoices } = voices;
   const [saveError, setSaveError] = useState<string>();
   const projectRef = useRef(project);
   projectRef.current = project;
+  const onRenamedRef = useRef(onRenamed);
+  onRenamedRef.current = onRenamed;
 
   // Read once as the notes open, and again every few seconds while still
   // being taken, so they show as they grow. A rename moves the project, not
-  // the notes, so it reads nothing again.
+  // the notes, so it reads nothing again; but notes renamed while being
+  // taken move once they are finished, and are read again from there.
   useEffect(() => {
     let disposed = false;
     let timer: number | undefined;
     const read = () => {
+      window.clearTimeout(timer);
       readNotes(projectRef.current)
         .then((notes) => {
           if (disposed) return;
           reset(parseNotes(notes.markdown));
           setIsTaking(notes.isTaking);
+          setTitle(notes.title);
           setVoices(notes.voices);
           if (notes.isTaking) timer = window.setTimeout(read, GROWING_MS);
         })
@@ -64,9 +72,21 @@ export function NotesViewWindow({
         });
     };
     read();
+    const unlisten = listen<[string, string]>(
+      NOTES_MOVED_EVENT,
+      ({ payload: [from, to] }) => {
+        if (from !== projectRef.current) return;
+        projectRef.current = to;
+        onRenamedRef.current(to);
+        read();
+      },
+    );
     return () => {
       disposed = true;
       window.clearTimeout(timer);
+      void unlisten.then((stop) => {
+        stop();
+      });
     };
   }, [reset, setVoices]);
 
@@ -116,6 +136,8 @@ export function NotesViewWindow({
 
   return (
     <NotesView
+      canRedo={history.canRedo}
+      canUndo={history.canUndo}
       document={document}
       isTaking={isTaking}
       onBack={onBack}
@@ -130,8 +152,15 @@ export function NotesViewWindow({
         void flush()
           .then(() => renameProject(projectRef.current, next))
           .then((moved) => {
+            // Notes being taken keep their folder until they are finished,
+            // and their name waits in the manifest until then.
+            if (moved === projectRef.current) {
+              setTitle(next);
+              return;
+            }
             projectRef.current = moved;
             onRenamed(moved);
+            setTitle(projectTitle(moved));
             edited(history.retitle)(projectTitle(moved));
           })
           .catch((cause: unknown) => {
@@ -141,7 +170,7 @@ export function NotesViewWindow({
       onUndo={edited(history.undo)}
       playingVoice={voices.playing}
       saveError={saveError}
-      title={projectTitle(project)}
+      title={title}
       voices={voices.voices}
     />
   );
