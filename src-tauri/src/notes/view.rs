@@ -11,6 +11,7 @@ use std::path::{Path, PathBuf};
 use std::sync::{Mutex, PoisonError};
 
 use screenwide_notes::clips;
+use screenwide_project::NotesManifest;
 use serde::Serialize;
 use tauri::ipc::Response;
 use tauri::{AppHandle, Emitter};
@@ -40,6 +41,9 @@ pub struct Notes {
   /// The numbers of the speakers whose voice can still be heard: those not
   /// yet named.
   pub voices: Vec<u32>,
+  /// The words marked as not private, lower case, which are not pointed
+  /// out.
+  pub not_private: Vec<String>,
 }
 
 /// Shows the notes whose Markdown file is `notes` in the projects window.
@@ -69,13 +73,17 @@ fn project_of(notes: &Path) -> Result<PathBuf, String> {
   Ok(root.join(format!("{name}.{}", screenwide_project::EXTENSION)))
 }
 
+/// The notes the manifest `project` holds.
+fn notes_of(project: &Path) -> Result<NotesManifest, String> {
+  screenwide_project::read(project)
+    .map_err(|error| error.to_string())?
+    .notes
+    .ok_or_else(|| "This project holds no notes".to_owned())
+}
+
 /// The Markdown file of the notes project whose manifest is `project`.
 fn notes_file(project: &Path) -> Result<PathBuf, String> {
-  let manifest = screenwide_project::read(project).map_err(|error| error.to_string())?;
-  let notes = manifest
-    .notes
-    .ok_or_else(|| "This project holds no notes".to_owned())?;
-  screenwide_project::resolve(project, &notes.file)
+  screenwide_project::resolve(project, &notes_of(project)?.file)
 }
 
 /// The notes the projects window was asked to show before it could hear.
@@ -89,7 +97,8 @@ pub fn take_pending_notes() -> Option<PathBuf> {
 
 #[tauri::command]
 pub fn read_notes(project: PathBuf) -> Result<Notes, String> {
-  let file = notes_file(&project)?;
+  let notes = notes_of(&project)?;
+  let file = screenwide_project::resolve(&project, &notes.file)?;
   let markdown = std::fs::read_to_string(&file).map_err(|error| error.to_string())?;
   Ok(Notes {
     voices: clips::kept(root_of(&file)?),
@@ -97,14 +106,21 @@ pub fn read_notes(project: PathBuf) -> Result<Notes, String> {
     markdown,
     is_taking: super::is_taking_into(&project),
     title: screenwide_project::summarize(&project).title,
+    not_private: notes.not_private,
   })
 }
 
-/// Saves `markdown` as the notes of `project`, whole or not at all, unless
-/// those notes are still being taken. Answers the numbers of the speakers
-/// whose voice can still be heard: a speaker named since is heard no more.
+/// Saves `markdown` as the notes of `project`, whole or not at all, and
+/// `not_private`, lower case, as the words marked as not private in them,
+/// unless those notes are still being taken. Answers the numbers of the
+/// speakers whose voice can still be heard: a speaker named since is heard
+/// no more.
 #[tauri::command]
-pub fn save_notes(project: PathBuf, markdown: String) -> Result<Vec<u32>, String> {
+pub fn save_notes(
+  project: PathBuf,
+  markdown: String,
+  not_private: Vec<String>,
+) -> Result<Vec<u32>, String> {
   if super::is_taking_into(&project) {
     return Err("These notes are still being taken".to_owned());
   }
@@ -112,6 +128,13 @@ pub fn save_notes(project: PathBuf, markdown: String) -> Result<Vec<u32>, String
   let writing = file.with_extension("md.part");
   std::fs::write(&writing, &markdown).map_err(|error| error.to_string())?;
   std::fs::rename(writing, &file).map_err(|error| error.to_string())?;
+  screenwide_project::update(&project, |manifest| match manifest.notes.as_mut() {
+    Some(notes) if notes.not_private != not_private => {
+      notes.not_private = not_private;
+      true
+    }
+    _ => false,
+  })?;
   let root = root_of(&file)?;
   clips::forget_named(root, &markdown);
   Ok(clips::kept(root))

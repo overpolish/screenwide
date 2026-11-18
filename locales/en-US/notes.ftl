@@ -75,3 +75,97 @@ notes-view-replace-field = Replace with
 # Replaces the match gone to with what was typed.
 notes-view-replace = Replace
 notes-view-replace-all = Replace All
+
+## What may be private in the notes
+
+# Over a paragraph, the badges naming what in it may be private, for screen readers.
+notes-sensitive-found = May be private
+# A badge over a paragraph naming what in it may be private, and how many; opens what can be done about them. Also heads that menu.
+notes-sensitive-kind =
+    { $kind ->
+        [name]
+            { $count ->
+                [one] Name
+               *[other] { $count } names
+            }
+        [company]
+            { $count ->
+                [one] Company
+               *[other] { $count } companies
+            }
+        [address]
+            { $count ->
+                [one] Address
+               *[other] { $count } addresses
+            }
+        [email]
+            { $count ->
+                [one] Email
+               *[other] { $count } emails
+            }
+        [phone]
+            { $count ->
+                [one] Phone number
+               *[other] { $count } phone numbers
+            }
+        [account]
+            { $count ->
+                [one] Account number
+               *[other] { $count } account numbers
+            }
+        [card]
+            { $count ->
+                [one] Card number
+               *[other] { $count } card numbers
+            }
+        [link]
+            { $count ->
+                [one] Link
+               *[other] { $count } links
+            }
+        [health]
+            { $count ->
+                [one] Health
+               *[other] { $count } health mentions
+            }
+        [religion]
+            { $count ->
+                [one] Religion
+               *[other] { $count } religion mentions
+            }
+        [sexuality]
+            { $count ->
+                [one] Sexuality
+               *[other] { $count } sexuality mentions
+            }
+        [ethnicity]
+            { $count ->
+                [one] Ethnicity
+               *[other] { $count } ethnicity mentions
+            }
+        [politics]
+            { $count ->
+                [one] Politics
+               *[other] { $count } political mentions
+            }
+       *[union]
+            { $count ->
+                [one] Union membership
+               *[other] { $count } union mentions
+            }
+    }
+# The menu a badge or a marked word opens, for screen readers.
+notes-sensitive-menu = What may be private
+# In a badge's menu: puts REDACTED in place of what the badge names, in this paragraph alone.
+notes-sensitive-redact-found =
+    { $count ->
+        [one] Redact it here
+       *[other] Redact them here
+    }
+# In a marked word's menu: puts REDACTED in place of these words in this paragraph alone.
+notes-sensitive-redact-here = Redact here
+# In a marked word's menu: puts REDACTED in place of these words wherever they are said in the notes.
+notes-sensitive-redact-throughout = Redact throughout the notes
+notes-sensitive-delete-paragraph = Delete paragraph
+# In a badge's or a marked word's menu: these words are not private, so they are no longer pointed out anywhere in these notes.
+notes-sensitive-not-private = Not private

@@ -21,4 +21,9 @@ title: string,
  * The numbers of the speakers whose voice can still be heard: those not
  * yet named.
  */
-voices: Array<number>, };
+voices: Array<number>, 
+/**
+ * The words marked as not private, lower case, which are not pointed
+ * out.
+ */
+notPrivate: Array<string>, };

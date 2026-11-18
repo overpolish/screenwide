@@ -8,6 +8,7 @@ import { useEffect, useRef, useState } from "react";
 import { renameProject } from "../../project-browser/api";
 import { copyNotesPath, NOTES_MOVED_EVENT, readNotes, saveNotes } from "../api";
 import { parseNotes, writeNotes } from "../document/notes-document";
+import { useSensitive } from "../sensitive/use-sensitive";
 import { useVoiceClips } from "../speakers/use-voice-clips";
 
 import { NotesView } from "./notes-view";
@@ -44,6 +45,7 @@ export function NotesViewWindow({
   const voices = useVoiceClips(project);
   const { setVoices } = voices;
   const [saveError, setSaveError] = useState<string>();
+  const sensitive = useSensitive(document, isTaking);
   const projectRef = useRef(project);
   projectRef.current = project;
   const onRenamedRef = useRef(onRenamed);
@@ -61,7 +63,10 @@ export function NotesViewWindow({
       readNotes(projectRef.current)
         .then((notes) => {
           if (disposed) return;
-          reset(parseNotes(notes.markdown));
+          reset({
+            ...parseNotes(notes.markdown),
+            notPrivate: notes.notPrivate,
+          });
           setIsTaking(notes.isTaking);
           setTitle(notes.title);
           setVoices(notes.voices);
@@ -91,14 +96,22 @@ export function NotesViewWindow({
   }, [reset, setVoices]);
 
   // Changes made here are saved a moment after the last; notes read afresh
-  // are not written back. What waits is saved as the view goes.
+  // are not written back. What waits is saved as the view goes, with the
+  // words marked as not private, which the project keeps.
   const editedRef = useRef(false);
-  const pendingRef = useRef<string | null>(null);
+  const pendingRef = useRef<{
+    markdown: string;
+    notPrivate: readonly string[];
+  } | null>(null);
   const flush = () => {
-    const markdown = pendingRef.current;
+    const pending = pendingRef.current;
     pendingRef.current = null;
-    if (markdown === null) return Promise.resolve();
-    return saveNotes(projectRef.current, markdown).then(
+    if (pending === null) return Promise.resolve();
+    return saveNotes(
+      projectRef.current,
+      pending.markdown,
+      pending.notPrivate,
+    ).then(
       (kept) => {
         setSaveError(undefined);
         setVoices(kept);
@@ -113,7 +126,10 @@ export function NotesViewWindow({
   useEffect(() => {
     if (!document || !editedRef.current) return;
     editedRef.current = false;
-    pendingRef.current = writeNotes(document);
+    pendingRef.current = {
+      markdown: writeNotes(document),
+      notPrivate: document.notPrivate ?? [],
+    };
     const timer = window.setTimeout(() => {
       void flushRef.current();
     }, SAVE_AFTER_MS);
@@ -170,6 +186,7 @@ export function NotesViewWindow({
       onUndo={edited(history.undo)}
       playingVoice={voices.playing}
       saveError={saveError}
+      sensitive={sensitive}
       title={title}
       voices={voices.voices}
     />

@@ -13,6 +13,7 @@
 pub mod clips;
 mod document;
 mod echo;
+pub mod sensitive;
 mod session;
 mod speakers;
 

@@ -141,13 +141,18 @@ pub struct ScreenshotManifest {
 }
 
 /// A notes project's notes: the Markdown file they are written in, relative
-/// to the project folder, and how long the call they were taken from ran.
+/// to the project folder, how long the call they were taken from ran, and
+/// the words marked as not private in them, which are not pointed out
+/// again. Those are kept here rather than in the notes, which stay plain for
+/// whatever reads them.
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct NotesManifest {
   pub file: String,
   #[serde(default, skip_serializing_if = "Option::is_none")]
   pub duration_ms: Option<u64>,
+  #[serde(default, skip_serializing_if = "Vec::is_empty")]
+  pub not_private: Vec<String>,
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]

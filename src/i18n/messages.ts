@@ -884,6 +884,14 @@ export type Messages = {
   "notes-island-open-settings": null;
   "notes-island-saved": null;
   "notes-island-taking": null;
+  "notes-sensitive-delete-paragraph": null;
+  "notes-sensitive-found": null;
+  "notes-sensitive-kind": { count: number; kind: string | number };
+  "notes-sensitive-menu": null;
+  "notes-sensitive-not-private": null;
+  "notes-sensitive-redact-found": { count: number };
+  "notes-sensitive-redact-here": null;
+  "notes-sensitive-redact-throughout": null;
   "notes-view-back": null;
   "notes-view-copy-path": null;
   "notes-view-find": null;

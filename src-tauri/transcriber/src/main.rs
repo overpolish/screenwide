@@ -11,6 +11,7 @@ mod faces;
 mod matte;
 mod read_text;
 mod restore;
+mod sensitive;
 mod separate;
 mod session;
 mod shared_gpu;
@@ -23,6 +24,7 @@ fn main() {
   whisper_rs::install_logging_hooks();
   let mut engine = engine::Engine::default();
   let mut text_reader: Option<read_text::TextReader> = None;
+  let mut sensitive_finder: Option<sensitive::SensitiveFinder> = None;
   let stdin = std::io::stdin();
   let mut stdout = std::io::stdout().lock();
   for line in stdin.lock().lines() {
@@ -185,6 +187,24 @@ fn main() {
               .map(|lines| Reply::TextRead { id, lines }),
             None => Err("The text reader is not loaded".to_owned()),
           },
+          Job::FindSensitive {
+            model,
+            tokenizer,
+            texts,
+          } => {
+            let loaded = match sensitive_finder.take() {
+              Some(finder) if finder.is_for(model, tokenizer) => Ok(finder),
+              _ => sensitive::SensitiveFinder::load(model, tokenizer),
+            };
+            loaded.and_then(|mut finder| {
+              let found = texts
+                .iter()
+                .map(|text| finder.find(text))
+                .collect::<Result<Vec<_>, _>>();
+              sensitive_finder = Some(finder);
+              found.map(|found| Reply::SensitiveFound { id, found })
+            })
+          }
           Job::BeginDictation { .. }
           | Job::BeginDictationAtPauses { .. }
           | Job::BeginDictationRewritten { .. }

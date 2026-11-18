@@ -53,6 +53,7 @@ engine = [
   "dep:tract-hir",
   "dep:tract-onnx",
   "dep:tract-pulse",
+  "dep:tokenizers",
   "dep:windows",
 ]
 # The notes' voice fingerprints run CAM++ in tract, on Kaldi features.
@@ -87,6 +88,10 @@ ort = { version = "=2.0.0-rc.15", optional = true, default-features = false, fea
 # are computed here rather than by a Python library: the same FFT the app
 # uses.
 realfft = { version = "3.5.0", optional = true }
+# Hugging Face's tokenizers, for the sensitive information model's
+# DeBERTa-v3 tokenizer. Pure Rust regular expressions, so nothing is built in
+# C.
+tokenizers = { version = "0.22", optional = true, default-features = false, features = ["fancy-regex"] }
 
 [target.'cfg(target_os = "macos")'.dependencies]
 whisper-rs = { version = "0.16.0", optional = true, features = ["metal"] }

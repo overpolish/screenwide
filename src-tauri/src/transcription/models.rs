@@ -103,6 +103,24 @@ pub(crate) fn usable(app: &AppHandle, purpose: Purpose) -> Option<&'static Model
   catalogue::for_purpose(purpose).filter(|model| is_downloaded(app, model))
 }
 
+/// Whether the files meeting notes are taken with are on this computer,
+/// whether or not the model that finds what is private in them is yet.
+pub(crate) fn can_take_notes(app: &AppHandle) -> bool {
+  catalogue::notes_speech_files()
+    .iter()
+    .all(|file| is_whole(app, file))
+}
+
+/// The model that finds what is private in notes and its tokenizer, once
+/// both are on this computer.
+pub(crate) fn sensitive_files(app: &AppHandle) -> Option<(PathBuf, PathBuf)> {
+  let (model, tokenizer) = catalogue::notes_sensitive_files();
+  if !is_whole(app, model) || !is_whole(app, tokenizer) {
+    return None;
+  }
+  Some((file_path(app, model).ok()?, file_path(app, tokenizer).ok()?))
+}
+
 /// The voice activity model, which finds where speech is: bundled as a
 /// resource, or beside the program when it runs unbundled during
 /// development.

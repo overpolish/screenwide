@@ -16,9 +16,12 @@ import {
   speakerName,
   speakerShares,
 } from "../document/notes-document";
-import { type FoundRange } from "../find/found-pieces";
+import { withoutNotPrivate } from "../sensitive/sensitive-edits";
+import { type SensitiveLookup } from "../sensitive/use-sensitive";
+import { useSensitiveMenus } from "../sensitive/use-sensitive-menus";
 import { SpeakersStrip } from "../speakers/speakers-strip";
 
+import { type FoundRange } from "./marked-pieces";
 import { NotesRunSection } from "./notes-run";
 import { useSpeakerFilter } from "./use-speaker-filter";
 
@@ -30,11 +33,13 @@ const MENU_WIDTH = 200;
 // The notes as a page: who was on the call across its head, then each run
 // of one speaker's turns. A run is removed from beside its speaker's name;
 // a paragraph whose words are all cleared goes when the notes are saved.
-// What a search found is tinted where it is. Choosing speakers by their
-// share shows only what they said: each stretch of everyone else closes up
-// into a line that opens it again, and the match a search goes to shows
-// wherever it falls. Changes come back whole, with the turn typed into
-// named so a run of typing undoes as one step.
+// What a search found is tinted where it is, and what may be private is
+// named over its paragraph and underlined, each opening what can be done
+// about it. Choosing speakers by their share shows only what they said:
+// each stretch of everyone else closes up into a line that opens it again,
+// and the match a search goes to shows wherever it falls. Changes come back
+// whole, with the turn typed into named so a run of typing undoes as one
+// step.
 
 export function NotesPage({
   current,
@@ -44,6 +49,7 @@ export function NotesPage({
   onChange,
   onHearVoice,
   playingVoice,
+  sensitive,
   voices,
 }: {
   /** The match gone to, by its place in `matches`; -1 when none is. */
@@ -57,6 +63,8 @@ export function NotesPage({
   onChange: (document: NotesDocument, typing?: string) => void;
   onHearVoice: (number: number) => void;
   playingVoice: number | null;
+  /** What may be private in each turn. */
+  sensitive: SensitiveLookup;
   voices: readonly number[];
 }) {
   const runs = runsOf(document);
@@ -107,6 +115,12 @@ export function NotesPage({
       if (run) onChange(assignRun(document, run, speaker));
     },
     width: MENU_WIDTH,
+  });
+  const shown = withoutNotPrivate(sensitive, document.notPrivate);
+  const sensitiveMenus = useSensitiveMenus({
+    document,
+    onChange,
+    sensitive: shown,
   });
   return (
     // The space above each run and line opens and closes inside its reveal,
@@ -176,7 +190,10 @@ export function NotesPage({
                 onRename={(name) => {
                   if (run.speaker !== null) rename(run.speaker, name);
                 }}
+                onSensitiveBadge={sensitiveMenus.openBadge}
+                onSensitiveWord={sensitiveMenus.openWord}
                 run={run}
+                sensitive={shown}
               />
             ) : null}
           </Reveal>,

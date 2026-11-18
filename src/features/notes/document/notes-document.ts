@@ -18,6 +18,10 @@ export type NotesDocument = {
   /** The heading's text; null when the file has none. */
   title: string | null;
   turns: readonly NotesTurn[];
+  /** Words marked as not private, lower case, which are not pointed out.
+   * Kept with the project rather than in the file, and part of the notes
+   * here so marking one is undone like any other change. */
+  notPrivate?: readonly string[];
 };
 
 /** A run of turns one speaker said one after another, shown under their

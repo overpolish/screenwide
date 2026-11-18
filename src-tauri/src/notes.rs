@@ -12,6 +12,7 @@
 
 mod ending;
 pub(crate) mod island;
+pub(crate) mod sensitive;
 pub(crate) mod view;
 
 pub(crate) use self::ending::{discard, stop, stop_for_deletion};
@@ -25,7 +26,7 @@ use screenwide_capture::monitor::RecordingMonitor;
 use screenwide_capture::SystemAudioSelection;
 use screenwide_notes::{Failure, NotesModels, Session, Setup};
 use screenwide_project::{Manifest, NotesManifest};
-use screenwide_speech::catalogue::Purpose;
+use screenwide_speech::catalogue;
 use serde::Deserialize;
 use tauri::AppHandle;
 use ts_rs::TS;
@@ -108,9 +109,11 @@ fn start(app: &AppHandle, options: StartNotesOptions) -> Result<(), NotesProblem
     eprintln!("Could not take notes: {error}");
     NotesProblem::Failed
   };
-  let model = models::usable(app, Purpose::Notes).ok_or(NotesProblem::NoModel)?;
-  let paths = models::paths(app, model).map_err(failed)?;
-  let [model, speakers, voices] = paths.as_slice() else {
+  if !models::can_take_notes(app) {
+    return Err(NotesProblem::NoModel);
+  }
+  let paths = models::paths(app, catalogue::notes()).map_err(failed)?;
+  let [model, speakers, voices, ..] = paths.as_slice() else {
     return Err(failed("The notes models are not as catalogued".to_owned()));
   };
   let vad = models::vad_model(app).map_err(failed)?;
@@ -121,6 +124,7 @@ fn start(app: &AppHandle, options: StartNotesOptions) -> Result<(), NotesProblem
   let manifest = Manifest::notes(NotesManifest {
     file: NOTES_FILE.to_owned(),
     duration_ms: None,
+    not_private: Vec::new(),
   });
   screenwide_project::write(&project.file, &manifest).map_err(failed)?;
   let reporter = app.clone();

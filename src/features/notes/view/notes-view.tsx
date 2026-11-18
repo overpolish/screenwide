@@ -19,6 +19,7 @@ import { useNotesFind } from "../find/use-notes-find";
 import { NotesPage } from "./notes-page";
 
 import type { NotesDocument } from "../document/notes-document";
+import type { SensitiveLookup } from "../sensitive/use-sensitive";
 
 // Notes in the projects window, in place of the projects: read as a page,
 // edited where they stand, their name edited in the title bar, and their
@@ -47,6 +48,8 @@ export type NotesViewProps = {
   onUndo: () => void;
   /** The speaker whose voice is playing, by number; null when none is. */
   playingVoice: number | null;
+  /** What may be private in each turn. */
+  sensitive: SensitiveLookup;
   title: string;
   /** The numbers of the speakers whose voice can still be heard. */
   voices: readonly number[];
@@ -70,6 +73,7 @@ export function NotesView({
   onUndo,
   playingVoice,
   saveError,
+  sensitive,
   title,
   voices,
 }: NotesViewProps) {
@@ -125,7 +129,9 @@ export function NotesView({
       <div
         className="flex min-h-0 grow flex-col"
         onKeyDown={(event) => {
-          if (!(event.metaKey || event.ctrlKey) || event.key !== "z") return;
+          // With Shift held the key reads as a capital Z.
+          const isZ = event.key.toLowerCase() === "z";
+          if (!(event.metaKey || event.ctrlKey) || !isZ) return;
           event.preventDefault();
           if (event.shiftKey) onRedo();
           else onUndo();
@@ -182,6 +188,7 @@ export function NotesView({
               onChange={onChange}
               onHearVoice={onHearVoice}
               playingVoice={playingVoice}
+              sensitive={sensitive}
               voices={voices}
             />
           ) : null}

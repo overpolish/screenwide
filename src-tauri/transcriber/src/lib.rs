@@ -202,6 +202,16 @@ pub enum Job {
     width: u32,
     height: u32,
   },
+  /// What in each of `texts` may be private, such as a person's name or a
+  /// client's, an address or a phone number, answered with
+  /// [`Reply::SensitiveFound`]. The model stays loaded for the jobs after.
+  FindSensitive {
+    /// The GLiNER entity model.
+    model: PathBuf,
+    /// Its tokenizer, as a Hugging Face `tokenizer.json`.
+    tokenizer: PathBuf,
+    texts: Vec<String>,
+  },
   /// Starts a dictation with the streaming model at `model`, answered with
   /// [`Reply::Dictated`] once it listens. Until [`Job::FinishDictation`] the
   /// dictation takes the helper over: [`Job::FeedDictation`] and
@@ -430,6 +440,11 @@ pub enum Reply {
     id: u64,
     lines: Vec<TextLine>,
   },
+  /// What may be private in each text asked about, in the same order.
+  SensitiveFound {
+    id: u64,
+    found: Vec<Vec<SensitiveSpan>>,
+  },
   /// What the dictation has heard so far, or all of it in answer to
   /// [`Job::FinishDictation`].
   Dictated {
@@ -549,6 +564,46 @@ pub struct SpeakerTurn {
 pub struct VoiceClip {
   pub speaker: u32,
   pub samples: Vec<i16>,
+}
+
+/// Something in a text that may be private, as `[start, end)` in UTF-16
+/// code units, the way the page that shows the text counts them.
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SensitiveSpan {
+  pub start: usize,
+  pub end: usize,
+  pub kind: SensitiveKind,
+}
+
+/// What a [`SensitiveSpan`] is.
+#[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub enum SensitiveKind {
+  /// A person's name.
+  Name,
+  /// An organisation's name, such as a client's.
+  Company,
+  Address,
+  Email,
+  Phone,
+  /// A bank account number or sort code.
+  Account,
+  /// A payment card's number.
+  Card,
+  Link,
+  // The rest are said in words the notes find by a list, not by the model:
+  // the kinds of personal information the law treats as special.
+  /// A health condition, a pregnancy, treatment or medication.
+  Health,
+  Religion,
+  /// Sexuality or gender identity.
+  Sexuality,
+  Ethnicity,
+  /// Political views or a party voted for.
+  Politics,
+  /// Trade union membership.
+  Union,
 }
 
 /// A word heard in a dictation, with its punctuation, and when it was said

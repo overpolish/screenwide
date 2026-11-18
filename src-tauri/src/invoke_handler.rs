@@ -227,6 +227,7 @@ pub(crate) fn invoke_handler() -> impl Fn(tauri::ipc::Invoke) -> bool + Send + S
     notes::view::save_notes,
     notes::view::read_voice_clip,
     notes::view::copy_notes_path,
+    notes::sensitive::find_sensitive,
     text_recognition::island::text_recognition_island_action,
     text_recognition::cancel_text_recognition,
     text_recognition::copy_recognition_content,

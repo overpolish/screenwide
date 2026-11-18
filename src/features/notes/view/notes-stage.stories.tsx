@@ -9,6 +9,7 @@ import { ProjectBrowser } from "../../project-browser/project-browser";
 import { recentProjects } from "../../project-browser/project-browser-fixtures";
 import { projectBrowserMeta } from "../../project-browser/project-browser-story-meta";
 import { parseNotes } from "../document/notes-document";
+import { sensitiveByText } from "../sensitive/use-sensitive";
 
 import { NotesStage } from "./notes-stage";
 import { NotesView } from "./notes-view";
@@ -48,6 +49,7 @@ const meta = {
               onRename={fn()}
               onUndo={fn()}
               playingVoice={null}
+              sensitive={sensitiveByText(new Map())}
               title={opened.title}
               voices={[]}
             />

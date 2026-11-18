@@ -16,5 +16,6 @@ workspace = true
 doctest = false
 
 [dependencies]
+regex.workspace = true
 screenwide-capture.workspace = true
 screenwide-speech.workspace = true

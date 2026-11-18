@@ -5982,6 +5982,7 @@ dependencies = [
 name = "screenwide-notes"
 version = "1.1.1"
 dependencies = [
+ "regex",
  "screenwide-capture",
  "screenwide-speech",
 ]

@@ -15,6 +15,7 @@ mod camera;
 pub mod dictation;
 pub mod notes;
 pub mod samples;
+pub mod sensitive;
 mod text;
 
 /// The transcriber program, started for a run of jobs and kept for the rest
@@ -247,6 +248,7 @@ impl Transcriber {
       | Reply::FacesFound { id }
       | Reply::TextReaderLoaded { id }
       | Reply::TextRead { id, .. }
+      | Reply::SensitiveFound { id, .. }
       | Reply::Dictated { id, .. }
       | Reply::Noted { id, .. }
       | Reply::NotesFinished { id, .. }

@@ -6,6 +6,7 @@ import { invoke } from "@tauri-apps/api/core";
 import type { Notes } from "../../bindings/Notes";
 import type { NotesIslandAction } from "../../bindings/NotesIslandAction";
 import type { NotesIslandState } from "../../bindings/NotesIslandState";
+import type { SensitiveFind } from "../../bindings/SensitiveFind";
 import type { StartNotesOptions } from "../../bindings/StartNotesOptions";
 
 export const startNotes = (options: StartNotesOptions) =>
@@ -25,10 +26,14 @@ export const takePendingNotes = () =>
 export const readNotes = (project: string) =>
   invoke<Notes>("read_notes", { project });
 
-/** Saves the notes, answering the numbers of the speakers whose voice can
- * still be heard: a speaker named since is heard no more. */
-export const saveNotes = (project: string, markdown: string) =>
-  invoke<number[]>("save_notes", { markdown, project });
+/** Saves the notes and the words marked as not private in them, lower
+ * case, answering the numbers of the speakers whose voice can still be
+ * heard: a speaker named since is heard no more. */
+export const saveNotes = (
+  project: string,
+  markdown: string,
+  notPrivate: readonly string[],
+) => invoke<number[]>("save_notes", { markdown, notPrivate, project });
 
 /** A few seconds of speaker `number`'s voice, as a WAV file. */
 export const readVoiceClip = (project: string, number: number) =>
@@ -36,6 +41,11 @@ export const readVoiceClip = (project: string, number: number) =>
 
 export const copyNotesPath = (project: string) =>
   invoke<null>("copy_notes_path", { project });
+
+/** What may be private in each of `texts`, the notes' paragraphs, in the
+ * same order. */
+export const findSensitive = (texts: string[]) =>
+  invoke<SensitiveFind[][]>("find_sensitive", { texts });
 
 /** Sent to the projects window with a notes project's manifest to show. */
 export const OPEN_NOTES_EVENT = "notes://open";
