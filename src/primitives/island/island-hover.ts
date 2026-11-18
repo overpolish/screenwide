@@ -7,7 +7,10 @@ import { HOVER_LINGER_MS } from "./island-motion";
 
 /** The pointer coming onto the island and leaving it, for the island's own
  * box: leaving is told a moment after it happens, so a slip off the edge
- * does not close what hovering opened. */
+ * does not close what hovering opened. Moving on the island tells it the
+ * pointer is on it too: the island's window ignores the pointer while it is
+ * tucked away, so a pointer resting where it comes back out was never seen
+ * to leave, and is never seen to enter. */
 export function useIslandHover(
   onHoverChange: ((isHovered: boolean) => void) | undefined,
 ) {
@@ -18,15 +21,17 @@ export function useIslandHover(
     },
     [],
   );
+  const enter = () => {
+    window.clearTimeout(closeRef.current);
+    onHoverChange?.(true);
+  };
   return {
-    onPointerEnter: () => {
-      window.clearTimeout(closeRef.current);
-      onHoverChange?.(true);
-    },
+    onPointerEnter: enter,
     onPointerLeave: () => {
       closeRef.current = window.setTimeout(() => {
         onHoverChange?.(false);
       }, HOVER_LINGER_MS);
     },
+    onPointerMove: enter,
   };
 }
