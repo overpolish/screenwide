@@ -44,6 +44,15 @@ pub struct Setup {
   pub title: String,
 }
 
+/// Why notes stopped on their own.
+pub enum Failure {
+  /// Dictation's helper or its models could not be readied, so nothing was
+  /// written.
+  Readying(String),
+  /// Taking them failed part way.
+  Taking(String),
+}
+
 /// Notes under way.
 pub struct Session {
   listening: Option<ListeningSession>,
@@ -53,10 +62,12 @@ pub struct Session {
 
 impl Session {
   /// Starts taking notes as `setup` says, telling `on_failure` why if they
-  /// stop on their own.
+  /// stop on their own. Listening begins before this returns; dictation's
+  /// helper starts and loads its models afterwards, on the notes' own
+  /// thread, which takes seconds, and what is heard meanwhile waits for it.
   pub fn start(
     setup: Setup,
-    on_failure: impl FnOnce(String) + Send + 'static,
+    on_failure: impl FnOnce(Failure) + Send + 'static,
   ) -> Result<Self, String> {
     let Setup {
       models,
@@ -66,17 +77,22 @@ impl Session {
       path,
       title,
     } = setup;
-    let mut helper = Transcriber::start_dictation()?;
-    helper.begin_notes(models, language, words)?;
     let (heard, runs) = mpsc::channel();
     let listening = begin_listening_blocking(listening, listener(heard))?;
     let (stop, stops) = mpsc::channel();
     let worker = std::thread::Builder::new()
       .name("screenwide-notes".to_owned())
       .spawn(move || {
+        let mut helper = match ready(models, language, words) {
+          Ok(helper) => helper,
+          Err(error) => {
+            on_failure(Failure::Readying(error.clone()));
+            return Err(error);
+          }
+        };
         let taken = take(&mut helper, &runs, &stops, (path, title));
         if let Err(error) = &taken {
-          on_failure(error.clone());
+          on_failure(Failure::Taking(error.clone()));
         }
         taken
       })
@@ -110,6 +126,17 @@ impl Session {
       .join()
       .map_err(|_| "Taking notes stopped unexpectedly".to_owned())?
   }
+}
+
+/// Dictation's helper, started with the notes' models loaded.
+fn ready(
+  models: NotesModels,
+  language: Option<String>,
+  words: Vec<String>,
+) -> Result<Transcriber, String> {
+  let mut helper = Transcriber::start_dictation()?;
+  helper.begin_notes(models, language, words)?;
+  Ok(helper)
 }
 
 /// A run of samples brought to the speech models' rate, and when, in

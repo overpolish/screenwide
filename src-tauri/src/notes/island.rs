@@ -103,11 +103,6 @@ pub(super) fn withdraw(app: &AppHandle) {
   {
     return;
   }
-  let _ = app.emit_to(
-    WindowLabel::Island.as_str(),
-    EVENT,
-    None::<NotesIslandState>,
-  );
   let keeps = !crate::recording::is_idle(app)
     || app_windows::is_recording_ui_visible()
     || crate::dictation::island::dictation_island_state().is_some();
@@ -119,6 +114,13 @@ pub(super) fn withdraw(app: &AppHandle) {
   if let Err(error) = result {
     eprintln!("Could not put the island away after notes: {error}");
   }
+  // Told after the island is asked to tuck away, so the page keeps the
+  // notes on it as it goes rather than showing the controls in their place.
+  let _ = app.emit_to(
+    WindowLabel::Island.as_str(),
+    EVENT,
+    None::<NotesIslandState>,
+  );
 }
 
 /// Shows `state` for a moment, unless something else is shown first.

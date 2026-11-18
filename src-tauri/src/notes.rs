@@ -18,7 +18,7 @@ use chrono::Local;
 use screenwide_capture::listening::Listening;
 use screenwide_capture::monitor::RecordingMonitor;
 use screenwide_capture::SystemAudioSelection;
-use screenwide_notes::{NotesModels, Session, Setup};
+use screenwide_notes::{Failure, NotesModels, Session, Setup};
 use screenwide_project::{Manifest, NotesManifest};
 use screenwide_speech::catalogue::Purpose;
 use serde::Deserialize;
@@ -142,9 +142,19 @@ fn start(app: &AppHandle, options: StartNotesOptions) -> Result<(), NotesProblem
     path: notes.clone(),
     title,
   };
+  // The island goes up once listening has begun, before the models have
+  // loaded. A failure to load them can arrive first, so it waits for the
+  // island to say the notes are being taken before saying they failed.
+  let (told, wait_told) = std::sync::mpsc::channel::<()>();
+  let (failing, file, root) = (app.clone(), project.file.clone(), project.root.clone());
   let started_ms = now_ms();
-  let session = Session::start(setup, |error| {
-    eprintln!("Taking notes failed: {error}");
+  let session = Session::start(setup, move |failure| match failure {
+    Failure::Readying(error) => {
+      eprintln!("Could not ready the notes: {error}");
+      let _ = wait_told.recv();
+      not_started(&failing, file, root);
+    }
+    Failure::Taking(error) => eprintln!("Taking notes failed: {error}"),
   })
   .map_err(|error| {
     project.remove();
@@ -157,8 +167,46 @@ fn start(app: &AppHandle, options: StartNotesOptions) -> Result<(), NotesProblem
     started_ms,
   });
   screenwide_project::library::remember(app, &project.file);
+  // The controls are put away as a recording's start puts them away: the
+  // island shows the notes from here, and Escape no longer takes it.
+  if let Err(error) = crate::app_windows::close_recording_controls(app) {
+    eprintln!("Could not put the recording controls away for notes: {error}");
+  }
   island::tell(app, NotesIslandState::Taking { started_ms });
+  let _ = told.send(());
   Ok(())
+}
+
+/// Notes whose models never loaded: listening stops, the project they were
+/// to be written into goes, and the island says they could not be taken.
+fn not_started(app: &AppHandle, file: std::path::PathBuf, root: std::path::PathBuf) {
+  let taken = {
+    let mut taking = taking();
+    if !taking.as_ref().is_some_and(|taking| taking.project == file) {
+      return;
+    }
+    taking.take()
+  };
+  let Some(taken) = taken else {
+    return;
+  };
+  island::show_for_a_moment(
+    app,
+    NotesIslandState::Problem {
+      problem: NotesProblem::Failed,
+    },
+  );
+  let app = app.clone();
+  // Off the notes' own thread, which this was called on and which letting
+  // the session go waits for.
+  std::thread::spawn(move || {
+    let _ = taken.session.abandon();
+    let _ = std::fs::remove_dir_all(&root);
+    if let Err(error) = screenwide_project::library::forget(&app, &file) {
+      eprintln!("Could not forget the notes that never started: {error}");
+    }
+    screenwide_project::library::notify(&app);
+  });
 }
 
 /// Stops listening and finishes the notes on a thread of their own, the

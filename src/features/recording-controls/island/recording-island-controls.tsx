@@ -54,6 +54,7 @@ import {
 import type { IslandMode, IslandPanel, IslandPhase } from "./island-types";
 import type { AnnotateRows } from "../../annotate/island/annotate-rows";
 import type { IslandHost } from "../../island/island-window";
+import type { NotesParts } from "../../notes/island/notes-island";
 
 const report = (action: string) => (error: unknown) => {
   console.error(`Could not ${action} the recording`, error);
@@ -79,11 +80,14 @@ export function RecordingIslandControls({
   annotate,
   island,
   note,
+  notes,
 }: {
   island: IslandHost;
   annotate?: AnnotateRows;
   /** A hint under the row before recording (`RecordingIsland`). */
   note?: ReactNode;
+  /** Meeting notes while they are on the island (`RecordingIsland`). */
+  notes?: NotesParts;
 }) {
   const settings = useGeneralSettings();
   // The checks are on until the stored settings say otherwise.
@@ -211,6 +215,7 @@ export function RecordingIslandControls({
       moment={moment}
       notch={island.notch}
       note={note}
+      notes={notes}
       onCancelCountdown={() => {
         cancelRecording().catch(report("cancel"));
       }}

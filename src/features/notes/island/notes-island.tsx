@@ -7,7 +7,6 @@ import { useFocusWithin } from "react-aria";
 
 import { ConfirmActionButton } from "../../../composites/confirm-action-button/confirm-action-button";
 import { t } from "../../../i18n/i18n";
-import { Alert } from "../../../primitives/alert/alert";
 import { Button } from "../../../primitives/button/button";
 import { IconButton } from "../../../primitives/button/icon-button";
 import { CircularProgress } from "../../../primitives/circular-progress/circular-progress";
@@ -18,9 +17,10 @@ import { IslandRow } from "../../../primitives/island/island-row";
 import { IslandRowTitle } from "../../../primitives/island/row-title/island-row-title";
 import { clock } from "../../recording-controls/island/island-names";
 
+import { notesSection } from "./notes-section";
+
 import type { NotesIslandAction } from "../../../bindings/NotesIslandAction";
 import type { NotesIslandState } from "../../../bindings/NotesIslandState";
-import type { NotesProblem } from "../../../bindings/NotesProblem";
 
 // Meeting notes on the island, at the top of the screen. While they are
 // taken the island keeps out of the way: the notebook glyph alone, and under
@@ -29,10 +29,8 @@ import type { NotesProblem } from "../../../bindings/NotesProblem";
 // the row offers to show the notes. A problem says why under the row, with
 // Settings where it is put right.
 
-export type NotesIslandProps = Pick<
-  IslandProps,
-  "isShown" | "notch" | "onHidden" | "onShapeChange"
-> & {
+/** The notes as the island shows them. */
+export type NotesParts = {
   onAction: (action: NotesIslandAction) => void;
   state: NotesIslandState;
   /** The time now, in milliseconds since the Unix epoch; the clock's own
@@ -40,21 +38,11 @@ export type NotesIslandProps = Pick<
   now?: number;
 };
 
-const problemMessage = (problem: NotesProblem) => {
-  switch (problem) {
-    case "noModel":
-      return t("notes-island-no-model");
-    case "noMicrophone":
-      return t("notes-island-no-microphone");
-    case "noSystemAudio":
-      return t("notes-island-no-system-audio");
-    case "failed":
-      return t("notes-island-failed");
-  }
-};
-
-/** Whether Settings is where `problem` is put right. */
-const isFixedInSettings = (problem: NotesProblem) => problem === "noModel";
+export type NotesIslandProps = Pick<
+  IslandProps,
+  "isShown" | "notch" | "onHidden" | "onShapeChange"
+> &
+  NotesParts;
 
 /** The time now, a second at a time, while `ticks`. */
 function useNow(ticks: boolean) {
@@ -83,30 +71,27 @@ function Close({ onPress }: { onPress: () => void }) {
   );
 }
 
-export function NotesIsland({
-  isShown = true,
-  notch,
+/** The notes' row, on their own island or on the recording island, which
+ * reshapes into it from the controls as it does into a recording. */
+export function NotesRow({
+  isHovered,
   now: fixedNow,
   onAction,
-  onHidden,
-  onShapeChange,
   state,
-}: NotesIslandProps) {
+}: NotesParts & { isHovered: boolean }) {
   const ticking = useNow(state.phase === "taking" && fixedNow === undefined);
   const now = fixedNow ?? ticking;
-  const [isHovered, setIsHovered] = useState(false);
   const [hasFocus, setHasFocus] = useState(false);
   const { focusWithinProps } = useFocusWithin({
     onFocusWithinChange: setHasFocus,
   });
 
-  let row;
   if (state.phase === "taking" || state.phase === "finishing") {
     const elapsed = clock(
       state.phase === "taking" ? Math.max(0, now - state.startedMs) / 1_000 : 0,
     );
     const showsControls = state.phase === "taking" && (isHovered || hasFocus);
-    row = (
+    return (
       <IslandRow
         end={
           <span className="contents" {...focusWithinProps}>
@@ -172,74 +157,59 @@ export function NotesIsland({
         }
       />
     );
-  } else {
-    row = (
-      <IslandRow
-        end={
-          <IslandParts direction="row">
-            {state.phase === "saved" ? (
-              <span className="flex items-center gap-1" key="saved">
-                <Close
-                  onPress={() => {
-                    onAction("close");
-                  }}
-                />
-                <Button
-                  onPress={() => {
-                    onAction("open");
-                  }}
-                >
-                  {t("notes-island-open")}
-                </Button>
-              </span>
-            ) : (
-              <span className="flex" key="problem">
-                <Close
-                  onPress={() => {
-                    onAction("close");
-                  }}
-                />
-              </span>
-            )}
-          </IslandParts>
-        }
-        start={
-          <IslandRowTitle
-            glyph={<NotebookPen aria-hidden />}
-            title={
-              state.phase === "saved"
-                ? t("notes-island-saved")
-                : t("notes-island")
-            }
-          />
-        }
-      />
-    );
   }
-
-  const section =
-    state.phase === "problem" ? (
-      <div className="w-80" key={`problem-${state.problem}`}>
-        <Alert
-          action={
-            isFixedInSettings(state.problem) ? (
+  return (
+    <IslandRow
+      end={
+        <IslandParts direction="row">
+          {state.phase === "saved" ? (
+            <span className="flex items-center gap-1" key="saved">
+              <Close
+                onPress={() => {
+                  onAction("close");
+                }}
+              />
               <Button
                 onPress={() => {
-                  onAction("openSettings");
+                  onAction("open");
                 }}
               >
-                {t("notes-island-open-settings")}
+                {t("notes-island-open")}
               </Button>
-            ) : undefined
+            </span>
+          ) : (
+            <span className="flex" key="problem">
+              <Close
+                onPress={() => {
+                  onAction("close");
+                }}
+              />
+            </span>
+          )}
+        </IslandParts>
+      }
+      start={
+        <IslandRowTitle
+          glyph={<NotebookPen aria-hidden />}
+          title={
+            state.phase === "saved"
+              ? t("notes-island-saved")
+              : t("notes-island")
           }
-          color="error"
-          role="alert"
-        >
-          {problemMessage(state.problem)}
-        </Alert>
-      </div>
-    ) : null;
+        />
+      }
+    />
+  );
+}
 
+export function NotesIsland({
+  isShown = true,
+  notch,
+  onHidden,
+  onShapeChange,
+  ...notes
+}: NotesIslandProps) {
+  const [isHovered, setIsHovered] = useState(false);
   return (
     <Island
       aria-label={t("notes-island")}
@@ -248,8 +218,8 @@ export function NotesIsland({
       onHidden={onHidden}
       onHoverChange={setIsHovered}
       onShapeChange={onShapeChange}
-      row={row}
-      section={section ? <IslandParts>{section}</IslandParts> : undefined}
+      row={<NotesRow {...notes} isHovered={isHovered} />}
+      section={notesSection(notes)}
     />
   );
 }

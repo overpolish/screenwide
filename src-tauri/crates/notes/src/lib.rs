@@ -18,5 +18,5 @@ mod speakers;
 
 pub use document::Document;
 pub use screenwide_speech::runner::notes::{NoteLine, NoteSource, NotesModels, SpeakerTurn};
-pub use session::{Session, Setup};
+pub use session::{Failure, Session, Setup};
 pub use speakers::Who;

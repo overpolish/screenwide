@@ -9,7 +9,6 @@ import { useAnnotateDrawing } from "../annotate/island/use-annotate-drawing";
 import { useAnnotateEditing } from "../annotate/island/use-annotate-editing";
 import { DictationIsland } from "../dictation/island/dictation-island";
 import { useDictationIsland } from "../dictation/island/use-dictation-island";
-import { NotesIsland } from "../notes/island/notes-island";
 import { useNotesIsland } from "../notes/island/use-notes-island";
 import { RecordingIslandControls } from "../recording-controls/island/recording-island-controls";
 import { selectStatus, useRecordingStore } from "../recording-controls/store";
@@ -42,7 +41,9 @@ import type { IslandHost } from "./island-window";
  * taken over comes back; Text Recognition's or the Ruler's tools while
  * either is up, even during a recording, as neither can be used without
  * them; notes while they are taken, saved or fail, as the call goes on under
- * the other tools; the annotate tools on their own island while the overlay
+ * the other tools, on the recording's island, which reshapes into them from
+ * the controls as it does into a recording; the annotate tools on their own
+ * island while the overlay
  * draws with no recording under way; a new version while one is offered,
  * which comes out only while the island is free; and otherwise the
  * recording's, with the annotate tools under its row while the overlay
@@ -75,6 +76,17 @@ export function IslandContent({ island }: { island: IslandHost }) {
   if (screenshotPart && screenshotPart !== lastScreenshotPart)
     setLastScreenshotPart(screenshotPart);
   const showsCopied = (screenshotPart ?? lastScreenshotPart) === "copied";
+  // Notes that end leave on the island as it tucks away, rather than the
+  // controls taking their place on the way out. Out again without them, or
+  // with a recording under way, the island shows what it holds instead.
+  const [hasNotes, setHasNotes] = useState(false);
+  if (notes.isUp && !hasNotes) setHasNotes(true);
+  if (!notes.isUp && hasNotes && (island.isShown || status !== "idle"))
+    setHasNotes(false);
+  const shownNotes =
+    hasNotes && notes.state
+      ? { onAction: notes.onAction, state: notes.state }
+      : null;
   const swap = useIslandSwap(
     scrolling.isUp
       ? "scrollingCapture"
@@ -88,8 +100,8 @@ export function IslandContent({ island }: { island: IslandHost }) {
               ? "textRecognition"
               : ruler.isUp
                 ? "ruler"
-                : notes.isUp
-                  ? "notes"
+                : shownNotes
+                  ? "recording"
                   : status !== "idle"
                     ? "recording"
                     : annotate
@@ -105,7 +117,10 @@ export function IslandContent({ island }: { island: IslandHost }) {
   const sayer =
     swap.kind === "quickScreenshot" ||
     swap.kind === "textRecognition" ||
-    (swap.kind === "recording" && status === "idle" && !annotate);
+    (swap.kind === "recording" &&
+      status === "idle" &&
+      !annotate &&
+      !shownNotes);
   const announcement = useSystemKeysAnnouncement(sayer && swap.host.isShown);
   // Quick Screenshot's row is one long title and a lone close, so its note
   // hangs as a section under the title rather than centred under the notch.
@@ -182,15 +197,6 @@ export function IslandContent({ island }: { island: IslandHost }) {
       />
     );
   }
-  if (swap.kind === "notes" && notes.state) {
-    return (
-      <NotesIsland
-        {...swap.host}
-        onAction={notes.onAction}
-        state={notes.state}
-      />
-    );
-  }
   if (swap.kind === "ruler" && ruler.parts) {
     return <RulerIsland {...ruler.parts} {...swap.host} />;
   }
@@ -210,6 +216,7 @@ export function IslandContent({ island }: { island: IslandHost }) {
       annotate={rows ?? undefined}
       island={host}
       note={note}
+      notes={shownNotes ?? undefined}
     />
   );
 }

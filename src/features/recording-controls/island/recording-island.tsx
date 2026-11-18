@@ -9,6 +9,8 @@ import { Button } from "../../../primitives/button/button";
 import { Island } from "../../../primitives/island/island";
 import { IslandParts } from "../../../primitives/island/island-parts";
 import { IslandRow } from "../../../primitives/island/island-row";
+import { NotesRow } from "../../notes/island/notes-island";
+import { notesSection } from "../../notes/island/notes-section";
 
 import { Countdown, Finishing, Starting } from "./island-live";
 import { PanelBody } from "./island-panel-body";
@@ -61,17 +63,48 @@ function NoticeLine({ notice }: { notice: IslandWarning }) {
 export function RecordingIsland(props: RecordingIslandProps) {
   const { initialPanel = "source", isShown = true, notch, phase } = props;
   const [panel, setPanel] = useState<IslandPanel>(initialPanel);
-  // Each time it comes out, it opens on what it will record again.
+  const [isHovered, setIsHovered] = useState(false);
+  // A pointer already resting where the island comes out, or where it turns
+  // into the notes from the controls, is told as coming onto it. The notes
+  // open collapsed all the same: their controls wait for the pointer to
+  // move on the island, or to leave it and come back.
+  const [isHoverHeld, setIsHoverHeld] = useState(false);
+  useEffect(() => {
+    if (!isHoverHeld) return;
+    // The window takes the pointer only over the island.
+    const onMove = (event: PointerEvent) => {
+      if (event.movementX !== 0 || event.movementY !== 0) setIsHoverHeld(false);
+    };
+    window.addEventListener("pointermove", onMove);
+    return () => {
+      window.removeEventListener("pointermove", onMove);
+    };
+  }, [isHoverHeld]);
+  // Each time it comes out, it opens on what it will record again, with
+  // nothing under the pointer: a pointer on it as it tucked away is never
+  // told leaving. The notes' row starts afresh too (`outings` keys it), so
+  // what was focused on it last time does not open its controls.
+  const [outings, setOutings] = useState(0);
   const [wasShown, setWasShown] = useState(isShown);
   if (isShown !== wasShown) {
     setWasShown(isShown);
-    if (isShown) setPanel(initialPanel);
+    if (isShown) {
+      setPanel(initialPanel);
+      setIsHovered(false);
+      setIsHoverHeld(true);
+      setOutings(outings + 1);
+    }
   }
   const { onPanelChange } = props;
   useEffect(() => {
     onPanelChange?.(panel);
   }, [onPanelChange, panel]);
-  const [isHovered, setIsHovered] = useState(false);
+  const hasNotes = props.notes !== undefined;
+  const [hadNotes, setHadNotes] = useState(hasNotes);
+  if (hasNotes !== hadNotes) {
+    setHadNotes(hasNotes);
+    if (hasNotes) setIsHoverHeld(true);
+  }
   // Pressing what is open steps back to the source.
   const toggle = (next: IslandPanel) => {
     setPanel((current) => (current === next ? "source" : next));
@@ -113,7 +146,16 @@ export function RecordingIsland(props: RecordingIslandProps) {
   let section: ReactNode = null;
   let below: ReactNode = null;
   let anchor: IslandAnchor = "center";
-  if (phase === "idle") {
+  if (props.notes) {
+    row = (
+      <NotesRow
+        key={outings}
+        {...props.notes}
+        isHovered={isHovered && !isHoverHeld}
+      />
+    );
+    section = notesSection(props.notes);
+  } else if (phase === "idle") {
     row = (
       <RestingRow
         onToggleInput={toggleInput}
@@ -183,12 +225,17 @@ export function RecordingIsland(props: RecordingIslandProps) {
   return (
     <Island
       anchor={anchor}
-      aria-label={t("recording-controls-island")}
+      aria-label={
+        props.notes ? t("notes-island") : t("recording-controls-island")
+      }
       below={below}
       isShown={isShown}
       notch={notch}
       onHidden={props.onHidden}
-      onHoverChange={setIsHovered}
+      onHoverChange={(hovered) => {
+        setIsHovered(hovered);
+        if (!hovered) setIsHoverHeld(false);
+      }}
       onShapeChange={props.onShapeChange}
       row={row}
       section={section}

@@ -8,6 +8,7 @@ import type {
   IslandNotch,
 } from "../../../primitives/island/island-geometry";
 import type { IslandPart } from "../../../primitives/island/island-outline-sync";
+import type { NotesParts } from "../../notes/island/notes-island";
 import type { ScreenshotAction, ScreenshotState } from "../types";
 
 // What the island shows, handed to it whole: it keeps only which part is
@@ -137,6 +138,10 @@ export type RecordingIslandProps = {
   /** A hint under the row before recording, such as which keys now open
    * the island. */
   note?: ReactNode;
+  /** Meeting notes while they are on the island. Their row and what hangs
+   * under it take the island's place of whatever the recording shows, so
+   * the controls reshape into the notes as they do into a recording. */
+  notes?: NotesParts;
   onCameraFlipChange?: (isFlipped: boolean) => void;
   onCancelCountdown?: () => void;
   onCancelStarting?: () => void;
