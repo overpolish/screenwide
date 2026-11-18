@@ -11,11 +11,13 @@
 //! text is pasted where the caret is (`screenwide_paste`).
 //!
 //! Dictation's helper is kept for a few minutes after each dictation, with
-//! its model loaded, so the next one starts at once.
+//! its model loaded, so the next one starts at once (`kept`); until it has
+//! loaded, the island says so.
 
 mod corrections;
 mod front;
 pub(crate) mod island;
+mod kept;
 mod put_in;
 mod setup;
 mod taught;
@@ -23,20 +25,18 @@ mod taught;
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 use std::time::{Duration, Instant};
 
-use screenwide_dictation::{shape, DictatedText, Ended, Event, Session};
-use screenwide_speech::runner::Transcriber;
+use screenwide_dictation::{shape, DictatedText, Ended, Event, Helper, Session};
 use tauri::AppHandle;
 
 use self::corrections::Corrections;
 use self::front::Front;
 use self::island::{DictationIslandState, DictationProblem};
+use self::kept::keep_helper;
 use self::setup::Spoken;
 
 /// A press held at least this long is a hold, and letting go stops
 /// listening; a shorter one is a tap, and listening goes on.
 const HOLD: Duration = Duration::from_millis(350);
-/// How long dictation's helper is kept after a dictation.
-const KEEP_HELPER: Duration = Duration::from_secs(180);
 /// The least time the island says it is typing before it goes or says how
 /// the paste went: long enough for its row to change over (`leave`, then
 /// `arrive`, in `island-motion.ts`). A paste can land at once, and the island
@@ -48,7 +48,7 @@ struct Dictation {
   listening: Option<Listening>,
   /// Between stopping and the paste finishing.
   finishing: bool,
-  helper: Option<Transcriber>,
+  helper: Option<Helper>,
   /// Which dictation last used the helper, for the timer that ends it.
   used: u64,
   /// The microphone chosen on the recording island, by id; the system's
@@ -126,8 +126,20 @@ pub(crate) fn pressed(app: &AppHandle) {
   let corrections = cleanup.map(|model| Corrections::start(app, model));
   let heard_corrections = corrections.clone();
   taught::reset();
+  let helper = with(|dictation| dictation.helper.take());
+  let loading = Session::loads(&setup, helper.as_ref());
+  // Told before the session starts, so its readiness is told after.
+  island::tell(
+    app,
+    DictationIslandState::Listening {
+      settled: String::new(),
+      unsettled: String::new(),
+      taught: Vec::new(),
+      at_pauses: spoken.at_pauses,
+      loading,
+    },
+  );
   with(|dictation| {
-    let helper = dictation.helper.take();
     dictation.used += 1;
     dictation.listening = Some(Listening {
       session: Session::start(setup, helper, move |event| match event {
@@ -135,6 +147,15 @@ pub(crate) fn pressed(app: &AppHandle) {
           island::level(&events, decibels);
           front::follow(&events);
         }
+        Event::Ready if loading && is_listening() => {
+          heard_so_far(
+            &events,
+            &DictatedText::default(),
+            spoken,
+            heard_corrections.as_deref(),
+          );
+        }
+        Event::Ready => {}
         // Words still arriving as listening stops would show over the
         // island's Finishing.
         Event::Heard(heard) if is_listening() => {
@@ -153,15 +174,6 @@ pub(crate) fn pressed(app: &AppHandle) {
       corrections,
     });
   });
-  island::tell(
-    app,
-    DictationIslandState::Listening {
-      settled: String::new(),
-      unsettled: String::new(),
-      taught: Vec::new(),
-      at_pauses: spoken.at_pauses,
-    },
-  );
   sync_escape(app);
 }
 
@@ -179,6 +191,7 @@ fn heard_so_far(
     settled: shaped.settled,
     unsettled: shaped.unsettled,
     at_pauses: spoken.at_pauses,
+    loading: false,
   };
   let state = match corrections {
     Some(corrections) => corrections.heard(heard, state),
@@ -271,24 +284,6 @@ fn problem(app: &AppHandle) -> Option<DictationProblem> {
     return Some(DictationProblem::NoAccessibility);
   }
   None
-}
-
-/// Keeps the helper for the next dictation, and ends it once none has come
-/// for `KEEP_HELPER`, so its model's memory is given back.
-fn keep_helper(helper: Option<Transcriber>) {
-  let used = with(|dictation| {
-    dictation.helper = helper;
-    dictation.used
-  });
-  std::thread::spawn(move || {
-    std::thread::sleep(KEEP_HELPER);
-    let idle = with(|dictation| {
-      (dictation.used == used && dictation.listening.is_none())
-        .then(|| dictation.helper.take())
-        .flatten()
-    });
-    drop(idle);
-  });
 }
 
 fn sync_escape(app: &AppHandle) {

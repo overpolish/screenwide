@@ -216,6 +216,7 @@ export function dictationFrame(
   const step = reached.length > 0 ? reached[reached.length - 1] : steps[0];
   return {
     atPauses: false,
+    loading: false,
     phase: "listening",
     settled: step.settled,
     taught: step.taught ?? [],

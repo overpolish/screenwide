@@ -12,6 +12,8 @@ dictation-island-listening = Listening
 dictation-island-hint = Speak, and the words go where your cursor is. { $key } finishes.
 # Before any words are heard, in a language whose text is written at each pause rather than as it is spoken. { $key } is the Escape key, drawn as a keycap.
 dictation-island-hint-at-pauses = Speak, and the text appears each time you pause. { $key } finishes.
+# Under the row while the speech model loads, the first time dictation is used for a while. What is said meanwhile is kept and appears once it has loaded.
+dictation-island-loading-model = Loading model
 # Stops listening and types what was heard.
 dictation-island-done = Done
 dictation-island-cancel = Cancel dictation

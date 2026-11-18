@@ -30,10 +30,9 @@ const EVENT: &str = "text-recognition://island";
 #[ts(export)]
 pub enum TextRecognitionIslandState {
   /// An area is being drawn; `failed` once reading the last one failed.
-  Choosing {
-    failed: bool,
-  },
-  Reading,
+  Choosing { failed: bool },
+  /// An area is being read; `loading` while the models that read it load.
+  Reading { loading: bool },
   /// What reading found, and whether any of the text is selected.
   Ready {
     lines: u32,
@@ -114,11 +113,41 @@ pub(super) fn stand_over(app: &AppHandle, overlay: &tauri::WebviewWindow) {
 /// An area was drawn, in the anchor display's points: the island hangs by it
 /// while it is read, on the display that holds most of it.
 pub(super) fn reading(app: &AppHandle, binding: &DesktopBinding, region: Rect) {
-  tell(app, Some(TextRecognitionIslandState::Reading));
+  tell(
+    app,
+    Some(TextRecognitionIslandState::Reading {
+      loading: model_loading(),
+    }),
+  );
   let Some((display, rect)) = local_box(binding, region) else {
     return;
   };
   place(app, IslandPlacement::ByBox { display, rect });
+}
+
+/// Whether the models that read text are still loading, which a read then
+/// waits for.
+fn model_loading() -> bool {
+  #[cfg(target_os = "windows")]
+  return super::windows::reader::is_loading();
+  #[cfg(target_os = "macos")]
+  return super::macos::warm_up::is_running();
+  #[cfg(not(any(target_os = "macos", target_os = "windows")))]
+  false
+}
+
+/// The models that read text have loaded: a read waiting for them goes on.
+pub(super) fn model_loaded(app: &AppHandle) {
+  let waiting = matches!(
+    *shown(),
+    Some(TextRecognitionIslandState::Reading { loading: true })
+  );
+  if waiting {
+    tell(
+      app,
+      Some(TextRecognitionIslandState::Reading { loading: false }),
+    );
+  }
 }
 
 /// The part of `region`, in the anchor display's points, on the display that

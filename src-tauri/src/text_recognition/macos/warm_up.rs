@@ -14,6 +14,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 
 use screenwide_compositor::platform::type_device::TypeDevice;
 use screenwide_text::engine::face::TypeFace;
+use tauri::AppHandle;
 
 /// One line in each script Vision reads with a network of its own: Latin
 /// (which also covers Cyrillic), Devanagari, Arabic, Chinese (which also
@@ -31,24 +32,37 @@ const SIZE: f64 = 32.0;
 const LINE_HEIGHT: f64 = 56.0;
 const CELL: (u32, u32) = (360, LINES.len() as u32 * LINE_HEIGHT as u32 + 16);
 
+/// Whether the warm-up is under way, which a read waits on.
+static RUNNING: AtomicBool = AtomicBool::new(false);
+
 /// Warms Vision once per process on a thread of its own, at the utility class:
 /// nobody waits on it, and a read someone does wait on outranks it.
-pub(in crate::text_recognition) fn start() {
+pub(in crate::text_recognition) fn start(app: &AppHandle) {
   static STARTED: AtomicBool = AtomicBool::new(false);
   if STARTED.swap(true, Ordering::AcqRel) {
     return;
   }
+  RUNNING.store(true, Ordering::Release);
+  let app = app.clone();
   let spawned = std::thread::Builder::new()
     .name("text-recognition-warm-up".to_owned())
-    .spawn(|| {
+    .spawn(move || {
       let _urgency = crate::user_work::ThreadUrgency::ahead();
       if let Err(error) = read_once() {
         eprintln!("Could not prepare Text Recognition: {error}");
       }
+      RUNNING.store(false, Ordering::Release);
+      super::super::island::model_loaded(&app);
     });
   if let Err(error) = spawned {
+    RUNNING.store(false, Ordering::Release);
     eprintln!("Could not start preparing Text Recognition: {error}");
   }
+}
+
+/// Whether Vision's readers are still being prepared.
+pub(in crate::text_recognition) fn is_running() -> bool {
+  RUNNING.load(Ordering::Acquire)
 }
 
 fn read_once() -> Result<(), String> {

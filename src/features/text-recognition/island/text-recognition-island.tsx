@@ -19,6 +19,7 @@ import { IslandParts } from "../../../primitives/island/island-parts";
 import { type IslandProps } from "../../../primitives/island/island-props";
 import { IslandRow } from "../../../primitives/island/island-row";
 import { IslandRowTitle } from "../../../primitives/island/row-title/island-row-title";
+import { IslandWorkLine } from "../../editor/island/island-work-line";
 
 import { type QrCodeFailure, QrCodeRow, QrCodeSection } from "./qr-code-island";
 
@@ -27,9 +28,10 @@ import type { TextRecognitionIslandState } from "../../../bindings/TextRecogniti
 
 // Text Recognition on the island. While an area is drawn it sits at the top
 // of the screen and says what to do; once one is drawn it hangs by it, a
-// spinner while it is read, then what can be done with what was found, or
-// what a QR code pressed in it holds. Each phase is its own row, revealed as
-// the black changes shape round it.
+// spinner while it is read, with a line under it while the models that read
+// it still load, then what can be done with what was found, or what a QR
+// code pressed in it holds. Each phase is its own row, revealed as the black
+// changes shape round it.
 
 export type TextRecognitionIslandProps = Pick<
   IslandProps,
@@ -276,6 +278,14 @@ export function TextRecognitionIsland({
               decodeError={qr.decodeError}
               failure={failure}
               key={qr.content}
+            />
+          </IslandParts>
+        ) : state.phase === "reading" && state.loading ? (
+          <IslandParts>
+            <IslandWorkLine
+              key="loading"
+              label={t("text-recognition-island-loading-model")}
+              value={null}
             />
           </IslandParts>
         ) : undefined

@@ -126,7 +126,7 @@ pub fn initialize(app: &AppHandle) {
   let enabled = runtime.settings.enabled;
   *RUNTIME.write().unwrap_or_else(|error| error.into_inner()) = runtime;
   if enabled {
-    prepare();
+    prepare(app);
   }
 }
 
@@ -160,7 +160,7 @@ pub fn set_ocr_settings(app: AppHandle, settings: OcrSettings) -> Result<OcrSett
     return Err(error);
   }
   if settings.enabled {
-    prepare();
+    prepare(&app);
   } else {
     super::dismiss(&app);
   }
@@ -171,9 +171,11 @@ pub fn set_ocr_settings(app: AppHandle, settings: OcrSettings) -> Result<OcrSett
 
 /// Has the recogniser ready before Text Recognition is first used, where the
 /// platform's takes a while to load.
-fn prepare() {
+fn prepare(app: &AppHandle) {
   #[cfg(target_os = "macos")]
-  super::macos::warm_up::start();
+  super::macos::warm_up::start(app);
+  #[cfg(not(target_os = "macos"))]
+  let _ = app;
 }
 
 pub(crate) fn key_phase(key: u16, modifiers: u32, mac: bool, repeat: bool) -> Option<u32> {

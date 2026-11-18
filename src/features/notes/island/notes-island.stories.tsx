@@ -27,7 +27,7 @@ const meta = {
     isShown: true,
     now: NOW,
     onAction: fn(),
-    state: { phase: "taking", startedMs: STARTED_MS },
+    state: { loading: false, phase: "taking", startedMs: STARTED_MS },
   },
   component: NotesIsland,
   decorators: [
@@ -63,6 +63,10 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const Taking: Story = {};
+
+export const LoadingModel: Story = {
+  args: { state: { loading: true, phase: "taking", startedMs: STARTED_MS } },
+};
 
 export const Finishing: Story = { args: { state: { phase: "finishing" } } };
 

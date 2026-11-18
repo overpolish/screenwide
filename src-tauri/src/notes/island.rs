@@ -24,11 +24,14 @@ const EVENT: &str = "notes://island";
 #[serde(tag = "phase", rename_all = "camelCase")]
 #[ts(export)]
 pub enum NotesIslandState {
-  /// Listening since `startedMs` (milliseconds since the Unix epoch).
+  /// Listening since `startedMs` (milliseconds since the Unix epoch);
+  /// `loading` while the models load, what is heard meanwhile waiting for
+  /// them.
   Taking {
     #[serde(rename = "startedMs")]
     #[ts(type = "number")]
     started_ms: u64,
+    loading: bool,
   },
   /// Stopped: the last lines are written and the speakers told apart.
   Finishing,
@@ -121,6 +124,24 @@ pub(super) fn withdraw(app: &AppHandle) {
     EVENT,
     None::<NotesIslandState>,
   );
+}
+
+/// The notes' models have loaded: the island stops saying they are loading.
+pub(super) fn loaded(app: &AppHandle) {
+  let shown = SHOWN.lock().unwrap_or_else(PoisonError::into_inner).clone();
+  if let Some(NotesIslandState::Taking {
+    started_ms,
+    loading: true,
+  }) = shown
+  {
+    tell(
+      app,
+      NotesIslandState::Taking {
+        started_ms,
+        loading: false,
+      },
+    );
+  }
 }
 
 /// Shows `state` for a moment, unless something else is shown first.

@@ -61,12 +61,14 @@ pub struct Session {
 }
 
 impl Session {
-  /// Starts taking notes as `setup` says, telling `on_failure` why if they
-  /// stop on their own. Listening begins before this returns; dictation's
-  /// helper starts and loads its models afterwards, on the notes' own
-  /// thread, which takes seconds, and what is heard meanwhile waits for it.
+  /// Starts taking notes as `setup` says, telling `on_ready` once the
+  /// models have loaded and `on_failure` why if they stop on their own.
+  /// Listening begins before this returns; dictation's helper starts and
+  /// loads its models afterwards, on the notes' own thread, which takes
+  /// seconds, and what is heard meanwhile waits for it.
   pub fn start(
     setup: Setup,
+    on_ready: impl FnOnce() + Send + 'static,
     on_failure: impl FnOnce(Failure) + Send + 'static,
   ) -> Result<Self, String> {
     let Setup {
@@ -90,6 +92,7 @@ impl Session {
             return Err(error);
           }
         };
+        on_ready();
         let taken = take(&mut helper, &runs, &stops, (path, title));
         if let Err(error) = &taken {
           on_failure(Failure::Taking(error.clone()));

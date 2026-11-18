@@ -142,20 +142,36 @@ fn start(app: &AppHandle, options: StartNotesOptions) -> Result<(), NotesProblem
     path: notes.clone(),
     title,
   };
-  // The island goes up once listening has begun, before the models have
-  // loaded. A failure to load them can arrive first, so it waits for the
-  // island to say the notes are being taken before saying they failed.
+  // The island goes up once listening has begun, saying the models load.
+  // Their loading, or failing to, can end first, so either waits for the
+  // island to say the notes are being taken before it is told.
   let (told, wait_told) = std::sync::mpsc::channel::<()>();
+  let wait_told = Arc::new(Mutex::new(wait_told));
+  let wait_ready = Arc::clone(&wait_told);
+  let ready = app.clone();
   let (failing, file, root) = (app.clone(), project.file.clone(), project.root.clone());
   let started_ms = now_ms();
-  let session = Session::start(setup, move |failure| match failure {
-    Failure::Readying(error) => {
-      eprintln!("Could not ready the notes: {error}");
-      let _ = wait_told.recv();
-      not_started(&failing, file, root);
-    }
-    Failure::Taking(error) => eprintln!("Taking notes failed: {error}"),
-  })
+  let session = Session::start(
+    setup,
+    move || {
+      let _ = wait_ready
+        .lock()
+        .unwrap_or_else(PoisonError::into_inner)
+        .recv();
+      island::loaded(&ready);
+    },
+    move |failure| match failure {
+      Failure::Readying(error) => {
+        eprintln!("Could not ready the notes: {error}");
+        let _ = wait_told
+          .lock()
+          .unwrap_or_else(PoisonError::into_inner)
+          .recv();
+        not_started(&failing, file, root);
+      }
+      Failure::Taking(error) => eprintln!("Taking notes failed: {error}"),
+    },
+  )
   .map_err(|error| {
     project.remove();
     failed(error)
@@ -172,7 +188,13 @@ fn start(app: &AppHandle, options: StartNotesOptions) -> Result<(), NotesProblem
   if let Err(error) = crate::app_windows::close_recording_controls(app) {
     eprintln!("Could not put the recording controls away for notes: {error}");
   }
-  island::tell(app, NotesIslandState::Taking { started_ms });
+  island::tell(
+    app,
+    NotesIslandState::Taking {
+      started_ms,
+      loading: true,
+    },
+  );
   let _ = told.send(());
   Ok(())
 }

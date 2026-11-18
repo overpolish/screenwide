@@ -6,7 +6,8 @@
 //! to the helper in short steps until the dictation is finished or
 //! cancelled.
 
-use std::path::PathBuf;
+mod setup;
+
 use std::sync::mpsc::{self, Receiver, RecvTimeoutError, Sender};
 use std::sync::Arc;
 use std::thread::JoinHandle;
@@ -16,6 +17,8 @@ use screenwide_capture::microphone::{Buffer, Source};
 use screenwide_speech::resample::ToSpeech;
 use screenwide_speech::runner::dictation::DictatedText;
 use screenwide_speech::runner::Transcriber;
+
+pub use self::setup::{AtPauses, Helper, Setup};
 
 /// How much speech is gathered before the helper hears it: 80 ms, the
 /// model's own step, so words follow the voice without the helper being
@@ -31,6 +34,9 @@ const WAIT: Duration = Duration::from_millis(15);
 pub enum Event {
   /// How loud the microphone is, in decibels, about 30 times a second.
   Level(f32),
+  /// The helper has its models loaded and hears what is said, everything
+  /// said since listening began included.
+  Ready,
   /// The text heard so far, whenever it changes.
   Heard(DictatedText),
   /// Listening cannot go on: the microphone, the helper or its model failed.
@@ -43,7 +49,7 @@ pub enum Event {
 /// the next dictation, while it is still sound.
 pub struct Ended {
   pub heard: Result<DictatedText, String>,
-  pub helper: Option<Transcriber>,
+  pub helper: Option<Helper>,
 }
 
 enum Stop {
@@ -61,39 +67,18 @@ pub struct Session {
   worker: JoinHandle<Ended>,
 }
 
-/// What a dictation listens with.
-pub struct Setup {
-  /// The model's file.
-  pub model: PathBuf,
-  /// The microphone's id, or none for the system's default, which also
-  /// stands in for one that is gone.
-  pub microphone: Option<String>,
-  /// Names and terms to write where the audio fits them better than what
-  /// was heard.
-  pub words: Vec<String>,
-  /// How words are written at each pause: by a model that does not stream,
-  /// or again after the streaming model.
-  pub at_pauses: Option<AtPauses>,
-}
-
-/// How a dictation is written at each pause.
-pub struct AtPauses {
-  /// The voice activity model's file, which finds the pauses.
-  pub vad: PathBuf,
-  /// A language code such as `fr`, or none to detect it.
-  pub language: Option<String>,
-  /// The file of the model that writes each stretch again, the setup's
-  /// model streaming the words as they are spoken until it has; none for
-  /// the setup's model to write each stretch itself.
-  pub rewriter: Option<PathBuf>,
-}
-
 impl Session {
+  /// Whether a dictation as `setup` says has its models to load first: on
+  /// a new helper, or one that has others loaded.
+  pub fn loads(setup: &Setup, helper: Option<&Helper>) -> bool {
+    helper.is_none_or(|helper| helper.loaded != setup.files())
+  }
+
   /// Starts listening as `setup` says, on `helper` if one is kept from an
   /// earlier dictation, telling `on_event` as it goes.
   pub fn start(
     setup: Setup,
-    helper: Option<Transcriber>,
+    helper: Option<Helper>,
     on_event: impl Fn(Event) + Send + 'static,
   ) -> Self {
     let (stop, stops) = mpsc::channel();
@@ -136,13 +121,8 @@ impl Session {
 }
 
 fn listen(
-  Setup {
-    model,
-    microphone,
-    words,
-    at_pauses,
-  }: Setup,
-  helper: Option<Transcriber>,
+  setup: Setup,
+  kept: Option<Helper>,
   stops: &Receiver<Stop>,
   on_event: &dyn Fn(Event),
 ) -> Ended {
@@ -150,6 +130,13 @@ fn listen(
     heard: Err(error),
     helper,
   };
+  let loaded = setup.files();
+  let Setup {
+    model,
+    microphone,
+    words,
+    at_pauses,
+  } = setup;
   let (sender, heard) = mpsc::channel();
   // A microphone chosen and since unplugged gives way to the default, as
   // one not chosen does.
@@ -159,7 +146,7 @@ fn listen(
     .map_or_else(|| Source::resolve_or_default(None), Ok)
   {
     Ok(source) => source,
-    Err(error) => return failed(format!("Could not open the microphone: {error}"), helper),
+    Err(error) => return failed(format!("Could not open the microphone: {error}"), kept),
   };
   let format = microphone.format();
   let samples = sender.clone();
@@ -172,9 +159,10 @@ fn listen(
     }),
   ) {
     Ok(stream) => stream,
-    Err(error) => return failed(format!("Could not open the microphone: {error}"), helper),
+    Err(error) => return failed(format!("Could not open the microphone: {error}"), kept),
   };
-  let mut helper = match helper.map_or_else(Transcriber::start_dictation, Ok) {
+  let started = kept.map_or_else(Transcriber::start_dictation, |kept| Ok(kept.transcriber));
+  let mut helper = match started {
     Ok(helper) => helper,
     Err(error) => return failed(error, None),
   };
@@ -194,6 +182,13 @@ fn listen(
   if let Err(error) = begun {
     return failed(error, None);
   }
+  on_event(Event::Ready);
+  let kept = |transcriber| {
+    Some(Helper {
+      transcriber,
+      loaded: loaded.clone(),
+    })
+  };
 
   let mut to_speech = ToSpeech::new(format.channels, format.sample_rate);
   let mut pending = Vec::new();
@@ -207,7 +202,7 @@ fn listen(
       Err(RecvTimeoutError::Disconnected) => Some(Stop::Cancel),
     };
     if let Err(error) = take(&heard, &mut to_speech, &mut pending, &mut peak) {
-      return failed(error, Some(helper));
+      return failed(error, kept(helper));
     }
     if told_level.elapsed() >= LEVEL_EVERY {
       on_event(Event::Level(20.0 * peak.max(1e-8).log10()));
@@ -240,11 +235,11 @@ fn listen(
   match helper.finish_dictation() {
     Ok(_) if matches!(stop, Stop::Cancel) => Ended {
       heard: Ok(DictatedText::default()),
-      helper: Some(helper),
+      helper: kept(helper),
     },
     Ok(heard) => Ended {
       heard: Ok(heard),
-      helper: Some(helper),
+      helper: kept(helper),
     },
     Err(error) => failed(error, None),
   }

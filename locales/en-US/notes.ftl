@@ -15,6 +15,8 @@ notes-island-done = Done
 # Stops the notes and throws them away, to Recently Deleted.
 notes-island-discard = Discard notes
 notes-island-confirm-discard = Confirm discarding
+# Under the row while the speech models load as notes start. What is said meanwhile is kept and written once they have loaded.
+notes-island-loading-model = Loading model
 # Shown while the last lines are written and the voices told apart.
 notes-island-finishing = Telling the speakers apart
 notes-island-saved = Notes saved

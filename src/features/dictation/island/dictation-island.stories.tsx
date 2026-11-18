@@ -26,6 +26,7 @@ const meta = {
     onAction: fn(),
     state: {
       atPauses: false,
+      loading: false,
       phase: "listening",
       settled: "",
       taught: [],
@@ -67,10 +68,24 @@ type Story = StoryObj<typeof meta>;
 
 export const Listening: Story = {};
 
+export const LoadingModel: Story = {
+  args: {
+    state: {
+      atPauses: false,
+      loading: true,
+      phase: "listening",
+      settled: "",
+      taught: [],
+      unsettled: "",
+    },
+  },
+};
+
 export const ListeningAtPauses: Story = {
   args: {
     state: {
       atPauses: true,
+      loading: false,
       phase: "listening",
       settled: "",
       taught: [],
@@ -83,6 +98,7 @@ export const Hearing: Story = {
   args: {
     state: {
       atPauses: false,
+      loading: false,
       phase: "listening",
       settled: "Hi Sarah, can you send me the quarterly numbers?\n\n",
       taught: [],
@@ -95,6 +111,7 @@ export const AddingAWord: Story = {
   args: {
     state: {
       atPauses: false,
+      loading: false,
       phase: "listening",
       settled: "I recorded the demo with Screenwide.",
       taught: [{ outcome: "added", word: "Screenwide" }],

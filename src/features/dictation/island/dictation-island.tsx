@@ -18,6 +18,7 @@ import { type IslandProps } from "../../../primitives/island/island-props";
 import { IslandRow } from "../../../primitives/island/island-row";
 import { IslandRowTitle } from "../../../primitives/island/row-title/island-row-title";
 import { Text } from "../../../primitives/text/text";
+import { IslandWorkLine } from "../../editor/island/island-work-line";
 import { LevelFill } from "../../recording-controls/island/island-glyphs";
 
 import {
@@ -33,10 +34,10 @@ import type { DictationWordChange } from "../../../bindings/DictationWordChange"
 // Dictation on the island, at the top of the screen. Listening, its row
 // names it beside the microphone's glyph, which fills with its level, with
 // Cancel and Done at its end; the words hang under it as they are heard, the
-// ones still being heard dimmer, and before any a hint says how to cancel.
-// Done, the row says the words are going in, and the words stay as they
-// were. A problem says why under the row, with Settings where it is put
-// right.
+// ones still being heard dimmer, and before any a hint says how to cancel,
+// under a line saying the model is loading while it is. Done, the row says
+// the words are going in, and the words stay as they were. A problem says
+// why under the row, with Settings where it is put right.
 
 /** The width the words wrap at, so the island does not grow word by word. */
 const WORDS_WIDTH = "w-96";
@@ -238,13 +239,23 @@ export function DictationIsland({
         <TaughtWords taught={taught} />
       </div>
     ) : state.phase === "listening" || words.settled || words.unsettled ? (
-      <div className="flex flex-col gap-inline" key="words">
+      <IslandParts className="flex flex-col gap-inline" key="words">
+        {state.phase === "listening" && state.loading ? (
+          <IslandWorkLine
+            key="loading"
+            label={t("dictation-island-loading-model")}
+            value={null}
+          />
+        ) : null}
         <HeardWords
           atPauses={state.phase === "listening" && state.atPauses}
+          key="heard"
           words={words}
         />
-        {taught.length > 0 ? <TaughtWords taught={taught} /> : null}
-      </div>
+        {taught.length > 0 ? (
+          <TaughtWords key="taught" taught={taught} />
+        ) : null}
+      </IslandParts>
     ) : null;
 
   return (

@@ -16,4 +16,4 @@ mod session;
 
 pub use commands::{paused, phrases, shape, Does, Phrases, Shaped, WordChange};
 pub use screenwide_speech::runner::dictation::DictatedText;
-pub use session::{AtPauses, Ended, Event, Session, Setup};
+pub use session::{AtPauses, Ended, Event, Helper, Session, Setup};

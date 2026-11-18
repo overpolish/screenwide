@@ -32,14 +32,16 @@ const LEVEL_EVENT: &str = "dictation://level";
 pub enum DictationIslandState {
   /// Listening: the text so far, its commands carried out, `settled` no
   /// longer changing and `unsettled` still being heard; the words this
-  /// dictation has added to or removed from the word list; and whether the
-  /// text comes at each pause rather than as it is spoken.
+  /// dictation has added to or removed from the word list; whether the text
+  /// comes at each pause rather than as it is spoken; and whether the model
+  /// is still loading, while what is said waits to be heard.
   Listening {
     settled: String,
     unsettled: String,
     taught: Vec<DictationWordChange>,
     #[serde(rename = "atPauses")]
     at_pauses: bool,
+    loading: bool,
   },
   /// Stopped: the last words are being heard and pasted.
   Finishing,

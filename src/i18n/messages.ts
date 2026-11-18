@@ -174,6 +174,7 @@ export type Messages = {
   "dictation-island-hint": { key: string | number };
   "dictation-island-hint-at-pauses": { key: string | number };
   "dictation-island-listening": null;
+  "dictation-island-loading-model": null;
   "dictation-island-no-accessibility": null;
   "dictation-island-no-microphone": null;
   "dictation-island-no-model": null;
@@ -875,6 +876,7 @@ export type Messages = {
   "notes-island-elapsed": { time: string | number };
   "notes-island-failed": null;
   "notes-island-finishing": null;
+  "notes-island-loading-model": null;
   "notes-island-no-microphone": null;
   "notes-island-no-model": null;
   "notes-island-no-system-audio": null;
@@ -1626,6 +1628,7 @@ export type Messages = {
   "text-recognition-island-copy-all": null;
   "text-recognition-island-copy-paragraph": null;
   "text-recognition-island-failed": null;
+  "text-recognition-island-loading-model": null;
   "text-recognition-island-nothing-found": null;
   "text-recognition-island-qr-back": null;
   "text-recognition-island-qr-content": null;

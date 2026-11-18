@@ -67,6 +67,7 @@ pub(in crate::text_recognition) fn warm(app: &AppHandle) {
     .lock()
     .unwrap_or_else(PoisonError::into_inner)
     .replace(Arc::clone(&session));
+  let app = app.clone();
   let started = std::thread::Builder::new()
     .name("text-reader".into())
     .spawn(move || {
@@ -86,10 +87,37 @@ pub(in crate::text_recognition) fn warm(app: &AppHandle) {
         }
       };
       session.loaded.notify_all();
+      drop(slot);
+      if is_current(&session) {
+        super::super::island::model_loaded(&app);
+      }
     });
   if let Err(error) = started {
     eprintln!("Could not start text recognition's reader: {error}");
   }
+}
+
+/// Whether `session` is the one Text Recognition is reading with.
+fn is_current(session: &Arc<Session>) -> bool {
+  SESSION
+    .lock()
+    .unwrap_or_else(PoisonError::into_inner)
+    .as_ref()
+    .is_some_and(|current| Arc::ptr_eq(current, session))
+}
+
+/// Whether the session's models are still loading, which a read waits for.
+pub(in crate::text_recognition) fn is_loading() -> bool {
+  let session = SESSION
+    .lock()
+    .unwrap_or_else(PoisonError::into_inner)
+    .clone();
+  session.is_some_and(|session| {
+    matches!(
+      *session.slot.lock().unwrap_or_else(PoisonError::into_inner),
+      Slot::Loading
+    )
+  })
 }
 
 /// Lets go of the session's reader, which ends the helper. Off the calling

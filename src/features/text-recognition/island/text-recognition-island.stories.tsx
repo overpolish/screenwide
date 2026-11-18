@@ -79,7 +79,11 @@ export const Failed: Story = {
 };
 
 export const Reading: Story = {
-  args: { state: { phase: "reading" } },
+  args: { state: { loading: false, phase: "reading" } },
+};
+
+export const LoadingModel: Story = {
+  args: { state: { loading: true, phase: "reading" } },
 };
 
 export const Found: Story = {

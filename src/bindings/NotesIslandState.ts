@@ -4,4 +4,4 @@ import type { NotesProblem } from "./NotesProblem";
 /**
  * What the island shows of notes being taken.
  */
-export type NotesIslandState = { "phase": "taking", startedMs: number, } | { "phase": "finishing" } | { "phase": "saved", file: string, } | { "phase": "problem", problem: NotesProblem, };
+export type NotesIslandState = { "phase": "taking", startedMs: number, loading: boolean, } | { "phase": "finishing" } | { "phase": "saved", file: string, } | { "phase": "problem", problem: NotesProblem, };
