@@ -18,9 +18,8 @@ import { useTravelRef } from "./island-follow";
 // the other. Without a notch the island grows evenly to both sides, and
 // what it holds eases to its new centre with it rather than jumping there.
 
-/** Writes the row's offset at once. Motion draws a changed value on its next
- * frame, and the row is drawn now, so without this the first frame would
- * show what it holds jump before the offset caught up. */
+/** Writes the row's offset at once, so the frame the row is drawn in shows it
+ * in its place. */
 function placeRow(layer: HTMLElement | null, offset: number) {
   if (layer) layer.style.transform = `translateX(${String(offset)}px)`;
 }
@@ -55,33 +54,33 @@ export function useRowOffset({
   width: number;
 }): {
   islandX: MotionValue<number>;
+  /** Where the row sits so far, in px from centre: under a notch, where the
+   * island has moved its gap to. */
+  rowHeading: MotionValue<number>;
   rowLayerRef: React.RefObject<HTMLDivElement | null>;
-  rowX: MotionValue<number>;
-  /** Holds what hangs under the row still while the island moves sideways
-   * under the notch. */
-  sectionX: MotionValue<number>;
   shapeWidth: MotionValue<number>;
 } {
   const islandX = useMotionValue(shiftTarget);
   const shapeWidth = useMotionValue(width);
-  const heading = useMotionValue(shiftTarget);
   const rowHeading = useMotionValue(rowTarget);
   const recentring = useMotionValue(0);
-  // A plain value kept current from its parts as each changes, not a derived
-  // one: a derived value is worked out lazily, and Motion would draw its
-  // stale result over the offset just written, for one frame.
-  const rowX = useMotionValue(0);
-  const sectionX = useMotionValue(0);
   const rowLayerRef = useRef<HTMLDivElement>(null);
   const rowWidthRef = useRef<number | null>(null);
   const travelRef = useTravelRef(travel);
 
+  // The row's offset is written to a plain element, never handed to Motion:
+  // Motion measures a part's layout without the transforms of the motion
+  // elements above it, so a part that the offset holds still while the row
+  // recentres round it would be seen to move, and glide back from where it
+  // was, on top of the offset already keeping it there.
   useLayoutEffect(() => {
     const update = () => {
-      sectionX.set(heading.get() - islandX.get());
-      rowX.set(rowHeading.get() - islandX.get() + recentring.get());
+      placeRow(
+        rowLayerRef.current,
+        rowHeading.get() - islandX.get() + recentring.get(),
+      );
     };
-    const stops = [heading, islandX, recentring, rowHeading].map((part) =>
+    const stops = [islandX, recentring, rowHeading].map((part) =>
       part.on("change", update),
     );
     return () => {
@@ -89,15 +88,12 @@ export function useRowOffset({
         stop();
       });
     };
-  }, [heading, islandX, recentring, rowHeading, rowX, sectionX]);
+  }, [islandX, recentring, rowHeading]);
 
   // The shift and the black's width start together on one curve: an edge
   // that should stay put is their sum, and started apart they would rock it.
   useLayoutEffect(() => {
-    if (!holdsContent) {
-      heading.set(shiftTarget);
-      rowHeading.set(rowTarget);
-    }
+    if (!holdsContent) rowHeading.set(rowTarget);
     const settling = animate(islandX, shiftTarget, travelRef.current);
     const widening = animate(shapeWidth, width, travelRef.current);
     placeRow(
@@ -109,7 +105,6 @@ export function useRowOffset({
       widening.stop();
     };
   }, [
-    heading,
     holdsContent,
     islandX,
     recentring,
@@ -137,5 +132,5 @@ export function useRowOffset({
     );
   });
 
-  return { islandX, rowLayerRef, rowX, sectionX, shapeWidth };
+  return { islandX, rowHeading, rowLayerRef, shapeWidth };
 }

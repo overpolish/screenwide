@@ -10,7 +10,6 @@ import { cn } from "../../lib/styling";
 import { px } from "./island-geometry";
 import { focusIn } from "./island-motion";
 import { useSectionPlace } from "./island-section-place";
-import { useSectionSettle } from "./island-section-settle";
 
 import type { IslandTravel } from "./island-follow";
 import type { islandLayout } from "./island-layout";
@@ -18,7 +17,11 @@ import type { IslandShapeValues } from "./island-outline-sync";
 
 // What hangs beneath the row: a box only as wide as what it holds, under the
 // part of the row it belongs to. It paints nothing; the island's outline is
-// drawn round it from `values`, which animate it.
+// drawn round it from `values`, which animate it. Round a notch it rides
+// with the island and its box, which move sideways on one curve: hung under
+// a part of the row that stays put, it stays put with it, and one whose
+// place moves, as under the middle of a row that grows, glides there with
+// the black rather than leaping ahead of it.
 export function IslandSection({
   children,
   isFromMiddle,
@@ -26,11 +29,9 @@ export function IslandSection({
   isShown,
   joinsRow,
   layout,
-  movesSideways,
   onElement,
   onOpened,
   rowWidth,
-  sectionX,
   travel,
   values,
 }: {
@@ -45,20 +46,12 @@ export function IslandSection({
    * its own above it, as one block's rows follow one another. */
   joinsRow: boolean;
   layout: ReturnType<typeof islandLayout>;
-  // Then what hangs is held against the move (`sectionX`) and put where it
-  // will rest at once (`island-section-settle.ts`); otherwise it rides with
-  // its box.
-  /** Whether the island moves sideways to balance its row round a notch. */
-  movesSideways: boolean;
   /** The element holding what hangs, to be measured. */
   onElement: (element: HTMLDivElement | null) => void;
   /** The section has finished growing or folding. */
   onOpened: () => void;
   /** The row's width as it is drawn, moving as it grows or shrinks. */
   rowWidth: MotionValue<number>;
-  /** Holds what hangs still while the island moves sideways under the
-   * notch. */
-  sectionX: MotionValue<number>;
   /** How the box moves to a new size along each axis
    * (`useIslandFollow`). */
   travel: IslandTravel;
@@ -82,11 +75,11 @@ export function IslandSection({
   // jumping ahead of it. A section the row's width leaves only a sliver
   // beside is merged to the row's width, and its rows then span it, names
   // at the start and controls at the end. The island measures it without
-  // the hold (`useSize`'s `isNatural`). Not while opening, folding or held
-  // round a notch, which place it themselves; but while it opens it is
-  // already stretched across the box and placed from the box's start, so it
-  // lies exactly as it will once held and nothing moves at the hand-over.
-  const isEndPinned = isEndAnchored && isOpen && !isOpening && !movesSideways;
+  // the hold (`useSize`'s `isNatural`). Not while opening or folding, which
+  // place it themselves; but while it opens it is already stretched across
+  // the box and placed from the box's start, so it lies exactly as it will
+  // once held and nothing moves at the hand-over.
+  const isEndPinned = isEndAnchored && isOpen && !isOpening;
   const stretch = isEndAnchored && isOpen ? sectionWidth - held.width : 0;
   const {
     foldStart,
@@ -114,11 +107,6 @@ export function IslandSection({
   const opacityTransition = isOpen
     ? { duration: 0 }
     : { delay: motionDurations.travel, duration: 0 };
-  const settle = useSectionSettle({
-    boxStart: values.start,
-    isActive: movesSideways && isOpen && !isOpening,
-    target: sectionStart,
-  });
 
   return (
     <div className="absolute start-1/2 top-0">
@@ -178,8 +166,7 @@ export function IslandSection({
             style={{
               // Held where it will rest while the box opens or folds in
               // place (`useSectionPlace`), its own place set at once.
-              marginInlineStart: isHolding ? holdOffset : settle,
-              x: movesSideways ? sectionX : 0,
+              marginInlineStart: isHolding ? holdOffset : 0,
               // Spanning the box, its content set at the end, so content
               // wider than the box overflows at the start, where the black
               // reveals it. Set at the top rather than stretched down, so

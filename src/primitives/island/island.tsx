@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { LayoutGroup, motion } from "motion/react";
-import { useMemo, useRef, useState } from "react";
+import { type CSSProperties, useMemo, useRef, useState } from "react";
 import { useLocale } from "react-aria";
 
 import { SkinContext } from "../skin/skin";
@@ -70,10 +70,6 @@ export function Island({
   const hover = useIslandHover(onHoverChange);
 
   const { contentOpacity, isComing, isShown } = useIslandPresence(isAsked);
-  const context = useMemo(
-    () => ({ isShown, notch, setShift }),
-    [isShown, notch],
-  );
 
   const isStacked = isShown && Boolean(below);
   const rowShift = isShown && notch ? shift : 0;
@@ -106,7 +102,7 @@ export function Island({
   const { finish, isOpening } = useOpening(isOpen);
   const { follow, travel } = useIslandFollow();
 
-  const { islandX, rowLayerRef, rowX, sectionX, shapeWidth } = useRowOffset({
+  const { islandX, rowHeading, rowLayerRef, shapeWidth } = useRowOffset({
     fillsWidth,
     hasNotch: notch !== null,
     holdsContent: !isShown,
@@ -116,6 +112,10 @@ export function Island({
     travel: travel.across,
     width,
   });
+  const context = useMemo(
+    () => ({ isShown, notch, rowShift: rowHeading, setShift }),
+    [isShown, notch, rowHeading],
+  );
 
   // The parts are laid out and animated as boxes that paint nothing; the
   // black is their outline, drawn from the same animated values.
@@ -198,17 +198,18 @@ export function Island({
                         opacity: fade(isShown, notch !== null),
                       }}
                     >
-                      <motion.div
+                      {/* A plain element: its offset is written by
+                          `useRowOffset`, out of Motion's sight. */}
+                      <div
                         className="absolute inset-x-0 top-0 flex justify-center"
                         ref={rowLayerRef}
-                        style={{
-                          x: rowX,
+                        style={
                           // Only once out: coming out, the row is laid out in its
                           // place and revealed as the black opens round it.
-                          ...(fillsWidth && isShown && !isComing
-                            ? { "--island-row-hold": "100%" }
-                            : {}),
-                        }}
+                          fillsWidth && isShown && !isComing
+                            ? ({ "--island-row-hold": "100%" } as CSSProperties)
+                            : undefined
+                        }
                       >
                         {/* Round the presence, not in it: a row on its way out still
                   hears the island, and folds into the notch as it goes. */}
@@ -222,7 +223,7 @@ export function Island({
                             {row}
                           </IslandRowBox>
                         </IslandContext>
-                      </motion.div>
+                      </div>
                       {/* Kept while there is no line, so one going away folds
                       into the row with what it held rather than vanishing
                       from an island still its height. */}
@@ -244,11 +245,9 @@ export function Island({
                         isShown={isShown}
                         joinsRow={sectionJoinsRow}
                         layout={layout}
-                        movesSideways={notch !== null && !isStacked}
                         onElement={measured.setSectionElement}
                         onOpened={finish}
                         rowWidth={shapeWidth}
-                        sectionX={sectionX}
                         travel={travel}
                         values={values.section}
                       >
