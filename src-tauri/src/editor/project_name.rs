@@ -6,9 +6,11 @@
 //! A project is named by its folder and manifest. One open in an editor
 //! cannot have them renamed under it: the editor and its player hold its
 //! files by where they are, and Windows will not rename a folder holding an
-//! open file. So a name given while it is open is kept in its manifest and
-//! shown at once, and the folder and manifest take it when the editor lets
-//! the project go, or when it is next opened if the app stopped first.
+//! open file. Notes being taken are written by where they are too. So a name
+//! given while either holds it is kept in its manifest and shown at once,
+//! and the folder and manifest take it when the editor lets the project go
+//! or the notes are finished, or when it is next opened if the app stopped
+//! first.
 
 use super::*;
 
@@ -22,16 +24,17 @@ fn stem(file: &Path) -> Option<&str> {
 pub fn rename_project(app: &AppHandle, file: &Path, title: &str) -> Result<PathBuf, String> {
   let title = sanitize_file_stem(title)
     .ok_or_else(|| screenwide_i18n::t!("project-browser-name-unusable"))?;
-  let Some(kind) = open_kind(app, file) else {
+  let kind = open_kind(app, file);
+  if kind.is_none() && !crate::notes::is_taking_into(file) {
     return rename_now(app, file, &title);
-  };
+  }
   screenwide_project::update(file, |manifest| {
     let pending = (stem(file) != Some(title.as_str())).then(|| title.clone());
     let changed = manifest.title != pending;
     manifest.title = pending;
     changed
   })?;
-  {
+  if let Some(kind) = kind {
     let state = app.state::<EditorState>();
     let mut artifact = state
       .slot(kind)
@@ -51,8 +54,9 @@ pub fn rename_project(app: &AppHandle, file: &Path, title: &str) -> Result<PathB
     {
       suggested_file_stem.clone_from(&title);
     }
+    drop(artifact);
+    emit_snapshot(app, kind);
   }
-  emit_snapshot(app, kind);
   screenwide_project::library::notify(app);
   Ok(file.to_path_buf())
 }
@@ -77,11 +81,12 @@ fn rename_now(app: &AppHandle, file: &Path, title: &str) -> Result<PathBuf, Stri
 }
 
 /// Gives the project whose manifest is `file` the name it was given while an
-/// editor had it open, unless one still does. Returns its manifest as it is
-/// now. A name that cannot be taken yet, such as one another project has, is
-/// kept for the next chance.
+/// editor had it open or its notes were being taken, unless one still does
+/// or they still are. Returns its manifest as it is now. A name that cannot
+/// be taken yet, such as one another project has, is kept for the next
+/// chance.
 pub(crate) fn settle_name(app: &AppHandle, file: &Path) -> PathBuf {
-  if open_kind(app, file).is_some() {
+  if open_kind(app, file).is_some() || crate::notes::is_taking_into(file) {
     return file.to_path_buf();
   }
   let Some(title) = screenwide_project::read(file)

@@ -16,7 +16,7 @@ mod echo;
 mod session;
 mod speakers;
 
-pub use document::Document;
+pub use document::{retitle, Document};
 pub use screenwide_speech::runner::notes::{NoteLine, NoteSource, NotesModels, SpeakerTurn};
 pub use session::{Failure, Session, Setup};
 pub use speakers::Who;

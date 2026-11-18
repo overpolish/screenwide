@@ -39,3 +39,7 @@ export const copyNotesPath = (project: string) =>
 
 /** Sent to the projects window with a notes project's manifest to show. */
 export const OPEN_NOTES_EVENT = "notes://open";
+
+/** Sent to the projects window as notes renamed while they were taken take
+ * their new name, with the manifest they had and the one they have now. */
+export const NOTES_MOVED_EVENT = "notes://moved";

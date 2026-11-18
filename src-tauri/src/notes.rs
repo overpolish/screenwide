@@ -6,10 +6,15 @@
 //! audio, and write what was said into a Markdown file in a project of their
 //! own as the call goes (`screenwide_notes`). The island says they are being
 //! taken (`island`); Stop tells the speakers apart and saves them, and the
-//! notes open in a window to read, edit and copy the path of (`view`).
+//! notes open in a window to read, edit and copy the path of (`view`). How
+//! they end, finished, thrown away or stopped for their project to be
+//! deleted, is `ending`.
 
+mod ending;
 pub(crate) mod island;
 pub(crate) mod view;
+
+pub(crate) use self::ending::{discard, stop, stop_for_deletion};
 
 use std::sync::{Arc, Mutex, PoisonError};
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -64,11 +69,13 @@ pub(crate) fn is_taking() -> bool {
 }
 
 /// Whether the notes of the project whose manifest is `project` are being
-/// taken, so they are not saved over meanwhile.
+/// taken or finished, so they are not saved over, renamed or moved
+/// meanwhile.
 pub(crate) fn is_taking_into(project: &std::path::Path) -> bool {
-  taking()
-    .as_ref()
-    .is_some_and(|taking| taking.project == project)
+  ending::is_finishing(project)
+    || taking()
+      .as_ref()
+      .is_some_and(|taking| taking.project == project)
 }
 
 #[tauri::command]
@@ -167,7 +174,7 @@ fn start(app: &AppHandle, options: StartNotesOptions) -> Result<(), NotesProblem
           .lock()
           .unwrap_or_else(PoisonError::into_inner)
           .recv();
-        not_started(&failing, file, root);
+        ending::not_started(&failing, file, root);
       }
       Failure::Taking(error) => eprintln!("Taking notes failed: {error}"),
     },
@@ -197,95 +204,6 @@ fn start(app: &AppHandle, options: StartNotesOptions) -> Result<(), NotesProblem
   );
   let _ = told.send(());
   Ok(())
-}
-
-/// Notes whose models never loaded: listening stops, the project they were
-/// to be written into goes, and the island says they could not be taken.
-fn not_started(app: &AppHandle, file: std::path::PathBuf, root: std::path::PathBuf) {
-  let taken = {
-    let mut taking = taking();
-    if !taking.as_ref().is_some_and(|taking| taking.project == file) {
-      return;
-    }
-    taking.take()
-  };
-  let Some(taken) = taken else {
-    return;
-  };
-  island::show_for_a_moment(
-    app,
-    NotesIslandState::Problem {
-      problem: NotesProblem::Failed,
-    },
-  );
-  let app = app.clone();
-  // Off the notes' own thread, which this was called on and which letting
-  // the session go waits for.
-  std::thread::spawn(move || {
-    let _ = taken.session.abandon();
-    let _ = std::fs::remove_dir_all(&root);
-    if let Err(error) = screenwide_project::library::forget(&app, &file) {
-      eprintln!("Could not forget the notes that never started: {error}");
-    }
-    screenwide_project::library::notify(&app);
-  });
-}
-
-/// Stops listening and finishes the notes on a thread of their own, the
-/// island saying so meanwhile.
-pub(crate) fn stop(app: &AppHandle) {
-  let Some(taken) = taking().take() else {
-    return;
-  };
-  island::tell(app, NotesIslandState::Finishing);
-  let app = app.clone();
-  std::thread::spawn(move || {
-    let finished = taken.session.finish();
-    let duration_ms = now_ms().saturating_sub(taken.started_ms);
-    let _ = screenwide_project::update(&taken.project, |manifest| {
-      if let Some(notes) = manifest.notes.as_mut() {
-        notes.duration_ms = Some(duration_ms);
-      }
-      true
-    });
-    screenwide_project::library::notify(&app);
-    match finished {
-      Ok(()) => island::show_for_a_moment(
-        &app,
-        NotesIslandState::Saved {
-          file: taken.notes.to_string_lossy().into_owned(),
-        },
-      ),
-      Err(error) => {
-        eprintln!("Could not finish the notes: {error}");
-        island::show_for_a_moment(
-          &app,
-          NotesIslandState::Problem {
-            problem: NotesProblem::Failed,
-          },
-        );
-      }
-    }
-  });
-}
-
-/// Stops listening and sets the notes aside in Recently Deleted, where they
-/// can still be brought back; the island goes at once.
-pub(crate) fn discard(app: &AppHandle) {
-  let Some(taken) = taking().take() else {
-    return;
-  };
-  island::withdraw(app);
-  let app = app.clone();
-  std::thread::spawn(move || {
-    if let Err(error) = taken.session.abandon() {
-      eprintln!("Notes thrown away stopped badly: {error}");
-    }
-    if let Err(error) = screenwide_project::delete(&app, &taken.project) {
-      eprintln!("Could not set the thrown-away notes aside: {error}");
-    }
-    screenwide_project::library::notify(&app);
-  });
 }
 
 fn now_ms() -> u64 {

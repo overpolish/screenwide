@@ -85,7 +85,8 @@ async fn copy_each(
 
 /// Moves projects into `location`. An open one is closed first, as closing
 /// its window would, so a name given while open settles before it goes.
-/// Recent follows them.
+/// Notes still being taken or finished are refused, as they are still
+/// written where they are. Recent follows them.
 #[tauri::command]
 pub async fn move_projects(
   app: AppHandle,
@@ -95,6 +96,9 @@ pub async fn move_projects(
   crate::projects_folder::ensure_default_directory(&app);
   if !location.is_dir() {
     return Err(format!("{} is not available", location.display()));
+  }
+  if files.iter().any(|file| crate::notes::is_taking_into(file)) {
+    return Err(screenwide_i18n::t!("project-browser-notes-taking"));
   }
   let files = files
     .into_iter()

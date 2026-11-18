@@ -9,9 +9,14 @@ export type Notes = {
  */
 file: string, markdown: string, 
 /**
- * Still being taken, so not yet to be edited.
+ * Still being taken or finished, so not yet to be edited.
  */
 isTaking: boolean, 
+/**
+ * The project's name: a name given while the notes are taken, which
+ * the folder takes once they are finished, or else the folder's.
+ */
+title: string, 
 /**
  * The numbers of the speakers whose voice can still be heard: those not
  * yet named.

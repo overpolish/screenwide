@@ -67,9 +67,11 @@ pub fn rename_project(app: AppHandle, file: PathBuf, title: String) -> Result<Pa
 /// there or go on to the Trash, and returns its manifest there for Undo to
 /// restore. An open one is closed first, as closing its window would, so a
 /// name given while open settles and the folder set aside is the one it
-/// ends up as.
+/// ends up as. Notes still being taken stop first, as Discard on their
+/// island stops them.
 #[tauri::command]
 pub fn delete_project(app: AppHandle, file: PathBuf) -> Result<PathBuf, String> {
+  crate::notes::stop_for_deletion(&app, &file)?;
   let file = match crate::editor::open_kind(&app, &file) {
     Some(kind) => crate::editor::close(&app, kind).unwrap_or(file),
     None => file,

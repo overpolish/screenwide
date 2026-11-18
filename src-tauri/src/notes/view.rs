@@ -32,8 +32,11 @@ pub struct Notes {
   /// The Markdown file.
   pub file: String,
   pub markdown: String,
-  /// Still being taken, so not yet to be edited.
+  /// Still being taken or finished, so not yet to be edited.
   pub is_taking: bool,
+  /// The project's name: a name given while the notes are taken, which
+  /// the folder takes once they are finished, or else the folder's.
+  pub title: String,
   /// The numbers of the speakers whose voice can still be heard: those not
   /// yet named.
   pub voices: Vec<u32>,
@@ -93,6 +96,7 @@ pub fn read_notes(project: PathBuf) -> Result<Notes, String> {
     file: file.to_string_lossy().into_owned(),
     markdown,
     is_taking: super::is_taking_into(&project),
+    title: screenwide_project::summarize(&project).title,
   })
 }
 

@@ -51,6 +51,7 @@ mod workspace;
 pub use artifact::close;
 pub use artifact_present::{keep_recording, present_recording};
 pub use project_name::rename_project;
+pub(crate) use project_name::settle_name;
 #[cfg(target_os = "macos")]
 pub use project_open::is_project_file;
 pub use project_open::{

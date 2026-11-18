@@ -180,6 +180,10 @@ project-browser-more-actions = More actions for { $title }
 project-browser-project-name = Project name
 # A rename to a name no file can have, such as one made only of dots.
 project-browser-name-unusable = That name cannot be used
+# Deleting notes whose speakers are still being told apart after Stop.
+project-browser-notes-finishing = These notes are still being finished. Try again in a moment.
+# Moving notes to another location while they are still being taken.
+project-browser-notes-taking = Notes cannot be moved while they are being taken.
 project-browser-unavailable = Not available
 project-browser-badge-screenshot = Screenshot
 project-browser-badge-replay = Replay

@@ -992,6 +992,8 @@ export type Messages = {
   "project-browser-moving-elsewhere": { count: number; title: string | number };
   "project-browser-name-unusable": null;
   "project-browser-no-results-title": null;
+  "project-browser-notes-finishing": null;
+  "project-browser-notes-taking": null;
   "project-browser-open-failed": { reason: string | number };
   "project-browser-open-failed-damaged": null;
   "project-browser-open-failed-discarded": null;

@@ -72,10 +72,33 @@ impl Document {
 
   /// Writes the notes to `path`, whole or not at all.
   pub fn save(&self, path: &Path) -> std::io::Result<()> {
-    let writing = path.with_extension("md.part");
-    std::fs::write(&writing, self.markdown())?;
-    std::fs::rename(writing, path)
+    write_whole(path, &self.markdown())
   }
+}
+
+/// Heads the notes at `path` with `title` in place of the title they were
+/// written under, as their project was renamed while they were taken.
+pub fn retitle(path: &Path, title: &str) -> std::io::Result<()> {
+  let markdown = std::fs::read_to_string(path)?;
+  write_whole(path, &retitled(&markdown, title))
+}
+
+fn retitled(markdown: &str, title: &str) -> String {
+  match markdown.strip_prefix("# ") {
+    Some(headed) => {
+      let body = headed.split_once('\n').map_or("", |(_, body)| body);
+      format!("# {title}\n{body}")
+    }
+    None => format!("# {title}\n\n{markdown}"),
+  }
+}
+
+/// Writes `markdown` to `path` through a file beside it, so a crash leaves
+/// the last whole notes.
+fn write_whole(path: &Path, markdown: &str) -> std::io::Result<()> {
+  let writing = path.with_extension("md.part");
+  std::fs::write(&writing, markdown)?;
+  std::fs::rename(writing, path)
 }
 
 fn label(who: Who) -> String {
@@ -90,7 +113,7 @@ fn label(who: Who) -> String {
 mod tests {
   use screenwide_speech::runner::notes::{NoteLine, NoteSource, SpeakerTurn};
 
-  use super::Document;
+  use super::{retitled, Document};
 
   fn line(source: NoteSource, start_ms: u64, text: &str) -> NoteLine {
     NoteLine {
@@ -125,5 +148,17 @@ mod tests {
     assert!(notes
       .markdown()
       .contains("**Speaker 1:** Can we ship Thursday? Or Friday?"));
+  }
+
+  #[test]
+  fn retitling_replaces_only_the_heading() {
+    assert_eq!(
+      retitled("# Notes 2026\n\n**Me:** # Not a heading\n", "Launch call"),
+      "# Launch call\n\n**Me:** # Not a heading\n"
+    );
+    assert_eq!(
+      retitled("**Me:** Hi\n", "Launch call"),
+      "# Launch call\n\n**Me:** Hi\n"
+    );
   }
 }
