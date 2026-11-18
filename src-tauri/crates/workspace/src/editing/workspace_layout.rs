@@ -9,6 +9,10 @@ use super::{
 };
 use screenwide_compositor::PreviewSurfaceRect;
 
+/// The room the page leaves round the canvas it fits into the viewport, on
+/// each side, in points: `fitPreviewPane`'s inset, halved.
+pub(super) const FIT_GUTTER: f64 = 8.0;
+
 pub(super) fn union_rect(
   left: PreviewSurfaceRect,
   right: PreviewSurfaceRect,
@@ -188,7 +192,7 @@ pub(super) fn rebase_workspace_fit(state: &mut SurfaceState, start: &FrameResize
       height: displayed.height,
     },
     natural,
-    8.0,
+    FIT_GUTTER,
     state.workspace_allows_upscale,
   );
   let fit = PreviewSurfaceRect {

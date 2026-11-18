@@ -4,20 +4,25 @@
 use super::*;
 
 impl WorkspaceEditor {
+  /// Lays out the viewport `rect` the page measured in a window
+  /// `page_window` points large, carried to the window's present size when
+  /// the platform has reported one ([`Self::follow_window`]).
   pub fn set_viewport(
     &self,
     rect: PreviewSurfaceRect,
+    page_window: Option<(f64, f64)>,
     corners: PreviewSurfaceCorners,
     backdrop: [f64; 4],
   ) {
     if let Ok(mut state) = self.inner.state.lock() {
-      state.viewport = rect;
+      window_follow::set_page_viewport(&mut state, rect, page_window);
       state.viewport_corners = corners;
-      let (x, right) = pixels::scaled_edges(rect.x, rect.width, state.scale);
-      let (y, bottom) = pixels::scaled_edges(rect.y, rect.height, state.scale);
+      let viewport = state.viewport;
+      let (x, right) = pixels::scaled_edges(viewport.x, viewport.width, state.scale);
+      let (y, bottom) = pixels::scaled_edges(viewport.y, viewport.height, state.scale);
       self.inner.host.place_viewport(
         (x, y, right - x, bottom - y),
-        rect,
+        viewport,
         corners,
         state.scale,
         backdrop,
@@ -68,6 +73,7 @@ impl WorkspaceEditor {
     // event. The native re-flow already placed every pane, on the recording
     // workspace and the per-pane screenshot layout alike.
     let owns_geometry = state.frame_resize.is_some();
+    let rect = window_follow::page_pane_rect(state, rect);
     let Some(pane) = state.panes[index].as_mut() else {
       return;
     };
@@ -153,7 +159,10 @@ impl WorkspaceEditor {
       }
       // The panes as laid out in the new viewport, put back where they were
       // on screen, so what is under the pointer stays under it.
-      let laid = panes.iter().map(|(_, rect)| *rect).reduce(union_rect);
+      let laid = panes
+        .iter()
+        .map(|(_, rect)| window_follow::page_pane_rect(&state, *rect))
+        .reduce(union_rect);
       if let (Some(displayed), Some(laid)) = (keep, laid) {
         if laid.width > 0.0 && displayed.width > 0.0 {
           state.workspace_transform = WorkspaceTransform::placing(state.viewport, laid, displayed);

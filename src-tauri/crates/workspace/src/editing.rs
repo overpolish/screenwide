@@ -35,6 +35,7 @@ mod state;
 mod tests;
 mod turn;
 mod vocabulary;
+mod window_follow;
 mod workspace_draw;
 mod workspace_editor;
 mod workspace_layout;
@@ -84,7 +85,7 @@ use state::{ActiveGesture, CropDrawStart, EditorGesture, FrameResizeStart, MoveA
 use workspace_draw::{clear_workspace, draw_workspace, present_workspace};
 use workspace_layout::{
   apply_workspace_transform, aspect_fit_rect, rebase_workspace_fit, reflow_workspace_panes,
-  union_rect,
+  union_rect, FIT_GUTTER,
 };
 
 const FRAME_LAYER_ID: u32 = u32::MAX;

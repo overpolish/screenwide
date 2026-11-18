@@ -16,7 +16,7 @@ use pipeline::Painter;
 use crate::editor::recording_preview_player::audio_visualizer::{
   bucket_levels, AudioRibbonEnvelopes,
 };
-use screenwide_gpu::surface::{Frame, Surface};
+use screenwide_gpu::surface::{Frame, Headroom, Surface};
 use screenwide_gpu::Gpu;
 
 /// Two points of bar with a three-point gap.
@@ -74,6 +74,9 @@ pub(crate) struct AudioRibbonRenderer {
   /// The constants and the bucketed levels, once there are levels to draw.
   levels: Option<wgpu::BindGroup>,
   points: u32,
+  /// The viewport in drawable pixels. The surface is fitted to it only when
+  /// there are levels to draw, so a picture with no audio never resizes it.
+  size: (u32, u32),
   dirty: bool,
   last_constants: Option<Constants>,
 }
@@ -87,16 +90,17 @@ impl AudioRibbonRenderer {
       painter: Painter::new(&gpu.device),
       levels: None,
       points: 0,
+      size: (2, 2),
       dirty: true,
       last_constants: None,
     }
   }
 
-  /// Matches the surface to `size` drawable pixels.
+  /// Takes the viewport's size in drawable pixels.
   pub(crate) fn set_viewport(&mut self, size: (u32, u32)) {
     let size = (size.0.max(2), size.1.max(2));
-    if size != self.surface.size() {
-      self.surface.resize(&self.gpu, size);
+    if size != self.size {
+      self.size = size;
       self.dirty = true;
     }
   }
@@ -126,7 +130,8 @@ impl AudioRibbonRenderer {
     let Some(levels) = self.levels.as_ref() else {
       return Ok(false);
     };
-    let (width, height) = self.surface.size();
+    self.surface.fit(&self.gpu, self.size, Headroom::WINDOW);
+    let (width, height) = self.size;
     let constants = Constants {
       color: look.color,
       flat: look.flat,

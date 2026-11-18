@@ -53,7 +53,10 @@ pub struct SurfaceState {
   pub selection_targets: Vec<PreviewSelection>,
   /// The rotation gizmo's held ring and the ring the pointer rests on.
   pub(super) turn: turn::TurnState,
+  /// The viewport the editor lays out in: the page's, carried to the
+  /// window's present size while the page's next layout is on its way.
   pub viewport: PreviewSurfaceRect,
+  pub(super) window_follow: window_follow::WindowFollow,
   /// How round the viewport's corners are where it meets the chrome.
   pub viewport_corners: PreviewSurfaceCorners,
   /// Recording marker layouts fill the viewport even above one point per
@@ -97,6 +100,7 @@ impl Default for SurfaceState {
         x: 0.0,
         y: 0.0,
       },
+      window_follow: Default::default(),
       viewport_corners: PreviewSurfaceCorners::default(),
       workspace_allows_upscale: false,
       workspace_transform: WorkspaceTransform::default(),

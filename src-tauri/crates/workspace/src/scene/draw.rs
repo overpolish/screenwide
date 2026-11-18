@@ -57,16 +57,17 @@ impl WorkspaceScene {
       .is_ok_and(|state| count > 0 && state.layers.len() == count)
   }
 
-  /// Draws every layer into `target` at its placement, in drawable pixels,
-  /// the first at the bottom, over the `backdrop` checkerboard, and the crop
-  /// magnifier over them all. With `reuse`, a picture composed since the
-  /// scene last changed, at the same placements, size and backdrop, is
-  /// copied in instead of composing it again: the redraw is for the
-  /// selection chrome alone. The magnifier follows the pointer, so it is
-  /// always composed afresh.
+  /// Draws every layer into the top-left `size` of `target` at its
+  /// placement, in drawable pixels, the first at the bottom, over the
+  /// `backdrop` checkerboard, and the crop magnifier over them all. With
+  /// `reuse`, a picture composed since the scene last changed, at the same
+  /// placements, size and backdrop, is copied in instead of composing it
+  /// again: the redraw is for the selection chrome alone. The magnifier
+  /// follows the pointer, so it is always composed afresh.
   pub fn draw(
     &self,
     target: &wgpu::Texture,
+    size: (u32, u32),
     placements: &[NativeWorkspacePlacement],
     magnifier: Option<&NativeMagnifier>,
     backdrop: BackdropStyle,
@@ -77,7 +78,10 @@ impl WorkspaceScene {
       return Err("The workspace placements do not match its layers".to_owned());
     }
     let gpu = std::sync::Arc::clone(state.compositor.gpu());
-    let size = (target.width(), target.height());
+    let size = (
+      size.0.clamp(1, target.width()),
+      size.1.clamp(1, target.height()),
+    );
     let magnified = magnifier.is_some_and(|magnifier| magnifier.active != 0);
     let revision = state.revision;
     let current = reuse

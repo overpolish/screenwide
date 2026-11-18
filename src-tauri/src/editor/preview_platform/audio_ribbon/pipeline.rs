@@ -69,7 +69,8 @@ impl Painter {
     })
   }
 
-  /// Clears `target` and draws the row into it.
+  /// Clears `target` and draws the row into its top-left corner, as large as
+  /// the constants' geometry says.
   pub(super) fn encode(
     &self,
     gpu: &Gpu,
@@ -99,6 +100,8 @@ impl Painter {
         })],
         ..Default::default()
       });
+      let [width, height, ..] = constants.geometry;
+      pass.set_viewport(0.0, 0.0, width, height, 0.0, 1.0);
       pass.set_pipeline(&self.pipeline);
       pass.set_bind_group(0, levels, &[]);
       pass.draw(0..3, 0..1);

@@ -44,6 +44,16 @@ pub(super) fn surface_for_editor(hwnd: HWND) -> Option<std::sync::Arc<SurfaceInn
     .map(std::sync::Arc::clone)
 }
 
+/// The surface of the window `key` names, once it is whole.
+pub(super) fn surface_for_host(key: usize) -> Option<std::sync::Arc<SurfaceInner>> {
+  let slot = preview_surfaces()
+    .lock()
+    .ok()?
+    .get(&(key as isize))
+    .map(std::sync::Arc::clone)?;
+  slot.get()?.as_ref().ok().map(std::sync::Arc::clone)
+}
+
 /// What names `window`'s surface in the registry: its handle, read while the
 /// window is alive.
 pub(crate) fn surface_key(window: &WebviewWindow) -> Option<usize> {

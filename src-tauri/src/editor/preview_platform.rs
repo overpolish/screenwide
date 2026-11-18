@@ -145,6 +145,11 @@ pub(crate) fn prewarm(_window: tauri::WebviewWindow) {}
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 pub(crate) use surface::{forget, surface_key};
 
+/// Hands an editor window's new size to its surface while the window is
+/// resized.
+#[cfg(target_os = "windows")]
+pub(crate) use surface::window_resized;
+
 #[cfg(not(any(target_os = "macos", target_os = "windows")))]
 pub(crate) fn surface_key(_window: &tauri::WebviewWindow) -> Option<usize> {
   None

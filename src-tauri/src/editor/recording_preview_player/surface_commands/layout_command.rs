@@ -29,16 +29,9 @@ pub async fn layout_recording_preview_surface(
     session_id,
     viewport,
     viewport_corners,
+    window_size,
     keep_view,
-    resize_timing,
   } = layout;
-  // TEMPORARY(#12)
-  let _timing = crate::editor::resize_timing::begin(
-    "recording",
-    viewport.width,
-    viewport.height,
-    resize_timing,
-  );
   let mut manager = state
     .0
     .lock()
@@ -185,7 +178,6 @@ pub async fn layout_recording_preview_surface(
       revision,
     )?);
   }
-  crate::editor::resize_timing::mark("state");
   let Some(surface) = manager
     .sources
     .as_ref()
@@ -247,10 +239,10 @@ pub async fn layout_recording_preview_surface(
   let kept = keep_view.then(|| surface.displayed_workspace()).flatten();
   #[cfg(not(any(target_os = "macos", target_os = "windows")))]
   let _ = keep_view;
-  crate::editor::resize_timing::mark("chrome");
   surface.begin_layout();
   surface.set_viewport(
     viewport,
+    window_size,
     viewport_corners,
     backdrop.unwrap_or([0.09, 0.09, 0.10, 1.0]),
   );
@@ -275,10 +267,8 @@ pub async fn layout_recording_preview_surface(
   // The decoder path keeps the batch closed; its present arrives later and
   // finds the geometry parked.
   surface.finish_layout();
-  crate::editor::resize_timing::mark("layout");
   let redraw_failed = redraw_still && !manager.redraw_layout_still(bake_changed);
   drop(layout_batch);
-  crate::editor::resize_timing::mark("redraw");
   if needs_decoder_still || redraw_failed {
     if let Some(decoder) = &manager.still_decoder {
       decoder.seek(

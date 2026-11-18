@@ -124,6 +124,10 @@ fn set_up(app: &AppHandle, label: WindowLabel, window: &WebviewWindow) -> tauri:
   super::super::hide_instead_of_close(app, label);
   let destroyed_app = app.clone();
   window.on_window_event(move |event| {
+    #[cfg(target_os = "windows")]
+    if let (WindowEvent::Resized(size), Some(surface)) = (event, surface) {
+      crate::editor::preview_platform::window_resized(surface, (size.width, size.height));
+    }
     if matches!(event, WindowEvent::Destroyed) {
       crate::tooltip_window::window_closing(&destroyed_app, label.as_str());
       if let Some(surface) = surface {

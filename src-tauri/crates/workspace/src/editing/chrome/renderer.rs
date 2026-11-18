@@ -8,7 +8,7 @@
 
 use std::sync::Arc;
 
-use screenwide_gpu::surface::{Frame, Surface};
+use screenwide_gpu::surface::{Frame, Headroom, Surface};
 use screenwide_osc::gpu::vertices::{self as osc_gpu, RenderConstants, Vertex};
 
 pub struct ChromeRenderer {
@@ -117,7 +117,7 @@ impl ChromeRenderer {
     constants: &RenderConstants,
   ) -> Result<(), String> {
     let gpu = Arc::clone(&self.shared);
-    self.surface.resize(&gpu, size);
+    self.surface.fit(&gpu, size, Headroom::WINDOW);
     let Frame::Ready(frame) = self.surface.acquire(&gpu)? else {
       return Ok(());
     };
@@ -154,6 +154,14 @@ impl ChromeRenderer {
         ..Default::default()
       });
       if !vertices.is_empty() {
+        pass.set_viewport(
+          0.0,
+          0.0,
+          size.0.max(1) as f32,
+          size.1.max(1) as f32,
+          0.0,
+          1.0,
+        );
         pass.set_pipeline(&self.pipeline);
         pass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
         pass.set_bind_group(0, &self.bindings, &[0]);

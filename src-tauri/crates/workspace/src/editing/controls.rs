@@ -143,7 +143,7 @@ impl WorkspaceEditor {
 }
 
 /// Lays the platform's editing surface over the viewport as `state` has it.
-fn place_viewport(inner: &SurfaceInner, state: &SurfaceState, active: bool) {
+pub(super) fn place_viewport(inner: &SurfaceInner, state: &SurfaceState, active: bool) {
   let (x, right) = pixels::scaled_edges(state.viewport.x, state.viewport.width, state.scale);
   let (y, bottom) = pixels::scaled_edges(state.viewport.y, state.viewport.height, state.scale);
   inner.host.place_viewport(

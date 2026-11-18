@@ -58,12 +58,13 @@ pub struct RecordingPreviewSurfaceLayout {
   viewport: PreviewSurfaceRect,
   /// How round the viewport's corners are where it meets the chrome.
   viewport_corners: PreviewSurfaceCorners,
+  /// The page's size in points, width then height, the viewport was
+  /// measured in.
+  #[serde(default)]
+  window_size: Option<(f64, f64)>,
   /// Whether the picture stays where it is on screen as the viewport changes:
   /// sent when the page moved only the viewport's bottom edge, as the strip
   /// under it grows or shrinks, and not when the window was resized.
   #[serde(default)]
   keep_view: bool,
-  // TEMPORARY(#12): what the frontend spent before sending this layout.
-  #[serde(default)]
-  resize_timing: Option<crate::editor::resize_timing::FrontendTiming>,
 }

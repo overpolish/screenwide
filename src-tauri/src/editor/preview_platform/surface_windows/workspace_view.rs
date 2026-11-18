@@ -6,6 +6,7 @@
 //! workspace layer is drawn.
 
 use super::*;
+use screenwide_gpu::surface::Headroom;
 use screenwide_osc::gpu::magnifier::NativeMagnifier;
 use screenwide_workspace::backdrop::BackdropStyle;
 use screenwide_workspace::scene::{NativeWorkspacePlacement, WorkspaceScene};
@@ -83,7 +84,9 @@ impl WorkspaceView {
       .lock()
       .map_err(|_| "The Windows workspace drawable is poisoned".to_owned())?;
     let (x, y, width, height) = frame;
-    drawable.surface.resize(&self.gpu, (width, height));
+    drawable
+      .surface
+      .fit(&self.gpu, (width, height), Headroom::WINDOW);
     let moved = drawable.offset != Some((x, y));
     if moved {
       unsafe {
@@ -99,10 +102,44 @@ impl WorkspaceView {
     let Frame::Ready(target) = drawable.surface.acquire(&self.gpu)? else {
       return Ok(moved);
     };
-    self
-      .scene
-      .draw(&target.texture, placements, magnifier, backdrop, true)?;
+    // The swap chain is kept larger than the viewport, and what an earlier,
+    // larger frame drew past the picture would show until the clip catches
+    // up with a smaller viewport.
+    if (target.texture.width(), target.texture.height()) != (width, height) {
+      clear(&self.gpu, &target.texture);
+    }
+    self.scene.draw(
+      &target.texture,
+      (width, height),
+      placements,
+      magnifier,
+      backdrop,
+      true,
+    )?;
     self.gpu.queue.present(target);
     Ok(moved)
   }
+}
+
+fn clear(gpu: &screenwide_gpu::Gpu, texture: &wgpu::Texture) {
+  let view = texture.create_view(&Default::default());
+  let mut encoder = gpu
+    .device
+    .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+      label: Some("Screenwide workspace margin"),
+    });
+  encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+    label: Some("Screenwide workspace margin"),
+    color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+      view: &view,
+      depth_slice: None,
+      resolve_target: None,
+      ops: wgpu::Operations {
+        load: wgpu::LoadOp::Clear(wgpu::Color::TRANSPARENT),
+        store: wgpu::StoreOp::Store,
+      },
+    })],
+    ..Default::default()
+  });
+  gpu.queue.submit([encoder.finish()]);
 }

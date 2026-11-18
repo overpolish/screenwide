@@ -24,6 +24,7 @@ mod resources;
 mod selection;
 mod thread_dispatch;
 mod viewport_clip;
+mod window_follow;
 mod workspace_view;
 
 use std::{
@@ -43,6 +44,7 @@ use screenwide_workspace::editing::pixels;
 use screenwide_workspace::editing::*;
 use tauri::WebviewWindow;
 use thread_dispatch::create_editor_on_owning_thread;
+pub(crate) use window_follow::window_resized;
 use windows::Win32::{
   Foundation::HWND,
   Graphics::{

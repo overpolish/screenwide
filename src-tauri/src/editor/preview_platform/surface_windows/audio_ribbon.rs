@@ -46,6 +46,8 @@ impl AudioRibbon {
     })
   }
 
+  /// Lays the ribbon over the viewport. Only a ribbon with levels draws;
+  /// the caller commits, as it does the rest of the viewport's layers.
   pub(super) fn set_viewport(
     &mut self,
     rect: PreviewSurfaceRect,
@@ -60,8 +62,11 @@ impl AudioRibbon {
     self.scale = scale.max(0.1) as f32;
     let luminance = backdrop[0] * 0.2126 + backdrop[1] * 0.7152 + backdrop[2] * 0.0722;
     self.neutral = if luminance > 0.5 { 0.0 } else { 1.0 };
+    if !self.renderer.has_levels() {
+      return Ok(());
+    }
     self.draw()?;
-    self.sync_visibility()
+    self.place()
   }
 
   pub(super) fn set_envelopes(&mut self, values: &AudioRibbonEnvelopes) -> Result<(), String> {
@@ -96,6 +101,13 @@ impl AudioRibbon {
   }
 
   fn sync_visibility(&self) -> Result<(), String> {
+    self.place()?;
+    unsafe { self.composition.Commit() }.map_err(|error| error.to_string())
+  }
+
+  /// Puts the visual over the viewport while there are levels, off screen
+  /// otherwise. The caller commits.
+  fn place(&self) -> Result<(), String> {
     let x = if self.renderer.has_levels() {
       self.offset.0
     } else {
@@ -106,7 +118,6 @@ impl AudioRibbon {
         .visual
         .SetOffsetX2(x)
         .and_then(|_| self.visual.SetOffsetY2(self.offset.1))
-        .and_then(|_| self.composition.Commit())
     }
     .map_err(|error| error.to_string())
   }

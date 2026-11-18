@@ -13,7 +13,7 @@
 
 use std::time::{Duration, Instant};
 
-use screenwide_gpu::surface::{Frame, Surface};
+use screenwide_gpu::surface::{Frame, Headroom, Surface};
 
 use super::clock::FrameClock;
 use super::content::canvas_texture;
@@ -26,41 +26,13 @@ use crate::worker::Renderer;
 /// for, as while the window is hidden.
 const RETRY: Duration = Duration::from_millis(16);
 
-/// The steps a swap chain on Windows grows and shrinks in, in pixels, and how
-/// far past the picture it reaches at least.
-#[cfg(target_os = "windows")]
-const SWAP_CHAIN_STEP: u32 = 128;
-#[cfg(target_os = "windows")]
-const SWAP_CHAIN_MARGIN: u32 = 32;
-
-/// The swap chain to show a picture `picture` in, given the one there is.
-/// Windows reallocates a swap chain only once every frame queued on the
-/// shared device has finished, and shows nothing of it until a frame is
-/// presented into the new one. DirectComposition shows the swap chain
-/// unscaled and clipped to the picture, so there it is kept larger than the
-/// picture, in steps, the frame drawn over all of it (`EdgeFill`). macOS
-/// stretches a drawable over its layer, so there the two match.
-fn swap_chain_size(current: (u32, u32), picture: (u32, u32)) -> (u32, u32) {
-  #[cfg(target_os = "windows")]
-  {
-    let edge = |current: u32, needed: u32| {
-      let stepped = (needed + SWAP_CHAIN_MARGIN).div_ceil(SWAP_CHAIN_STEP) * SWAP_CHAIN_STEP;
-      // Kept while it reaches past the picture and is at most a step too
-      // big, so a picture easing back and forth does not reallocate.
-      if current >= needed + SWAP_CHAIN_MARGIN && current <= stepped + SWAP_CHAIN_STEP {
-        current
-      } else {
-        stepped
-      }
-    };
-    (edge(current.0, picture.0), edge(current.1, picture.1))
-  }
-  #[cfg(not(target_os = "windows"))]
-  {
-    let _ = current;
-    picture
-  }
-}
+/// The swap chain's room past the picture on Windows, where the frame is
+/// drawn over all of it (`EdgeFill`).
+const SWAP_CHAIN: Headroom = Headroom {
+  step: 128,
+  margin: 32,
+  slack: 128,
+};
 
 pub(crate) struct SceneDriver {
   renderer: SceneRenderer,
@@ -173,8 +145,7 @@ impl Renderer for SceneDriver {
 
   fn resize(&mut self, size: (u32, u32)) -> Option<Duration> {
     self.size = size;
-    let swap_chain = swap_chain_size(self.surface.size(), size);
-    self.surface.resize(&self.gpu, swap_chain);
+    self.surface.fit(&self.gpu, size, SWAP_CHAIN);
     self.shown = false;
     Some(Duration::ZERO)
   }

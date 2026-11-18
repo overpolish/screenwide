@@ -21,6 +21,55 @@ const CONFIGURE_RETRY: Duration = Duration::from_millis(5);
 /// both DirectComposition and Core Animation blend.
 pub const FORMAT: wgpu::TextureFormat = wgpu::TextureFormat::Bgra8Unorm;
 
+/// How far past the picture drawn in it a swap chain on Windows reaches, in
+/// pixels. Windows reallocates a swap chain only once every frame queued on
+/// the shared device has finished, so a surface whose picture changes size
+/// from frame to frame, as one following a window's dragged edge does, is
+/// kept larger than its picture, in steps, and the picture drawn in its
+/// top-left corner; DirectComposition shows the swap chain unscaled, clipped
+/// to the picture. macOS resizes a drawable without waiting and stretches it
+/// over its layer, so there the two match.
+#[derive(Clone, Copy)]
+pub struct Headroom {
+  /// The steps the swap chain grows and shrinks in.
+  pub step: u32,
+  /// How far past the picture it reaches at least.
+  pub margin: u32,
+  /// How much larger than the picture's next step it may stay, so a picture
+  /// growing and shrinking back does not reallocate.
+  pub slack: u32,
+}
+
+impl Headroom {
+  /// For a picture over an area a window's dragged edge resizes.
+  pub const WINDOW: Self = Self {
+    step: 256,
+    margin: 0,
+    slack: 256,
+  };
+
+  /// The swap chain to show `picture` in, given the `current` one.
+  pub fn swap_chain(self, current: (u32, u32), picture: (u32, u32)) -> (u32, u32) {
+    #[cfg(target_os = "windows")]
+    {
+      let edge = |current: u32, needed: u32| {
+        let stepped = (needed + self.margin).div_ceil(self.step) * self.step;
+        if current >= needed + self.margin && current <= stepped + self.slack {
+          current
+        } else {
+          stepped
+        }
+      };
+      (edge(current.0, picture.0), edge(current.1, picture.1))
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+      let _ = (self, current);
+      picture
+    }
+  }
+}
+
 pub enum Frame {
   Ready(wgpu::SurfaceTexture),
   /// Nothing can be drawn now; the next frame tries again.
@@ -182,6 +231,14 @@ impl Surface {
     self.config.width = size.0;
     self.config.height = size.1;
     self.configure(gpu);
+  }
+
+  /// Makes the swap chain large enough for a picture of `picture` physical
+  /// pixels, with `headroom` on Windows. The picture is drawn in the frame's
+  /// top-left corner; the rest of it is the caller's to clear or fill.
+  pub fn fit(&mut self, gpu: &Gpu, picture: (u32, u32), headroom: Headroom) {
+    let swap_chain = headroom.swap_chain(self.size(), (picture.0.max(1), picture.1.max(1)));
+    self.resize(gpu, swap_chain);
   }
 
   pub fn acquire(&self, gpu: &Gpu) -> Result<Frame, String> {

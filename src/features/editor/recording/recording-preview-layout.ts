@@ -3,13 +3,8 @@
 
 import { invoke } from "@tauri-apps/api/core";
 
+import { pageWindowSize } from "../preview/page-window-size";
 import { normalizedCameraOverlay } from "../preview/preview-settings-normalization";
-import {
-  createResizeTimer,
-  readyLayoutTiming,
-  type ReadyLayoutTiming,
-  type ResizeTiming,
-} from "../preview/resize-timing";
 import {
   normalizedScreenshotOutput,
   type RecordingOutputSettings,
@@ -25,7 +20,13 @@ import type { CameraOverlaySettings } from "../types";
 // waits, so a burst of resizes never queues behind itself.
 
 type Box = { height: number; width: number; x: number; y: number };
-type Size = { height: number; width: number };
+
+/**
+ * The audio-only preview's viewport. It has no pane canvases of its own, so
+ * the native ribbon is laid out from this element directly.
+ */
+export const audioRibbonViewport = () =>
+  document.querySelector<HTMLElement>("[data-audio-ribbon-viewport]");
 
 export type RecordingPreviewLayout = {
   backdrop: [number, number, number, number];
@@ -48,13 +49,13 @@ export type RecordingPreviewLayout = {
   /** The picture stays where it is on screen as the viewport changes: only
    * its bottom edge moved, as the strip under it grew or shrank. */
   keepView?: boolean;
-  /** TEMPORARY(#12): what the frontend spent before sending this layout. */
-  resizeTiming?: ResizeTiming;
   /** Whether ⌘ (Ctrl) holds Select over the tool: the chosen layer's chrome
    * stands down and a press on it draws a band. */
   selectHeld?: boolean;
   selection?: PreviewSelectionLayout | null;
   selectionTargets?: PreviewSelectionLayout[] | null;
+  /** The page's size, width then height, the viewport was measured in. */
+  windowSize?: [number, number];
 };
 
 /** What decides which chrome owns the picture: the annotation tool in hand
@@ -101,53 +102,53 @@ const layoutRecordingPreviewSurface = ({
  * viewport's bottom edge moved since the last one sent, as the strip under
  * it grew or shrank, so what is under the pointer stays under it. It is
  * worked out against what was sent, since a layout replaced while another is
- * on its way never reaches the native side.
+ * on its way never reaches the native side. The page is measured again
+ * (`measure`) on every resize of the window, which the native side carries
+ * the viewport with until a layout measured at the window's new size
+ * arrives.
  */
 export function createRecordingLayoutQueue({
+  measure,
   nextRequestId,
   onError,
 }: {
+  measure: { readonly current: () => void };
   nextRequestId: () => number;
   onError: (message: string) => void;
 }) {
+  const remeasure = () => {
+    measure.current();
+  };
+  window.addEventListener("resize", remeasure);
   let disposed = false;
   let inFlight = false;
   let last = "";
   let pending: {
     layout: RecordingPreviewLayout;
-    ready: ReadyLayoutTiming;
-    window: Size;
+    windowSize: [number, number];
   } | null = null;
-  let sent: { viewport: Box; window: Size } | null = null;
-  // TEMPORARY(#12)
-  const resizeTimer = createResizeTimer();
+  let sent: { viewport: Box; windowSize: [number, number] } | null = null;
 
   const flush = () => {
     if (disposed || inFlight || !pending) return;
-    const { layout, ready, window: size } = pending;
+    const { layout, windowSize } = pending;
     const { viewport } = layout;
     const keepView =
       sent !== null &&
-      sent.window.width === size.width &&
-      sent.window.height === size.height &&
+      sent.windowSize[0] === windowSize[0] &&
+      sent.windowSize[1] === windowSize[1] &&
       sent.viewport.x === viewport.x &&
       sent.viewport.y === viewport.y &&
       sent.viewport.width === viewport.width &&
       sent.viewport.height !== viewport.height;
-    sent = { viewport, window: size };
+    sent = { viewport, windowSize };
     pending = null;
     inFlight = true;
-    const { settled, timing } = resizeTimer.send(ready);
-    void layoutRecordingPreviewSurface({
-      ...layout,
-      keepView,
-      resizeTiming: timing,
-    })
+    void layoutRecordingPreviewSurface({ ...layout, keepView, windowSize })
       .catch((cause: unknown) => {
         if (!disposed) onError(String(cause));
       })
       .finally(() => {
-        settled();
         inFlight = false;
         flush();
       });
@@ -156,15 +157,18 @@ export function createRecordingLayoutQueue({
   return {
     dispose: () => {
       disposed = true;
+      window.removeEventListener("resize", remeasure);
     },
     queue: (layout: RecordingPreviewLayout) => {
-      const next = JSON.stringify(layout);
+      const windowSize = pageWindowSize();
+      // The window's size is part of what is sent: a resize that leaves the
+      // viewport as it was still has to reach the native side.
+      const next = JSON.stringify([layout, windowSize]);
       if (next === last) return;
       last = next;
       pending = {
         layout: { ...layout, requestId: nextRequestId() },
-        ready: readyLayoutTiming(next.length),
-        window: { height: window.innerHeight, width: window.innerWidth },
+        windowSize,
       };
       flush();
     },

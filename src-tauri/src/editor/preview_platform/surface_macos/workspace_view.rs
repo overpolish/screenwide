@@ -118,9 +118,14 @@ impl WorkspaceView {
     let Frame::Ready(target) = drawable.surface.acquire(&self.gpu)? else {
       return Ok(moved);
     };
-    self
-      .scene
-      .draw(&target.texture, placements, magnifier, backdrop, true)?;
+    self.scene.draw(
+      &target.texture,
+      (width, height),
+      placements,
+      magnifier,
+      backdrop,
+      true,
+    )?;
     self.gpu.queue.present(target);
     Ok(moved)
   }

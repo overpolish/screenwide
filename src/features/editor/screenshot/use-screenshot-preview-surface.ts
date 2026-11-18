@@ -213,9 +213,8 @@ export function useScreenshotPreviewSurface({
 
   useEffect(() => {
     if (!isEnabled) return;
-    const layouts = createScreenshotLayoutQueue();
+    const layouts = createScreenshotLayoutQueue(measureRef);
     const measure = () => {
-      const measureStartedAt = performance.now();
       const marker = canvasRef.current;
       const currentOutput = outputRef.current;
       if (
@@ -276,7 +275,7 @@ export function useScreenshotPreviewSurface({
           // session behind it is new and holds no selection yet. Keying the
           // dedupe on the session makes the first layout of every session
           // reach the surface.
-          layouts.queue(layout, measureStartedAt);
+          layouts.queue(layout);
         }
       }
     };

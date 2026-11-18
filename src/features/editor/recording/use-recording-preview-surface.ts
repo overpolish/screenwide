@@ -14,7 +14,10 @@ import {
 import { RecordingOutputSettings } from "../screenshot/screenshot-output";
 import { CameraOverlaySettings } from "../types";
 
-import { createRecordingLayoutQueue } from "./recording-preview-layout";
+import {
+  audioRibbonViewport,
+  createRecordingLayoutQueue,
+} from "./recording-preview-layout";
 
 import type { RecordingPreviewChrome } from "./recording-preview-layout";
 import type { SceneRotation } from "./scenes/recording-scenes";
@@ -23,13 +26,6 @@ export {
   clearBackdropMasks,
   effectiveBackdrop,
 } from "../preview/preview-backdrop";
-
-/**
- * The audio-only preview's viewport. It has no pane canvases of its own, so
- * the native ribbon is laid out from this element directly.
- */
-const audioRibbonViewport = () =>
-  document.querySelector<HTMLElement>("[data-audio-ribbon-viewport]");
 
 export type RecordingSelectionGestureEvent = {
   deltaX: number;
@@ -250,6 +246,7 @@ export function useRecordingPreviewSurface({
     let animation = 0;
     let disposed = false;
     const layouts = createRecordingLayoutQueue({
+      measure: measureRef,
       nextRequestId: () => ++layoutRequestIdRef.current,
       onError,
     });
