@@ -4,10 +4,9 @@
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { type ReactNode, useState } from "react";
 
+import { clearIn } from "../../lib/motion";
 import { cn } from "../../lib/styling";
 import { glide, leave, reveal } from "../../primitives/island/island-motion";
-
-import { clearIn } from "./settings-motion";
 
 const still = { duration: 0 };
 
@@ -25,7 +24,7 @@ const RING_ROOM = 4;
  * focus ring at its edge is never cut. Where motion is reduced it comes and
  * goes at once. A gap above it belongs inside it (`className`), so the gap
  * opens and closes with it. */
-export function SettingsReveal({
+export function Reveal({
   children,
   className,
 }: {

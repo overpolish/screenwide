@@ -4,8 +4,8 @@
 import { AnimatePresence, motion } from "motion/react";
 import { type ReactNode } from "react";
 
+import { clearIn } from "../../../lib/motion";
 import { TOOL_PICTURE } from "../preview/scenes/scene-kit";
-import { clearIn } from "../settings-motion";
 
 import type { PreviewFollow } from "./use-preview-subject";
 

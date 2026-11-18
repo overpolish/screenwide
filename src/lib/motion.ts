@@ -20,3 +20,17 @@ export const motionDurationCss = (duration: keyof typeof motionDurations) =>
 export const motionEasings = {
   out: "easeOut",
 } as const;
+
+/** Arriving out of a blur rather than cutting in, as a Settings pane or a
+ * revealed part does. The filter is dropped once clear, so it leaves no
+ * layer behind. */
+export const clearIn = {
+  animate: {
+    filter: "blur(0px)",
+    opacity: 1,
+    transitionEnd: { filter: "none" },
+  },
+  exit: { filter: "blur(6px)", opacity: 0 },
+  initial: { filter: "blur(6px)", opacity: 0 },
+  transition: { duration: motionDurations.travel, ease: motionEasings.out },
+} as const;

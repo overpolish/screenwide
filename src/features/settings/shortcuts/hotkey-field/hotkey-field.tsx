@@ -4,6 +4,7 @@
 import { CircleAlert, RotateCcw, X } from "lucide-react";
 import { VisuallyHidden } from "react-aria";
 
+import { Reveal } from "../../../../composites/reveal/reveal";
 import { t } from "../../../../i18n/i18n";
 import {
   type HotkeyCaptureMode,
@@ -12,7 +13,6 @@ import {
 } from "../../../../lib/hotkey";
 import { cn } from "../../../../lib/styling";
 import { IconButton } from "../../../../primitives/button/icon-button";
-import { SettingsReveal } from "../../settings-reveal";
 
 import { FieldSwap } from "./field-swap";
 import { HotkeyTrigger } from "./hotkey-trigger";
@@ -155,7 +155,7 @@ export function HotkeyField({
           <X />
         </IconButton>
       </div>
-      <SettingsReveal className="flex flex-col items-end gap-inline pt-inline">
+      <Reveal className="flex flex-col items-end gap-inline pt-inline">
         {pick && status ? (
           <PickerChoices
             current={capture.current}
@@ -168,8 +168,8 @@ export function HotkeyField({
             suggestions={capture.suggestions}
           />
         ) : null}
-      </SettingsReveal>
-      <SettingsReveal className="pt-inline">
+      </Reveal>
+      <Reveal className="pt-inline">
         {/* The glyph carries the error colour; the words stay readable. */}
         {capture.captureError ? (
           <p
@@ -180,7 +180,7 @@ export function HotkeyField({
             {capture.captureError}
           </p>
         ) : null}
-      </SettingsReveal>
+      </Reveal>
       <VisuallyHidden>
         <span aria-live="polite" role="status">
           {capture.feedback}

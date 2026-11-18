@@ -5,6 +5,7 @@ import { CircleAlert } from "lucide-react";
 import { useListFormatter } from "react-aria";
 
 import { ControlRow } from "../../../composites/control-row/control-row";
+import { Reveal } from "../../../composites/reveal/reveal";
 import { t } from "../../../i18n/i18n";
 import { hotkeyKeys } from "../../../lib/hotkey";
 import { cn } from "../../../lib/styling";
@@ -12,7 +13,6 @@ import { Button } from "../../../primitives/button/button";
 import { Keyboard, Shortcut } from "../../../primitives/keyboard/keyboard";
 import { Text } from "../../../primitives/text/text";
 import { SettingsGroup } from "../settings-group";
-import { SettingsReveal } from "../settings-reveal";
 
 import { HotkeyField } from "./hotkey-field/hotkey-field";
 import { shortcutValues } from "./shortcut-entry";
@@ -139,9 +139,9 @@ export function ShortcutList({
                   )
                 }
               </ControlRow>
-              <SettingsReveal>
+              <Reveal>
                 {others.length > 0 ? <ClashLine others={others} /> : null}
-              </SettingsReveal>
+              </Reveal>
             </div>
           );
         })}

@@ -6,12 +6,12 @@ import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { useState } from "react";
 
 import { t } from "../../../i18n/i18n";
+import { clearIn } from "../../../lib/motion";
 import { Button } from "../../../primitives/button/button";
 import { IconButton } from "../../../primitives/button/icon-button";
 import { TextField } from "../../../primitives/input-fields/text-field";
 import { glide, leave, reveal } from "../../../primitives/island/island-motion";
 import { SettingsGroup } from "../settings-group";
-import { clearIn } from "../settings-motion";
 
 import type { TranscriptionControls } from "./use-transcription";
 

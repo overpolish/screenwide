@@ -5,8 +5,8 @@ import { type ReactNode, useEffect, useRef } from "react";
 
 import { ColorButton } from "../../../composites/color-button/color-button";
 import { ColorGrid } from "../../../composites/color-grid/color-grid";
+import { Reveal } from "../../../composites/reveal/reveal";
 import { t } from "../../../i18n/i18n";
-import { SettingsReveal } from "../settings-reveal";
 
 /** The colour as a kind keeps it: `#rrggbb` in lower case, whatever the
  * Colours panel reports. */
@@ -143,7 +143,7 @@ export function KindColorPicker({
         />
         {children}
       </div>
-      <SettingsReveal className="flex pt-separate">
+      <Reveal className="flex pt-separate">
         {isOpen ? (
           <KindColorGrid
             {...props}
@@ -154,7 +154,7 @@ export function KindColorPicker({
             }}
           />
         ) : null}
-      </SettingsReveal>
+      </Reveal>
     </div>
   );
 }

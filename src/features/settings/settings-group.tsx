@@ -3,9 +3,8 @@
 
 import { ReactNode } from "react";
 
+import { Reveal } from "../../composites/reveal/reveal";
 import { Text } from "../../primitives/text/text";
-
-import { SettingsReveal } from "./settings-reveal";
 
 // A group of a settings pane's rows, in a box of the fill that a notice
 // sits in, so each group reads as one thing and its heading as its name
@@ -36,9 +35,9 @@ export function SettingsGroup({
               {title}
             </Text>
           ) : null}
-          <SettingsReveal>
+          <Reveal>
             {description ? <Text variant="caption">{description}</Text> : null}
-          </SettingsReveal>
+          </Reveal>
         </div>
       ) : null}
       <div className="flex flex-col gap-separate rounded-panel bg-fill p-inset">

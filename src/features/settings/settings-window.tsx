@@ -8,6 +8,7 @@ import { SidebarNav } from "../../composites/sidebar-nav/sidebar-nav";
 import { WindowHeader } from "../../composites/window-header/window-header";
 import { WindowShell } from "../../composites/window-shell/window-shell";
 import { t } from "../../i18n/i18n";
+import { clearIn } from "../../lib/motion";
 import { Alert } from "../../primitives/alert/alert";
 import { ScrollArea } from "../../primitives/scroll-area/scroll-area";
 
@@ -16,7 +17,6 @@ import { SettingsSearchField } from "./search/settings-search-field";
 import { SettingsSearchResults } from "./search/settings-search-results";
 import { useSettingsSearch } from "./search/use-settings-search";
 import { useSettingsApi } from "./settings-api-context";
-import { clearIn } from "./settings-motion";
 import { SettingsPanes } from "./settings-panes";
 import { sectionTitle, type SettingsSection } from "./settings-sections";
 import { settingsSidebarItems } from "./settings-sidebar-items";
