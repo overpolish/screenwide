@@ -64,11 +64,12 @@ impl Corrector {
     Self { shared }
   }
 
-  /// The speaker paused with `text` written: what is open of it is
-  /// corrected, unless it already is.
-  pub fn paused(&self, text: &str) {
+  /// The speaker paused with `text` written, the first `recognised` bytes
+  /// of it no longer changing: what is open of it is corrected, unless it
+  /// already is.
+  pub fn paused(&self, text: &str, recognised: usize) {
     let mut state = locked(&self.shared);
-    let open = state.draft.open(text);
+    let open = state.draft.open(text, recognised);
     let wanted = state
       .wanted
       .as_ref()
@@ -89,7 +90,7 @@ impl Corrector {
   /// corrected, waiting for it until `deadline` at most, and left as heard
   /// if its correction has not come by then.
   pub fn finish(&self, text: &str, deadline: Instant) -> String {
-    self.paused(text);
+    self.paused(text, text.len());
     let mut state = locked(&self.shared);
     loop {
       let (shown, whole) = state.draft.corrected(text);

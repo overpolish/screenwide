@@ -67,7 +67,9 @@ impl Corrections {
     } = &state
     {
       if paused(heard) {
-        self.corrector.paused(&format!("{settled}{unsettled}"));
+        self
+          .corrector
+          .paused(&format!("{settled}{unsettled}"), settled.len());
       }
     }
     *self.last.lock().unwrap_or_else(PoisonError::into_inner) = Some(state.clone());
