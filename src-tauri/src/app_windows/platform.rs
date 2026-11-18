@@ -13,8 +13,9 @@ pub use self::windows::passthrough::set_pointer_passthrough;
 pub use self::windows::windows_api::{
   activate, hide, hide_without_activation, initialize_editor, initialize_region_selector,
   initialize_standalone_listbox, initialize_tool_panel, initialize_tooltip, is_visible,
-  prepare_to_show, raise_without_activation, restore_recording_level, set_capture_affinity,
-  set_normal_level, set_opacity, set_owner, show, show_without_activation,
+  place_below, prepare_to_show, raise_owned_without_activation, raise_without_activation,
+  restore_recording_level, set_capture_affinity, set_normal_level, set_opacity, set_owner, show,
+  show_without_activation,
 };
 
 #[cfg(target_os = "macos")]

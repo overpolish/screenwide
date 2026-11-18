@@ -145,7 +145,7 @@ pub fn restore_recording_level(window: &WebviewWindow) -> tauri::Result<()> {
 pub fn set_normal_level(window: &WebviewWindow) -> tauri::Result<()> {
   use ::windows::Win32::UI::WindowsAndMessaging::HWND_NOTOPMOST;
 
-  reorder(window, HWND_NOTOPMOST)
+  reorder(window, HWND_NOTOPMOST, false)
 }
 
 #[cfg(target_os = "windows")]
@@ -157,29 +157,52 @@ pub fn set_opacity(window: &WebviewWindow, opacity: f64) -> tauri::Result<()> {
 pub fn raise_without_activation(window: &WebviewWindow) -> tauri::Result<()> {
   use ::windows::Win32::UI::WindowsAndMessaging::HWND_TOPMOST;
 
-  reorder(window, HWND_TOPMOST)
+  reorder(window, HWND_TOPMOST, false)
 }
 
-/// Moves the window to one of the z-order bands without disturbing its frame
-/// or taking focus from wherever the user left it.
+/// Raises a window owned by another, such as the island over the overlay it
+/// shows a tool's controls for, leaving its owner where it is. A plain raise
+/// takes the owner up with it, to just under the window raised, over
+/// anything placed between them, such as a screenshot's overlay.
 #[cfg(target_os = "windows")]
-fn reorder(window: &WebviewWindow, band: ::windows::Win32::Foundation::HWND) -> tauri::Result<()> {
+pub fn raise_owned_without_activation(window: &WebviewWindow) -> tauri::Result<()> {
+  use ::windows::Win32::UI::WindowsAndMessaging::HWND_TOPMOST;
+
+  reorder(window, HWND_TOPMOST, true)
+}
+
+/// Puts the window directly under `above`, in whichever band `above` is in,
+/// without moving it or taking focus.
+#[cfg(target_os = "windows")]
+pub fn place_below(window: &WebviewWindow, above: &WebviewWindow) -> tauri::Result<()> {
+  use ::windows::Win32::Foundation::HWND;
+
+  reorder(window, HWND(above.hwnd()?.0), false)
+}
+
+/// Moves the window to one of the z-order bands, or under another window,
+/// without disturbing its frame or taking focus from wherever the user left
+/// it; its owner, if it has one, stays put when `alone`.
+#[cfg(target_os = "windows")]
+fn reorder(
+  window: &WebviewWindow,
+  band: ::windows::Win32::Foundation::HWND,
+  alone: bool,
+) -> tauri::Result<()> {
   use ::windows::Win32::{
     Foundation::HWND,
-    UI::WindowsAndMessaging::{SetWindowPos, SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOSIZE},
+    UI::WindowsAndMessaging::{
+      SetWindowPos, SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOOWNERZORDER, SWP_NOSIZE,
+    },
   };
 
+  let mut flags = SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE;
+  if alone {
+    flags |= SWP_NOOWNERZORDER;
+  }
   unsafe {
-    SetWindowPos(
-      HWND(window.hwnd()?.0),
-      Some(band),
-      0,
-      0,
-      0,
-      0,
-      SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE,
-    )
-    .map_err(std::io::Error::other)?;
+    SetWindowPos(HWND(window.hwnd()?.0), Some(band), 0, 0, 0, 0, flags)
+      .map_err(std::io::Error::other)?;
   }
   Ok(())
 }

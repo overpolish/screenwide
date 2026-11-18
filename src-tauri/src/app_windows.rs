@@ -115,6 +115,22 @@ pub(crate) fn initialize_capture_overlay(window: &WebviewWindow) -> tauri::Resul
   platform::initialize_capture_overlay(window)
 }
 
+/// Puts a capture overlay under the region selector, so a screenshot's
+/// overlay is drawn over it: the step back macOS takes with a lower window
+/// level, which Windows does not have.
+#[cfg(target_os = "windows")]
+pub(crate) fn place_under_region_selector(window: &WebviewWindow) -> tauri::Result<()> {
+  use tauri::Manager;
+
+  match window
+    .app_handle()
+    .get_webview_window(WindowLabel::RegionSelector.as_str())
+  {
+    Some(region) => platform::place_below(window, &region),
+    None => Ok(()),
+  }
+}
+
 /// Puts one overlay host back in the always-on-top band. Needed after any
 /// call that rebuilds a window's extended style from tao's own flags, which
 /// drops the band without tao noticing.

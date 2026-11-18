@@ -201,9 +201,11 @@ pub(super) fn set_hiding(app: &AppHandle, is_hiding: bool) {
 
 /// Raises the island to the top of the topmost windows. Windows has no
 /// levels, so standing above the capture overlays is being raised after
-/// them, which is when Annotate asks.
+/// them, which is when Annotate asks. The overlay that owns the island, the
+/// Ruler or Text Recognition, stays where it is: during a screenshot it sits
+/// under the screenshot's overlay, and a plain raise would bring it back over.
 pub(super) fn apply_level(app: &AppHandle) -> tauri::Result<()> {
-  platform::restore_recording_level(&window(app)?)
+  platform::raise_owned_without_activation(&window(app)?)
 }
 
 /// The next look at the pointer finds the island's new shape.

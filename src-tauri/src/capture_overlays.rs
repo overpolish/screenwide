@@ -19,10 +19,20 @@ pub enum CaptureOverlay {
 }
 
 /// Gives capture overlays a stable order above the recording controls on
-/// macOS. Other platforms retain their existing always-on-top behavior.
+/// macOS. Windows has no window levels: an overlay is kept always on top,
+/// and one given a level below the foreground, as for a screenshot taken
+/// through it, goes under the screenshot's overlay instead.
 pub fn set_level(window: &tauri::WebviewWindow, level: isize) -> Result<(), String> {
   #[cfg(target_os = "windows")]
-  crate::app_windows::initialize_capture_overlay(window).map_err(|error| error.to_string())?;
+  {
+    // Reapplying always on top brings the window to the front of the band,
+    // so stepping back has to come after it.
+    crate::app_windows::initialize_capture_overlay(window).map_err(|error| error.to_string())?;
+    if level < FOREGROUND_LEVEL {
+      crate::app_windows::place_under_region_selector(window).map_err(|error| error.to_string())?;
+    }
+    Ok(())
+  }
 
   #[cfg(target_os = "macos")]
   {
@@ -48,12 +58,6 @@ pub fn set_level(window: &tauri::WebviewWindow, level: isize) -> Result<(), Stri
   #[cfg(not(any(target_os = "macos", target_os = "windows")))]
   {
     let _ = (window, level);
-    Ok(())
-  }
-
-  #[cfg(target_os = "windows")]
-  {
-    let _ = level;
     Ok(())
   }
 }
