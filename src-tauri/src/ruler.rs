@@ -118,12 +118,12 @@ pub async fn start(app: &AppHandle) -> Result<(), String> {
 
 async fn start_native(app: &AppHandle, generation: u64) -> Result<(), String> {
   let monitors = capture_overlays::monitor_layout(app)?;
-  // The island stays on screen and changes into the Ruler's tools over the
-  // frozen desktop, so it is kept out of the desktop it is frozen from.
-  island::keep_out_of_captures(app, true).await;
   // Out at once, so the start shows while the desktop freezes and the
-  // overlay is built.
+  // overlay is built. It stays on screen and changes into the Ruler's tools
+  // over the frozen desktop, so it is kept out of the desktop it is frozen
+  // from.
   island::come_out(app);
+  island::keep_out_of_captures(app, true).await;
   let ids = monitors.iter().map(|(id, _, _)| *id).collect::<Vec<_>>();
   let stills = screenshots::freeze_monitors(&ids, screenshots::FrozenDesktop::WithOwnWindows).await;
   island::keep_out_of_captures(app, false).await;

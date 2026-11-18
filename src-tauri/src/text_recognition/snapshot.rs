@@ -204,16 +204,15 @@ impl TextRecognitionState {
   }
 }
 
-/// Captures every display for a session, with its scale. The island stays
-/// on screen and changes into Text Recognition's over the frozen desktop, so
-/// it is kept out of the desktop it is frozen from, and comes out as soon as
-/// it is.
+/// Captures every display for a session, with its scale. The island comes
+/// out at once and changes into Text Recognition's over the frozen desktop,
+/// so it is kept out of the desktop it is frozen from.
 pub(super) async fn freeze(
   app: &tauri::AppHandle,
   monitors: &[(u32, f64, tauri::Monitor)],
 ) -> Result<Vec<(u32, f64, CapturedImage)>, String> {
-  crate::app_windows::island_overlay::keep_out_of_captures(app, true).await;
   super::island::come_out(app);
+  crate::app_windows::island_overlay::keep_out_of_captures(app, true).await;
   let ids = monitors.iter().map(|(id, _, _)| *id).collect::<Vec<_>>();
   let stills = screenshots::freeze_monitors(&ids, screenshots::FrozenDesktop::WithOwnWindows).await;
   crate::app_windows::island_overlay::keep_out_of_captures(app, false).await;

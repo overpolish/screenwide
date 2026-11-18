@@ -60,7 +60,9 @@ fn exempt_from_crosshair(app: &AppHandle, exempt: bool) {
 /// Keeps the island out of captures while a tool freezes the desktop, or
 /// lets them see it again. The island stays on screen and changes into the
 /// tool's over the frozen desktop; frozen into it as well, its old shape
-/// would show round the new one.
+/// would show round the new one. Called once the island is shown: showing
+/// its window on Windows puts it back on the "record Screenwide's windows"
+/// preference, which would let the capture see it again.
 pub(crate) async fn keep_out_of_captures(app: &AppHandle, kept_out: bool) {
   let Some(window) = island::window(app) else {
     return;
