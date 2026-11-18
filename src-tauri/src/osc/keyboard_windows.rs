@@ -60,7 +60,13 @@ static MONITOR: Mutex<Option<Monitor>> = Mutex::new(None);
 
 const START_TIMEOUT: Duration = Duration::from_secs(2);
 const ALT_POLL_INTERVAL_MS: u32 = 8;
-const HOOK_STATE_GRACE: Duration = Duration::from_millis(24);
+/// How long the Alt poll leaves Alt to the hook after the hook last heard it.
+/// The Ruler takes Alt from the system, so `GetAsyncKeyState` never sees it
+/// held, and Alt held is only heard again as it repeats: after the keyboard's
+/// repeat delay, at most a second, then at the repeat rate. Longer than that
+/// delay, so the poll does not read a held Alt as let go between repeats; the
+/// hook's own release still ends it at once.
+const HOOK_STATE_GRACE: Duration = Duration::from_millis(1_200);
 
 struct Monitor {
   _registration: Registration,
