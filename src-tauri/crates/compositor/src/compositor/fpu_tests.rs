@@ -3,6 +3,7 @@
 
 use super::render_test_helpers::{compositor, draw, read_pixel, target, white_source};
 use screenwide_output::fixtures::test_output_settings;
+use screenwide_scenes::Measure;
 
 #[test]
 #[ignore = "requires a GPU adapter"]
