@@ -10,6 +10,7 @@
 
 mod making;
 mod placement;
+mod reshape;
 
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -168,6 +169,7 @@ fn move_along(app: &AppHandle, resized: bool) {
   let Ok(Some((position, size))) = beside(&teleprompter, &wanted) else {
     return;
   };
+  reshape::stop();
   if resized {
     if let Some(state) = shown().as_mut() {
       state.placed = Some(size);
@@ -206,10 +208,17 @@ fn place(app: &AppHandle) -> Result<bool, String> {
   if let Some(state) = shown().as_mut() {
     state.placed = Some(size);
   }
-  window.set_size(size).map_err(|error| error.to_string())?;
-  window
-    .set_position(position)
-    .map_err(|error| error.to_string())?;
+  // A cue already showing eases into the next one's shape as the two
+  // cross-fade; one coming out of nothing starts where it belongs.
+  if window.is_visible().unwrap_or(false) {
+    reshape::change(&window, (position, size))?;
+  } else {
+    reshape::stop();
+    window.set_size(size).map_err(|error| error.to_string())?;
+    window
+      .set_position(position)
+      .map_err(|error| error.to_string())?;
+  }
   let _ = app.emit_to(LABEL, SHOW_EVENT, teleprompter_cue());
   window.show().map_err(|error| error.to_string())?;
   #[cfg(target_os = "macos")]

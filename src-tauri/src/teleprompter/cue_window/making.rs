@@ -64,6 +64,8 @@ fn build(app: &AppHandle) -> Result<(), String> {
       .map_err(|error| error.to_string())?;
   crate::app_windows::set_window_capture_affinity(&window, false)
     .map_err(|error| error.to_string())?;
+  #[cfg(target_os = "macos")]
+  round_corners(&window)?;
   let handle = app.clone();
   window.on_window_event(move |event| {
     if let WindowEvent::Resized(size) = event {
@@ -73,9 +75,42 @@ fn build(app: &AppHandle) -> Result<(), String> {
   Ok(())
 }
 
+/// The picture's rounded corner (`rounded-island` in `CueCard`), in points.
+#[cfg(target_os = "macos")]
+const CORNER_RADIUS: f64 = 24.0;
+
+/// Rounds the window itself as the page rounds the picture. Between two
+/// cues the window changes shape a step at a time, and WebKit can show a
+/// step drawn at the size before, which the window's square edge would cut;
+/// rounded here, the window clips it to the same corner at its own size.
+#[cfg(target_os = "macos")]
+fn round_corners(window: &tauri::WebviewWindow) -> Result<(), String> {
+  let target = window.clone();
+  window
+    .run_on_main_thread(move || {
+      let Ok(raw) = target.ns_window() else {
+        return;
+      };
+      let native: &objc2_app_kit::NSWindow = unsafe { &*raw.cast() };
+      let Some(content) = native.contentView() else {
+        return;
+      };
+      content.setWantsLayer(true);
+      if let Some(layer) = content.layer() {
+        layer.setCornerRadius(CORNER_RADIUS);
+        layer.setMasksToBounds(true);
+      }
+    })
+    .map_err(|error| error.to_string())
+}
+
 /// A size the window was not given was set by hand: its height is kept as
 /// the tallest the cue grows to, and the teleprompter keeps it for later.
+/// The sizes it passes through between two cues are its own.
 fn resized_by_hand(app: &AppHandle, size: PhysicalSize<u32>) {
+  if super::reshape::is_changing() {
+    return;
+  }
   let scale = app
     .get_webview_window(LABEL)
     .and_then(|window| window.scale_factor().ok())
