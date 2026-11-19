@@ -34,4 +34,4 @@ Set each with `pnpm wrangler secret put <NAME>` from this folder, entered at the
 - `pnpm --filter screenwide-license-worker typecheck` writes the Worker's types (`wrangler types`) and checks them.
 - `pnpm exec vitest run workers/license` runs its tests, with Payhip faked.
 - `pnpm --filter screenwide-license-worker dev` runs it locally; it reads secrets from a `.dev.vars` file here, which git ignores.
-- `pnpm --filter screenwide-license-worker deploy` publishes it, after `pnpm wrangler login`. The custom domain needs the `getscreenwide.com` zone on the same Cloudflare account.
+- `pnpm --filter screenwide-license-worker run deploy` publishes it, after `pnpm wrangler login`; without `run`, pnpm takes `deploy` as its own command. The custom domain needs the `getscreenwide.com` zone on the same Cloudflare account.
