@@ -205,3 +205,27 @@ jobs:
             -H "Authorization: Bearer $GH_TOKEN" \
             -H "Accept: application/octet-stream" \
             --range 0-0 "$url" > /dev/null
+
+  # Both architectures' Store packages bundled into the one upload Partner
+  # Center takes, attached to the draft for a submission made by hand. Built
+  # whenever the Windows packages are, so a rebuild replaces it with them.
+  store-upload:
+    name: Bundle the Microsoft Store upload
+    needs: [prepare, build]
+    if: ${{ !contains(inputs.tag || github.ref_name, '-') && inputs.platforms != 'macos' }}
+    runs-on: windows-latest
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Bundle and attach the Store upload
+        shell: pwsh
+        run: |
+          gh release download $env:RELEASE_TAG --pattern "*.msix" --dir msix --clobber
+          if ($LASTEXITCODE -ne 0) { throw "Could not download the packages" }
+          $upload = node scripts/bundle-msix.mjs msix $env:RELEASE_TAG
+          if ($LASTEXITCODE -ne 0) { throw "Could not bundle the packages" }
+          gh release upload $env:RELEASE_TAG $upload --clobber
+          if ($LASTEXITCODE -ne 0) { throw "Could not attach the upload" }

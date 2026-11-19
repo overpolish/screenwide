@@ -17,10 +17,12 @@
 // installs it unsigned, to test it as the Store would install it.
 
 import { execFileSync } from "node:child_process";
-import { existsSync, readdirSync } from "node:fs";
+import { existsSync } from "node:fs";
 import { cp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { basename, dirname, join, resolve } from "node:path";
-import { arch as hostArch, argv, env, exit, platform } from "node:process";
+import { arch as hostArch, argv, exit, platform } from "node:process";
+
+import { findSdkTool } from "./windows-sdk.mjs";
 
 if (platform !== "win32") {
   console.log("The Microsoft Store package is only made on Windows");
@@ -102,28 +104,6 @@ const manifest = (
   .replaceAll("{{VERSION}}", packageVersion)
   .replaceAll("{{ARCHITECTURE}}", architecture);
 await writeFile(join(stage, "AppxManifest.xml"), manifest);
-
-// The newest Windows SDK's copy of `name` (makeappx, makepri), for the machine
-// this runs on, unless the variable of its name in capitals names one.
-function findSdkTool(name) {
-  const override = env[name.toUpperCase()];
-  if (override) return override;
-  const kits = "C:\\Program Files (x86)\\Windows Kits\\10\\bin";
-  const host = hostArch === "arm64" ? "arm64" : "x64";
-  const versions = existsSync(kits)
-    ? readdirSync(kits)
-        .filter((entry) => /^10\.\d+\.\d+\.\d+$/.test(entry))
-        .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }))
-        .reverse()
-    : [];
-  for (const sdk of versions) {
-    for (const folder of [host, "x64"]) {
-      const tool = join(kits, sdk, folder, `${name}.exe`);
-      if (existsSync(tool)) return tool;
-    }
-  }
-  throw new Error(`${name} was not found; install the Windows SDK`);
-}
 
 // Windows finds a logo's sizes through the package's resource index, and
 // ignores any file it does not list. Only the logos are indexed, from a copy

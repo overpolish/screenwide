@@ -33,31 +33,21 @@ jobs:
       TAG: ${{ inputs.tag }}
       PRODUCT_ID: 9MSN8CRH5W0F
     steps:
-      # The Store takes plain versions only, so a prerelease has no package.
-      - name: Download the release's packages
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      # One upload per submission: a second would replace the first, so both
+      # architectures go up together as a bundle. The Store takes plain
+      # versions only, so a prerelease has no package.
+      - name: Bundle the release's packages
         shell: pwsh
         run: |
           if ($env:TAG.Contains('-')) { throw "$env:TAG is a prerelease, which has no Store package" }
           gh release download $env:TAG --repo $env:GITHUB_REPOSITORY --pattern "*.msix" --dir msix
-          $packages = Get-ChildItem msix -Filter *.msix
-          if ($packages.Count -ne 2) { throw "Expected the x64 and ARM64 packages, found $($packages.Count)" }
-          $packages | ForEach-Object { $_.Name }
-
-      # One upload per submission: a second would replace the first, so both
-      # architectures go up together as a bundle. Once a release has shipped
-      # as a bundle, every later submission must carry one too.
-      - name: Bundle both architectures
-        shell: pwsh
-        run: |
-          $version = "$($env:TAG.TrimStart('v')).0"
-          $makeappx = Get-ChildItem "${env:ProgramFiles(x86)}\Windows Kits\10\bin\*\x64\makeappx.exe" |
-            Sort-Object FullName -Descending | Select-Object -First 1
-          New-Item -ItemType Directory -Force upload | Out-Null
-          & $makeappx.FullName bundle /d msix /p "upload\Screenwide_$version.msixbundle" /bv $version /o
-          if ($LASTEXITCODE -ne 0) { throw "makeappx failed" }
-          Compress-Archive -Path "upload\Screenwide_$version.msixbundle" -DestinationPath "Screenwide_$version.zip"
-          Move-Item "Screenwide_$version.zip" "Screenwide_$version.msixupload"
-          "UPLOAD=$PWD\Screenwide_$version.msixupload" >> $env:GITHUB_ENV
+          if ($LASTEXITCODE -ne 0) { throw "Could not download the packages" }
+          $upload = node scripts/bundle-msix.mjs msix $env:TAG
+          if ($LASTEXITCODE -ne 0) { throw "Could not bundle the packages" }
+          "UPLOAD=$upload" >> $env:GITHUB_ENV
 
       - name: Install the Microsoft Store Developer CLI
         uses: microsoft/setup-msstore-cli@v1

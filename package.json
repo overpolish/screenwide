@@ -19,6 +19,7 @@
       ".": {
         "entry": [
           "scripts/build-ffmpeg-windows.mjs",
+          "scripts/bundle-msix.mjs",
           "src-tauri/crates/dictation/evaluation/*.mjs"
         ],
         "ignore": [
