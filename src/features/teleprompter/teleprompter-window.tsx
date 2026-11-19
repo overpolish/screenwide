@@ -5,10 +5,15 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
 import { useMemo, useState } from "react";
 
 import { useModel } from "../editor/recording/microphone/use-model";
+import { PopupPanelSync } from "../popup-panel/popup-panel-sync";
 import { renameProject } from "../project-browser/api";
 import { RecordingStateSync } from "../recording-controls/recording-state-sync";
 
 import { setTeleprompterFullscreen } from "./api";
+import { shownCue } from "./cues/shown-cue";
+import { useCueMenus } from "./cues/use-cue-menus";
+import { useCuePlace } from "./cues/use-cue-place";
+import { useCues } from "./cues/use-cues";
 import { placeAfterEdit, scriptText } from "./script-words";
 import {
   stepped,
@@ -38,6 +43,7 @@ export function TeleprompterWindow() {
   return (
     <>
       <RecordingStateSync />
+      <PopupPanelSync />
       {/* The island's black alone until the script has been read. */}
       {shown ? (
         <ScriptReader key={shown.opened} shown={shown} />
@@ -67,6 +73,14 @@ function ScriptReader({ shown }: { shown: ShownScript }) {
     wordsPerMinute: preferences.wordsPerMinute,
   });
   useRecordingLink(setIsPlaying);
+  const cues = useCues(shown.project);
+  const cueMenu = useCueMenus({
+    cues: cues.cues,
+    onRemove: cues.remove,
+    script: shown.project,
+  });
+  const reached = shownCue(cues.cues, script, place);
+  const cuePlace = useCuePlace(reached, preferences);
 
   const close = () => {
     void saving
@@ -100,6 +114,8 @@ function ScriptReader({ shown }: { shown: ShownScript }) {
 
   return (
     <TeleprompterView
+      cuePlace={cuePlace.place}
+      cues={cues.cues}
       isFullscreen={isFullscreen}
       isPlaying={isPlaying}
       onClose={close}
@@ -107,13 +123,15 @@ function ScriptReader({ shown }: { shown: ShownScript }) {
       onEdit={(next) => {
         // Writing pauses the text, so it does not move under the caret.
         setIsPlaying(false);
+        const nextScript = scriptText(next);
         setPlace(
           placeAfterEdit(
             { script, text },
-            { script: scriptText(next), text: next },
+            { script: nextScript, text: next },
             place,
           ),
         );
+        cues.edited(text, next, nextScript);
         setText(next);
         saving.save(next);
       }}
@@ -135,10 +153,13 @@ function ScriptReader({ shown }: { shown: ShownScript }) {
         setPlace(0);
       }}
       onScrollTo={setPlace}
+      onTextFrameChange={cuePlace.onTextFrameChange}
+      onWordMenu={cueMenu}
       place={place}
       preferences={preferences}
       saveError={saving.error}
       script={script}
+      shownCue={cuePlace.drawn}
       text={text}
       title={title}
       voice={voice}

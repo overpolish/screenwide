@@ -116,8 +116,8 @@ pub async fn set_screenshot_project_workspace(
   .map_err(|error| error.to_string())?
 }
 
-/// Composes the open screenshot as the window shows it and keeps it, smaller,
-/// as its project's preview.
+/// Composes the open screenshot as the window shows it and keeps it as its
+/// project's preview, smaller, and as its large still.
 #[tauri::command]
 pub async fn save_screenshot_project_still(
   app: AppHandle,
@@ -144,7 +144,9 @@ pub async fn save_screenshot_project_still(
   })
   .await
   .map_err(|error| error.to_string())??;
-  super::super::project_thumbnail::edited::keep_composed_preview(&app, project, composed).await
+  use super::super::project_thumbnail::edited::{keep_composed_preview, keep_large_still};
+  keep_large_still(&project, composed.clone()).await?;
+  keep_composed_preview(&app, project, composed).await
 }
 
 #[cfg(test)]

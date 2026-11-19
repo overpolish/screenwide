@@ -42,7 +42,10 @@ mod gap_preview;
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 pub(crate) mod pin_tracks;
 mod platform;
+#[cfg(any(target_os = "macos", target_os = "windows"))]
+pub(crate) mod project_frames;
 pub(crate) mod recenter;
+mod recording_files;
 mod scene_cursor;
 mod scene_pane_gesture;
 pub(crate) mod scene_preview;

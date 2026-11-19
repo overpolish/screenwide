@@ -18,3 +18,5 @@ window-titles-reference = Reference
 window-titles-listbox = Listbox
 # The floating window a script is read from while recording or on a call.
 window-titles-teleprompter = Teleprompter
+# The window beside the teleprompter showing the picture pinned to the words being read.
+window-titles-teleprompter-cue = Cue

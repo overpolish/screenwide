@@ -13,6 +13,10 @@ const MEDIA_FOLDER: &str = "media";
 const PREVIEW_FILE: &str = "preview.png";
 /// Frames along the edit side by side, for the browser's card to scrub.
 const SCRUB_STRIP_FILE: &str = "scrub.jpg";
+/// The picture as edited, larger than the preview: see `still_path`.
+const STILL_FILE: &str = "still.jpg";
+/// The widest the large still is kept, in pixels.
+pub const STILL_WIDTH: u32 = 1920;
 /// Each frame's width in the strip: twice the widest card, so it stays sharp
 /// on a Retina display. How many frames a strip holds follows from it.
 pub const SCRUB_FRAME_WIDTH: u32 = 480;
@@ -179,6 +183,13 @@ pub fn preview_path(file: &Path) -> PathBuf {
 /// does.
 pub fn scrub_strip_path(file: &Path) -> PathBuf {
   file.parent().unwrap_or(file).join(SCRUB_STRIP_FILE)
+}
+
+/// The picture as edited, larger than the preview, for what shows it large,
+/// such as a teleprompter's cue. Kept beside the preview, so it travels with
+/// the project as the preview does.
+pub fn still_path(file: &Path) -> PathBuf {
+  file.parent().unwrap_or(file).join(STILL_FILE)
 }
 
 /// Finishes deleting projects in `directory` whose recording was discarded

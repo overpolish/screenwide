@@ -4,6 +4,7 @@
 import { useMemo, useState } from "react";
 import { fn } from "storybook/test";
 
+import poster from "../../site/public/recordings/edit.jpg";
 import { featureStage } from "../../storybook/feature-story-stage";
 
 import { scriptText } from "./script-words";
@@ -40,6 +41,8 @@ const VOICE_MODEL: ToolPanelModel = {
 
 const meta = {
   args: {
+    cuePlace: { kind: "top" },
+    cues: [],
     isFullscreen: false,
     isPlaying: false,
     onClose: fn(),
@@ -51,9 +54,12 @@ const meta = {
     onRename: fn(),
     onRestart: fn(),
     onScrollTo: fn(),
+    onTextFrameChange: fn(),
+    onWordMenu: fn(),
     place: 9,
     preferences: PREFERENCES,
     script: scriptText(SCRIPT),
+    shownCue: null,
     text: SCRIPT,
     title: "Launch video script",
     voice: { kind: "idle" },
@@ -129,4 +135,22 @@ export const DownloadingModel: Story = {
 
 export const Empty: Story = {
   args: { place: 0, script: scriptText(""), text: "" },
+};
+
+const CUE = {
+  cues: [{ at: SCRIPT.indexOf("timeline"), title: "Editor walkthrough" }],
+  place: SCRIPT.slice(0, SCRIPT.indexOf("timeline")).split(/\s+/).length - 2,
+  shownCue: { id: "timeline", src: poster, title: "Editor walkthrough" },
+};
+
+export const CueInMargin: Story = {
+  args: {
+    ...CUE,
+    cuePlace: { kind: "margin", textSize: PREFERENCES.textSize, width: 170 },
+    preferences: { ...PREFERENCES, columnWidth: 340 },
+  },
+};
+
+export const CueOverText: Story = {
+  args: CUE,
 };

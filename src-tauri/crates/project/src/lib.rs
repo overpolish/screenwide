@@ -38,8 +38,8 @@ mod relocate;
 
 pub use deleted::{delete, expire, listed as recently_deleted, restore, KEEP_MS};
 pub use folder::{
-  create_in, is_cancelled, move_to_trash, preview_path, rename, scrub_strip_path, sweep_cancelled,
-  NewProject, SCRUB_FRAME_WIDTH,
+  create_in, is_cancelled, move_to_trash, preview_path, rename, scrub_strip_path, still_path,
+  sweep_cancelled, NewProject, SCRUB_FRAME_WIDTH, STILL_WIDTH,
 };
 pub use listing::{folder_size, in_folder, summarize, ProjectSummary};
 pub use manifest::{

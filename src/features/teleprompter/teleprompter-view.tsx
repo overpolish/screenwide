@@ -1,32 +1,47 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: Elastic-2.0
 
+import { useRef } from "react";
+
 import { t } from "../../i18n/i18n";
 import { cn } from "../../lib/styling";
 import { Alert } from "../../primitives/alert/alert";
 import { SkinContext } from "../../primitives/skin/skin";
 import { Text } from "../../primitives/text/text";
 import { IslandModelLine } from "../editor/island/island-model-line";
+import { type PopupMenuAnchor } from "../popup-panel/use-popup-menu";
 
+import { type CardCue, type CardPlace, CueCard } from "./cues/cue-card";
 import { ScriptText } from "./script-words";
 import { TeleprompterBar, type TeleprompterBarProps } from "./teleprompter-bar";
 import { TeleprompterText } from "./teleprompter-text";
 import { VoiceState } from "./use-teleprompter-reading";
+import { type TextFrame, useTextFrame } from "./use-text-frame";
 
 import type { ToolPanelModel } from "../editor/tools/tool-panel-selection";
 
 export type TeleprompterViewProps = Omit<TeleprompterBarProps, "isSteady"> & {
+  /** Where the cue shown stands in the window. */
+  cuePlace: CardPlace;
+  /** The cues, marked beside their words. */
+  cues: readonly { at: number; title: string }[];
   onDownloadVoiceModel: () => void;
   onEdit: (text: string) => void;
   onScrollTo: (index: number) => void;
+  onWordMenu: (anchor: PopupMenuAnchor, at: number) => void;
   /** The next word to read, fractional between words. */
   place: number;
   script: ScriptText;
+  /** The cue shown in the window; none between cues, or while it stands
+   * beside the window. */
+  shownCue: CardCue | null;
   /** The script as written. */
   text: string;
   voice: VoiceState;
   /** Dictation's model, which the voice is heard with; null until known. */
   voiceModel: ToolPanelModel | null;
+  /** Where the text frame stands, as it opens and changes. */
+  onTextFrameChange?: (frame: TextFrame) => void;
   /** Set when the last change could not be saved. */
   saveError?: string;
 };
@@ -80,12 +95,17 @@ function Note({
 // teleprompter's glass, its controls included; filling the display it
 // loses its corners.
 export function TeleprompterView({
+  cuePlace,
+  cues,
   onDownloadVoiceModel,
   onEdit,
   onScrollTo,
+  onTextFrameChange,
+  onWordMenu,
   place,
   saveError,
   script,
+  shownCue,
   text,
   voice,
   voiceModel,
@@ -93,6 +113,8 @@ export function TeleprompterView({
 }: TeleprompterViewProps) {
   const isSteady =
     bar.preferences.mode === "steady" || voice.kind === "problem";
+  const frameRef = useRef<HTMLDivElement>(null);
+  useTextFrame(frameRef, onTextFrameChange);
   return (
     <SkinContext value="island">
       <div
@@ -127,19 +149,24 @@ export function TeleprompterView({
             />
           </div>
         </div>
-        <TeleprompterText
-          columnWidth={bar.preferences.columnWidth}
-          isPlaying={bar.isPlaying}
-          onColumnWidthChange={(columnWidth) => {
-            bar.onPreferencesChange({ columnWidth });
-          }}
-          onEdit={onEdit}
-          onScrollTo={onScrollTo}
-          place={place}
-          script={script}
-          text={text}
-          textSize={bar.preferences.textSize}
-        />
+        <div className="relative flex min-h-0 grow flex-col" ref={frameRef}>
+          <TeleprompterText
+            columnWidth={bar.preferences.columnWidth}
+            cues={cues}
+            isPlaying={bar.isPlaying}
+            onColumnWidthChange={(columnWidth) => {
+              bar.onPreferencesChange({ columnWidth });
+            }}
+            onEdit={onEdit}
+            onScrollTo={onScrollTo}
+            onWordMenu={onWordMenu}
+            place={place}
+            script={script}
+            text={text}
+            textSize={bar.preferences.textSize}
+          />
+          <CueCard cue={shownCue} place={cuePlace} />
+        </div>
       </div>
     </SkinContext>
   );

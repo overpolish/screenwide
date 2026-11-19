@@ -71,7 +71,7 @@ pub(crate) fn apply_capture_policy(app: &AppHandle) -> Result<()> {
 /// Recognition's snapshots, which are not our captures, read them; during
 /// one they follow the preference as any of our windows does.
 ///
-/// The teleprompter is never captured.
+/// The teleprompter, and the cue beside it, are never captured.
 #[cfg(target_os = "windows")]
 #[derive(Clone, Copy)]
 enum Kind {
@@ -105,7 +105,7 @@ pub fn sync_capture_affinity(app: &AppHandle, record_screenwide_windows: bool) -
         Kind::AnnotateHost
       } else if crate::references::is_reference_label(label) {
         Kind::Reference
-      } else if label == crate::teleprompter::LABEL {
+      } else if label == crate::teleprompter::LABEL || label == crate::teleprompter::CUE_LABEL {
         Kind::Teleprompter
       } else {
         // Quick Screenshot temporarily preserves Ruler in the captured

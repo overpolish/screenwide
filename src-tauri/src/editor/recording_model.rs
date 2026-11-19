@@ -203,22 +203,36 @@ impl EditorArtifact {
     else {
       return [Capture::default(); 2];
     };
-    let scale = f64::from((*source_scale_percent).max(1)) / 100.0;
-    [
-      Capture {
-        width_points: f64::from(*width) / scale,
-        scale,
-        corner_radius: corner_radius.map_or(0.0, f64::from),
-      },
-      camera
-        .as_ref()
-        .map_or_else(Capture::default, |camera| Capture {
-          width_points: f64::from(camera.width),
-          scale: 1.0,
-          corner_radius: 0.0,
-        }),
-    ]
+    recording_captures(
+      *width,
+      *source_scale_percent,
+      *corner_radius,
+      camera.as_ref().map(|camera| camera.width),
+    )
   }
+}
+
+/// [`EditorArtifact::captures`] for a recording `width` pixels wide,
+/// recorded at `source_scale_percent`, with a camera `camera_width` wide.
+pub(crate) fn recording_captures(
+  width: u32,
+  source_scale_percent: u16,
+  corner_radius: Option<f32>,
+  camera_width: Option<u32>,
+) -> [Capture; 2] {
+  let scale = f64::from(source_scale_percent.max(1)) / 100.0;
+  [
+    Capture {
+      width_points: f64::from(width) / scale,
+      scale,
+      corner_radius: corner_radius.map_or(0.0, f64::from),
+    },
+    camera_width.map_or_else(Capture::default, |camera_width| Capture {
+      width_points: f64::from(camera_width),
+      scale: 1.0,
+      corner_radius: 0.0,
+    }),
+  ]
 }
 
 #[cfg(test)]

@@ -23,4 +23,5 @@ mod precompiled_shaders {
 mod render_tests;
 pub mod scenes;
 mod shader_layouts;
+pub mod still_size;
 pub mod track_selection;

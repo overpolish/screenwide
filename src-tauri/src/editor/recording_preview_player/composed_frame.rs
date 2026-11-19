@@ -5,35 +5,38 @@
 //! read back into memory: the platform decodes the source frames, and the
 //! shared still compositor draws them.
 
+use super::composed_frames::FrameLook;
 use super::PlayerSources;
 use screenwide_compositor::compositor::cursor_placement::placed_cursor;
 use screenwide_compositor::compositor::still::{compose_still, StillInputs};
 use screenwide_compositor::compositor::PictureLook;
-use screenwide_cursor_effects::{CursorEffectSettings, GpuCursor};
+use screenwide_cursor_effects::GpuCursor;
 use screenwide_export::camera_effects::cpu::StillEffects;
 use screenwide_export::decode::source_frame_image;
 use screenwide_export::recording_model::{RecordingOutputSettings, CAMERA_IN_FRONT};
 use screenwide_imaging::CapturedImage;
-use screenwide_keyboard_effects::KeyboardEffectSettings;
-use screenwide_scenes::CameraOverlaySettings;
 use screenwide_workspace::scene::baked_camera_overlay;
 
 /// The longest side a composed still reads the camera's matte at: stills
 /// are copied or shown small, and the edge it draws is soft.
 const STILL_MATTE_SIDE: u32 = 1_920;
 
-/// The frame at `position_ms` composed with `recording_output`, the camera
-/// drawn into it where `bake_camera`, with the cursor and the shortcut strip
-/// `cursor_effects` and `keyboard_effects` describe.
+/// The frame at `position_ms` composed with `recording_output`, drawn as
+/// `look` says: the camera baked in or not, the cursor and the shortcut
+/// strip.
 pub(super) fn composed_frame_image(
   sources: &PlayerSources,
   position_ms: u64,
-  bake_camera: bool,
-  camera_overlay: CameraOverlaySettings,
-  cursor_effects: CursorEffectSettings,
-  keyboard_effects: KeyboardEffectSettings,
+  look: &FrameLook,
   recording_output: &RecordingOutputSettings,
 ) -> Result<CapturedImage, String> {
+  let FrameLook {
+    bake_camera,
+    camera_overlay,
+    cursor_effects,
+    keyboard_effects,
+    ..
+  } = *look;
   let position_ms = position_ms.min(sources.duration_ms.saturating_sub(1));
   let mut screen = source_frame_image(&sources.screen_path, position_ms, sources.duration_ms)?;
   let camera_duration_ms = sources.camera_duration_ms.unwrap_or(sources.duration_ms);

@@ -25,6 +25,34 @@ pub(super) fn open_project(app: &AppHandle, artifact_id: u64) -> Result<PathBuf,
   }
 }
 
+/// Keeps `composed`, at most `STILL_WIDTH` wide, as the large still of the
+/// project whose manifest is `project`: the screenshot as edited, for what
+/// shows it larger than its card does, such as a teleprompter's cue. Laid
+/// over black where it is see-through, as a JPEG has no alpha.
+pub(crate) async fn keep_large_still(
+  project: &Path,
+  composed: CapturedImage,
+) -> Result<(), String> {
+  let still = screenwide_project::still_path(project);
+  tauri::async_runtime::spawn_blocking(move || {
+    let shrunk = screenwide_export::still_size::shrunk(composed, screenwide_project::STILL_WIDTH)?;
+    let (width, height) = (shrunk.width, shrunk.height);
+    let picture = image::RgbaImage::from_raw(width, height, shrunk.rgba)
+      .ok_or_else(|| "The composed frame is not the size it says".to_owned())?;
+    // Its colour is premultiplied by its alpha, so dropping the alpha is
+    // laying it over black.
+    let rgb = image::DynamicImage::ImageRgba8(picture).into_rgb8();
+    write_atomically(&still, true, |partial| {
+      let file = std::fs::File::create(partial).map_err(|error| error.to_string())?;
+      image::codecs::jpeg::JpegEncoder::new_with_quality(std::io::BufWriter::new(file), 85)
+        .encode(rgb.as_raw(), width, height, image::ExtendedColorType::Rgb8)
+        .map_err(|error| error.to_string())
+    })
+  })
+  .await
+  .map_err(|error| error.to_string())?
+}
+
 /// Keeps `composed`, smaller, as the preview of the project whose manifest
 /// is `project`, and tells the browser it has a new one.
 pub(crate) async fn keep_composed_preview(

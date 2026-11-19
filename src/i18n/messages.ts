@@ -1661,6 +1661,19 @@ export type Messages = {
   "site-tools-title": null;
   "teleprompter-close": null;
   "teleprompter-column-width": null;
+  "teleprompter-cue-add": null;
+  "teleprompter-cue-back": null;
+  "teleprompter-cue-failed": null;
+  "teleprompter-cue-mark": { title: string | number };
+  "teleprompter-cue-menu": null;
+  "teleprompter-cue-moment": null;
+  "teleprompter-cue-none": null;
+  "teleprompter-cue-picker": null;
+  "teleprompter-cue-remove": null;
+  "teleprompter-cue-replace": null;
+  "teleprompter-cue-screenshot": null;
+  "teleprompter-cue-search": null;
+  "teleprompter-cue-sources": null;
   "teleprompter-follow-voice": null;
   "teleprompter-fullscreen": null;
   "teleprompter-mirror": null;
@@ -1780,6 +1793,7 @@ export type Messages = {
   "window-titles-region-selector": null;
   "window-titles-settings": null;
   "window-titles-teleprompter": null;
+  "window-titles-teleprompter-cue": null;
   "window-titles-tool-panel-recording": null;
   "window-titles-tool-panel-screenshot": null;
 };

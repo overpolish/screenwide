@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+use super::recording_files::RecordingFiles;
 use super::*;
 
 pub(super) mod captions;
@@ -86,8 +87,31 @@ pub(super) fn sources_with_surface(
   settings: Option<&PreviewPlayerSettings>,
   create_surface: bool,
 ) -> Result<PlayerSources, String> {
-  let state = app.state::<EditorState>();
-  let (
+  let files = RecordingFiles::of_open(app, artifact_id)?;
+  sources_from(app, files, Some(artifact_id), settings, create_surface)
+}
+
+/// The sources of the recording saved in the project whose manifest is
+/// `project`, read without the editor: its saved edit and annotations, no
+/// surface, and its camera as it was recorded.
+#[cfg(any(target_os = "macos", target_os = "windows"))]
+pub(super) fn project_sources(
+  app: &AppHandle,
+  project: &std::path::Path,
+) -> Result<PlayerSources, String> {
+  sources_from(app, RecordingFiles::of_project(project)?, None, None, false)
+}
+
+/// The sources of `files`. `artifact_id` names the editor's open recording
+/// they are, if they are: its live camera effects then apply.
+fn sources_from(
+  app: &AppHandle,
+  files: RecordingFiles,
+  artifact_id: Option<u64>,
+  settings: Option<&PreviewPlayerSettings>,
+  create_surface: bool,
+) -> Result<PlayerSources, String> {
+  let RecordingFiles {
     audio_tracks,
     camera,
     captures,
@@ -99,48 +123,7 @@ pub(super) fn sources_with_surface(
     primary_kind,
     project,
     width,
-  ) = {
-    let artifact = state
-      .recording
-      .artifact
-      .lock()
-      .unwrap_or_else(|poisoned| poisoned.into_inner());
-    let Some(
-      recording @ EditorArtifact::Recording {
-        audio_tracks,
-        camera,
-        cursor,
-        keyboard,
-        duration_ms,
-        height,
-        id,
-        path,
-        primary_kind,
-        project,
-        width,
-        ..
-      },
-    ) = artifact.as_ref()
-    else {
-      return Err("There is no recording to preview".to_owned());
-    };
-    if *id != artifact_id {
-      return Err("That recording is no longer available in the editor".to_owned());
-    }
-    (
-      audio_tracks.clone(),
-      camera.clone(),
-      recording.captures(),
-      cursor.as_ref().map(|value| value.path.clone()),
-      keyboard.as_ref().map(|value| value.path.clone()),
-      *duration_ms,
-      *height,
-      path.clone(),
-      *primary_kind,
-      project.clone(),
-      *width,
-    )
-  };
+  } = files;
   #[cfg(any(target_os = "macos", target_os = "windows"))]
   let frames_per_second =
     screenwide_export::media_preview::recording_info(&path).and_then(|info| info.frames_per_second);
@@ -157,7 +140,7 @@ pub(super) fn sources_with_surface(
   // mutex: the main thread may simultaneously be serving a snapshot request
   // that needs the same mutex, and the two would wait on each other forever.
   let persisted_edit =
-    crate::editor::timeline_edit::for_project(&project, artifact_id, duration_ms)
+    crate::editor::timeline_edit::for_project(&project, artifact_id.unwrap_or(0), duration_ms)
       .map(|(_, edit)| edit);
   let persisted = persisted_edit
     .as_ref()
@@ -221,7 +204,11 @@ pub(super) fn sources_with_surface(
     audio_tracks,
     camera_duration_ms: camera.as_ref().map(|value| value.duration_ms),
     camera_path: camera.as_ref().map(|value| value.path.clone()),
-    camera_effects: super::camera_effects::shared(app, artifact_id),
+    // A saved project drawn without the editor shows its camera as it was
+    // recorded: the effects are the open editor's.
+    camera_effects: artifact_id.map_or_else(Default::default, |artifact_id| {
+      super::camera_effects::shared(app, artifact_id)
+    }),
     camera_picking: Default::default(),
     cursor,
     composition_settings: settings.map(|settings| {

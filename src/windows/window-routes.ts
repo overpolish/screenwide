@@ -53,6 +53,10 @@ const WINDOW_ROUTES: Record<string, WindowLoader | null> = {
     import("../features/teleprompter/teleprompter-window").then(
       (module) => module.TeleprompterWindow,
     ),
+  "/teleprompter-cue": () =>
+    import("../features/teleprompter/cues/teleprompter-cue-window").then(
+      (module) => module.TeleprompterCueWindow,
+    ),
   "/text-recognition": null,
   "/tooltip": () =>
     import("../features/tooltip/tooltip-window").then(

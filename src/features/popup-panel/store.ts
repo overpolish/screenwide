@@ -52,7 +52,16 @@ export type PopupPanelListContent = {
   showsAllItems?: boolean;
 };
 
-export type PopupPanelContent = PopupPanelIslandContent | PopupPanelListContent;
+/** The teleprompter's cue picker: the recordings and screenshots a cue can
+ * be made of, for the word starting `at` in the script of `script`. */
+export type PopupPanelCuePickerContent = {
+  at: number;
+  kind: "cuePicker";
+  script: string;
+};
+
+export type PopupPanelContent =
+  PopupPanelCuePickerContent | PopupPanelIslandContent | PopupPanelListContent;
 
 /** The one panel window every pop-up button borrows. A caller that names no
  * panel means this one. */

@@ -7,14 +7,18 @@ import { TextArea, TextField } from "react-aria-components";
 
 import { t } from "../../i18n/i18n";
 import { cn } from "../../lib/styling";
+import {
+  type PopupMenuAnchor,
+  pointerAnchor,
+} from "../popup-panel/use-popup-menu";
 
 import { columnStyle } from "./column-style";
+import { wordStartAt } from "./cues/cue-anchors";
+import { CueMark } from "./cues/cue-mark";
+import { READING_LINE, readingLineMiddle } from "./reading-line";
 import { ScriptText } from "./script-words";
 import { TeleprompterColumn } from "./teleprompter-column";
 
-/** Where the word being read stands, as a share of the frame's height:
- * high, so the eyes stay near the camera above it. */
-const READING_LINE = 0.3;
 /** How long after the last turn of the wheel the place settles on the line
  * scrolled to, in milliseconds. */
 const SCROLL_SETTLE_MS = 160;
@@ -28,14 +32,18 @@ const SCROLL_SETTLE_MS = 160;
  * unseen, so the caret and the selection fall on the words shown. Scrolled
  * by hand, the text follows the wheel, and the place settles on the line
  * left on the reading line. The text runs in a column whose edges are
- * dragged to set its width (`TeleprompterColumn`).
+ * dragged to set its width (`TeleprompterColumn`). A cue is marked at the
+ * column's end beside its word, which opens the word's menu, as a right
+ * click on the word does.
  */
 export function TeleprompterText({
   columnWidth,
+  cues,
   isPlaying,
   onColumnWidthChange,
   onEdit,
   onScrollTo,
+  onWordMenu,
   place,
   script,
   text,
@@ -43,11 +51,15 @@ export function TeleprompterText({
 }: {
   /** The widest the text runs, in points; null fills the frame. */
   columnWidth: number | null;
+  /** The cues, marked beside their words. */
+  cues: readonly { at: number; title: string }[];
   isPlaying: boolean;
   onColumnWidthChange: (width: number | null) => void;
   onEdit: (text: string) => void;
   /** The place scrolled to by hand, as a word's index. */
   onScrollTo: (index: number) => void;
+  /** Opens the menu of the word starting at `at` in the text. */
+  onWordMenu: (anchor: PopupMenuAnchor, at: number) => void;
   place: number;
   script: ScriptText;
   /** The script as written. */
@@ -117,6 +129,18 @@ export function TeleprompterText({
     return best;
   };
 
+  /** Where the word under the point starts in the text, if one is: the
+   * words are drawn under the field, which hit testing passes through. */
+  const startOfWordAt = (x: number, y: number) => {
+    const under = document.elementsFromPoint(x, y);
+    for (const [index, element] of wordsRef.current)
+      if (under.includes(element)) return script.starts[index];
+    return undefined;
+  };
+
+  const marked = new Map(cues.map((cue) => [cue.at, cue.title]));
+  const hasMarks = marked.size > 0;
+
   let lastWord = -1;
   // Each piece is keyed by where it starts in the text.
   let at = 0;
@@ -151,7 +175,7 @@ export function TeleprompterText({
         frameRef={frameRef}
         isPlaying={isPlaying}
         onWidthChange={onColumnWidthChange}
-        readingTop={`calc(${String(READING_LINE * 100)}% + ${String(textSize * 0.65)}px)`}
+        readingTop={readingLineMiddle(textSize)}
         width={columnWidth}
       />
       <motion.div
@@ -165,6 +189,7 @@ export function TeleprompterText({
           className={cn(
             "px-inset break-words whitespace-pre-wrap",
             text === "" ? "min-h-[3lh]" : "min-h-lh",
+            hasMarks && "pe-8",
           )}
           dir="auto"
         >
@@ -190,6 +215,14 @@ export function TeleprompterText({
                     : undefined
                 }
               >
+                {piece.kind === "word" && marked.has(key) ? (
+                  <CueMark
+                    onPress={(anchor) => {
+                      onWordMenu(anchor, key);
+                    }}
+                    title={marked.get(key) ?? ""}
+                  />
+                ) : null}
                 {piece.text}
               </span>
             );
@@ -208,8 +241,19 @@ export function TeleprompterText({
               page's, which would set the words a touch apart from those
               under it along a line. */}
           <TextArea
-            className="size-full resize-none overflow-hidden bg-transparent px-inset break-words whitespace-pre-wrap text-transparent caret-fg outline-none [text-rendering:inherit] placeholder:text-fg-tertiary"
+            className={cn(
+              "size-full resize-none overflow-hidden bg-transparent px-inset break-words whitespace-pre-wrap text-transparent caret-fg outline-none [text-rendering:inherit] placeholder:text-fg-tertiary",
+              hasMarks && "pe-8",
+            )}
             dir="auto"
+            onContextMenu={(event) => {
+              event.preventDefault();
+              onWordMenu(
+                pointerAnchor(event.clientX, event.clientY),
+                startOfWordAt(event.clientX, event.clientY) ??
+                  wordStartAt(script, event.currentTarget.selectionStart),
+              );
+            }}
             placeholder={t("teleprompter-script-placeholder")}
           />
         </TextField>

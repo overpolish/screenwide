@@ -31,3 +31,28 @@ teleprompter-script-name = Script name
 teleprompter-script-label = Script
 teleprompter-script-placeholder = Write what you will say. Leave an empty line between paragraphs.
 teleprompter-save-failed = Could not save the script.
+
+## Cues: a picture of a recording or a screenshot pinned to a word of the script, shown while the script is read.
+
+# The item of the script's right-click menu that pins a cue to the word clicked.
+teleprompter-cue-add = Add cue
+# The item of a cue's menu that chooses another picture for it.
+teleprompter-cue-replace = Replace cue
+teleprompter-cue-remove = Remove cue
+# Names the menu opened on a cue or on the script, for assistive technology.
+teleprompter-cue-menu = Cue
+# Names a cue's mark beside its word. $title is the recording's or screenshot's name.
+teleprompter-cue-mark = Cue: { $title }
+# Names the panel that lists the recordings and screenshots a cue can show.
+teleprompter-cue-picker = Choose a recording or screenshot
+teleprompter-cue-search = Search recordings and screenshots
+# Names the list of recordings and screenshots, for assistive technology.
+teleprompter-cue-sources = Recordings and screenshots
+teleprompter-cue-none = No recordings or screenshots
+# Names the button that goes back from a recording's moments to the list.
+teleprompter-cue-back = Back
+# Names the slider that picks the moment of the recording the cue shows.
+teleprompter-cue-moment = Moment
+teleprompter-cue-failed = Could not make the cue.
+# Said under a screenshot's name in the cue picker, where a recording's length is said instead.
+teleprompter-cue-screenshot = Screenshot

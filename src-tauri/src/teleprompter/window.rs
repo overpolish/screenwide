@@ -121,11 +121,16 @@ fn build(app: &AppHandle) -> Result<(), String> {
   }
   crate::app_windows::set_window_capture_affinity(&window, false)
     .map_err(|error| error.to_string())?;
-  window.on_window_event(|event| {
-    if matches!(event, WindowEvent::Destroyed) {
+  let handle = app.clone();
+  window.on_window_event(move |event| match event {
+    WindowEvent::Moved(_) => super::cue_window::follow(&handle, false),
+    WindowEvent::Resized(_) => super::cue_window::follow(&handle, true),
+    WindowEvent::Destroyed => {
       *shown() = None;
       super::voice::stop();
+      super::cue_window::close(&handle);
     }
+    _ => {}
   });
   window.show().map_err(|error| error.to_string())?;
   window.set_focus().map_err(|error| error.to_string())

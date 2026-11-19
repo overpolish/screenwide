@@ -5,6 +5,7 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
 
 import { EditorIslandPanel } from "../editor/island/host/editor-island-panel";
 import { useTextTemplateFonts } from "../editor/recording/captions/use-text-template-fonts";
+import { CuePicker } from "../teleprompter/cues/picker/cue-picker";
 
 import { PopupPanelList } from "./popup-panel-list";
 import {
@@ -79,6 +80,8 @@ function PanelContents({
   content: Exclude<PopupPanelContent, PopupPanelIslandContent>;
   panel: string;
 }) {
+  if (content.kind === "cuePicker")
+    return <CuePicker at={content.at} panel={panel} script={content.script} />;
   return (
     <PopupPanelList
       content={content}
