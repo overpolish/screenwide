@@ -21,6 +21,7 @@ pub enum SummaryKind {
   Audio,
   Camera,
   Notes,
+  Script,
   Screen,
   Screenshot,
 }
@@ -90,20 +91,20 @@ pub struct ProjectSummary {
   pub title: String,
   /// None for a screenshot, and for a project that could not be read.
   pub tracks: Option<ProjectTracks>,
-  /// The start of a notes project's Markdown, for its card to show what
-  /// was said; None for other kinds.
-  pub notes_opening: Option<String>,
+  /// The start of a notes or script project's Markdown, for its card to
+  /// show what was said or will be; None for other kinds.
+  pub opening: Option<String>,
 }
 
-/// How much of a notes file its card is given, in bytes.
-const NOTES_OPENING_BYTES: usize = 1_200;
+/// How much of a notes or script file its card is given, in bytes.
+const OPENING_BYTES: usize = 1_200;
 
-/// The start of the notes file `name` names in the project at `file`, cut
+/// The start of the Markdown file `name` names in the project at `file`, cut
 /// at a character's edge.
-fn notes_opening(file: &Path, name: &str) -> Option<String> {
+fn opening(file: &Path, name: &str) -> Option<String> {
   let mut text = std::fs::read_to_string(super::resolve(file, name).ok()?).ok()?;
-  if text.len() > NOTES_OPENING_BYTES {
-    let mut end = NOTES_OPENING_BYTES;
+  if text.len() > OPENING_BYTES {
+    let mut end = OPENING_BYTES;
     while !text.is_char_boundary(end) {
       end -= 1;
     }
@@ -150,6 +151,7 @@ pub fn summarize(file: &Path) -> ProjectSummary {
           ProjectKind::Recording => recording.map(|recording| recording.primary_kind.into()),
           ProjectKind::Screenshot => Some(SummaryKind::Screenshot),
           ProjectKind::Notes => Some(SummaryKind::Notes),
+          ProjectKind::Script => Some(SummaryKind::Script),
         },
         modified_ms,
         size_bytes: file.parent().map(folder_size),
@@ -157,11 +159,12 @@ pub fn summarize(file: &Path) -> ProjectSummary {
         // A name given while it is open stands until its folder takes it.
         title: manifest.title.clone().unwrap_or(title),
         tracks: recording.map(ProjectTracks::from),
-        notes_opening: manifest
-          .notes
-          .as_ref()
-          .filter(|_| manifest.kind == ProjectKind::Notes)
-          .and_then(|notes| notes_opening(file, &notes.file)),
+        opening: match manifest.kind {
+          ProjectKind::Notes => manifest.notes.as_ref().map(|notes| &notes.file),
+          ProjectKind::Script => manifest.script.as_ref().map(|script| &script.file),
+          ProjectKind::Recording | ProjectKind::Screenshot => None,
+        }
+        .and_then(|name| opening(file, name)),
       }
     }
     Err(_) => ProjectSummary {
@@ -176,7 +179,7 @@ pub fn summarize(file: &Path) -> ProjectSummary {
       replay: false,
       title,
       tracks: None,
-      notes_opening: None,
+      opening: None,
     },
   }
 }

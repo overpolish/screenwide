@@ -1,10 +1,11 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { convertFileSrc } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { useEffect, useRef, useState } from "react";
+
+import { newScript } from "../teleprompter/api";
 
 import { useProjectReadings } from "./activity/use-project-readings";
 import {
@@ -14,7 +15,6 @@ import {
   emptyRecentlyDeleted,
   forgetRecentProject,
   getProjectLocations,
-  getProjectThumbnail,
   hideProjectBrowser,
   listProjects,
   moveProjects,
@@ -38,8 +38,10 @@ import {
 } from "./types";
 import { opening, useOpenFailures } from "./use-open-failures";
 import { useProjectCopy } from "./use-project-copy";
+import { useProjectThumbnails } from "./use-project-thumbnails";
 import { useScrubStrips } from "./use-scrub-strips";
 import { useUndoDelete } from "./use-undo-delete";
+
 
 const message = (cause: unknown) =>
   cause instanceof Error ? cause.message : String(cause);
@@ -54,16 +56,10 @@ export function ProjectBrowserWindow({
   const [locations, setLocations] = useState<ProjectLocation[]>([]);
   const [selected, setSelected] = useState(RECENT);
   const [projects, setProjects] = useState<ProjectSummary[] | null>(null);
-  const [thumbnails, setThumbnails] = useState<Record<string, string | null>>(
-    {},
-  );
   const [error, setError] = useState<string | null>(null);
   // Bumped to read everything again: after an action, a change Rust reports,
   // or a return to the window, since projects can change outside the app.
   const [generation, setGeneration] = useState(0);
-  // Stills already asked for, by manifest and edit time, so a refresh asks
-  // again only for a project whose movie may have changed.
-  const requestedRef = useRef(new Set<string>());
 
   useEffect(() => {
     // A read for a selection the user has since left is dropped.
@@ -97,24 +93,7 @@ export function ProjectBrowserWindow({
     };
   }, [generation, selected]);
 
-  // Each fetch gets its own address: the editor redraws a still in place,
-  // and the webview would otherwise keep showing the copy it has.
-  const loadThumbnail = (file: string, key?: string) => {
-    getProjectThumbnail(file)
-      .then((path) => {
-        setThumbnails((current) => ({
-          ...current,
-          [file]: path
-            ? `${convertFileSrc(path)}?v=${String(Date.now())}`
-            : null,
-        }));
-      })
-      .catch(() => {
-        if (key) requestedRef.current.delete(key);
-      });
-  };
-  const loadThumbnailRef = useRef(loadThumbnail);
-  loadThumbnailRef.current = loadThumbnail;
+  const loadThumbnailRef = useRef<(file: string) => void>(() => undefined);
   const forgetStripRef = useRef<(file: string) => void>(() => undefined);
 
   useEffect(() => {
@@ -141,16 +120,6 @@ export function ProjectBrowserWindow({
     };
   }, []);
 
-  useEffect(() => {
-    for (const project of projects ?? []) {
-      const key = `${project.file}@${String(project.modifiedMs)}`;
-      if (project.kind === "notes") continue;
-      if (!project.available || requestedRef.current.has(key)) continue;
-      requestedRef.current.add(key);
-      loadThumbnailRef.current(project.file, key);
-    }
-  }, [projects]);
-
   const select = (next: string) => {
     // Pressing the row already chosen asks for nothing new; clearing the list
     // then would leave it empty, with no change of selection to refill it.
@@ -174,6 +143,8 @@ export function ProjectBrowserWindow({
   forgetStripRef.current = scrub.forget;
   useOpenFailures(setError);
   const readings = useProjectReadings(projects);
+  const thumbs = useProjectThumbnails(projects);
+  loadThumbnailRef.current = thumbs.load;
   const titleOf = (file: string | undefined) =>
     projects?.find((project) => project.file === file)?.title ?? "";
 
@@ -239,6 +210,9 @@ export function ProjectBrowserWindow({
               );
             }
       }
+      onNewScript={() => {
+        run(newScript());
+      }}
       onOpen={(file) => {
         if (projects?.find((one) => one.file === file)?.kind === "notes") {
           onOpenNotes(file);
@@ -263,7 +237,7 @@ export function ProjectBrowserWindow({
             // The card is listed again under its new manifest; the still it
             // showed stays with it, so it is not drawn empty until the new
             // name's still has been asked for.
-            setThumbnails((current) => ({
+            thumbs.setThumbnails((current) => ({
               ...current,
               [renamed]: current[file] ?? null,
             }));
@@ -293,7 +267,7 @@ export function ProjectBrowserWindow({
       readings={readings}
       scrubStrips={scrub.strips}
       selected={selected}
-      thumbnails={thumbnails}
+      thumbnails={thumbs.thumbnails}
     />
   );
 }

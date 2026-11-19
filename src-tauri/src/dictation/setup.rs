@@ -24,6 +24,15 @@ pub(super) struct Spoken {
   pub at_pauses: bool,
 }
 
+/// What another listener on the microphone hears with: dictation's model
+/// for the language transcription is set to, on the island's microphone,
+/// or why there is none (`DictationProblem::NoModel`). The teleprompter
+/// follows the voice with it.
+pub(crate) fn listening_setup(app: &AppHandle) -> Result<Setup, DictationProblem> {
+  let microphone = super::with(|dictation| dictation.microphone.clone());
+  setup(app, microphone).map(|(setup, ..)| setup)
+}
+
 /// The setup for a dictation on `microphone`, and its cleanup model if it
 /// has one, or why there can be none.
 pub(super) fn setup(

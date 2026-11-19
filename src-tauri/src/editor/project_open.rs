@@ -101,6 +101,10 @@ fn open(app: &AppHandle, file: &Path) -> Result<(), OpenFailure> {
     screenwide_project::ProjectKind::Notes => {
       return crate::notes::view::show(app, file).map_err(OpenFailure::from);
     }
+    // Scripts are written and read in the teleprompter.
+    screenwide_project::ProjectKind::Script => {
+      return crate::teleprompter::open(app, file).map_err(OpenFailure::from);
+    }
     _ => {}
   }
   let screenwide_project::RecordingManifest {

@@ -57,10 +57,13 @@ pub fn open_project_location(path: PathBuf) -> Result<(), String> {
 }
 
 /// Renames a project and returns its new manifest. One open in an editor is
-/// opened again there under its new name.
+/// opened again there under its new name, and a script in the teleprompter
+/// is saved there from then on.
 #[tauri::command]
 pub fn rename_project(app: AppHandle, file: PathBuf, title: String) -> Result<PathBuf, String> {
-  crate::editor::rename_project(&app, &file, &title)
+  let renamed = crate::editor::rename_project(&app, &file, &title)?;
+  crate::teleprompter::renamed(&app, &file, &renamed);
+  Ok(renamed)
 }
 
 /// Deletes a project: sets it aside in Recently Deleted, to come back from
@@ -72,6 +75,7 @@ pub fn rename_project(app: AppHandle, file: PathBuf, title: String) -> Result<Pa
 #[tauri::command]
 pub fn delete_project(app: AppHandle, file: PathBuf) -> Result<PathBuf, String> {
   crate::notes::stop_for_deletion(&app, &file)?;
+  crate::teleprompter::close_on(&app, &file);
   let file = match crate::editor::open_kind(&app, &file) {
     Some(kind) => crate::editor::close(&app, kind).unwrap_or(file),
     None => file,

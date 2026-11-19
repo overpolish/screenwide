@@ -312,6 +312,14 @@ settings-shortcut-editor-snapping = Turn snapping on or off
 settings-shortcut-annotate-undo = Undo
 settings-shortcut-annotate-clear = Clear the screen
 settings-shortcut-annotate-leave = Stop drawing
+# The teleprompter window's keys.
+settings-shortcut-teleprompter-play = Play or pause
+settings-shortcut-teleprompter-back = Back a few words
+settings-shortcut-teleprompter-on = On a few words
+settings-shortcut-teleprompter-start = Back to the start
+settings-shortcut-teleprompter-larger = Larger text
+settings-shortcut-teleprompter-smaller = Smaller text
+settings-shortcut-teleprompter-leave = Stop writing, pause, leave the full display, then close
 
 ## The Shortcuts pane's keyboard map: a keyboard with each key that does
 ## something raised. $shortcut and $action name a shortcut, such as Take a
@@ -327,6 +335,7 @@ settings-shortcuts-scope-ruler = In Ruler
 settings-shortcuts-scope-ocr = In OCR
 settings-shortcuts-scope-editor = In Editor
 settings-shortcuts-scope-annotate = In Annotate
+settings-shortcuts-scope-teleprompter = In Teleprompter
 settings-shortcuts-hint = Raised keys do something. Choose a shortcut below, then click a key to give it.
 settings-shortcuts-hint-selected = Click a key to give it to “{ $shortcut }”, with the modifiers lit.
 # In the scopes whose keys are built in (the editor's and Annotate's), in place of the hints above.
@@ -472,6 +481,7 @@ settings-preview-desktop-notes = notes.txt
 ## Licences
 
 settings-licences-references = References
+settings-licences-teleprompter = Teleprompter
 # A paid tool's row, when a key for it is held.
 settings-licences-licensed = Licensed
 # A paid tool's row during the trial. $days is the whole days left, at least 1.

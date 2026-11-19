@@ -173,6 +173,10 @@ export function ShortcutsPane({
               { id: "annotate", label: t("settings-shortcuts-scope-annotate") },
               { id: "ruler", label: t("settings-shortcuts-scope-ruler") },
               { id: "ocr", label: t("settings-shortcuts-scope-ocr") },
+              {
+                id: "teleprompter",
+                label: t("settings-shortcuts-scope-teleprompter"),
+              },
             ]}
             onSelectionChange={(next) => {
               setScope(next as ShortcutScope);

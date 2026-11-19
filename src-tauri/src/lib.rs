@@ -58,6 +58,7 @@ mod silence;
 mod startup;
 #[cfg(debug_assertions)]
 mod storybook_native;
+mod teleprompter;
 mod text_recognition;
 mod tooltip_window;
 mod transcription;
@@ -105,7 +106,9 @@ pub fn run() {
     .manage(text_recognition::TextRecognitionState::default())
     .manage(tooltip_window::TooltipState::default())
     .invoke_handler(editor::sound_library::with_commands(
-      app_windows::commands::with_commands(invoke_handler::invoke_handler()),
+      editor::annotation_clipboard::with_commands(teleprompter::with_commands(
+        app_windows::commands::with_commands(invoke_handler::invoke_handler()),
+      )),
     ))
     .setup(startup::setup)
     .build(context)

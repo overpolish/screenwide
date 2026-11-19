@@ -50,9 +50,19 @@ export function TrackBadge({
   );
 }
 
+/** What a card names itself beside its length, where it does: a still, a
+ * replay, notes or a script, which hold no picture to tell them by. */
+const kindLabel = (kind: ProjectKind | null, replay: boolean) => {
+  if (kind === "screenshot") return t("project-browser-badge-screenshot");
+  if (kind === "notes") return t("project-browser-badge-notes");
+  if (kind === "script") return t("project-browser-badge-script");
+  return replay ? t("project-browser-badge-replay") : null;
+};
+
 /** Bottom end, where file browsers and video players put a clip's length:
- * a replay says it is one, then the length, or, while the card is pointed
- * along, where in the take the frame shown is. */
+ * what kind of project it is where the picture does not say, then the
+ * length, or, while the card is pointed along, where in the take the frame
+ * shown is. */
 export function LengthBadges({
   appearance,
   kind: projectKind,
@@ -66,12 +76,7 @@ export function LengthBadges({
   replay: boolean;
 }) {
   const length = lengthMs === null ? null : formatDuration(lengthMs);
-  const kind =
-    projectKind === "screenshot"
-      ? t("project-browser-badge-screenshot")
-      : replay
-        ? t("project-browser-badge-replay")
-        : null;
+  const kind = kindLabel(projectKind, replay);
   if (!length && !kind) return null;
   return (
     <span className={cn("ms-auto flex shrink-0 gap-inline", appearance)}>

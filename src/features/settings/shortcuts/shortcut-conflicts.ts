@@ -12,12 +12,12 @@ import { reservedUse } from "./reserved-shortcuts";
 
 /** Where a shortcut works: anywhere, or only while a tool is open. */
 export type ShortcutScope =
-  "annotate" | "anywhere" | "editor" | "ocr" | "ruler";
+  "annotate" | "anywhere" | "editor" | "ocr" | "ruler" | "teleprompter";
 
-/** Whether a scope's keys are built in, shown but never set: the editor's
- * and the live Annotate overlay's. */
+/** Whether a scope's keys are built in, shown but never set: the editor's,
+ * the live Annotate overlay's and the teleprompter's. */
 export const isFixedScope = (scope: ShortcutScope) =>
-  scope === "editor" || scope === "annotate";
+  scope === "editor" || scope === "annotate" || scope === "teleprompter";
 
 export type ShortcutConflict =
   /** Another of Screenwide's shortcuts has it; `label` names that one. */

@@ -6,6 +6,8 @@
 project-browser-search-label = Search projects
 project-browser-search-placeholder = Search
 project-browser-open-file = Open File
+# Makes an empty script, a project to write and read from the teleprompter, and opens it.
+project-browser-new-script = New Script
 
 ## Sidebar
 
@@ -46,6 +48,7 @@ project-browser-kind-camera = Camera
 project-browser-kind-audio = Audio
 project-browser-kind-screenshot = Screenshots
 project-browser-kind-notes = Notes
+project-browser-kind-script = Scripts
 project-browser-project-count =
     { $count ->
         [one] { $count } project
@@ -187,6 +190,8 @@ project-browser-notes-taking = Notes cannot be moved while they are being taken.
 project-browser-unavailable = Not available
 project-browser-badge-screenshot = Screenshot
 project-browser-badge-replay = Replay
+project-browser-badge-notes = Notes
+project-browser-badge-script = Script
 # What a recording holds, read out after "Open <name>" in a list.
 project-browser-track-screen = screen
 project-browser-track-camera = camera

@@ -27,7 +27,7 @@ The app takes only `disabled` and `invalid_key` as a no; everything else reads a
 Set each with `pnpm wrangler secret put <NAME>` from this folder, entered at the prompt or piped from a file, never typed into a command:
 
 - `LICENSE_SIGNING_KEY`: the private half of the key pair the app checks records against, PKCS#8 in base64. Its public half is `PUBLIC_KEY` in `src-tauri/crates/licensing/src/server.rs`.
-- `PAYHIP_SECRET_RULER`, `PAYHIP_SECRET_REFERENCES`, `PAYHIP_SECRET_GLIDE`, `PAYHIP_SECRET_ANNOTATE`: each product's secret key, from the bottom of its edit page on Payhip once licence keys are switched on.
+- `PAYHIP_SECRET_RULER`, `PAYHIP_SECRET_REFERENCES`, `PAYHIP_SECRET_GLIDE`, `PAYHIP_SECRET_ANNOTATE`, `PAYHIP_SECRET_TELEPROMPTER`: each product's secret key, from the bottom of its edit page on Payhip once licence keys are switched on. Every one must be set: with one missing, the Worker turns every key away as not configured.
 
 ## Work on it
 

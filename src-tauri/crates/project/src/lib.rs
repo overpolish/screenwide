@@ -45,6 +45,7 @@ pub use listing::{folder_size, in_folder, summarize, ProjectSummary};
 pub use manifest::{
   read, resolve, update, write, Manifest, NotesManifest, PrimaryRecordingKind, ProjectKind,
   RecordingManifest, RecordingMedia, RecordingOrigin, ScreenshotLayer, ScreenshotManifest,
+  ScriptManifest,
 };
 pub use read_error::ReadError;
 pub use relocate::{duplicate, move_into};

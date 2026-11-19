@@ -21,7 +21,13 @@ const isSeed = (value: unknown): value is LicencesPreviewSeed =>
 export const licencesSeed = (value: unknown): LicencesPreviewSeed =>
   isSeed(value) ? value : "trial";
 
-const TOOLS: PaidTool[] = ["ruler", "annotate", "glide", "references"];
+const TOOLS: PaidTool[] = [
+  "ruler",
+  "annotate",
+  "glide",
+  "references",
+  "teleprompter",
+];
 const now = () => Math.floor(Date.now() / 1000);
 
 // A key the preview pretends to know, by the tool it unlocks: any key that

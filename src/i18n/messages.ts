@@ -938,8 +938,10 @@ export type Messages = {
   "popup-panel-empty": null;
   "project-browser-add-location": null;
   "project-browser-add-location-dialog": null;
+  "project-browser-badge-notes": null;
   "project-browser-badge-replay": null;
   "project-browser-badge-screenshot": null;
+  "project-browser-badge-script": null;
   "project-browser-date-in": { period: string | number };
   "project-browser-date-last-month": null;
   "project-browser-date-last-week": null;
@@ -999,6 +1001,7 @@ export type Messages = {
   "project-browser-kind-notes": null;
   "project-browser-kind-screen": null;
   "project-browser-kind-screenshot": null;
+  "project-browser-kind-script": null;
   "project-browser-loading": null;
   "project-browser-location-actions": null;
   "project-browser-locations": null;
@@ -1012,6 +1015,7 @@ export type Messages = {
   };
   "project-browser-moving-elsewhere": { count: number; title: string | number };
   "project-browser-name-unusable": null;
+  "project-browser-new-script": null;
   "project-browser-no-results-title": null;
   "project-browser-notes-finishing": null;
   "project-browser-notes-taking": null;
@@ -1289,6 +1293,7 @@ export type Messages = {
   "settings-licences-licensed-key": { hint: string | number };
   "settings-licences-references": null;
   "settings-licences-remove": { hint: string | number };
+  "settings-licences-teleprompter": null;
   "settings-licences-trial": { days: number };
   "settings-licences-trial-unused": { days: string | number };
   "settings-moment-color": { moment: string | number };
@@ -1470,6 +1475,13 @@ export type Messages = {
   "settings-shortcut-start-stop": null;
   "settings-shortcut-take-notes": null;
   "settings-shortcut-take-notes-description": null;
+  "settings-shortcut-teleprompter-back": null;
+  "settings-shortcut-teleprompter-larger": null;
+  "settings-shortcut-teleprompter-leave": null;
+  "settings-shortcut-teleprompter-on": null;
+  "settings-shortcut-teleprompter-play": null;
+  "settings-shortcut-teleprompter-smaller": null;
+  "settings-shortcut-teleprompter-start": null;
   "settings-shortcut-toggle-controls": null;
   "settings-shortcuts-assigned": {
     keys: string | number;
@@ -1518,6 +1530,7 @@ export type Messages = {
   "settings-shortcuts-scope-editor": null;
   "settings-shortcuts-scope-ocr": null;
   "settings-shortcuts-scope-ruler": null;
+  "settings-shortcuts-scope-teleprompter": null;
   "settings-shortcuts-system-keys": null;
   "settings-shortcuts-system-keys-replace": { platform: string | number };
   "settings-shortcuts-system-keys-replace-description": null;
@@ -1646,6 +1659,26 @@ export type Messages = {
   "site-sound-title": null;
   "site-tools-body": null;
   "site-tools-title": null;
+  "teleprompter-close": null;
+  "teleprompter-column-width": null;
+  "teleprompter-follow-voice": null;
+  "teleprompter-fullscreen": null;
+  "teleprompter-mirror": null;
+  "teleprompter-pace": null;
+  "teleprompter-pace-unit": null;
+  "teleprompter-pause": null;
+  "teleprompter-play": null;
+  "teleprompter-restart": null;
+  "teleprompter-save-failed": null;
+  "teleprompter-script-label": null;
+  "teleprompter-script-name": null;
+  "teleprompter-script-placeholder": null;
+  "teleprompter-text-size": null;
+  "teleprompter-voice-download": null;
+  "teleprompter-voice-failed": null;
+  "teleprompter-voice-loading": null;
+  "teleprompter-voice-no-microphone": null;
+  "teleprompter-voice-no-model": null;
   "text-recognition-island": null;
   "text-recognition-island-choosing": null;
   "text-recognition-island-close": null;
@@ -1748,6 +1781,7 @@ export type Messages = {
   "window-titles-reference": null;
   "window-titles-region-selector": null;
   "window-titles-settings": null;
+  "window-titles-teleprompter": null;
   "window-titles-tool-panel-recording": null;
   "window-titles-tool-panel-screenshot": null;
 };

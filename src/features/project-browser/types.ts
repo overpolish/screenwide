@@ -23,6 +23,11 @@ export type {
  * with the file as an address the webview can load. */
 export type ScrubStrip = Omit<ScrubStripFile, "path"> & { src: string };
 
+/** Whether a project's card shows the start of its words rather than a
+ * still: notes, and scripts. */
+export const showsWords = (kind: ProjectKind | null | undefined) =>
+  kind === "notes" || kind === "script";
+
 /** The last delete, named for the island that offers to undo it. */
 export type DeletedProjects = { count: number; title: string };
 

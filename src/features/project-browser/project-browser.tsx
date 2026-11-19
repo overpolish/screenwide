@@ -39,6 +39,8 @@ export type ProjectBrowserProps = {
   onEmpty: () => void;
   onForget: (file: string) => void;
   onMinimize: () => void;
+  /** Makes an empty script and opens the teleprompter on it. */
+  onNewScript: () => void;
   onOpen: (file: string) => void;
   onOpenFile: () => void;
   onOpenLocation: (path: string) => void;
@@ -93,6 +95,7 @@ export function ProjectBrowser({
   onForget,
   onMinimize,
   onMove,
+  onNewScript,
   onOpen,
   onOpenFile,
   onOpenLocation,
@@ -165,6 +168,9 @@ export function ProjectBrowser({
                 placeholder={t("project-browser-search-placeholder")}
                 value={query}
               />
+              <Button onPress={onNewScript} variant="ghost">
+                {t("project-browser-new-script")}
+              </Button>
               <Button onPress={onOpenFile} variant="ghost">
                 {t("project-browser-open-file")}
               </Button>

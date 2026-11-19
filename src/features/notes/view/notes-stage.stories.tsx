@@ -35,7 +35,7 @@ const meta = {
             <NotesView
               canRedo={false}
               canUndo={false}
-              document={parseNotes(opened.notesOpening ?? "")}
+              document={parseNotes(opened.opening ?? "")}
               isTaking={false}
               onBack={() => {
                 setNotes(null);

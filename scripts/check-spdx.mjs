@@ -22,6 +22,8 @@ const ELASTIC_PATHS = [
   "src/features/ruler/",
   "src/features/settings/licences/",
   "src/features/settings/settings-licences.stories.tsx",
+  "src/features/teleprompter/",
+  "locales/en-US/teleprompter.ftl",
   "src-tauri/crates/licensing/",
   "src-tauri/crates/osc/src/gpu/shaders/reference.wgsl",
   "src-tauri/crates/osc/src/gpu/vertices/ruler.rs",
@@ -41,6 +43,8 @@ const ELASTIC_PATHS = [
   "src-tauri/src/references.rs",
   "src-tauri/src/ruler/",
   "src-tauri/src/ruler.rs",
+  "src-tauri/src/teleprompter/",
+  "src-tauri/src/teleprompter.rs",
   "workers/license/",
 ];
 

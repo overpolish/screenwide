@@ -3,4 +3,4 @@
 /**
  * What a project holds, as the browser draws it.
  */
-export type ProjectKind = "audio" | "camera" | "notes" | "screen" | "screenshot";
+export type ProjectKind = "audio" | "camera" | "notes" | "script" | "screen" | "screenshot";

@@ -7,6 +7,7 @@ import {
   type LucideIcon,
   MousePointer2,
   PenLine,
+  ScrollText,
   SquarePen,
 } from "lucide-react";
 
@@ -28,7 +29,8 @@ import type { ShortcutScope } from "./shortcut-conflicts";
 import type { FixedShortcutEntry } from "./shortcut-entry";
 import type { AnnotationKind } from "../../annotations/types";
 
-// The keys built into the editor and the live Annotate overlay, which are
+// The keys built into the editor, the live Annotate overlay and the
+// teleprompter, which are
 // shown in the pane but not set there. The tools' and the modes' keys come
 // from the tables the editor answers them from; the rest are the keys
 // `useEditorWindowShortcuts` and the overlay's `input/keys.rs` hold.
@@ -214,7 +216,25 @@ const annotateKeys = (): Row[] => [
   { label: t("settings-shortcut-annotate-leave"), value: "Escape" },
 ];
 
-/** The editor's keys, grouped as its parts are, and the overlay's. */
+/** The teleprompter window's keys (`teleprompter-window.tsx`). */
+const teleprompterKeys = (): Row[] => [
+  { label: t("settings-shortcut-teleprompter-play"), value: "Space" },
+  { label: t("settings-shortcut-teleprompter-back"), value: "ArrowUp" },
+  { label: t("settings-shortcut-teleprompter-on"), value: "ArrowDown" },
+  { label: t("settings-shortcut-teleprompter-start"), value: "Home" },
+  {
+    label: t("settings-shortcut-teleprompter-larger"),
+    value: "CommandOrControl+Equal",
+  },
+  {
+    label: t("settings-shortcut-teleprompter-smaller"),
+    value: "CommandOrControl+Minus",
+  },
+  { label: t("settings-shortcut-teleprompter-leave"), value: "Escape" },
+];
+
+/** The editor's keys, grouped as its parts are, the overlay's and the
+ * teleprompter's. */
 export const fixedShortcutEntries = ({
   isAnnotateOff,
 }: {
@@ -250,6 +270,12 @@ export const fixedShortcutEntries = ({
     name: t("settings-section-annotate"),
     rows: annotateKeys(),
     scope: "annotate",
+  }),
+  ...group({
+    icon: ScrollText,
+    name: t("settings-licences-teleprompter"),
+    rows: teleprompterKeys(),
+    scope: "teleprompter",
   }),
 ];
 

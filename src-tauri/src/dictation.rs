@@ -22,6 +22,7 @@ mod put_in;
 mod setup;
 mod taught;
 
+pub(crate) use setup::listening_setup;
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 use std::time::{Duration, Instant};
 

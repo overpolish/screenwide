@@ -49,6 +49,10 @@ const WINDOW_ROUTES: Record<string, WindowLoader | null> = {
     import("./standalone-listbox-entry").then(
       (module) => module.StandaloneListboxEntry,
     ),
+  "/teleprompter": () =>
+    import("../features/teleprompter/teleprompter-window").then(
+      (module) => module.TeleprompterWindow,
+    ),
   "/text-recognition": null,
   "/tooltip": () =>
     import("../features/tooltip/tooltip-window").then(

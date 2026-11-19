@@ -11,6 +11,7 @@ export const PAID_TOOLS: readonly PaidTool[] = [
   "annotate",
   "glide",
   "references",
+  "teleprompter",
 ];
 
 /** A paid tool's name, as the Tools pane names its group. */
@@ -24,5 +25,7 @@ export const paidToolName = (tool: PaidTool) => {
       return t("settings-licences-references");
     case "ruler":
       return t("settings-section-ruler");
+    case "teleprompter":
+      return t("settings-licences-teleprompter");
   }
 };

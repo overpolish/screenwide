@@ -49,6 +49,8 @@ pub enum ProjectKind {
   Recording,
   Screenshot,
   Notes,
+  /// A script, read from with the teleprompter.
+  Script,
 }
 
 #[derive(Deserialize, Serialize)]
@@ -65,6 +67,9 @@ pub struct Manifest {
   /// The notes taken, for a notes project.
   #[serde(default, skip_serializing_if = "Option::is_none")]
   pub notes: Option<NotesManifest>,
+  /// The script written, for a script project.
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  pub script: Option<ScriptManifest>,
   /// The edit, from the editor's first save on. A project that has never
   /// been edited has none.
   #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -91,6 +96,7 @@ impl Manifest {
       recording: Some(recording),
       screenshot: None,
       notes: None,
+      script: None,
       timeline: None,
       look: None,
       title: None,
@@ -104,6 +110,7 @@ impl Manifest {
       recording: None,
       screenshot: Some(screenshot),
       notes: None,
+      script: None,
       timeline: None,
       look: None,
       title: None,
@@ -117,6 +124,21 @@ impl Manifest {
       recording: None,
       screenshot: None,
       notes: Some(notes),
+      script: None,
+      timeline: None,
+      look: None,
+      title: None,
+    }
+  }
+
+  pub fn script(script: ScriptManifest) -> Self {
+    Self {
+      version: FORMAT_VERSION,
+      kind: ProjectKind::Script,
+      recording: None,
+      screenshot: None,
+      notes: None,
+      script: Some(script),
       timeline: None,
       look: None,
       title: None,
@@ -153,6 +175,14 @@ pub struct NotesManifest {
   pub duration_ms: Option<u64>,
   #[serde(default, skip_serializing_if = "Vec::is_empty")]
   pub not_private: Vec<String>,
+}
+
+/// A script project's script: the Markdown file it is written in, relative
+/// to the project folder, which the teleprompter reads from.
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ScriptManifest {
+  pub file: String,
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]

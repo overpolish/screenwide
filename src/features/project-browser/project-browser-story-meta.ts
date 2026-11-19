@@ -34,6 +34,7 @@ const events = {
   onForget: fn(),
   onMinimize: fn(),
   onMove: fn(),
+  onNewScript: fn(),
   onOpen: fn(),
   onOpenFile: fn(),
   onOpenLocation: fn(),

@@ -18,6 +18,7 @@ pub enum PaidTool {
   References,
   Glide,
   Annotate,
+  Teleprompter,
 }
 
 impl From<Tool> for PaidTool {
@@ -27,6 +28,7 @@ impl From<Tool> for PaidTool {
       Tool::References => PaidTool::References,
       Tool::Glide => PaidTool::Glide,
       Tool::Annotate => PaidTool::Annotate,
+      Tool::Teleprompter => PaidTool::Teleprompter,
     }
   }
 }
@@ -38,6 +40,7 @@ impl From<PaidTool> for Tool {
       PaidTool::References => Tool::References,
       PaidTool::Glide => Tool::Glide,
       PaidTool::Annotate => Tool::Annotate,
+      PaidTool::Teleprompter => Tool::Teleprompter,
     }
   }
 }

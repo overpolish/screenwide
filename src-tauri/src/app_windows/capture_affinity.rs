@@ -70,12 +70,19 @@ pub(crate) fn apply_capture_policy(app: &AppHandle) -> Result<()> {
 /// References are visible outside our captures too, so the Ruler's and Text
 /// Recognition's snapshots, which are not our captures, read them; during
 /// one they follow the preference as any of our windows does.
+///
+/// The teleprompter is never captured.
 #[cfg(target_os = "windows")]
 #[derive(Clone, Copy)]
 enum Kind {
-  Ordinary { preserve_ruler: bool },
+  Ordinary {
+    preserve_ruler: bool,
+  },
   AnnotateHost,
   Reference,
+  /// Read only by whoever speaks, so out of every capture, a video call's
+  /// screen share as much as our own recordings, whatever the preference.
+  Teleprompter,
 }
 
 #[cfg(target_os = "windows")]
@@ -83,6 +90,7 @@ const fn window_capturable(record_screenwide_windows: bool, kind: Kind, capturin
   match kind {
     Kind::AnnotateHost => !capturing,
     Kind::Reference => record_screenwide_windows || !capturing,
+    Kind::Teleprompter => false,
     Kind::Ordinary { preserve_ruler } => record_screenwide_windows || preserve_ruler,
   }
 }
@@ -97,6 +105,8 @@ pub fn sync_capture_affinity(app: &AppHandle, record_screenwide_windows: bool) -
         Kind::AnnotateHost
       } else if crate::references::is_reference_label(label) {
         Kind::Reference
+      } else if label == crate::teleprompter::LABEL {
+        Kind::Teleprompter
       } else {
         // Quick Screenshot temporarily preserves Ruler in the captured
         // pixels. Region's pre-shutter exclusion pass must not overwrite the

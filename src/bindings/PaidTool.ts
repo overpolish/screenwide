@@ -3,4 +3,4 @@
 /**
  * A paid tool, as the pages name it.
  */
-export type PaidTool = "ruler" | "references" | "glide" | "annotate";
+export type PaidTool = "ruler" | "references" | "glide" | "annotate" | "teleprompter";

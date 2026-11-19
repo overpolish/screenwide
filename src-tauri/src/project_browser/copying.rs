@@ -102,9 +102,12 @@ pub async fn move_projects(
   }
   let files = files
     .into_iter()
-    .map(|file| match crate::editor::open_kind(&app, &file) {
-      Some(kind) => crate::editor::close(&app, kind).unwrap_or(file),
-      None => file,
+    .map(|file| {
+      crate::teleprompter::close_on(&app, &file);
+      match crate::editor::open_kind(&app, &file) {
+        Some(kind) => crate::editor::close(&app, kind).unwrap_or(file),
+        None => file,
+      }
     })
     .collect();
   copy_each(app, files, move |app, file, size, on_copied| {

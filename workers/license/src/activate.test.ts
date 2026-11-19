@@ -13,6 +13,7 @@ const SECRETS = {
   references: "secret-references",
   glide: "secret-glide",
   annotate: "secret-annotate",
+  teleprompter: "secret-teleprompter",
 };
 
 let env: Env;
@@ -35,6 +36,7 @@ beforeAll(async () => {
     PAYHIP_SECRET_REFERENCES: SECRETS.references,
     PAYHIP_SECRET_GLIDE: SECRETS.glide,
     PAYHIP_SECRET_ANNOTATE: SECRETS.annotate,
+    PAYHIP_SECRET_TELEPROMPTER: SECRETS.teleprompter,
   };
 });
 

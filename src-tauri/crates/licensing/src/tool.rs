@@ -11,10 +11,18 @@ pub enum Tool {
   /// The live Annotate overlay, for drawing on the screen. Annotations in
   /// the editor stay free.
   Annotate,
+  /// The teleprompter, which reads a script and follows the voice.
+  Teleprompter,
 }
 
 impl Tool {
-  pub const ALL: [Tool; 4] = [Tool::Ruler, Tool::References, Tool::Glide, Tool::Annotate];
+  pub const ALL: [Tool; 5] = [
+    Tool::Ruler,
+    Tool::References,
+    Tool::Glide,
+    Tool::Annotate,
+    Tool::Teleprompter,
+  ];
 
   /// The name the licence server signs for the tool in a record's
   /// entitlements. Part of the server's contract: never rename one.
@@ -24,6 +32,7 @@ impl Tool {
       Tool::References => "references",
       Tool::Glide => "glide",
       Tool::Annotate => "annotate",
+      Tool::Teleprompter => "teleprompter",
     }
   }
 
@@ -41,6 +50,9 @@ impl Tool {
       Tool::References => "https://store.overpolish.co/buy?s=1&link=6GVnd",
       Tool::Glide => "https://store.overpolish.co/buy?s=1&link=oSXt5",
       Tool::Annotate => "https://store.overpolish.co/buy?s=1&link=oYtlS",
+      // The store itself until the teleprompter's own product is listed and
+      // its checkout link can stand here.
+      Tool::Teleprompter => "https://store.overpolish.co/",
     }
   }
 }

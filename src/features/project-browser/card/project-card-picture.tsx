@@ -9,6 +9,7 @@ import {
   Mic,
   Monitor,
   NotebookPen,
+  ScrollText,
   Video,
   Volume2,
 } from "lucide-react";
@@ -24,7 +25,7 @@ import {
 } from "../../../lib/picture-tone";
 import { cn, elementFocusVisible, focusStyles } from "../../../lib/styling";
 import { Checkbox } from "../../../primitives/checkbox/checkbox";
-import { NotesCardPage } from "../../notes/card/notes-card-page";
+import { showsWords } from "../types";
 
 import {
   type CapturedTrack,
@@ -32,6 +33,7 @@ import {
   MomentCaption,
   TrackBadge,
 } from "./project-card-overlays";
+import { ProjectCardWords } from "./project-card-words";
 import { StripFrame } from "./strip-frame";
 
 import type { ProjectKind, ProjectSummary, ScrubStrip } from "../types";
@@ -42,6 +44,7 @@ const kindIcons: Record<ProjectKind, typeof Monitor> = {
   notes: NotebookPen,
   screen: Monitor,
   screenshot: ImageIcon,
+  script: ScrollText,
 };
 
 /** In capture order, with the icons the editor's timeline and the recording
@@ -118,8 +121,8 @@ export function ProjectCardPicture({
   const KindIcon = project.available
     ? kindIcons[project.kind ?? "screen"]
     : FileQuestion;
-  const isPicture =
-    thumbnail !== null && project.kind !== "audio" && project.kind !== "notes";
+  const hasWords = showsWords(project.kind);
+  const isPicture = thumbnail !== null && project.kind !== "audio" && !hasWords;
   // How light the picture is under each corner something is drawn over,
   // once it has loaded; until then, or with no picture, they take the
   // window's own appearance.
@@ -130,7 +133,7 @@ export function ProjectCardPicture({
     project.available &&
     project.durationMs !== null &&
     project.kind !== "screenshot" &&
-    project.kind !== "notes";
+    !hasWords;
   const strip = canScrub && isPicture ? scrubStrip : null;
   const { tracks } = project;
   const captured =
@@ -217,8 +220,8 @@ export function ProjectCardPicture({
               }}
               src={thumbnail}
             />
-          ) : project.kind === "notes" && project.notesOpening ? (
-            <NotesCardPage markdown={project.notesOpening} />
+          ) : hasWords && project.opening ? (
+            <ProjectCardWords project={project} />
           ) : (
             <KindIcon className="absolute inset-0 m-auto size-icon-lg" />
           )}

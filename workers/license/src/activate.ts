@@ -11,6 +11,7 @@ const PRODUCTS = {
   references: "PAYHIP_SECRET_REFERENCES",
   glide: "PAYHIP_SECRET_GLIDE",
   annotate: "PAYHIP_SECRET_ANNOTATE",
+  teleprompter: "PAYHIP_SECRET_TELEPROMPTER",
 } as const satisfies Record<string, keyof Env>;
 
 // Bounds for what a client sends; a key and an installation ID are short.

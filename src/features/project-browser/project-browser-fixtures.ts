@@ -43,7 +43,7 @@ const project = (
   kind: "screen",
   // Last edited when it was recorded, unless a project says otherwise.
   modifiedMs: overrides.createdMs ?? daysAgo(0, 10),
-  notesOpening: null,
+  opening: null,
   replay: false,
   sizeBytes: 148_000_000,
   title,
@@ -111,16 +111,25 @@ export const projects = [
     createdMs: daysAgo(2, 14),
     durationMs: 1_820_000,
     kind: "notes",
-    notesOpening:
+    opening:
       "# Notes 2026-10-06 at 14.00.00\n\n**Me:** Thanks for joining. Let's go through the launch plan for the beta.\n\n**Speaker 1:** The build is ready. We are waiting on the store review, which usually takes two days.\n\n**Speaker 2:** Marketing needs the final screenshots by Thursday.\n",
     sizeBytes: 4_800,
+    tracks: null,
+  }),
+  project("Launch video script", {
+    createdMs: daysAgo(0, 9),
+    durationMs: null,
+    kind: "script",
+    opening:
+      "# Launch video\n\nHi, I'm Dom. Today we look at the new editor, and the way it keeps your place.\n\nFirst, the timeline. Then the islands, and how they move with you.\n",
+    sizeBytes: 1_200,
     tracks: null,
   }),
 ];
 
 /** Recent: the projects most recently opened first, which is not the order
  * they were recorded in. */
-export const recentProjects = [8, 0, 9, 3, 1, 6, 2, 4, 5, 7].map(
+export const recentProjects = [10, 8, 0, 9, 3, 1, 6, 2, 4, 5, 7].map(
   (index) => projects[index],
 );
 
