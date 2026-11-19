@@ -95,10 +95,10 @@ export function TeleprompterBar({
           }
           isSelected={isPlaying}
           key="play"
-          off={<Play />}
+          off={<Play className="fill-current" />}
           onChange={onPlayingChange}
         >
-          <Pause />
+          <Pause className="fill-current" />
         </IconToggleButton>
         <IconButton
           aria-label={t("teleprompter-restart")}
