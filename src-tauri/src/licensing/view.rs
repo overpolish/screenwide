@@ -51,7 +51,7 @@ impl From<PaidTool> for Tool {
 #[ts(export)]
 pub enum ToolAccess {
   Licensed,
-  /// No paid tool has been used yet; the trial starts with the first.
+  /// The tool has not been used yet; its trial starts with its first use.
   TrialUnused,
   /// In the trial, which ends at `endsAt`, in seconds since 1970.
   Trial {

@@ -103,9 +103,9 @@ pub(crate) fn may_start(app: &AppHandle, tool: Tool) -> bool {
     let Ok(mut state) = licensing.state.write() else {
       return true;
     };
-    let before = state.trial_started_at;
+    let before = state.trials.len();
     let access = state.begin_use(tool, now(), &licensing.server_key);
-    let started = (before != state.trial_started_at).then(|| state.clone());
+    let started = (before != state.trials.len()).then(|| state.clone());
     (access, started)
   };
   if let Some(state) = started {
@@ -186,12 +186,10 @@ fn save(path: Option<PathBuf>, state: &LicenseState) {
 }
 
 fn fresh() -> LicenseState {
-  LicenseState::new().unwrap_or_else(|_| LicenseState {
+  LicenseState::new().unwrap_or_else(|_| {
     // The system's random source failing is near impossible; the time still
     // gives an installation ID no other copy shares.
-    installation_id: format!("t{:x}", now_nanos()),
-    trial_started_at: None,
-    activations: Vec::new(),
+    LicenseState::with_installation_id(format!("t{:x}", now_nanos()))
   })
 }
 

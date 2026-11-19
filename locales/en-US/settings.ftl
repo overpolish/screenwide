@@ -492,8 +492,8 @@ settings-licences-trial =
         [one] In trial, 1 day left
        *[other] In trial, { $days } days left
     }
-# A paid tool's row before any paid tool has been used. $days is the trial's length.
-settings-licences-trial-unused = Free for { $days } days from the first time you use a paid tool
+# A paid tool's row before the tool has been used. $days is the trial's length.
+settings-licences-trial-unused = Free for { $days } days from the first time you use it
 settings-licences-expired = Trial ended. Buy it or add its key below.
 settings-licences-buy = Buy
 # The Buy button's name for assistive technology. $tool is the tool's name.

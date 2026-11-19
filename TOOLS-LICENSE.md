@@ -16,7 +16,7 @@ Each individual tool licence includes all current and future versions of that to
 
 ## Trial and activation
 
-Every paid tool can be tried free for 14 days, counted from the first time any of them is used; the trial is shared by all of them. After the trial, a tool needs its licence to start. Trying a tool does not grant a licence for it.
+Every paid tool can be tried free for 14 days, counted from the first time that tool is used; each tool has its own trial. After its trial, a tool needs its licence to start. Trying a tool does not grant a licence for it.
 
 Each purchased tool is activated with its own licence key. Activation is a technical check that unlocks that tool; it does not extend the licence to other tools. To activate a key, and to check it again from time to time, Screenwide sends the key and a random identifier for your installation to Screenwide's licence server, which checks the key with the store it was bought from. Nothing else about you or your computer is sent. Licence keys are personal purchase credentials and may not be shared, sold, transferred or published.
 

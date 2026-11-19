@@ -1,6 +1,8 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: Elastic-2.0
 
+use std::collections::BTreeMap;
+
 use p256::ecdsa::VerifyingKey;
 use serde::{Deserialize, Serialize};
 
@@ -10,7 +12,7 @@ use crate::{
   tool::Tool,
 };
 
-/// How long the trial runs from the first time a tool is used.
+/// How long each tool's trial runs from the first time it is used.
 pub const TRIAL_DAYS: i64 = 14;
 /// How often a held key is checked with the licence server again.
 pub const RECHECK_DAYS: i64 = 21;
@@ -37,16 +39,54 @@ impl Activation {
 }
 
 /// Everything the gate knows, saved by the app beside its settings. Times are
-/// seconds since 1970, passed in by the app.
+/// seconds since 1970, passed in by the app. Read through [`Saved`], so a
+/// file from before each tool had its own trial still opens.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[serde(rename_all = "camelCase", from = "Saved")]
 pub struct LicenseState {
   /// Random, made once: never derived from the hardware.
   pub installation_id: String,
-  #[serde(default)]
-  pub trial_started_at: Option<i64>,
-  #[serde(default)]
+  /// When each tool's trial started, by the tool's entitlement name; a tool
+  /// not used yet has none.
+  pub trials: BTreeMap<String, i64>,
   pub activations: Vec<Activation>,
+}
+
+/// The tools there were while every tool shared one trial. A file saved then
+/// gives its start to each of them, since it does not say which were used; a
+/// tool added since starts a trial of its own.
+const SHARED_TRIAL_TOOLS: [Tool; 4] = [Tool::Ruler, Tool::References, Tool::Glide, Tool::Annotate];
+
+/// The state as files hold it, older ones included.
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct Saved {
+  installation_id: String,
+  #[serde(default)]
+  trials: BTreeMap<String, i64>,
+  /// The one trial every tool shared, in files saved before each had its own.
+  #[serde(default)]
+  trial_started_at: Option<i64>,
+  #[serde(default)]
+  activations: Vec<Activation>,
+}
+
+impl From<Saved> for LicenseState {
+  fn from(saved: Saved) -> LicenseState {
+    let mut trials = saved.trials;
+    if let Some(started) = saved.trial_started_at {
+      for tool in SHARED_TRIAL_TOOLS {
+        trials
+          .entry(tool.entitlement().to_owned())
+          .or_insert(started);
+      }
+    }
+    LicenseState {
+      installation_id: saved.installation_id,
+      trials,
+      activations: saved.activations,
+    }
+  }
 }
 
 /// Whether a tool may be used now, and why.
@@ -54,7 +94,7 @@ pub struct LicenseState {
 pub enum Access {
   /// A key held here grants the tool.
   Licensed,
-  /// No tool has been used yet; the trial starts with the first.
+  /// The tool has not been used yet; its trial starts with its first use.
   TrialUnused,
   /// In the trial, which ends at this time.
   Trial { ends_at: i64 },
@@ -73,32 +113,40 @@ impl LicenseState {
   pub fn new() -> Result<LicenseState, getrandom::Error> {
     let mut bytes = [0u8; 16];
     getrandom::fill(&mut bytes)?;
-    Ok(LicenseState {
-      installation_id: bytes.iter().map(|byte| format!("{byte:02x}")).collect(),
-      trial_started_at: None,
+    Ok(LicenseState::with_installation_id(
+      bytes.iter().map(|byte| format!("{byte:02x}")).collect(),
+    ))
+  }
+
+  /// A fresh state for the installation `installation_id`: no trial started,
+  /// no key held.
+  pub fn with_installation_id(installation_id: String) -> LicenseState {
+    LicenseState {
+      installation_id,
+      trials: BTreeMap::new(),
       activations: Vec::new(),
-    })
+    }
   }
 
   pub fn access(&self, tool: Tool, now: i64, server_key: &VerifyingKey) -> Access {
     if self.unlocked(server_key).contains(&tool) {
       return Access::Licensed;
     }
-    match self.trial_started_at {
+    match self.trials.get(tool.entitlement()) {
       None => Access::TrialUnused,
-      Some(started) if now < started + TRIAL_DAYS * DAY => Access::Trial {
+      Some(&started) if now < started + TRIAL_DAYS * DAY => Access::Trial {
         ends_at: started + TRIAL_DAYS * DAY,
       },
       Some(_) => Access::Expired,
     }
   }
 
-  /// The tool is starting: starts the trial if this is the first use, and
-  /// says whether it may run. A tool its key already grants leaves the
-  /// trial unstarted, to be had in full for the others.
+  /// The tool is starting: starts its trial if this is its first use, and
+  /// says whether it may run. A tool its key already grants leaves its
+  /// trial unstarted, to be had in full if the key goes.
   pub fn begin_use(&mut self, tool: Tool, now: i64, server_key: &VerifyingKey) -> Access {
     if self.access(tool, now, server_key) == Access::TrialUnused {
-      self.trial_started_at = Some(now);
+      self.trials.insert(tool.entitlement().to_owned(), now);
     }
     self.access(tool, now, server_key)
   }

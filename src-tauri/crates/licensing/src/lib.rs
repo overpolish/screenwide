@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: Elastic-2.0
 
 //! Who may use the paid tools, listed in [`Tool`]. Each tool is free for a
-//! 14-day trial that starts the first time any of them is used; after
-//! that it needs a licence key bought for it. The licence server checks a key
+//! 14-day trial of its own, from the first time it is used; after that it
+//! needs a licence key bought for it. The licence server checks a key
 //! with Payhip and answers with a record it signs, which this crate checks
 //! offline from then on against the server's public key, so a tool opens
 //! without a connection. Every few weeks the app asks the server again, so a

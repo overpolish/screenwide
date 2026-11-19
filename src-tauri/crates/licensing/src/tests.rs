@@ -44,11 +44,7 @@ fn record_for(
 }
 
 fn state() -> LicenseState {
-  LicenseState {
-    installation_id: "install-a".into(),
-    trial_started_at: None,
-    activations: Vec::new(),
-  }
+  LicenseState::with_installation_id("install-a".into())
 }
 
 #[test]
@@ -103,7 +99,7 @@ fn a_high_s_signature_verifies_as_its_low_s_twin() {
 }
 
 #[test]
-fn the_trial_starts_at_first_use_and_runs_for_trial_days() {
+fn each_tool_s_trial_starts_at_its_own_first_use_and_runs_for_trial_days() {
   let key = public(&server());
   let mut state = state();
   assert_eq!(state.access(Tool::Ruler, NOW, &key), Access::TrialUnused);
@@ -113,23 +109,55 @@ fn the_trial_starts_at_first_use_and_runs_for_trial_days() {
       ends_at: NOW + TRIAL_DAYS * DAY
     }
   );
-  // One trial for all the tools, counted from the first.
+  // Glide, first used ten days later, has its whole trial from then.
   assert_eq!(
     state.begin_use(Tool::Glide, NOW + 10 * DAY, &key),
     Access::Trial {
-      ends_at: NOW + TRIAL_DAYS * DAY
+      ends_at: NOW + (10 + TRIAL_DAYS) * DAY
     }
   );
-  assert!(state
-    .access(Tool::Glide, NOW + TRIAL_DAYS * DAY - 1, &key)
-    .allows_use());
   assert_eq!(
-    state.access(Tool::Glide, NOW + TRIAL_DAYS * DAY, &key),
+    state.access(Tool::Ruler, NOW + TRIAL_DAYS * DAY, &key),
     Access::Expired
   );
+  assert!(state
+    .access(Tool::Glide, NOW + TRIAL_DAYS * DAY, &key)
+    .allows_use());
   assert!(!state
     .begin_use(Tool::Glide, NOW + 40 * DAY, &key)
     .allows_use());
+  // A tool never used still has its trial to come.
+  assert_eq!(
+    state.access(Tool::Teleprompter, NOW + 40 * DAY, &key),
+    Access::TrialUnused
+  );
+}
+
+#[test]
+fn a_file_from_the_shared_trial_keeps_it_for_the_tools_there_were_then() {
+  let key = public(&server());
+  let saved = serde_json::json!({
+    "installationId": "install-a",
+    "trialStartedAt": NOW,
+    "activations": [],
+  });
+  let state: LicenseState = serde_json::from_value(saved).unwrap();
+  for tool in [Tool::Ruler, Tool::References, Tool::Glide, Tool::Annotate] {
+    assert_eq!(
+      state.access(tool, NOW + DAY, &key),
+      Access::Trial {
+        ends_at: NOW + TRIAL_DAYS * DAY
+      }
+    );
+  }
+  assert_eq!(
+    state.access(Tool::Teleprompter, NOW + DAY, &key),
+    Access::TrialUnused
+  );
+  // Saved again, it holds each tool's own start and no shared one.
+  let resaved = serde_json::to_value(&state).unwrap();
+  assert!(resaved.get("trialStartedAt").is_none());
+  assert_eq!(resaved["trials"]["glide"], NOW);
 }
 
 #[test]
@@ -147,7 +175,7 @@ fn a_key_unlocks_only_its_tools_and_leaves_the_trial_for_the_rest() {
 
   // Using the licensed tool does not spend the trial.
   assert_eq!(state.begin_use(Tool::Ruler, NOW, &key), Access::Licensed);
-  assert_eq!(state.trial_started_at, None);
+  assert!(!state.trials.contains_key("ruler"));
   assert_eq!(state.access(Tool::Glide, NOW, &key), Access::TrialUnused);
 
   // Long after the trial, the licensed tool still opens and the others do not.
