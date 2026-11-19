@@ -15,6 +15,7 @@ const CHECKOUT = {
   glide: "https://store.overpolish.co/buy?s=1&link=oSXt5",
   references: "https://store.overpolish.co/buy?s=1&link=6GVnd",
   ruler: "https://store.overpolish.co/buy?s=1&link=XZ1n8",
+  teleprompter: "https://store.overpolish.co/buy?s=1&link=W0pfj",
 };
 
 const open = (url: string) => () => {
@@ -56,10 +57,12 @@ function Tile({ body, checkout, clip, label, title }: TileProps) {
   );
 }
 
-/** What is free and what is paid, in the grid's last place. */
+/** What is free and what is paid, in the grid's last place. On a wide
+ * page the tools fill whole rows of three, so it takes a row of its own,
+ * its two halves side by side. */
 function Pricing() {
   return (
-    <div className="flex flex-col justify-center gap-group rounded-panel bg-fill p-8">
+    <div className="flex flex-col justify-center gap-group rounded-panel bg-fill p-8 lg:col-span-3 lg:grid lg:grid-cols-2">
       <div>
         <h2 className="text-tile-title text-fg">{t("site-free-title")}</h2>
         <p className="mt-1 text-tile text-fg-secondary">
@@ -134,6 +137,13 @@ export function SiteTiles() {
         clip="reference"
         label={t("site-references-recording")}
         title={t("site-references-title")}
+      />
+      <Tile
+        body={t("site-teleprompter-body")}
+        checkout={CHECKOUT.teleprompter}
+        clip="teleprompter"
+        label={t("site-teleprompter-recording")}
+        title={t("site-teleprompter-title")}
       />
       <Pricing />
     </section>

@@ -1659,6 +1659,9 @@ export type Messages = {
   "site-sound-body": null;
   "site-sound-recording": null;
   "site-sound-title": null;
+  "site-teleprompter-body": null;
+  "site-teleprompter-recording": null;
+  "site-teleprompter-title": null;
   "site-tools-body": null;
   "site-tools-title": null;
   "teleprompter-close": null;

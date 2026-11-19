@@ -54,9 +54,15 @@ Take notes of a call: what you and everyone else said, written into a Markdown f
 
 <img alt="Notes taken during a call, then opened with each speaker's lines told apart" src="./.github/assets/notes.gif" />
 
+## Teleprompter
+
+Read your script as it follows your voice, with cues from your recordings shown as you reach them.
+
+<img alt="A script scrolling in the teleprompter, a cue dragged to its line, and each cue's picture showing as its words are read" src="./.github/assets/teleprompter.gif" />
+
 ## Free and paid
 
-Recording, editing, screenshots, text recognition, dictation and meeting notes are free. Ruler, Annotate, Glide and References are paid tools: each is free for 14 days, then a one-off purchase from Settings › Licences, on its own or all together.
+Recording, editing, screenshots, text recognition, dictation and meeting notes are free. Ruler, Annotate, Glide, References and the Teleprompter are paid tools: each is free for 14 days, then a one-off purchase from Settings › Licences, on its own or all together.
 
 <table>
 	<tr>

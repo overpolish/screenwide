@@ -57,6 +57,10 @@ site-glide-title = Glide
 site-glide-body = Snap windows to halves, quarters or thirds with a trackpad or mouse gesture.
 # Names the recording of Glide at work, for assistive technology.
 site-glide-recording = Two windows snapped into the halves of the screen
+site-teleprompter-title = Teleprompter
+site-teleprompter-body = Read your script as it follows your voice, with cues from your recordings.
+# Names the recording of the teleprompter at work, for assistive technology.
+site-teleprompter-recording = A script scrolling in the teleprompter, a cue dragged to its line, and each cue's picture showing as its words are read
 site-footer-licence = Free software under the GNU GPL, version 3 or later.
 site-footer-requirements = macOS 14.2 or later, and Windows 10 22H2 or later from the Microsoft Store.
 # Links to every release and its notes.
