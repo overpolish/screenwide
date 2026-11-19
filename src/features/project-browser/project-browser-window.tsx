@@ -42,7 +42,6 @@ import { useProjectThumbnails } from "./use-project-thumbnails";
 import { useScrubStrips } from "./use-scrub-strips";
 import { useUndoDelete } from "./use-undo-delete";
 
-
 const message = (cause: unknown) =>
   cause instanceof Error ? cause.message : String(cause);
 

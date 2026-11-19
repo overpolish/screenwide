@@ -12,6 +12,6 @@ export function ProjectCardWords({ project }: { project: ProjectSummary }) {
   const { kind, opening } = project;
   if (!opening) return null;
   if (kind === "notes") return <NotesCardPage markdown={opening} />;
-  if (kind === "script") return <ScriptCardPage markdown={opening} />;
+  if (kind === "script") return <ScriptCardPage text={opening} />;
   return null;
 }

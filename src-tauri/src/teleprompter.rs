@@ -18,7 +18,7 @@ pub(crate) use window::{close_on, open, renamed};
 
 use tauri::ipc::Invoke;
 
-const COMMANDS: [&str; 8] = [
+const COMMANDS: [&str; 7] = [
   "new_script",
   "read_script",
   "save_script",
@@ -26,7 +26,6 @@ const COMMANDS: [&str; 8] = [
   "set_teleprompter_fullscreen",
   "start_teleprompter_voice",
   "stop_teleprompter_voice",
-  "show_teleprompter_models",
 ];
 
 /// `app_commands` with the teleprompter's commands beside them.
@@ -41,7 +40,6 @@ pub(crate) fn with_commands(
     window::set_teleprompter_fullscreen,
     voice::start_teleprompter_voice,
     voice::stop_teleprompter_voice,
-    voice::show_teleprompter_models,
   ];
   move |invoke| {
     if COMMANDS.contains(&invoke.message.command()) {

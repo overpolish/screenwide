@@ -1674,11 +1674,9 @@ export type Messages = {
   "teleprompter-script-name": null;
   "teleprompter-script-placeholder": null;
   "teleprompter-text-size": null;
-  "teleprompter-voice-download": null;
   "teleprompter-voice-failed": null;
   "teleprompter-voice-loading": null;
   "teleprompter-voice-no-microphone": null;
-  "teleprompter-voice-no-model": null;
   "text-recognition-island": null;
   "text-recognition-island-choosing": null;
   "text-recognition-island-close": null;

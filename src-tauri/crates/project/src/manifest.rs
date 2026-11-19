@@ -177,8 +177,8 @@ pub struct NotesManifest {
   pub not_private: Vec<String>,
 }
 
-/// A script project's script: the Markdown file it is written in, relative
-/// to the project folder, which the teleprompter reads from.
+/// A script project's script: the plain text file it is written in,
+/// relative to the project folder, which the teleprompter reads from.
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ScriptManifest {

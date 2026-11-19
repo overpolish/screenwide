@@ -4,10 +4,11 @@
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { useMemo, useState } from "react";
 
+import { useModel } from "../editor/recording/microphone/use-model";
 import { renameProject } from "../project-browser/api";
 import { RecordingStateSync } from "../recording-controls/recording-state-sync";
 
-import { setTeleprompterFullscreen, showTeleprompterModels } from "./api";
+import { setTeleprompterFullscreen } from "./api";
 import { placeAfterEdit, scriptText } from "./script-words";
 import {
   stepped,
@@ -49,13 +50,17 @@ export function TeleprompterWindow() {
 
 function ScriptReader({ shown }: { shown: ShownScript }) {
   const { change, ...preferences } = useTeleprompterPreferences();
-  const [markdown, setMarkdown] = useState(shown.script.markdown);
+  const [text, setText] = useState(shown.script.text);
   const [title, setTitle] = useState(shown.script.title);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const script = useMemo(() => scriptText(markdown), [markdown]);
+  const script = useMemo(() => scriptText(text), [text]);
   const saving = useScriptSaving(shown.project);
+  // The voice is heard with dictation's model, which can be fetched from
+  // here; listening starts again once it has arrived.
+  const voiceModel = useModel("dictation");
   const { place, setPlace, voice } = useTeleprompterReading({
+    hasModel: voiceModel.shown?.status === "downloaded",
     isPlaying,
     mode: preferences.mode,
     spoken: script.spoken,
@@ -97,25 +102,22 @@ function ScriptReader({ shown }: { shown: ShownScript }) {
     <TeleprompterView
       isFullscreen={isFullscreen}
       isPlaying={isPlaying}
-      markdown={markdown}
       onClose={close}
+      onDownloadVoiceModel={voiceModel.download}
       onEdit={(next) => {
         // Writing pauses the text, so it does not move under the caret.
         setIsPlaying(false);
         setPlace(
           placeAfterEdit(
-            { markdown, text: script },
-            { markdown: next, text: scriptText(next) },
+            { script, text },
+            { script: scriptText(next), text: next },
             place,
           ),
         );
-        setMarkdown(next);
+        setText(next);
         saving.save(next);
       }}
       onFullscreenChange={fullscreen}
-      onOpenModels={() => {
-        showTeleprompterModels().catch(report("Could not open Settings"));
-      }}
       onPlayingChange={setIsPlaying}
       onPreferencesChange={change}
       onRename={(next) => {
@@ -137,8 +139,10 @@ function ScriptReader({ shown }: { shown: ShownScript }) {
       preferences={preferences}
       saveError={saving.error}
       script={script}
+      text={text}
       title={title}
       voice={voice}
+      voiceModel={voiceModel.shown}
     />
   );
 }

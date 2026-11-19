@@ -31,11 +31,14 @@ const isVoiceProblem = (value: unknown): value is TeleprompterVoiceProblem =>
  * meanwhile. Pausing stops listening; the place stays.
  */
 export function useTeleprompterReading({
+  hasModel,
   isPlaying,
   mode,
   spoken,
   wordsPerMinute,
 }: {
+  /** Whether dictation's model is downloaded. */
+  hasModel: boolean;
   isPlaying: boolean;
   mode: TeleprompterMode;
   /** The script's words, in their spoken form. */
@@ -91,7 +94,8 @@ export function useTeleprompterReading({
       });
       void stopTeleprompterVoice();
     };
-  }, [listens]);
+    // A model that has just arrived lets it listen where it could not.
+  }, [hasModel, listens]);
 
   useEffect(() => {
     if (!isSteady) return;

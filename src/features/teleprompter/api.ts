@@ -22,8 +22,8 @@ export const newScript = () => invoke("new_script");
 export const readScript = (project: string) =>
   invoke<Script>("read_script", { project });
 
-export const saveScript = (project: string, markdown: string) =>
-  invoke("save_script", { markdown, project });
+export const saveScript = (project: string, text: string) =>
+  invoke("save_script", { project, text });
 
 /** The script the teleprompter shows, by its project's manifest. */
 export const teleprompterScript = () =>
@@ -37,6 +37,3 @@ export const setTeleprompterFullscreen = (fullscreen: boolean) =>
 export const startTeleprompterVoice = () => invoke("start_teleprompter_voice");
 
 export const stopTeleprompterVoice = () => invoke("stop_teleprompter_voice");
-
-/** Opens Settings where dictation's model is downloaded. */
-export const showTeleprompterModels = () => invoke("show_teleprompter_models");

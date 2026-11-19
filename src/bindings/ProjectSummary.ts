@@ -42,7 +42,7 @@ replay: boolean, title: string,
  */
 tracks: ProjectTracks | null, 
 /**
- * The start of a notes or script project's Markdown, for its card to
- * show what was said or will be; None for other kinds.
+ * The start of a notes project's Markdown or a script's text, for its
+ * card to show what was said or will be; None for other kinds.
  */
 opening: string | null, };

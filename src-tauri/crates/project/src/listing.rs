@@ -91,16 +91,16 @@ pub struct ProjectSummary {
   pub title: String,
   /// None for a screenshot, and for a project that could not be read.
   pub tracks: Option<ProjectTracks>,
-  /// The start of a notes or script project's Markdown, for its card to
-  /// show what was said or will be; None for other kinds.
+  /// The start of a notes project's Markdown or a script's text, for its
+  /// card to show what was said or will be; None for other kinds.
   pub opening: Option<String>,
 }
 
 /// How much of a notes or script file its card is given, in bytes.
 const OPENING_BYTES: usize = 1_200;
 
-/// The start of the Markdown file `name` names in the project at `file`, cut
-/// at a character's edge.
+/// The start of the file `name` names in the project at `file`, cut at a
+/// character's edge.
 fn opening(file: &Path, name: &str) -> Option<String> {
   let mut text = std::fs::read_to_string(super::resolve(file, name).ok()?).ok()?;
   if text.len() > OPENING_BYTES {

@@ -10,7 +10,8 @@ import type {
 /** The Dictation models for English, the streaming model and the one that
  * writes each stretch again, at their real download size together. */
 const DICTATION_MODEL: TranscriptionModel = {
-  description: "Types what you say into any app as you speak.",
+  description:
+    "Types what you say as you speak, and lets the Teleprompter follow you.",
   id: "parakeet-unified-en-0.6b-q8_0",
   name: "Dictation",
   progress: null,
@@ -22,7 +23,8 @@ const DICTATION_MODEL: TranscriptionModel = {
 
 /** The Dictation model for European languages, at its real download size. */
 const EUROPEAN_DICTATION_MODEL: TranscriptionModel = {
-  description: "Types what you say into any app each time you pause.",
+  description:
+    "Types what you say at each pause, and lets the Teleprompter follow you.",
   id: "parakeet-ultra-q8_0",
   name: "Dictation",
   progress: null,
@@ -105,7 +107,7 @@ export const dictationFor = (
       {
         ...transcripts,
         description:
-          "Types what you say into any app each time you pause, with the Transcripts model.",
+          "Types what you say at each pause, and lets the Teleprompter follow you. Uses the Transcripts model.",
         name: "Dictation",
         purpose: "dictation",
         writes: "atPauses",

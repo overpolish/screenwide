@@ -46,9 +46,9 @@ export function useScriptSaving(project: string) {
   return {
     error,
     flush,
-    /** Saves `markdown` once the changes stop for a moment. */
-    save: (markdown: string) => {
-      pendingRef.current = markdown;
+    /** Saves `text` once the changes stop for a moment. */
+    save: (text: string) => {
+      pendingRef.current = text;
       window.clearTimeout(timerRef.current);
       timerRef.current = window.setTimeout(() => {
         void flushRef.current();

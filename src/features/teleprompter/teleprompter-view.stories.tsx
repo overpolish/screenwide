@@ -10,15 +10,15 @@ import { scriptText } from "./script-words";
 import { TeleprompterPreferences } from "./teleprompter-preferences";
 import { TeleprompterView } from "./teleprompter-view";
 
+import type { ToolPanelModel } from "../editor/tools/tool-panel-selection";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 
-const MARKDOWN = [
-  "# Launch video",
+const SCRIPT = [
+  "Launch video",
   "",
-  "Hi, I'm Dom. Today we look at the **new** editor, and the way it keeps your place while you work.",
+  "Hi, I'm Dom. Today we look at the new editor, and the way it keeps your place while you work.",
   "",
-  "- First, the timeline.",
-  "- Then the islands, and how they move with you as you edit.",
+  "First, the timeline. Then the islands, and how they move with you as you edit.",
   "",
   "Finally, exporting: one click, and the file is ready to share.",
 ].join("\n");
@@ -31,15 +31,21 @@ const PREFERENCES: TeleprompterPreferences = {
   wordsPerMinute: 140,
 };
 
+/** Dictation's English model, downloaded, at its real size. */
+const VOICE_MODEL: ToolPanelModel = {
+  progress: 0,
+  sizeBytes: 1_471_720_736,
+  status: "downloaded",
+};
+
 const meta = {
   args: {
     isFullscreen: false,
     isPlaying: false,
-    markdown: MARKDOWN,
     onClose: fn(),
+    onDownloadVoiceModel: fn(),
     onEdit: fn(),
     onFullscreenChange: fn(),
-    onOpenModels: fn(),
     onPlayingChange: fn(),
     onPreferencesChange: fn(),
     onRename: fn(),
@@ -47,9 +53,11 @@ const meta = {
     onScrollTo: fn(),
     place: 9,
     preferences: PREFERENCES,
-    script: scriptText(MARKDOWN),
+    script: scriptText(SCRIPT),
+    text: SCRIPT,
     title: "Launch video script",
     voice: { kind: "idle" },
+    voiceModel: VOICE_MODEL,
   },
   component: TeleprompterView,
   decorators: [featureStage({ height: 280, width: 680 })],
@@ -61,17 +69,16 @@ const meta = {
   // own state: args reach the story a moment late, which would put a field
   // typed into back between keys.
   render: function Render(args) {
-    const [markdown, setMarkdown] = useState(args.markdown);
+    const [text, setText] = useState(args.text);
     const [place, setPlace] = useState(args.place);
     const [preferences, setPreferences] = useState(args.preferences);
-    const script = useMemo(() => scriptText(markdown), [markdown]);
+    const script = useMemo(() => scriptText(text), [text]);
     return (
       <TeleprompterView
         {...args}
-        markdown={markdown}
         onEdit={(next) => {
           args.onEdit(next);
-          setMarkdown(next);
+          setText(next);
         }}
         onPreferencesChange={(patch) => {
           args.onPreferencesChange(patch);
@@ -84,6 +91,7 @@ const meta = {
         place={place}
         preferences={preferences}
         script={script}
+        text={text}
       />
     );
   },
@@ -108,9 +116,17 @@ export const Mirrored: Story = {
 };
 
 export const NoModel: Story = {
-  args: { voice: { kind: "problem", problem: "noModel" } },
+  args: {
+    voiceModel: { ...VOICE_MODEL, status: "available" },
+  },
+};
+
+export const DownloadingModel: Story = {
+  args: {
+    voiceModel: { ...VOICE_MODEL, progress: 0.4, status: "downloading" },
+  },
 };
 
 export const Empty: Story = {
-  args: { markdown: "", place: 0, script: scriptText("") },
+  args: { place: 0, script: scriptText(""), text: "" },
 };

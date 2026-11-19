@@ -23,8 +23,6 @@ teleprompter-mirror = Mirror
 teleprompter-fullscreen = Fill the display
 teleprompter-close = Close teleprompter
 teleprompter-voice-loading = Getting ready to listen
-teleprompter-voice-no-model = Following the voice needs the dictation model. Moving at a steady pace meanwhile.
-teleprompter-voice-download = Download
 teleprompter-voice-no-microphone = Screenwide may not use the microphone, so it moves at a steady pace.
 teleprompter-voice-failed = Could not hear the voice, so it moves at a steady pace.
 # Names the script's name in the title bar, which is renamed where it is shown, for assistive technology.

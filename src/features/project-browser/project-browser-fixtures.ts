@@ -121,7 +121,7 @@ export const projects = [
     durationMs: null,
     kind: "script",
     opening:
-      "# Launch video\n\nHi, I'm Dom. Today we look at the new editor, and the way it keeps your place.\n\nFirst, the timeline. Then the islands, and how they move with you.\n",
+      "Launch video\n\nHi, I'm Dom. Today we look at the new editor, and the way it keeps your place.\n\nFirst, the timeline. Then the islands, and how they move with you.\n",
     sizeBytes: 1_200,
     tracks: null,
   }),

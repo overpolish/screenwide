@@ -79,12 +79,6 @@ pub fn stop_teleprompter_voice() {
   stop();
 }
 
-/// Opens Settings where dictation's model is downloaded.
-#[tauri::command]
-pub fn show_teleprompter_models(app: AppHandle) {
-  crate::settings::show_section(&app, "transcription");
-}
-
 /// Stops listening, dropping what was heard. The session finishes on a
 /// thread of its own, which waits for its helper to let go.
 pub(super) fn stop() {

@@ -33,24 +33,25 @@ const SCROLL_SETTLE_MS = 160;
 export function TeleprompterText({
   columnWidth,
   isPlaying,
-  markdown,
   onColumnWidthChange,
   onEdit,
   onScrollTo,
   place,
   script,
+  text,
   textSize,
 }: {
   /** The widest the text runs, in points; null fills the frame. */
   columnWidth: number | null;
   isPlaying: boolean;
-  markdown: string;
   onColumnWidthChange: (width: number | null) => void;
-  onEdit: (markdown: string) => void;
+  onEdit: (text: string) => void;
   /** The place scrolled to by hand, as a word's index. */
   onScrollTo: (index: number) => void;
   place: number;
   script: ScriptText;
+  /** The script as written. */
+  text: string;
   /** In points. */
   textSize: number;
 }) {
@@ -163,7 +164,7 @@ export function TeleprompterText({
           // An empty script leaves room for the placeholder's lines.
           className={cn(
             "px-inset break-words whitespace-pre-wrap",
-            markdown === "" ? "min-h-[3lh]" : "min-h-lh",
+            text === "" ? "min-h-[3lh]" : "min-h-lh",
           )}
           dir="auto"
         >
@@ -175,11 +176,9 @@ export function TeleprompterText({
               <span
                 className={cn(
                   "transition-colors duration-200",
-                  piece.kind === "mark"
-                    ? "text-fg-tertiary"
-                    : lastWord >= 0 && lastWord < read
-                      ? "text-fg-secondary/50"
-                      : "text-fg",
+                  lastWord >= 0 && lastWord < read
+                    ? "text-fg-secondary/50"
+                    : "text-fg",
                 )}
                 key={key}
                 ref={
@@ -197,13 +196,13 @@ export function TeleprompterText({
           })}
           {/* A field shows a last empty line after a final line break,
               which text alone does not. */}
-          {markdown.endsWith("\n") ? "\u200b" : null}
+          {text.endsWith("\n") ? "\u200b" : null}
         </div>
         <TextField
           aria-label={t("teleprompter-script-label")}
           className="absolute inset-0"
           onChange={onEdit}
-          value={markdown}
+          value={text}
         >
           {/* The browser's own text rendering for a field is not the
               page's, which would set the words a touch apart from those

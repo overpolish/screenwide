@@ -31,7 +31,7 @@ import {
 export type TeleprompterBarProps = {
   isFullscreen: boolean;
   isPlaying: boolean;
-  /** Whether the text moves at the steady pace, which can then be set. */
+  /** Whether the text moves at the steady pace. */
   isSteady: boolean;
   onClose: () => void;
   onFullscreenChange: (isFullscreen: boolean) => void;

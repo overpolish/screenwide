@@ -215,14 +215,14 @@ settings-transcription-camera-objects-description = Keeps or removes objects on 
 # The model the recording's transcript and voice notes are made with, named for what it does.
 settings-transcription-transcripts = Transcripts
 settings-transcription-transcripts-description = Turns your recordings and voice notes into text.
-# The model dictation takes in the transcription language, named for what it does.
+# The model dictation takes in the transcription language, named for what it does. The Teleprompter follows the reader's voice with it too.
 settings-transcription-dictation = Dictation
 # In English, where the words appear as they are spoken.
-settings-transcription-dictation-description = Types what you say into any app as you speak.
+settings-transcription-dictation-description = Types what you say as you speak, and lets the Teleprompter follow you.
 # In a language whose text is written each time the speaker pauses.
-settings-transcription-dictation-at-pauses-description = Types what you say into any app each time you pause.
+settings-transcription-dictation-at-pauses-description = Types what you say at each pause, and lets the Teleprompter follow you.
 # In a language Dictation writes with the Transcripts model, downloaded once for both.
-settings-transcription-dictation-shared-description = Types what you say into any app each time you pause, with the Transcripts model.
+settings-transcription-dictation-shared-description = Types what you say at each pause, and lets the Teleprompter follow you. Uses the Transcripts model.
 # Shown in place of the description while macOS has not yet given dictation the access it needs.
 settings-transcription-dictation-access = Allow microphone and Accessibility access to dictate.
 settings-transcription-dictation-allow-microphone = Allow Microphone

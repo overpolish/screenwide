@@ -4,40 +4,59 @@
 import { t } from "../../i18n/i18n";
 import { cn } from "../../lib/styling";
 import { Alert } from "../../primitives/alert/alert";
-import { Button } from "../../primitives/button/button";
 import { SkinContext } from "../../primitives/skin/skin";
 import { Text } from "../../primitives/text/text";
+import { IslandModelLine } from "../editor/island/island-model-line";
 
 import { ScriptText } from "./script-words";
 import { TeleprompterBar, type TeleprompterBarProps } from "./teleprompter-bar";
 import { TeleprompterText } from "./teleprompter-text";
 import { VoiceState } from "./use-teleprompter-reading";
 
+import type { ToolPanelModel } from "../editor/tools/tool-panel-selection";
+
 export type TeleprompterViewProps = Omit<TeleprompterBarProps, "isSteady"> & {
-  /** The script as written. */
-  markdown: string;
-  onEdit: (markdown: string) => void;
-  onOpenModels: () => void;
+  onDownloadVoiceModel: () => void;
+  onEdit: (text: string) => void;
   onScrollTo: (index: number) => void;
   /** The next word to read, fractional between words. */
   place: number;
   script: ScriptText;
+  /** The script as written. */
+  text: string;
   voice: VoiceState;
+  /** Dictation's model, which the voice is heard with; null until known. */
+  voiceModel: ToolPanelModel | null;
   /** Set when the last change could not be saved. */
   saveError?: string;
 };
 
-/** What stands under the bar about the voice or saving, if anything. */
+/** What stands under the bar about the voice or saving, if anything: the
+ * voice's model fetched from right here while following the voice needs
+ * it, as every island's models are. */
 function Note({
-  onOpenModels,
+  needsModel,
+  onDownloadVoiceModel,
   saveError,
   voice,
-}: Pick<TeleprompterViewProps, "onOpenModels" | "saveError" | "voice">) {
+  voiceModel,
+}: Pick<
+  TeleprompterViewProps,
+  "onDownloadVoiceModel" | "saveError" | "voice" | "voiceModel"
+> & { needsModel: boolean }) {
   if (saveError)
     return (
       <Alert color="error" role="alert">
         {t("teleprompter-save-failed")}
       </Alert>
+    );
+  if (needsModel && voiceModel)
+    return (
+      <IslandModelLine
+        model={voiceModel}
+        onDownload={onDownloadVoiceModel}
+        title={t("teleprompter-follow-voice")}
+      />
     );
   if (voice.kind === "loading")
     return (
@@ -45,19 +64,7 @@ function Note({
         {t("teleprompter-voice-loading")}
       </Text>
     );
-  if (voice.kind !== "problem") return null;
-  if (voice.problem === "noModel")
-    return (
-      <Alert
-        action={
-          <Button onPress={onOpenModels} variant="ghost">
-            {t("teleprompter-voice-download")}
-          </Button>
-        }
-      >
-        {t("teleprompter-voice-no-model")}
-      </Alert>
-    );
+  if (voice.kind !== "problem" || voice.problem === "noModel") return null;
   return (
     <Alert color="error">
       {voice.problem === "noMicrophone"
@@ -67,22 +74,21 @@ function Note({
   );
 }
 
-/**
- * The teleprompter: its bar, then the script, large, on the island's
- * black, read on a line near the top so the eyes stay by the camera. While
- * it plays the bar gives way to the text until the pointer comes back to
- * the window. Mirrored, the whole window reads through a teleprompter's
- * glass, its controls included; filling the display it loses its corners.
- */
+// The script is read on a line near the top, so the eyes stay by the
+// camera. While it plays the bar gives way to the text until the pointer
+// comes back to the window. Mirrored, the whole window reads through a
+// teleprompter's glass, its controls included; filling the display it
+// loses its corners.
 export function TeleprompterView({
-  markdown,
+  onDownloadVoiceModel,
   onEdit,
-  onOpenModels,
   onScrollTo,
   place,
   saveError,
   script,
+  text,
   voice,
+  voiceModel,
   ...bar
 }: TeleprompterViewProps) {
   const isSteady =
@@ -109,16 +115,21 @@ export function TeleprompterView({
           <TeleprompterBar {...bar} isSteady={isSteady} />
           <div className="px-inset-sm empty:hidden">
             <Note
-              onOpenModels={onOpenModels}
+              needsModel={
+                bar.preferences.mode === "voice" &&
+                voiceModel !== null &&
+                voiceModel.status !== "downloaded"
+              }
+              onDownloadVoiceModel={onDownloadVoiceModel}
               saveError={saveError}
               voice={voice}
+              voiceModel={voiceModel}
             />
           </div>
         </div>
         <TeleprompterText
           columnWidth={bar.preferences.columnWidth}
           isPlaying={bar.isPlaying}
-          markdown={markdown}
           onColumnWidthChange={(columnWidth) => {
             bar.onPreferencesChange({ columnWidth });
           }}
@@ -126,6 +137,7 @@ export function TeleprompterView({
           onScrollTo={onScrollTo}
           place={place}
           script={script}
+          text={text}
           textSize={bar.preferences.textSize}
         />
       </div>

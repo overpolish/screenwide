@@ -3,7 +3,7 @@
 /**
  * A script project's script.
  */
-export type Script = { markdown: string, 
+export type Script = { text: string, 
 /**
  * The project's name.
  */
