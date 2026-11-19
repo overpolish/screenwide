@@ -15,7 +15,7 @@ import {
 import { columnStyle } from "./column-style";
 import { wordStartAt } from "./cues/cue-anchors";
 import { CueMarks, type MarkedCue } from "./cues/cue-marks";
-import { type CuePlace, placeCue } from "./cues/place-cue";
+import { type CuePlace, movedTo } from "./cues/place-cue";
 import { PlacingPicture } from "./cues/placing-picture";
 import { useCueDrag } from "./cues/use-cue-drag";
 import { READING_LINE, readingLineMiddle } from "./reading-line";
@@ -65,7 +65,7 @@ export function TeleprompterText({
   cues: readonly MarkedCue[];
   isPlaying: boolean;
   onColumnWidthChange: (width: number | null) => void;
-  /** Cues dragged or pushed to other words: each moved one, at its word. */
+  /** A cue dragged to another word, at that word. */
   onCuesMove: (moved: readonly CuePlace[]) => void;
   onEdit: (text: string) => void;
   /** The word starting `at` picked for the cue being placed. */
@@ -148,23 +148,23 @@ export function TeleprompterText({
   /** The word a point is over, or the first of the line beside it. */
   const landingAt = (point: ScreenPoint) =>
     wordStartNear(wordsRef.current, script, point);
-  // Lines as they are laid out, so a cue pushed aside is pushed to a line
-  // where its mark shows; a word not drawn is on no line it can go to.
-  const layout = {
-    lineOf: (index: number) =>
-      wordsRef.current.get(index)?.offsetTop ?? -Infinity,
-    script,
-  };
-  // A cue dragged to another word moves the cues there aside as it goes,
-  // and they are kept where they are when it is let go.
+  // A cue dragged to another word is let go there; the others keep their
+  // words, and their marks make room for its mark (`CueMarks`). A word
+  // holds one cue, so a word holding another is passed over, the drag
+  // staying on the last word it could land on.
   const { begin, drag } = useCueDrag({
-    landingAt,
+    landingAt: (point, id) => {
+      const at = landingAt(point);
+      return cues.some((cue) => cue.at === at && cue.id !== id)
+        ? undefined
+        : at;
+    },
     onMove: (id, at) => {
-      const placed = placeCue(cues, { at, id }, layout);
-      onCuesMove(placed.filter((cue, index) => cue !== cues[index]));
+      if (cues.some((cue) => cue.id === id && cue.at !== at))
+        onCuesMove([{ at, id }]);
     },
   });
-  const marks = drag ? placeCue(cues, drag, layout) : cues;
+  const marks = drag ? movedTo(cues, [drag]) : cues;
   const hasMarks = cues.length > 0;
   // Where the pointer is over the text while a cue is being placed, and the
   // word it would place it on.

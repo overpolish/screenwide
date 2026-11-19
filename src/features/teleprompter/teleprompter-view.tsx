@@ -27,7 +27,7 @@ export type TeleprompterViewProps = Omit<TeleprompterBarProps, "isSteady"> & {
   cuePlace: CardPlace;
   /** The cues, marked beside their words. */
   cues: readonly MarkedCue[];
-  /** Cues dragged or pushed to other words: each moved one, at its word. */
+  /** A cue dragged to another word, at that word. */
   onCuesMove: (moved: readonly CuePlace[]) => void;
   onDownloadVoiceModel: () => void;
   onEdit: (text: string) => void;

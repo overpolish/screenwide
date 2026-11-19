@@ -10,6 +10,7 @@ import { type ScriptText } from "../script-words";
 
 import { wordAt } from "./cue-anchors";
 import { CueMark } from "./cue-mark";
+import { markLines } from "./mark-lines";
 
 /** A cue as the text shows it: its mark, a tiny copy of its picture at
  * `src`, beside the word starting `at`. */
@@ -17,13 +18,48 @@ export type MarkedCue = { at: number; id: string; src: string; title: string };
 
 const px = (value: number) => `${String(value)}px`;
 
-// Each cue's mark at the column's end, level with its word's line. The marks
-// stand in a layer of their own over the words rather than among them, so a
-// cue moved to another word keeps its mark, which slides to the new line.
-// Where each line is can only be read once the words are laid out, so the
-// marks are put there after each render, before it is painted. The mark
-// being dragged follows the pointer instead, and slides onto its line once
-// let go.
+const middleOf = (word: HTMLElement) => word.offsetTop + word.offsetHeight / 2;
+
+/** Each mark's middle, by cue, from the column's top: level with its
+ * word's line, or with another line where marks would share one
+ * (`markLines`). */
+function markMiddles(
+  marks: readonly MarkedCue[],
+  script: ScriptText,
+  words: ReadonlyMap<number, HTMLSpanElement>,
+) {
+  const placed = marks
+    .flatMap((mark) => {
+      const word = words.get(wordAt(script, mark.at));
+      return word ? [{ at: mark.at, id: mark.id, middle: middleOf(word) }] : [];
+    })
+    .sort((first, second) => first.at - second.at);
+  const own = placed.map(({ middle }) => middle);
+  // Most often no two share a line, and no other line need be measured.
+  if (new Set(own).size < own.length) {
+    const lines = [...new Set(Array.from(words.values(), middleOf))].sort(
+      (first, second) => first - second,
+    );
+    const moved = markLines(
+      own.map((middle) => lines.indexOf(middle)),
+      lines.length,
+    );
+    moved.forEach((line, index) => {
+      own[index] = lines[line];
+    });
+  }
+  return new Map(placed.map(({ id }, index) => [id, own[index]]));
+}
+
+// Each cue's mark at the column's end, level with its word's line, or with
+// the next free line where an earlier cue's mark has that one; the cue
+// keeps its word all the same, so a rewrap undone puts the mark back. The
+// marks stand in a layer of their own over the words rather than among
+// them, so a cue moved to another word keeps its mark, which slides to the
+// new line. Where each line is can only be read once the words are laid
+// out, so the marks are put there after each render, before it is painted.
+// The mark being dragged follows the pointer instead, and slides onto its
+// line once let go.
 export function CueMarks({
   dragged,
   marks,
@@ -57,16 +93,14 @@ export function CueMarks({
     const slides = slidesRef.current;
     for (const id of middles.keys())
       if (!marks.some((mark) => mark.id === id)) middles.delete(id);
+    const lines = markMiddles(marks, script, wordsRef.current);
     for (const mark of marks) {
       const element = elementsRef.current.get(mark.id);
-      const word = wordsRef.current.get(wordAt(script, mark.at));
-      if (!element || !word) continue;
+      const line = lines.get(mark.id);
+      if (!element || line === undefined) continue;
       // Measured from the column as it stands on screen, scrolled with it.
       const column = element.offsetParent?.getBoundingClientRect().top ?? 0;
-      const middle =
-        mark.id === dragged?.id
-          ? dragged.clientY - column
-          : word.offsetTop + word.offsetHeight / 2;
+      const middle = mark.id === dragged?.id ? dragged.clientY - column : line;
       const was = middles.get(mark.id);
       if (was === middle) continue;
       middles.set(mark.id, middle);

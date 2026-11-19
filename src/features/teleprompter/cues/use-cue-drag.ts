@@ -18,15 +18,15 @@ export type CueDrag = CuePlace & { clientY: number };
 /**
  * Dragging a cue's mark to another word: from a press on the mark, the
  * pointer is followed over the whole window until it is let go, with the
- * word it would land on (`landingAt`, from a point on screen). Let go, the
- * cue is moved there (`onMove`); let go without having moved, the press was
- * a click (`onClick`).
+ * word the cue `id` would land on (`landingAt`, from a point on screen;
+ * undefined keeps the last). Let go, the cue is moved there (`onMove`); let
+ * go without having moved, the press was a click (`onClick`).
  */
 export function useCueDrag({
   landingAt,
   onMove,
 }: {
-  landingAt: (point: ScreenPoint) => number | undefined;
+  landingAt: (point: ScreenPoint, id: string) => number | undefined;
   onMove: (id: string, at: number) => void;
 }) {
   const [drag, setDrag] = useState<CueDrag | null>(null);
@@ -59,7 +59,8 @@ export function useCueDrag({
         event.clientY - press.clientY,
       );
       if (!landing && moved < DRAG_SLOP) return;
-      const to = callbacksRef.current.landingAt(event) ?? landing?.at ?? cue.at;
+      const to =
+        callbacksRef.current.landingAt(event, cue.id) ?? landing?.at ?? cue.at;
       landing = { at: to, id: cue.id };
       setDrag({ ...landing, clientY: event.clientY });
     };
