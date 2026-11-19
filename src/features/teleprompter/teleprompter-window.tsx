@@ -85,14 +85,23 @@ function ScriptReader({
   // The voice is heard with dictation's model, which can be fetched from
   // here; listening starts again once it has arrived.
   const voiceModel = useModel("dictation");
+  // Read to its end the script stops, its button back to play.
   const { place, setPlace, voice } = useTeleprompterReading({
     hasModel: voiceModel.shown?.status === "downloaded",
     isPlaying,
     mode: preferences.mode,
+    onEnd: () => {
+      setIsPlaying(false);
+    },
     spoken: script.spoken,
     wordsPerMinute: preferences.wordsPerMinute,
   });
-  useRecordingLink(setIsPlaying);
+  // Played again from the end, it starts over from the top.
+  const playingChange = (next: boolean) => {
+    if (next && place >= script.spoken.length) setPlace(0);
+    setIsPlaying(next);
+  };
+  useRecordingLink(playingChange);
   const cues = useCues(shown.project);
   const cueMenu = useCueMenus({
     cues: cues.cues,
@@ -137,7 +146,7 @@ function ScriptReader({
     onClose: close,
     onFullscreenChange: fullscreen,
     onPlace: setPlace,
-    onPlayingChange: setIsPlaying,
+    onPlayingChange: playingChange,
     onTextSize: textSize,
     place,
   });
@@ -170,7 +179,7 @@ function ScriptReader({
       onPlace={(at) => {
         onPlace(at, shown.project);
       }}
-      onPlayingChange={setIsPlaying}
+      onPlayingChange={playingChange}
       onPreferencesChange={change}
       onRename={(next) => {
         // What waits is written where the script is now, before it moves;

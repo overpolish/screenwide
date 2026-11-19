@@ -28,12 +28,14 @@ const isVoiceProblem = (value: unknown): value is TeleprompterVoiceProblem =>
  * words: moved on at `wordsPerMinute` while playing steadily, or to the
  * word after the last ones heard while following the voice. Where the
  * voice cannot be followed it says why, and the place moves steadily
- * meanwhile. Pausing stops listening; the place stays.
+ * meanwhile. Pausing stops listening; the place stays. Read to its end,
+ * the script says so (`onEnd`), for the reading to stop there.
  */
 export function useTeleprompterReading({
   hasModel,
   isPlaying,
   mode,
+  onEnd,
   spoken,
   wordsPerMinute,
 }: {
@@ -41,21 +43,35 @@ export function useTeleprompterReading({
   hasModel: boolean;
   isPlaying: boolean;
   mode: TeleprompterMode;
+  /** The last word has been read. */
+  onEnd: () => void;
   /** The script's words, in their spoken form. */
   spoken: readonly string[];
   wordsPerMinute: number;
 }) {
   const [place, setPlace] = useState(0);
+  // The place as it moves, read by the loops that move it on.
+  const placeRef = useRef(0);
   // What the voice last answered while listening; until it does, its model
   // is loading.
   const [answer, setAnswer] = useState<VoiceState | null>(null);
   const spokenRef = useRef(spoken);
   spokenRef.current = spoken;
+  const onEndRef = useRef(onEnd);
+  onEndRef.current = onEnd;
   const listens = isPlaying && mode === "voice";
   const voice: VoiceState = listens
     ? (answer ?? { kind: "loading" })
     : { kind: "idle" };
   const isSteady = isPlaying && (mode === "steady" || voice.kind === "problem");
+
+  /** Moves the place on as it is read, telling `onEnd` once the last word
+   * has been. */
+  const moveTo = (next: number) => {
+    placeRef.current = next;
+    setPlace(next);
+    if (next >= spokenRef.current.length) onEndRef.current();
+  };
 
   useEffect(() => {
     if (!listens) return;
@@ -69,11 +85,11 @@ export function useTeleprompterReading({
           setAnswer({ kind: "problem", problem: "failed" });
         else {
           setAnswer({ kind: "listening" });
-          setPlace((current) =>
+          moveTo(
             followedPlace(
               spokenRef.current,
               payload.words,
-              Math.floor(current),
+              Math.floor(placeRef.current),
             ),
           );
         }
@@ -104,10 +120,10 @@ export function useTeleprompterReading({
     const tick = (now: number) => {
       const seconds = (now - last) / 1_000;
       last = now;
-      setPlace((current) =>
+      moveTo(
         Math.min(
           spokenRef.current.length,
-          current + (wordsPerMinute / 60) * seconds,
+          placeRef.current + (wordsPerMinute / 60) * seconds,
         ),
       );
       frame = requestAnimationFrame(tick);
@@ -122,7 +138,9 @@ export function useTeleprompterReading({
     place,
     /** Puts the place at word `index`, the start being 0. */
     setPlace: (index: number) => {
-      setPlace(Math.max(0, Math.min(spoken.length, index)));
+      const next = Math.max(0, Math.min(spoken.length, index));
+      placeRef.current = next;
+      setPlace(next);
     },
     voice,
   };
