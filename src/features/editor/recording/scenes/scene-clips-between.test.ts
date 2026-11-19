@@ -3,6 +3,8 @@
 
 import { describe, expect, it } from "vitest";
 
+import { points } from "../../layer-measure";
+
 import { RecordingSceneClip } from "./recording-scenes";
 import { sceneClipsBetween } from "./scene-clips-between";
 
@@ -13,35 +15,36 @@ const scene: RecordingSceneClip = {
   startMs: 0,
 };
 
-/** Scenes between two lists, the recording's own corners 12 for the screen
- * and 30 for the camera. */
-const clipsBetween = sceneClipsBetween(
-  (clip, pane) => clip.radius?.[pane] ?? (pane === "camera" ? 30 : 12),
-);
+/** Scenes between two lists, the recording's own corners 12 points for the
+ * screen and 30% for the camera. */
+const clipsBetween = sceneClipsBetween({
+  camera: (clip) => clip.radius?.camera ?? 30,
+  screen: (clip) => clip.radius?.screen ?? points(12),
+});
 
 describe("sceneClipsBetween", () => {
   it("pads, rounds and turns a scene part of the way", () => {
     const to = {
       ...scene,
-      inset: 0.1,
-      radius: { screen: 40 },
+      inset: points(32),
+      radius: { screen: points(40) },
       rotation: { x: 0, y: 20, z: 0 },
     };
     const [half] = clipsBetween([scene], [to], 0.5);
-    expect(half.inset).toBeCloseTo(0.05);
+    expect(half.inset).toEqual(points(16));
     // From the recording's own corners, which the scene took until now.
-    expect(half.radius).toEqual({ screen: 26 });
+    expect(half.radius).toEqual({ screen: points(26) });
     expect(half.rotation).toEqual({ x: 0, y: 10, z: 0 });
   });
 
   it("starts on the old scene and ends on the new one", () => {
-    const to = { ...scene, inset: 0.2 };
-    expect(clipsBetween([scene], [to], 0)[0].inset).toBe(0);
-    expect(clipsBetween([scene], [to], 1)[0].inset).toBe(0.2);
+    const to = { ...scene, inset: points(64) };
+    expect(clipsBetween([scene], [to], 0)[0].inset).toEqual(points(0));
+    expect(clipsBetween([scene], [to], 1)[0].inset).toEqual(points(64));
   });
 
   it("draws a scene only the new clips have as it is", () => {
-    const added = { ...scene, id: "b", inset: 0.2 };
+    const added = { ...scene, id: "b", inset: points(64) };
     expect(clipsBetween([scene], [added], 0.5)).toEqual([added]);
   });
 

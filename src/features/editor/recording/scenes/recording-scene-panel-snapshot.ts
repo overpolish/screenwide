@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import { Measure, measureIn, points, unitOf } from "../../layer-measure";
 import { UPRIGHT_ROTATION } from "../../layer-rotation";
 import { ScreenshotOutputSettings } from "../../screenshot/screenshot-output";
 import { CameraOverlaySettings } from "../../types";
@@ -66,18 +67,19 @@ export function recordingSceneLook({
   };
 }
 
-/** How round `clip` draws `pane`'s corners, in percent of its shorter side:
- * the recording's own radius where the scene does not round it. */
-export const sceneRadius = (
+/** How round `clip` draws the camera's corners, in percent of its shorter
+ * side: the recording's own where the scene does not round them. */
+export const sceneCameraRadius = (
   clip: RecordingSceneClip,
-  pane: ScenePane,
-  {
-    cameraOverlay,
-    output,
-  }: { cameraOverlay: CameraOverlaySettings; output: ScreenshotOutputSettings },
-) =>
-  clip.radius?.[pane] ??
-  (pane === "camera" ? cameraOverlay.radiusPercent : output.radiusPercent);
+  cameraOverlay: CameraOverlaySettings,
+) => clip.radius?.camera ?? cameraOverlay.radiusPercent;
+
+/** How round `clip` draws the screen's corners: the recording's own where
+ * the scene does not round them. */
+export const sceneScreenRadius = (
+  clip: RecordingSceneClip,
+  output: ScreenshotOutputSettings,
+): Measure => clip.radius?.screen ?? output.radius;
 
 /**
  * What the scene islands are shown of the scene under the playhead,
@@ -114,8 +116,13 @@ export function toolPanelSceneOf({
     cameraOverlay,
     output,
   });
+  // The islands offer the screen's corners as looks in the unit the
+  // recording's own are in; -1 is a radius no look gives.
   const radiusOf = (clip: RecordingSceneClip, pane: ScenePane) =>
-    sceneRadius(clip, pane, { cameraOverlay, output });
+    pane === "camera"
+      ? sceneCameraRadius(clip, cameraOverlay)
+      : (measureIn(sceneScreenRadius(clip, output), unitOf(output.radius)) ??
+        -1);
   const paneOf = (pane: ScenePane): ToolPanelScenePane | null => {
     const found = current
       ? scenePaneFraming({ camera, clip: current, output, pane })
@@ -123,7 +130,10 @@ export function toolPanelSceneOf({
     return current && found
       ? {
           framing: found.framing,
-          inset: pane === "screen" ? (current.inset ?? 0) : 0,
+          inset:
+            pane === "screen"
+              ? (measureIn(current.inset ?? points(0), "points") ?? -1)
+              : 0,
           isAtLayout: isScenePaneAtLayout(current, pane, { camera, output }),
           radius: radiusOf(current, pane),
         }

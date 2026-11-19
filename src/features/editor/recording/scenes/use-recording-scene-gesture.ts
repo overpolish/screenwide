@@ -33,6 +33,9 @@ export type RecordingSceneTarget = {
   clipId: string;
   clips: RecordingSceneClip[];
   screen: ScenePane;
+  /** How far the scene pads the screen's box as the paused frame draws it,
+   * in canvas pixels on every side. */
+  screenInset: number;
 };
 
 type ActiveGesture =
@@ -189,7 +192,10 @@ export function useRecordingSceneGesture({
     if (!isCrop && operation !== "move" && operation !== "resize") return null;
     if (!isCrop && boxes) {
       if (!boxes[paneName]) return null;
-      const edit = boxEdit(boxes, paneName, canvas);
+      const edit = boxEdit(boxes, paneName, {
+        canvas,
+        inset: paneName === "screen" ? target.screenInset : 0,
+      });
       return {
         clipId,
         clips,

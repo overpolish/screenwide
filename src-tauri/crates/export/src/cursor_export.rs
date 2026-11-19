@@ -157,7 +157,7 @@ pub fn needs_composition(
   settings.width != source_width
     || settings.height != source_height
     || settings.background_radius_percent > 0.0
-    || settings.radius_percent > 0.0
+    || !settings.radius.is_zero()
     || settings.capture_corner_radius > 0.0
     || (settings.crop_height - f64::from(settings.height)).abs() > 0.000_001
     || (settings.crop_width - f64::from(settings.width)).abs() > 0.000_001
@@ -214,7 +214,7 @@ mod tests {
       mesh_points: Vec::<MeshGradientPoint>::new(),
       mesh_seed: 0,
       mesh_warp_percent: 0.0,
-      radius_percent: 0.0,
+      radius: screenwide_scenes::Measure::Points(0.0),
       recenter_inset_color: None,
       source_crop: NormalizedSourceRect {
         height: 1.0,

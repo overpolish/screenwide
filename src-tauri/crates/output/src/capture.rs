@@ -44,6 +44,37 @@ impl ScreenshotOutputSettings {
   pub fn size_image_width(&self) -> f64 {
     self.image_width / self.size_scale()
   }
+
+  /// Canvas pixels per point of the capture as the layer draws its picture:
+  /// what the corners' and padding's points are drawn at, growing and
+  /// shrinking with the picture. One where no capture was stamped.
+  pub fn canvas_pixels_per_point(&self) -> f64 {
+    if self.capture_width_points.is_finite() && self.capture_width_points > 0.0 {
+      self.image_width.max(0.0) / self.capture_width_points
+    } else {
+      1.0
+    }
+  }
+
+  /// The frame's corner radius in canvas pixels, on a frame `width` by
+  /// `height` canvas pixels.
+  pub fn corner_radius_pixels(&self, width: f64, height: f64) -> f64 {
+    self
+      .radius
+      .radius_pixels(width.min(height), self.canvas_pixels_per_point())
+  }
+
+  /// The frame's corner radius as a percent of its own shorter side, as the
+  /// selection's outline is rounded: the outline is drawn in the view's
+  /// pixels, where the canvas's are not known.
+  pub fn corner_radius_frame_percent(&self) -> f64 {
+    let shortest = self.crop_width.min(self.crop_height);
+    if shortest > 0.0 {
+      self.corner_radius_pixels(self.crop_width, self.crop_height) / shortest * 100.0
+    } else {
+      0.0
+    }
+  }
 }
 
 /// Output pixels per point of annotation size for a capture taken at

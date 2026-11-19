@@ -78,7 +78,7 @@ impl CameraComposition {
       image_x: 0.0,
       image_y: 0.0,
       inset: None,
-      radius_percent: 0.0,
+      radius: Measure::Points(0.0),
       recenter_inset_color: None,
       scene_motion: None,
       scene_opacity: None,

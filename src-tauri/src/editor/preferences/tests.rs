@@ -40,7 +40,10 @@ fn loads_preferences_written_before_screenshot_output_was_remembered() {
   .unwrap();
 
   assert_eq!(preferences.screenshot_background_radius_percent, 7.5);
-  assert_eq!(preferences.screenshot_radius_percent, 12.0);
+  assert_eq!(
+    preferences.screenshot_radius,
+    screenwide_scenes::Measure::Percent(12.0)
+  );
   assert_eq!(preferences.screenshot_output, None);
   assert_eq!(preferences.recording_output, None);
   assert_eq!(

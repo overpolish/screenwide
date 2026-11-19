@@ -4,6 +4,10 @@
 import { t } from "../../../../i18n/i18n";
 import { MicrophoneTools } from "../../recording/microphone/use-microphone-tools";
 import {
+  cornersInPoints,
+  recordingCaptures,
+} from "../../recording/recording-captures";
+import {
   RecordingOutputSettings,
   ScreenshotOutputSettings,
   screenshotWorkspaceItemOutput,
@@ -75,15 +79,13 @@ const recordingSelectionTarget = (
       onCameraOverlayChange: inputs.onCameraOverlayChange,
       onRecordingOutputChange: inputs.onRecordingOutputChange,
     });
-  const source =
-    track === "primary"
-      ? { height: artifact.height, width: artifact.width }
-      : artifact.camera;
+  const source = recordingCaptures(artifact)[track];
   if (!source) return null;
   return placedSelectionTarget({
     apply: (next) => {
       inputs.onRecordingOutputChange?.(track, next);
     },
+    corners: cornersInPoints(artifact, track) ? "points" : "percent",
     kind: track,
     label:
       track === "primary"
@@ -116,13 +118,14 @@ const screenshotSelectionTarget = (
     apply: (next) => {
       inputs.onScreenshotOutputChange?.(next, item.id);
     },
+    corners: "points",
     kind: "layer",
     label:
       pictures.length > 1
         ? t("editor-island-layer", { number: index + 1 })
         : t("editor-island-screenshot"),
     settings: screenshotWorkspaceItemOutput(output, item.id),
-    source: { height: item.height, width: item.width },
+    source: item,
     turns: true,
     workspace: "screenshot",
   });

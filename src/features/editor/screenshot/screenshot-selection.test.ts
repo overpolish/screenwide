@@ -3,6 +3,8 @@
 
 import { describe, expect, it } from "vitest";
 
+import { pixelsPerPoint } from "../layer-measure";
+
 import { insetScreenshotPadding } from "./screenshot-inset";
 import {
   ScreenshotWorkspaceOutputSettings,
@@ -18,12 +20,12 @@ import {
 
 describe("a padded screenshot layer", () => {
   it("hands the hit target the padded box the selection is drawn on", () => {
-    const item = { height: 500, id: 1, width: 1_000 };
+    const item = { height: 500, id: 1, scaleFactor: 2, width: 1_000 };
     const canvas = defaultScreenshotOutput(1_600, 900);
     const padded = insetScreenshotPadding(
       resetScreenshotLayout(canvas, item),
       item,
-      0.1,
+      64,
     );
     const workspace: ScreenshotWorkspaceOutputSettings = {
       ...canvas,
@@ -43,7 +45,7 @@ describe("a padded screenshot layer", () => {
     expect(target.rect).toEqual(selection.rect);
     const { crop, sourceCrop } = screenshotLayout(item, padded);
     expect(crop.width - sourceCrop.width).toBeCloseTo(
-      0.2 * Math.min(sourceCrop.width, sourceCrop.height),
+      2 * 64 * pixelsPerPoint(padded.imageWidth, item),
     );
     expect(target.rect.width).toBeCloseTo(crop.width / dimensions.width);
     expect(target.rect.x).toBeCloseTo(crop.x / dimensions.width);

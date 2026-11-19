@@ -104,7 +104,7 @@ fn keeps_every_channel_when_the_still_is_not_opaque() {
 #[test]
 fn rounds_only_the_requested_corners_with_antialiasing() {
   let image = palette_image(40, 20, 1, 255);
-  let rounded = rounded_corners(&image, 50.0);
+  let rounded = rounded_corners(&image, 10.0);
   let alpha = |x: u32, y: u32| rounded.rgba[((y * rounded.width + x) * 4 + 3) as usize];
   assert_eq!(alpha(0, 0), 0);
   assert_eq!(alpha(20, 10), 255);

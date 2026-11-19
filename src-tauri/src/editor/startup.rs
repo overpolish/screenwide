@@ -20,7 +20,7 @@ pub fn initialize(app: &AppHandle) {
     .lock()
     .unwrap_or_else(|poisoned| poisoned.into_inner()) = load_screenshot_background_radius(app);
   *state
-    .screenshot_radius_percent
+    .screenshot_radius
     .lock()
     .unwrap_or_else(|poisoned| poisoned.into_inner()) = load_screenshot_radius(app);
   *state

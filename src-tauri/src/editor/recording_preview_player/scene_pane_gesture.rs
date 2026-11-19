@@ -26,7 +26,7 @@ fn clip_at(clips: &[RecordingSceneClip], timeline_ms: u64) -> Option<usize> {
 /// neither; `Some(None)` for a pane its boxes do not place, whose gestures
 /// stay the recording's own. `delta` is in shares of the `canvas`, as the
 /// boxes are; the screen's is measured on its box padded by the scene's
-/// inset, where its handles are drawn.
+/// inset, `inset` canvas pixels on every side, where its handles are drawn.
 pub(super) fn custom_box_gesture(
   clips: &[RecordingSceneClip],
   timeline_ms: u64,
@@ -35,7 +35,7 @@ pub(super) fn custom_box_gesture(
     impl FnOnce(&RecordingSceneClip) -> Option<RecordingSceneClip>,
   ),
   layer_id: u32,
-  (delta, scale, canvas): ((f64, f64), f64, (f64, f64)),
+  (delta, scale, canvas, inset): ((f64, f64), f64, (f64, f64), f64),
 ) -> Option<Option<Vec<RecordingSceneClip>>> {
   let index = clip_at(clips, timeline_ms)?;
   let mut next = clips.to_vec();
@@ -50,13 +50,10 @@ pub(super) fn custom_box_gesture(
     }
     next[index] = custom(&clips[index])?;
   }
-  let clip = &next[index];
-  let inset = clip.inset.unwrap_or(0.0);
   let target = next[index].boxes.as_mut()?;
   match (layer_id, target.camera) {
     (0, _) => {
       let screen = target.screen;
-      let inset = inset * (screen.width * canvas.0).min(screen.height * canvas.1);
       target.screen = screen.moved_padded(delta, scale, (inset / canvas.0, inset / canvas.1));
     }
     (1, Some(camera)) if bake_camera => target.camera = Some(camera.moved(delta, scale)),
@@ -139,12 +136,20 @@ impl PreviewPlayerManager {
         camera.map(|size| (&snapshot.camera_overlay, size)),
       )
     };
+    // How far the scene pads the screen's box, in canvas pixels, as the
+    // arranged frame draws it: the padded crop past the box it shows.
+    let arranged_screen = &arranged.recording_output.primary;
+    let inset = arranged_screen
+      .scene_window
+      .map_or(0.0, |[_, _, width, _]| {
+        ((arranged_screen.crop_width - width) / 2.0).max(0.0)
+      });
     if let Some(next) = custom_box_gesture(
       clips,
       timeline_ms,
       (snapshot.bake_camera, custom),
       layer_id,
-      (delta, scale, canvas),
+      (delta, scale, canvas, inset),
     ) {
       return next.map(Some);
     }

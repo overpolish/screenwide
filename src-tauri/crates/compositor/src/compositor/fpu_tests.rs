@@ -16,7 +16,7 @@ fn aurora_background_is_stable_across_cpu_rounding_modes() {
   settings.mesh_colors = vec!["#8FE3FF".into(), "#FF9BE3".into(), "#C9B8FF".into()];
   settings.mesh_points.clear();
   settings.mesh_warp_percent = 10.0;
-  settings.radius_percent = 8.0;
+  settings.radius = Measure::Percent(8.0);
   settings.background_radius_percent = 16.0;
   settings.image_width = 400.0;
   settings.crop_width = 400.0;

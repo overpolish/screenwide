@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import { CaptureSource, points } from "../layer-measure";
 import {
   UPRIGHT_ROTATION,
   withRotation,
@@ -15,7 +16,7 @@ import {
 } from "./screenshot-geometry";
 import {
   insetScreenshotPadding,
-  screenshotInsetShare,
+  screenshotInsetPoints,
 } from "./screenshot-inset";
 import {
   ScreenshotOutputSettings,
@@ -121,16 +122,15 @@ export const applyScreenshotCropGesture = ({
 };
 
 /** Rebase the outer inset frame on the crop committed: a padded layer is
- * padded again by the same share of its new picture, so the padding keeps
- * its proportion to it; an unpadded one moves each edge of its frame with
- * the crop's. */
+ * padded again by the same points round its new picture; an unpadded one
+ * moves each edge of its frame with the crop's. */
 export const commitScreenshotCrop = (
   before: ScreenshotOutputSettings,
   after: ScreenshotOutputSettings,
-  source: { height: number; width: number },
+  source: CaptureSource,
 ): ScreenshotOutputSettings => {
-  const share = screenshotInsetShare(before, source);
-  if (share > 0) return insetScreenshotPadding(after, source, share);
+  const inset = screenshotInsetPoints(before, source);
+  if (inset > 0) return insetScreenshotPadding(after, source, inset);
   const previous = screenshotLayout(source, before);
   const next = screenshotLayout(source, after);
   const left = previous.crop.x + next.sourceCrop.x - previous.sourceCrop.x;
@@ -155,18 +155,18 @@ export const commitScreenshotCrop = (
     cropWidth: right - left,
     cropX: left,
     cropY: top,
-    inset: 0,
+    inset: points(0),
   };
 };
 
 export const resetCommittedScreenshotCrop = (
   settings: ScreenshotOutputSettings,
-  source: { height: number; width: number },
+  source: CaptureSource,
 ): ScreenshotOutputSettings =>
   commitScreenshotCrop(
     settings,
     withScreenshotSourceCrop(
-      { ...settings, radiusPercent: 0 },
+      { ...settings, radius: points(0) },
       fullSourceRect(),
     ),
     source,

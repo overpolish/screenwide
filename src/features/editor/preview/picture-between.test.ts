@@ -3,6 +3,7 @@
 
 import { describe, expect, it } from "vitest";
 
+import { percent, points } from "../layer-measure";
 import { defaultScreenshotOutput } from "../screenshot/screenshot-output";
 
 import { colourBetween, outputBetween } from "./picture-between";
@@ -11,13 +12,21 @@ const plain = { ...defaultScreenshotOutput(800, 600), dropShadow: false };
 
 describe("outputBetween", () => {
   it("starts on the old look and ends on the new one", () => {
-    const to = { ...plain, cropWidth: plain.cropWidth + 40, radiusPercent: 20 };
-    expect(outputBetween(plain, to, 0).radiusPercent).toBe(plain.radiusPercent);
+    const to = {
+      ...plain,
+      cropWidth: plain.cropWidth + 40,
+      radius: points(20),
+    };
+    expect(outputBetween(plain, to, 0).radius).toEqual(plain.radius);
     expect(outputBetween(plain, to, 0).cropWidth).toBe(plain.cropWidth);
-    expect(outputBetween(plain, to, 1).radiusPercent).toBe(20);
-    expect(outputBetween(plain, to, 0.5).radiusPercent).toBe(
-      (plain.radiusPercent + 20) / 2,
-    );
+    expect(outputBetween(plain, to, 1).radius).toEqual(points(20));
+    expect(outputBetween(plain, to, 0.5).radius).toEqual(points(10));
+  });
+
+  it("switches corners between units halfway rather than mixing them", () => {
+    const camera = { ...plain, radius: percent(50) };
+    expect(outputBetween(plain, camera, 0.4).radius).toEqual(plain.radius);
+    expect(outputBetween(plain, camera, 0.6).radius).toEqual(percent(50));
   });
 
   it("fades a shadow in and out rather than switching it", () => {

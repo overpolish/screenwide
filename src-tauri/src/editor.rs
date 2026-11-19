@@ -195,7 +195,8 @@ pub struct EditorSnapshot {
   pub keyboard_effects: screenwide_keyboard_effects::KeyboardEffectSettings,
   pub recording_export_choices: RecordingExportChoices,
   pub recording_output: Option<RecordingOutputSettings>,
-  pub screenshot_radius_percent: f64,
+  /// The corners the next screenshot starts with.
+  pub screenshot_radius: screenwide_scenes::Measure,
   pub screenshot_background_radius_percent: f64,
   pub screenshot_output: Option<ScreenshotOutputSettings>,
   /// Unset until a screenshot has been exported or copied once.
@@ -255,7 +256,7 @@ pub struct EditorState {
   keyboard_effects: Mutex<screenwide_keyboard_effects::KeyboardEffectSettings>,
   recording_choices: Mutex<RecordingExportChoices>,
   recording_output: Mutex<Option<RecordingOutputSettings>>,
-  screenshot_radius_percent: Mutex<f64>,
+  screenshot_radius: Mutex<screenwide_scenes::Measure>,
   screenshot_background_radius_percent: Mutex<f64>,
   screenshot_output: Mutex<Option<ScreenshotOutputSettings>>,
   screenshot_delete_project_after_export: Mutex<Option<bool>>,

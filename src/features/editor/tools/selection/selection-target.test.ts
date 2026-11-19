@@ -19,7 +19,7 @@ import {
   editorSelectionTarget,
 } from "./selection-target";
 
-const source = { height: 1_000, width: 1_000 };
+const source = { height: 1_000, scaleFactor: 2, width: 1_000 };
 
 const artifact: EditorArtifact = {
   deletedItemIds: [],
@@ -32,6 +32,7 @@ const artifact: EditorArtifact = {
       height: source.height,
       id: 7,
       isBlank: false,
+      scaleFactor: 2,
       width: source.width,
     },
   ],
@@ -81,21 +82,21 @@ const croppedLayer = (settings: Partial<ScreenshotOutputSettings> = {}) =>
   );
 
 describe("selection padding", () => {
-  it("grows the frame past the picture by the same share on every side", () => {
+  it("grows the frame past the picture by the same points on every side", () => {
     const settings = croppedLayer();
     const { apply, target } = targetFor(settings);
 
-    target.applyInset(0.1);
+    target.applyInset(32);
 
     const next = apply.mock.calls[0][0];
     expect(apply).toHaveBeenCalledOnce();
     expect(apply.mock.calls[0][1]).toBe(7);
-    // A tenth of the picture's 600 pixels on every side.
-    expect(next.cropHeight).toBeCloseTo(720);
-    expect(next.cropWidth).toBeCloseTo(720);
-    expect(next.cropX).toBeCloseTo(140);
-    expect(next.cropY).toBeCloseTo(140);
-    expect(next.inset).toBe(0.1);
+    // 32 points at two pixels to the point on every side.
+    expect(next.cropHeight).toBeCloseTo(728);
+    expect(next.cropWidth).toBeCloseTo(728);
+    expect(next.cropX).toBeCloseTo(136);
+    expect(next.cropY).toBeCloseTo(136);
+    expect(next.inset).toEqual({ points: 32 });
     // The picture itself does not move: only the frame around it changes.
     expect(next.imageX).toBe(settings.imageX);
     expect(next.imageY).toBe(settings.imageY);
@@ -111,22 +112,22 @@ describe("selection padding", () => {
       ),
     );
 
-    target.applyInset(0.12);
+    target.applyInset(64);
 
     const next = apply.mock.calls[0][0];
-    expect(next.cropX).toBeCloseTo(-120);
-    expect(next.cropY).toBeCloseTo(-120);
-    expect(next.cropWidth).toBeCloseTo(1_240);
-    expect(next.cropHeight).toBeCloseTo(1_240);
+    expect(next.cropX).toBeCloseTo(-128);
+    expect(next.cropY).toBeCloseTo(-128);
+    expect(next.cropWidth).toBeCloseTo(1_256);
+    expect(next.cropHeight).toBeCloseTo(1_256);
   });
 
   it("measures each inset from the picture rather than from the last frame", () => {
     const first = targetFor(croppedLayer());
-    first.target.applyInset(0.05);
+    first.target.applyInset(16);
     const once = first.apply.mock.calls[0][0];
 
     const again = targetFor(once);
-    again.target.applyInset(0.05);
+    again.target.applyInset(16);
 
     expect(again.apply.mock.calls[0][0].cropWidth).toBe(once.cropWidth);
     expect(again.apply.mock.calls[0][0].cropX).toBe(once.cropX);
@@ -150,28 +151,31 @@ describe("selection padding", () => {
     expect(next.recenterInsetColor).toBe("#ffffff");
   });
 
-  it("shows the padding as a share of the layer's own picture, however padded", () => {
-    const padded = targetFor(
+  it("shows a padding saved before points as the look it was nearest", () => {
+    // 50 pixels round a 600 pixel picture, a share of a twelfth: Large.
+    const framed = targetFor(
       croppedLayer({ cropHeight: 700, cropWidth: 700, cropX: 150, cropY: 150 }),
     ).target;
-    const shared = targetFor(croppedLayer({ inset: 0.06 })).target;
+    const shared = targetFor(croppedLayer({ inset: { percent: 6 } })).target;
+    const pointed = targetFor(croppedLayer({ inset: { points: 16 } })).target;
 
-    expect(padded.selection.inset).toBeCloseTo(50 / 600);
-    expect(shared.selection.inset).toBe(0.06);
+    expect(framed.selection.inset).toBe(64);
+    expect(shared.selection.inset).toBe(32);
+    expect(pointed.selection.inset).toBe(16);
   });
+});
 
-  it("keeps padding wider than the picture visible", () => {
-    const settings = withScreenshotSourceCrop(
-      {
-        ...defaultScreenshotOutput(source.width, source.height),
-        cropHeight: 3_040,
-        cropWidth: 3_040,
-      },
-      sourceRect({ height: 0.04, width: 0.04, x: 0.48, y: 0.48 }),
-    );
-    const { target } = targetFor(settings);
+describe("selection corners", () => {
+  it("rounds a screenshot layer by points of its capture", () => {
+    const { apply, target } = targetFor(croppedLayer());
 
-    expect(target.selection.inset).toBeCloseTo(1_500 / 40);
+    target.applyRadius(24);
+
+    expect(apply.mock.calls[0][0].radius).toEqual({ points: 24 });
+    expect(
+      targetFor(croppedLayer({ radius: { points: 10 } })).target.selection
+        .radius,
+    ).toBe(10);
   });
 });
 

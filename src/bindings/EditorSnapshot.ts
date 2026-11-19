@@ -3,11 +3,16 @@ import type { CursorEffectSettings } from "./CursorEffectSettings";
 import type { EditorArtifact } from "./EditorArtifact";
 import type { EditorKind } from "./EditorKind";
 import type { KeyboardEffectSettings } from "./KeyboardEffectSettings";
+import type { Measure } from "./Measure";
 import type { RecordingExportChoices } from "./RecordingExportChoices";
 import type { RecordingOutputSettings } from "./RecordingOutputSettings";
 import type { ScreenshotOutputSettings } from "./ScreenshotOutputSettings";
 
-export type EditorSnapshot = { artifact: EditorArtifact | null, cursorEffects: CursorEffectSettings, directory: string | null, keyboardEffects: KeyboardEffectSettings, recordingExportChoices: RecordingExportChoices, recordingOutput: RecordingOutputSettings | null, screenshotRadiusPercent: number, screenshotBackgroundRadiusPercent: number, screenshotOutput: ScreenshotOutputSettings | null, 
+export type EditorSnapshot = { artifact: EditorArtifact | null, cursorEffects: CursorEffectSettings, directory: string | null, keyboardEffects: KeyboardEffectSettings, recordingExportChoices: RecordingExportChoices, recordingOutput: RecordingOutputSettings | null, 
+/**
+ * The corners the next screenshot starts with.
+ */
+screenshotRadius: Measure, screenshotBackgroundRadiusPercent: number, screenshotOutput: ScreenshotOutputSettings | null, 
 /**
  * Unset until a screenshot has been exported or copied once.
  */

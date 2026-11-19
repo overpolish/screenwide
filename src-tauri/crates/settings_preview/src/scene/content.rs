@@ -83,7 +83,7 @@ pub(super) fn canvas_settings(
     mesh_points: Vec::new(),
     mesh_seed: 0,
     mesh_warp_percent: 0.0,
-    radius_percent: 0.0,
+    radius: screenwide_scenes::Measure::Points(0.0),
     recenter_inset_color: None,
     rotation: None,
     source_crop: NormalizedSourceRect {

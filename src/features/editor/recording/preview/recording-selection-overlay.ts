@@ -13,11 +13,12 @@ import { RecordingCanvasTool } from "./recording-canvas-tool";
 import { normalizedRecordingSelection } from "./recording-selection";
 
 import type { AnnotationKind } from "../../../annotations/types";
+import type { CaptureSource } from "../../layer-measure";
 
 const FRAME_LAYER_ID = 0xffffffff;
 
 type VideoSourceDimensions = Partial<
-  Record<RecordingVideoTrackId, { height: number; width: number }>
+  Record<RecordingVideoTrackId, CaptureSource>
 >;
 
 /**

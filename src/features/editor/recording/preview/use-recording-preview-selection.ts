@@ -122,9 +122,9 @@ export function useRecordingPreviewSelection(
   }, [clearCaptionSelection, clearKeyboardSelection]);
   const scene = useScenePreviewEditing({
     cameraOverlay,
-    cameraSource: previewSourceDimensions.camera,
     canPreviewBakedCamera,
     canvasTool,
+    captures: previewSourceDimensions,
     durationMs,
     edit: recordingTimelineEdit,
     editGesture,

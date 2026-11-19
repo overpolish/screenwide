@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import { Measure, measureBetween, points } from "../../layer-measure";
 import { between, rotationBetween } from "../../preview/picture-between";
 
 import { ScenePane } from "./recording-scene-order";
@@ -36,9 +37,12 @@ const framingBetween = (
       }
     : to;
 
-/** How round a scene draws a pane: the recording's own radius where the
+/** How round a scene draws each pane: the recording's own radius where the
  * scene sets none. */
-type RadiusOf = (clip: RecordingSceneClip, pane: ScenePane) => number;
+type RadiusOf = {
+  camera: (clip: RecordingSceneClip) => number;
+  screen: (clip: RecordingSceneClip) => Measure;
+};
 
 /** `to`'s scene drawn `share` of the way from `from`'s. */
 const clipBetween = (
@@ -46,16 +50,19 @@ const clipBetween = (
   share: number,
   radiusOf: RadiusOf,
 ): RecordingSceneClip => {
-  const radius = (pane: ScenePane) =>
-    from.radius?.[pane] === undefined && to.radius?.[pane] === undefined
-      ? undefined
-      : between(radiusOf(from, pane), radiusOf(to, pane), share);
-  const [screenRadius, cameraRadius] = [radius("screen"), radius("camera")];
+  const unset = (pane: ScenePane) =>
+    from.radius?.[pane] === undefined && to.radius?.[pane] === undefined;
+  const screenRadius = unset("screen")
+    ? undefined
+    : measureBetween(radiusOf.screen(from), radiusOf.screen(to), share);
+  const cameraRadius = unset("camera")
+    ? undefined
+    : between(radiusOf.camera(from), radiusOf.camera(to), share);
   const rotation = rotationBetween(from.rotation, to.rotation, share);
   const inset =
     from.inset === undefined && to.inset === undefined
       ? undefined
-      : between(from.inset ?? 0, to.inset ?? 0, share);
+      : measureBetween(from.inset ?? points(0), to.inset ?? points(0), share);
   const camera = framingBetween(from.camera, to.camera, share);
   const screen = framingBetween(from.screen, to.screen, share);
   return {

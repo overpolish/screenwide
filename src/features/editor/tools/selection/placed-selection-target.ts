@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import { CaptureSource, measureIn, percent, points } from "../../layer-measure";
 import {
   isLayerAtDefaultPlacement,
   layerAtDefaultPlacement,
@@ -17,7 +18,7 @@ import {
 import { CameraEffectsTool } from "../../recording/camera/use-camera-effects";
 import {
   insetScreenshotPadding,
-  screenshotInsetShare,
+  screenshotInsetPoints,
 } from "../../screenshot/screenshot-inset";
 import { ScreenshotOutputSettings } from "../../screenshot/screenshot-output";
 import { EditorKind } from "../../types";
@@ -34,10 +35,10 @@ import { ToolPanelLayerSelection } from "../tool-panel-store";
 export type EditorSelectionTarget = {
   /** Cast the layer's shadow onto the canvas, or take it away. */
   applyDropShadow: (dropShadow: boolean) => void;
-  /** Pad the layer by this share of its picture's shorter side on each
-   * side. */
+  /** Pad the layer by this many points of its capture on each side. */
   applyInset: (inset: number) => void;
-  /** Round the layer's corners by this share of its shorter side. */
+  /** Round the layer's corners: points of its capture for a screen or
+   * screenshot, a share of its shorter side for a camera. */
   applyRadius: (radius: number) => void;
   /** Put the layer's content in the middle of its padded frame. */
   recenter: () => void;
@@ -64,6 +65,7 @@ export type EditorSelectionTarget = {
  */
 export const placedSelectionTarget = ({
   apply,
+  corners,
   kind,
   label,
   settings,
@@ -72,10 +74,13 @@ export const placedSelectionTarget = ({
   workspace,
 }: {
   apply: (next: ScreenshotOutputSettings) => void;
+  /** Whether the layer's corners are points of its capture, as a screen's
+   * and a screenshot's are, or a percent of its frame, as a camera's are. */
+  corners: "percent" | "points";
   kind: ToolPanelLayerSelection["kind"];
   label: string;
   settings: ScreenshotOutputSettings;
-  source: { height: number; width: number };
+  source: CaptureSource;
   /** Whether the layer turns in depth: the screen of a recording and a
    * screenshot's layers do, the camera does not. */
   turns: boolean;
@@ -102,8 +107,11 @@ export const placedSelectionTarget = ({
         padWithInsetColor(workspace, pad);
       else pad();
     },
-    applyRadius: (radiusPercent) => {
-      apply({ ...settings, radiusPercent });
+    applyRadius: (radius) => {
+      apply({
+        ...settings,
+        radius: corners === "points" ? points(radius) : percent(radius),
+      });
     },
     ...(turns
       ? {
@@ -120,14 +128,11 @@ export const placedSelectionTarget = ({
     },
     selection: {
       dropShadow: settings.dropShadow,
-      // A share of the layer's own picture, its source crop, rather than of
-      // its padded frame, so it does not move as the padding changes, and a
-      // large look is large whatever the layer's size.
-      inset: screenshotInsetShare(settings, source),
+      inset: screenshotInsetPoints(settings, source),
       isAtDefaultPlacement: isLayerAtDefaultPlacement(settings),
       kind,
       label,
-      radius: settings.radiusPercent,
+      radius: measureIn(settings.radius, corners) ?? -1,
       ...(turns ? { rotation } : {}),
     },
   };

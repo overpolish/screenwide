@@ -19,7 +19,7 @@ import { RecordingSceneClip } from "./recording-scenes";
 
 import type { RecordingSelectionGestureEvent } from "../use-recording-preview-surface";
 
-const source = { height: 900, width: 1600 };
+const source = { height: 900, scaleFactor: 2, width: 1600 };
 const recording = defaultRecordingOutput({ primary: source });
 /** The recording's own crop, padded by its own inset of 40 pixels. */
 const output = {
@@ -32,7 +32,7 @@ const output = {
 const zoom = (inset?: number): RecordingSceneClip => ({
   endMs: 10_000,
   id: "z",
-  ...(inset === undefined ? {} : { inset }),
+  ...(inset === undefined ? {} : { inset: { points: inset } }),
   preset: "full",
   screen: { focusX: 0.5, focusY: 0.5, zoom: 2 },
   startMs: 1_000,
@@ -43,6 +43,7 @@ const arranged = (clip: RecordingSceneClip, sourceMs = 5_000) =>
     clips: [clip],
     output,
     ranges: [{ playbackRate: 1, sourceEndMs: 20_000, sourceStartMs: 0 }],
+    screen: source,
     sourceMs,
   });
 
@@ -70,12 +71,14 @@ const targetAndSelection = (
 };
 
 describe("a scene that pads its screen", () => {
-  it("pads the crop outwards round its box, as arrange.rs does", () => {
+  it("pads the crop outwards round its box by points of the capture", () => {
     const bare = arranged(zoom());
-    const padded = arranged(zoom(0.1));
+    const padded = arranged(zoom(32));
     if (!bare || !padded) throw new Error("the scene places the screen");
     const box = bare.screen.box;
-    const pad = 0.1 * Math.min(box.width, box.height);
+    // Two pixels to the point, drawn at the scale the scene draws the
+    // picture.
+    const pad = (32 * 2 * padded.output.imageWidth) / source.width;
     expect(padded.screen.box).toEqual(box);
     expect(padded.output.cropX).toBeCloseTo(box.x - pad);
     expect(padded.output.cropY).toBeCloseTo(box.y - pad);
@@ -87,16 +90,15 @@ describe("a scene that pads its screen", () => {
   });
 
   it("eases its padding in with its arrival", () => {
-    const settled = arranged(zoom(0.1));
-    const halfway = arranged(zoom(0.1), 1_300);
-    if (!settled || !halfway) throw new Error("the scene places the screen");
-    expect((halfway.screen.box.x - halfway.output.cropX) * 2).toBeCloseTo(
-      settled.screen.box.x - settled.output.cropX,
+    const halfway = arranged(zoom(32), 1_300);
+    if (!halfway) throw new Error("the scene places the screen");
+    expect(halfway.screen.box.x - halfway.output.cropX).toBeCloseTo(
+      (16 * 2 * halfway.output.imageWidth) / source.width,
     );
   });
 
   it("hands the hit target the padded box the selection is drawn on", () => {
-    const scene = arranged(zoom(0.1));
+    const scene = arranged(zoom(32));
     if (!scene) throw new Error("the scene places the screen");
     const { selection, target } = targetAndSelection(scene.output);
     const canvas = screenshotOutputDimensions(output);
@@ -124,7 +126,7 @@ describe("a scene that pads its screen", () => {
     const canvas = { height: 900, width: 1600 };
     const box = { height: 0.4, width: 0.3, x: 0.2, y: 0.3 };
     const clip: RecordingSceneClip = {
-      ...zoom(0.1),
+      ...zoom(32),
       boxes: { screen: box },
     };
     const padded = (screen: typeof box) => {
@@ -132,6 +134,7 @@ describe("a scene that pads its screen", () => {
         0.1 *
         Math.min(screen.width * canvas.width, screen.height * canvas.height);
       return {
+        inset,
         x: screen.x - inset / canvas.width,
         y: screen.y - inset / canvas.height,
       };
@@ -147,7 +150,10 @@ describe("a scene that pads its screen", () => {
       phase: "update",
       scale: 2,
     };
-    const edit = boxEdit({ screen: box }, "screen", canvas);
+    const edit = boxEdit({ screen: box }, "screen", {
+      canvas,
+      inset: padded(box).inset,
+    });
     const screen = edit(clip, event)?.boxes.screen;
     if (!screen) throw new Error("the gesture resizes the box");
     expect(screen.width).toBeCloseTo(0.6);

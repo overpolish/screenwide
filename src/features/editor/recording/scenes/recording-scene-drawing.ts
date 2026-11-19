@@ -10,7 +10,7 @@ import { CameraOverlaySettings } from "../../types";
 
 import {
   recordingSceneLook,
-  sceneRadius,
+  sceneCameraRadius,
 } from "./recording-scene-panel-snapshot";
 import { SceneCamera } from "./recording-scene-placement";
 import { RecordingSceneClip } from "./recording-scenes";
@@ -56,7 +56,7 @@ export function sceneClipDrawing(
   const shape = {
     aspect: look.canvasAspect,
     cameraAspect: look.cameraAspect,
-    cameraRadius: sceneRadius(clip, "camera", source),
+    cameraRadius: sceneCameraRadius(clip, source.cameraOverlay),
     rotation: clip.rotation,
     screen: look.composition.screen,
     screenAspect: look.screenAspect,

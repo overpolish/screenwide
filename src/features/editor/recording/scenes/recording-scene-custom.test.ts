@@ -34,6 +34,7 @@ const arranged = (clip: RecordingSceneClip) =>
     clips: [clip],
     output,
     ranges: uncut,
+    screen: { height: output.height, scaleFactor: 1, width: output.width },
     sourceMs: 5_000,
   });
 

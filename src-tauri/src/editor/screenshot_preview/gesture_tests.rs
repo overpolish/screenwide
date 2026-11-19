@@ -17,7 +17,7 @@ fn moving_an_item_keeps_canvas_presentation_fields() {
   canvas.mesh_colors = vec!["#112233".to_owned(), "#445566".to_owned()];
   let mut item = test_output_settings(800, 600);
   item.background_color = "#AABBCC".to_owned();
-  item.radius_percent = 31.0;
+  item.radius = screenwide_scenes::Measure::Points(31.0);
   item.mesh_seed = 5678;
   let snapshot = ScreenshotWorkspaceOutputSettings {
     canvas,
@@ -61,7 +61,10 @@ fn moving_an_item_keeps_canvas_presentation_fields() {
   assert_eq!(next.canvas.mesh_seed, 1234);
   assert_eq!(next.canvas.mesh_colors, snapshot.canvas.mesh_colors);
   assert_eq!(next.items[0].output.background_color, "#AABBCC");
-  assert_eq!(next.items[0].output.radius_percent, 31.0);
+  assert_eq!(
+    next.items[0].output.radius,
+    screenwide_scenes::Measure::Points(31.0)
+  );
   assert_ne!(next.items[0].output.crop_x, snapshot.items[0].output.crop_x);
 }
 

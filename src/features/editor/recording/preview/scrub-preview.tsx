@@ -17,11 +17,13 @@ import {
 
 import { NativeRecordingPreview } from "./native-recording-preview";
 
+import type { CaptureSource } from "../../layer-measure";
+
 export type ScrubPreviewProps = {
   artifactId: number;
   durationMs: number;
   previewSourceDimensions: Partial<
-    Record<RecordingVideoTrackId, { height: number; width: number }>
+    Record<RecordingVideoTrackId, CaptureSource>
   >;
   audioError?: string | null;
   audioTrackVolumes?: AudioTrackVolume[];

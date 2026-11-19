@@ -7,6 +7,7 @@ use ts_rs::TS;
 
 pub use super::boxes::{SceneBox, SceneBoxes};
 use super::framing::SceneFraming;
+use super::measure::Measure;
 use super::rotation::SceneRotation;
 use super::variant::SceneVariant;
 
@@ -45,15 +46,21 @@ impl RecordingScenePreset {
   }
 }
 
-/// The corner radius a scene gives each pane, as a share of the pane's
-/// shorter side in percent, like the recording's own. A pane without one
-/// keeps the recording's radius.
+/// The corner radius a scene gives each pane, like the recording's own: the
+/// screen's in points of its capture (a percent of the pane in clips saved
+/// before, and for a recording of the camera alone, whose screen pane is the
+/// camera), the camera's a percent of its pane's shorter side. A pane
+/// without one keeps the recording's radius.
 #[derive(Clone, Copy, Debug, Default, Deserialize, PartialEq, Serialize, TS)]
 #[ts(export)]
 pub struct SceneRadius {
-  #[serde(default, skip_serializing_if = "Option::is_none")]
+  #[serde(
+    default,
+    deserialize_with = "crate::measure::optional_measure_or_bare_percent",
+    skip_serializing_if = "Option::is_none"
+  )]
   #[ts(optional)]
-  pub screen: Option<f64>,
+  pub screen: Option<Measure>,
   #[serde(default, skip_serializing_if = "Option::is_none")]
   #[ts(optional)]
   pub camera: Option<f64>,
@@ -61,10 +68,10 @@ pub struct SceneRadius {
 
 impl SceneRadius {
   pub(crate) fn is_valid(self) -> bool {
-    [self.screen, self.camera]
-      .into_iter()
-      .flatten()
-      .all(|radius| (0.0..=50.0).contains(&radius))
+    self.screen.is_none_or(|screen| screen.is_valid(50.0))
+      && self
+        .camera
+        .is_none_or(|camera| (0.0..=50.0).contains(&camera))
   }
 }
 
@@ -114,13 +121,18 @@ pub struct RecordingSceneClip {
   #[serde(default, skip_serializing_if = "Option::is_none")]
   #[ts(optional)]
   pub radius: Option<SceneRadius>,
-  /// How far the scene pads its screen's box, as a share of the box's
-  /// shorter side: the box grows outwards by it, filled with the colour found
-  /// behind the recording's content, as the recording's own inset pads its
-  /// crop. None where unset.
-  #[serde(default, skip_serializing_if = "Option::is_none")]
+  /// How far the scene pads its screen's box: the box grows outwards by it
+  /// on every side, filled with the colour found behind the recording's
+  /// content, as the recording's own inset pads its crop. Points of the
+  /// recording's capture as the scene draws it; a percent of the box's
+  /// shorter side in clips saved before. None where unset.
+  #[serde(
+    default,
+    deserialize_with = "crate::measure::optional_measure_or_bare_share",
+    skip_serializing_if = "Option::is_none"
+  )]
   #[ts(optional)]
-  pub inset: Option<f64>,
+  pub inset: Option<Measure>,
   /// How the scene turns the screen in depth, with everything drawn on it;
   /// upright where unset.
   #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -168,9 +180,9 @@ impl RecordingSceneClip {
   }
 }
 
-/// The furthest a scene pads its screen, as a share of the box's shorter
-/// side, on every side.
-pub const MAX_SCENE_INSET: f64 = 0.5;
+/// The furthest a scene saved before paddings had a unit pads its screen,
+/// in percent of the box's shorter side.
+const MAX_SCENE_INSET_PERCENT: f64 = 50.0;
 
 /// Whether a recording's scene clips can be played: each spans time, has an
 /// id of its own and framings a scene can hold, and they run in order without
@@ -192,7 +204,7 @@ pub fn validate_clips(clips: &[RecordingSceneClip]) -> Result<(), String> {
       || clip.radius.is_some_and(|radius| !radius.is_valid())
       || clip
         .inset
-        .is_some_and(|inset| !inset.is_finite() || !(0.0..=MAX_SCENE_INSET).contains(&inset))
+        .is_some_and(|inset| !inset.is_valid(MAX_SCENE_INSET_PERCENT))
       || clip.rotation.is_some_and(|rotation| !rotation.is_valid())
     {
       return Err("The scene clips are invalid".to_owned());

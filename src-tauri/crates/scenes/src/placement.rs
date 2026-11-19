@@ -13,8 +13,9 @@ const VANISHED_SCALE: f64 = 0.25;
 /// Where the panes are, in the canvas's output pixels: the screen's box and
 /// the whole screen image behind it by its corner and width, then the
 /// camera's box and the camera picture behind it by its centre and width;
-/// the screen's and the camera's corner radii in percent of their boxes'
-/// shorter sides; how opaque each pane is drawn, zero for a pane the scene
+/// the screen's corner radius in output pixels, on its padded box, and the
+/// camera's in percent of its box's shorter side; how opaque each pane is
+/// drawn, zero for a pane the scene
 /// hides; and how far the camera is drawn in front of the screen, one in
 /// front and zero behind, between the two while a scene changes the order;
 /// how the screen is turned in depth about its box's middle; and how far the

@@ -33,6 +33,7 @@ const arranged = (preset: RecordingScenePreset, sourceMs: number) =>
     clips: [{ endMs: 10_000, id: "p", preset, startMs: 1000 }],
     output,
     ranges: uncut,
+    screen: { height: output.height, scaleFactor: 1, width: output.width },
     sourceMs,
   });
 

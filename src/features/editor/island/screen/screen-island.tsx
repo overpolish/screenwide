@@ -14,7 +14,7 @@ import {
   AnnotationRows,
 } from "../annotation/annotation-island-parts";
 import { IslandRotation } from "../island-rotation";
-import { PICTURE_CORNERS } from "../picture-corners";
+import { CAPTURE_CORNERS } from "../picture-corners";
 import { SceneOnlyNote } from "../scene-only-note";
 
 import { ScreenInsetChoice } from "./screen-inset-choice";
@@ -40,9 +40,8 @@ export type ScreenIslandProps = {
   capture: "recording" | "screenshot";
   /** Whether the screen casts a shadow onto the canvas behind it. */
   hasShadow: boolean;
-  /** How far the screen's edges are extended on each side, as a share of
-   * its picture's shorter side, the scene's own (a share of its box's)
-   * while `isInScene`. */
+  /** How far the screen's edges are extended on each side, in points of
+   * the capture, the scene's own while `isInScene`. */
   inset: number;
   /** Whether the screen sits where a fresh project places it, the scene's
    * own pane where its layout puts it while `isInScene`. */
@@ -61,9 +60,9 @@ export type ScreenIslandProps = {
    * box its layout gives it while `isInScene`. */
   onResetPlacement: () => void;
   onShadowChange: (hasShadow: boolean) => void;
-  /** Percent of the screen's shorter side, the scene's own while
-   * `isInScene`. These are the screen's own corners, inside the canvas the
-   * Frame island rounds. */
+  /** Points of the capture, the scene's own while `isInScene`; -1 for a
+   * radius no look gives. These are the screen's own corners, inside the
+   * canvas the Frame island rounds. */
   radius: number;
   /** Turns the screen; left out where it cannot be turned. */
   onRotationChange?: (rotation: SceneRotation) => void;
@@ -89,7 +88,7 @@ export function screenIsland(props: ScreenIslandProps): EditorIslandContent {
           </AnnotationChoiceRow>
           <AnnotationChoiceRow key="corners" title={t("annotation-radius")}>
             <CornerChoice
-              corners={PICTURE_CORNERS}
+              corners={CAPTURE_CORNERS}
               onChange={props.onRadiusChange}
               value={props.radius}
             />

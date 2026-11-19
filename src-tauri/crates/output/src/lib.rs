@@ -70,8 +70,7 @@ pub fn validate_output_settings(
   if let Some(colour) = settings.recenter_inset_color.as_deref() {
     parse_hex_colour(colour)?;
   }
-  if !settings.radius_percent.is_finite()
-    || !(0.0..=50.0).contains(&settings.radius_percent)
+  if !settings.radius.is_valid(50.0)
     || !settings.background_radius_percent.is_finite()
     || !(0.0..=50.0).contains(&settings.background_radius_percent)
   {

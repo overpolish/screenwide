@@ -15,7 +15,7 @@ use screenwide_scenes::geometry::Rect;
 use screenwide_scenes::model::{RecordingSceneClip, RecordingScenePreset};
 use screenwide_scenes::motion::SceneMotion;
 use screenwide_scenes::placement::Placement;
-use screenwide_scenes::CameraOverlaySettings;
+use screenwide_scenes::{CameraOverlaySettings, Measure};
 use screenwide_timeline::{rate_at, TimelineRange};
 
 use super::target::Base;
@@ -153,7 +153,14 @@ pub fn arrange_following(
     placed.screen.width,
     placed.screen.height,
   ]);
-  output.radius_percent = placed.radius.0;
+  // The placement holds the screen's corners in canvas pixels, whatever the
+  // scene measured them in; the layer draws points of its capture.
+  let pixels_per_point = output.canvas_pixels_per_point();
+  output.radius = Measure::Points(if pixels_per_point > 0.0 {
+    placed.radius.0 / pixels_per_point
+  } else {
+    0.0
+  });
   output.scene_opacity = Some([
     placed.opacity.0 as f32,
     placed.opacity.1 as f32,

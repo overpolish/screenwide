@@ -17,18 +17,19 @@ const layer = (id: number, isBlank = false) => ({
   height: 1_080,
   id,
   isBlank,
+  scaleFactor: 2,
   width: 1_920,
 });
 
 describe("a blank canvas", () => {
   it("draws its blank layer with no shadow or corners", () => {
     const template = {
-      ...defaultScreenshotOutput(1_920, 1_080, { screenshot: 12 }),
+      ...defaultScreenshotOutput(1_920, 1_080, { screenshot: { points: 24 } }),
       dropShadow: true,
     };
     const output = seedScreenshotItemOutput(template, layer(1, true));
     expect(output.dropShadow).toBe(false);
-    expect(output.radiusPercent).toBe(0);
+    expect(output.radius).toEqual({ points: 0 });
     // A picture takes the look.
     expect(seedScreenshotItemOutput(template, layer(2)).dropShadow).toBe(true);
   });

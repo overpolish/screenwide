@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import { measureLike, points } from "../../layer-measure";
 import { UPRIGHT_ROTATION } from "../../layer-rotation";
 import { ScreenshotOutputSettings } from "../../screenshot/screenshot-output";
 import { timedSpanClipAt } from "../../timeline/tracks/timed-span-clips";
@@ -27,7 +28,6 @@ import {
 } from "./recording-scene-template";
 import {
   insertRecordingSceneClip,
-  MAX_SCENE_INSET,
   RECORDING_SCENE_MINIMUM_MS,
   RecordingSceneClip,
   rotatedSceneClip,
@@ -249,19 +249,21 @@ export function recordingSceneEdits({
     setInset: (inset) => {
       reframeCurrent((clip) => {
         const { inset: _inset, ...rest } = clip;
-        const share = Math.min(MAX_SCENE_INSET, Math.max(0, inset));
-        return share > 0 ? { ...rest, inset: share } : rest;
+        return inset > 0 ? { ...rest, inset: points(inset) } : rest;
       });
     },
+    // The screen's corners are in the unit the recording's own are in.
     setRadius: (radius) => {
       reframeCurrent((clip) => {
         const pane = paneOf(clip);
         if (!pane) return clip;
+        const share = Math.min(50, Math.max(0, radius));
+        const screen = measureLike(output.radius, Math.max(0, radius));
         return {
           ...clip,
           radius: {
             ...clip.radius,
-            [pane.pane]: Math.min(50, Math.max(0, radius)),
+            ...(pane.pane === "screen" ? { screen } : { camera: share }),
           },
         };
       });

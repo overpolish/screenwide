@@ -48,7 +48,7 @@ fn layer(
       width: output.crop_width / width,
       height: output.crop_height / height,
     },
-    radius_percent: output.radius_percent,
+    radius_percent: output.corner_radius_frame_percent(),
     z_index,
   }
 }

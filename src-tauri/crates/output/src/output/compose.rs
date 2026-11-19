@@ -23,8 +23,7 @@ pub fn compose_screenshot(
   let (output_width, output_height) = output_dimensions(settings)?;
   let source = image::RgbaImage::from_raw(image.width, image.height, image.rgba.clone())
     .ok_or_else(|| "The screenshot pixels are not valid".to_owned())?;
-  if !settings.radius_percent.is_finite()
-    || !(0.0..=50.0).contains(&settings.radius_percent)
+  if !settings.radius.is_valid(50.0)
     || !settings.background_radius_percent.is_finite()
     || !(0.0..=50.0).contains(&settings.background_radius_percent)
   {
@@ -81,7 +80,7 @@ pub fn compose_screenshot(
       rgba: cropped.into_raw(),
       width: crop_width,
     },
-    settings.radius_percent,
+    settings.corner_radius_pixels(f64::from(crop_width), f64::from(crop_height)),
   );
   let solid_canvas = || -> Result<image::RgbaImage, String> {
     Ok(image::RgbaImage::from_pixel(
@@ -165,6 +164,6 @@ pub fn compose_screenshot(
       rgba: canvas.into_raw(),
       width: output_width,
     },
-    settings.background_radius_percent,
+    f64::from(output_width.min(output_height)) * settings.background_radius_percent / 100.0,
   ))
 }

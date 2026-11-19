@@ -19,7 +19,14 @@ const screenshotArtifact: EditorArtifact = {
   height: 900,
   id: 1,
   items: [
-    { annotations: [], height: 900, id: 7, isBlank: false, width: 1_600 },
+    {
+      annotations: [],
+      height: 900,
+      id: 7,
+      isBlank: false,
+      scaleFactor: 2,
+      width: 1_600,
+    },
   ],
   kind: "screenshot",
   suggestedFileStem: "capture",
@@ -39,12 +46,14 @@ describe("frame radius target", () => {
     const output = {
       ...defaultScreenshotOutput(1_600, 900, {
         background: 4,
-        screenshot: 18,
+        screenshot: { points: 10 },
       }),
       items: [
         {
           id: 7,
-          output: defaultScreenshotOutput(800, 450, { screenshot: 27 }),
+          output: defaultScreenshotOutput(800, 450, {
+            screenshot: { points: 24 },
+          }),
         },
       ],
     };
@@ -65,13 +74,15 @@ describe("frame radius target", () => {
 
     expect(target?.snapshot.radius).toBe(4);
     expect(apply.mock.calls[0][0].backgroundRadiusPercent).toBe(11);
-    expect(apply.mock.calls[0][0].items[0].output.radiusPercent).toBe(27);
+    expect(apply.mock.calls[0][0].items[0].output.radius).toEqual({
+      points: 24,
+    });
   });
 
   it("changes the selected recording canvas radius", () => {
     const output = defaultScreenshotOutput(1_600, 900, {
       background: 3,
-      screenshot: 21,
+      screenshot: { points: 10 },
     });
     const apply = vi.fn<(next: ScreenshotOutputSettings) => void>();
     const target = editorFrameTarget({
@@ -92,7 +103,7 @@ describe("frame radius target", () => {
 
     expect(target?.snapshot.radius).toBe(3);
     expect(apply.mock.calls[0][0].backgroundRadiusPercent).toBe(9);
-    expect(apply.mock.calls[0][0].radiusPercent).toBe(21);
+    expect(apply.mock.calls[0][0].radius).toEqual({ points: 10 });
   });
 });
 

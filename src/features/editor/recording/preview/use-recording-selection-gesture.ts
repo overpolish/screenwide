@@ -20,6 +20,7 @@ import {
   gesturedTrackOutput,
 } from "./recording-selection-gesture-geometry";
 
+import type { CaptureSource } from "../../layer-measure";
 import type { RecordingSelectionGestureEvent } from "../use-recording-preview-surface";
 
 const AUTO_FIT_MOVE_EDGE = 1 << 17;
@@ -48,7 +49,7 @@ export function useRecordingSelectionGesture({
   editGesture: ReturnType<typeof useEditorEditGesture>;
   effectiveRecordingOutput: RecordingOutputSettings;
   previewSourceDimensions: Partial<
-    Record<RecordingVideoTrackId, { height: number; width: number }>
+    Record<RecordingVideoTrackId, CaptureSource>
   >;
   recenterRefreshRef: RefObject<
     (crop: ScreenshotOutputSettings["sourceCrop"]) => Promise<void>

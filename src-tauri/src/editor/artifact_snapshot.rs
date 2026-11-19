@@ -16,6 +16,9 @@ pub struct ScreenshotItemSnapshot {
   /// The canvas's own layer, whose picture is empty: it holds what is drawn
   /// on a blank canvas and is never drawn or chosen as a picture.
   pub is_blank: bool,
+  /// How many of its pixels one logical point spans, which its padding and
+  /// corners are measured in.
+  pub scale_factor: f64,
   pub width: u32,
 }
 
@@ -110,6 +113,7 @@ pub(super) fn snapshot(app: &AppHandle, kind: EditorKind) -> EditorSnapshot {
               height: item.image.height,
               id: item.id,
               is_blank: item.blank,
+              scale_factor: item.capture().scale,
               width: item.image.width,
             })
             .collect(),
@@ -179,8 +183,8 @@ pub(super) fn snapshot(app: &AppHandle, kind: EditorKind) -> EditorSnapshot {
       }
     });
 
-  let screenshot_radius_percent = *state
-    .screenshot_radius_percent
+  let screenshot_radius = *state
+    .screenshot_radius
     .lock()
     .unwrap_or_else(|poisoned| poisoned.into_inner());
   let screenshot_background_radius_percent = *state
@@ -220,7 +224,7 @@ pub(super) fn snapshot(app: &AppHandle, kind: EditorKind) -> EditorSnapshot {
     keyboard_effects,
     recording_export_choices,
     recording_output,
-    screenshot_radius_percent,
+    screenshot_radius,
     screenshot_background_radius_percent,
     screenshot_output,
     screenshot_delete_project_after_export,

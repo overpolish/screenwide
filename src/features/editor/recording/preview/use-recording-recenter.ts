@@ -10,6 +10,8 @@ import {
   recenterScreenshotContent,
 } from "../../screenshot/screenshot-recenter";
 
+import type { CaptureSource } from "../../layer-measure";
+
 /**
  * The recording's content analysis, published for the crop's commit and the
  * Screen island's inset presets and Recenter. Both read the frame under the
@@ -28,7 +30,7 @@ export function useRecordingRecenter({
   output: ScreenshotOutputSettings;
   pause: () => void;
   onOutputChange?: (settings: ScreenshotOutputSettings) => void;
-  source?: { height: number; width: number };
+  source?: CaptureSource;
 }) {
   const requestRef = useRef<symbol | null>(null);
   // The padding slider asks for the colour on every step until it lands, and

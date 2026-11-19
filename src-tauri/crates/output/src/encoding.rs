@@ -30,9 +30,10 @@ pub fn reserved<T>(length: usize) -> Result<Vec<T>, String> {
 
 /// The largest palette an 8-bit indexed PNG can carry.
 const MAX_PALETTE: usize = 256;
-/// Applies an antialiased alpha mask without changing the captured dimensions.
-pub fn rounded_corners(image: &CapturedImage, radius_percent: f64) -> CapturedImage {
-  let radius = f64::from(image.width.min(image.height)) * radius_percent.clamp(0.0, 50.0) / 100.0;
+/// Applies an antialiased alpha mask without changing the captured dimensions,
+/// its corners `radius` pixels round, at most half the shorter side.
+pub fn rounded_corners(image: &CapturedImage, radius: f64) -> CapturedImage {
+  let radius = radius.clamp(0.0, f64::from(image.width.min(image.height)) / 2.0);
   let mut rgba = image.rgba.clone();
   if radius <= 0.0 {
     return CapturedImage {

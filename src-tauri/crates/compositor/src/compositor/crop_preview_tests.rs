@@ -11,7 +11,7 @@ use screenwide_output::CropPreviewRect;
 fn crop_tool_settings() -> ScreenshotOutputSettings {
   let mut settings = test_output_settings(OUTPUT.0, OUTPUT.1);
   settings.drop_shadow = true;
-  settings.radius_percent = 50.0;
+  settings.radius = Measure::Percent(50.0);
   settings.image_width = 800.0;
   settings.image_x = 400.0;
   settings.image_y = 200.0;

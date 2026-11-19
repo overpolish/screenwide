@@ -9,7 +9,7 @@ use screenwide_scenes::framing::{drawn_frame, SceneFraming};
 use screenwide_scenes::geometry::{preset_panes, PresetPanes, Rect};
 use screenwide_scenes::model::{RecordingSceneClip, RecordingScenePreset};
 use screenwide_scenes::placement::Placement;
-use screenwide_scenes::CameraOverlaySettings;
+use screenwide_scenes::{CameraOverlaySettings, Measure};
 
 /// What a frame is arranged from: the composition outside every scene, the
 /// canvas, the camera picture's aspect where a camera is drawn into it, and
@@ -28,6 +28,11 @@ pub(super) struct Base {
   /// not, and how far that crop zooms into it.
   own_camera: (f64, f64, f64),
   own_zoom: f64,
+  /// The recording's own corners, which a scene's screen pane keeps where
+  /// the scene gives it none, drawn at the pane's scale.
+  own_radius: Measure,
+  /// Canvas pixels per point of the screen's capture outside every scene.
+  pixels_per_point: f64,
 }
 
 impl Base {
@@ -69,7 +74,7 @@ impl Base {
         frame,
         camera: drawn_camera,
         radius: (
-          output.radius_percent,
+          output.corner_radius_pixels(output.crop_width, output.crop_height),
           overlay.map_or(0.0, |overlay| overlay.radius_percent),
         ),
         opacity: (1.0, 1.0),
@@ -84,6 +89,8 @@ impl Base {
       follows,
       own_camera,
       own_zoom,
+      own_radius: output.radius,
+      pixels_per_point: output.canvas_pixels_per_point(),
     }
   }
 
@@ -193,6 +200,16 @@ impl Base {
       _ => base.camera,
     };
     let radius = clip.radius.unwrap_or_default();
+    // The screen's capture drawn at the pane's scale, which its corners and
+    // padding are measured in.
+    let pixels_per_point = self.pixels_per_point * scale;
+    let inset = clip.inset.map_or(0.0, |inset| {
+      inset.pixels(screen.width.min(screen.height), pixels_per_point)
+    });
+    let screen_radius = radius.screen.unwrap_or(self.own_radius).radius_pixels(
+      screen.width.min(screen.height) + inset * 2.0,
+      pixels_per_point,
+    );
     // A camera filling the canvas is cut by the canvas's own corners, not
     // rounded again inside them.
     let camera_radius = if clip.boxes.is_none() && clip.preset == RecordingScenePreset::CameraOnly {
@@ -206,16 +223,13 @@ impl Base {
       image,
       frame,
       camera,
-      radius: (
-        radius.screen.unwrap_or(base.radius.0),
-        radius.camera.unwrap_or(camera_radius),
-      ),
+      radius: (screen_radius, radius.camera.unwrap_or(camera_radius)),
       opacity: (opacity(shown.0), opacity(shown.1)),
       camera_front: clip.camera_front(),
       rotation: clip.rotation.unwrap_or_default(),
       // The scene pads its box outwards, as the recording's inset pads its
-      // crop, by a share of the box's shorter side.
-      inset: clip.inset.unwrap_or(0.0) * screen.width.min(screen.height),
+      // crop.
+      inset,
     })
   }
 }

@@ -69,7 +69,7 @@ pub(super) fn placed_selection(
           image_width,
           image_width * aspect(source),
         ),
-        screen.radius_percent,
+        screen.corner_radius_frame_percent(),
       )
     }
     (0, 1) if arranged.bake_camera => {

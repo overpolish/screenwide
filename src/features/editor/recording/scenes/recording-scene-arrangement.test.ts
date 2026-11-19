@@ -15,6 +15,7 @@ import { RecordingSceneClip, SceneFraming } from "./recording-scenes";
 
 const ASPECT = 16 / 9;
 const output = { ...defaultScreenshotOutput(1600, 900), cropHeight: 800 };
+const SCREEN = { height: 900, scaleFactor: 1, width: 1600 };
 /** A square window on the camera in the recording's own composition: the
  * fixture `src-tauri/crates/export/src/scenes/framing_tests.rs` uses. */
 const overlay = {
@@ -62,6 +63,7 @@ const arranged = (
     clips: [clip],
     output,
     ranges,
+    screen: SCREEN,
     sourceMs,
   });
 
@@ -216,23 +218,25 @@ describe("a scene's corner radius", () => {
           endMs: 10_000,
           id: "r",
           preset: "split-two-thirds",
-          radius: { screen: 30 },
+          radius: { screen: { points: 24 } },
           startMs: 1000,
         },
       ],
-      output: { ...output, radiusPercent: 10 },
+      output: { ...output, radius: { points: 10 } },
       ranges: uncut,
+      screen: SCREEN,
       sourceMs,
     });
 
   it("rounds its panes and leaves the rest to the recording, as `radius_tests.rs` pins", () => {
     const scene = rounded(5000);
-    expect(scene?.output.radiusPercent).toBe(30);
+    expect(scene?.output.radius).toEqual({ points: 24 });
     expect(scene?.cameraOverlay?.radiusPercent).toBe(50);
   });
 
   it("eases its radius in with its arrival", () => {
-    expect(rounded(1300)?.output.radiusPercent).toBeCloseTo(20);
+    const radius = rounded(1300)?.output.radius;
+    expect(radius && "points" in radius ? radius.points : null).toBeCloseTo(17);
   });
 });
 
@@ -243,6 +247,7 @@ describe("a scene's turn of the screen", () => {
       clips: [{ ...zoom, rotation: { x: 20, y: -30, z: 10 } }],
       output,
       ranges: uncut,
+      screen: SCREEN,
       sourceMs,
     })?.rotation;
 

@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use super::*;
+use screenwide_scenes::Measure;
 
 mod recording;
 pub(super) use recording::{
@@ -17,7 +18,14 @@ struct EditorPreferences {
   recording_output: Option<RecordingOutputSettings>,
   screenshot_background_radius_percent: f64,
   screenshot_output: Option<ScreenshotOutputSettings>,
-  screenshot_radius_percent: f64,
+  /// The corners the last screenshot was exported with, which the next one
+  /// starts with: a percent in preferences saved before corners had a unit,
+  /// which the editor snaps to the look in points it was nearest.
+  #[serde(
+    alias = "screenshot_radius_percent",
+    deserialize_with = "screenwide_scenes::measure::measure_or_bare_percent"
+  )]
+  screenshot_radius: Measure,
   /// Whether a screenshot's project goes to the Trash once it is exported or
   /// copied, kept apart from a recording's: unset until the first is chosen.
   screenshot_delete_project_after_export: Option<bool>,
@@ -32,7 +40,7 @@ impl Default for EditorPreferences {
       recording_output: None,
       screenshot_background_radius_percent: 0.0,
       screenshot_output: None,
-      screenshot_radius_percent: 0.0,
+      screenshot_radius: Measure::default(),
       screenshot_delete_project_after_export: None,
     }
   }
@@ -81,10 +89,11 @@ fn preferences_path(app: &AppHandle) -> Result<PathBuf, String> {
     .map_err(|error| error.to_string())
 }
 
-pub(super) fn load_screenshot_radius(app: &AppHandle) -> f64 {
-  load_preferences(app).map_or(0.0, |preferences| {
-    validate_screenshot_radius(preferences.screenshot_radius_percent).unwrap_or(0.0)
-  })
+pub(super) fn load_screenshot_radius(app: &AppHandle) -> Measure {
+  load_preferences(app)
+    .map(|preferences| preferences.screenshot_radius)
+    .filter(|radius| radius.is_valid(50.0))
+    .unwrap_or_default()
 }
 
 /// The remembered look, as a template for the next capture.
@@ -159,13 +168,16 @@ pub(super) fn remember_screenshot_output(
   app: &AppHandle,
   output: ScreenshotOutputSettings,
 ) -> Result<(), String> {
-  let radius = validate_screenshot_radius(output.radius_percent)?;
+  let radius = output.radius;
+  if !radius.is_valid(50.0) {
+    return Err("The screenshot corner radius is not valid".to_owned());
+  }
   let background_radius = validate_screenshot_radius(output.background_radius_percent)?;
   let mut output = screenshot_output_template(output);
   super::project_look::keep_in_app_data(&mut output);
   *app
     .state::<EditorState>()
-    .screenshot_radius_percent
+    .screenshot_radius
     .lock()
     .unwrap_or_else(|poisoned| poisoned.into_inner()) = radius;
   *app
@@ -180,7 +192,7 @@ pub(super) fn remember_screenshot_output(
     .unwrap_or_else(|poisoned| poisoned.into_inner()) = Some(output.clone());
 
   let mut preferences = load_preferences(app).unwrap_or_default();
-  preferences.screenshot_radius_percent = radius;
+  preferences.screenshot_radius = radius;
   preferences.screenshot_background_radius_percent = background_radius;
   preferences.screenshot_output = Some(output);
   store_preferences(app, &preferences)

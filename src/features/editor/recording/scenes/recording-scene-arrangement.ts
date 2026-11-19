@@ -1,6 +1,11 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import {
+  CaptureSource,
+  measurePixels,
+  pixelsPerPoint,
+} from "../../layer-measure";
 import { ScreenshotOutputSettings } from "../../screenshot/screenshot-output";
 import { RecordingTimelinePlaybackRange } from "../../timeline/recording-timeline-playback";
 import { CameraOverlaySettings } from "../../types";
@@ -111,12 +116,15 @@ export function arrangedRecordingScene({
   clips,
   output,
   ranges,
+  screen,
   sourceMs,
 }: {
   camera: SceneCamera | null;
   clips: readonly RecordingSceneClip[];
   output: ScreenshotOutputSettings;
   ranges: RecordingTimelinePlaybackRange[];
+  /** The screen as captured, whose points the padding is measured in. */
+  screen: CaptureSource;
   sourceMs: number;
 }): RecordingSceneArrangement | null {
   if (output.cropWidth <= 0 || output.cropHeight <= 0 || output.imageWidth <= 0)
@@ -194,8 +202,13 @@ export function arrangedRecordingScene({
         : cameraFramingOf(sceneCamera.overlay, sceneCamera.aspect)))
     : null;
   // A scene that pads its screen grows the crop outwards past its box, as the
-  // recording's own inset pads its crop.
-  const inset = Math.max(0, placed.inset);
+  // recording's own inset pads its crop, by points of the screen's capture
+  // at the scale the scene draws its picture.
+  const inset = measurePixels(
+    placed.inset,
+    Math.min(placed.screen.width, placed.screen.height),
+    pixelsPerPoint(placed.image.width, screen),
+  );
   return {
     cameraInFront: placed.cameraFront >= 0.5,
     cameraOverlay: sceneCamera
@@ -233,7 +246,7 @@ export function arrangedRecordingScene({
       imageWidth: placed.image.width,
       imageX: placed.image.x,
       imageY: placed.image.y,
-      radiusPercent: placed.radius.screen,
+      radius: placed.radius.screen,
     },
     rotation: placed.rotation,
     screen: {

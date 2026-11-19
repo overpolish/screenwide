@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import { CaptureSource, cornerRadiusFramePercent } from "../../layer-measure";
 import {
   ScreenshotOutputSettings,
   screenshotLayout,
@@ -33,7 +34,7 @@ export function normalizedRecordingSelection({
   mode: SelectionTool;
   output: ScreenshotOutputSettings;
   paneIndex: number;
-  source: { height: number; width: number };
+  source: CaptureSource;
 }) {
   const dimensions = screenshotOutputDimensions(output);
   const selection = normalizedScreenshotSelection(
@@ -46,7 +47,7 @@ export function normalizedRecordingSelection({
     image: selection.image,
     layerId: paneIndex,
     paneIndex,
-    radiusPercent: output.radiusPercent,
+    radiusPercent: cornerRadiusFramePercent(output, source),
     recenterBounds: selection.recenterBounds,
     rect: selection.rect,
   };

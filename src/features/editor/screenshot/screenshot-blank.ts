@@ -1,6 +1,8 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import { points } from "../layer-measure";
+
 import { type ScreenshotOutputSettings } from "./screenshot-output";
 
 // A blank canvas (#41) is a screenshot whose layer holds no picture: the
@@ -20,8 +22,8 @@ export const blankLayerOutput = (
 ): ScreenshotOutputSettings => ({
   ...output,
   dropShadow: false,
-  inset: 0,
-  radiusPercent: 0,
+  inset: points(0),
+  radius: points(0),
 });
 
 /** The layer chosen; the picture chosen, none where the blank layer is, which

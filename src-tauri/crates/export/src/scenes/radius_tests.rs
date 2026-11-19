@@ -6,10 +6,11 @@ use screenwide_output::fixtures::test_output_settings;
 use screenwide_scenes::model::{RecordingScenePreset, SceneRadius};
 use screenwide_scenes::validate_clips;
 use screenwide_scenes::CameraOverlaySettings;
+use screenwide_scenes::Measure;
 use screenwide_scenes::RecordingSceneClip;
 
-/// A side by side scene from 1s to 10s that rounds the screen's corners to
-/// 30%, leaving the camera's to the recording.
+/// A side by side scene from 1s to 10s that rounds the screen's corners by
+/// 24 points, leaving the camera's to the recording.
 fn rounded_split() -> RecordingSceneClip {
   RecordingSceneClip {
     id: "r".to_owned(),
@@ -20,7 +21,7 @@ fn rounded_split() -> RecordingSceneClip {
     camera: None,
     boxes: None,
     radius: Some(SceneRadius {
-      screen: Some(30.0),
+      screen: Some(Measure::Points(24.0)),
       camera: None,
     }),
     inset: None,
@@ -33,11 +34,13 @@ fn rounded_split() -> RecordingSceneClip {
   }
 }
 
-/// The screen's and the camera's radii `source_ms` in, for a recording whose
-/// own screen is rounded 10% and camera 50%.
+/// The screen's corners in points and the camera's in percent `source_ms`
+/// in, for a recording captured at two pixels to the point whose own screen
+/// is rounded 10 points and camera 50%.
 fn radii(source_ms: u64) -> (f64, f64) {
   let mut output = test_output_settings(1_600, 900);
-  output.radius_percent = 10.0;
+  output.capture_width_points = output.image_width / 2.0;
+  output.radius = Measure::Points(10.0);
   let mut overlay = CameraOverlaySettings {
     camera_x: 1_400.0,
     camera_y: 750.0,
@@ -57,18 +60,28 @@ fn radii(source_ms: u64) -> (f64, f64) {
     &mut output,
     Some((&mut overlay, (1_280, 720))),
   );
-  (output.radius_percent, overlay.radius_percent)
+  let Measure::Points(screen) = output.radius else {
+    panic!("the screen's corners are drawn in points");
+  };
+  (screen, overlay.radius_percent)
 }
 
 #[test]
 fn a_scene_rounds_its_panes_and_leaves_the_rest_to_the_recording() {
-  assert_eq!(radii(5_000), (30.0, 50.0));
+  let (screen, camera) = radii(5_000);
+  assert!((screen - 24.0).abs() < 1e-6, "{screen} is not the scene's");
+  assert_eq!(camera, 50.0);
+  let (screen, _) = radii(12_000);
+  assert!(
+    (screen - 10.0).abs() < 1e-6,
+    "{screen} is not the recording's"
+  );
 }
 
 #[test]
 fn a_scene_eases_its_radius_in_with_its_arrival() {
   let (screen, camera) = radii(1_300);
-  assert!((screen - 20.0).abs() < 1e-6, "{screen} is not halfway");
+  assert!(screen > 10.0 && screen < 24.0, "{screen} is not on its way");
   assert_eq!(camera, 50.0);
 }
 

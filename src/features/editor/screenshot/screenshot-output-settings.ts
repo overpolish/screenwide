@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { validAnnotations } from "../annotations/annotation-documents";
+import { Measure, points, savedMeasure } from "../layer-measure";
 import { DEFAULT_GENERATOR_ID } from "../tools/frame/background/background-generators";
 
 import { randomMeshComposition } from "./screenshot-background";
@@ -14,7 +15,7 @@ export type { ScreenshotOutputSettings };
 export const defaultScreenshotOutput = (
   width: number,
   height: number,
-  radii: { background?: number; screenshot?: number } = {},
+  radii: { background?: number; screenshot?: Measure } = {},
 ): ScreenshotOutputSettings => {
   const mesh = randomMeshComposition();
   return {
@@ -35,7 +36,7 @@ export const defaultScreenshotOutput = (
     imageY: 0,
     meshGenerator: DEFAULT_GENERATOR_ID,
     meshLockedColors: mesh.meshColors.map(() => false),
-    radiusPercent: radii.screenshot ?? 0,
+    radius: radii.screenshot ?? points(0),
     recenterInsetColor: null,
     sourceCrop: fullSourceRect(),
     width,
@@ -117,9 +118,22 @@ export const normalizedScreenshotOutput = (
     "imageX",
     "imageY",
     "meshWarpPercent",
-    "radiusPercent",
   ] as const)
     normalized[key] = finite(settings[key], defaults[key]);
+  // Settings saved before lengths had a unit hold a bare percent under
+  // another name, and a bare share for the padding; read as percents, which
+  // a project opening snaps to looks in points.
+  const legacyRadius =
+    "radiusPercent" in settings ? settings.radiusPercent : undefined;
+  normalized.radius =
+    savedMeasure(
+      "radius" in settings ? settings.radius : legacyRadius,
+      "percent",
+    ) ?? defaults.radius;
+  Reflect.deleteProperty(normalized, "radiusPercent");
+  const inset = savedMeasure(settings.inset, "share");
+  if (inset) normalized.inset = inset;
+  else delete normalized.inset;
   normalized.height = Math.max(
     1,
     Math.round(finite(settings.height, defaults.height)),

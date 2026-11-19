@@ -1,9 +1,15 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import { Measure } from "../layer-measure";
 import { EditorArtifact } from "../types";
 
 import { blankLayerOutput } from "./screenshot-blank";
+import {
+  cornersIn,
+  snappedTemplate,
+  withSnappedMeasures,
+} from "./screenshot-measure-snap";
 import {
   defaultScreenshotOutput,
   resetScreenshotLayout,
@@ -51,22 +57,23 @@ export const seedScreenshotWorkspace = ({
   artifact: EditorArtifact | null;
   backgroundRadius: number;
   persisted: ScreenshotOutputSettings | null;
-  radius: number;
+  radius: Measure;
 }): ScreenshotWorkspaceOutputSettings => {
+  const corners = cornersIn(radius, "points");
   const defaults = defaultScreenshotOutput(
     artifact?.width ?? 1,
     artifact?.height ?? 1,
-    { background: backgroundRadius, screenshot: radius },
+    { background: backgroundRadius, screenshot: corners },
   );
   if (artifact?.kind !== "screenshot") return { ...defaults, items: [] };
   const first = persisted
     ? resetScreenshotLayout(
         {
           ...defaults,
-          ...screenshotOutputTemplate(persisted),
+          ...screenshotOutputTemplate(snappedTemplate(persisted, "points")),
           backgroundRadiusPercent: backgroundRadius,
           height: defaults.height,
-          radiusPercent: radius,
+          radius: corners,
           recenterInsetColor: null,
           width: defaults.width,
         },
@@ -94,7 +101,7 @@ export const reopenedScreenshotWorkspace = (
   const { items: savedItems, ...canvas } = saved;
   const workspace = {
     ...defaultScreenshotOutput(artifact.width, artifact.height),
-    ...canvas,
+    ...snappedTemplate(canvas, "points"),
     recenterInsetColor: null,
   };
   return {
@@ -102,12 +109,19 @@ export const reopenedScreenshotWorkspace = (
     // A layer deleted before it was saved stays deleted.
     items: artifact.items
       .filter((item) => !artifact.deletedItemIds.includes(item.id))
-      .map(
-        (item) =>
-          savedItems.find((savedItem) => savedItem.id === item.id) ?? {
-            id: item.id,
-            output: seedScreenshotItemOutput(workspace, item, { fit: false }),
-          },
-      ),
+      .map((item) => {
+        const savedItem = savedItems.find(
+          (candidate) => candidate.id === item.id,
+        );
+        return savedItem
+          ? {
+              id: item.id,
+              output: withSnappedMeasures(savedItem.output, item, "points"),
+            }
+          : {
+              id: item.id,
+              output: seedScreenshotItemOutput(workspace, item, { fit: false }),
+            };
+      }),
   };
 };

@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { ScrubPreview } from "../recording/preview/scrub-preview";
+import { recordingCaptures } from "../recording/recording-captures";
 import {
   scaledDimensions,
   scaledVideoDimensions,
@@ -102,19 +103,7 @@ export function RecordingSection({
           ...(cameraOutputDimensions ? { camera: cameraOutputDimensions } : {}),
         }}
         // An audio recording has no picture, so nothing to arrange in scenes.
-        previewSourceDimensions={{
-          ...(artifact.primaryKind === "audio"
-            ? {}
-            : { primary: { height: artifact.height, width: artifact.width } }),
-          ...(artifact.camera
-            ? {
-                camera: {
-                  height: artifact.camera.height,
-                  width: artifact.camera.width,
-                },
-              }
-            : {}),
-        }}
+        previewSourceDimensions={recordingCaptures(artifact)}
         recorded={{
           audio: artifact.audioTracks,
           camera: Boolean(artifact.camera),

@@ -22,7 +22,10 @@ pub struct CanvasGeometry {
 impl CanvasGeometry {
   pub fn of(source: (u32, u32), settings: &ScreenshotOutputSettings) -> Result<Self, String> {
     let placement = output_placement(source.0, source.1, settings)?;
-    let shortest_crop = placement.crop_width.min(placement.crop_height) as f32;
+    let crop = (
+      f64::from(placement.crop_width),
+      f64::from(placement.crop_height),
+    );
     let shortest_output = settings.width.min(settings.height) as f32;
     Ok(Self {
       size: (settings.width, settings.height),
@@ -32,7 +35,7 @@ impl CanvasGeometry {
       radius: if crop_preview_rect(settings).is_some() {
         0.0
       } else {
-        shortest_crop * (settings.radius_percent as f32 / 100.0)
+        settings.corner_radius_pixels(crop.0, crop.1) as f32
       },
       background_radius: shortest_output * (settings.background_radius_percent as f32 / 100.0),
     })

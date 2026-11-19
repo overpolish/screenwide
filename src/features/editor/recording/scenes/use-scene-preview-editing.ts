@@ -22,6 +22,7 @@ import {
   useRecordingSceneGesture,
 } from "./use-recording-scene-gesture";
 
+import type { CaptureSource } from "../../layer-measure";
 import type { RecordingCanvasTool } from "../preview/recording-canvas-tool";
 import type { RecordingPreviewSelection } from "../use-recording-preview-surface";
 
@@ -37,9 +38,9 @@ import type { RecordingPreviewSelection } from "../use-recording-preview-surface
  */
 export function useScenePreviewEditing({
   cameraOverlay,
-  cameraSource,
   canPreviewBakedCamera,
   canvasTool,
+  captures,
   durationMs,
   edit,
   editGesture,
@@ -48,9 +49,10 @@ export function useScenePreviewEditing({
   positionMs,
 }: {
   cameraOverlay: CameraOverlaySettings;
-  cameraSource: { height: number; width: number } | undefined;
   canPreviewBakedCamera: boolean;
   canvasTool: RecordingCanvasTool;
+  /** Each picture as captured; none for one the recording does not have. */
+  captures: Partial<Record<RecordingVideoTrackId, CaptureSource>>;
   durationMs: number;
   edit: RecordingTimelineEdit | null | undefined;
   editGesture: { beginGesture: () => void; endGesture: () => void };
@@ -59,6 +61,8 @@ export function useScenePreviewEditing({
   positionMs: number;
   onEditChange?: (edit: RecordingTimelineEdit) => void;
 }) {
+  const cameraSource = captures.camera;
+  const screenSource = captures.primary;
   const cameraAspect = cameraSource
     ? cameraSource.width / Math.max(1, cameraSource.height)
     : 0;
@@ -71,16 +75,17 @@ export function useScenePreviewEditing({
   );
   const arrangement = useMemo(
     () =>
-      edit?.sceneClips
+      edit?.sceneClips && screenSource
         ? arrangedRecordingScene({
             camera,
             clips: edit.sceneClips,
             output,
             ranges: recordingTimelinePlaybackRanges(edit, durationMs),
+            screen: screenSource,
             sourceMs: positionMs,
           })
         : null,
-    [camera, durationMs, edit, output, positionMs],
+    [camera, durationMs, edit, output, positionMs, screenSource],
   );
   const isEditing = canvasTool === "select" || canvasTool === "crop";
   // Each pane as the paused frame draws it: the box it sits in now and the
@@ -107,6 +112,10 @@ export function useScenePreviewEditing({
           clipId: arrangement.clip.id,
           clips: edit.sceneClips,
           screen: arrangement.screen,
+          screenInset: Math.max(
+            0,
+            (arrangement.output.cropWidth - arrangement.screen.box.width) / 2,
+          ),
         }
       : null;
   const gesture = useRecordingSceneGesture({

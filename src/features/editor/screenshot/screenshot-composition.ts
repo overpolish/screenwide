@@ -1,6 +1,8 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import { isZeroMeasure } from "../layer-measure";
+
 import { ScreenshotOutputSettings } from "./screenshot-output";
 import { screenshotSourceCrop } from "./screenshot-output-settings";
 
@@ -13,7 +15,7 @@ export const hasOutputComposition = (
     settings.width !== source.width ||
     settings.height !== source.height ||
     settings.backgroundRadiusPercent > 0 ||
-    settings.radiusPercent > 0 ||
+    !isZeroMeasure(settings.radius) ||
     settings.recenterInsetColor !== null ||
     Math.abs(settings.cropHeight - settings.height) > 0.000_001 ||
     Math.abs(settings.cropWidth - settings.width) > 0.000_001 ||

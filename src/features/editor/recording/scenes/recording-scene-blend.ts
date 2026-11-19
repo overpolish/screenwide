@@ -1,6 +1,8 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import { measureBetween } from "../../layer-measure";
+
 import { SceneRect } from "./recording-scene-geometry";
 import { Picture, Placement } from "./recording-scene-placement";
 
@@ -72,14 +74,14 @@ export const towardPlacement = (
     cameraFront: mixed(from.cameraFront, to.cameraFront, t),
     frame: mixedRect(from.frame, to.frame, t),
     image: mixedPicture(from.image, to.image, t),
-    inset: mixed(from.inset, to.inset, t),
+    inset: measureBetween(from.inset, to.inset, t),
     opacity: {
       camera: mixed(from.opacity.camera, to.opacity.camera, t),
       screen: mixed(from.opacity.screen, to.opacity.screen, t),
     },
     radius: {
       camera: mixed(from.radius.camera, to.radius.camera, t),
-      screen: mixed(from.radius.screen, to.radius.screen, t),
+      screen: measureBetween(from.radius.screen, to.radius.screen, t),
     },
     rotation: {
       x: mixed(from.rotation.x, to.rotation.x, t),
@@ -95,7 +97,8 @@ export const towardPlacement = (
     next.screen = held.box;
     next.image = held.picture;
     next.rotation = source.rotation;
-    next.inset = source.inset * screen.factor;
+    // The padding is measured on the picture, which shrinks with the box.
+    next.inset = source.inset;
   }
   const camera = settling(from.opacity.camera, to.opacity.camera, t);
   if (camera) {

@@ -3,12 +3,12 @@
 
 import { t } from "../../../../i18n/i18n";
 import { PillGroup } from "../../../../primitives/pill-group/pill-group";
-import { INSET_LOOKS } from "../../screenshot/screenshot-inset";
+import { INSET_LOOKS } from "../../layer-measure";
 
 // How far the picture's edges are extended, as four looks rather than a
-// figure: a padding is judged by eye against the picture, and a share of
-// the picture's shorter side looks the same at any size where pixels would
-// not. The padding is kept as that share, so each look is one share exactly.
+// figure: a padding is judged by eye against the picture. The padding is
+// kept in points of the capture, as annotations are, so each look pads
+// every capture alike, and each look is one number of points exactly.
 
 const [NONE, TIGHT, MEDIUM, LARGE] = INSET_LOOKS;
 
@@ -81,7 +81,7 @@ export function ScreenInsetChoice({
   inset,
   onChange,
 }: {
-  /** A share of the picture's shorter side. */
+  /** Points of the capture. */
   inset: number;
   onChange: (inset: number) => void;
 }) {

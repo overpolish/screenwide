@@ -96,6 +96,6 @@ export const initialEditorSnapshot = (
   screenshotBackgroundRadiusPercent: 0,
   screenshotDeleteProjectAfterExport: null,
   screenshotOutput: null,
-  screenshotRadiusPercent: 0,
+  screenshotRadius: { points: 0 },
   workspace,
 });

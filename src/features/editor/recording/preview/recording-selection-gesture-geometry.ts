@@ -18,6 +18,7 @@ import {
 } from "../../screenshot/screenshot-output";
 import { CameraOverlaySettings, RecordingVideoTrackId } from "../../types";
 
+import type { CaptureSource } from "../../layer-measure";
 import type { RecordingSelectionGestureEvent } from "../use-recording-preview-surface";
 
 /**
@@ -114,7 +115,7 @@ export function gesturedTrackOutput({
   anchor: { x: number; y: number };
   event: RecordingSelectionGestureEvent;
   previewSourceDimensions: Partial<
-    Record<RecordingVideoTrackId, { height: number; width: number }>
+    Record<RecordingVideoTrackId, CaptureSource>
   >;
   snapshot: RecordingOutputSettings[RecordingVideoTrackId];
   trackId: RecordingVideoTrackId;

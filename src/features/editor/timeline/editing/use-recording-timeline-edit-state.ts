@@ -3,6 +3,7 @@
 
 import { useCallback, useMemo, useRef, useState } from "react";
 
+import { withSnappedScenes } from "../../recording/recording-captures";
 import {
   recordOverlayTimeline,
   RecordingOverlayTimelines,
@@ -32,8 +33,11 @@ export function useRecordingTimelineEditState(artifact: EditorArtifact | null) {
     artifact?.kind === "recording" ? artifact.durationMs : 0;
   const initialEdit = useMemo(() => {
     if (artifact?.kind !== "recording") return null;
-    const opened =
-      artifact.timelineEdit ?? createRecordingTimelineEdit(artifact.id);
+    // Paddings and corners saved as percents open as the looks in points
+    // they were nearest.
+    const opened = artifact.timelineEdit
+      ? withSnappedScenes(artifact.timelineEdit, artifact)
+      : createRecordingTimelineEdit(artifact.id);
     // A project saved with a scene over a gap opens with it cut back to
     // either side, as an edit would leave it.
     return retimeRecordingOverlays(

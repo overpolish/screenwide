@@ -37,7 +37,7 @@ fn compositor() -> Compositor {
 fn settings() -> ScreenshotOutputSettings {
   let mut settings = test_output_settings(1920, 1080);
   settings.drop_shadow = true;
-  settings.radius_percent = 4.0;
+  settings.radius = Measure::Percent(4.0);
   settings.background_radius_percent = 3.0;
   (settings.image_width, settings.crop_width) = (1200.0, 1200.0);
   settings.crop_height = 700.0;

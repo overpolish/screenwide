@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import { CaptureSource, cornerRadiusFramePercent } from "../layer-measure";
 import { UPRIGHT_ROTATION, withShareOfTurn } from "../layer-rotation";
 
 import {
@@ -58,7 +59,7 @@ export const screenshotItemSelection = ({
 }: {
   cropKeepsShape: boolean;
   cropMode: boolean;
-  item: { height: number; width: number; isBlank?: boolean };
+  item: CaptureSource & { isBlank?: boolean };
   itemOutput: ScreenshotOutputSettings;
   paneIndex: number;
   target: { height: number; width: number };
@@ -70,7 +71,7 @@ export const screenshotItemSelection = ({
   // picture (`screenshot-blank.ts`).
   isBlank: item.isBlank === true,
   paneIndex,
-  radiusPercent: itemOutput.radiusPercent,
+  radiusPercent: cornerRadiusFramePercent(itemOutput, item),
   ...screenshotLayerTurn(withShareOfTurn(itemOutput, turnShare), cropMode),
   ...normalizedScreenshotSelection(
     screenshotLayout(item, itemOutput),
@@ -82,7 +83,7 @@ export const screenshotItemSelection = ({
 /** One selectable target per workspace pane, in pane order, for the native
  * select and crop overlays to hit-test. Panes whose item is gone are skipped. */
 export function screenshotSelectionTargets(
-  items: { height: number; id: number; width: number; isBlank?: boolean }[],
+  items: (CaptureSource & { id: number; isBlank?: boolean })[],
   workspaceOutput: ScreenshotWorkspaceOutputSettings,
   target: { cropMode: boolean; height: number; width: number },
 ) {
@@ -96,7 +97,7 @@ export function screenshotSelectionTargets(
         cropMode,
         isBlank: item.isBlank === true,
         paneIndex,
-        radiusPercent: itemOutput.output.radiusPercent,
+        radiusPercent: cornerRadiusFramePercent(itemOutput.output, item),
         ...screenshotLayerTurn(itemOutput.output, cropMode),
         ...normalizedScreenshotSelection(
           layout,

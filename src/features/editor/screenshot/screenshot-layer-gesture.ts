@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import { CaptureSource } from "../layer-measure";
 import { withRotation } from "../layer-rotation";
 
 import {
@@ -35,7 +36,7 @@ export function gesturedScreenshotLayer({
   event: ScreenshotSelectionGestureEvent;
   output: { height: number; width: number };
   snapshot: ScreenshotOutputSettings;
-  source: { height: number; width: number };
+  source: CaptureSource;
   workspace: ScreenshotWorkspaceOutputSettings;
 }): ScreenshotOutputSettings {
   if (isCropOperation(event.operation)) {

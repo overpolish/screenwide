@@ -3,6 +3,8 @@
 
 import { useRef } from "react";
 
+import { CaptureSource } from "../layer-measure";
+
 import { SourceRect } from "./screenshot-geometry";
 import { ScreenshotOutputSettings } from "./screenshot-output";
 import {
@@ -23,7 +25,7 @@ export function useScreenshotRecenter({
     settings: ScreenshotOutputSettings,
     itemId?: number,
   ) => void;
-  selectedItem?: { height: number; id: number; width: number };
+  selectedItem?: CaptureSource & { id: number };
 }) {
   const analysisKey = (itemId: number, crop: SourceRect) =>
     [itemId, crop.x, crop.y, crop.width, crop.height].join(":");

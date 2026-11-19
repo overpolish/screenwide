@@ -19,7 +19,7 @@ const bubble: RecordingSceneClip = {
   endMs: 5000,
   id: "b",
   preset: "picture-in-picture",
-  radius: { camera: 50, screen: 4 },
+  radius: { camera: 50, screen: { points: 10 } },
   screen: { focusX: 0.5, focusY: 0.5, zoom: 1 },
   startMs: 0,
 };

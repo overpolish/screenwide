@@ -88,7 +88,7 @@ describe("Crop and padding composition", () => {
     );
     const recentered = recenterScreenshotContent(
       cropped,
-      { height: 1_000, width: 1_000 },
+      { height: 1_000, scaleFactor: 1, width: 1_000 },
       { height: 500, width: 500, x: 100, y: 100 },
     );
 
@@ -104,15 +104,16 @@ describe("Crop and padding composition", () => {
     expect(recentered.recenterInsetColor).toBe("#ffffff");
   });
 
-  it("keeps the inset's share when Recenter detects new content", () => {
-    const source = { height: 1_000, width: 1_000 };
+  it("keeps the inset's points when Recenter detects new content", () => {
+    const source = { height: 1_000, scaleFactor: 2, width: 1_000 };
     const settings = withScreenshotSourceCrop(
       {
         ...defaultScreenshotOutput(source.width, source.height),
-        cropHeight: 600,
-        cropWidth: 600,
-        cropX: 200,
-        cropY: 200,
+        cropHeight: 528,
+        cropWidth: 528,
+        cropX: 236,
+        cropY: 236,
+        inset: { points: 32 },
         recenterInsetColor: "#ffffff",
       },
       sourceRect({ height: 0.4, width: 0.4, x: 0.3, y: 0.3 }),
@@ -126,9 +127,9 @@ describe("Crop and padding composition", () => {
     });
     const layout = screenshotLayout(source, recentered);
 
-    // A quarter of the 400 pixel picture's side, so a quarter of the 200
-    // pixel content's.
-    expect((layout.crop.width - layout.sourceCrop.width) / 2).toBeCloseTo(50);
-    expect((layout.crop.height - layout.sourceCrop.height) / 2).toBeCloseTo(50);
+    // 32 points at two pixels to the point, round the content as round the
+    // picture before it.
+    expect((layout.crop.width - layout.sourceCrop.width) / 2).toBeCloseTo(64);
+    expect((layout.crop.height - layout.sourceCrop.height) / 2).toBeCloseTo(64);
   });
 });

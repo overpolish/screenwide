@@ -13,7 +13,7 @@ import { screenshotLayout } from "../screenshot/screenshot-layout";
 import { defaultScreenshotOutput } from "../screenshot/screenshot-output-settings";
 import { recenterScreenshotContent } from "../screenshot/screenshot-recenter";
 
-const source = { height: 1_000, width: 1_000 };
+const source = { height: 1_000, scaleFactor: 1, width: 1_000 };
 
 describe("recording Crop and Recenter parity", () => {
   it("uses the canonical screenshot Crop transaction", () => {
@@ -50,7 +50,7 @@ describe("recording Crop and Recenter parity", () => {
     const settings = {
       ...defaultScreenshotOutput(1_000, 1_000),
       dropShadow: true,
-      radiusPercent: 12,
+      radius: { points: 10 },
     };
     const live = applyScreenshotCropGesture({
       deltaX: 0.1,
@@ -75,7 +75,7 @@ describe("recording Crop and Recenter parity", () => {
     }).toEqual({ height: 1_000, width: 1_000, x: 0, y: 0 });
     expect(preview.cropPreview).toEqual(layout.sourceCrop);
     expect(preview.dropShadow).toBe(true);
-    expect(preview.radiusPercent).toBe(12);
+    expect(preview.radius).toEqual({ points: 10 });
   });
 
   it("stands a turned layer upright under the crop overlay", () => {

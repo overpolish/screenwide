@@ -15,6 +15,7 @@ use screenwide_annotations::spotlight::model::new_spotlight;
 use screenwide_annotations::{Annotation, AnnotationPoint, AnnotationRedaction, AnnotationShape};
 use screenwide_imaging::CapturedImage;
 use screenwide_output::fixtures::test_output_settings;
+use screenwide_scenes::Measure;
 
 const SOURCE: (u32, u32) = (300, 1200);
 const CANVAS: (u32, u32) = (400, 1400);
@@ -70,7 +71,7 @@ fn composed(annotations: Vec<Annotation>, limit: u32) -> CapturedImage {
   (settings.crop_x, settings.crop_y) = (50.0, 100.0);
   (settings.crop_width, settings.crop_height) = (300.0, 1200.0);
   settings.drop_shadow = true;
-  settings.radius_percent = 6.0;
+  settings.radius = Measure::Percent(6.0);
   settings.background_radius_percent = 4.0;
   settings.annotations = annotations;
   let image = picture();

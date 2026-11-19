@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import { Measure, points } from "../../layer-measure";
 import { UPRIGHT_ROTATION } from "../../layer-rotation";
 import { ScreenshotOutputSettings } from "../../screenshot/screenshot-output";
 import { CameraOverlaySettings } from "../../types";
@@ -20,20 +21,24 @@ export type Picture = { width: number; x: number; y: number };
 /** Where the panes are, in the canvas's output pixels: the screen's box and
  * the whole screen image behind it by its corner and width, then the
  * camera's box and the camera picture behind it by its centre and width;
- * each pane's corner radius in percent of its box's shorter side; how
- * opaque each pane is drawn, zero for a pane the scene hides; how far the
- * camera is drawn in front of the screen, one in front and zero behind;
- * how the screen is turned in depth about its box's middle; and how far the
- * scene pads the screen's box outwards, in output pixels. The twin of
- * `Placement` in `src-tauri/crates/scenes/src/placement.rs`. */
+ * the screen's corners as a length on its picture and the camera's in
+ * percent of its box's shorter side; how opaque each pane is drawn, zero
+ * for a pane the scene hides; how far the camera is drawn in front of the
+ * screen, one in front and zero behind; how the screen is turned in depth
+ * about its box's middle; and how far the scene pads the screen's box
+ * outwards, as a length on its picture. The twin of `Placement` in
+ * `src-tauri/crates/scenes/src/placement.rs`, which holds the screen's
+ * corners and padding in canvas pixels; here they stay lengths until the
+ * arrangement draws them at the picture's scale, which the selection alone
+ * reads. */
 export type Placement = {
   camera: Picture;
   cameraFront: number;
   frame: SceneRect;
   image: Picture;
-  inset: number;
+  inset: Measure;
   opacity: { camera: number; screen: number };
-  radius: { camera: number; screen: number };
+  radius: { camera: number; screen: Measure };
   rotation: SceneRotation;
   screen: SceneRect;
 };
@@ -63,11 +68,11 @@ export const basePlacement = (
     : { height: 0, width: 0, x: 0, y: 0 },
   image: { width: output.imageWidth, x: output.imageX, y: output.imageY },
   // The recording's own inset is already its crop's padding.
-  inset: 0,
+  inset: points(0),
   opacity: { camera: 1, screen: 1 },
   radius: {
     camera: camera?.overlay.radiusPercent ?? 0,
-    screen: output.radiusPercent,
+    screen: output.radius,
   },
   // A scene arrives from the screen's own turn and leaves for it.
   rotation: output.rotation ?? UPRIGHT_ROTATION,
@@ -175,8 +180,8 @@ export const targeting =
       frame,
       image,
       // The scene pads its box outwards, as the recording's inset pads its
-      // crop, by a share of the box's shorter side.
-      inset: (clip.inset ?? 0) * Math.min(screen.width, screen.height),
+      // crop.
+      inset: clip.inset ?? points(0),
       opacity: {
         camera: shown.camera ? 1 : 0,
         screen: shown.screen ? 1 : 0,

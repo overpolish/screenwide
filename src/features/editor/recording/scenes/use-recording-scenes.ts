@@ -45,6 +45,8 @@ import { recenterSceneScreen } from "./recording-scene-recenter";
 import { RecordingSceneClip } from "./recording-scenes";
 import { useScenePreviewSync } from "./use-scene-preview-sync";
 
+import type { CaptureSource } from "../../layer-measure";
+
 const EMPTY_CLIPS: RecordingSceneClip[] = [];
 
 export type RecordingScenes = {
@@ -97,11 +99,9 @@ export function useRecordingScenes({
   /** Where the recording's own composition puts the camera. */
   cameraOverlay: CameraOverlaySettings;
   edit: RecordingTimelineEdit;
-  /** Each pane's picture size: a scene needs a screen, and a camera to place
-   * one. */
-  frames: Partial<
-    Record<RecordingVideoTrackId, { height: number; width: number }>
-  >;
+  /** Each pane's picture as captured: a scene needs a screen, and a camera
+   * to place one. */
+  frames: Partial<Record<RecordingVideoTrackId, CaptureSource>>;
   /** Where the playhead is now, in source time, for an edit the panel asks
    * for while the recording plays. */
   getPositionMs: () => number;

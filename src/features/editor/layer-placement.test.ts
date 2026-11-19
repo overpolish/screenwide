@@ -55,7 +55,7 @@ const expectClose = (actual: object, expected: object) => {
 };
 
 describe("a recording's screen", () => {
-  const screen = { height: 1_080, width: 1_920 };
+  const screen = { height: 1_080, scaleFactor: 2, width: 1_920 };
   const fresh = defaultRecordingOutput({ primary: screen }).primary;
 
   it("is at its default placement in a fresh project", () => {
@@ -79,11 +79,11 @@ describe("a recording's screen", () => {
       cropX: 300,
       cropY: 100,
       dropShadow: false,
-      radiusPercent: 12,
+      radius: { points: 10 },
       rotation: { x: 10, y: 0, z: 5 },
       sourceCrop: { height: 0.5, width: 0.28125, x: 0.1, y: 0.2 },
     };
-    const padded = insetScreenshotPadding(cropped, screen, 0.06);
+    const padded = insetScreenshotPadding(cropped, screen, 32);
     const moved = dragged(padded, { dx: -120, dy: 40, scale: 0.5 });
     const reset = layerAtDefaultPlacement(moved);
     // A square frame fills the canvas's height, in its middle.
@@ -103,11 +103,11 @@ describe("a recording's screen", () => {
     );
     expect(reset).toMatchObject({
       dropShadow: false,
-      radiusPercent: 12,
+      radius: { points: 10 },
       rotation: { x: 10, y: 0, z: 5 },
       sourceCrop: padded.sourceCrop,
     });
-    expect(reset.inset).toBe(padded.inset);
+    expect(reset.inset).toEqual(padded.inset);
   });
 });
 

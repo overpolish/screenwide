@@ -14,7 +14,10 @@ import {
 } from "../../timeline/recording-timeline-playback";
 import { CameraOverlaySettings } from "../../types";
 
-import { sceneRadius } from "./recording-scene-panel-snapshot";
+import {
+  sceneCameraRadius,
+  sceneScreenRadius,
+} from "./recording-scene-panel-snapshot";
 import { RecordingSceneClip } from "./recording-scenes";
 import { sceneClipsBetween } from "./scene-clips-between";
 
@@ -89,7 +92,10 @@ export function useScenePreviewSync({
   const drawnClips = useTweenedOutput(
     clips,
     { part: "scenes", workspace: "recording" },
-    sceneClipsBetween((clip, pane) => sceneRadius(clip, pane, look)),
+    sceneClipsBetween({
+      camera: (clip) => sceneCameraRadius(clip, look.cameraOverlay),
+      screen: (clip) => sceneScreenRadius(clip, look.output),
+    }),
   );
   const timed = (sent: RecordingSceneClip[]): TimedScenes => ({
     clips: sent,

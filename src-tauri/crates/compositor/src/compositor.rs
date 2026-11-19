@@ -69,6 +69,7 @@ use screenwide_output::{
   colour_f32, foreground_bounds_f32, generator_palette, mesh_generator, optional_colour_f32,
   output_placement, validate_mesh, ScreenshotOutputSettings,
 };
+use screenwide_scenes::Measure;
 
 const SHADER: &str = include_str!(concat!(env!("OUT_DIR"), "/preview.wgsl"));
 

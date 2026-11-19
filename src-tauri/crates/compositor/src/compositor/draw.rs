@@ -69,8 +69,7 @@ impl Compositor {
   ) -> Result<wgpu::TextureView, String> {
     let placement = geometry.placement;
     let (width, height) = (geometry.size.0 as f32, geometry.size.1 as f32);
-    if !settings.radius_percent.is_finite()
-      || !(0.0..=50.0).contains(&settings.radius_percent)
+    if !settings.radius.is_valid(50.0)
       || !settings.background_radius_percent.is_finite()
       || !(0.0..=50.0).contains(&settings.background_radius_percent)
     {
@@ -134,11 +133,11 @@ impl Compositor {
         placement.source_crop_height as f32,
       ],
       crop_preview_rect: crop_preview.unwrap_or([0.0; 4]),
-      // The radius is a percentage of the layer's shorter side, and in crop
-      // mode that layer is the crop rectangle rather than the whole source.
+      // The corners are rounded on the layer's frame, and in crop mode that
+      // frame is the crop rectangle rather than the whole source.
       crop_preview_effects: crop_preview.map_or([0.0; 4], |[_, _, rect_width, rect_height]| {
         [
-          rect_width.min(rect_height) * (settings.radius_percent as f32 / 100.0),
+          settings.corner_radius_pixels(f64::from(rect_width), f64::from(rect_height)) as f32,
           1.0,
           preview_shadow_sigma,
           0.0,

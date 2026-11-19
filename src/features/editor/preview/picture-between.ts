@@ -1,6 +1,8 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import { measureBetween } from "../layer-measure";
+
 import type { CameraOverlaySettings } from "../../../bindings/CameraOverlaySettings";
 import type { MeshGradientPoint } from "../../../bindings/MeshGradientPoint";
 import type { SceneRotation } from "../../../bindings/SceneRotation";
@@ -121,10 +123,10 @@ export const outputBetween = <T extends ScreenshotOutputSettings>(
     imageX: between(from.imageX, to.imageX, share),
     imageY: between(from.imageY, to.imageY, share),
     ...(from.inset !== undefined && to.inset !== undefined
-      ? { inset: between(from.inset, to.inset, share) }
+      ? { inset: measureBetween(from.inset, to.inset, share) }
       : {}),
     ...meshBetween(from, to, share),
-    radiusPercent: between(from.radiusPercent, to.radiusPercent, share),
+    radius: measureBetween(from.radius, to.radius, share),
     recenterInsetColor: to.recenterInsetColor ?? from.recenterInsetColor,
     ...(rotation ? { rotation } : {}),
     sourceCrop: {

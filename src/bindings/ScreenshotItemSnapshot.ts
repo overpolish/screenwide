@@ -10,4 +10,9 @@ annotations: Array<Annotation>, height: number, id: number,
  * The canvas's own layer, whose picture is empty: it holds what is drawn
  * on a blank canvas and is never drawn or chosen as a picture.
  */
-isBlank: boolean, width: number, };
+isBlank: boolean, 
+/**
+ * How many of its pixels one logical point spans, which its padding and
+ * corners are measured in.
+ */
+scaleFactor: number, width: number, };

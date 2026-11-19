@@ -41,6 +41,7 @@ import { openProjectActions } from "./open-project-actions";
 import { EditorPanel } from "./panel/editor-panel";
 import { useNativePressBlur } from "./preview/use-native-press-blur";
 import { usePointerAway } from "./preview/use-pointer-away";
+import { openedRecordingOutput } from "./recording/recording-captures";
 import { recordingOutputForEdit } from "./recording/recording-output-edit";
 import {
   seededTrackChoices,
@@ -53,8 +54,6 @@ import {
   defaultRecordingOutput,
   defaultScreenshotOutput,
   RecordingOutputSettings,
-  reopenedRecordingOutput,
-  restoredRecordingOutput,
   ScreenshotWorkspaceOutputSettings,
   withScreenshotWorkspaceItemOutput,
 } from "./screenshot/screenshot-output";
@@ -104,7 +103,7 @@ export function EditorWindow() {
     screenshotBackgroundRadiusPercent: persistedScreenshotBackgroundRadius,
     screenshotDeleteProjectAfterExport: persistedScreenshotDeleteProject,
     screenshotOutput: persistedScreenshotOutput,
-    screenshotRadiusPercent: persistedScreenshotRadius,
+    screenshotRadius: persistedScreenshotRadius,
   } = useEditorStore(selectSnapshot(kind));
   const [fileStem, setFileStem] = useState("");
   const [collapseAudio, setCollapseAudio] = useState(false);
@@ -376,16 +375,10 @@ export function EditorWindow() {
     // one that kept none takes the remembered look, fitted to this recording.
     const look =
       artifact?.kind === "recording" ? (artifact.projectLook ?? null) : null;
-    const sources = {
-      camera: artifact?.kind === "recording" ? artifact.camera : undefined,
-      primary: { height: artifact?.height ?? 1, width: artifact?.width ?? 1 },
-    };
-    const seededRecordingOutput = look
-      ? reopenedRecordingOutput({ ...sources, saved: look.recordingOutput })
-      : restoredRecordingOutput({
-          ...sources,
-          persisted: persistedRecordingOutput,
-        });
+    const seededRecordingOutput = openedRecordingOutput(
+      artifact,
+      persistedRecordingOutput,
+    );
     const seeded = seededExportChoices({
       artifact,
       choices: persistedRecordingExportChoices,

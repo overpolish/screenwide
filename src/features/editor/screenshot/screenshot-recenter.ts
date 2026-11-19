@@ -3,8 +3,10 @@
 
 import { invoke } from "@tauri-apps/api/core";
 
+import { CaptureSource, pixelsPerPoint, points } from "../layer-measure";
+
 import { sourceRect, SourceRect } from "./screenshot-geometry";
-import { screenshotInsetShare } from "./screenshot-inset";
+import { screenshotInsetPoints } from "./screenshot-inset";
 import {
   screenshotLayout,
   ScreenshotOutputSettings,
@@ -47,11 +49,11 @@ export const getRecordingRecenterAnalysis = (
 
 export const recenterScreenshotContent = (
   settings: ScreenshotOutputSettings,
-  source: { height: number; width: number },
+  source: CaptureSource,
   content: ScreenshotContentBounds,
 ): ScreenshotOutputSettings => {
   const layout = screenshotLayout(source, settings);
-  const share = screenshotInsetShare(settings, source);
+  const insetPoints = screenshotInsetPoints(settings, source);
   const sourceCrop = sourceRect({
     height: content.height / source.height,
     width: content.width / source.width,
@@ -64,10 +66,8 @@ export const recenterScreenshotContent = (
     x: layout.image.x + layout.image.width * sourceCrop.x,
     y: layout.image.y + layout.image.height * sourceCrop.y,
   };
-  // The padding is the content's share, so it keeps its proportion to the
-  // picture it now frames.
-  const inset =
-    share * Math.max(1, Math.min(contentRect.width, contentRect.height));
+  // The padding keeps its points round the picture it now frames.
+  const inset = insetPoints * pixelsPerPoint(settings.imageWidth, source);
   const deltaX =
     layout.crop.x +
     layout.crop.width / 2 -
@@ -85,7 +85,7 @@ export const recenterScreenshotContent = (
       cropY: contentRect.y + deltaY - inset,
       imageX: settings.imageX + deltaX,
       imageY: settings.imageY + deltaY,
-      inset: share,
+      inset: points(insetPoints),
     },
     sourceCrop,
   );

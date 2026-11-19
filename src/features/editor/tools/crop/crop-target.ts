@@ -2,7 +2,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { type CropAspect } from "../../island/crop-aspect-choice";
+import { type CaptureSource } from "../../layer-measure";
 import { cropWithInsetColor } from "../../recenter-inset-channel";
+import { recordingCaptures } from "../../recording/recording-captures";
 import {
   commitScreenshotCrop,
   resetCommittedScreenshotCrop,
@@ -123,7 +125,7 @@ const target = ({
   /** Which crop the shape is kept for (`cropAspectKey`). */
   aspectKey: string;
   settings: ScreenshotOutputSettings;
-  source: { height: number; width: number };
+  source: CaptureSource;
   /** The workspace whose recenter inset to re-read, or null where a crop
    * there never carries one. */
   workspace: EditorKind | null;
@@ -228,10 +230,8 @@ const recordingCropTarget = (
       ...scene,
       sceneId: scene.sceneId,
     });
-  const source =
-    track === "camera" && artifact.camera
-      ? { height: artifact.camera.height, width: artifact.camera.width }
-      : { height: artifact.height, width: artifact.width };
+  const source = recordingCaptures(artifact)[track];
+  if (!source) return null;
   const aspectKey = recordingCropAspectKey(track, null);
   return target({
     applyOutput: (next) => {
@@ -269,7 +269,7 @@ const screenshotCropTarget = (
     aspect: inputs.aspects[aspectKey] ?? "free",
     aspectKey,
     settings: screenshotWorkspaceItemOutput(output, item.id),
-    source: { height: item.height, width: item.width },
+    source: item,
     workspace: "screenshot",
   });
 };
