@@ -18,7 +18,7 @@ const report = (what: string) => (error: unknown) => {
 
 /** Whether a cue can be made of `project`: a recording with a picture, or
  * a screenshot. */
-export const canCue = ({ available, kind }: ProjectSummary) =>
+const canCue = ({ available, kind }: ProjectSummary) =>
   available &&
   (kind === "screen" || kind === "camera" || kind === "screenshot");
 

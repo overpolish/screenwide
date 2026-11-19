@@ -25,7 +25,7 @@ export function startOfWordAt(
 /** Where the word nearest a point that is on no word starts, on the line
  * nearest its height: the nearest along the line for a point between its
  * words, the line's first for a point beside the text. */
-export function startOfLineAt(
+function startOfLineAt(
   words: DrawnWords,
   script: ScriptText,
   { clientX, clientY }: ScreenPoint,

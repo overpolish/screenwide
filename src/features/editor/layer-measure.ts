@@ -79,11 +79,7 @@ export const measurePixels = (
   );
 
 /** As a corner radius: never more than half the shorter side. */
-export const radiusPixels = (
-  measure: Measure,
-  shortest: number,
-  perPoint: number,
-) =>
+const radiusPixels = (measure: Measure, shortest: number, perPoint: number) =>
   Math.min(
     measurePixels(measure, shortest, perPoint),
     Math.max(0, shortest) / 2,

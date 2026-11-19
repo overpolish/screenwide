@@ -16,11 +16,11 @@ import { Annotation, AnnotationPoint } from "./annotations";
 
 /** How far a paste steps from annotations it would land on, and how far a
  * duplicate stands from its original, in points. */
-export const PASTE_STEP_POINTS = 16;
+const PASTE_STEP_POINTS = 16;
 
 /** One copied annotation, and how long its clip ran where it was copied
  * from a recording. */
-export type CopiedAnnotation = { annotation: Annotation; lengthMs?: number };
+type CopiedAnnotation = { annotation: Annotation; lengthMs?: number };
 
 export type AnnotationClipboard = {
   capture: CaptureSource;

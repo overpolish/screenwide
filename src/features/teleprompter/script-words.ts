@@ -6,7 +6,7 @@
 // over it letter for letter. Each word keeps where it starts in the text, so
 // a place in the script survives an edit.
 
-export type ScriptPiece =
+type ScriptPiece =
   /** A word read aloud, and its place among them. */
   | { index: number; kind: "word"; text: string }
   /** Spaces, line breaks and marks that stand on their own, such as a

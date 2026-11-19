@@ -54,7 +54,7 @@ export type PopupPanelListContent = {
 
 /** The teleprompter's cue picker: the recordings and screenshots a cue can
  * be made of, for the word starting `at` in the script of `script`. */
-export type PopupPanelCuePickerContent = {
+type PopupPanelCuePickerContent = {
   at: number;
   kind: "cuePicker";
   script: string;
@@ -62,7 +62,7 @@ export type PopupPanelCuePickerContent = {
 
 /** Which script a cue made in an editor is for, with no teleprompter open:
  * the editor's project, and where in it. */
-export type PopupPanelScriptPickerContent = {
+type PopupPanelScriptPickerContent = {
   kind: "scriptPicker";
   source: string;
   timing: { playedMs: number; sourceMs: number } | null;
