@@ -103,7 +103,8 @@ pub(super) fn project_sources(
 }
 
 /// The sources of `files`. `artifact_id` names the editor's open recording
-/// they are, if they are: its live camera effects then apply.
+/// they are, if they are: its live camera effects then apply, and otherwise
+/// those saved in its project.
 fn sources_from(
   app: &AppHandle,
   files: RecordingFiles,
@@ -111,6 +112,10 @@ fn sources_from(
   settings: Option<&PreviewPlayerSettings>,
   create_surface: bool,
 ) -> Result<PlayerSources, String> {
+  let saved_effects = match artifact_id {
+    Some(_) => None,
+    None => files.saved_camera_effects(),
+  };
   let RecordingFiles {
     audio_tracks,
     camera,
@@ -204,11 +209,12 @@ fn sources_from(
     audio_tracks,
     camera_duration_ms: camera.as_ref().map(|value| value.duration_ms),
     camera_path: camera.as_ref().map(|value| value.path.clone()),
-    // A saved project drawn without the editor shows its camera as it was
-    // recorded: the effects are the open editor's.
-    camera_effects: artifact_id.map_or_else(Default::default, |artifact_id| {
-      super::camera_effects::shared(app, artifact_id)
-    }),
+    // A saved project drawn without the editor shows its camera with the
+    // effects saved in it; the open recording's are the editor's own.
+    camera_effects: match artifact_id {
+      Some(artifact_id) => super::camera_effects::shared(app, artifact_id),
+      None => Arc::new(RwLock::new(saved_effects)),
+    },
     camera_picking: Default::default(),
     cursor,
     composition_settings: settings.map(|settings| {

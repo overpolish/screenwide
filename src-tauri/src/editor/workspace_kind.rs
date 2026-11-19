@@ -53,6 +53,22 @@ impl EditorArtifact {
   }
 }
 
+/// The project of the artifact `artifact_id` open in the `kind` editor,
+/// while it still is.
+pub(crate) fn open_project(app: &AppHandle, kind: EditorKind, artifact_id: u64) -> Option<PathBuf> {
+  let state = app.state::<EditorState>();
+  let artifact = state
+    .slot(kind)
+    .artifact
+    .lock()
+    .unwrap_or_else(|poisoned| poisoned.into_inner());
+  let artifact = artifact.as_ref()?;
+  let id = match artifact {
+    EditorArtifact::Recording { id, .. } | EditorArtifact::Screenshot { id, .. } => *id,
+  };
+  (id == artifact_id).then(|| artifact.project().map(Path::to_path_buf))?
+}
+
 /// The workspace a command is addressed to, read off the window it came from.
 ///
 /// Tauri injects the calling window, so the webview never has to name its own

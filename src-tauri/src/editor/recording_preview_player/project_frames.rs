@@ -2,9 +2,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 //! A saved recording's frame as its edit shows it, drawn without opening it
-//! in the editor: its saved look, its saved edit and the annotations showing
-//! then, composed as the editor composes its project's still. The camera is
-//! drawn as it was recorded, its effects being the open editor's.
+//! in the editor: its saved look, its saved edit, the camera effects saved
+//! with it and the annotations showing then, composed as the editor
+//! composes its project's still.
 
 use std::path::Path;
 

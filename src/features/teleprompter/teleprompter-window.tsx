@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: Elastic-2.0
 
+import { convertFileSrc } from "@tauri-apps/api/core";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { useMemo, useState } from "react";
 
@@ -13,6 +14,7 @@ import { setTeleprompterFullscreen } from "./api";
 import { shownCue } from "./cues/shown-cue";
 import { useCueMenus } from "./cues/use-cue-menus";
 import { useCuePlace } from "./cues/use-cue-place";
+import { type PlacingCue, useCuePlacing } from "./cues/use-cue-placing";
 import { useCues } from "./cues/use-cues";
 import { placeAfterEdit, scriptText } from "./script-words";
 import {
@@ -40,21 +42,39 @@ const report = (what: string) => (error: unknown) => {
 // script opened in it is read from its start, paused.
 export function TeleprompterWindow() {
   const shown = useTeleprompterScript();
+  // Kept above the script read, so a cue waiting for its word stays as the
+  // script it is for opens in place of another.
+  const { place, placing } = useCuePlacing();
   return (
     <>
       <RecordingStateSync />
       <PopupPanelSync />
       {/* The island's black alone until the script has been read. */}
       {shown ? (
-        <ScriptReader key={shown.opened} shown={shown} />
+        <ScriptReader
+          key={shown.opened}
+          onPlace={place}
+          placing={placing}
+          shown={shown}
+        />
       ) : (
-        <div className="size-full rounded-panel bg-island" />
+        <div className="size-full rounded-island bg-island" />
       )}
     </>
   );
 }
 
-function ScriptReader({ shown }: { shown: ShownScript }) {
+function ScriptReader({
+  onPlace,
+  placing,
+  shown,
+}: {
+  /** Places the cue waiting for its word at the word starting `at` in the
+   * script project `project`. */
+  onPlace: (at: number, project: string) => void;
+  placing: PlacingCue | null;
+  shown: ShownScript;
+}) {
   const { change, ...preferences } = useTeleprompterPreferences();
   const [text, setText] = useState(shown.script.text);
   const [title, setTitle] = useState(shown.script.title);
@@ -81,6 +101,16 @@ function ScriptReader({ shown }: { shown: ShownScript }) {
   });
   const reached = shownCue(cues.cues, script, place);
   const cuePlace = useCuePlace(reached, preferences);
+  const marked = useMemo(
+    () =>
+      cues.cues.map(({ at, id, path, title }) => ({
+        at,
+        id,
+        src: convertFileSrc(path),
+        title,
+      })),
+    [cues.cues],
+  );
 
   const close = () => {
     void saving
@@ -115,10 +145,11 @@ function ScriptReader({ shown }: { shown: ShownScript }) {
   return (
     <TeleprompterView
       cuePlace={cuePlace.place}
-      cues={cues.cues}
+      cues={marked}
       isFullscreen={isFullscreen}
       isPlaying={isPlaying}
       onClose={close}
+      onCuesMove={cues.move}
       onDownloadVoiceModel={voiceModel.download}
       onEdit={(next) => {
         // Writing pauses the text, so it does not move under the caret.
@@ -136,6 +167,9 @@ function ScriptReader({ shown }: { shown: ShownScript }) {
         saving.save(next);
       }}
       onFullscreenChange={fullscreen}
+      onPlace={(at) => {
+        onPlace(at, shown.project);
+      }}
       onPlayingChange={setIsPlaying}
       onPreferencesChange={change}
       onRename={(next) => {
@@ -156,6 +190,7 @@ function ScriptReader({ shown }: { shown: ShownScript }) {
       onTextFrameChange={cuePlace.onTextFrameChange}
       onWordMenu={cueMenu}
       place={place}
+      placing={placing}
       preferences={preferences}
       saveError={saving.error}
       script={script}

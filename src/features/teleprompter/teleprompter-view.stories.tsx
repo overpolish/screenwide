@@ -5,8 +5,10 @@ import { useMemo, useState } from "react";
 import { fn } from "storybook/test";
 
 import poster from "../../site/public/recordings/edit.jpg";
+import soundPoster from "../../site/public/recordings/sound.jpg";
 import { featureStage } from "../../storybook/feature-story-stage";
 
+import { movedTo } from "./cues/place-cue";
 import { scriptText } from "./script-words";
 import { TeleprompterPreferences } from "./teleprompter-preferences";
 import { TeleprompterView } from "./teleprompter-view";
@@ -46,9 +48,11 @@ const meta = {
     isFullscreen: false,
     isPlaying: false,
     onClose: fn(),
+    onCuesMove: fn(),
     onDownloadVoiceModel: fn(),
     onEdit: fn(),
     onFullscreenChange: fn(),
+    onPlace: fn(),
     onPlayingChange: fn(),
     onPreferencesChange: fn(),
     onRename: fn(),
@@ -57,6 +61,7 @@ const meta = {
     onTextFrameChange: fn(),
     onWordMenu: fn(),
     place: 9,
+    placing: null,
     preferences: PREFERENCES,
     script: scriptText(SCRIPT),
     shownCue: null,
@@ -70,18 +75,24 @@ const meta = {
   parameters: {
     controls: { include: ["isPlaying", "title"] },
   },
-  // Typing, scrolling and the bar's settings change the story's script,
-  // place and preferences as they would the teleprompter's, in the story's
-  // own state: args reach the story a moment late, which would put a field
-  // typed into back between keys.
+  // Typing, scrolling, dragging a cue and the bar's settings change the
+  // story's script, place, cues and preferences as they would the
+  // teleprompter's, in the story's own state: args reach the story a moment
+  // late, which would put a field typed into back between keys.
   render: function Render(args) {
     const [text, setText] = useState(args.text);
     const [place, setPlace] = useState(args.place);
+    const [cues, setCues] = useState(args.cues);
     const [preferences, setPreferences] = useState(args.preferences);
     const script = useMemo(() => scriptText(text), [text]);
     return (
       <TeleprompterView
         {...args}
+        cues={cues}
+        onCuesMove={(moved) => {
+          args.onCuesMove(moved);
+          setCues((current) => movedTo(current, moved));
+        }}
         onEdit={(next) => {
           args.onEdit(next);
           setText(next);
@@ -138,7 +149,20 @@ export const Empty: Story = {
 };
 
 const CUE = {
-  cues: [{ at: SCRIPT.indexOf("timeline"), title: "Editor walkthrough" }],
+  cues: [
+    {
+      at: SCRIPT.indexOf("timeline"),
+      id: "timeline",
+      src: poster,
+      title: "Editor walkthrough",
+    },
+    {
+      at: SCRIPT.indexOf("exporting"),
+      id: "exporting",
+      src: soundPoster,
+      title: "Export walkthrough",
+    },
+  ],
   place: SCRIPT.slice(0, SCRIPT.indexOf("timeline")).split(/\s+/).length - 2,
   shownCue: { id: "timeline", src: poster, title: "Editor walkthrough" },
 };
@@ -153,4 +177,8 @@ export const CueInMargin: Story = {
 
 export const CueOverText: Story = {
   args: CUE,
+};
+
+export const PlacingCue: Story = {
+  args: { placing: { picture: poster } },
 };

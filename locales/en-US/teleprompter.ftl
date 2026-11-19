@@ -56,3 +56,13 @@ teleprompter-cue-moment = Moment
 teleprompter-cue-failed = Could not make the cue.
 # Said under a screenshot's name in the cue picker, where a recording's length is said instead.
 teleprompter-cue-screenshot = Screenshot
+# The item of the recording timeline's right-click menu that adds the frame under the playhead to a script as a cue.
+teleprompter-cue-add-to-script = Add cue to script
+# Names the panel, opened from an editor with no teleprompter open, that lists the scripts a cue can be added to.
+teleprompter-cue-script-picker = Choose a script
+teleprompter-cue-script-search = Search scripts
+# Names the list of scripts, for assistive technology.
+teleprompter-cue-scripts = Scripts
+teleprompter-cue-no-scripts = No scripts
+# Under the teleprompter's bar while a cue made in an editor waits for the word it goes on. Escape is the key that cancels.
+teleprompter-cue-placing = Click a word to place the cue. Press Escape to cancel.

@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { ClipboardCopy, Upload, Trash2 } from "lucide-react";
+import { ClipboardCopy, ScrollText, Upload, Trash2 } from "lucide-react";
 import { type ReactNode, useCallback, useLayoutEffect, useRef } from "react";
 
 import { ConfirmActionButton } from "../../../composites/confirm-action-button/confirm-action-button";
@@ -9,6 +9,8 @@ import { WindowHeader } from "../../../composites/window-header/window-header";
 import { t } from "../../../i18n/i18n";
 import { Button } from "../../../primitives/button/button";
 import { CircularProgress } from "../../../primitives/circular-progress/circular-progress";
+import { useAddCueShortcut } from "../../teleprompter/cues/editor/use-add-cue-shortcut";
+import { addEditorCue } from "../../teleprompter/cues/editor/use-editor-cue";
 import { useAnnotationSelectionCount } from "../annotations/annotation-channel";
 import { useRecordingFrameCopy } from "../recording/use-copy-recording-frame";
 import { useEditorWindowShortcuts } from "../shortcuts/use-editor-window-shortcuts";
@@ -88,6 +90,17 @@ export function EditorTitleBar({
     onCopy: isSaving || chosenAnnotations > 0 ? undefined : copy,
     onExport: canExport ? onShortcutExport : undefined,
   });
+  // The open project, added to a script as a cue: a recording's frame under
+  // the playhead, or the screenshot (`use-editor-cue.ts`).
+  const addCue =
+    artifact && !isSaving
+      ? () => {
+          addEditorCue(artifact.kind, artifact.id).catch((error: unknown) => {
+            console.error("Could not add the cue", error);
+          });
+        }
+      : undefined;
+  useAddCueShortcut(addCue);
 
   return (
     <WindowHeader
@@ -111,6 +124,12 @@ export function EditorTitleBar({
               {artifact?.kind === "recording"
                 ? t("editor-copy-frame")
                 : t("editor-copy")}
+            </Button>
+          ) : null}
+          {artifact?.kind === "screenshot" ? (
+            <Button isDisabled={isSaving} onPress={addCue} variant="ghost">
+              <ScrollText />
+              {t("editor-add-to-script")}
             </Button>
           ) : null}
           <Button

@@ -60,8 +60,19 @@ export type PopupPanelCuePickerContent = {
   script: string;
 };
 
+/** Which script a cue made in an editor is for, with no teleprompter open:
+ * the editor's project, and where in it. */
+export type PopupPanelScriptPickerContent = {
+  kind: "scriptPicker";
+  source: string;
+  timing: { playedMs: number; sourceMs: number } | null;
+};
+
 export type PopupPanelContent =
-  PopupPanelCuePickerContent | PopupPanelIslandContent | PopupPanelListContent;
+  | PopupPanelCuePickerContent
+  | PopupPanelIslandContent
+  | PopupPanelListContent
+  | PopupPanelScriptPickerContent;
 
 /** The one panel window every pop-up button borrows. A caller that names no
  * panel means this one. */

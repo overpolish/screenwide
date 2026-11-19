@@ -296,6 +296,8 @@ settings-shortcut-editor-delete = Delete what is chosen
 # Escape puts the tool in hand down and lets go of what is chosen.
 settings-shortcut-editor-back-to-select = Back to Select
 settings-shortcut-editor-duplicate = Duplicate the chosen annotations, or let go of everything
+# Adds the frame under the playhead, or the screenshot, to the open teleprompter's script, as a picture shown beside the word being read.
+settings-shortcut-editor-add-cue = Add to the script as a cue
 settings-shortcut-editor-confirm-crop = Finish cropping
 settings-shortcut-editor-nudge = Nudge what is chosen
 settings-shortcut-editor-nudge-further = Nudge what is chosen further

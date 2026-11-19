@@ -4,6 +4,10 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { create } from "zustand";
 
 import { copyRecordingPreviewFrameToClipboard } from "../api";
+import {
+  playedMs,
+  recordingStripTime,
+} from "../timeline/recording-strip/recording-strip-time";
 import { recordingTimelinePlaybackRanges } from "../timeline/recording-timeline-playback";
 
 import { ResolvedScrubPreviewProps } from "./preview/recording-preview-props";
@@ -16,6 +20,13 @@ type Payload = Parameters<typeof copyRecordingPreviewFrameToClipboard>[0];
 export const useRecordingFrameCopy = create<{
   copy: (() => Promise<unknown>) | null;
 }>(() => ({ copy: null }));
+
+/** Where the open recording's playhead stands, in the recording and in what
+ * plays, in ms: what a cue made in the editor shows. Null while no
+ * recording preview is mounted. */
+export const usePlayheadMoment = create<{
+  moment: (() => { playedMs: number; sourceMs: number }) | null;
+}>(() => ({ moment: null }));
 
 /** Copies the frame under the playhead, composed as the preview draws it,
  * with the annotations timed on the timeline the edit lays out. */
@@ -71,6 +82,27 @@ export function useCopyRecordingFrame(
       useRecordingFrameCopy.setState({ copy: null });
     };
   }, [copyCurrentFrame]);
+  useEffect(() => {
+    const ownEdit =
+      recordingTimelineEdit?.artifactId === artifactId
+        ? recordingTimelineEdit
+        : null;
+    const map = ownEdit
+      ? recordingStripTime(ownEdit, durationMs / 1000).map
+      : null;
+    usePlayheadMoment.setState({
+      moment: () => {
+        const sourceMs = getPositionMs();
+        return {
+          playedMs: map ? playedMs(map, sourceMs / 1000) : sourceMs,
+          sourceMs,
+        };
+      },
+    });
+    return () => {
+      usePlayheadMoment.setState({ moment: null });
+    };
+  }, [artifactId, durationMs, getPositionMs, recordingTimelineEdit]);
 
   return { copyError };
 }

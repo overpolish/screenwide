@@ -36,17 +36,9 @@ pub(crate) async fn keep_large_still(
   let still = screenwide_project::still_path(project);
   tauri::async_runtime::spawn_blocking(move || {
     let shrunk = screenwide_export::still_size::shrunk(composed, screenwide_project::STILL_WIDTH)?;
-    let (width, height) = (shrunk.width, shrunk.height);
-    let picture = image::RgbaImage::from_raw(width, height, shrunk.rgba)
-      .ok_or_else(|| "The composed frame is not the size it says".to_owned())?;
-    // Its colour is premultiplied by its alpha, so dropping the alpha is
-    // laying it over black.
-    let rgb = image::DynamicImage::ImageRgba8(picture).into_rgb8();
     write_atomically(&still, true, |partial| {
       let file = std::fs::File::create(partial).map_err(|error| error.to_string())?;
-      image::codecs::jpeg::JpegEncoder::new_with_quality(std::io::BufWriter::new(file), 85)
-        .encode(rgb.as_raw(), width, height, image::ExtendedColorType::Rgb8)
-        .map_err(|error| error.to_string())
+      screenwide_export::still_size::write_jpeg(&shrunk, 85, &mut std::io::BufWriter::new(file))
     })
   })
   .await

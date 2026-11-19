@@ -7,10 +7,38 @@ import type { ShownTeleprompterCue } from "../../../bindings/ShownTeleprompterCu
 import type { TeleprompterCue } from "../../../bindings/TeleprompterCue";
 import type { TeleprompterCueTiming } from "../../../bindings/TeleprompterCueTiming";
 
-export type { ShownTeleprompterCue, TeleprompterCue };
+export type { ShownTeleprompterCue, TeleprompterCue, TeleprompterCueTiming };
 
 /** A cue made for the teleprompter's script, to pin and keep. */
 export const TELEPROMPTER_CUE_EVENT = "teleprompter://cue";
+/** A cue drawn again from its edited source, with its new picture. */
+export const TELEPROMPTER_CUE_REDRAWN_EVENT = "teleprompter://cue-redrawn";
+/** A cue from an editor is waiting for its word (`takeCueRequest`). */
+export const TELEPROMPTER_CUE_REQUEST_EVENT = "teleprompter://cue-request";
+
+/** An editor's project, and where in it, to pin as a cue. */
+export type CueRequest = {
+  source: string;
+  timing: TeleprompterCueTiming | null;
+};
+
+/** Has the open teleprompter wait for a word to be picked for a cue of
+ * `source`; false when none is open. */
+export const requestCue = ({ source, timing }: CueRequest) =>
+  invoke<boolean>("request_cue", { source, timing });
+
+/** Opens the teleprompter on `script`, waiting for a word to be picked for
+ * a cue of `source`. */
+export const placeCueInScript = ({
+  script,
+  source,
+  timing,
+}: CueRequest & { script: string }) =>
+  invoke("place_cue_in_script", { script, source, timing });
+
+/** The cue from an editor waiting for its word, if one is, taken to place. */
+export const takeCueRequest = () =>
+  invoke<CueRequest | null>("take_cue_request");
 
 export const readCues = (project: string) =>
   invoke<ShownTeleprompterCue[]>("read_cues", { project });

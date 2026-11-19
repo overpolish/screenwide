@@ -77,6 +77,7 @@ mod screenshot_spotlights;
 pub use screenshot_model::{ScreenshotItem, ScreenshotWorkspaceOutputSettings};
 mod workspace_kind;
 use workspace_kind::kind_of_window;
+pub(crate) use workspace_kind::open_project as open_editor_project;
 pub use workspace_kind::EditorKind;
 
 use screenshot_composition::compose_screenshot_workspace;

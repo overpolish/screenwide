@@ -8,6 +8,8 @@ editor-screenshot-preview = Screenshot preview
 editor-copy = Copy
 # The title bar's command in a recording: copies the frame under the playhead, as the preview draws it.
 editor-copy-frame = Copy Frame
+# The screenshot editor's title bar command: adds the screenshot, as edited, to a teleprompter script as a cue.
+editor-add-to-script = Add to Script
 editor-export = Export
 editor-delete = Delete
 editor-confirm-delete = Confirm deleting

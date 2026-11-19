@@ -2,6 +2,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { t } from "../../../../i18n/i18n";
+import {
+  type PopupMenuAnchor,
+  pointerAnchor,
+} from "../../../popup-panel/use-popup-menu";
 import { ChromeSetBack } from "../../panel/chrome-set-back";
 import {
   EditorTransport,
@@ -20,6 +24,7 @@ import { type TimelineStripProps } from "../strip/timeline-strip-props";
 
 export function RecordingStripBand({
   isLocked = false,
+  onMenu,
   strip,
   transport,
 }: {
@@ -27,6 +32,8 @@ export function RecordingStripBand({
   transport: EditorTransportProps;
   /** Nothing on the strip is edited: only playing and scrubbing answer. */
   isLocked?: boolean;
+  /** Opens the strip's menu under the point pressed. */
+  onMenu?: (anchor: PopupMenuAnchor) => void;
 }) {
   return (
     <section
@@ -48,7 +55,19 @@ export function RecordingStripBand({
       >
         {/* Making a GIF, a press here draws its range rather than putting
           the Export island away (`use-export-light-dismiss.ts`). */}
-        <div className="contents" data-gif-range>
+        <div
+          className="contents"
+          data-gif-range
+          // A right press anywhere on the strip offers to add the frame
+          // under the playhead to a script (`use-editor-cue.ts`).
+          onContextMenu={
+            onMenu &&
+            ((event) => {
+              event.preventDefault();
+              onMenu(pointerAnchor(event.clientX, event.clientY));
+            })
+          }
+        >
           <TimelineStrip {...strip} isLocked={isLocked} />
         </div>
       </ChromeSetBack>

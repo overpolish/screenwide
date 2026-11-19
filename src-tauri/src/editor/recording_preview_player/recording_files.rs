@@ -7,8 +7,10 @@
 //! so a recording can be drawn as its edit shows it without opening it.
 
 use std::path::{Path, PathBuf};
+use std::time::SystemTime;
 
 use super::*;
+use screenwide_export::camera_effects::live::LiveCameraEffects;
 use screenwide_export::recording_model::{RecordingAudioTrack, RecordingCamera};
 use screenwide_output::Capture;
 
@@ -137,4 +139,42 @@ impl RecordingFiles {
       width: info.width,
     })
   }
+
+  /// The camera effects saved with the project, as its export draws them:
+  /// background removal, enhancement and the rest. Loaded once for a
+  /// project as it was last saved, since scrubbing reads the same project
+  /// many times over.
+  pub(super) fn saved_camera_effects(&self) -> Option<Arc<LiveCameraEffects>> {
+    let (path, duration_ms) = match (&self.camera, self.primary_kind) {
+      (Some(camera), _) => (camera.path.clone(), camera.duration_ms),
+      (None, PrimaryRecordingKind::Camera) => (self.path.clone(), self.duration_ms),
+      (None, _) => return None,
+    };
+    let saved = std::fs::metadata(&self.project)
+      .and_then(|metadata| metadata.modified())
+      .ok();
+    let mut loaded = SAVED_EFFECTS
+      .lock()
+      .unwrap_or_else(std::sync::PoisonError::into_inner);
+    if let Some((project, when, effects)) = loaded.as_ref() {
+      if *project == self.project && *when == saved {
+        return effects.clone();
+      }
+    }
+    let camera = crate::editor::camera_effects::CameraRecording {
+      path,
+      duration_ms,
+      recording_ms: self.duration_ms,
+      project: self.project.clone(),
+    };
+    let effects = crate::editor::camera_effects::live::load(&camera, None);
+    *loaded = Some((self.project.clone(), saved, effects.clone()));
+    effects
+  }
 }
+
+/// The camera effects last loaded for a project drawn without the editor:
+/// the project, when its manifest was last saved, and the effects.
+type SavedEffects = (PathBuf, Option<SystemTime>, Option<Arc<LiveCameraEffects>>);
+
+static SAVED_EFFECTS: std::sync::Mutex<Option<SavedEffects>> = std::sync::Mutex::new(None);

@@ -12,6 +12,8 @@ import { IslandModelLine } from "../editor/island/island-model-line";
 import { type PopupMenuAnchor } from "../popup-panel/use-popup-menu";
 
 import { type CardCue, type CardPlace, CueCard } from "./cues/cue-card";
+import { type MarkedCue } from "./cues/cue-marks";
+import { type CuePlace } from "./cues/place-cue";
 import { ScriptText } from "./script-words";
 import { TeleprompterBar, type TeleprompterBarProps } from "./teleprompter-bar";
 import { TeleprompterText } from "./teleprompter-text";
@@ -24,13 +26,20 @@ export type TeleprompterViewProps = Omit<TeleprompterBarProps, "isSteady"> & {
   /** Where the cue shown stands in the window. */
   cuePlace: CardPlace;
   /** The cues, marked beside their words. */
-  cues: readonly { at: number; title: string }[];
+  cues: readonly MarkedCue[];
+  /** Cues dragged or pushed to other words: each moved one, at its word. */
+  onCuesMove: (moved: readonly CuePlace[]) => void;
   onDownloadVoiceModel: () => void;
   onEdit: (text: string) => void;
+  /** The word starting `at` picked for the cue being placed. */
+  onPlace: (at: number) => void;
   onScrollTo: (index: number) => void;
   onWordMenu: (anchor: PopupMenuAnchor, at: number) => void;
   /** The next word to read, fractional between words. */
   place: number;
+  /** A cue from an editor waiting for its word, with its picture once
+   * drawn. */
+  placing: { picture: ImageBitmap | string | null } | null;
   script: ScriptText;
   /** The cue shown in the window; none between cues, or while it stands
    * beside the window. */
@@ -46,10 +55,11 @@ export type TeleprompterViewProps = Omit<TeleprompterBarProps, "isSteady"> & {
   saveError?: string;
 };
 
-/** What stands under the bar about the voice or saving, if anything: the
- * voice's model fetched from right here while following the voice needs
- * it, as every island's models are. */
+/** What stands under the bar about a cue being placed, the voice or
+ * saving, if anything: the voice's model fetched from right here while
+ * following the voice needs it, as every island's models are. */
 function Note({
+  isPlacing,
   needsModel,
   onDownloadVoiceModel,
   saveError,
@@ -58,12 +68,18 @@ function Note({
 }: Pick<
   TeleprompterViewProps,
   "onDownloadVoiceModel" | "saveError" | "voice" | "voiceModel"
-> & { needsModel: boolean }) {
+> & { isPlacing: boolean; needsModel: boolean }) {
   if (saveError)
     return (
       <Alert color="error" role="alert">
         {t("teleprompter-save-failed")}
       </Alert>
+    );
+  if (isPlacing)
+    return (
+      <Text className="ps-inset-sm text-fg-secondary" variant="caption">
+        {t("teleprompter-cue-placing")}
+      </Text>
     );
   if (needsModel && voiceModel)
     return (
@@ -97,12 +113,15 @@ function Note({
 export function TeleprompterView({
   cuePlace,
   cues,
+  onCuesMove,
   onDownloadVoiceModel,
   onEdit,
+  onPlace,
   onScrollTo,
   onTextFrameChange,
   onWordMenu,
   place,
+  placing,
   saveError,
   script,
   shownCue,
@@ -121,7 +140,7 @@ export function TeleprompterView({
         className={cn(
           "group dark flex size-full flex-col overflow-hidden bg-island text-fg",
           !bar.isFullscreen &&
-            "rounded-panel inset-ring inset-ring-fill-strong",
+            "rounded-island inset-ring inset-ring-fill-strong",
         )}
         style={{
           transform: bar.preferences.isMirrored ? "scaleX(-1)" : undefined,
@@ -137,6 +156,7 @@ export function TeleprompterView({
           <TeleprompterBar {...bar} isSteady={isSteady} />
           <div className="px-inset-sm empty:hidden">
             <Note
+              isPlacing={placing !== null}
               needsModel={
                 bar.preferences.mode === "voice" &&
                 voiceModel !== null &&
@@ -157,10 +177,13 @@ export function TeleprompterView({
             onColumnWidthChange={(columnWidth) => {
               bar.onPreferencesChange({ columnWidth });
             }}
+            onCuesMove={onCuesMove}
             onEdit={onEdit}
+            onPlace={onPlace}
             onScrollTo={onScrollTo}
             onWordMenu={onWordMenu}
             place={place}
+            placing={placing}
             script={script}
             text={text}
             textSize={bar.preferences.textSize}

@@ -22,6 +22,12 @@ title: string,
  */
 playedMs: number | null, 
 /**
+ * Where in the recording it was taken, in ms, which it is drawn from
+ * again once the recording is edited; none for a screenshot, and for a
+ * cue made before cues kept it.
+ */
+sourceMs?: number, 
+/**
  * The project it was taken from, where it was then.
  */
 source: string, };

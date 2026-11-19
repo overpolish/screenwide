@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Elastic-2.0
 
 import { convertFileSrc } from "@tauri-apps/api/core";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import {
   getProjectThumbnail,
@@ -18,15 +18,19 @@ const report = (what: string) => (error: unknown) => {
 
 /** Whether a cue can be made of `project`: a recording with a picture, or
  * a screenshot. */
-const canCue = ({ available, kind }: ProjectSummary) =>
+export const canCue = ({ available, kind }: ProjectSummary) =>
   available &&
   (kind === "screen" || kind === "camera" || kind === "screenshot");
 
-/** The recent recordings and screenshots a cue can be made of, newest
- * first, and their stills as each arrives. */
-export function useCueSources() {
+/** The recent projects `canChoose` lets through, newest first, and their
+ * stills as each arrives: by default those a cue can be made of. */
+export function useCueSources(
+  canChoose: (project: ProjectSummary) => boolean = canCue,
+) {
   const [projects, setProjects] = useState<ProjectSummary[] | null>(null);
   const [stills, setStills] = useState<Record<string, string>>({});
+  const canChooseRef = useRef(canChoose);
+  canChooseRef.current = canChoose;
 
   useEffect(() => {
     let disposed = false;
@@ -34,7 +38,7 @@ export function useCueSources() {
       .then((listed) => {
         if (disposed) return;
         const cueable = listed
-          .filter(canCue)
+          .filter((project) => canChooseRef.current(project))
           .sort((a, b) => (b.createdMs ?? 0) - (a.createdMs ?? 0));
         setProjects(cueable);
         for (const project of cueable)

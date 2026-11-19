@@ -12,7 +12,9 @@ import {
   saveCues,
   type ShownTeleprompterCue,
   TELEPROMPTER_CUE_EVENT,
+  TELEPROMPTER_CUE_REDRAWN_EVENT,
 } from "./cue-api";
+import { type CuePlace, movedTo } from "./place-cue";
 
 /** How long after the last change the cues are saved, in milliseconds. */
 const SAVE_AFTER_MS = 500;
@@ -61,26 +63,47 @@ export function useCues(project: string) {
   // pictures in it; anything waiting is saved there first.
   useEffect(() => {
     let disposed = false;
+    // A redrawn picture can arrive before the cues are read; it is kept to
+    // be swapped in then.
+    const redrawn = new Map<string, ShownTeleprompterCue>();
+    const withRedrawn = (cue: ShownTeleprompterCue) => {
+      const drawn = redrawn.get(cue.id);
+      return drawn ? { ...cue, image: drawn.image, path: drawn.path } : cue;
+    };
     readCues(project)
       .then((read) => {
-        if (!disposed) setCues(read);
+        if (disposed) return;
+        const cues = read.map(withRedrawn);
+        // Redrawn, the cues are kept with their new pictures.
+        if (cues.some((cue, index) => cue !== read[index]))
+          changeRef.current(cues);
+        else setCues(cues);
       })
       .catch(report("Could not read the cues"));
-    // A word holds one cue, so a cue made for a word with one replaces it.
-    const unlistening = listen<ShownTeleprompterCue>(
-      TELEPROMPTER_CUE_EVENT,
-      ({ payload }) => {
+    const unlistening = [
+      // A word holds one cue, so a cue made for a word with one replaces it.
+      listen<ShownTeleprompterCue>(TELEPROMPTER_CUE_EVENT, ({ payload }) => {
         changeRef.current([
           ...cuesRef.current.filter((cue) => cue.at !== payload.at),
           payload,
         ]);
-      },
-    );
+      }),
+      // The cue keeps the word it has moved to since it was read.
+      listen<ShownTeleprompterCue>(
+        TELEPROMPTER_CUE_REDRAWN_EVENT,
+        ({ payload }) => {
+          redrawn.set(payload.id, payload);
+          if (cuesRef.current.some((cue) => cue.id === payload.id))
+            changeRef.current(cuesRef.current.map(withRedrawn));
+        },
+      ),
+    ];
     return () => {
       disposed = true;
-      void unlistening.then((unlisten) => {
-        unlisten();
-      });
+      for (const pending of unlistening)
+        void pending.then((unlisten) => {
+          unlisten();
+        });
       flushRef.current();
     };
   }, [project]);
@@ -92,6 +115,10 @@ export function useCues(project: string) {
     edited: (before: string, after: string, script: ScriptText) => {
       const moved = cuesAfterEdit({ after, before, script }, cues);
       if (moved.some((cue, index) => cue !== cues[index])) change(moved);
+    },
+    /** Moves each of `moved` to its word. */
+    move: (moved: readonly CuePlace[]) => {
+      if (moved.length > 0) change(movedTo(cues, moved));
     },
     remove: (id: string) => {
       change(cues.filter((cue) => cue.id !== id));

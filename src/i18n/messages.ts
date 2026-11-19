@@ -187,6 +187,7 @@ export type Messages = {
   "dictation-island-word-failed": { word: string | number };
   "dictation-island-word-not-listed": { word: string | number };
   "dictation-island-word-removed": { word: string | number };
+  "editor-add-to-script": null;
   "editor-annotation-actions": null;
   "editor-arrange": null;
   "editor-arrange-back": null;
@@ -1440,6 +1441,7 @@ export type Messages = {
   "settings-shortcut-annotate-undo": null;
   "settings-shortcut-dictate": null;
   "settings-shortcut-dictate-description": null;
+  "settings-shortcut-editor-add-cue": null;
   "settings-shortcut-editor-back-to-select": null;
   "settings-shortcut-editor-confirm-crop": null;
   "settings-shortcut-editor-copy": null;
@@ -1662,16 +1664,22 @@ export type Messages = {
   "teleprompter-close": null;
   "teleprompter-column-width": null;
   "teleprompter-cue-add": null;
+  "teleprompter-cue-add-to-script": null;
   "teleprompter-cue-back": null;
   "teleprompter-cue-failed": null;
   "teleprompter-cue-mark": { title: string | number };
   "teleprompter-cue-menu": null;
   "teleprompter-cue-moment": null;
+  "teleprompter-cue-no-scripts": null;
   "teleprompter-cue-none": null;
   "teleprompter-cue-picker": null;
+  "teleprompter-cue-placing": null;
   "teleprompter-cue-remove": null;
   "teleprompter-cue-replace": null;
   "teleprompter-cue-screenshot": null;
+  "teleprompter-cue-script-picker": null;
+  "teleprompter-cue-script-search": null;
+  "teleprompter-cue-scripts": null;
   "teleprompter-cue-search": null;
   "teleprompter-cue-sources": null;
   "teleprompter-follow-voice": null;

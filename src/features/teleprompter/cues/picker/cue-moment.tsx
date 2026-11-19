@@ -114,7 +114,7 @@ export function CueMoment({
 }
 
 /** A drawn moment, filling its box. */
-function MomentPicture({ picture }: { picture: ImageBitmap }) {
+export function MomentPicture({ picture }: { picture: ImageBitmap }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   useLayoutEffect(() => {
     canvasRef.current?.getContext("2d")?.drawImage(picture, 0, 0);

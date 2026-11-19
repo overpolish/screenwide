@@ -1,27 +1,17 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: Elastic-2.0
 
-import { LogicalPosition, LogicalSize } from "@tauri-apps/api/dpi";
-import { getCurrentWindow } from "@tauri-apps/api/window";
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
 
 import { t } from "../../../i18n/i18n";
 import {
-  openPopupPanels,
-  panelStartX,
-  showPopupPanel,
-} from "../../popup-panel/api";
-import {
-  SHARED_POPUP_PANEL,
-  usePopupPanelStore,
-} from "../../popup-panel/store";
-import {
+  closePopupMenu,
   type PopupMenuAnchor,
   pointerAnchor,
   usePopupMenu,
 } from "../../popup-panel/use-popup-menu";
 
-import { PICKER_SIZE } from "./picker/use-picker-size";
+import { afterMenuCloses, openCuePanel } from "./cue-panel";
 
 import type { ShownTeleprompterCue } from "./cue-api";
 
@@ -31,31 +21,6 @@ const ID_PREFIX = "teleprompter-cue:";
 const report = (what: string) => (error: unknown) => {
   console.error(what, error);
 };
-
-/** How often, and how many times, the menu's panel is asked whether it has
- * gone, in milliseconds and tries. */
-const CLOSE_POLL_MS = 25;
-const CLOSE_POLLS = 20;
-
-const pause = (ms: number) =>
-  new Promise((resolve) => {
-    window.setTimeout(resolve, ms);
-  });
-
-/**
- * Resolves once the menu a choice was made in has left the shared panel.
- * The picker opens in that same panel, and the menu's going is told to
- * every window as it lands, which would put away a picker opened before
- * it: so the picker waits until the app has the panel closed, and a moment
- * more for that word to have reached this window.
- */
-async function afterMenuCloses() {
-  for (let poll = 0; poll < CLOSE_POLLS; poll++) {
-    if (!(await openPopupPanels()).includes(SHARED_POPUP_PANEL)) break;
-    await pause(CLOSE_POLL_MS);
-  }
-  await pause(CLOSE_POLL_MS * 2);
-}
 
 /**
  * The menus that add, replace and take out cues: one on a word of the
@@ -75,27 +40,25 @@ export function useCueMenus({
 }) {
   const anchorRef = useRef<PopupMenuAnchor>(pointerAnchor(0, 0));
 
-  const openPicker = async (at: number) => {
-    const anchor = anchorRef.current;
-    const id = `${ID_PREFIX}picker:${String(at)}`;
-    usePopupPanelStore.getState().open(SHARED_POPUP_PANEL, {
+  // A menu or picker stands where its word was; scrolled, the word moves
+  // from under it, so it goes.
+  useEffect(() => {
+    const close = () => {
+      closePopupMenu(ID_PREFIX).catch(report("Could not close the cue menu"));
+    };
+    window.addEventListener("wheel", close, { passive: true });
+    return () => {
+      window.removeEventListener("wheel", close);
+    };
+  }, []);
+
+  const openPicker = (at: number) =>
+    openCuePanel({
+      anchor: anchorRef.current,
       content: { at, kind: "cuePicker", script },
-      focusContents: true,
-      id,
+      id: `${ID_PREFIX}picker:${String(at)}`,
       label: t("teleprompter-cue-picker"),
     });
-    await showPopupPanel({
-      anchor,
-      focusContents: true,
-      offset: new LogicalPosition(
-        panelStartX(anchor, PICKER_SIZE.width),
-        anchor.y + anchor.height + 4,
-      ),
-      parentWindowLabel: getCurrentWindow().label,
-      size: new LogicalSize(PICKER_SIZE.width, PICKER_SIZE.height),
-      triggerId: id,
-    });
-  };
 
   // The context names the word's start and, for a word with a cue, the
   // cue: `at` or `at:id`.

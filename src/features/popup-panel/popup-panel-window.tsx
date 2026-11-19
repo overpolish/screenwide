@@ -3,8 +3,10 @@
 
 import { getCurrentWindow } from "@tauri-apps/api/window";
 
+import { cn } from "../../lib/styling";
 import { EditorIslandPanel } from "../editor/island/host/editor-island-panel";
 import { useTextTemplateFonts } from "../editor/recording/captions/use-text-template-fonts";
+import { ScriptPicker } from "../teleprompter/cues/editor/script-picker";
 import { CuePicker } from "../teleprompter/cues/picker/cue-picker";
 
 import { PopupPanelList } from "./popup-panel-list";
@@ -61,11 +63,20 @@ export function PopupPanelWindow() {
   // Every panel is drawn in the island's black and its dark dress, over no
   // material or shadow (`tauri.conf.json`), so menus, lists and panels read
   // the same wherever they open. Its corner sits a tight inset out from its
-  // items'. Over the island's black it would vanish, so it takes the faint
-  // ring the island's angle dial draws, inset so the window still fits its
-  // contents.
+  // items'; the teleprompter's pickers take the island's, as the
+  // teleprompter does. Over the island's black it would vanish, so it takes
+  // the faint ring the island's angle dial draws, inset so the window still
+  // fits its contents.
+  const isIslandShaped =
+    active.content.kind === "cuePicker" ||
+    active.content.kind === "scriptPicker";
   return (
-    <div className="dark size-full overflow-hidden rounded-panel bg-island text-fg inset-ring inset-ring-fill-strong">
+    <div
+      className={cn(
+        "dark size-full overflow-hidden bg-island text-fg inset-ring inset-ring-fill-strong",
+        isIslandShaped ? "rounded-island" : "rounded-panel",
+      )}
+    >
       <PanelContents active={active} content={active.content} panel={panel} />
     </div>
   );
@@ -82,6 +93,8 @@ function PanelContents({
 }) {
   if (content.kind === "cuePicker")
     return <CuePicker at={content.at} panel={panel} script={content.script} />;
+  if (content.kind === "scriptPicker")
+    return <ScriptPicker panel={panel} request={content} />;
   return (
     <PopupPanelList
       content={content}

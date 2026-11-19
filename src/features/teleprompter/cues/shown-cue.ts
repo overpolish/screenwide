@@ -12,6 +12,19 @@ export const LEAD_WORDS = 6;
 /** A run of spaces holding an empty line, which ends a paragraph. */
 const PARAGRAPH_BREAK = /\n[^\S\n]*\n/;
 
+/** The index of the first word of the paragraph word `index` is in. */
+function paragraphStart(script: ScriptText, index: number) {
+  let start = 0;
+  let word = -1;
+  for (const piece of script.pieces) {
+    if (piece.kind === "word") {
+      word = piece.index;
+      if (word >= index) return start;
+    } else if (PARAGRAPH_BREAK.test(piece.text)) start = word + 1;
+  }
+  return start;
+}
+
 /** The index of the first word of the paragraph after the one word `index`
  * is in; past the last word for the last paragraph. */
 function paragraphEnd(script: ScriptText, index: number) {
@@ -25,9 +38,10 @@ function paragraphEnd(script: ScriptText, index: number) {
 
 /**
  * The cue to show with the reader at `place`, the index of the next word to
- * read: the last whose showing has begun, a few words before its own,
- * until its paragraph has been read or the next cue's showing begins; none
- * between.
+ * read: the last whose word has been reached, until its paragraph has been
+ * read or the next cue's word is reached. With none showing, the next cue
+ * shows a few words before its own, a glance ahead, but never before its
+ * paragraph; it never takes over early from one being read.
  */
 export function shownCue<T extends { at: number }>(
   cues: readonly T[],
@@ -35,11 +49,19 @@ export function shownCue<T extends { at: number }>(
   place: number,
 ): T | null {
   const word = Math.floor(place);
-  let shown: { cue: T; index: number } | null = null;
+  let reached: { cue: T; index: number } | null = null;
+  let coming: { cue: T; index: number } | null = null;
   for (const cue of cues) {
     const index = wordAt(script, cue.at);
-    if (index < 0 || word < index - LEAD_WORDS) continue;
-    if (!shown || index >= shown.index) shown = { cue, index };
+    if (index < 0) continue;
+    if (index <= word) {
+      if (!reached || index >= reached.index) reached = { cue, index };
+      continue;
+    }
+    const from = Math.max(index - LEAD_WORDS, paragraphStart(script, index));
+    if (word >= from && (!coming || index < coming.index))
+      coming = { cue, index };
   }
-  return shown && word < paragraphEnd(script, shown.index) ? shown.cue : null;
+  if (reached && word < paragraphEnd(script, reached.index)) return reached.cue;
+  return coming?.cue ?? null;
 }

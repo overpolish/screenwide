@@ -14,10 +14,15 @@ import {
 
 import { columnStyle } from "./column-style";
 import { wordStartAt } from "./cues/cue-anchors";
-import { CueMark } from "./cues/cue-mark";
+import { CueMarks, type MarkedCue } from "./cues/cue-marks";
+import { type CuePlace, placeCue } from "./cues/place-cue";
+import { PlacingPicture } from "./cues/placing-picture";
+import { useCueDrag } from "./cues/use-cue-drag";
 import { READING_LINE, readingLineMiddle } from "./reading-line";
+import { ScriptLayer } from "./script-layer";
 import { ScriptText } from "./script-words";
 import { TeleprompterColumn } from "./teleprompter-column";
+import { type ScreenPoint, startOfWordAt, wordStartNear } from "./word-hits";
 
 /** How long after the last turn of the wheel the place settles on the line
  * scrolled to, in milliseconds. */
@@ -33,18 +38,23 @@ const SCROLL_SETTLE_MS = 160;
  * by hand, the text follows the wheel, and the place settles on the line
  * left on the reading line. The text runs in a column whose edges are
  * dragged to set its width (`TeleprompterColumn`). A cue is marked at the
- * column's end beside its word, which opens the word's menu, as a right
- * click on the word does.
+ * column's end beside its word: clicked, it opens the word's menu, as a
+ * right click on the word does, and dragged it moves to another word. A cue
+ * made in an editor waits for its word, its picture following the pointer
+ * over the text, until a click picks one.
  */
 export function TeleprompterText({
   columnWidth,
   cues,
   isPlaying,
   onColumnWidthChange,
+  onCuesMove,
   onEdit,
+  onPlace,
   onScrollTo,
   onWordMenu,
   place,
+  placing,
   script,
   text,
   textSize,
@@ -52,15 +62,21 @@ export function TeleprompterText({
   /** The widest the text runs, in points; null fills the frame. */
   columnWidth: number | null;
   /** The cues, marked beside their words. */
-  cues: readonly { at: number; title: string }[];
+  cues: readonly MarkedCue[];
   isPlaying: boolean;
   onColumnWidthChange: (width: number | null) => void;
+  /** Cues dragged or pushed to other words: each moved one, at its word. */
+  onCuesMove: (moved: readonly CuePlace[]) => void;
   onEdit: (text: string) => void;
+  /** The word starting `at` picked for the cue being placed. */
+  onPlace: (at: number) => void;
   /** The place scrolled to by hand, as a word's index. */
   onScrollTo: (index: number) => void;
   /** Opens the menu of the word starting at `at` in the text. */
   onWordMenu: (anchor: PopupMenuAnchor, at: number) => void;
   place: number;
+  /** A cue waiting for its word, with its picture once drawn. */
+  placing: { picture: ImageBitmap | string | null } | null;
   script: ScriptText;
   /** The script as written. */
   text: string;
@@ -129,21 +145,35 @@ export function TeleprompterText({
     return best;
   };
 
-  /** Where the word under the point starts in the text, if one is: the
-   * words are drawn under the field, which hit testing passes through. */
-  const startOfWordAt = (x: number, y: number) => {
-    const under = document.elementsFromPoint(x, y);
-    for (const [index, element] of wordsRef.current)
-      if (under.includes(element)) return script.starts[index];
-    return undefined;
+  /** The word a point is over, or the first of the line beside it. */
+  const landingAt = (point: ScreenPoint) =>
+    wordStartNear(wordsRef.current, script, point);
+  // Lines as they are laid out, so a cue pushed aside is pushed to a line
+  // where its mark shows; a word not drawn is on no line it can go to.
+  const layout = {
+    lineOf: (index: number) =>
+      wordsRef.current.get(index)?.offsetTop ?? -Infinity,
+    script,
   };
+  // A cue dragged to another word moves the cues there aside as it goes,
+  // and they are kept where they are when it is let go.
+  const { begin, drag } = useCueDrag({
+    landingAt,
+    onMove: (id, at) => {
+      const placed = placeCue(cues, { at, id }, layout);
+      onCuesMove(placed.filter((cue, index) => cue !== cues[index]));
+    },
+  });
+  const marks = drag ? placeCue(cues, drag, layout) : cues;
+  const hasMarks = cues.length > 0;
+  // Where the pointer is over the text while a cue is being placed, and the
+  // word it would place it on.
+  const [pointing, setPointing] = useState<{
+    at: number | null;
+    x: number;
+    y: number;
+  } | null>(null);
 
-  const marked = new Map(cues.map((cue) => [cue.at, cue.title]));
-  const hasMarks = marked.size > 0;
-
-  let lastWord = -1;
-  // Each piece is keyed by where it starts in the text.
-  let at = 0;
   return (
     // Its own compositing layer, so WebKit repaints under the fade at the
     // edges when the text inside it rewraps; without one, the text as it
@@ -183,54 +213,25 @@ export function TeleprompterText({
         ref={columnRef}
         style={{ ...columnStyle(columnWidth), fontSize: textSize, y: offset }}
       >
-        <div
-          aria-hidden
-          // An empty script leaves room for the placeholder's lines.
-          className={cn(
-            "px-inset break-words whitespace-pre-wrap",
-            text === "" ? "min-h-[3lh]" : "min-h-lh",
-            hasMarks && "pe-8",
-          )}
-          dir="auto"
-        >
-          {script.pieces.map((piece) => {
-            if (piece.kind === "word") lastWord = piece.index;
-            const key = at;
-            at += piece.text.length;
-            return (
-              <span
-                className={cn(
-                  "transition-colors duration-200",
-                  lastWord >= 0 && lastWord < read
-                    ? "text-fg-secondary/50"
-                    : "text-fg",
-                )}
-                key={key}
-                ref={
-                  piece.kind === "word"
-                    ? (element) => {
-                        if (element) wordsRef.current.set(piece.index, element);
-                        else wordsRef.current.delete(piece.index);
-                      }
-                    : undefined
-                }
-              >
-                {piece.kind === "word" && marked.has(key) ? (
-                  <CueMark
-                    onPress={(anchor) => {
-                      onWordMenu(anchor, key);
-                    }}
-                    title={marked.get(key) ?? ""}
-                  />
-                ) : null}
-                {piece.text}
-              </span>
-            );
-          })}
-          {/* A field shows a last empty line after a final line break,
-              which text alone does not. */}
-          {text.endsWith("\n") ? "\u200b" : null}
-        </div>
+        <ScriptLayer
+          hasMarks={hasMarks}
+          pointedAt={drag?.at ?? (placing ? (pointing?.at ?? null) : null)}
+          read={read}
+          script={script}
+          text={text}
+          wordsRef={wordsRef}
+        />
+        <CueMarks
+          dragged={drag}
+          marks={marks}
+          onMarkPress={(cue, press, anchor) => {
+            begin(cue, press, () => {
+              onWordMenu(anchor, cue.at);
+            });
+          }}
+          script={script}
+          wordsRef={wordsRef}
+        />
         <TextField
           aria-label={t("teleprompter-script-label")}
           className="absolute inset-0"
@@ -243,21 +244,48 @@ export function TeleprompterText({
           <TextArea
             className={cn(
               "size-full resize-none overflow-hidden bg-transparent px-inset break-words whitespace-pre-wrap text-transparent caret-fg outline-none [text-rendering:inherit] placeholder:text-fg-tertiary",
-              hasMarks && "pe-8",
+              hasMarks && "pe-12",
+              placing && "cursor-pointer",
             )}
             dir="auto"
             onContextMenu={(event) => {
               event.preventDefault();
               onWordMenu(
                 pointerAnchor(event.clientX, event.clientY),
-                startOfWordAt(event.clientX, event.clientY) ??
+                startOfWordAt(wordsRef.current, script, event) ??
                   wordStartAt(script, event.currentTarget.selectionStart),
               );
+            }}
+            onPointerDown={(event) => {
+              // Placing a cue, a press picks its word rather than the caret.
+              if (!placing || event.button !== 0) return;
+              event.preventDefault();
+              const to = landingAt(event);
+              if (to !== undefined) onPlace(to);
+            }}
+            onPointerLeave={() => {
+              setPointing(null);
+            }}
+            onPointerMove={(event) => {
+              if (!placing) return;
+              const frame = frameRef.current?.getBoundingClientRect();
+              setPointing({
+                at: landingAt(event) ?? null,
+                x: event.clientX - (frame?.left ?? 0),
+                y: event.clientY - (frame?.top ?? 0),
+              });
             }}
             placeholder={t("teleprompter-script-placeholder")}
           />
         </TextField>
       </motion.div>
+      {placing && pointing ? (
+        <PlacingPicture
+          picture={placing.picture}
+          x={pointing.x}
+          y={pointing.y}
+        />
+      ) : null}
     </div>
   );
 }

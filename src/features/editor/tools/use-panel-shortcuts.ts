@@ -1,6 +1,10 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import {
+  ADD_CUE_SHORTCUT,
+  useAddCueShortcut,
+} from "../../teleprompter/cues/editor/use-add-cue-shortcut";
 import { useEditorWindowShortcuts } from "../shortcuts/use-editor-window-shortcuts";
 import { EditorKind } from "../types";
 
@@ -24,6 +28,9 @@ export function usePanelShortcuts(workspace: EditorKind) {
   const forward = (code: string, modifiers?: KeyboardEventInit) => {
     forwardToolPanelShortcut(workspace, code, modifiers);
   };
+  useAddCueShortcut(() => {
+    forward(ADD_CUE_SHORTCUT.code, { altKey: ADD_CUE_SHORTCUT.altKey });
+  });
   useEditorWindowShortcuts({
     onArrange: (move) => {
       forward(

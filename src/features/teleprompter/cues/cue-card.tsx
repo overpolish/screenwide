@@ -30,7 +30,7 @@ const placed = (place: CardPlace): { box: Styled; picture: Styled } => {
     case "window":
       return {
         box: { className: "absolute inset-0" },
-        picture: { className: "size-full rounded-panel object-contain" },
+        picture: { className: "size-full rounded-island object-contain" },
       };
     case "margin": {
       // Centred in the margin and level with the words being read, so the

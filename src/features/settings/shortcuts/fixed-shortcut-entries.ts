@@ -170,6 +170,7 @@ const editorEditing = (): Row[] => [
     value: `Shift+${ARROWS[0]}`,
   },
   { label: t("editor-export"), value: "CommandOrControl+KeyE" },
+  { label: t("settings-shortcut-editor-add-cue"), value: "Alt+KeyC" },
 ];
 
 const editorTimeline = (): Row[] => [

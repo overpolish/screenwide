@@ -3,6 +3,7 @@
 
 import { useEffect, useRef, useState } from "react";
 
+import { useRecordingCueMenu } from "../../../teleprompter/cues/editor/use-editor-cue";
 import { useAnnotationDraft } from "../../annotations/annotation-draft";
 import { useSelectHold } from "../../choice/use-select-hold";
 import { useToolFollowsChoice } from "../../choice/use-tool-follows-choice";
@@ -257,6 +258,7 @@ export function NativeRecordingPreview(rawProps: ScrubPreviewProps) {
     getPositionMs: player.getPositionMs,
     recordingOutput: effectiveRecordingOutput,
   });
+  const cueMenu = useRecordingCueMenu(props.artifactId);
   useProjectStill(props, {
     annotationClips: annotations.clips,
     hasPicture: composedVideoTracks.has("primary"),
@@ -285,6 +287,7 @@ export function NativeRecordingPreview(rawProps: ScrubPreviewProps) {
       {layout ? (
         <RecordingStripBand
           isLocked={isExportOpen}
+          onMenu={cueMenu}
           strip={band.strip}
           transport={band.transport}
         />
