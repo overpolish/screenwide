@@ -54,6 +54,8 @@ Add these GitHub Actions repository secrets:
 - `APPLE_ID`: the Apple ID used for notarization.
 - `APPLE_PASSWORD`: an app-specific password for that Apple ID.
 - `APPLE_TEAM_ID`: the Apple Developer Team ID.
+- `CLOUDFLARE_API_TOKEN`: a Cloudflare API token made from the **Edit Cloudflare Workers** template, limited to the account and the `getscreenwide.com` zone, for the Website workflow to deploy the website (`workers/site`).
+- `CLOUDFLARE_ACCOUNT_ID`: the ID of the Cloudflare account the website is on, shown on the account's overview page.
 
 For the currently installed Screenwide signing certificate, use these exact values without surrounding quotes:
 
@@ -65,6 +67,8 @@ APPLE_TEAM_ID=378WQ9W95U
 The updater public key is intentionally committed in `src-tauri/tauri.conf.json`. Never commit the private key. Back it up securely: losing it prevents existing installations from accepting future updates.
 
 The project has no Windows code-signing certificate, so it ships no Windows installer: an unsigned one meets SmartScreen's warning, and Smart App Control blocks it. The Store signs the packages it distributes.
+
+The website deploys from GitHub Actions too. Between releases, a fix to the page goes out by running the Website workflow by hand on `main` (`gh workflow run site.yml`), or by `pnpm site:deploy` from a computer logged in to Wrangler.
 
 ## Make a release
 
@@ -78,7 +82,7 @@ The project has no Windows code-signing certificate, so it ships no Windows inst
    ```
 
 4. Wait for the Release workflow to finish, including the **Verify updater assets** job. In the draft GitHub Release, verify the Apple Silicon macOS DMG (`Screenwide_aarch64.dmg`, the name the website's download button links to), its signed updater bundle, `latest.json` (macOS only), and both Microsoft Store packages (`.msix`, not made for prereleases).
-5. Edit the drafted notes, then publish the draft. Publishing makes it the endpoint served by `releases/latest/download/latest.json`, so installed copies can offer it. The notes are what the update offer and, for a release sent to the Store (below), the Store's What's new show, so write them for the people using the app. The draft lists the `feat` and `fix` commits since the last release (`scripts/release-notes.mjs`), whose subjects are lowercase, so names such as macOS and Microsoft Store need their capitals back.
+5. Edit the drafted notes, then publish the draft. Publishing makes it the endpoint served by `releases/latest/download/latest.json`, so installed copies can offer it, and starts the Website workflow (`.github/workflows/site.yml`), which deploys the website as it stands at the release's tag; a prerelease leaves the website as it is. The notes are what the update offer and, for a release sent to the Store (below), the Store's What's new show, so write them for the people using the app. The draft lists the `feat` and `fix` commits since the last release (`scripts/release-notes.mjs`), whose subjects are lowercase, so names such as macOS and Microsoft Store need their capitals back.
 6. To send the release to the Microsoft Store as well, run the Microsoft Store workflow with its tag once it is published (below). Not every release goes to the Store: send those that bring something new.
 
 Do not publish a partially successful release. Rerun failed jobs or delete the draft and tag, correct the issue, and create a new version.
