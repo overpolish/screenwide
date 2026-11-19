@@ -28,9 +28,14 @@ type Styled = { className: string; style?: CSSProperties };
 const placed = (place: CardPlace): { box: Styled; picture: Styled } => {
   switch (place.kind) {
     case "window":
+      // The window is the picture's shape, except for one too narrow to
+      // read whole, as a long scrolling screenshot, which shows its top
+      // (`cue_window/placement.rs`).
       return {
         box: { className: "absolute inset-0" },
-        picture: { className: "size-full rounded-island object-contain" },
+        picture: {
+          className: "size-full rounded-island object-cover object-top",
+        },
       };
     case "margin": {
       // Centred in the margin and level with the words being read, so the

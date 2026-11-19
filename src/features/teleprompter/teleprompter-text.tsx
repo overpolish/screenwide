@@ -145,7 +145,7 @@ export function TeleprompterText({
     return best;
   };
 
-  /** The word a point is over, or the first of the line beside it. */
+  /** The word a point is over, or the nearest on the line beside it. */
   const landingAt = (point: ScreenPoint) =>
     wordStartNear(wordsRef.current, script, point);
   // A cue dragged to another word is let go there; the others keep their

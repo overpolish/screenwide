@@ -22,31 +22,42 @@ export function startOfWordAt(
   return undefined;
 }
 
-/** Where the first word of the line nearest the height `y` starts, on
- * screen: for a point beside the text rather than on a word. */
+/** Where the word nearest a point that is on no word starts, on the line
+ * nearest its height: the nearest along the line for a point between its
+ * words, the line's first for a point beside the text. */
 export function startOfLineAt(
   words: DrawnWords,
   script: ScriptText,
-  y: number,
+  { clientX, clientY }: ScreenPoint,
 ) {
-  let best = -1;
+  let line: { index: number; left: number; right: number }[] = [];
   let distance = Infinity;
   for (const [index, element] of words) {
-    const { bottom, top } = element.getBoundingClientRect();
-    const away = Math.abs((top + bottom) / 2 - y);
-    if (away < distance || (away === distance && index < best)) {
-      best = index;
+    const { bottom, left, right, top } = element.getBoundingClientRect();
+    const away = Math.abs((top + bottom) / 2 - clientY);
+    if (away < distance) {
+      line = [];
       distance = away;
     }
+    if (away === distance) line.push({ index, left, right });
   }
-  return best < 0 ? undefined : script.starts[best];
+  if (line.length === 0) return undefined;
+  const start = Math.min(...line.map(({ left }) => left));
+  const end = Math.max(...line.map(({ right }) => right));
+  let best = line.reduce((first, word) =>
+    word.index < first.index ? word : first,
+  );
+  if (clientX > start && clientX < end) {
+    const along = ({ left, right }: { left: number; right: number }) =>
+      Math.max(left - clientX, clientX - right, 0);
+    for (const word of line) if (along(word) < along(best)) best = word;
+  }
+  return script.starts[best.index];
 }
 
-/** The word under the point, or the first of the line beside it. */
+/** The word under the point, or the nearest on the line beside it. */
 export const wordStartNear = (
   words: DrawnWords,
   script: ScriptText,
   point: ScreenPoint,
-) =>
-  startOfWordAt(words, script, point) ??
-  startOfLineAt(words, script, point.clientY);
+) => startOfWordAt(words, script, point) ?? startOfLineAt(words, script, point);

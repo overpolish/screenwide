@@ -44,7 +44,10 @@ pub(super) type Placement = (PhysicalPosition<i32>, PhysicalSize<u32>);
 /// Where the cue stands beside `teleprompter`, and how large: on its end
 /// side, or its start side where only that has room, as tall as the
 /// teleprompter or the height kept and as wide as the picture's shape asks
-/// within the room, its middle level with the line being read. None where
+/// within the room, its middle level with the line being read. A picture
+/// too narrow at that height grows taller, up to its display's height or the
+/// height kept; one narrower still, as a long scrolling screenshot, keeps
+/// the least width and is cut at the window's foot (`CueCard`). None where
 /// neither side has room, as when the teleprompter fills its display.
 pub(super) fn beside(
   teleprompter: &WebviewWindow,
@@ -83,15 +86,19 @@ pub(super) fn beside(
     f64::from(wanted.picture.1.max(1)),
   );
   let aspect = picture_width / picture_height;
-  let mut cue_height = wanted
-    .kept
-    .map_or(height, |kept| kept * scale)
-    .min(bottom - top)
-    .min(picture_height);
+  let tallest = (bottom - top).min(picture_height);
+  let least_width = (MIN_WIDTH * scale).min(picture_width);
+  let kept = wanted.kept.map(|kept| kept * scale);
+  let mut cue_height = kept.unwrap_or(height).min(tallest);
   let mut cue_width = cue_height * aspect;
   if cue_width > room {
     cue_width = room;
     cue_height = cue_width / aspect;
+  } else if cue_width < least_width {
+    cue_height = (least_width / aspect)
+      .min(kept.unwrap_or(tallest))
+      .min(tallest);
+    cue_width = least_width;
   }
   let on_right = at_end != wanted.line.end_is_left;
   let cue_x = if on_right {
