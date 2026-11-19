@@ -50,9 +50,7 @@ impl Tool {
       Tool::References => "https://store.overpolish.co/buy?s=1&link=6GVnd",
       Tool::Glide => "https://store.overpolish.co/buy?s=1&link=oSXt5",
       Tool::Annotate => "https://store.overpolish.co/buy?s=1&link=oYtlS",
-      // The store itself until the teleprompter's own product is listed and
-      // its checkout link can stand here.
-      Tool::Teleprompter => "https://store.overpolish.co/",
+      Tool::Teleprompter => "https://store.overpolish.co/buy?s=1&link=W0pfj",
     }
   }
 }
