@@ -60,8 +60,8 @@ export type AngleDialProps = {
   onChange: (degrees: number) => void;
   /** Angle in degrees. */
   value: number;
-  /** On the island, a glyph that turns in place of the notch, drawn
-   * pointing up. */
+  // Drawn pointing up.
+  /** On the island, a glyph turning in place of the notch. */
   children?: ReactNode;
   className?: string;
   color?: keyof typeof notchColors;

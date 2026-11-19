@@ -45,8 +45,8 @@ export type ReferenceIslandProps = Pick<IslandProps, "isShown" | "onHidden"> & {
   /** Puts the reference back where it was taken, at its true size. */
   onToOrigin: () => void;
   opacity: ReferenceOpacity;
-  /** Whether the reference was taken of an area it can be put back over;
-   * one dropped, or of a whole screen or window, has only its size to reset. */
+  // One dropped, or of a whole screen or window, has only its size to reset.
+  /** Whether it can be put back over the area it was taken of. */
   returnsToOrigin: boolean;
 };
 

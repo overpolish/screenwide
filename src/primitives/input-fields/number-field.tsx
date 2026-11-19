@@ -41,8 +41,8 @@ export type NumberFieldProps = AriaNumberFieldProps &
     // For a field whose value is read from outside the window it is typed
     // in, where a value waiting behind an unfocused field is never seen.
     // Plain numeric entry only: a formatted field would need its own parse.
-    /** Called on each keystroke that reads as a number, in place of
-     * `onChange`, which fires on blur or Enter. */
+    // `onChange` otherwise fires on blur or Enter.
+    /** Each keystroke's number, in place of `onChange`. */
     onTypedChange?: (value: number) => void;
     placeholder?: string;
     // Keeps the field's width, and its neighbours, still while a value is

@@ -75,6 +75,7 @@ const meta = {
     beat: { kind: "click", label: "New Project" },
     isHidden: false,
     isSelected: false,
+    onGrab: fn(),
     onPress: fn(),
     peaks: storyPeaks(1),
     pictureAspect: storyFrameAspect(),

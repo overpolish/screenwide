@@ -27,6 +27,7 @@ const SHORTCUTS = [
 const meta = {
   args: {
     isSelected: false,
+    onMeasure: fn(),
     onPress: fn(),
     shortcut: SHORTCUTS[0],
     x: 1,

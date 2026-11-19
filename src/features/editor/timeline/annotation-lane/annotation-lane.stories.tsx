@@ -77,6 +77,7 @@ const meta = {
       { end: 24, id: "text", kind: "text", lane: 1, start: 2 },
       { end: 52, id: "redact", kind: "redact", lane: 2, start: 36 },
     ],
+    onIncomingLanes: fn(),
     onRestack: fn(),
     onRetime: fn(),
     onSelect: fn(),

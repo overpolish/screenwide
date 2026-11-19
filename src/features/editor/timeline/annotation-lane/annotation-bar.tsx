@@ -32,8 +32,8 @@ import type { AnnotationKind } from "../../../../bindings/AnnotationKind";
 
 export type AnnotationBarProps = StackBarPlacement & {
   kind: AnnotationKind;
-  /** Where its annotation travels between its places in the scenes, which
-   * its line makes a wave over (`annotation-bar-wavy-line.tsx`). */
+  // Its line makes a wave over them (`annotation-bar-wavy-line.tsx`).
+  /** Where it glides between its places in the scenes. */
   glides?: Span[];
   /** Its pin, where it follows the content under it. */
   pin?: TimelineAnnotationPin;

@@ -35,8 +35,8 @@ export type HotkeyFieldProps = {
   "aria-labelledby"?: string;
   captureMode?: HotkeyCaptureMode;
   className?: string;
-  /** What a combination would clash with, so the field marks it and never
-   * takes it unseen. */
+  // So the field marks it and never takes it unseen.
+  /** What a combination would clash with. */
   conflictOf?: (value: string) => ShortcutConflict | null;
   defaultValue?: string | null;
   isClearable?: boolean;

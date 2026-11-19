@@ -45,7 +45,7 @@ export type BeatClipProps = {
   isHidden?: boolean;
   /** Whether it is lifted to be moved, carried with the pointer. */
   isLifted?: boolean;
-  /** Told a press on it, which may go on to drag it to play elsewhere. */
+  /** A press on it, which may become a drag. */
   onGrab?: (event: React.PointerEvent) => void;
   /** The beat's sound, as peaks from 0 to 1. */
   peaks?: number[];

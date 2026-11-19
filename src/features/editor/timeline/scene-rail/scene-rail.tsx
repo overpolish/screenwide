@@ -52,11 +52,11 @@ type Drag =
 const NO_SNAP: SnapFor = () => (seconds) => ({ isSnapped: false, seconds });
 
 export type SceneRailProps = {
-  /** How long what plays is, in the rail's seconds: played seconds, as
-   * the strip lays its lanes out (`strip-lane-time.ts`). */
+  // The rail's seconds are played seconds, as the strip lays its lanes out
+  // (`strip-lane-time.ts`); no scene plays over a gap.
+  /** How long what plays is, in played seconds. */
   duration: number;
-  /** Where the timeline's gaps are, in the rail's seconds, which no scene
-   * plays over. */
+  /** The timeline's gaps, in played seconds. */
   gaps: readonly Span[];
   /** A stretch drawn along the empty rail, either way round. */
   onDraw: (from: number, to: number) => void;
@@ -69,8 +69,8 @@ export type SceneRailProps = {
   /** Where a drawn or dragged end has snapped, or null, for the guide. */
   onGuide?: (seconds: number | null) => void;
   selected?: string;
-  /** Where a drawn or dragged end settles while ⌘ or Ctrl is held, given
-   * the scene dragged, whose own edges are left out. */
+  // Given the scene dragged, whose own edges are left out.
+  /** Where a drawn or dragged end settles while ⌘ or Ctrl is held. */
   snap?: SnapFor;
 };
 

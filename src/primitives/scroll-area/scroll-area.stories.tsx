@@ -1,6 +1,8 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import { fn } from "storybook/test";
+
 import { Button } from "../button/button";
 
 import { ScrollArea } from "./scroll-area";
@@ -31,6 +33,7 @@ const meta = {
   },
   args: {
     edgeEffect: "fade",
+    onInitialized: fn(),
     scrollbarAutoHide: "scroll",
     scrollbarHidden: false,
   },

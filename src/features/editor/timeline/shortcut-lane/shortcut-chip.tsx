@@ -33,10 +33,12 @@ export type ShortcutChipProps = {
   shortcut: TimelineShortcut;
   /** Where it was pressed, in px along the strip. */
   x: number;
-  /** How far from the tick its keys start, in px: after it where pressed
-   * close after another shortcut, before it near the strip's end. */
+  // After the tick where pressed close after another shortcut, before it
+  // near the strip's end.
+  /** How far from the tick its keys start, in px. */
   labelOffset?: number;
-  /** How wide its keys are drawn, in px, to set the next one clear. */
+  // So the next one is set clear of it.
+  /** How wide its keys are drawn, in px. */
   onMeasure?: (width: number) => void;
 };
 

@@ -32,7 +32,7 @@ export type UpdateIslandProps = Pick<
   "isShown" | "notch" | "onHidden" | "onShapeChange"
 > & {
   currentVersion: string | null;
-  /** How far the download has got, 0 to 1; null while it cannot say. */
+  /** Download progress, 0 to 1; null while unknown. */
   downloadProgress: number | null;
   error: string | null;
   /** Install opens the Microsoft Store, which installs the update. */

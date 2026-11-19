@@ -33,8 +33,8 @@ import type { NotesIslandState } from "../../../bindings/NotesIslandState";
 export type NotesParts = {
   onAction: (action: NotesIslandAction) => void;
   state: NotesIslandState;
-  /** The time now, in milliseconds since the Unix epoch; the clock's own
-   * when not given, as stories fix it. */
+  // The clock's own when not given, as stories fix it.
+  /** The time now, in ms since the Unix epoch. */
   now?: number;
 };
 

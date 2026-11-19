@@ -58,8 +58,8 @@ export type QuickScreenshotIslandProps = Pick<
   onClose: () => void;
   /** The shot just copied; while none, an area is being drawn. */
   copied?: CopiedShot | null;
-  /** A hint under the title while an area is drawn, such as which keys now
-   * open it, at the row's width. */
+  // Such as which keys now open it, at the row's width.
+  /** A hint under the title while an area is drawn. */
   note?: ReactNode;
   onEdit?: () => void;
   onSave?: () => void;

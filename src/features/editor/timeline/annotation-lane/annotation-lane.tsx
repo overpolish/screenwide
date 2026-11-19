@@ -37,11 +37,11 @@ export type AnnotationLaneProps = {
   width: number;
   /** A picture carried in, held as a bar of its own (`BarStack`). */
   incoming?: IncomingBar<TimelineAnnotation> | null;
-  /** Told every bar's lane if the carried picture is let go now, or null. */
+  /** Each bar's lane if the carried picture is dropped now, or null. */
   onIncomingLanes?: (lanes: Record<string, number> | null) => void;
   selected?: string;
-  /** Where a dragged end settles while ⌘ is held, given its annotation,
-   * whose own edges are left out. */
+  // Given its annotation, whose own edges are left out.
+  /** Where a dragged end settles while ⌘ is held. */
   snap?: SnapFor;
 };
 

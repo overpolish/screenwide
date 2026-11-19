@@ -68,6 +68,7 @@ const meta = {
     duration: DURATION,
     gaps: [],
     onDraw: fn(),
+    onGuide: fn(),
     onRetime: fn(),
     onSelect: fn(),
     scale,

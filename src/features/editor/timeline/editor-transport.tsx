@@ -43,8 +43,8 @@ export type EditorTransportProps = {
   playhead: Playhead;
   /** Only play answers: nothing is cut. */
   isLocked?: boolean;
-  /** Inserts a gap at the playhead: time with nothing recorded behind it.
-   * Without it the transport offers none. */
+  // Without it the transport offers none.
+  /** Inserts a gap, time with nothing recorded, at the playhead. */
   onInsertGap?: () => void;
 };
 

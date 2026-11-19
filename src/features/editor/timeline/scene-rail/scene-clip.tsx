@@ -16,8 +16,8 @@ export type TimelineScene = Span & {
   id: string;
   /** What its layout is called. */
   name: string;
-  /** Where choosing it brings the playhead, in played seconds: once it has
-   * arrived. Its start where not given. */
+  // Once it has arrived; its start where not given.
+  /** Where choosing it puts the playhead, in played seconds. */
   landsAt?: number;
 };
 

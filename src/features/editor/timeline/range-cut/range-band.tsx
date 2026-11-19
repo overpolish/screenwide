@@ -21,7 +21,7 @@ export function RangeBand({
 }: {
   scale: TimelineScale;
   span: Span;
-  /** How far up and down it reaches; the row it is in, inset, by default. */
+  /** Its height; its row, inset, by default. */
   className?: string;
   /** Whether it is seen, rather than only taken hold of. */
   isDrawn?: boolean;
