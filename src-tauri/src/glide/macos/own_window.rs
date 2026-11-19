@@ -16,7 +16,7 @@
 use cidre::cg;
 use core_graphics::geometry::CGPoint;
 use objc2::MainThreadMarker;
-use objc2_app_kit::NSWindow;
+use objc2_app_kit::{NSScreen, NSWindow};
 use objc2_foundation::{NSPoint, NSRect};
 use tauri::{AppHandle, LogicalPosition, LogicalSize, Manager, WebviewWindow};
 
@@ -36,13 +36,16 @@ pub(super) fn any_titlebar(app: &AppHandle, point: CGPoint) -> bool {
 
 /// The allowlisted window of ours whose titlebar a global point lands on, with
 /// its logical outer frame - the same rectangle, in the same space, that the
-/// Accessibility path reports for a foreign window.
+/// Accessibility path reports for a foreign window. A window of ours standing
+/// over that titlebar there, such as the teleprompter, hides it, as any window
+/// in front hides a foreign one from the Accessibility hit test.
 pub(super) fn own_window_at(app: &AppHandle, point: CGPoint) -> Option<(WebviewWindow, cg::Rect)> {
   crate::glide::GLIDABLE_WINDOW_LABELS
     .iter()
     .find_map(|label| {
       let window = app.get_webview_window(label.as_str())?;
-      window_hit(&window, point).map(|frame| (window.clone(), frame))
+      let frame = window_hit(&window, point)?;
+      is_front_at(&window, point).then(|| (window.clone(), frame))
     })
 }
 
@@ -106,6 +109,36 @@ pub(super) fn min_outer_size(window: &WebviewWindow) -> Option<(f64, f64)> {
       ))
     }
   };
+  on_main(window, read)
+}
+
+/// Whether a press at `point` would land on `window`: no other window of
+/// ours, such as the teleprompter, stands over it there. AppKit's hit test
+/// passes through windows that ignore the mouse, as a press does.
+fn is_front_at(window: &WebviewWindow, point: CGPoint) -> bool {
+  let read = {
+    let window = window.clone();
+    move || {
+      let mtm = MainThreadMarker::new()?;
+      let raw = window.ns_window().ok()?;
+      let native: &NSWindow = unsafe { &*raw.cast() };
+      let primary = NSScreen::screens(mtm).firstObject()?;
+      // AppKit measures the desktop up from the primary display's bottom
+      // edge; the point, down from its top edge.
+      let at = NSPoint::new(point.x, primary.frame().size.height - point.y);
+      let front = NSWindow::windowNumberAtPoint_belowWindowWithWindowNumber(at, 0, mtm);
+      Some(front == native.windowNumber())
+    }
+  };
+  on_main(window, read).unwrap_or(false)
+}
+
+/// Runs `read` on the main thread, where AppKit is read, and waits for its
+/// answer; a caller already there runs it directly.
+fn on_main<T: Send + 'static>(
+  window: &WebviewWindow,
+  read: impl FnOnce() -> Option<T> + Send + 'static,
+) -> Option<T> {
   if MainThreadMarker::new().is_some() {
     return read();
   }
