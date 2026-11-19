@@ -38,10 +38,9 @@ const keyboardAnchor = (): PopupMenuAnchor => ({
 /**
  * Adds what the `editor` editor has open as `artifactId` to a script as a
  * cue: a recording's frame under the playhead, as its edit shows it, or the
- * screenshot as edited. It goes to the word the open teleprompter is
- * reading; with none open, the editor asks which script, under `anchor` or
- * at the top of the window, and the cue is pinned at its start as the
- * script opens.
+ * screenshot as edited. The open teleprompter waits for a word to be
+ * clicked for it; with none open, the editor first asks which script, under
+ * `anchor` or at the top of the window, and that script opens waiting.
  */
 export const addEditorCue = async (
   editor: EditorKind,

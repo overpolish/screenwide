@@ -11,7 +11,7 @@ import { addCue } from "../cue-api";
 import { CueMoment } from "./cue-moment";
 import { CueSources } from "./cue-sources";
 import { useCueMoment } from "./use-cue-moment";
-import { useCueSources } from "./use-cue-sources";
+import { useCueSources, useCueStills } from "./use-cue-sources";
 import { usePickerSize } from "./use-picker-size";
 
 import type { TeleprompterCueTiming } from "../../../../bindings/TeleprompterCueTiming";
@@ -35,7 +35,8 @@ export function CuePicker({
   panel: string;
   script: string;
 }) {
-  const sources = useCueSources();
+  const projects = useCueSources();
+  const stills = useCueStills(projects);
   const [recording, setRecording] = useState<ProjectSummary | null>(null);
   const [isMaking, setIsMaking] = useState(false);
   const [failed, setFailed] = useState(false);
@@ -82,8 +83,8 @@ export function CuePicker({
               if (project.kind === "screenshot") make(project.file, null);
               else setRecording(project);
             }}
-            projects={sources.projects}
-            stills={sources.stills}
+            projects={projects}
+            stills={stills}
           />
         )}
       </div>

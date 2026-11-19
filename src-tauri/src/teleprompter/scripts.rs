@@ -38,27 +38,32 @@ fn script_file(project: &Path) -> Result<PathBuf, String> {
 
 /// Makes an empty script in the projects folder, remembered as the newest
 /// project, and opens the teleprompter on it. Nothing is made when the
-/// teleprompter may not be used.
+/// teleprompter may not be used. Off the main thread, as opening the
+/// teleprompter makes its window, which deadlocks there on Windows.
 #[tauri::command]
-pub fn new_script(app: AppHandle) -> Result<(), String> {
-  if !crate::licensing::allow(&app, crate::licensing::Tool::Teleprompter) {
-    return Ok(());
-  }
-  let title = Local::now()
-    .naive_local()
-    .format("Script %Y-%m-%d at %H.%M.%S")
-    .to_string();
-  let project = crate::projects_folder::create(&app, &title)?;
-  std::fs::write(project.root.join(SCRIPT_FILE), "").map_err(|error| error.to_string())?;
-  screenwide_project::write(
-    &project.file,
-    &Manifest::script(ScriptManifest {
-      file: SCRIPT_FILE.to_owned(),
-    }),
-  )
-  .map_err(|error| error.to_string())?;
-  screenwide_project::library::remember(&app, &project.file);
-  super::window::open(&app, &project.file)
+pub async fn new_script(app: AppHandle) -> Result<(), String> {
+  tauri::async_runtime::spawn_blocking(move || {
+    if !crate::licensing::allow(&app, crate::licensing::Tool::Teleprompter) {
+      return Ok(());
+    }
+    let title = Local::now()
+      .naive_local()
+      .format("Script %Y-%m-%d at %H.%M.%S")
+      .to_string();
+    let project = crate::projects_folder::create(&app, &title)?;
+    std::fs::write(project.root.join(SCRIPT_FILE), "").map_err(|error| error.to_string())?;
+    screenwide_project::write(
+      &project.file,
+      &Manifest::script(ScriptManifest {
+        file: SCRIPT_FILE.to_owned(),
+      }),
+    )
+    .map_err(|error| error.to_string())?;
+    screenwide_project::library::remember(&app, &project.file);
+    super::window::open(&app, &project.file)
+  })
+  .await
+  .map_err(|error| error.to_string())?
 }
 
 #[tauri::command]

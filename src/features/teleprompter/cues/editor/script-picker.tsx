@@ -30,7 +30,7 @@ export function ScriptPicker({
   panel: string;
   request: CueRequest;
 }) {
-  const { projects } = useCueSources(isScript);
+  const projects = useCueSources(isScript);
   const [isAdding, setIsAdding] = useState(false);
   const [failed, setFailed] = useState(false);
   return (

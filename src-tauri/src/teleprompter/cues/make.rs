@@ -151,19 +151,25 @@ pub fn request_cue(
 }
 
 /// Opens the teleprompter on the script project whose manifest is `script`,
-/// to have a word picked there for a cue of `source`.
+/// to have a word picked there for a cue of `source`. Off the main thread,
+/// as opening the teleprompter may make its window, which deadlocks there on
+/// Windows.
 #[tauri::command]
-pub fn place_cue_in_script(
+pub async fn place_cue_in_script(
   app: AppHandle,
   script: PathBuf,
   source: PathBuf,
   timing: Option<CueTiming>,
 ) -> Result<(), String> {
-  if !crate::licensing::allow(&app, crate::licensing::Tool::Teleprompter) {
-    return Ok(());
-  }
-  wait_for_word(&app, Request { source, timing })?;
-  crate::teleprompter::open(&app, &script)
+  tauri::async_runtime::spawn_blocking(move || {
+    if !crate::licensing::allow(&app, crate::licensing::Tool::Teleprompter) {
+      return Ok(());
+    }
+    wait_for_word(&app, Request { source, timing })?;
+    crate::teleprompter::open(&app, &script)
+  })
+  .await
+  .map_err(|error| error.to_string())?
 }
 
 /// The cue waiting for its word, taken by the teleprompter to place.

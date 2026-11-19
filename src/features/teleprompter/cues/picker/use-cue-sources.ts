@@ -22,13 +22,12 @@ export const canCue = ({ available, kind }: ProjectSummary) =>
   available &&
   (kind === "screen" || kind === "camera" || kind === "screenshot");
 
-/** The recent projects `canChoose` lets through, newest first, and their
- * stills as each arrives: by default those a cue can be made of. */
+/** The recent projects `canChoose` lets through, newest first: by default
+ * those a cue can be made of. Null until listed. */
 export function useCueSources(
   canChoose: (project: ProjectSummary) => boolean = canCue,
 ) {
   const [projects, setProjects] = useState<ProjectSummary[] | null>(null);
-  const [stills, setStills] = useState<Record<string, string>>({});
   const canChooseRef = useRef(canChoose);
   canChooseRef.current = canChoose;
 
@@ -37,20 +36,11 @@ export function useCueSources(
     listProjects(sourceFor(RECENT))
       .then((listed) => {
         if (disposed) return;
-        const cueable = listed
-          .filter((project) => canChooseRef.current(project))
-          .sort((a, b) => (b.createdMs ?? 0) - (a.createdMs ?? 0));
-        setProjects(cueable);
-        for (const project of cueable)
-          getProjectThumbnail(project.file)
-            .then((path) => {
-              if (!disposed && path)
-                setStills((current) => ({
-                  ...current,
-                  [project.file]: convertFileSrc(path),
-                }));
-            })
-            .catch(report("Could not read a still"));
+        setProjects(
+          listed
+            .filter((project) => canChooseRef.current(project))
+            .sort((a, b) => (b.createdMs ?? 0) - (a.createdMs ?? 0)),
+        );
       })
       .catch(report("Could not list the projects"));
     return () => {
@@ -58,5 +48,29 @@ export function useCueSources(
     };
   }, []);
 
-  return { projects, stills };
+  return projects;
+}
+
+/** The stills of `projects`, by manifest, as each arrives. */
+export function useCueStills(projects: readonly ProjectSummary[] | null) {
+  const [stills, setStills] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    let disposed = false;
+    for (const project of projects ?? [])
+      getProjectThumbnail(project.file)
+        .then((path) => {
+          if (!disposed && path)
+            setStills((current) => ({
+              ...current,
+              [project.file]: convertFileSrc(path),
+            }));
+        })
+        .catch(report("Could not read a still"));
+    return () => {
+      disposed = true;
+    };
+  }, [projects]);
+
+  return stills;
 }

@@ -8,6 +8,7 @@
 //! and is left out of every capture. Where neither side has room, the
 //! teleprompter is told, and shows the cue over its text instead.
 
+mod making;
 mod placement;
 
 use std::path::PathBuf;
@@ -16,7 +17,7 @@ use std::sync::{Mutex, MutexGuard, PoisonError};
 use std::time::Duration;
 
 use serde::{Deserialize, Serialize};
-use tauri::{AppHandle, Emitter, Manager, PhysicalSize, WebviewUrl, WebviewWindow, WindowEvent};
+use tauri::{AppHandle, Emitter, Manager, PhysicalSize};
 use ts_rs::TS;
 
 pub(crate) use self::placement::ReadingLine;
@@ -28,12 +29,6 @@ pub(crate) const LABEL: &str = "teleprompter-cue";
 const SHOW_EVENT: &str = "teleprompter-cue://show";
 /// Tells the teleprompter whether the cue stands beside it.
 const BESIDE_EVENT: &str = "teleprompter://cue-beside";
-/// Tells the teleprompter the cue's window was resized by hand, to the
-/// height in points it should keep.
-const HEIGHT_EVENT: &str = "teleprompter://cue-height";
-/// How far a size may differ from the one set and still be taken as the
-/// size set, in pixels, for the rounding a display's scale brings.
-const SIZE_SLACK: u32 = 2;
 
 /// A cue's picture as it is shown beside the teleprompter.
 #[derive(Clone, Debug, Deserialize, Serialize, TS)]
@@ -191,7 +186,8 @@ pub(crate) fn close(app: &AppHandle) {
 }
 
 /// Places the cue beside the teleprompter and shows it there. False, with
-/// the window off screen, when there is no room for it.
+/// the window off screen, when there is no room for it. A window not made
+/// yet is made first, and the teleprompter hears where the cue went then.
 fn place(app: &AppHandle) -> Result<bool, String> {
   let teleprompter = app
     .get_webview_window(TELEPROMPTER)
@@ -203,9 +199,9 @@ fn place(app: &AppHandle) -> Result<bool, String> {
     hide(app);
     return Ok(false);
   };
-  let window = match app.get_webview_window(LABEL) {
-    Some(window) => window,
-    None => build(app)?,
+  let Some(window) = app.get_webview_window(LABEL) else {
+    making::build_then_place(app);
+    return Ok(true);
   };
   if let Some(state) = shown().as_mut() {
     state.placed = Some(size);
@@ -234,61 +230,4 @@ fn hide(app: &AppHandle) {
     let _ = crate::app_windows::options::presentation::detach(app, &teleprompter, &window);
   }
   let _ = window.hide();
-}
-
-fn build(app: &AppHandle) -> Result<WebviewWindow, String> {
-  let window =
-    crate::app_windows::webview_window(app, LABEL, WebviewUrl::App("/teleprompter-cue".into()))
-      .title(screenwide_i18n::t!("window-titles-teleprompter-cue"))
-      .accept_first_mouse(true)
-      .always_on_top(true)
-      .decorations(false)
-      // Shown as the reader reaches a word, so it must not take the keys
-      // from the script being written or the app being recorded.
-      .focusable(false)
-      .focused(false)
-      .resizable(true)
-      .shadow(false)
-      .skip_taskbar(true)
-      .transparent(true)
-      .visible(false)
-      .visible_on_all_workspaces(true)
-      .build()
-      .map_err(|error| error.to_string())?;
-  crate::app_windows::set_window_capture_affinity(&window, false)
-    .map_err(|error| error.to_string())?;
-  let handle = app.clone();
-  window.on_window_event(move |event| {
-    if let WindowEvent::Resized(size) = event {
-      resized_by_hand(&handle, *size);
-    }
-  });
-  Ok(window)
-}
-
-/// A size the window was not given was set by hand: its height is kept as
-/// the tallest the cue grows to, and the teleprompter keeps it for later.
-fn resized_by_hand(app: &AppHandle, size: PhysicalSize<u32>) {
-  let scale = app
-    .get_webview_window(LABEL)
-    .and_then(|window| window.scale_factor().ok())
-    .unwrap_or(1.0);
-  let height = {
-    let mut state = shown();
-    let Some(state) = state.as_mut() else {
-      return;
-    };
-    let given = state.placed.is_some_and(|placed| {
-      placed.width.abs_diff(size.width) <= SIZE_SLACK
-        && placed.height.abs_diff(size.height) <= SIZE_SLACK
-    });
-    if given || size.height == 0 {
-      return;
-    }
-    state.placed = Some(size);
-    let height = f64::from(size.height) / scale;
-    state.height = Some(height);
-    height
-  };
-  let _ = app.emit_to(TELEPROMPTER, HEIGHT_EVENT, height);
 }
