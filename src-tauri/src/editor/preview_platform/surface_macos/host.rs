@@ -220,6 +220,7 @@ impl Host for MacHost {
     Modifiers {
       shift: flags.contains(NSEventModifierFlags::Shift),
       shortcut: flags.contains(NSEventModifierFlags::Command),
+      duplicate: flags.contains(NSEventModifierFlags::Option),
     }
   }
 

@@ -52,7 +52,7 @@ fn bend(annotation: &Annotation) -> (f64, f64) {
   )
 }
 
-fn arrow(id: &str) -> Annotation {
+pub(crate) fn arrow(id: &str) -> Annotation {
   Annotation {
     above_camera: false,
     animated: true,

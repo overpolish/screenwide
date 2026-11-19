@@ -45,6 +45,10 @@ pub mod arrow;
 /// and the spotlight.
 #[cfg(any(target_os = "macos", target_os = "windows", test))]
 pub(crate) mod box_gesture;
+/// Copies made in place, which a drag with the duplicate modifier carries
+/// while the originals stay.
+#[cfg(any(target_os = "macos", target_os = "windows", test))]
+pub mod copy;
 /// The counter tool's own half of the model.
 #[cfg(any(target_os = "macos", target_os = "windows", test))]
 pub mod counter;

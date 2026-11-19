@@ -25,6 +25,7 @@ fn held(shift: bool) -> SnapModifiers {
   SnapModifiers {
     shift,
     position: false,
+    duplicate: false,
   }
 }
 

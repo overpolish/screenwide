@@ -4,6 +4,10 @@
 import { listen } from "@tauri-apps/api/event";
 import { useEffect, useRef } from "react";
 
+import {
+  AnnotationClipboard,
+  readCopiedAnnotations,
+} from "../annotations/annotation-clipboard";
 import { useEditorWindowShortcuts } from "../shortcuts/use-editor-window-shortcuts";
 
 import {
@@ -26,13 +30,22 @@ import type { EditorKind } from "../types";
  * be dressed at once; `onPlaced` then puts a tool in hand that shows it. A
  * clipboard with no picture leaves everything as it was. `settle` runs first
  * and is waited for, so a playing recording has stopped before an image is
- * placed on its still frame.
+ * placed on its still frame. Annotations copied in an editor, while nothing
+ * has been copied since, are pasted by `pasteAnnotations` instead.
  */
 export function useIncomingImages(
   workspace: EditorKind,
   place:
     ((art: ImageArt, at: ImagePoint | null) => Promise<boolean>) | undefined,
-  { onPlaced, settle }: { onPlaced: () => void; settle?: () => Promise<void> },
+  {
+    onPlaced,
+    pasteAnnotations,
+    settle,
+  }: {
+    onPlaced: () => void;
+    pasteAnnotations?: (clipboard: AnnotationClipboard) => void;
+    settle?: () => Promise<void>;
+  },
 ) {
   const placeRef = useRef(place);
   placeRef.current = place;
@@ -40,26 +53,38 @@ export function useIncomingImages(
   settleRef.current = settle;
   const onPlacedRef = useRef(onPlaced);
   onPlacedRef.current = onPlaced;
-  // A held ⌘V repeats; one picture is read at a time.
+  const pasteAnnotationsRef = useRef(pasteAnnotations);
+  pasteAnnotationsRef.current = pasteAnnotations;
+  // A held ⌘V repeats; one paste is read at a time.
   const readingRef = useRef(false);
   useEditorWindowShortcuts({
-    onPaste: place
-      ? () => {
-          if (readingRef.current) return;
-          readingRef.current = true;
-          void (async () => {
-            try {
-              await settleRef.current?.();
-              const art = await readClipboardImage();
-              if (art && (await place(art, null))) onPlacedRef.current();
-            } catch (cause) {
-              console.error("Could not paste the picture", cause);
-            } finally {
-              readingRef.current = false;
-            }
-          })();
-        }
-      : undefined,
+    onPaste:
+      place || pasteAnnotations
+        ? () => {
+            if (readingRef.current) return;
+            readingRef.current = true;
+            void (async () => {
+              try {
+                await settleRef.current?.();
+                const copied = pasteAnnotationsRef.current
+                  ? await readCopiedAnnotations()
+                  : null;
+                if (copied) {
+                  pasteAnnotationsRef.current?.(copied);
+                  return;
+                }
+                const placeNow = placeRef.current;
+                if (!placeNow) return;
+                const art = await readClipboardImage();
+                if (art && (await placeNow(art, null))) onPlacedRef.current();
+              } catch (cause) {
+                console.error("Could not paste", cause);
+              } finally {
+                readingRef.current = false;
+              }
+            })();
+          }
+        : undefined,
   });
   useEffect(() => {
     if (!place) return;

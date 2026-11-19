@@ -147,17 +147,25 @@ export const editorToolKeyAction = (
 /** The ⌘ or Ctrl letters a window answers, without Shift. */
 export type EditorCommandKeys = {
   onCopy?: () => void;
+  /** ⌘X or Ctrl+X outside a text field: copy what is chosen and take it
+   * away. */
+  onCut?: () => void;
   onCutTimeline?: () => void;
-  /** ⌘D or Ctrl+D: let go of everything chosen in the window. */
+  /** ⌘D or Ctrl+D: let go of everything chosen in the window, where nothing
+   * chosen can be duplicated. */
   onDeselectAll?: () => void;
+  /** ⌘D or Ctrl+D with something chosen that can be duplicated. */
+  onDuplicate?: () => void;
   onExport?: () => void;
   /** ⌘V or Ctrl+V outside a text field. */
   onPaste?: () => void;
+  /** ⌘A or Ctrl+A outside a text field. */
+  onSelectAll?: () => void;
 };
 
 /** What ⌘ or Ctrl with `code` does in this window, or null where it does
- * nothing. A field being typed in keeps its own cut, copy and paste, so only
- * Export reaches past one. */
+ * nothing. A field being typed in keeps its own cut, copy, paste and
+ * select all, so only Export reaches past one. */
 export const editorCommandKeyAction = (
   code: string,
   keys: EditorCommandKeys,
@@ -166,11 +174,13 @@ export const editorCommandKeyAction = (
   (inTextField && code !== "KeyE"
     ? null
     : {
+        KeyA: keys.onSelectAll,
         KeyB: keys.onCutTimeline,
         KeyC: keys.onCopy,
-        KeyD: keys.onDeselectAll,
+        KeyD: keys.onDuplicate ?? keys.onDeselectAll,
         KeyE: keys.onExport,
         KeyV: keys.onPaste,
+        KeyX: keys.onCut,
       }[code]) ?? null;
 
 /** The arrow keys as directions, for nudging a layer or stepping the playhead. */

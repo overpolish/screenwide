@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+pub(crate) mod annotation_clipboard;
 mod artifact;
 mod artifact_present;
 mod artifact_snapshot;

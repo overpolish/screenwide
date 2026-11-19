@@ -21,6 +21,8 @@ mod annotation_hold;
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 mod annotation_hover;
 #[cfg(any(target_os = "macos", target_os = "windows"))]
+mod annotation_pane;
+#[cfg(any(target_os = "macos", target_os = "windows"))]
 mod annotation_pixels;
 #[cfg(all(any(target_os = "macos", target_os = "windows"), test))]
 mod annotation_tests;

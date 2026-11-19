@@ -1438,8 +1438,9 @@ export type Messages = {
   "settings-shortcut-editor-back-to-select": null;
   "settings-shortcut-editor-confirm-crop": null;
   "settings-shortcut-editor-copy": null;
+  "settings-shortcut-editor-cut": null;
   "settings-shortcut-editor-delete": null;
-  "settings-shortcut-editor-deselect-all": null;
+  "settings-shortcut-editor-duplicate": null;
   "settings-shortcut-editor-end": null;
   "settings-shortcut-editor-jump-back": null;
   "settings-shortcut-editor-jump-forward": null;
@@ -1449,6 +1450,7 @@ export type Messages = {
   "settings-shortcut-editor-play": null;
   "settings-shortcut-editor-redo": null;
   "settings-shortcut-editor-screen": null;
+  "settings-shortcut-editor-select-all": null;
   "settings-shortcut-editor-snapping": null;
   "settings-shortcut-editor-split": null;
   "settings-shortcut-editor-start": null;

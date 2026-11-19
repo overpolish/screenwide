@@ -248,6 +248,8 @@ export function useAnnotations({
     clearSelection: () => {
       setChosen(NOTHING_CHOSEN);
     },
+    /** Takes away every chosen annotation, in one edit: what a cut leaves. */
+    deleteSelected: applyDelete,
     deleteTargeted: () => {
       if (deleteTargets.size === 0) return false;
       remove(deleteTargets);

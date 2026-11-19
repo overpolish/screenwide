@@ -287,15 +287,18 @@ settings-shortcuts-editor-timeline = Timeline
 settings-shortcut-editor-screen = Screen or screenshot
 settings-shortcut-editor-undo = Undo
 settings-shortcut-editor-redo = Redo
+# Copies the chosen annotations, or with none the screenshot or the frame.
 settings-shortcut-editor-copy = Copy
-settings-shortcut-editor-paste = Paste an image
+settings-shortcut-editor-cut = Cut the chosen annotations
+settings-shortcut-editor-paste = Paste annotations or an image
+settings-shortcut-editor-select-all = Choose every annotation
 settings-shortcut-editor-delete = Delete what is chosen
 # Escape puts the tool in hand down and lets go of what is chosen.
 settings-shortcut-editor-back-to-select = Back to Select
-settings-shortcut-editor-deselect-all = Let go of everything chosen
+settings-shortcut-editor-duplicate = Duplicate the chosen annotations, or let go of everything
 settings-shortcut-editor-confirm-crop = Finish cropping
-settings-shortcut-editor-nudge = Nudge the chosen layer
-settings-shortcut-editor-nudge-further = Nudge the chosen layer further
+settings-shortcut-editor-nudge = Nudge what is chosen
+settings-shortcut-editor-nudge-further = Nudge what is chosen further
 settings-shortcut-editor-play = Play or pause
 settings-shortcut-editor-step-back = Step back a frame
 settings-shortcut-editor-step-forward = Step forward a frame

@@ -4,7 +4,10 @@
 //! The native annotation gesture: the tool in hand, the annotations a pane is
 //! showing, and the provisional clips a drag writes through until it commits.
 
+use super::copies::{with_copies, Copies};
+use super::provisional::provisional_clips;
 use super::*;
+use screenwide_annotations::copy::carried_copy;
 use screenwide_annotations::{AnnotationKind, AnnotationShape};
 
 pub(super) struct Gesture {
@@ -18,6 +21,8 @@ pub(super) struct Gesture {
   /// press landed. Its element anchors are refreshed each sample, because
   /// detection may land part way through the drag.
   field: SnapField,
+  /// What a carry with the duplicate modifier took, if it did.
+  copies: Option<Copies>,
 }
 #[derive(Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -37,6 +42,8 @@ pub(super) struct Commit {
   /// The scene shapes of the annotations among `annotations` an edit inside
   /// a scene reached, which it may have given that scene a place.
   pub(super) scene_shapes: Vec<super::commit::CommitSceneShapes>,
+  /// The copies a carry with the duplicate modifier took, and whose each is.
+  pub(super) copies: Vec<super::copies::CommitCopy>,
 }
 
 pub(super) fn track(pane: u32) -> AnnotationTrack {
@@ -82,7 +89,9 @@ impl PreviewPlayerManager {
     let modifiers = SnapModifiers::from_bits(snap);
     if matches!(phase, SelectionGesturePhase::Cancel) {
       let gesture = self.annotation.gesture.take()?;
-      *clips.write().ok()? = gesture.before;
+      *clips.write().ok()? = gesture
+        .copies
+        .map_or(gesture.before, |copies| copies.restore);
       self.annotation.selected = gesture.before_selected;
       self.publish_annotation_snap(source_size, &SnapResult::default());
       self.publish_annotation_handles();
@@ -124,7 +133,10 @@ impl PreviewPlayerManager {
         _ => {}
       }
       let redacting = drawing_kind(self.annotation.mode) == Some(AnnotationKind::Redact);
-      let before = clips.read().ok()?.clone();
+      // With the duplicate modifier a carry takes a copy, with a clip timed as
+      // the original's, which moves while the original stays.
+      let (target, copied) = carried_copy(&mut working, target, modifiers.duplicate);
+      let (before, copies) = with_copies(clips.read().ok()?.clone(), copied, &working);
       // A disc's diameter and a text box's type size are in points, so the
       // pane's drawn width in points is what turns them into source pixels.
       let image_width = self.pane_image_widths(pane).1;
@@ -165,6 +177,7 @@ impl PreviewPlayerManager {
         before,
         before_selected,
         field,
+        copies,
       });
       // The detector costs far too much to run between two pointer samples,
       // so the press starts it while the hand is still holding steady.
@@ -230,13 +243,14 @@ impl PreviewPlayerManager {
       }
       self.publish_annotation_handles();
       let _ = self.restart(PlaybackMode::InteractiveStill);
-      return self.commit(
+      let commit = self.commit(
         pane,
         gesture.position,
         gesture.working,
         self.annotation.selected.clone(),
         None,
       );
+      return commit.map(|commit| commit.with_copies(gesture.copies.as_ref()));
     }
     self.publish_annotation_handles();
     // The macOS workspace re-encodes from its retained scene on a restart,
@@ -250,43 +264,4 @@ impl PreviewPlayerManager {
     }
     None
   }
-}
-
-/// The clips a gesture or a typing session draws through: the clips it began
-/// on, with every annotation it holds written into its own clip. One with no
-/// clip yet gets a provisional, unpaced one reaching back a draw-in, so it is
-/// finished drawing at the playhead, under the hand, until the editor paces
-/// it. `position` is the playhead in the recording and `timeline_ms` where it
-/// plays on the timeline.
-pub(super) fn provisional_clips(
-  before: &[RecordingAnnotationClip],
-  working: &[Annotation],
-  pane: u32,
-  (position, timeline_ms): (u64, u64),
-  scenes: &screenwide_annotations::scene_shape::SceneEdit,
-) -> Vec<RecordingAnnotationClip> {
-  let reach_back = screenwide_annotations::reveal::REVEAL_DRAW_IN_MS as u64;
-  let mut next = before.to_vec();
-  for annotation in working {
-    if let Some(clip) = next.iter_mut().find(|c| c.annotation.id == annotation.id) {
-      // A pinned annotation was shown where its pin put it at `position`, and
-      // one in a scene where the scene puts it.
-      scenes.fold(clip, annotation, position);
-    } else {
-      next.push(RecordingAnnotationClip {
-        path_ms: None,
-        pin: None,
-        annotation: annotation.clone(),
-        track_id: track(pane),
-        start_ms: timeline_ms.saturating_sub(reach_back),
-        end_ms: timeline_ms.saturating_add(3000),
-        recording_span: Some([
-          position.saturating_sub(reach_back),
-          position.saturating_add(3000),
-        ]),
-        scene_shapes: Vec::new(),
-      });
-    }
-  }
-  next
 }

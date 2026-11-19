@@ -14,6 +14,7 @@
 //! and its history.
 
 use super::state::PreviewManager;
+use screenwide_annotations::copy::carried_copy;
 use screenwide_annotations::edit::AnnotationEdit;
 use screenwide_annotations::gesture::{drawing_kind, AnnotationGestureTarget};
 use screenwide_annotations::handles::source_point;
@@ -44,38 +45,12 @@ pub(super) struct AnnotationGestureOverride {
   /// What this gesture can snap to, built from the pane as it was when the
   /// press landed.
   field: SnapField,
+  /// The copy this carry took with the duplicate modifier, by its id, which
+  /// goes again if the carry is cancelled.
+  copy: Option<String>,
 }
 
 impl PreviewManager {
-  /// The source's pixel dimensions for one pane, for the normalised points
-  /// the native side reports.
-  pub(super) fn annotation_source(&self, pane_index: u32) -> Option<(u32, u32)> {
-    let output = self.output.as_ref()?;
-    let item = output.items.get(pane_index as usize)?;
-    let source = self.sources.iter().find(|source| source.id == item.id)?;
-    Some((source.image.width, source.image.height))
-  }
-
-  /// How wide this pane's picture is drawn, in points of annotation size: what
-  /// turns a size into source pixels, or into a share of the picture.
-  pub(super) fn annotation_image_width(&self, pane_index: u32) -> Option<f64> {
-    let item = self.output.as_ref()?.items.get(pane_index as usize)?;
-    let source = self.sources.iter().find(|source| source.id == item.id)?;
-    Some(item.output.image_width / source.capture.size_scale())
-  }
-
-  pub(super) fn annotations_for(&self, pane_index: u32) -> Option<&Vec<Annotation>> {
-    Some(
-      &self
-        .output
-        .as_ref()?
-        .items
-        .get(pane_index as usize)?
-        .output
-        .annotations,
-    )
-  }
-
   /// Republishes the arrow grips and the live picture. Both are read from the
   /// manager's own working copy, so a gesture sample shows its own geometry
   /// rather than the React layout that is still catching up with it.
@@ -148,6 +123,7 @@ impl PreviewManager {
         .map(|item| &mut item.output.annotations)
       {
         gesture.edit.cancel(annotations);
+        annotations.retain(|annotation| Some(&annotation.id) != gesture.copy.as_ref());
       }
       self.publish_annotation_snap(gesture.pane_index, &SnapResult::default());
       self.present_annotation_gesture(gesture.pane_index, &[]);
@@ -253,13 +229,10 @@ impl PreviewManager {
     let fresh = self.annotation_fresh.within(source);
     let image_width = self.annotation_image_width(pane_index).unwrap_or_default();
     let picture = self.annotation_picture(pane_index);
-    let annotations = &mut self
-      .output
-      .as_mut()?
-      .items
-      .get_mut(pane_index as usize)?
-      .output
-      .annotations;
+    let annotations = self.pane_annotations_mut(pane_index)?;
+    // With the duplicate modifier a carry takes a copy, which moves while the
+    // original stays where it was.
+    let (target, copied) = carried_copy(annotations, target, modifiers.duplicate);
     let mut edit = AnnotationEdit::begin(
       annotations,
       target,
@@ -285,6 +258,7 @@ impl PreviewManager {
       pane_index,
       edit,
       field,
+      copy: copied.map(|copied| copied.copy),
     });
     // The detector costs far too much to run between two pointer samples, so
     // the press starts it while the hand is still holding steady.

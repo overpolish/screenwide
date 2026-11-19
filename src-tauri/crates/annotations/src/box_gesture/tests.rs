@@ -13,6 +13,7 @@ fn point(x: f64, y: f64) -> AnnotationPoint {
 const RELEASED: SnapModifiers = SnapModifiers {
   shift: false,
   position: false,
+  duplicate: false,
 };
 
 /// Every kind held by a box and its eight grips.

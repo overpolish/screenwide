@@ -7,13 +7,17 @@ import { useEffect, useRef } from "react";
 import { Annotation, AnnotationTextEdit } from "../../annotations/annotations";
 
 import {
+  RecordingAnnotationCopyCommit,
   RecordingAnnotationPinCommit,
   RecordingAnnotationSceneShapesCommit,
-} from "./recording-annotations";
+} from "./recording-annotation-merge";
 
 /** An edit on the picture, as the native preview reports it once it lands. */
 export type RecordingAnnotationEvent = {
   annotations: Annotation[];
+  /** The copies a carry with the duplicate modifier took, and whose each
+   * is. */
+  copies: RecordingAnnotationCopyCommit[];
   paneIndex: number;
   /** The pins of the pinned annotations among `annotations`. */
   pins: RecordingAnnotationPinCommit[];

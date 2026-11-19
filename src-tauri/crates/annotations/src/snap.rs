@@ -101,10 +101,10 @@ impl SnapResult {
   }
 }
 
-/// Which modifiers a sample was taken with. Both Shift and the positional
+/// Which modifiers a sample was taken with. Shift and the positional
 /// modifier (Cmd on macOS, Ctrl on Windows) are read per sample rather than
 /// latched at the press, so either can be taken and let go part way through
-/// a drag.
+/// a drag; the duplicate modifier is read only as a carry begins.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct SnapModifiers {
   /// Holds a counter's tail and an arrow's tips to the eighth turns, and a
@@ -112,16 +112,21 @@ pub struct SnapModifiers {
   pub(crate) shift: bool,
   /// Snaps the position to the candidate field.
   pub position: bool,
+  /// Option on macOS, Alt on Windows: a carry takes copies of what is chosen
+  /// and leaves the originals in place.
+  pub duplicate: bool,
 }
 
 impl SnapModifiers {
   const SHIFT: u32 = 1;
   const POSITION: u32 = 1 << 1;
+  const DUPLICATE: u32 = 1 << 2;
 
   pub fn from_bits(bits: u32) -> Self {
     Self {
       shift: bits & Self::SHIFT != 0,
       position: bits & Self::POSITION != 0,
+      duplicate: bits & Self::DUPLICATE != 0,
     }
   }
 }

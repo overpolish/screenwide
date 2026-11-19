@@ -11,15 +11,13 @@ import {
   RecordingTimelineEdit,
 } from "../../timeline/editing/recording-timeline-edit";
 
+import { mergeRecordingAnnotationClips } from "./recording-annotation-merge";
 import {
   clearedPinCorrections,
   pinnedClip,
   withPinKeyframe,
 } from "./recording-annotation-pins";
-import {
-  mergeRecordingAnnotationClips,
-  RecordingAnnotationClip,
-} from "./recording-annotations";
+import { RecordingAnnotationClip } from "./recording-annotations";
 
 const annotation: Annotation = {
   animated: true,
@@ -94,8 +92,8 @@ describe("pinned recording annotations", () => {
       clips: [pinned],
       edit: whole,
       pins: [{ annotationId: annotation.id, pin }],
-      positionMs: 6_000,
       sourceDurationMs: 20_000,
+      sourcePositionMs: 6_000,
       trackId: "primary",
     });
     expect(merged).toEqual([{ ...pinned, pin }]);

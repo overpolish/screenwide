@@ -173,3 +173,22 @@ export const withSceneClips = (
     ),
   sceneClips,
 });
+
+/** `edited`, the clips with their annotations as the picture shows them
+ * edited, laid back on `clips`: over the scene `sceneId`, where an unpinned
+ * annotation's moves are that scene's (`withEditInScene`). */
+export const withEditsInScene = (
+  clips: RecordingAnnotationClip[],
+  edited: RecordingAnnotationClip[],
+  sceneId: string | null,
+) =>
+  sceneId
+    ? edited.map((clip) => {
+        const before = clips.find(
+          (each) => each.annotation.id === clip.annotation.id,
+        );
+        return before && !before.pin
+          ? withEditInScene(before, clip.annotation, sceneId)
+          : clip;
+      })
+    : edited;

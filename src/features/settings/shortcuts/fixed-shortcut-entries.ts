@@ -131,8 +131,16 @@ const editorEditing = (): Row[] => [
     value: "CommandOrControl+KeyC",
   },
   {
+    label: t("settings-shortcut-editor-cut"),
+    value: "CommandOrControl+KeyX",
+  },
+  {
     label: t("settings-shortcut-editor-paste"),
     value: "CommandOrControl+KeyV",
+  },
+  {
+    label: t("settings-shortcut-editor-select-all"),
+    value: "CommandOrControl+KeyA",
   },
   {
     alternates: ["Delete"],
@@ -141,7 +149,7 @@ const editorEditing = (): Row[] => [
   },
   { label: t("settings-shortcut-editor-back-to-select"), value: "Escape" },
   {
-    label: t("settings-shortcut-editor-deselect-all"),
+    label: t("settings-shortcut-editor-duplicate"),
     value: "CommandOrControl+KeyD",
   },
   { label: t("settings-shortcut-editor-confirm-crop"), value: "Enter" },

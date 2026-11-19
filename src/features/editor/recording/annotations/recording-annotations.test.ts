@@ -7,10 +7,8 @@ import { ANNOTATION_DRAW_IN_MS } from "../../annotations/annotation-draw-in";
 import { Annotation } from "../../annotations/annotations";
 import { createRecordingTimelineEdit } from "../../timeline/editing/recording-timeline-edit";
 
-import {
-  mergeRecordingAnnotationClips,
-  recordingAnnotationClipAt,
-} from "./recording-annotations";
+import { mergeRecordingAnnotationClips } from "./recording-annotation-merge";
+import { recordingAnnotationClipAt } from "./recording-annotations";
 
 const annotation: Annotation = {
   animated: true,
@@ -141,8 +139,8 @@ it("merges a visible edit without dropping hidden or other-track arrows", () => 
     annotations: [changed],
     clips,
     edit,
-    positionMs: 4500,
     sourceDurationMs: 20_000,
+    sourcePositionMs: 4500,
     trackId: "primary",
   });
   expect(merged).toEqual([
@@ -155,11 +153,45 @@ it("merges a visible edit without dropping hidden or other-track arrows", () => 
       annotations: [changed],
       clips: merged,
       edit,
-      positionMs: 4500,
       sourceDurationMs: 20_000,
+      sourcePositionMs: 4500,
       trackId: "primary",
     }),
   ).toEqual(merged);
+});
+
+it("times a copy taken with the duplicate modifier as its original, above it", () => {
+  const edit = createRecordingTimelineEdit(1);
+  const original = recordingAnnotationClipAt({
+    annotation,
+    sourceDurationMs: 20_000,
+    sourcePositionMs: 4000,
+  });
+  const other = recordingAnnotationClipAt({
+    annotation: { ...annotation, id: "other" },
+    sourceDurationMs: 20_000,
+    sourcePositionMs: 9000,
+  });
+  const copy = { ...annotation, id: "copy" };
+  const merged = mergeRecordingAnnotationClips({
+    annotations: [copy],
+    clips: [{ ...original, pin: { keyframes: [], pinnedMs: 4000 } }, other],
+    copies: [{ annotationId: "copy", originalId: annotation.id }],
+    edit,
+    sourceDurationMs: 20_000,
+    sourcePositionMs: 12_000,
+    trackId: "primary",
+  });
+  expect(merged.map((clip) => clip.annotation.id)).toEqual([
+    annotation.id,
+    "copy",
+    "other",
+  ]);
+  expect(merged[1]).toMatchObject({
+    endMs: original.endMs,
+    startMs: original.startMs,
+  });
+  expect(merged[1].pin).toBeUndefined();
 });
 
 it("keeps a short clip valid at the final source position", () => {

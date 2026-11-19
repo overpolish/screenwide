@@ -44,7 +44,7 @@ impl PreviewPlayerManager {
     let Some(gesture) = self.annotation.gesture.as_ref() else {
       return false;
     };
-    let clips = gesture::provisional_clips(
+    let clips = super::provisional::provisional_clips(
       &gesture.before,
       &gesture.working,
       pane,

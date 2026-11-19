@@ -9,6 +9,7 @@ import { WindowHeader } from "../../../composites/window-header/window-header";
 import { t } from "../../../i18n/i18n";
 import { Button } from "../../../primitives/button/button";
 import { CircularProgress } from "../../../primitives/circular-progress/circular-progress";
+import { useAnnotationSelectionCount } from "../annotations/annotation-channel";
 import { useRecordingFrameCopy } from "../recording/use-copy-recording-frame";
 import { useEditorWindowShortcuts } from "../shortcuts/use-editor-window-shortcuts";
 import { EditorArtifact } from "../types";
@@ -79,8 +80,12 @@ export function EditorTitleBar({
       : artifact?.kind === "recording" && copyFrame
         ? () => void copyFrame()
         : undefined;
+  // With annotations chosen, ⌘C copies them instead (`annotation-clipboard`).
+  const chosenAnnotations = useAnnotationSelectionCount(
+    artifact?.kind === "recording" ? "recording" : "screenshot",
+  );
   useEditorWindowShortcuts({
-    onCopy: isSaving ? undefined : copy,
+    onCopy: isSaving || chosenAnnotations > 0 ? undefined : copy,
     onExport: canExport ? onShortcutExport : undefined,
   });
 

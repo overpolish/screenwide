@@ -6,6 +6,7 @@ import { useState } from "react";
 import { AnnotationTool } from "../../annotations/annotation-defaults";
 import { Arrangement } from "../../annotations/annotation-order";
 import { AnnotationFrame, pacedClip } from "../../annotations/annotation-pace";
+import { Annotation } from "../../annotations/annotations";
 import { useAnnotations } from "../../annotations/use-annotations";
 import { ScreenshotOutputSettings } from "../../screenshot/screenshot-output";
 import { RecordingTimelineEdit } from "../../timeline/editing/recording-timeline-edit";
@@ -15,15 +16,17 @@ import { CameraOverlaySettings, RecordingVideoTrackId } from "../../types";
 import { useEditorEditGesture } from "../../use-editor-edit-history";
 
 import { heldLengthClip } from "./image-once";
+import { recordingAnnotationClipboard } from "./recording-annotation-clipboard";
 import {
   arrangedRecordingAnnotations,
   recordingCameraPlacement,
 } from "./recording-annotation-layers";
+import { mergeRecordingAnnotationClips } from "./recording-annotation-merge";
 import { recordingAnnotationPinning } from "./recording-annotation-pinning";
 import {
   annotationInScene,
   isPlacedInScene,
-  withEditInScene,
+  withEditsInScene,
   withoutSceneShape,
 } from "./recording-annotation-scenes";
 import {
@@ -32,7 +35,6 @@ import {
   withShownAnnotations,
 } from "./recording-annotation-visibility";
 import {
-  mergeRecordingAnnotationClips,
   RecordingAnnotationClip,
   renumberedAnnotationClips,
 } from "./recording-annotations";
@@ -182,25 +184,23 @@ export function useRecordingAnnotations({
         },
       }
     : undefined;
+  const shownAnnotations = lane.clips.map((clip) =>
+    annotationInScene(clip, sceneId),
+  );
+  const commitAnnotations = (annotations: Annotation[]) => {
+    commitClips(
+      withEditsInScene(
+        clips,
+        withShownAnnotations(clips, annotations, shownTracks),
+        sceneId,
+      ),
+    );
+  };
   const selection = useAnnotations({
-    annotations: lane.clips.map((clip) => annotationInScene(clip, sceneId)),
+    annotations: shownAnnotations,
     groupable: (id) => !pinned.has(id),
     onChoiceDeleted,
-    onCommit: (annotations) => {
-      const shown = withShownAnnotations(clips, annotations, shownTracks);
-      commitClips(
-        sceneId
-          ? shown.map((clip) => {
-              const before = clips.find(
-                (each) => each.annotation.id === clip.annotation.id,
-              );
-              return before && !before.pin
-                ? withEditInScene(before, clip.annotation, sceneId)
-                : clip;
-            })
-          : shown,
-      );
-    },
+    onCommit: commitAnnotations,
     pins,
     scenes,
     workspace: "recording",
@@ -212,13 +212,10 @@ export function useRecordingAnnotations({
       const track = payload.paneIndex === 1 ? "camera" : "primary";
       commitClips(
         mergeRecordingAnnotationClips({
-          annotations: payload.annotations,
+          ...payload,
           clips,
           edit,
           frame: frames[track],
-          pins: payload.pins,
-          positionMs: payload.sourcePositionMs,
-          sceneShapes: payload.sceneShapes,
           sourceDurationMs,
           trackId: track,
         }),
@@ -237,6 +234,20 @@ export function useRecordingAnnotations({
     sessionId,
     sourceDurationMs,
     tool,
+    trackId,
+  });
+  const clipboard = recordingAnnotationClipboard({
+    choice: selection,
+    clips,
+    commitAnnotations,
+    commitClips,
+    edit,
+    frames,
+    getPositionMs,
+    onSelectTrack,
+    screenCaptureScale,
+    shown: shownAnnotations,
+    sourceDurationMs,
     trackId,
   });
   return {
@@ -266,6 +277,8 @@ export function useRecordingAnnotations({
      * a move between the two keeps an annotation's place against. */
     cameraPlacement,
     canDelete: selection.hasSelection || (tool !== null && selection.canDelete),
+    /** Copy, paste and the rest (`recordingAnnotationClipboard`). */
+    clipboard,
     ...lane,
     /** Choose the clip named `id` alone, or with `toggle`, add it to the
      * choice or take it away. Its pane becomes the one in hand. */

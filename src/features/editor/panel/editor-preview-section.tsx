@@ -27,9 +27,9 @@ import {
 } from "../screenshot/screenshot-column";
 import { screenshotWorkspaceItemOutput } from "../screenshot/screenshot-output";
 import { useScreenshotAnnotations } from "../screenshot/use-screenshot-annotations";
+import { useScreenshotEditingKeys } from "../screenshot/use-screenshot-editing-keys";
 import { useScreenshotLayerActions } from "../screenshot/use-screenshot-layer-actions";
 import { useScreenshotLibrary } from "../screenshot/use-screenshot-library";
-import { useScreenshotNudge } from "../screenshot/use-screenshot-nudge";
 import { useScreenshotRecenter } from "../screenshot/use-screenshot-recenter";
 import { useScreenshotTool } from "../screenshot/use-screenshot-tool";
 import { useEditorWindowShortcuts } from "../shortcuts/use-editor-window-shortcuts";
@@ -163,10 +163,17 @@ export function ScreenshotSection({
     { part: "picture", workspace: "screenshot" },
     screenshotBetween,
   );
-  const nudgeSelectedLayer = useScreenshotNudge({
+  const editing = useScreenshotEditingKeys({
+    annotations,
+    canNudgeLayer: tool === "select" && !!selectedPicture && !!selectedOutput,
+    items: artifact.items,
     onOutputChange,
-    selectedItem: selectedPicture,
+    onSelectedItemChange,
+    selectedItemId,
     selectedOutput,
+    selectedPicture,
+    targetItemId: newestItemId,
+    workspace: screenshotOutput,
   });
   // The crop tool is the one tool you are "in": Enter accepts what is framed
   // and puts it down, the crop itself committed as each handle was released.
@@ -198,6 +205,7 @@ export function ScreenshotSection({
   // through here, alongside the refresh a crop drag ends with.
   useRecenterInsetControls("screenshot", recenter);
   useEditorWindowShortcuts({
+    ...editing.keys,
     // A chosen annotation moves through its layer's stacking; with none in
     // hand the layer itself moves.
     onArrange: (move) => {
@@ -215,12 +223,8 @@ export function ScreenshotSection({
         ? backToSelect
         : undefined,
     // ⌘D lets go of everything chosen, the layer as well, with Select in
-    // hand.
+    // hand, where no annotation is chosen to duplicate.
     onDeselectAll: backToSelect,
-    onNudge:
-      tool === "select" && selectedPicture && selectedOutput
-        ? nudgeSelectedLayer
-        : undefined,
     onResizeCanvas: () => {
       toggle("canvas");
     },
@@ -239,6 +243,7 @@ export function ScreenshotSection({
     onPlaced: () => {
       setTool("image");
     },
+    pasteAnnotations: editing.pasteAnnotations,
   });
 
   return (

@@ -8,8 +8,11 @@
 //! drawing: every member's clip is written through while the hand moves, and
 //! the release commits them all as one edit.
 
-use super::gesture::{provisional_clips, track, Commit};
+use super::copies::Copies;
+use super::gesture::{track, Commit};
+use super::provisional::provisional_clips;
 use super::*;
+use screenwide_annotations::copy::copy_clips_in_place;
 use screenwide_annotations::group::{group_bounds, GroupMember, GroupMove};
 
 pub(super) struct GroupDrag {
@@ -18,6 +21,8 @@ pub(super) struct GroupDrag {
   before: Vec<RecordingAnnotationClip>,
   moving: GroupMove,
   field: SnapField,
+  /// What a carry with the duplicate modifier took, if it did.
+  copies: Option<Copies>,
 }
 
 impl PreviewPlayerManager {
@@ -68,13 +73,22 @@ impl PreviewPlayerManager {
     };
     if matches!(phase, SelectionGesturePhase::Cancel) {
       let drag = self.annotation.group.take()?;
-      *clips.write().ok()? = drag.before;
+      if let Some(copies) = &drag.copies {
+        self.annotation.selected = copies.originals();
+      }
+      *clips.write().ok()? = drag.copies.map_or(drag.before, |copies| copies.restore);
       self.settle_group(drag.pane);
       return None;
     }
     if matches!(phase, SelectionGesturePhase::Begin) {
       self.annotation.pane = Some(pane);
-      self.annotation.group = Some(self.begin_group(pane, position, x, y)?);
+      let duplicate = SnapModifiers::from_bits(snap).duplicate;
+      let drag = self.begin_group(pane, position, x, y, duplicate)?;
+      // The copies are chosen in the originals' place.
+      if let Some(copies) = &drag.copies {
+        self.annotation.selected = copies.copies();
+      }
+      self.annotation.group = Some(drag);
       return None;
     }
     let drag = self.annotation.group.as_ref()?;
@@ -105,15 +119,16 @@ impl PreviewPlayerManager {
       }
       return None;
     }
-    self.annotation.group = None;
+    let copies = self.annotation.group.take().and_then(|drag| drag.copies);
     self.settle_group(pane);
-    self.commit(
+    let commit = self.commit(
       pane,
       position,
       moved,
       self.annotation.selected.clone(),
       None,
-    )
+    );
+    commit.map(|commit| commit.with_copies(copies.as_ref()))
   }
 
   pub(super) fn pane_source(&self, pane: u32) -> Option<(u32, u32)> {
@@ -134,16 +149,42 @@ impl PreviewPlayerManager {
     (image_width.is_finite() && image_width > 0.0).then(|| f64::from(source.0.max(1)) / image_width)
   }
 
-  fn begin_group(&self, pane: u32, position: u64, x: f64, y: f64) -> Option<GroupDrag> {
-    let chosen = self.annotation_group();
+  /// The carry of the chosen group from where it was pressed. With the
+  /// duplicate modifier it takes copies of them, with clips timed as the
+  /// originals', which move while the originals stay.
+  fn begin_group(
+    &self,
+    pane: u32,
+    position: u64,
+    x: f64,
+    y: f64,
+    duplicate: bool,
+  ) -> Option<GroupDrag> {
     let source = self.pane_source(pane)?;
-    let before = self.sources.as_ref()?.annotation_clips.read().ok()?.clone();
+    let originals = self.sources.as_ref()?.annotation_clips.read().ok()?.clone();
     let pressed = self.pane_density(pane);
     // Pinned annotations follow their content on their own and are never
     // chosen with others; one that gained a pin since is left where it is.
+    let chosen: Vec<String> = originals
+      .iter()
+      .filter(|clip| clip.pin.is_none() && self.annotation_group().contains(&clip.annotation.id))
+      .map(|clip| clip.annotation.id.clone())
+      .collect();
+    let (before, copies) = if duplicate {
+      let mut clips = originals.clone();
+      let copied = copy_clips_in_place(&mut clips, &chosen);
+      let copies = Copies {
+        copied,
+        restore: originals,
+      };
+      (clips, Some(copies))
+    } else {
+      (originals, None)
+    };
+    let carried = copies.as_ref().map_or(chosen, Copies::copies);
     let members: Vec<GroupMember> = before
       .iter()
-      .filter(|clip| clip.pin.is_none() && chosen.contains(&clip.annotation.id))
+      .filter(|clip| carried.contains(&clip.annotation.id))
       .map(|clip| {
         let own = if clip.track_id == track(1) { 1 } else { 0 };
         GroupMember {
@@ -179,6 +220,7 @@ impl PreviewPlayerManager {
       before,
       moving,
       field,
+      copies,
     })
   }
 

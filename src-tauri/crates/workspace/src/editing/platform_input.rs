@@ -127,4 +127,7 @@ pub struct Modifiers {
   /// Ctrl on Windows, Command on macOS: what turns a key into a shortcut and
   /// a drag into a snapping one.
   pub shortcut: bool,
+  /// Option on macOS, Alt on Windows: a drag that carries what is chosen
+  /// carries a copy of it instead, and leaves the original where it was.
+  pub duplicate: bool,
 }

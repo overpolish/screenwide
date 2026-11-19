@@ -4,7 +4,7 @@
 //! What the shared editing engine asks of Windows: the DirectComposition
 //! drawables, the input window's cursor, the keyboard and the clipboard.
 
-use windows::Win32::UI::Input::KeyboardAndMouse::{GetKeyState, VK_CONTROL, VK_SHIFT};
+use windows::Win32::UI::Input::KeyboardAndMouse::{GetKeyState, VK_CONTROL, VK_MENU, VK_SHIFT};
 
 use screenwide_compositor::{PreviewSurfaceCorners, PreviewSurfaceRect};
 use screenwide_osc::gpu::magnifier::NativeMagnifier;
@@ -121,6 +121,7 @@ impl Host for WindowsHost {
     Modifiers {
       shift: down(VK_SHIFT.0),
       shortcut: down(VK_CONTROL.0),
+      duplicate: down(VK_MENU.0),
     }
   }
 

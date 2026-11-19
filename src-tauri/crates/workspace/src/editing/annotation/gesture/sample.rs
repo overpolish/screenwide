@@ -18,20 +18,24 @@ pub(super) struct Sample {
   handle: u32,
   x: f64,
   y: f64,
-  /// Which snapping modifiers were held when the sample was taken: bit 0
-  /// Shift, which holds a counter's tail to the quarter turns, and bit 1
-  /// Ctrl, which snaps the position itself.
+  /// Which modifiers were held when the sample was taken: bit 0 Shift,
+  /// which holds a counter's tail to the quarter turns, bit 1 Ctrl, which
+  /// snaps the position itself, and bit 2 the duplicate modifier, with which
+  /// a carry takes copies.
   snap: u32,
   /// How wide the layer's picture is drawn on screen, in display points,
   /// which is what turns a snap's reach into source pixels.
   image_points: f64,
 }
 
-/// Which snapping modifiers are down, as of the pointer event being handled
-/// rather than latched at the press, so either can be taken and let go part
-/// way through a drag. Shortcut is Ctrl on Windows and Command on macOS.
+/// Which modifiers are down, as of the pointer event being handled rather
+/// than latched at the press, so either snapping one can be taken and let go
+/// part way through a drag. Shortcut is Ctrl on Windows and Command on
+/// macOS; duplicate is Alt on Windows and Option on macOS.
 fn snapped(state: &SurfaceState) -> u32 {
-  u32::from(state.modifiers.shift) | (u32::from(state.modifiers.shortcut) << 1)
+  u32::from(state.modifiers.shift)
+    | (u32::from(state.modifiers.shortcut) << 1)
+    | (u32::from(state.modifiers.duplicate) << 2)
 }
 
 /// Whether a press takes the toggle modifier: Ctrl, as the timeline's own

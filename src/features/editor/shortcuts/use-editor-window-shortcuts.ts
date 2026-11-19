@@ -43,15 +43,18 @@ let escapeClaims = 0;
 export function useEditorWindowShortcuts({
   onConfirm,
   onCopy,
+  onCut,
   onCutTimeline,
   onDelete,
   onDeselect,
   onDeselectAll,
+  onDuplicate,
   onExport,
   onNudge,
   onPaste,
   onRedo,
   onSeekEdge,
+  onSelectAll,
   onStep,
   onUndo,
   ownsEscape = false,
@@ -189,7 +192,16 @@ export function useEditorWindowShortcuts({
       if (commandKey && !event.shiftKey) {
         const action = editorCommandKeyAction(
           event.code,
-          { onCopy, onCutTimeline, onDeselectAll, onExport, onPaste },
+          {
+            onCopy,
+            onCut,
+            onCutTimeline,
+            onDeselectAll,
+            onDuplicate,
+            onExport,
+            onPaste,
+            onSelectAll,
+          },
           ownsTextEditingKeys(event.target),
         );
         if (action) {
@@ -263,13 +275,16 @@ export function useEditorWindowShortcuts({
   }, [
     onConfirm,
     onCopy,
+    onCut,
     onCutTimeline,
     onDelete,
     onDeselect,
     onDeselectAll,
+    onDuplicate,
     onExport,
     onNudge,
     onPaste,
+    onSelectAll,
     onRedo,
     onSeekEdge,
     onStep,

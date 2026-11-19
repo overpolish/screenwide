@@ -95,21 +95,36 @@ export function useRecordingPreviewShortcuts({
         }
       : arrangeScenePane,
     onConfirm: isCropping ? backToSelect : undefined,
+    // ⌘C and ⌘X copy and cut the annotations chosen; with none, ⌘C is the
+    // title bar's copy of the frame.
+    onCopy: annotations.clipboard.copy,
+    onCut: annotations.clipboard.cut,
     onDelete:
       annotations.canDelete && !hasSceneSelection
         ? annotations.deleteTargeted
         : undefined,
     onDeselect: ownsEscape ? backToSelect : undefined,
-    // ⌘D lets go of everything chosen, whatever owns Escape: the
-    // annotations, the track and the mode here, and with the mode the
-    // scenes; the strip and the lanes let go of their own.
+    // ⌘D duplicates the annotations chosen; with none it lets go of
+    // everything chosen, whatever owns Escape: the track and the mode here,
+    // and with the mode the scenes; the strip and the lanes let go of their
+    // own.
     onDeselectAll: backToSelect,
-    onNudge: canNudgeActiveTrack ? nudgeActiveTrack : undefined,
+    onDuplicate: annotations.clipboard.duplicate,
+    // The arrows move the annotations chosen, else the track in hand.
+    onNudge: annotations.clipboard.hasChosen
+      ? annotations.clipboard.nudge
+      : canNudgeActiveTrack
+        ? nudgeActiveTrack
+        : undefined,
     // As its title bar button, F opens Frame whatever is in hand: the
     // canvas belongs to no track.
     onResizeCanvas: offered.has("frame") ? mode("frame") : undefined,
     onSceneTool:
       offered.has("scene") && hasVisiblePanes ? mode("scene") : undefined,
+    onSelectAll:
+      hasVisiblePanes && hasAnnotations
+        ? annotations.clipboard.selectAll
+        : undefined,
     onSelectTool: hasVisiblePanes ? backToSelect : undefined,
     onStep: !canNudgeActiveTrack && layout ? step : undefined,
     onToggleCameraPanel: offered.has("camera") ? mode("camera") : undefined,
@@ -148,6 +163,10 @@ export function useRecordingPreviewShortcuts({
         if (canvasTool !== "select" && canvasTool !== "image")
           changeCanvasTool("image");
       },
+      pasteAnnotations:
+        hasVisiblePanes && hasAnnotations
+          ? annotations.clipboard.paste
+          : undefined,
       settle: isPlaying ? player.pauseSettled : undefined,
     },
   );

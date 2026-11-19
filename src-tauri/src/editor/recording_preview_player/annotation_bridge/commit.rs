@@ -110,6 +110,7 @@ impl PreviewPlayerManager {
       text_edit,
       pins,
       scene_shapes,
+      copies: Vec::new(),
     })
   }
 }
