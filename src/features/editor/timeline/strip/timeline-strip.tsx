@@ -10,7 +10,6 @@ import { AnnotationDropLane } from "../annotation-lane/annotation-drop-lane";
 import { usePictureCarry } from "../annotation-lane/picture-carry";
 import { AudioLanes } from "../audio-lane/audio-lanes";
 import { CaptionLane } from "../caption-lane/caption-lane";
-import { Minimap } from "../minimap/minimap";
 import { CutBlade } from "../range-cut/cut-blade";
 import { RangeBand } from "../range-cut/range-band";
 import { SceneRail } from "../scene-rail/scene-rail";
@@ -23,6 +22,7 @@ import { stripChoice } from "./strip-choice";
 import { GLIDE, GlideCue } from "./strip-glide";
 import { StripLane } from "./strip-lane";
 import { laneLayout, laneSnapParts } from "./strip-lane-time";
+import { StripMinimap } from "./strip-minimap";
 import { StripScrubBand } from "./strip-scrub-band";
 import { stripSnap } from "./strip-snap";
 import { splitParts } from "./strip-split";
@@ -277,19 +277,19 @@ export function TimelineStrip(props: TimelineStripProps) {
         </ScrollArea>
       </div>
       <div className={cn("px-2", GLIDE)} inert={props.isLocked}>
-        <Minimap
+        <StripMinimap
           beats={drawn.beats.map(({ beat, span }) => ({
             ...span,
             color: beat.kind === "moment" ? beat.color : undefined,
           }))}
           map={reorder.map}
           maxSqueeze={props.maxSqueeze}
+          now={view.now}
           onSqueezeChange={props.onSqueezeChange}
           onViewChange={view.set}
           playhead={props.playhead}
           squeeze={props.squeeze}
           taken={taken}
-          view={view.view}
         />
       </div>
     </div>

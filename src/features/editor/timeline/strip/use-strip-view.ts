@@ -1,10 +1,18 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import {
+  useEffect,
+  useLayoutEffect,
+  useReducer,
+  useRef,
+  useState,
+} from "react";
 
 import { type Playhead } from "../scrub-playhead";
 import { clampView, type View } from "../timeline-scale";
+
+import { stripViewNow } from "./strip-view-now";
 
 // What part of the recording the strip shows. The strip scrolls in a
 // ScrollArea, as every scrolling region does, so it fades where there is
@@ -15,6 +23,14 @@ import { clampView, type View } from "../timeline-scale";
 // Nothing else moves the view, except to bring a new choice into it, or
 // the playhead while it plays: choosing one thing never pushes the rest
 // aside.
+//
+// Only the zoom is the strip's state. Where the view starts is kept apart
+// (`startRef`, published as `now`): nothing on the track moves when it
+// scrolls, so a pan scrolls the page the browser already drew rather than
+// drawing the whole recording again for every scroll event, which a long
+// recording could not keep up with. The zoom is kept exactly as it was set,
+// so the track's width is the same number on every draw and nothing laid
+// along it is written again for a difference in the last decimal place.
 
 /** How wide a second is drawn when the view opens, at least, in px: a
  * short recording fits whole, a long one opens on its first minute or so. */
@@ -58,52 +74,76 @@ export function useStripView({
   // the strip past the end, so the strip is always as long as the recording
   // and the gaps in it; a gap taken away shortens it, and the view is drawn
   // back inside it at once (below), as the next zoom or pan would.
-  const [chosen, setChosen] = useState<View | null>(null);
-  if (chosen === null && width > 0)
-    setChosen({
-      end: Math.min(width / OPENING_PX_PER_S, duration + takenOut),
-      start: 0,
-    });
-  const seconds = chosen ?? { end: duration + takenOut, start: 0 };
+  const [span, setSpan] = useState<number | null>(null);
+  if (span === null && width > 0)
+    setSpan(Math.min(width / OPENING_PX_PER_S, duration + takenOut));
+  const seconds = span ?? duration + takenOut;
   const length = Math.max(duration, 1e-6);
   /** Where the strip ends, past the edited recording's end by what was
    * taken out, as a share of the edited recording; never short of its end,
    * so a recording with no length (a recovered one) still has a track. */
   const extent = Math.max(1, (duration + Math.max(takenOut, 0)) / length);
-  const view = clampView(
-    { end: seconds.end / length, start: seconds.start / length },
-    least,
-    extent,
-  );
+  const asked = seconds / length;
+  const shown = Math.min(Math.max(asked, least), extent);
   const trackWidth =
-    Math.max(0, width - TRACK_INSET_PX * 2) /
-    Math.max(view.end - view.start, (seconds.end - seconds.start) / length);
+    Math.max(0, width - TRACK_INSET_PX * 2) / Math.max(shown, asked);
   const [viewport, setViewport] = useState<HTMLElement | null>(null);
+  const viewportRef = useRef<HTMLElement | null>(null);
+  /** Where the view starts, in played seconds. */
+  const startRef = useRef(0);
+  /** Draws the strip again when a gap held at its start moves the view,
+   * so the scroll lands with the gap's new width. */
+  const [, redraw] = useReducer((draws: number) => draws + 1, 0);
 
   // Wheel and scroll events arrive faster than renders; each builds on the
   // last view rather than the one rendered.
-  const latestRef = useRef({ extent, least, length, trackWidth, view });
-  useLayoutEffect(() => {
-    latestRef.current = { extent, least, length, trackWidth, view };
-  });
+  const latestRef = useRef({ asked, extent, least, length, shown, trackWidth });
+  const viewNow = () => {
+    const latest = latestRef.current;
+    const start = startRef.current / latest.length;
+    return clampView(
+      { end: start + latest.shown, start },
+      latest.least,
+      latest.extent,
+    );
+  };
+  const [now] = useState(() => stripViewNow(viewNow()));
+  /** Whether the view was moved by something other than the scroll area
+   * itself and is still to be scrolled to once the strip is drawn. */
+  const pendingRef = useRef(true);
   /** Where the view started, in played seconds, when a gap's start was
    * taken hold of. */
   const heldStartRef = useRef<number | null>(null);
+
+  const scrollToView = () => {
+    const area = viewportRef.current;
+    if (!area) return;
+    const left = viewNow().start * latestRef.current.trackWidth;
+    if (Math.abs(area.scrollLeft - left) > 0.5) area.scrollLeft = left;
+  };
   const set = (next: View) => {
-    const { extent: end, least: fewest, length: playing } = latestRef.current;
-    const kept = clampView(next, fewest, end);
-    latestRef.current.view = kept;
-    setChosen({ end: kept.end * playing, start: kept.start * playing });
+    const latest = latestRef.current;
+    const kept = clampView(next, latest.least, latest.extent);
+    startRef.current = kept.start * latest.length;
+    const keptSpan = kept.end - kept.start;
+    // A zoom draws the track again at its new width and scrolls after;
+    // anything else keeps the span exactly and only scrolls.
+    if (Math.abs(keptSpan - latest.asked) > 1e-9 * latest.asked) {
+      latestRef.current = { ...latest, asked: keptSpan, shown: keptSpan };
+      pendingRef.current = true;
+      setSpan(keptSpan * latest.length);
+    } else scrollToView();
+    now.hold(viewNow());
   };
   const reveal = (start: number, end: number) => {
-    const current = latestRef.current.view;
+    const current = viewNow();
     if (start >= current.start && end <= current.end) return;
     const span = current.end - current.start;
     const from = start - span * LEAD;
     set({ end: from + span, start: from });
   };
   const zoomAt = (factor: number, at: number) => {
-    const current = latestRef.current.view;
+    const current = viewNow();
     const span = current.end - current.start;
     const next = Math.min(
       Math.max(span * factor, latestRef.current.least),
@@ -113,34 +153,43 @@ export function useStripView({
     set({ end: pivot - at * next + next, start: pivot - at * next });
   };
   const actionsRef = useRef({ reveal, set, zoomAt });
-  useLayoutEffect(() => {
-    actionsRef.current = { reveal, set, zoomAt };
-  });
 
   // Before paint, once the track has its new width, so a zoom never shows a
-  // frame scrolled to the old place.
+  // frame scrolled to the old place. A zoom always scrolls, since the
+  // position the scroll area holds is measured on the old width; a view
+  // read from the scroll position never does, as the area has often
+  // scrolled on by the time it is drawn, and putting it back would pull a
+  // pan back.
+  const scrolledWidthRef = useRef<number | null>(null);
   useLayoutEffect(() => {
+    latestRef.current = { asked, extent, least, length, shown, trackWidth };
+    actionsRef.current = { reveal, set, zoomAt };
+    now.hold(viewNow());
     if (!viewport) return;
-    const left = view.start * trackWidth;
-    if (Math.abs(viewport.scrollLeft - left) > 0.5) viewport.scrollLeft = left;
-  }, [viewport, view.start, trackWidth]);
+    const resized =
+      scrolledWidthRef.current === null ||
+      Math.abs(scrolledWidthRef.current - trackWidth) > 0.01;
+    if (!resized && !pendingRef.current) return;
+    scrolledWidthRef.current = trackWidth;
+    pendingRef.current = false;
+    scrollToView();
+  });
 
   // A strip grown shorter than the view, as a gap taken away leaves it,
   // takes back the room past its end rather than leaving it empty.
   const total = duration + Math.max(takenOut, 0);
   useLayoutEffect(() => {
-    if (chosen && chosen.end > total + 1e-6)
-      actionsRef.current.set(latestRef.current.view);
-  }, [chosen, total]);
+    if (span !== null && startRef.current + span > total + 1e-6)
+      actionsRef.current.set(viewNow());
+  }, [span, total]);
 
   useEffect(() => {
     if (!viewport) return;
     const onScroll = () => {
-      const { trackWidth: track, view: was } = latestRef.current;
+      const { length: playing, trackWidth: track } = latestRef.current;
       if (track <= 0) return;
-      const start = viewport.scrollLeft / track;
-      if (Math.abs(start - was.start) * track < 0.5) return;
-      actionsRef.current.set({ end: start + was.end - was.start, start });
+      startRef.current = (viewport.scrollLeft / track) * playing;
+      now.hold(viewNow());
     };
     // An upright wheel moves along the strip, which only scrolls sideways.
     const onWheel = (event: WheelEvent) => {
@@ -167,7 +216,7 @@ export function useStripView({
       viewport.removeEventListener("scroll", onScroll);
       viewport.removeEventListener("wheel", onWheel);
     };
-  }, [viewport]);
+  }, [now, viewport]);
 
   // Only a new choice moves the view, never an edit to what is chosen.
   const focusKey = focus?.key ?? null;
@@ -191,30 +240,36 @@ export function useStripView({
     /** How wide, in px, the room past the track's end for what was taken
      * out is: as wide as it would play. */
     bandWidth: trackWidth * (extent - 1),
-    onInitialized: setViewport,
+    /** The view shown this moment, which a pan changes without the strip
+     * drawing again (`useStripViewNow`). */
+    now,
+    onInitialized: (area: HTMLElement | null) => {
+      viewportRef.current = area;
+      setViewport(area);
+    },
     /** How wide a second is drawn, in px. */
     pxPerSecond: trackWidth / length,
-    set,
+    /** Shows `next`, as the minimap moves the view, scrolling to it. */
+    set: (next: View) => {
+      set(next);
+    },
     /** Told null as a gap's start is taken hold of, then how many seconds
      * it has grown there since: the view moves by as much from where it
      * was, its zoom kept, so the start stays under the pointer and what
      * came before is pushed back. Measured from the hold, it cannot drift;
-     * at the strip's start it can go no further back. */
+     * at the strip's start it can go no further back. It scrolls once the
+     * strip is drawn with the gap's new width. */
     shiftSinceHold: (grown: number | null) => {
-      const { length: playing, view: shown } = latestRef.current;
       if (grown === null) {
-        heldStartRef.current = shown.start * playing;
+        heldStartRef.current = viewNow().start * latestRef.current.length;
         return;
       }
       const from = heldStartRef.current;
       if (from === null) return;
-      const start = Math.max(0, from + grown);
-      setChosen((current) => ({
-        end: start + (current ? current.end - current.start : 0),
-        start,
-      }));
+      startRef.current = Math.max(0, from + grown);
+      pendingRef.current = true;
+      redraw();
     },
     trackWidth,
-    view,
   };
 }

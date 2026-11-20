@@ -51,6 +51,52 @@ function trackWidths(durations: number[]) {
   return widths;
 }
 
+/** A scroll area the strip's view is laid on: its scroll position, and the
+ * scroll event it sends, fired by hand. */
+function scrollArea() {
+  const listeners = new Map<string, () => void>();
+  return {
+    addEventListener: (type: string, listener: () => void) => {
+      listeners.set(type, listener);
+    },
+    removeEventListener: (type: string) => {
+      listeners.delete(type);
+    },
+    scroll: () => listeners.get("scroll")?.(),
+    scrollLeft: 0,
+  };
+}
+
+/** The strip's view of a 16 minute recording in an 800 px scroll area,
+ * laid on `area`, and how many times it has been drawn. */
+function laidOn(area: ReturnType<typeof scrollArea>) {
+  const playhead = createPlayhead();
+  const held: { view: ReturnType<typeof useStripView> | null } = {
+    view: null,
+  };
+  let drawn = 0;
+  function Reader() {
+    drawn += 1;
+    held.view = useStripView({
+      duration: 960,
+      focus: null,
+      isPlaying: false,
+      playhead,
+      takenOut: 0,
+      width: 800,
+    });
+    return null;
+  }
+  const root = createRoot(container());
+  act(() => {
+    root.render(<Reader />);
+  });
+  act(() => {
+    held.view?.onInitialized(area as unknown as HTMLElement);
+  });
+  return { held, renders: () => drawn, root };
+}
+
 beforeEach(() => {
   // React only flushes `act` work where it is told it runs under tests.
   vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
@@ -71,5 +117,56 @@ describe("the strip's view", () => {
     const widths = trackWidths([20, 15]);
     expect(widths[0]).toBe(784);
     expect(widths[widths.length - 1]).toBe(784);
+  });
+
+  it("follows a pan that scrolls on before the strip has drawn", () => {
+    const area = scrollArea();
+    const { root } = laidOn(area);
+    // A swipe scrolls on faster than the strip draws: by the time the view
+    // from one scroll event is drawn, the area has scrolled further, and
+    // that scroll's own event is still to come.
+    act(() => {
+      area.scrollLeft = 1_000;
+      area.scroll();
+      area.scrollLeft = 1_400;
+    });
+    expect(area.scrollLeft).toBe(1_400);
+    act(() => {
+      root.unmount();
+    });
+  });
+
+  it("pans without drawing the strip again, the minimap following", () => {
+    const area = scrollArea();
+    const { held, renders, root } = laidOn(area);
+    const drawn = renders();
+    const trackWidth = held.view?.trackWidth ?? 0;
+    act(() => {
+      for (const left of [300, 700, 1_100]) {
+        area.scrollLeft = left;
+        area.scroll();
+      }
+    });
+    expect(renders()).toBe(drawn);
+    expect(held.view?.trackWidth).toBe(trackWidth);
+    expect(held.view?.now.get().start).toBeCloseTo(1_100 / trackWidth, 9);
+    act(() => {
+      root.unmount();
+    });
+  });
+
+  it("scrolls to a view the minimap moves it to", () => {
+    const area = scrollArea();
+    const { held, root } = laidOn(area);
+    const trackWidth = held.view?.trackWidth ?? 0;
+    const shown = held.view?.now.get() ?? { end: 0, start: 0 };
+    const span = shown.end - shown.start;
+    act(() => {
+      held.view?.set({ end: 0.5 + span, start: 0.5 });
+    });
+    expect(area.scrollLeft).toBeCloseTo(0.5 * trackWidth, 3);
+    act(() => {
+      root.unmount();
+    });
   });
 });
