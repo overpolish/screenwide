@@ -1,9 +1,11 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+mod audio;
 mod container;
 mod finish;
 mod picture;
+mod report;
 mod samples;
 
 mod setup;
@@ -26,13 +28,13 @@ use cidre::{arc, av, cm, ns, objc};
 use super::output::FrameClock;
 use super::{
   asset_writer_error,
+  audio_track::{AudioTrack, Track, TrackError, SYSTEM_AUDIO_FORMAT},
   media::{
-    audio_sample_from_origin, microphone_audio_settings, microphone_buffer_from_origin,
-    microphone_format_description, microphone_sample_buffer, nanos, system_audio_settings,
-    time_to_ns, video_settings, VideoEncoder,
+    audio_sample_from_origin, microphone_audio_settings, microphone_buffer_from_origin, nanos,
+    system_audio_settings, video_settings, VideoEncoder,
   },
   AudioSample, CaptureStats, Command, Frame, CAMERA_ENCODER_POLL, CAMERA_ENCODER_WAIT,
-  MICROPHONE_PREROLL_LIMIT, NANOS_PER_MS, REJECTION_STREAK_LIMIT, SYSTEM_AUDIO_CHANNELS,
+  MICROPHONE_PREROLL_LIMIT, NANOS_PER_MS, NANOS_PER_SEC, REJECTION_STREAK_LIMIT,
   SYSTEM_AUDIO_PREROLL_LIMIT, SYSTEM_AUDIO_SAMPLE_RATE, TAIL_APPEND_ATTEMPTS, TAIL_APPEND_WAIT,
 };
 pub(super) use container::Container;
@@ -48,18 +50,11 @@ pub(super) struct Writer {
   pub(crate) base: Instant,
   pub(super) height: u32,
   input: arc::R<av::AssetWriterInput>,
-  system_audio_input: Option<arc::R<av::AssetWriterInput>>,
-  system_audio_format_description: Option<arc::R<cm::AudioFormatDesc>>,
-  last_system_audio_pts_ns: Option<i64>,
-  microphone_input: Option<arc::R<av::AssetWriterInput>>,
-  pub(super) microphone_format: Option<MicrophoneFormat>,
-  microphone_format_description: Option<arc::R<cm::AudioFormatDesc>>,
-  last_microphone_pts_ns: Option<i64>,
-  microphone_end_ns: Option<i64>,
+  system_audio: Option<AudioTrack>,
+  microphone: Option<AudioTrack>,
   microphone_failure_reported: bool,
   origin_source_ns: Option<i64>,
   origin_wall: Option<Instant>,
-  system_audio_end_ns: Option<i64>,
   /// Set once the writer has refused to carry on. Everything downstream
   /// checks this rather than asking AVFoundation again per frame.
   failed: Option<String>,
@@ -151,6 +146,9 @@ impl Writer {
     first_frame: &mpsc::Sender<Result<(), String>>,
     announced: &mut bool,
   ) -> ControlFlow<()> {
+    // Every command is a chance for audio held back by a busy encoder to go
+    // in, ahead of whatever the command brings.
+    self.drain_audio_backlogs();
     match command {
       Command::Begin { .. } => {}
       Command::Frame(frame) => {

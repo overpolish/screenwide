@@ -14,17 +14,19 @@ impl AudioWriter {
       return Err("The audio recording did not start".to_owned());
     }
     let stop_ns = self.timeline.stop_pts_ns(self.elapsed_ns(at)).max(1);
+    self.drain_backlogs(true);
     self.pad_tracks_to(stop_ns);
-    if let Some(input) = self.system_audio_input.as_mut() {
-      input.mark_as_finished();
+    for audio in [self.system_audio.as_mut(), self.microphone.as_mut()]
+      .into_iter()
+      .flatten()
+    {
+      audio.finish();
     }
-    if let Some(input) = self.microphone_input.as_mut() {
-      input.mark_as_finished();
-    }
-    let end_ns = self
-      .system_audio_end_ns
-      .unwrap_or(0)
-      .max(self.microphone_end_ns.unwrap_or(0));
+    let end_ns = [self.system_audio.as_ref(), self.microphone.as_ref()]
+      .into_iter()
+      .flatten()
+      .filter_map(AudioTrack::end_ns)
+      .fold(0, i64::max);
     self
       .writer
       .end_session_at_src_time(nanos(end_ns))
@@ -45,8 +47,8 @@ impl AudioWriter {
       corner_radius: None,
       cursor_path: None,
       keyboard_path: None,
-      has_microphone: self.microphone_input.is_some(),
-      has_system_audio: self.system_audio_input.is_some(),
+      has_microphone: self.microphone.is_some(),
+      has_system_audio: self.system_audio.is_some(),
       duration_ms: u64::try_from(end_ns / NANOS_PER_MS).unwrap_or_default(),
       height: 0,
       path: self.path.clone(),
@@ -77,6 +79,9 @@ impl AudioWriter {
     command: Command,
     ready: &mpsc::Sender<Result<(), String>>,
   ) -> ControlFlow<()> {
+    // Every command is a chance for audio held back by a busy encoder to go
+    // in, ahead of whatever the command brings.
+    self.drain_backlogs(false);
     match command {
       Command::Begin { at } => {
         let _ = ready.send(self.begin(at));
@@ -94,8 +99,8 @@ impl AudioWriter {
             self.pending_microphone.pop_front();
           }
           self.pending_microphone.push_back(buffer);
-        } else if let Some(format) = self.microphone_format {
-          self.append_pcm(buffer, format, false);
+        } else {
+          self.append_pcm(buffer, Track::Microphone);
         }
       }
       Command::MicrophoneFailed(error) => self.fail(error),

@@ -60,22 +60,24 @@ impl Writer {
       self.append_insisting(frame, stop_ns);
     }
 
+    self.flush_audio_backlogs();
+
     self.input.mark_as_finished();
-    if let Some(input) = self.system_audio_input.as_mut() {
-      input.mark_as_finished();
-    }
-    if let Some(input) = self.microphone_input.as_mut() {
-      input.mark_as_finished();
+    for audio in [self.system_audio.as_mut(), self.microphone.as_mut()]
+      .into_iter()
+      .flatten()
+    {
+      audio.finish();
     }
     // The session ends exactly where the media ends. Ending it any later
     // leaves the movie claiming a duration it has no sample to fill, and the
     // writer refuses the whole file for it - which is what a skipped final
     // frame used to cause, intermittently and only at the very end.
-    let end_ns = self
-      .last_appended_ns
-      .unwrap_or(0)
-      .max(self.system_audio_end_ns.unwrap_or(0))
-      .max(self.microphone_end_ns.unwrap_or(0));
+    let end_ns = [self.system_audio.as_ref(), self.microphone.as_ref()]
+      .into_iter()
+      .flatten()
+      .filter_map(AudioTrack::end_ns)
+      .fold(self.last_appended_ns.unwrap_or(0), i64::max);
     self
       .writer
       .end_session_at_src_time(nanos(end_ns))
@@ -90,30 +92,7 @@ impl Writer {
       ));
     }
 
-    let capture_dropped = self.stats.capture_dropped.load(Ordering::Relaxed);
-    let dropped = self.stats.dropped.load(Ordering::Relaxed);
-    let not_ready = self.stats.not_ready.load(Ordering::Relaxed);
-    if capture_dropped > 0 || dropped > 0 || not_ready > 0 {
-      eprintln!(
-        "Recording dropped {capture_dropped} frames at the capture device, {dropped} at the capture queue, and {not_ready} at the encoder"
-      );
-    }
-    let audio_dropped = self.stats.audio_dropped.load(Ordering::Relaxed);
-    let audio_not_ready = self.stats.audio_not_ready.load(Ordering::Relaxed);
-    let audio_rejected = self.stats.audio_rejected.load(Ordering::Relaxed);
-    if audio_dropped > 0 || audio_not_ready > 0 || audio_rejected > 0 {
-      eprintln!(
-        "Recording dropped {audio_dropped} system-audio buffers at the capture queue, {audio_not_ready} at the encoder, and rejected {audio_rejected}"
-      );
-    }
-    let microphone_dropped = self.stats.microphone_dropped.load(Ordering::Relaxed);
-    let microphone_not_ready = self.stats.microphone_not_ready.load(Ordering::Relaxed);
-    let microphone_rejected = self.stats.microphone_rejected.load(Ordering::Relaxed);
-    if microphone_dropped > 0 || microphone_not_ready > 0 || microphone_rejected > 0 {
-      eprintln!(
-        "Recording dropped {microphone_dropped} microphone buffers at the capture queue, {microphone_not_ready} at the encoder, and rejected {microphone_rejected}"
-      );
-    }
+    self.report_capture();
 
     Ok(FinalizeInfo {
       annotation_clips: Vec::new(),
@@ -121,8 +100,8 @@ impl Writer {
       corner_radius: None,
       cursor_path: None,
       keyboard_path: None,
-      has_microphone: self.microphone_input.is_some(),
-      has_system_audio: self.system_audio_input.is_some(),
+      has_microphone: self.microphone.is_some(),
+      has_system_audio: self.system_audio.is_some(),
       duration_ms: u64::try_from(end_ns / NANOS_PER_MS).unwrap_or_default(),
       height: self.height,
       path: self.path.clone(),

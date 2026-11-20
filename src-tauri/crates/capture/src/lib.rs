@@ -26,6 +26,8 @@ pub mod devices;
 pub mod encoding;
 pub mod keyboard;
 pub mod listening;
+#[cfg(any(target_os = "macos", target_os = "windows"))]
+mod lost_audio;
 pub mod microphone;
 pub mod monitor;
 pub mod note_gate;

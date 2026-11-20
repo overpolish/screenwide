@@ -11,10 +11,12 @@
 //! sidecars only for a clip being saved.
 
 mod mux;
+mod pause;
 mod raw;
 mod ring;
 mod system;
 use mux::mux_file;
+use pause::Pause;
 pub(super) use ring::AudioDestination;
 use system::start_system;
 
@@ -44,6 +46,8 @@ const SYSTEM_CHANNELS: u16 = 2;
 
 struct Packet {
   captured_at: Instant,
+  /// The run between pauses it was captured in (`Pause::run`).
+  run: u64,
   samples: Vec<f32>,
 }
 
@@ -80,7 +84,7 @@ struct SystemCapture {
 
 pub(super) struct AudioCaptures {
   microphone: Option<MicrophoneCapture>,
-  paused: Arc<AtomicBool>,
+  pause: Arc<Pause>,
   system: Vec<SystemCapture>,
 }
 
@@ -113,14 +117,14 @@ impl AudioCaptures {
     on_failure: FailureReport,
     destination: AudioDestination<'_>,
   ) -> Result<Self, String> {
-    let paused = Arc::new(AtomicBool::new(false));
+    let pause = Arc::new(Pause::default());
     let microphone = microphone_id
       .map(|device_id| {
         start_microphone(
           device_id,
           destination,
           Arc::clone(&origin),
-          Arc::clone(&paused),
+          Arc::clone(&pause),
           Arc::clone(&monitor),
           Arc::clone(&on_failure),
         )
@@ -142,7 +146,7 @@ impl AudioCaptures {
           process_id,
           destination.keep("system", index, SYSTEM_CHANNELS, SYSTEM_SAMPLE_RATE),
           Arc::clone(&origin),
-          Arc::clone(&paused),
+          Arc::clone(&pause),
           Arc::clone(&monitor),
           Arc::clone(&on_failure),
         )?);
@@ -150,17 +154,17 @@ impl AudioCaptures {
     }
     Ok(Self {
       microphone,
-      paused,
+      pause,
       system: captures,
     })
   }
 
   pub(super) fn pause(&self) {
-    self.paused.store(true, Ordering::Release);
+    self.pause.pause();
   }
 
   pub(super) fn resume(&self) {
-    self.paused.store(false, Ordering::Release);
+    self.pause.resume();
   }
 
   pub(super) fn finish(mut self) -> Result<AudioFiles, String> {
@@ -220,7 +224,7 @@ fn start_microphone(
   device_id: &str,
   destination: AudioDestination<'_>,
   origin: Arc<OnceLock<Instant>>,
-  paused: Arc<AtomicBool>,
+  pause: Arc<Pause>,
   monitor: Arc<RecordingMonitor>,
   on_failure: FailureReport,
 ) -> Result<MicrophoneCapture, String> {
@@ -234,9 +238,10 @@ fn start_microphone(
   let sender = sink.sender()?;
   let write: Arc<dyn Fn(microphone::Buffer) + Send + Sync> =
     Arc::new(move |buffer: microphone::Buffer| {
-      if !paused.load(Ordering::Acquire) {
+      if let Some(run) = pause.run() {
         let _ = sender.try_send(Packet {
           captured_at: buffer.captured_at,
+          run,
           samples: buffer.samples,
         });
       }

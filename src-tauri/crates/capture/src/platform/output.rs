@@ -98,17 +98,29 @@ pub(super) struct CaptureStats {
   pub(super) not_ready: AtomicU64,
   /// Frames the writer refused. Any of these means something is wrong.
   pub(super) rejected: AtomicU64,
+  /// System-audio buffers the capture callback could not hand over, because
+  /// even the audio queue (`audio_queue`) was full.
   pub(super) audio_dropped: AtomicU64,
+  /// System-audio buffers let go because the encoder was not ready for
+  /// longer than a track holds back.
   pub(super) audio_not_ready: AtomicU64,
   pub(super) audio_rejected: AtomicU64,
+  /// System audio lost on its way to the file and written back as silence.
+  pub(super) audio_silence_ns: AtomicU64,
   pub(super) microphone_dropped: AtomicU64,
   pub(super) microphone_not_ready: AtomicU64,
   pub(super) microphone_rejected: AtomicU64,
+  /// Microphone audio lost on its way to the file and written back as
+  /// silence.
+  pub(super) microphone_silence_ns: AtomicU64,
 }
 
 #[repr(C)]
 pub(super) struct ScreenOutputInner {
   pub(super) commands: SyncSender<Command>,
+  /// Where system audio goes: its own deep queue to the writer
+  /// (`audio_queue`), so frames filling `commands` never cost any sound.
+  pub(super) audio: SyncSender<Command>,
   pub(super) monitor: Arc<crate::monitor::RecordingMonitor>,
   pub(super) stats: Arc<CaptureStats>,
 }
@@ -161,7 +173,7 @@ impl ScreenOutputInner {
       source_ns,
       wall: Instant::now(),
     };
-    if let Err(TrySendError::Full(_)) = self.commands.try_send(Command::SystemAudio(audio)) {
+    if let Err(TrySendError::Full(_)) = self.audio.try_send(Command::SystemAudio(audio)) {
       self.stats.audio_dropped.fetch_add(1, Ordering::Relaxed);
     }
   }

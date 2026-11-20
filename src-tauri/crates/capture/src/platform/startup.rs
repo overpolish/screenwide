@@ -176,13 +176,17 @@ pub(super) async fn begin(
   })?;
   let mut primary_camera = None;
 
-  let output = content.as_ref().map(|_| {
-    ScreenOutput::with(ScreenOutputInner {
-      commands: commands.clone(),
-      monitor: Arc::clone(&monitor),
-      stats: Arc::clone(&stats),
+  let output = content
+    .as_ref()
+    .map(|_| {
+      Ok::<_, String>(ScreenOutput::with(ScreenOutputInner {
+        audio: audio_queue(commands.clone(), "screenwide-system-audio-queue")?,
+        commands: commands.clone(),
+        monitor: Arc::clone(&monitor),
+        stats: Arc::clone(&stats),
+      }))
     })
-  });
+    .transpose()?;
   let queue = dispatch::Queue::serial_with_ar_pool();
   let (watch, stream_reports) = stream_recovery::watch();
   let mut streams = Vec::new();

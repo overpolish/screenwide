@@ -25,6 +25,8 @@
 //! ordered against the frames for free. There is no lock anywhere in the hot
 //! path, and no state that two threads can see at once.
 
+mod audio_queue;
+mod audio_track;
 mod audio_writer;
 mod camera;
 mod desktop_compositor;
@@ -60,6 +62,7 @@ use super::microphone::{
   Buffer as MicrophoneBuffer, Format as MicrophoneFormat, Source as MicrophoneSource,
 };
 use super::{CameraCaptureMode, CaptureStartupConfig, PrimaryCaptureSource};
+use audio_queue::audio_queue;
 pub use listening::{begin_listening_blocking, ListeningSession};
 #[cfg(test)]
 use media::microphone_buffer_from_origin;
@@ -151,5 +154,7 @@ fn configure_system_audio(cfg: &mut sc::StreamCfg) {
   cfg.set_channel_count(SYSTEM_AUDIO_CHANNELS);
 }
 
+#[cfg(test)]
+mod lost_audio_tests;
 #[cfg(test)]
 mod tests;

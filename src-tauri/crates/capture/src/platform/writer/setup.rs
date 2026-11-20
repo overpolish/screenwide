@@ -49,47 +49,12 @@ impl Writer {
       .add_input(&input)
       .map_err(|error| error.to_string())?;
 
-    let (system_audio_input, system_audio_format_description) = if system_audio {
-      let settings = system_audio_settings();
-      let mut audio_input = av::AssetWriterInput::with_media_type_and_output_settings(
-        av::MediaType::audio(),
-        Some(&settings),
-      )
-      .map_err(|error| error.to_string())?;
-      audio_input.set_expects_media_data_in_real_time(true);
-      writer
-        .add_input(&audio_input)
-        .map_err(|error| error.to_string())?;
-      (
-        Some(audio_input),
-        Some(microphone_format_description(MicrophoneFormat {
-          channels: SYSTEM_AUDIO_CHANNELS as u16,
-          sample_rate: SYSTEM_AUDIO_SAMPLE_RATE as u32,
-        })?),
-      )
-    } else {
-      (None, None)
-    };
-
-    let (microphone_input, microphone_format_description) = if let Some(format) = microphone_format
-    {
-      let settings = microphone_audio_settings(format);
-      let mut audio_input = av::AssetWriterInput::with_media_type_and_output_settings(
-        av::MediaType::audio(),
-        Some(&settings),
-      )
-      .map_err(|error| error.to_string())?;
-      audio_input.set_expects_media_data_in_real_time(true);
-      writer
-        .add_input(&audio_input)
-        .map_err(|error| error.to_string())?;
-      (
-        Some(audio_input),
-        Some(microphone_format_description(format)?),
-      )
-    } else {
-      (None, None)
-    };
+    let system_audio = system_audio
+      .then(|| AudioTrack::add_to(&mut writer, &system_audio_settings(), SYSTEM_AUDIO_FORMAT))
+      .transpose()?;
+    let microphone = microphone_format
+      .map(|format| AudioTrack::add_to(&mut writer, &microphone_audio_settings(format), format))
+      .transpose()?;
 
     if !writer.start_writing() {
       return Err(asset_writer_error(
@@ -106,13 +71,8 @@ impl Writer {
       last_appended_ns: None,
       height,
       input,
-      last_microphone_pts_ns: None,
-      last_system_audio_pts_ns: None,
-      microphone_end_ns: None,
+      microphone,
       microphone_failure_reported: false,
-      microphone_format,
-      microphone_format_description,
-      microphone_input,
       on_failure,
       origin_source_ns: None,
       origin_wall: None,
@@ -124,9 +84,7 @@ impl Writer {
       rejection_streak: 0,
       source,
       stats,
-      system_audio_end_ns: None,
-      system_audio_format_description,
-      system_audio_input,
+      system_audio,
       tail: None,
       timeline: Timeline::default(),
       timeline_origin,

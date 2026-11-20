@@ -4,6 +4,12 @@
 use super::ring::{fill_ring, Keep};
 use super::*;
 use crate::listening::Heard;
+use crate::lost_audio::{lost_before, silence};
+
+/// How many packets may wait for the sidecar writer: some ten seconds of
+/// audio, so a writer held up by the disk delays the sound rather than
+/// losing it.
+const PACKET_QUEUE_DEPTH: usize = 1024;
 
 impl RawSink {
   pub(super) fn start(
@@ -12,7 +18,7 @@ impl RawSink {
     channels: u16,
     origin: Arc<OnceLock<Instant>>,
   ) -> Result<Self, String> {
-    let (sender, packets) = mpsc::sync_channel(128);
+    let (sender, packets) = mpsc::sync_channel(PACKET_QUEUE_DEPTH);
     let (path, ring) = match &keep {
       Keep::File(path) => (Some(path.clone()), None),
       Keep::Ring(ring) => (None, Some(Arc::clone(ring))),
@@ -130,17 +136,39 @@ fn write_raw(
 ) -> Result<RawSource, String> {
   let file = File::create(&path).map_err(|error| error.to_string())?;
   let mut file = BufWriter::new(file);
+  let format = microphone::Format {
+    channels,
+    sample_rate,
+  };
   let mut first_at = None;
+  let mut written_frames = 0_u64;
+  // The run between pauses being written: which it is, the capture time it
+  // started at, and where in the sidecar that was.
+  let mut run: Option<(u64, Instant, i64)> = None;
   for mut packet in packets {
     if on_timeline(&mut packet, origin, sample_rate, channels).is_none() {
       continue;
     }
     first_at.get_or_insert(packet.captured_at);
-    for sample in packet.samples {
-      file
-        .write_all(&sample.to_le_bytes())
-        .map_err(|error| error.to_string())?;
+    let end_ns = frames_ns(written_frames, sample_rate);
+    let (run_at, run_ns) = match run {
+      Some((id, at, ns)) if id == packet.run => (at, ns),
+      _ => {
+        run = Some((packet.run, packet.captured_at, end_ns));
+        (packet.captured_at, end_ns)
+      }
+    };
+    let since_ns = packet
+      .captured_at
+      .saturating_duration_since(run_at)
+      .as_nanos();
+    let pts_ns = run_ns.saturating_add(i64::try_from(since_ns).unwrap_or(i64::MAX));
+    if let Some((from_ns, to_ns)) = lost_before(Some(end_ns), pts_ns) {
+      for (_, silent) in silence(format, packet.captured_at, from_ns, to_ns) {
+        written_frames += write_samples(&mut file, &silent.samples, channels)?;
+      }
     }
+    written_frames += write_samples(&mut file, &packet.samples, channels)?;
   }
   file.flush().map_err(|error| error.to_string())?;
   let first_offset_ms = first_at
@@ -157,4 +185,22 @@ fn write_raw(
     path,
     sample_rate,
   })
+}
+
+fn frames_ns(frames: u64, sample_rate: u32) -> i64 {
+  let ns = u128::from(frames) * 1_000_000_000 / u128::from(sample_rate.max(1));
+  i64::try_from(ns).unwrap_or(i64::MAX)
+}
+
+/// Writes `samples` to the sidecar, answering how many frames they are.
+fn write_samples(
+  file: &mut BufWriter<File>,
+  samples: &[f32],
+  channels: u16,
+) -> Result<u64, String> {
+  // Raw sidecars are little-endian, as Windows is.
+  file
+    .write_all(bytemuck::cast_slice(samples))
+    .map_err(|error| error.to_string())?;
+  Ok((samples.len() / usize::from(channels.max(1))) as u64)
 }

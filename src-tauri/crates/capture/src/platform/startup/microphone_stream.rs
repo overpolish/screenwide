@@ -17,7 +17,7 @@ pub(super) fn start(
   let Some(source) = source else {
     return Ok(None);
   };
-  let sample_commands = commands.clone();
+  let sample_commands = audio_queue(commands.clone(), "screenwide-microphone-queue")?;
   let sample_stats = Arc::clone(stats);
   let write: Arc<dyn Fn(MicrophoneBuffer) + Send + Sync> =
     Arc::new(move |buffer: MicrophoneBuffer| {

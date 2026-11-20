@@ -7,7 +7,7 @@ pub(super) fn start_system(
   process_id: Option<u32>,
   keep: ring::Keep,
   origin: Arc<OnceLock<Instant>>,
-  paused: Arc<AtomicBool>,
+  pause: Arc<Pause>,
   monitor: Arc<RecordingMonitor>,
   on_failure: FailureReport,
 ) -> Result<SystemCapture, String> {
@@ -22,7 +22,7 @@ pub(super) fn start_system(
       capture_system(
         process_id,
         thread_stop,
-        paused,
+        pause,
         sender,
         monitor,
         ready_tx,
@@ -43,7 +43,7 @@ pub(super) fn start_system(
 pub(super) fn capture_system(
   process_id: Option<u32>,
   stop: Arc<AtomicBool>,
-  paused: Arc<AtomicBool>,
+  pause: Arc<Pause>,
   sender: mpsc::SyncSender<Packet>,
   monitor: Arc<RecordingMonitor>,
   ready: mpsc::SyncSender<Result<(), String>>,
@@ -66,7 +66,7 @@ pub(super) fn capture_system(
     }
   };
   if let Err(error) =
-    capture_system_packets(&capture_client, &event, &stop, &paused, &sender, &monitor)
+    capture_system_packets(&capture_client, &event, &stop, &pause, &sender, &monitor)
   {
     on_failure(format!("System audio recording stopped: {error}"));
   }
@@ -126,11 +126,12 @@ pub(super) fn capture_system_packets(
   capture: &AudioCaptureClient,
   event: &Handle,
   stop: &AtomicBool,
-  paused: &AtomicBool,
+  pause: &Pause,
   sender: &mpsc::SyncSender<Packet>,
   monitor: &RecordingMonitor,
 ) -> Result<(), String> {
   let mut bytes = Vec::new();
+  let mut clock = CaptureClock::default();
   while !stop.load(Ordering::Acquire) {
     while capture
       .get_next_packet_size()
@@ -157,12 +158,17 @@ pub(super) fn capture_system_packets(
           .collect::<Vec<_>>()
       };
       monitor.send_system_audio(&samples);
-      if !paused.load(Ordering::Acquire) {
+      if let Some(run) = pause.run() {
         let duration = Duration::from_secs_f64(read as f64 / f64::from(SYSTEM_SAMPLE_RATE));
         let now = Instant::now();
-        let captured_at = now.checked_sub(duration).unwrap_or(now);
+        let captured_at = if info.flags.timestamp_error {
+          now.checked_sub(duration).unwrap_or(now)
+        } else {
+          clock.captured_at(info.timestamp, now, duration)
+        };
         let _ = sender.try_send(Packet {
           captured_at,
+          run,
           samples,
         });
       }
@@ -170,4 +176,28 @@ pub(super) fn capture_system_packets(
     let _ = event.wait_for_event(50);
   }
   Ok(())
+}
+
+/// When each packet was captured, from the capture timestamp WASAPI gives
+/// it (the performance counter, in 100 ns units) rather than from when this
+/// loop reads it: a loop held up reads several packets at once, and stamping
+/// them on arrival would make the first look later than it was, which reads
+/// as audio lost before it. The counter is mapped onto `Instant` by the
+/// earliest estimate seen, since reading late only ever makes one later.
+#[derive(Default)]
+struct CaptureClock {
+  /// The first packet's timestamp, and the moment it stands for.
+  anchor: Option<(u64, Instant)>,
+}
+
+impl CaptureClock {
+  fn captured_at(&mut self, timestamp: u64, now: Instant, duration: Duration) -> Instant {
+    let read_at = now.checked_sub(duration).unwrap_or(now);
+    let (first, zero) = *self.anchor.get_or_insert((timestamp, read_at));
+    let since_first = Duration::from_nanos(timestamp.saturating_sub(first).saturating_mul(100));
+    let estimate = read_at.checked_sub(since_first).unwrap_or(read_at);
+    let zero = zero.min(estimate);
+    self.anchor = Some((first, zero));
+    zero + since_first
+  }
 }
