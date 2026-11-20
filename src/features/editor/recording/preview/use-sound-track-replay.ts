@@ -7,7 +7,7 @@ import { useEffect, useRef } from "react";
 import type { RecordingTimelineEdit } from "../../../../bindings/RecordingTimelineEdit";
 
 // The songs and sound effects are laid out for the preview as it starts
-// playing, with whether the songs make way for the voice: Studio ducking on,
+// playing, with whether the songs make way for the voice: Smart ducking on,
 // and the microphone among the tracks heard. A change to any of that while
 // it plays is heard at once: playback starts again where it is, with it.
 
@@ -41,13 +41,13 @@ export function useSoundTrackReplay(
     if (!hasClips) return;
     let current = true;
     let stop: (() => void) | undefined;
-    listen("editor://studio-ducking", replay)
+    listen("editor://smart-ducking", replay)
       .then((unlisten) => {
         if (current) stop = unlisten;
         else unlisten();
       })
       .catch((cause: unknown) => {
-        console.error("Could not follow Studio ducking", cause);
+        console.error("Could not follow Smart ducking", cause);
       });
     return () => {
       current = false;

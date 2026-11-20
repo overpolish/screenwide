@@ -783,8 +783,9 @@ editor-island-enhance-working = Measuring colour
 
 ## Audio
 
-editor-island-studio-sound = Studio sound
-editor-island-studio-sound-working = Rebuilding voice
+# A microphone switch that restores the recorded voice to sound like a studio recording, in place of Reduce noise and Vocal cleanup.
+editor-island-restore-voice = Restore voice
+editor-island-restore-voice-working = Restoring voice
 editor-island-reduce-noise = Reduce noise
 editor-island-noise-cleaning = Removing noise
 editor-island-vocal-cleanup = Vocal cleanup
@@ -792,5 +793,14 @@ editor-island-voice-cleaning = Cleaning up voice
 editor-island-auto-volume = Auto volume
 editor-island-auto-volume-measuring = Measuring volume
 # A microphone switch that lowers background audio, singers and speakers most, so the person talking stays clear.
-editor-island-studio-ducking = Studio ducking
-editor-island-studio-ducking-working = Finding vocals
+editor-island-smart-ducking = Smart ducking
+editor-island-smart-ducking-working = Finding vocals
+
+## The models' work, in the picture's bottom start corner while there is any
+
+# The island's title, over a line for each tool whose model is at work on the recording.
+editor-island-model-work = In progress
+# Under a tool at work, until it has gone long enough to say how long it has left.
+editor-island-model-work-estimating = Working out the time left
+# The button at the end of a tool's line that stops its work and turns the tool off.
+editor-island-model-work-cancel = Cancel

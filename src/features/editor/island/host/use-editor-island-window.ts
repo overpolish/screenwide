@@ -16,6 +16,7 @@ import {
 } from "../../../popup-panel/api";
 import { usePopupPanelStore } from "../../../popup-panel/store";
 import { useExportIslandStore } from "../../export/export-island-store";
+import { useToolPanelStore } from "../../tools/tool-panel-store";
 import { toolPanelLabel } from "../../tools/tool-panel-window";
 import { EditorKind } from "../../types";
 
@@ -80,6 +81,10 @@ export function useEditorIslandWindow({
   );
   const island = isExportOut ? "export" : asked;
   const panel = toolPanelLabel(workspace);
+  // The models' work has an island of its own, out whatever else is.
+  const hasWork = useToolPanelStore(
+    (state) => (state.snapshots[workspace]?.modelWork?.length ?? 0) > 0,
+  );
   const shownRef = useRef({ anchor: anchorKey, island });
   useEffect(() => {
     shownRef.current = { anchor: anchorKey, island };
@@ -87,7 +92,8 @@ export function useEditorIslandWindow({
 
   // What the island holds, and the strip item it stands over, as they
   // change. The window is shown the first time there is an island to hold,
-  // and again when it was put away with the editor, as minimising takes it.
+  // the models' work's included, and again when it was put away with the
+  // editor, as minimising takes it.
   useEffect(() => {
     let disposed = false;
     let frame = 0;
@@ -103,7 +109,7 @@ export function useEditorIslandWindow({
         panel,
         islandContent({ anchor: anchorKey, island }, place, workspace),
       );
-      if (island === null) return;
+      if (island === null && !hasWork) return;
       const isShowing = (
         await openPopupPanels().catch((): string[] => [])
       ).includes(panel);
@@ -125,7 +131,7 @@ export function useEditorIslandWindow({
       disposed = true;
       cancelAnimationFrame(frame);
     };
-  }, [anchorKey, island, panel, workspace]);
+  }, [anchorKey, hasWork, island, panel, workspace]);
 
   // A strip item's island stands over the item, which moves as the strip
   // scrolls under it, while it plays or as a choice is brought into view.

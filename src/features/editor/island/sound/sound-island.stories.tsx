@@ -37,15 +37,11 @@ type Microphone = NonNullable<SoundTrack["microphone"]>;
 
 const MICROPHONE: Microphone = {
   autoVolume: "on",
-  autoVolumeProgress: 0,
-  ducking: { model: AVAILABLE(96_000_000), progress: 0, state: "off" },
+  ducking: { model: AVAILABLE(96_000_000), state: "off" },
   noise: "off",
-  noiseProgress: 0,
-  studio: "off",
-  studioModel: AVAILABLE(310_000_000),
-  studioProgress: 0,
+  restore: "off",
+  restoreModel: AVAILABLE(1_123_349_858),
   voice: "off",
-  voiceProgress: 0,
 };
 
 const tracks = (microphone: Microphone, decibels = -4): SoundTrack[] => [
@@ -65,12 +61,12 @@ const withTool = (
       return { ...microphone, autoVolume: state };
     case "reduceNoise":
       return { ...microphone, noise: state };
-    case "studioDucking":
+    case "restoreVoice":
+      return { ...microphone, restore: state };
+    case "smartDucking":
       return microphone.ducking
         ? { ...microphone, ducking: { ...microphone.ducking, state } }
         : microphone;
-    case "studioSound":
-      return { ...microphone, studio: state };
     case "vocalCleanup":
       return { ...microphone, voice: state };
   }
@@ -87,8 +83,8 @@ const meta = {
   ...editorIslandStoryMeta,
   args: {
     isShown: true,
-    onDownloadStudioDucking: fn(),
-    onDownloadStudioSound: fn(),
+    onDownloadRestoreVoice: fn(),
+    onDownloadSmartDucking: fn(),
     onToolChange: fn(),
     onVolumeChange: fn(),
     tracks: tracks(MICROPHONE),
@@ -113,8 +109,19 @@ const meta = {
     return (
       <SoundIsland
         {...args}
-        onDownloadStudioDucking={() => {
-          args.onDownloadStudioDucking();
+        onDownloadRestoreVoice={() => {
+          args.onDownloadRestoreVoice();
+          changeMicrophone((microphone) =>
+            microphone.restoreModel
+              ? {
+                  ...microphone,
+                  restoreModel: READY(microphone.restoreModel.sizeBytes),
+                }
+              : microphone,
+          );
+        }}
+        onDownloadSmartDucking={() => {
+          args.onDownloadSmartDucking();
           changeMicrophone((microphone) =>
             microphone.ducking?.model
               ? {
@@ -123,17 +130,6 @@ const meta = {
                     ...microphone.ducking,
                     model: READY(microphone.ducking.model.sizeBytes),
                   },
-                }
-              : microphone,
-          );
-        }}
-        onDownloadStudioSound={() => {
-          args.onDownloadStudioSound();
-          changeMicrophone((microphone) =>
-            microphone.studioModel
-              ? {
-                  ...microphone,
-                  studioModel: READY(microphone.studioModel.sizeBytes),
                 }
               : microphone,
           );
@@ -161,26 +157,13 @@ type Story = StoryObj<typeof meta>;
 
 export const Recording: Story = {};
 
-export const StudioSound: Story = {
+export const RestoreVoice: Story = {
   args: {
     tracks: tracks({
       ...MICROPHONE,
-      ducking: { model: READY(96_000_000), progress: 0, state: "on" },
-      studio: "on",
-      studioModel: READY(310_000_000),
-    }),
-  },
-};
-
-// Reduce noise and Auto volume both at work.
-export const Working: Story = {
-  args: {
-    tracks: tracks({
-      ...MICROPHONE,
-      autoVolume: "cleaning",
-      autoVolumeProgress: 0.6,
-      noise: "cleaning",
-      noiseProgress: 0.3,
+      ducking: { model: READY(96_000_000), state: "on" },
+      restore: "on",
+      restoreModel: READY(1_123_349_858),
     }),
   },
 };
@@ -189,9 +172,9 @@ export const DownloadingModel: Story = {
   args: {
     tracks: tracks({
       ...MICROPHONE,
-      studioModel: {
+      restoreModel: {
         progress: 0.45,
-        sizeBytes: 310_000_000,
+        sizeBytes: 1_123_349_858,
         status: "downloading",
       },
     }),

@@ -169,7 +169,12 @@ impl Reader {
     // A write that fails means FFmpeg stopped, and what it says about why is
     // read below, so the error here adds nothing.
     let mut written = Ok(());
+    let mut stopped = false;
     for start in (0..self.length).step_by(chunk) {
+      if crate::stop::requested() {
+        stopped = true;
+        break;
+      }
       let end = (start + chunk).min(self.length);
       let from = start.saturating_sub(context);
       self.read(from, (end + context).min(self.length))?;
@@ -195,6 +200,9 @@ impl Reader {
     let finished = child
       .wait_with_output()
       .map_err(|error| format!("FFmpeg did not finish: {error}"))?;
+    if stopped {
+      return Err(crate::stop::STOPPED.to_owned());
+    }
     if !finished.status.success() || written.is_err() {
       return Err(format!(
         "Could not write the cleaned microphone: {}",

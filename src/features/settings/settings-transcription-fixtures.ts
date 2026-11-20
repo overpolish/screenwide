@@ -34,25 +34,25 @@ const TRANSCRIPTS_MODEL: TranscriptionModel = {
   writes: null,
 };
 
-/** The Studio sound model, at its real download size, both files together. */
-const STUDIO_SOUND_MODEL: TranscriptionModel = {
-  description: "Enhances your voice.",
-  id: "sidon-v0.1",
-  name: "Studio sound",
+/** The Restore voice model, at its real download size, every file together. */
+const RESTORE_VOICE_MODEL: TranscriptionModel = {
+  description: "Makes your voice sound like a studio recording.",
+  id: "unipase",
+  name: "Restore voice",
   progress: null,
-  purpose: "studioSound",
-  sizeBytes: 1_005_394_589,
+  purpose: "restoreVoice",
+  sizeBytes: 1_123_349_858,
   status: "available",
   writes: null,
 };
 
-/** The Studio ducking model, at its real download size. */
-const STUDIO_DUCKING_MODEL: TranscriptionModel = {
+/** The Smart ducking model, at its real download size. */
+const SMART_DUCKING_MODEL: TranscriptionModel = {
   description: "Keeps your voice clear over other audio.",
   id: "mel-roformer-vocals",
-  name: "Studio ducking",
+  name: "Smart ducking",
   progress: null,
-  purpose: "studioDucking",
+  purpose: "smartDucking",
   sizeBytes: 165_612_636,
   status: "available",
   writes: null,
@@ -128,8 +128,8 @@ export function transcriptionPreviewApi(
       transcripts,
       ...dictation,
       NOTES_MODEL,
-      STUDIO_SOUND_MODEL,
-      STUDIO_DUCKING_MODEL,
+      RESTORE_VOICE_MODEL,
+      SMART_DUCKING_MODEL,
       CAMERA_BACKGROUND_MODEL,
       CAMERA_OBJECTS_MODEL,
     ],

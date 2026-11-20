@@ -19,7 +19,6 @@ import {
 import { FollowFaceToggle } from "../follow-face-toggle";
 import { IslandModelLine } from "../island-model-line";
 import { IslandRotation } from "../island-rotation";
-import { IslandWorkLine } from "../island-work-line";
 import { SceneOnlyNote } from "../scene-only-note";
 import { ScreenInsetChoice } from "../screen/screen-inset-choice";
 
@@ -41,14 +40,14 @@ import type { ScreenIslandProps } from "../screen/screen-island";
 // brings follows it: what goes behind the person, drawn as each looks, with
 // choosing another picture at that row's end, and objects put right where
 // the cutout has them wrong. A tool whose model is not on this computer yet
-// offers the download in its place, and a tool at work shows how far it
-// has got, each on a line that comes and goes as the others glide
-// (`IslandParts`). Over a scene, which may round the camera and have it
-// follow the face its own way, the corners and the following are that
-// scene's, and a note at the island's foot says so. Reset placement, at the
-// foot, puts the camera back where a fresh project places it; a recording
-// of the camera alone, whose camera is its own picture, has Recenter beside
-// it, as the Screen island does.
+// offers the download in its place, on a line that comes and goes as the
+// others glide (`IslandParts`); the work its model does is listed on the
+// island of its own at the picture's foot. Over a scene, which may round
+// the camera and have it follow the face its own way, the corners and the
+// following are that scene's, and a note at the island's foot says so.
+// Reset placement, at the foot, puts the camera back where a fresh project
+// places it; a recording of the camera alone, whose camera is its own
+// picture, has Recenter beside it, as the Screen island does.
 
 export type CameraIslandProps = {
   effects: ToolPanelCameraEffects;
@@ -61,8 +60,6 @@ export type CameraIslandProps = {
   /** Whether the camera sits where a fresh project places it, the scene's
    * own pane where its layout puts it while `isInScene`. */
   isAtDefaultPlacement: boolean;
-  /** While the face is first looked for, once `followFace` is turned on. */
-  isFindingFace: boolean;
   /** Whether the playhead is in a scene, whose own corners and following
    * of the face `radius`, `followFace` and their handlers then are. */
   isInScene: boolean;
@@ -116,10 +113,8 @@ export function cameraIsland(props: CameraIslandProps): EditorIslandContent {
   // What taking the room away brings, under its toggle; held as one group
   // only while there is something in it, so an empty one leaves no gap.
   const hasBackgroundRows =
-    effects.working.background ||
     (isRemoved && (hasBackgroundModel || objects?.model != null)) ||
-    objects?.isPicking === true ||
-    objects?.working === true;
+    objects?.isPicking === true;
   return {
     actions: props.onInVideoChange ? (
       <CameraInVideoToggle isInVideo onChange={props.onInVideoChange} />
@@ -170,20 +165,12 @@ export function cameraIsland(props: CameraIslandProps): EditorIslandContent {
           />
           {picture ? null : (
             <FollowFaceToggle
-              isFindingFace={props.isFindingFace}
               isFollowing={props.followFace}
               key="follow-face"
               onChange={props.onFollowFaceChange}
             />
           )}
         </AnnotationLine>
-        {effects.working.colour ? (
-          <IslandWorkLine
-            key="enhance-work"
-            label={t("editor-island-enhance-working")}
-            value={effects.progress.colour}
-          />
-        ) : null}
         {/* On a line of its own at the start, under the options, since the
             rows it brings follow it. */}
         {hasBackgroundModel ? (
@@ -208,13 +195,6 @@ export function cameraIsland(props: CameraIslandProps): EditorIslandContent {
         ) : null}
         {hasBackgroundRows ? (
           <AnnotationRows key="background-rows">
-            {effects.working.background ? (
-              <IslandWorkLine
-                key="background-work"
-                label={t("editor-island-remove-background-working")}
-                value={effects.progress.background}
-              />
-            ) : null}
             {isRemoved && hasBackgroundModel ? (
               <CameraBackgroundLine
                 background={effects.background}
@@ -249,13 +229,6 @@ export function cameraIsland(props: CameraIslandProps): EditorIslandContent {
                 message={(key) =>
                   t("editor-island-camera-objects-hint", { key })
                 }
-              />
-            ) : null}
-            {objects?.working ? (
-              <IslandWorkLine
-                key="objects-work"
-                label={t("editor-island-camera-objects-working")}
-                value={objects.progress}
               />
             ) : null}
           </AnnotationRows>

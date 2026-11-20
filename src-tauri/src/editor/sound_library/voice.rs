@@ -38,8 +38,8 @@ pub(super) fn voice_lufs(project: &Path, microphone: usize) -> f64 {
 }
 
 /// Whether the songs of the project whose manifest is `project` make way
-/// for its `microphone`th track: Studio ducking is on for it and has its
+/// for its `microphone`th track: Smart ducking is on for it and has its
 /// model. Whether the microphone is heard is for the caller to say.
 pub(crate) fn ducks(app: &tauri::AppHandle, project: &Path, microphone: usize) -> bool {
-  crate::editor::speech::studio_ducking::wanted(app, folder(project), microphone).is_some()
+  crate::editor::speech::smart_ducking::wanted(app, folder(project), microphone).is_some()
 }

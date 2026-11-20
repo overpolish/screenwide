@@ -122,7 +122,7 @@ export function InstrumentalToggle({
   );
 }
 
-/** What an instrumental song still needs: Studio ducking's model, or its
+/** What an instrumental song still needs: Smart ducking's model, or its
  * singing separated. */
 export function InstrumentalNote({
   isInstrumental,

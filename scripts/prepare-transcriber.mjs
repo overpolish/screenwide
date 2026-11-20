@@ -246,7 +246,7 @@ for (const program of [
     if (hostPlatform !== "win32") await chmod(destination, 0o755);
   }
 }
-// The GPU library Studio sound runs through, which ONNX Runtime's build keeps
+// The GPU library Restore voice runs through, which ONNX Runtime's build keeps
 // out of the helper: beside the development helper, and in binaries, from
 // where tauri.macos.conf.json and tauri.windows.conf.json bundle it where the
 // installed helper looks.

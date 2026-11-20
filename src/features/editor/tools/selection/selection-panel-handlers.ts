@@ -86,10 +86,10 @@ export const microphonePanelHandlers = (
   ToolPanelHandlers,
   | "onAutoVolumeChange"
   | "onReduceNoiseChange"
-  | "onStudioDuckingChange"
-  | "onStudioDuckingDownload"
-  | "onStudioSoundChange"
-  | "onStudioSoundDownload"
+  | "onRestoreVoiceChange"
+  | "onRestoreVoiceDownload"
+  | "onSmartDuckingChange"
+  | "onSmartDuckingDownload"
   | "onVocalCleanupChange"
 > => ({
   onAutoVolumeChange: (enabled) => {
@@ -98,17 +98,17 @@ export const microphonePanelHandlers = (
   onReduceNoiseChange: (enabled) => {
     microphone?.reduceNoise(enabled);
   },
-  onStudioDuckingChange: (enabled) => {
-    microphone?.changeStudioDucking(enabled);
+  onRestoreVoiceChange: (enabled) => {
+    microphone?.changeRestoreVoice(enabled);
   },
-  onStudioDuckingDownload: () => {
-    microphone?.downloadStudioDucking();
+  onRestoreVoiceDownload: () => {
+    microphone?.downloadRestoreVoice();
   },
-  onStudioSoundChange: (enabled) => {
-    microphone?.changeStudioSound(enabled);
+  onSmartDuckingChange: (enabled) => {
+    microphone?.changeSmartDucking(enabled);
   },
-  onStudioSoundDownload: () => {
-    microphone?.downloadStudioSound();
+  onSmartDuckingDownload: () => {
+    microphone?.downloadSmartDucking();
   },
   onVocalCleanupChange: (enabled) => {
     microphone?.cleanUpVoice(enabled);

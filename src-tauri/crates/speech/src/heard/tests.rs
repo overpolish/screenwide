@@ -81,7 +81,7 @@ fn a_switch_whose_file_is_not_made_is_heard_as_off() {
 }
 
 #[test]
-fn system_audio_makes_way_only_while_studio_ducking_and_its_microphone_are_on() {
+fn system_audio_makes_way_only_while_smart_ducking_and_its_microphone_are_on() {
   let folder = project("duck");
   let ducked = make(duck::path(&folder, 0));
   let made = |singing: bool| {
@@ -91,15 +91,15 @@ fn system_audio_makes_way_only_while_studio_ducking_and_its_microphone_are_on() 
     )
     .unwrap();
   };
-  // Made before Studio ducking separated singing: made again, not heard.
+  // Made before Smart ducking separated singing: made again, not heard.
   made(false);
   assert_eq!(heard_files(&folder, &[0, 1]), []);
   made(true);
-  // A recording starts with Studio ducking on; Auto volume plays no part.
+  // A recording starts with Smart ducking on; Auto volume plays no part.
   auto_volume::keep(&folder, 1, AutoVolume::Off).unwrap();
   assert_eq!(heard_files(&folder, &[0, 1]), [(0, ducked)]);
   assert_eq!(heard_files(&folder, &[0]), []);
-  duck::keep(&folder, 1, duck::StudioDucking::Off).unwrap();
+  duck::keep(&folder, 1, duck::SmartDucking::Off).unwrap();
   assert_eq!(heard_files(&folder, &[0, 1]), []);
   let _ = std::fs::remove_dir_all(&folder);
 }

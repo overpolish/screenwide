@@ -86,13 +86,14 @@ pub enum Job {
     /// samples in and as long.
     output: PathBuf,
   },
-  /// The voice in the audio rebuilt as a studio recording, answered with
-  /// [`Reply::Restored`] once it is written.
+  /// The voice in the audio restored, answered with [`Reply::Restored`]
+  /// once it is written. What a job stopped part-way left in `output` is
+  /// kept, and the job goes on from there.
   RestoreSpeech {
-    /// The speech encoder of the restoration model.
-    features: PathBuf,
-    /// Its vocoder.
-    decoder: PathBuf,
+    /// The model that restores the voice at [`SAMPLE_RATE`].
+    restorer: PathBuf,
+    /// The model that adds the band above it, at [`CLEAN_SAMPLE_RATE`].
+    widener: PathBuf,
     /// The samples, as [`SAMPLE_RATE`] describes.
     audio: PathBuf,
     /// Where the restored samples go, in the same form but at
@@ -110,7 +111,8 @@ pub enum Job {
     /// The samples, as [`SEPARATE_SAMPLE_RATE`] describes.
     audio: PathBuf,
     /// Where the singing goes, in the same form, lined up with the samples
-    /// in and as long.
+    /// in and as long. Whole chunks it holds already are kept and carried
+    /// on from.
     output: PathBuf,
   },
   /// The person in a camera recording told apart from the room behind them,

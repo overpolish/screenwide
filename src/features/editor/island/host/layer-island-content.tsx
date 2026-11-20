@@ -86,12 +86,8 @@ export function screenIslandContent({
 
 export function cameraIslandContent({
   change,
-  isFindingFace,
   snapshot,
-}: Inputs & {
-  /** Whether the face is being looked for, which following it starts. */
-  isFindingFace: boolean;
-}): EditorIslandContent | null {
+}: Inputs): EditorIslandContent | null {
   const { scene, selection } = snapshot;
   // Saved as a file of its own, the camera is not in the picture: the
   // island offers only drawing it back in. Either way the choice is the
@@ -127,7 +123,6 @@ export function cameraIslandContent({
     isAtDefaultPlacement: scenePane
       ? scenePane.isAtLayout
       : selection.isAtDefaultPlacement,
-    isFindingFace: followFace && isFindingFace,
     isInScene: scenePane !== null,
     ...(snapshot.cameraOutput === "combined" ? { onInVideoChange } : {}),
     onBackgroundChange: (background) => {

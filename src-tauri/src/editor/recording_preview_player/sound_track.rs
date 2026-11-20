@@ -40,7 +40,7 @@ pub(super) struct PreviewSoundTrack {
 impl PreviewSoundTrack {
   /// `request`'s clips with their files found in the project whose manifest
   /// is `project`, at the levels they play at over `tracks`, making way for
-  /// its microphone where `ducks` says it does: Studio ducking on for it,
+  /// its microphone where `ducks` says it does: Smart ducking on for it,
   /// and the microphone among the tracks heard.
   pub(super) fn new(
     request: PreviewSoundTrackRequest,

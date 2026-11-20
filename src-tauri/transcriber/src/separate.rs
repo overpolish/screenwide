@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! Studio ducking and instrumental songs: the singing in music, found by
+//! Smart ducking and instrumental songs: the singing in music, found by
 //! Kimberley Jensen's Mel-Band RoFormer, so the app can move the singer out
 //! of the voice's way, or take the singing out of a song, and leave the
 //! music playing.
@@ -28,8 +28,8 @@ mod spectrum;
 #[cfg(test)]
 mod tests;
 
-use std::fs::File;
-use std::io::{BufReader, BufWriter, Read, Write};
+use std::fs::{File, OpenOptions};
+use std::io::{BufReader, BufWriter, Read, Seek, SeekFrom, Write};
 use std::path::Path;
 
 use ort::session::Session;
@@ -43,7 +43,7 @@ use spectrum::{Spectrum, BINS, FRAMES};
 
 const SIDES: usize = 2;
 /// The feature's name in what the helper reports.
-const WHAT: &str = "Studio ducking";
+const WHAT: &str = "Smart ducking";
 
 /// The singing in one planar chunk, by `separator`.
 fn singing(
@@ -95,8 +95,10 @@ fn plausible(singing: Vec<f32>, peak: f32) -> Result<Vec<f32>, String> {
 }
 
 /// Writes the singing in the stereo samples at `audio`, at the separation
-/// rate, to `output` in the same form, by the model at `model`. Tells
-/// `progress` how far it has got.
+/// rate, to `output` in the same form, by the model at `model`. Whole chunks
+/// `output` holds already are kept and carried on from, so work stopped
+/// part-way goes on where it was: each chunk depends on that chunk alone.
+/// Tells `progress` how far it has got.
 pub fn separate_vocals(
   model: &Path,
   audio: &Path,
@@ -104,24 +106,41 @@ pub fn separate_vocals(
   progress: &mut dyn FnMut(f32),
 ) -> Result<(), String> {
   let unreadable = |error: std::io::Error| format!("Could not read the audio: {error}");
+  let unwritable = |error: std::io::Error| format!("Could not write the singing: {error}");
+  let frame_bytes = 4 * SIDES as u64;
   let bytes = std::fs::metadata(audio).map_err(unreadable)?.len();
-  let total = usize::try_from(bytes / (4 * SIDES as u64)).unwrap_or(usize::MAX);
+  let total = bytes / frame_bytes;
+  let mut kept = OpenOptions::new()
+    .create(true)
+    .truncate(false)
+    .write(true)
+    .open(output)
+    .map_err(unwritable)?;
+  let chunk = CHUNK as u64;
+  let done =
+    (kept.metadata().map_err(unwritable)?.len() / (chunk * frame_bytes) * chunk).min(total);
+  kept.set_len(done * frame_bytes).map_err(unwritable)?;
+  kept.seek(SeekFrom::End(0)).map_err(unwritable)?;
+  let mut writer = BufWriter::new(kept);
   let mut reader = BufReader::new(File::open(audio).map_err(unreadable)?);
-  let mut writer = BufWriter::new(
-    File::create(output).map_err(|error| format!("Could not write the singing: {error}"))?,
-  );
+  reader
+    .seek(SeekFrom::Start(done * frame_bytes))
+    .map_err(unreadable)?;
   let mut separator = Shared::open(model, WHAT, || gpu_session(model, WHAT, Fusion::Off));
   let mut spectrum = Spectrum::new();
+  #[expect(clippy::cast_precision_loss, reason = "a fraction")]
+  let (done_share, left_share) = (
+    done as f32 / total.max(1) as f32,
+    (total - done) as f32 / total.max(1) as f32,
+  );
   chunked(
     &mut reader,
     &mut writer,
-    total,
+    usize::try_from(total - done).unwrap_or(usize::MAX),
     &mut |planar| singing(&mut separator, &mut spectrum, &planar),
-    progress,
+    &mut |fraction| progress(done_share + fraction * left_share),
   )?;
-  writer
-    .flush()
-    .map_err(|error| format!("Could not write the singing: {error}"))
+  writer.flush().map_err(unwritable)
 }
 
 /// Runs `separate` over the `total` interleaved stereo frames from `reader`

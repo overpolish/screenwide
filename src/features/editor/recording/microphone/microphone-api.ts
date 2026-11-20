@@ -7,16 +7,16 @@ import { listen } from "@tauri-apps/api/event";
 import type { AutoVolume } from "../../../../bindings/AutoVolume";
 import type { MicrophoneProgress } from "../../../../bindings/MicrophoneProgress";
 import type { NoiseReduction } from "../../../../bindings/NoiseReduction";
+import type { RestoreVoice } from "../../../../bindings/RestoreVoice";
 import type { SilenceCut } from "../../../../bindings/SilenceCut";
-import type { StudioDucking } from "../../../../bindings/StudioDucking";
-import type { StudioSound } from "../../../../bindings/StudioSound";
+import type { SmartDucking } from "../../../../bindings/SmartDucking";
 import type { VocalCleanup } from "../../../../bindings/VocalCleanup";
 
 export type {
   MicrophoneProgress,
   NoiseReduction,
-  StudioDucking,
-  StudioSound,
+  RestoreVoice,
+  SmartDucking,
   VocalCleanup,
 };
 
@@ -70,27 +70,30 @@ export const getRecordingAutoVolume = (artifactId: number) =>
 export const setRecordingAutoVolume = (artifactId: number, enabled: boolean) =>
   invoke<AutoVolume>("set_recording_auto_volume", { artifactId, enabled });
 
-export const getRecordingStudioSound = (artifactId: number) =>
-  invoke<StudioSound>("get_recording_studio_sound", { artifactId });
+export const getRecordingRestoreVoice = (artifactId: number) =>
+  invoke<RestoreVoice>("get_recording_restore_voice", { artifactId });
 
-/** Rebuilds the microphone as a studio recording, or brings back how Reduce
- * noise and Vocal cleanup have it, answering with what the project says
- * now. Turning it on the first time takes a while, and needs the model. */
-export const setRecordingStudioSound = (artifactId: number, enabled: boolean) =>
-  invoke<StudioSound>("set_recording_studio_sound", { artifactId, enabled });
+/** Restores the microphone, or brings back how Reduce noise and Vocal
+ * cleanup have it, answering with what the project says now. Turning it on
+ * the first time takes a while, and needs the model. */
+export const setRecordingRestoreVoice = (
+  artifactId: number,
+  enabled: boolean,
+) =>
+  invoke<RestoreVoice>("set_recording_restore_voice", { artifactId, enabled });
 
-export const getRecordingStudioDucking = (artifactId: number) =>
-  invoke<StudioDucking>("get_recording_studio_ducking", { artifactId });
+export const getRecordingSmartDucking = (artifactId: number) =>
+  invoke<SmartDucking>("get_recording_smart_ducking", { artifactId });
 
 /** Moves the singing in the system audio out of the voice's way while it
  * speaks, or lets the system audio make way as a whole, answering with what
  * the project says now. Turning it on the first time takes a while, and
  * needs the model. */
-export const setRecordingStudioDucking = (
+export const setRecordingSmartDucking = (
   artifactId: number,
   enabled: boolean,
 ) =>
-  invoke<StudioDucking>("set_recording_studio_ducking", {
+  invoke<SmartDucking>("set_recording_smart_ducking", {
     artifactId,
     enabled,
   });

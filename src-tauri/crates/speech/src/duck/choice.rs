@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! Studio ducking's switch, as the project keeps it for each microphone: on,
+//! Smart ducking's switch, as the project keeps it for each microphone: on,
 //! the system audio and the songs come down while the voice speaks, their
 //! singing out of its way entirely; off, they play as they are.
 
@@ -19,29 +19,29 @@ const FORMAT_VERSION: u16 = 1;
 #[derive(Clone, Copy, Debug, Default, Deserialize, Eq, PartialEq, Serialize, TS)]
 #[serde(rename_all = "kebab-case")]
 #[ts(export)]
-pub enum StudioDucking {
+pub enum SmartDucking {
   #[default]
   Off,
   On,
 }
 
 fn choice_path(project_folder: &Path, microphone: usize) -> PathBuf {
-  project_folder.join(format!("studio-ducking-{microphone}.json"))
+  project_folder.join(format!("smart-ducking-{microphone}.json"))
 }
 
 /// What the project says for the `microphone`th track. A recording starts
-/// with Studio ducking on, until someone turns it off; it is heard only once
+/// with Smart ducking on, until someone turns it off; it is heard only once
 /// its model is downloaded.
-pub fn choice(project_folder: &Path, microphone: usize) -> StudioDucking {
+pub fn choice(project_folder: &Path, microphone: usize) -> SmartDucking {
   choice_file::read(&choice_path(project_folder, microphone), FORMAT_VERSION)
-    .unwrap_or(StudioDucking::On)
+    .unwrap_or(SmartDucking::On)
 }
 
-pub fn keep(project_folder: &Path, microphone: usize, choice: StudioDucking) -> Result<(), String> {
+pub fn keep(project_folder: &Path, microphone: usize, choice: SmartDucking) -> Result<(), String> {
   choice_file::write(
     &choice_path(project_folder, microphone),
     FORMAT_VERSION,
     choice,
   )
-  .map_err(|error| format!("Could not keep the Studio ducking choice: {error}"))
+  .map_err(|error| format!("Could not keep the Smart ducking choice: {error}"))
 }

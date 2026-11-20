@@ -84,11 +84,11 @@ fn wanted(
 }
 
 /// Separates, in the background, the pieces of each song `clips` play that
-/// are not separated yet, once Studio ducking's model is on this computer,
+/// are not separated yet, once Smart ducking's model is on this computer,
 /// and carries them into the project and the library. Until then a song
 /// plays, and makes way, as a whole.
 pub(crate) fn separate_singing(app: &AppHandle, project: &Path, clips: &[RecordingAudioClip]) {
-  let Some(model) = crate::editor::speech::studio_ducking::model(app) else {
+  let Some(model) = crate::editor::speech::smart_ducking::model(app) else {
     return;
   };
   let folder = project_sounds(project);
@@ -168,7 +168,7 @@ pub(crate) fn ready_for_export(
   project: &Path,
   clips: &[RecordingAudioClip],
 ) -> Result<(), String> {
-  let Some(model) = crate::editor::speech::studio_ducking::model(app) else {
+  let Some(model) = crate::editor::speech::smart_ducking::model(app) else {
     return Ok(());
   };
   for (_, path, pieces) in wanted(app, project, clips) {
@@ -192,7 +192,7 @@ pub(super) fn separate_pieces(
 }
 
 /// Separates, in the background, what the songs of the recording open in
-/// the editor need now that Studio ducking is on, which wants every song's
+/// the editor need now that Smart ducking is on, which wants every song's
 /// singing, not only the instrumental ones'.
 pub(crate) fn separate_open_songs(app: &AppHandle) {
   let open = {

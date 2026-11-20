@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! Studio ducking: while the voice speaks, the system audio and the songs
+//! Smart ducking: while the voice speaks, the system audio and the songs
 //! laid under the recording make way for it, their singing out of its way
 //! entirely, as a sung word competes with a spoken one far more than an
 //! instrument does. It needs the music separation model downloaded first,
@@ -16,11 +16,11 @@ use tauri::AppHandle;
 
 use crate::transcription::models;
 use screenwide_speech::catalogue::{self, Purpose};
-pub(crate) use screenwide_speech::duck::{choice, keep, StudioDucking};
+pub(crate) use screenwide_speech::duck::{choice, keep, SmartDucking};
 
 /// The separation model, where it is downloaded.
 pub(crate) fn model(app: &AppHandle) -> Option<PathBuf> {
-  let model = catalogue::for_purpose(Purpose::StudioDucking)?;
+  let model = catalogue::for_purpose(Purpose::SmartDucking)?;
   if !models::is_downloaded(app, model) {
     return None;
   }
@@ -31,7 +31,7 @@ pub(crate) fn model(app: &AppHandle) -> Option<PathBuf> {
 /// and the model downloaded: the system audio and the songs then make way
 /// for it.
 pub(crate) fn wanted(app: &AppHandle, project_folder: &Path, microphone: usize) -> Option<PathBuf> {
-  (choice(project_folder, microphone) == StudioDucking::On)
+  (choice(project_folder, microphone) == SmartDucking::On)
     .then(|| model(app))
     .flatten()
 }

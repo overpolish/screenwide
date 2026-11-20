@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use std::io::{BufRead, BufReader, Write};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::{Child, ChildStdin, ChildStdout, Stdio};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
@@ -65,12 +65,13 @@ impl Transcriber {
       input,
       next_id: 0,
       output,
-      stop: None,
+      stop: crate::stop::flag(),
     })
   }
 
-  /// Ends the program, and with it the job under way, once `stop` is set.
-  /// It is looked at as each reply arrives.
+  /// Ends the program, and with it the job under way, once `stop` is set,
+  /// in place of the flag of [`crate::stop::stoppable`] work it started
+  /// under. It is looked at as each reply arrives.
   pub fn stopped_by(mut self, stop: Arc<AtomicBool>) -> Self {
     self.stop = Some(stop);
     self
@@ -145,25 +146,25 @@ impl Transcriber {
     }
   }
 
-  /// The `stretches` of `audio` rebuilt as a studio recording by the
-  /// restoration model whose encoder is at `features` and vocoder at
-  /// `decoder`, written to `output` at the protocol's cleaning rate with
-  /// silence between them, telling `progress` how far it has got.
+  /// The `stretches` of `audio` restored by the model at `restorer` and
+  /// widened by the one at `widener`, written to `output` at the protocol's
+  /// cleaning rate with silence between them, telling `progress` how far it
+  /// has got. What a job stopped part-way left in `output` is kept.
   pub(crate) fn restore_speech(
     &mut self,
-    (features, decoder): (PathBuf, PathBuf),
+    (restorer, widener): (PathBuf, PathBuf),
     audio: &Samples,
     stretches: Vec<[u64; 2]>,
-    output: &Samples,
+    output: &Path,
     progress: &mut dyn FnMut(f32),
   ) -> Result<(), String> {
     match self.ask(
       Job::RestoreSpeech {
         audio: audio.0.clone(),
-        decoder,
-        features,
-        output: output.0.clone(),
+        output: output.to_owned(),
+        restorer,
         stretches,
+        widener,
       },
       progress,
     )? {
@@ -174,19 +175,20 @@ impl Transcriber {
 
   /// The singing in the stereo `audio`, at the protocol's separation rate,
   /// written to `output` in the same form by the separation model at
-  /// `model`, telling `progress` how far it has got.
+  /// `model`, telling `progress` how far it has got. Whole chunks `output`
+  /// holds already are kept and carried on from.
   pub(crate) fn separate_vocals(
     &mut self,
     model: PathBuf,
     audio: &Samples,
-    output: &Samples,
+    output: &Path,
     progress: &mut dyn FnMut(f32),
   ) -> Result<(), String> {
     match self.ask(
       Job::SeparateVocals {
         audio: audio.0.clone(),
         model,
-        output: output.0.clone(),
+        output: output.to_path_buf(),
       },
       progress,
     )? {
@@ -233,7 +235,7 @@ impl Transcriber {
         .is_some_and(|stop| stop.load(Ordering::Acquire))
       {
         let _ = self.child.kill();
-        return Err("The work was stopped".to_owned());
+        return Err(crate::stop::STOPPED.to_owned());
       }
       let answer = serde_json::from_str::<Reply>(&reply).map_err(|error| error.to_string())?;
       let (Reply::Done { id, .. }

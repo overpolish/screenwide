@@ -5,7 +5,7 @@
  * transcripts and voice notes take the transcription model, dictation the
  * model for its language and, in English, the model that applies the
  * speaker's corrections, meeting notes their writing and speaker models,
- * Studio sound its restoration model, Studio ducking its music separation
+ * Restore voice its restoration model, Smart ducking its music separation
  * model, Remove background its video matting model, and the camera's
  * objects their tracking model. */
 export type TranscriptionPurpose =
@@ -14,8 +14,8 @@ export type TranscriptionPurpose =
   | "dictation"
   | "dictationCleanup"
   | "notes"
-  | "studioDucking"
-  | "studioSound"
+  | "restoreVoice"
+  | "smartDucking"
   | "transcripts";
 
 /** A speech model, and how far it is on this computer. */

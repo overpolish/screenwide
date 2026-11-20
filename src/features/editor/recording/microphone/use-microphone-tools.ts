@@ -15,15 +15,15 @@ import { useEditorEditGesture } from "../../use-editor-edit-history";
 import {
   getRecordingAutoVolume,
   getRecordingNoiseReduction,
-  getRecordingStudioDucking,
-  getRecordingStudioSound,
+  getRecordingRestoreVoice,
+  getRecordingSmartDucking,
   getRecordingVocalCleanup,
   listenToMicrophoneProgress,
   planRecordingSilences,
   setRecordingAutoVolume,
   setRecordingNoiseReduction,
-  setRecordingStudioDucking,
-  setRecordingStudioSound,
+  setRecordingRestoreVoice,
+  setRecordingSmartDucking,
   setRecordingVocalCleanup,
 } from "./microphone-api";
 import { useMicrophoneSwitch } from "./use-microphone-switch";
@@ -33,18 +33,17 @@ export type MicrophoneTools = {
   /** Bring the microphone to a steady loudness with the system audio making
    * way for it, or play both as recorded. */
   changeAutoVolume: (enabled: boolean) => void;
+  /** Restore the microphone, or bring back Reduce noise and Vocal cleanup. */
+  changeRestoreVoice: (enabled: boolean) => void;
   /** Move the singing in the system audio out of the voice's way while it
    * speaks, or let the system audio make way as a whole. */
-  changeStudioDucking: (enabled: boolean) => void;
-  /** Rebuild the microphone as a studio recording, or bring back Reduce
-   * noise and Vocal cleanup. */
-  changeStudioSound: (enabled: boolean) => void;
+  changeSmartDucking: (enabled: boolean) => void;
   /** Clean up the microphone's voice, or put it back as it was. */
   cleanUpVoice: (enabled: boolean) => void;
-  /** Download the model Studio ducking needs. */
-  downloadStudioDucking: () => void;
-  /** Download the model Studio sound needs. */
-  downloadStudioSound: () => void;
+  /** Download the model Restore voice needs. */
+  downloadRestoreVoice: () => void;
+  /** Download the model Smart ducking needs. */
+  downloadSmartDucking: () => void;
   microphone: ToolPanelMicrophone;
   /** Take the room's steady noise out of the microphone, or put it back. */
   reduceNoise: (enabled: boolean) => void;
@@ -59,18 +58,18 @@ type Progress = {
   artifactId: number;
   autoVolume: number | null;
   noise: number | null;
+  restoreVoice: number | null;
   silences: number | null;
-  studioDucking: number | null;
-  studioSound: number | null;
+  smartDucking: number | null;
   voice: number | null;
 };
 const noProgress = (artifactId: number): Progress => ({
   artifactId,
   autoVolume: null,
   noise: null,
+  restoreVoice: null,
   silences: null,
-  studioDucking: null,
-  studioSound: null,
+  smartDucking: null,
   voice: null,
 });
 /** A switch as the panel shows it: `cleaning` while the app works on a turn
@@ -109,7 +108,7 @@ export function useMicrophoneTools({
     recording?.audioTracks.some((track) => track.kind === "microphone") === true
       ? recording.id
       : null;
-  // Studio ducking makes the system audio and the songs make way, so it is
+  // Smart ducking makes the system audio and the songs make way, so it is
   // offered wherever there is either.
   const canDuck =
     recording?.audioTracks.some((track) => track.kind === "system-audio") ===
@@ -132,21 +131,21 @@ export function useMicrophoneTools({
     read: getRecordingAutoVolume,
     write: setRecordingAutoVolume,
   });
-  const studio = useMicrophoneSwitch({
+  const restore = useMicrophoneSwitch({
     artifactId,
-    name: "studio sound",
-    read: getRecordingStudioSound,
-    write: setRecordingStudioSound,
+    name: "restore voice",
+    read: getRecordingRestoreVoice,
+    write: setRecordingRestoreVoice,
   });
   const ducking = useMicrophoneSwitch({
     artifactId: canDuck ? artifactId : null,
-    name: "studio ducking",
-    read: getRecordingStudioDucking,
-    write: setRecordingStudioDucking,
+    name: "smart ducking",
+    read: getRecordingSmartDucking,
+    write: setRecordingSmartDucking,
   });
-  const studioModel = useModel("studioSound");
-  const duckingModel = useModel("studioDucking");
-  const downloadedModels = [studioModel.shown, duckingModel.shown].filter(
+  const restoreModel = useModel("restoreVoice");
+  const duckingModel = useModel("smartDucking");
+  const downloadedModels = [restoreModel.shown, duckingModel.shown].filter(
     (model) => model?.status === "downloaded",
   ).length;
   const [silences, setSilences] = useState<Silences | null>(null);
@@ -185,7 +184,7 @@ export function useMicrophoneTools({
   // starts its work too.
   useEffect(() => {
     if (artifactId === null || downloadedModels === 0) return;
-    getRecordingStudioSound(artifactId).catch((cause: unknown) => {
+    getRecordingRestoreVoice(artifactId).catch((cause: unknown) => {
       console.error("Could not ready the microphone's models", cause);
     });
   }, [artifactId, downloadedModels]);
@@ -213,43 +212,38 @@ export function useMicrophoneTools({
       setProgress({ ...progressNow, autoVolume: null });
       autoVolume.turn(enabled);
     },
-    changeStudioDucking: (enabled) => {
-      setProgress({ ...progressNow, studioDucking: null });
-      ducking.turn(enabled);
+    changeRestoreVoice: (enabled) => {
+      setProgress({ ...progressNow, restoreVoice: null });
+      restore.turn(enabled);
     },
-    changeStudioSound: (enabled) => {
-      setProgress({ ...progressNow, studioSound: null });
-      studio.turn(enabled);
+    changeSmartDucking: (enabled) => {
+      setProgress({ ...progressNow, smartDucking: null });
+      ducking.turn(enabled);
     },
     cleanUpVoice: (enabled) => {
       // As with Reduce noise, the bar waits until the app says there is work.
       setProgress({ ...progressNow, voice: null });
       voice.turn(enabled);
     },
-    downloadStudioDucking: duckingModel.download,
-    downloadStudioSound: studioModel.download,
+    downloadRestoreVoice: restoreModel.download,
+    downloadSmartDucking: duckingModel.download,
     microphone: {
       autoVolume: shown(autoVolume, progressNow.autoVolume),
-      autoVolumeProgress: progressNow.autoVolume ?? 0,
       ducking: canDuck
         ? {
             model: duckingModel.shown,
-            progress: progressNow.studioDucking ?? 0,
-            state: shown(ducking, progressNow.studioDucking),
+            state: shown(ducking, progressNow.smartDucking),
           }
         : null,
       noise: shown(noise, progressNow.noise),
-      noiseProgress: progressNow.noise ?? 0,
+      restore: shown(restore, progressNow.restoreVoice),
+      restoreModel: restoreModel.shown,
       silences: {
         ...recordingTimelineSilenceSummary(edit, recording.durationMs),
         progress: progressNow.silences,
         status,
       },
-      studio: shown(studio, progressNow.studioSound),
-      studioModel: studioModel.shown,
-      studioProgress: progressNow.studioSound ?? 0,
       voice: shown(voice, progressNow.voice),
-      voiceProgress: progressNow.voice ?? 0,
     },
     reduceNoise: (enabled) => {
       // The switch turns at once; the bar waits until the app says there is

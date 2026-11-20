@@ -32,8 +32,6 @@ const NO_OBJECTS: ToolPanelCameraObjects = {
   isPicking: false,
   model: { progress: 1, sizeBytes: 152_000_000, status: "downloaded" },
   picks: [],
-  progress: 0,
-  working: false,
 };
 
 const EFFECTS: ToolPanelCameraEffects = {
@@ -42,8 +40,6 @@ const EFFECTS: ToolPanelCameraEffects = {
   hasImage: false,
   model: READY,
   objects: null,
-  progress: { background: 0, colour: 0 },
-  working: { background: false, colour: false },
 };
 
 // A kept mug, a removed lamp, and a painted line not yet followed.
@@ -74,7 +70,6 @@ const meta = {
     followFace: false,
     hasShadow: false,
     isAtDefaultPlacement: false,
-    isFindingFace: false,
     isInScene: false,
     isInVideo: true,
     isShown: true,
@@ -202,10 +197,6 @@ export const InScene: Story = { args: { isInScene: true } };
 // offers only drawing it back in.
 export const SavedSeparately: Story = { args: { isInVideo: false } };
 
-export const FindingFace: Story = {
-  args: { followFace: true, isFindingFace: true },
-};
-
 export const NeedsModel: Story = {
   args: {
     effects: {
@@ -220,20 +211,6 @@ export const DownloadingModel: Story = {
     effects: {
       ...EFFECTS,
       model: { progress: 0.4, sizeBytes: 46_000_000, status: "downloading" },
-    },
-  },
-};
-
-// The cutout and the colour measure both being made.
-export const Working: Story = {
-  args: {
-    effects: {
-      ...EFFECTS,
-      background: "transparent",
-      enhance: true,
-      objects: NO_OBJECTS,
-      progress: { background: 0.6, colour: 0.25 },
-      working: { background: true, colour: true },
     },
   },
 };
@@ -291,8 +268,6 @@ export const PickingObjects: Story = {
             painted: false,
           },
         ],
-        progress: 0.3,
-        working: true,
       },
     },
   },

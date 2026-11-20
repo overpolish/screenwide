@@ -10,13 +10,12 @@ import { IslandRowTitle } from "../../../../primitives/island/row-title/island-r
 import { OptionToggle } from "../../../annotations/options/option-toggle";
 import { AnnotationOptions } from "../annotation/annotation-island-parts";
 import { IslandModelLine } from "../island-model-line";
-import { IslandWorkLine } from "../island-work-line";
 
 import {
   AutoVolumeGlyph,
   ReduceNoiseGlyph,
-  StudioDuckingGlyph,
-  StudioSoundGlyph,
+  RestoreVoiceGlyph,
+  SmartDuckingGlyph,
   VocalCleanupGlyph,
 } from "./sound-glyphs";
 import { SoundVolumeRow } from "./sound-volume-row";
@@ -31,21 +30,22 @@ import type { EditorIslandContent } from "../editor-island";
 // islands hold their overlays. Each track is a block: how loud it plays, a
 // typed figure named by the track, with its reset while it is off the
 // recorded level; and for the microphone its tools under it on one line,
-// each an animated toggle drawing its off and on looks. Studio sound rebuilds
-// the voice in place of Reduce noise and Vocal cleanup, so while it is on
-// those two step aside; Studio ducking changes how the system audio makes
+// each an animated toggle drawing its off and on looks. Restore voice
+// restores the voice in place of Reduce noise and Vocal cleanup, so while it
+// is on those two step aside; Smart ducking changes how the system audio makes
 // way, which it does only while Auto volume is on, so it shows only then. A
 // tool whose model is not on this computer yet offers the download in its
-// place, and a tool at work shows how far it has got, each on a line that
-// comes and goes as the others glide (`IslandParts`). Remove silences is not
-// here: it sits with the pauses on the strip and with Transcript.
+// place, on a line that comes and goes as the others glide (`IslandParts`);
+// the work its model does is listed on the island of its own at the
+// picture's foot. Remove silences is not here: it sits with the pauses on
+// the strip and with Transcript.
 
 /** A microphone tool that can be turned on. */
 export type SoundTool =
   | "autoVolume"
   | "reduceNoise"
-  | "studioDucking"
-  | "studioSound"
+  | "restoreVoice"
+  | "smartDucking"
   | "vocalCleanup";
 
 export type SoundTrack = {
@@ -59,8 +59,8 @@ export type SoundTrack = {
 };
 
 export type SoundIslandProps = {
-  onDownloadStudioDucking: () => void;
-  onDownloadStudioSound: () => void;
+  onDownloadRestoreVoice: () => void;
+  onDownloadSmartDucking: () => void;
   onToolChange: (tool: SoundTool, isOn: boolean) => void;
   onVolumeChange: (trackId: string, decibels: number) => void;
   tracks: SoundTrack[];
@@ -72,8 +72,8 @@ const isDownloaded = (model: ToolPanelModel | null) =>
 const TOOL_NAMES: Record<SoundTool, () => string> = {
   autoVolume: () => t("editor-island-auto-volume"),
   reduceNoise: () => t("editor-island-reduce-noise"),
-  studioDucking: () => t("editor-island-studio-ducking"),
-  studioSound: () => t("editor-island-studio-sound"),
+  restoreVoice: () => t("editor-island-restore-voice"),
+  smartDucking: () => t("editor-island-smart-ducking"),
   vocalCleanup: () => t("editor-island-vocal-cleanup"),
 };
 
@@ -107,14 +107,14 @@ export function soundIsland(props: SoundIslandProps): EditorIslandContent {
 }
 
 /** The microphone's tools under its volume: one line of toggles, then a
- * line for each model to download and each tool at work. */
+ * line for each model to download. */
 function microphoneParts(
   trackId: string,
   microphone: Omit<ToolPanelMicrophone, "silences">,
   props: SoundIslandProps,
 ): ReactNode[] {
-  const hasStudio = isDownloaded(microphone.studioModel);
-  const isStudio = hasStudio && microphone.studio !== "off";
+  const hasRestore = isDownloaded(microphone.restoreModel);
+  const isRestored = hasRestore && microphone.restore !== "off";
   // Ducking only where the recording has system audio or songs to make way,
   // and once the app has said where its model is.
   const { ducking } = microphone;
@@ -136,22 +136,19 @@ function microphoneParts(
       }}
     />
   );
-  const work = (key: string, label: string, value: number) => (
-    <IslandWorkLine key={`${trackId}-${key}`} label={label} value={value} />
-  );
   return [
     <AnnotationOptions key={`${trackId}-tools`}>
-      {hasStudio
-        ? toggle("studioSound", microphone.studio, (isOn) => (
-            <StudioSoundGlyph isOn={isOn} />
+      {hasRestore
+        ? toggle("restoreVoice", microphone.restore, (isOn) => (
+            <RestoreVoiceGlyph isOn={isOn} />
           ))
         : null}
-      {isStudio
+      {isRestored
         ? null
         : toggle("reduceNoise", microphone.noise, (isOn) => (
             <ReduceNoiseGlyph isOn={isOn} />
           ))}
-      {isStudio
+      {isRestored
         ? null
         : toggle("vocalCleanup", microphone.voice, (isOn) => (
             <VocalCleanupGlyph isOn={isOn} />
@@ -160,61 +157,26 @@ function microphoneParts(
         <AutoVolumeGlyph isOn={isOn} />
       ))}
       {shownDucking && isDownloaded(shownDucking.model)
-        ? toggle("studioDucking", shownDucking.state, (isOn) => (
-            <StudioDuckingGlyph isOn={isOn} />
+        ? toggle("smartDucking", shownDucking.state, (isOn) => (
+            <SmartDuckingGlyph isOn={isOn} />
           ))
         : null}
     </AnnotationOptions>,
-    microphone.studioModel && !hasStudio ? (
+    microphone.restoreModel && !hasRestore ? (
       <IslandModelLine
-        key={`${trackId}-studio-model`}
-        model={microphone.studioModel}
-        onDownload={props.onDownloadStudioSound}
-        title={t("editor-island-studio-sound")}
+        key={`${trackId}-restore-model`}
+        model={microphone.restoreModel}
+        onDownload={props.onDownloadRestoreVoice}
+        title={t("editor-island-restore-voice")}
       />
     ) : null,
     shownDucking && !isDownloaded(shownDucking.model) ? (
       <IslandModelLine
         key={`${trackId}-ducking-model`}
         model={shownDucking.model}
-        onDownload={props.onDownloadStudioDucking}
-        title={t("editor-island-studio-ducking")}
+        onDownload={props.onDownloadSmartDucking}
+        title={t("editor-island-smart-ducking")}
       />
     ) : null,
-    microphone.studio === "cleaning"
-      ? work(
-          "studio-work",
-          t("editor-island-studio-sound-working"),
-          microphone.studioProgress,
-        )
-      : null,
-    !isStudio && microphone.noise === "cleaning"
-      ? work(
-          "noise-work",
-          t("editor-island-noise-cleaning"),
-          microphone.noiseProgress,
-        )
-      : null,
-    !isStudio && microphone.voice === "cleaning"
-      ? work(
-          "voice-work",
-          t("editor-island-voice-cleaning"),
-          microphone.voiceProgress,
-        )
-      : null,
-    microphone.autoVolume === "cleaning"
-      ? work(
-          "volume-work",
-          t("editor-island-auto-volume-measuring"),
-          microphone.autoVolumeProgress,
-        )
-      : null,
-    shownDucking?.state === "cleaning"
-      ? work(
-          "ducking-work",
-          t("editor-island-studio-ducking-working"),
-          shownDucking.progress,
-        )
-      : null,
   ];
 }

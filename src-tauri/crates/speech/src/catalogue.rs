@@ -14,11 +14,12 @@ use serde::Serialize;
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub enum Purpose {
-  /// Studio sound: the microphone rebuilt as a studio recording.
-  StudioSound,
-  /// Studio ducking: the singing in the system audio moved out of the
+  /// Restore voice: the microphone restored and given a studio
+  /// microphone's finish.
+  RestoreVoice,
+  /// Smart ducking: the singing in the system audio moved out of the
   /// voice's way.
-  StudioDucking,
+  SmartDucking,
   /// Background removal: the person in the camera cut out of the room.
   CameraBackground,
   /// Objects picked in the camera, followed through the recording, to keep
@@ -45,8 +46,8 @@ impl Purpose {
   /// What Settings calls the model for this use.
   pub fn name(self) -> String {
     match self {
-      Self::StudioSound => screenwide_i18n::t!("settings-transcription-studio-sound"),
-      Self::StudioDucking => screenwide_i18n::t!("settings-transcription-studio-ducking"),
+      Self::RestoreVoice => screenwide_i18n::t!("settings-transcription-restore-voice"),
+      Self::SmartDucking => screenwide_i18n::t!("settings-transcription-smart-ducking"),
       Self::CameraBackground => screenwide_i18n::t!("settings-transcription-camera-background"),
       Self::CameraObjects => screenwide_i18n::t!("settings-transcription-camera-objects"),
       Self::Transcripts => screenwide_i18n::t!("settings-transcription-transcripts"),
@@ -59,9 +60,11 @@ impl Purpose {
   /// What downloading the model for this use gets you.
   pub fn description(self) -> String {
     match self {
-      Self::StudioSound => screenwide_i18n::t!("settings-transcription-studio-sound-description"),
-      Self::StudioDucking => {
-        screenwide_i18n::t!("settings-transcription-studio-ducking-description")
+      Self::RestoreVoice => {
+        screenwide_i18n::t!("settings-transcription-restore-voice-description")
+      }
+      Self::SmartDucking => {
+        screenwide_i18n::t!("settings-transcription-smart-ducking-description")
       }
       Self::CameraBackground => {
         screenwide_i18n::t!("settings-transcription-camera-background-description")
@@ -168,26 +171,39 @@ pub const MODELS: &[Model] = &[
     purpose: Purpose::DictationCleanup,
   },
   notes::NOTES,
-  // Sidon v0.1 from the University of Tokyo (MIT), its released TorchScript
-  // converted to ONNX: a speech encoder and the vocoder that speaks again
-  // from what it hears.
+  // UniPASE from Nanjing University (Apache-2.0), exported to ONNX as two
+  // models: one restores the voice at 16 kHz, its weights stored at half
+  // precision; the other adds the band above 8 kHz. Each keeps its weights
+  // in a file beside it, under the name the model looks for.
   Model {
     files: &[
       ModelFile {
-        name: "sidon-encoder.onnx",
-        sha256: "df510e203dc644a68b85399e580e2e5a7c4069af7a235dc670dd617aab5a5f1a",
-        size_bytes: 795_539_651,
-        url: "https://github.com/barrett-snapshot/voice-isolation-models/releases/download/v1/sidon_fe.onnx",
+        name: "unipase-restore.onnx",
+        sha256: "cf5622c58265e9119aa96129f0693be32df5c964d864abd33ec6181af6400d09",
+        size_bytes: 1_258_296,
+        url: "https://huggingface.co/overpolish/unipase-onnx/resolve/0c1b990d66bda448ea3ce13c7c5582e9818a6b28/unipase-restore.onnx",
       },
       ModelFile {
-        name: "sidon-vocoder.onnx",
-        sha256: "8daa3f39d52d27b6fc4fd99258595f7a445c1a1dd77862a800d11000635581e8",
-        size_bytes: 209_854_938,
-        url: "https://github.com/barrett-snapshot/voice-isolation-models/releases/download/v1/sidon_decoder.onnx",
+        name: "unipase-restore.onnx.data",
+        sha256: "b689f4bf1e27f8cae473559e945e3f15832b344e3409da7129c6ae749e17a580",
+        size_bytes: 1_091_734_536,
+        url: "https://huggingface.co/overpolish/unipase-onnx/resolve/0c1b990d66bda448ea3ce13c7c5582e9818a6b28/unipase-restore.onnx.data",
+      },
+      ModelFile {
+        name: "unipase-widen.onnx",
+        sha256: "b2efe957b414569cceb82a8528783e57be7d014b501aa2f9c7967606d90a6fcc",
+        size_bytes: 376_606,
+        url: "https://huggingface.co/overpolish/unipase-onnx/resolve/0c1b990d66bda448ea3ce13c7c5582e9818a6b28/unipase-widen.onnx",
+      },
+      ModelFile {
+        name: "unipase-widen.onnx.data",
+        sha256: "3b3ebe46adc8c2536d12cb48beaf58e13adef16fb1718b8a09c6be2e4cbaff11",
+        size_bytes: 29_980_420,
+        url: "https://huggingface.co/overpolish/unipase-onnx/resolve/0c1b990d66bda448ea3ce13c7c5582e9818a6b28/unipase-widen.onnx.data",
       },
     ],
-    id: "sidon-v0.1",
-    purpose: Purpose::StudioSound,
+    id: "unipase",
+    purpose: Purpose::RestoreVoice,
   },
   // Kimberley Jensen's Mel-Band RoFormer vocals model (MIT), as audiojs
   // exported it to ONNX for the GPU with its weights stored at half
@@ -200,7 +216,7 @@ pub const MODELS: &[Model] = &[
       url: "https://huggingface.co/audiojs/mel-roformer/resolve/c1aba02c00a0bee852d6754fe6ede8164f90a4b3/mel-roformer.fp16.onnx",
     }],
     id: "mel-roformer-vocals",
-    purpose: Purpose::StudioDucking,
+    purpose: Purpose::SmartDucking,
   },
   // Robust Video Matting from ByteDance (GPL-3.0), its MobileNetV3 model as
   // the authors released it in ONNX at full precision. It finds a person in

@@ -30,6 +30,7 @@ import {
 import { ToolPanelStripItem, ToolPanelTrack } from "./tool-panel-strip";
 import { ToolPanelTranscript } from "./tool-panel-transcript";
 
+import type { ModelJob } from "../../../bindings/ModelJob";
 import type { RecordingCaptions } from "../../../bindings/RecordingCaptions";
 import type { CropAspect } from "../island/crop-aspect-choice";
 
@@ -112,6 +113,9 @@ export type ToolPanelSnapshot = {
   /** Whether a song added to the recording's timeline now would have room
    * after the last song; absent where songs cannot be added. */
   hasSongRoom?: boolean;
+  /** The models' work under way on the recording, in the order it started,
+   * for the island that lists it; absent or empty while there is none. */
+  modelWork?: ModelJob[];
   /** Every recorded audio track, for the Sound island; absent or empty
    * where there is none. */
   soundTracks?: ToolPanelSoundTrack[];

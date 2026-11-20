@@ -5,13 +5,16 @@
 //! time, and the system audio written back out as it is made, so an hour of
 //! audio is never held in memory at once.
 
-use std::io::{Read, Write};
+mod sides;
+
+use std::io::Read;
 use std::path::Path;
 use std::process::{Child, ChildStdout, Command, Stdio};
 
 use screenwide_transcriber::{CLEAN_SAMPLE_RATE as RATE, SEPARATE_SAMPLE_RATE};
 
-use super::super::framer::{Framer, HOP, SIZE};
+use self::sides::Sides;
+use super::super::framer::{Framer, SIZE};
 use super::plan::Plan;
 
 /// Samples read at a time, across all channels.
@@ -78,6 +81,9 @@ pub(super) fn decode(
   let mut samples = Vec::with_capacity(CHUNK);
   let mut bytes = vec![0_u8; CHUNK * 4];
   loop {
+    if crate::stop::requested() {
+      return Err(halt(child));
+    }
     let read = fill(&mut stdout, &mut bytes)?;
     if read < 4 {
       break;
@@ -132,6 +138,11 @@ pub(super) fn make_way(
   let mut samples = Vec::with_capacity(CHUNK);
   let mut written = Ok(());
   loop {
+    if crate::stop::requested() {
+      drop(input);
+      let _ = encoding.wait();
+      return Err(halt(decoding));
+    }
     let read = fill(&mut stdout, &mut bytes)?;
     if read < 4 * channels {
       break;
@@ -162,90 +173,6 @@ pub(super) fn make_way(
     ));
   }
   Ok(())
-}
-
-/// The channels of every part on their way through their framers, one
-/// framer to each, a part's two sides together.
-struct Sides {
-  /// Samples of each side read from the track, which is how many go out.
-  read: usize,
-  /// Samples of each side that came out of the framers, the first
-  /// `SIZE - HOP` of which lie before the start.
-  made: usize,
-  split: Vec<Vec<f32>>,
-  out: Vec<Vec<f32>>,
-  bytes: Vec<u8>,
-}
-
-impl Sides {
-  fn new(channels: usize) -> Self {
-    Self {
-      read: 0,
-      made: 0,
-      split: vec![Vec::new(); channels],
-      out: vec![Vec::new(); channels],
-      bytes: Vec::new(),
-    }
-  }
-
-  /// Feeds interleaved `samples` through `framers`, each part's turned down
-  /// as its plan in `plans` says, counting them as read from the track when
-  /// `from_track`.
-  fn feed(
-    &mut self,
-    samples: &[f32],
-    framers: &mut [Framer],
-    plans: &mut [Plan],
-    from_track: bool,
-  ) {
-    let channels = self.split.len();
-    for (channel, split) in self.split.iter_mut().enumerate() {
-      split.clear();
-      split.extend(samples.iter().skip(channel).step_by(channels));
-    }
-    if from_track {
-      self.read += self.split[0].len();
-    }
-    let parts = framers.iter_mut().zip(&self.split).zip(&mut self.out);
-    for (channel, ((framer, split), out)) in parts.enumerate() {
-      let plan = &mut plans[channel / SIDES];
-      framer.feed(split, Some(out), &mut |frame, spectrum| {
-        plan.apply(frame, spectrum)
-      });
-    }
-  }
-
-  /// Writes what has come out of every channel since last time, each side
-  /// the sum of the parts', leaving out what lies before the start and after
-  /// the end.
-  fn write(&mut self, input: &mut impl Write) -> Result<(), String> {
-    let latency = SIZE - HOP;
-    let length = self.out.iter().map(Vec::len).min().unwrap_or(0);
-    self.bytes.clear();
-    for at in 0..length {
-      let made = self.made + at;
-      if made < latency || made - latency >= self.read {
-        continue;
-      }
-      for side in 0..SIDES {
-        let sum: f32 = self
-          .out
-          .iter()
-          .skip(side)
-          .step_by(SIDES)
-          .map(|out| out[at])
-          .sum();
-        self.bytes.extend_from_slice(&sum.to_le_bytes());
-      }
-    }
-    self.made += length;
-    for out in &mut self.out {
-      out.drain(..length);
-    }
-    input
-      .write_all(&self.bytes)
-      .map_err(|error| error.to_string())
-  }
 }
 
 fn take_stdout(child: &mut Child) -> Result<ChildStdout, String> {
@@ -279,6 +206,14 @@ fn fill(reader: &mut impl Read, buffer: &mut [u8]) -> Result<usize, String> {
     }
   }
   Ok(filled)
+}
+
+/// Ends a reading FFmpeg for work asked to stop, answering what stopped work
+/// answers.
+fn halt(mut child: Child) -> String {
+  let _ = child.kill();
+  let _ = child.wait();
+  crate::stop::STOPPED.to_owned()
 }
 
 /// Waits for a reading FFmpeg, failing with what it said if it failed.

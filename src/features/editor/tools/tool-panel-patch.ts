@@ -24,6 +24,7 @@ import { ToolPanelExportPatch } from "./tool-panel-export";
 import { TranscriptRequest } from "./tool-panel-transcript";
 
 import type { ToolPanelSnapshot } from "./tool-panel-store";
+import type { ModelWork } from "../../../bindings/ModelWork";
 import type { TextStyle } from "../../../bindings/TextStyle";
 import type { AnnotationPinAction } from "../island/annotation/annotation-pin";
 import type { AudioClipChange } from "../island/audio-clip/audio-clip-island";
@@ -90,6 +91,8 @@ export type ToolPanelPatch = Partial<
   /** Change the camera's effects, a field at a time: what is behind the
    * person, and colour correction. */
   cameraEffects?: CameraEffectsChange;
+  /** Stop the models' work for this tool and turn the tool off. */
+  cancelModelWork?: ModelWork;
   /** Change what new captions start as: a template and its look, the
    * layout options set by hand, the rules for what they say, or a template
    * put back to how it ships. */
@@ -121,10 +124,10 @@ export type ToolPanelPatch = Partial<
   downloadCameraBackground?: true;
   /** Download the model following the camera's objects needs. */
   downloadCameraObjects?: true;
-  /** Download the model Studio ducking separates the singing with. */
-  downloadStudioDucking?: true;
-  /** Download the model Studio sound rebuilds the microphone with. */
-  downloadStudioSound?: true;
+  /** Download the model Restore voice restores the microphone with. */
+  downloadRestoreVoice?: true;
+  /** Download the model Smart ducking separates the singing with. */
+  downloadSmartDucking?: true;
   /** Something the Export island asks for. */
   exportPatch?: ToolPanelExportPatch;
   /** Round the output canvas corners by this share of its shorter side. */
@@ -167,6 +170,9 @@ export type ToolPanelPatch = Partial<
   resetPlacement?: true;
   /** Bring back every shortcut deleted from the timeline. */
   restoreShortcuts?: true;
+  /** Restore the selected microphone, in place of Reduce noise and Vocal
+   * cleanup, or bring them back. */
+  restoreVoice?: boolean;
   /** Turn the chosen annotation round, so its head points the other way, or
    * mirror the chosen image. */
   reverseAnnotation?: true;
@@ -228,14 +234,11 @@ export type ToolPanelPatch = Partial<
   /** Lay the chosen redaction's blocks out again, or draw the chosen
    * hand-drawn highlight's stroke again, from a fresh seed. */
   shuffleAnnotation?: true;
-  /** Add a song or sound effect from the library to the timeline. */
-  soundAddition?: SoundAddition;
   /** Move the singing in the selected microphone's system audio out of its
    * way while it speaks, or let the system audio make way as a whole. */
-  studioDucking?: boolean;
-  /** Rebuild the selected microphone as a studio recording, in place of
-   * Reduce noise and Vocal cleanup, or bring them back. */
-  studioSound?: boolean;
+  smartDucking?: boolean;
+  /** Add a song or sound effect from the library to the timeline. */
+  soundAddition?: SoundAddition;
   /** Trade the panes of the custom scene under the playhead: each takes the
    * other's box and place in the order. */
   swapScenePanes?: true;

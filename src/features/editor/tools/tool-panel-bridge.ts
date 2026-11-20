@@ -66,12 +66,13 @@ const applyPatch = (values: ToolPanelPatch, on: ToolPanelHandlers) => {
     on.onAutoVolumeChange?.(values.autoVolume);
   if (values.audioClip) on.onAudioClipChange?.(values.audioClip);
   if (values.soundAddition) on.onSoundAdd?.(values.soundAddition);
-  if (values.studioSound !== undefined)
-    on.onStudioSoundChange?.(values.studioSound);
-  if (values.downloadStudioSound) on.onStudioSoundDownload?.();
-  if (values.studioDucking !== undefined)
-    on.onStudioDuckingChange?.(values.studioDucking);
-  if (values.downloadStudioDucking) on.onStudioDuckingDownload?.();
+  if (values.restoreVoice !== undefined)
+    on.onRestoreVoiceChange?.(values.restoreVoice);
+  if (values.downloadRestoreVoice) on.onRestoreVoiceDownload?.();
+  if (values.smartDucking !== undefined)
+    on.onSmartDuckingChange?.(values.smartDucking);
+  if (values.downloadSmartDucking) on.onSmartDuckingDownload?.();
+  if (values.cancelModelWork) on.onModelWorkCancel?.(values.cancelModelWork);
   if (values.cameraEffects !== undefined)
     on.onCameraEffectsChange?.(values.cameraEffects);
   if (values.chooseCameraBackground) on.onCameraBackgroundChoose?.();

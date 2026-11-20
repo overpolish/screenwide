@@ -29,8 +29,8 @@ function GlyphBox({ children }: { children: ReactNode }) {
 }
 
 /** Lucide's microphone, a little to the start; turned on, a glint comes
- * out beside its head, as the voice is rebuilt as a studio recording. */
-export function StudioSoundGlyph({ isOn }: { isOn: boolean }) {
+ * out beside its head, as the voice is restored. */
+export function RestoreVoiceGlyph({ isOn }: { isOn: boolean }) {
   const motionOf = useGlyphMotion();
   return (
     <GlyphBox>
@@ -142,7 +142,7 @@ export function AutoVolumeGlyph({ isOn }: { isOn: boolean }) {
 
 /** A note of the system audio's music; turned on, it sinks and shrinks
  * as an arrow over it points down, the singing making way for the voice. */
-export function StudioDuckingGlyph({ isOn }: { isOn: boolean }) {
+export function SmartDuckingGlyph({ isOn }: { isOn: boolean }) {
   const motionOf = useGlyphMotion();
   return (
     <GlyphBox>

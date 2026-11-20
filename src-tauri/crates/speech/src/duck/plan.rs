@@ -16,7 +16,7 @@ use super::super::framer::SIZE;
 const WHOLE_DB: f32 = 6.0;
 /// The most a band the voice is using comes down on top of that.
 const UNMASK_DB: f32 = 6.0;
-/// The singing comes down this far while the voice speaks, with Studio
+/// The singing comes down this far while the voice speaks, with Smart
 /// ducking: far enough that a sung word no longer competes with a spoken one.
 const SINGER_DB: f32 = 30.0;
 /// The voice's bands: sixteen from 150 Hz to 6 kHz, a third of an octave
@@ -76,7 +76,7 @@ pub(super) struct Plan {
 }
 
 impl Plan {
-  /// The plan for the singing in the system audio with Studio ducking: all
+  /// The plan for the singing in the system audio with Smart ducking: all
   /// of it out of the way, as far as `gate` says, whatever the voice's bands.
   pub(super) fn singer(gate: &[f32], rate: u32) -> Self {
     let bins = bin_bands(rate);

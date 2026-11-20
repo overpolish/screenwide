@@ -20,7 +20,7 @@ pub use pieces::{pieces, Piece, SoundFile};
 /// effects switches), the files their sounds are in, the recorded stream of
 /// the voice they play under, if the recording has one, how loud that voice
 /// is heard, which the clips are levelled against, and whether the songs
-/// make way for it: Studio ducking on, and the voice heard.
+/// make way for it: Smart ducking on, and the voice heard.
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct SoundTrack {
   pub clips: Vec<RecordingAudioClip>,

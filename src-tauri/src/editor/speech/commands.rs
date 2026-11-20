@@ -20,9 +20,9 @@ const PROGRESS_EVENT: &str = "editor://microphone-progress";
 pub enum MicrophoneTool {
   AutoVolume,
   Noise,
+  RestoreVoice,
   Silences,
-  StudioDucking,
-  StudioSound,
+  SmartDucking,
   Voice,
 }
 

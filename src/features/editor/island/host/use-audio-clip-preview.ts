@@ -18,7 +18,7 @@ import type { SoundPreview } from "../audio-clip/sound-start-picker";
 // sound's waveform, from the library, and the clip played from where it
 // starts, in the island's own window as a moment's voice note is, the
 // editor pausing while it plays. Moving where it starts loads the stretch
-// it now plays. A song played instrumental needs Studio ducking's model,
+// it now plays. A song played instrumental needs Smart ducking's model,
 // offered here, and shows how far its singing is separated.
 
 export type AudioClipPreviewState = {
@@ -38,7 +38,7 @@ export function useAudioClipPreview(
 ): AudioClipPreviewState {
   const clip = item?.kind === "audioClip" ? item : null;
   const sounds = useClipSounds(clip ? [clip.sound] : []);
-  const model = useModel("studioDucking");
+  const model = useModel("smartDucking");
   const separating = useSingingProgress(clip?.sound ?? null);
   const lengthMs = clip ? Math.min(clip.clipMs, MOST_PREVIEW_MS) : 0;
   const playback = useIslandSoundPlayback(

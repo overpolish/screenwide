@@ -3,7 +3,7 @@
 
 //! Whether each song in the library is sung, so the Library island can
 //! narrow songs to the instrumental or the sung: heard in the background,
-//! one song at a time, by separating a few pieces of it with Studio
+//! one song at a time, by separating a few pieces of it with Smart
 //! ducking's model, once that is on this computer, and kept with the song.
 //! The pieces are the ones the singing is separated in anyway, so a song
 //! later played instrumental already has them. A song found on Openverse
@@ -80,7 +80,7 @@ pub(super) fn hear(app: &AppHandle, sounds: &[Sound]) {
   if !sounds.iter().any(is_unheard) {
     return;
   }
-  let Some(model) = crate::editor::speech::studio_ducking::model(app) else {
+  let Some(model) = crate::editor::speech::smart_ducking::model(app) else {
     return;
   };
   if HEARING.swap(true, Ordering::AcqRel) {

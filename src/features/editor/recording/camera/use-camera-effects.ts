@@ -20,7 +20,6 @@ import { CameraPicksTool, useCameraPicks } from "./use-camera-picks";
 
 import type { CameraTool } from "../../../../bindings/CameraTool";
 
-type Tool = keyof ToolPanelCameraEffects["progress"];
 /** A change to some of the camera's effects, the rest kept as they are:
  * the background of the range the panel shows, or Enhance. */
 export type CameraEffectsChange = Partial<
@@ -43,19 +42,14 @@ export type CameraEffectsTool = {
 type Held = {
   artifactId: number;
   effects: CameraEffects;
-  /** Whether Enhance's last turn is still being carried out. */
-  pending: boolean;
 };
-
-const TOOLS: Tool[] = ["background", "colour"];
 
 /**
  * The camera's effects for the recording open, where it has a camera or is
  * of the camera alone. The background is the timeline's: the panel shows
  * the range chosen in the camera's lane or under the playhead, and changes
- * it there. Enhance is kept beside the edit. A change shows at once, and a
- * tool whose matte or measure is still to make shows its bar until the app
- * says it is.
+ * it there. Enhance is kept beside the edit. A change shows at once; the
+ * work its matte or measure takes is listed with the models' work.
  */
 export function useCameraEffects(
   artifact: EditorArtifact | null,
@@ -90,7 +84,7 @@ export function useCameraEffects(
     getRecordingCameraEffects(artifactId)
       .then((effects) => {
         if (current && ticket === latestRef.current)
-          setHeld({ artifactId, effects, pending: false });
+          setHeld({ artifactId, effects });
       })
       .catch((cause: unknown) => {
         console.error("Could not read the camera's effects", cause);
@@ -138,25 +132,17 @@ export function useCameraEffects(
     hasRanges &&
     held.effects.canPickObjects &&
     (backgroundFraction === undefined || backgroundFraction >= 1);
-  const objects = useCameraPicks(artifactId, isMatted, fractions.objects);
+  const objects = useCameraPicks(artifactId, isMatted);
   if (artifactId === null || !isHeld) return null;
   const { effects } = held;
   const settle = (request: Promise<CameraEffects>, enhance: boolean) => {
-    if (enhance) {
-      const { colour: _colour, ...rest } = fractions;
-      setProgress({ artifactId, fractions: rest });
-    }
-    setHeld({
-      artifactId,
-      effects: { ...effects, enhance },
-      pending: enhance,
-    });
+    setHeld({ artifactId, effects: { ...effects, enhance } });
     latestRef.current += 1;
     const ticket = latestRef.current;
     request
       .then((answered) => {
         if (ticket === latestRef.current)
-          setHeld({ artifactId, effects: answered, pending: false });
+          setHeld({ artifactId, effects: answered });
       })
       .catch((cause: unknown) => {
         if (ticket !== latestRef.current) return;
@@ -164,13 +150,6 @@ export function useCameraEffects(
         setHeld(held);
       });
   };
-  const isOn = (tool: Tool) =>
-    tool === "background" ? hasRanges : effects.enhance;
-  const byTool = <Value>(value: (tool: Tool) => Value) =>
-    Object.fromEntries(TOOLS.map((tool) => [tool, value(tool)])) as Record<
-      Tool,
-      Value
-    >;
   return {
     change: (change) => {
       if (change.background !== undefined)
@@ -206,15 +185,6 @@ export function useCameraEffects(
       hasImage: range !== null && effects.pictures.includes(range.id),
       model: model.shown,
       objects: objects?.shown ?? null,
-      progress: byTool((tool) => fractions[tool] ?? 0),
-      working: byTool((tool) => {
-        const fraction = fractions[tool];
-        return (
-          fraction !== undefined &&
-          fraction < 1 &&
-          ((tool === "colour" && held.pending) || isOn(tool))
-        );
-      }),
     },
   };
 }

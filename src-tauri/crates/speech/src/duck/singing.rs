@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 //! The singing in music, separated by the transcriber with the music
-//! separation model: in the system audio, for Studio ducking to move out of
+//! separation model: in the system audio, for Smart ducking to move out of
 //! the voice's way while the music stays, and in songs from the sound
 //! library, a stretch at a time, written into the song's singing file.
 
@@ -20,18 +20,18 @@ const SIDES: usize = 2;
 const BLOCK: usize = 1 << 16;
 
 /// The singing in the `stream`th track of `movie`, both sides interleaved at
-/// the protocol's separation rate, found by the model at `model`, telling
-/// `progress` how far it has got.
+/// the protocol's separation rate, found by the model at `model` and written
+/// to `into`, carrying on from what it holds, telling `progress` how far it
+/// has got.
 pub(super) fn separate(
   movie: &Path,
   stream: usize,
   model: PathBuf,
+  into: &Path,
   progress: &mut dyn FnMut(f32),
-) -> Result<Samples, String> {
+) -> Result<(), String> {
   let mix = decode_stereo_stream(movie, stream, SEPARATE_SAMPLE_RATE)?;
-  let singing = Samples::scratch();
-  Transcriber::start()?.separate_vocals(model, &mix, &singing, progress)?;
-  Ok(singing)
+  Transcriber::start()?.separate_vocals(model, &mix, into, progress)
 }
 
 /// Separates frames `from` to `to` of `sound` with the model at `model` and
@@ -50,7 +50,7 @@ pub(super) fn into_song(
 ) -> Result<(), String> {
   let mix = decode_stereo_stretch(sound, SEPARATE_SAMPLE_RATE, (from, to))?;
   let singing = Samples::scratch();
-  Transcriber::start()?.separate_vocals(model, &mix, &singing, progress)?;
+  Transcriber::start()?.separate_vocals(model, &mix, singing.path(), progress)?;
   let singing = singing.read()?;
   let rest: Vec<f32> = mix
     .read()?

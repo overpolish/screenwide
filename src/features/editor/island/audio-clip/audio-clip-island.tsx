@@ -34,7 +34,7 @@ import type { EditorIslandContent } from "../editor-island";
 // on its whole sound. Then how loud it plays, from the level its kind plays
 // at by default, whether a song loops for as long as its clip runs and
 // whether it plays without its singing; giving it another sound is a
-// one-shot action at the end. An instrumental song needs Studio ducking's
+// one-shot action at the end. An instrumental song needs Smart ducking's
 // model, offered under its toggle, and says while its singing is
 // separated. Its fades are its kind's own, songs that touch blend, and
 // songs make way for the voice.

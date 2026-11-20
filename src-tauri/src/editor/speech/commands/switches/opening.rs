@@ -3,25 +3,25 @@
 
 //! A recording readied as it opens. The microphone's switches all start
 //! on, so the first time a recording opens, or after a change of make, their
-//! work is done in the background in the order each needs the last: Studio
-//! sound's rebuilt voice where its model is downloaded, or else the noise
+//! work is done in the background in the order each needs the last: Restore
+//! voice's restored voice where its model is downloaded, or else the noise
 //! taken out and the voice cleaned up from what that leaves, then the voice
 //! as heard measured and the system audio made to make way, its singing
-//! separated where Studio ducking's model is downloaded. Each fills its own
+//! separated where Smart ducking's model is downloaded. Each fills its own
 //! bar.
 
 use std::sync::Mutex;
 
 use tauri::AppHandle;
 
-use super::super::super::studio_ducking;
-use super::super::super::{ready_voice, vad_model, SpeechSource, VoiceProgress};
+use super::super::super::smart_ducking;
+use super::super::super::{ready_voice, vad_model, SpeechSource, VoiceSteps};
 use super::super::MicrophoneTool;
 use super::{bar, heard_changed, level_heard, singing};
 use screenwide_speech::auto_volume::{self, AutoVolume};
 use screenwide_speech::duck;
 use screenwide_speech::noise::{self, NoiseReduction};
-use screenwide_speech::studio::{self, StudioSound};
+use screenwide_speech::restore_voice::{self, RestoreVoice};
 use screenwide_speech::voice::{self, VocalCleanup};
 
 /// One recording readied at a time; asked again while it runs, the work
@@ -40,7 +40,7 @@ pub(super) fn ready(app: &AppHandle, artifact_id: u64, source: SpeechSource) {
       return;
     };
     let vad = vad_model(&app).ok();
-    let mut studio_bar = bar(&app, artifact_id, MicrophoneTool::StudioSound);
+    let mut restore_bar = bar(&app, artifact_id, MicrophoneTool::RestoreVoice);
     let mut noise_bar = bar(&app, artifact_id, MicrophoneTool::Noise);
     let mut voice_bar = bar(&app, artifact_id, MicrophoneTool::Voice);
     let made = ready_voice(
@@ -48,21 +48,21 @@ pub(super) fn ready(app: &AppHandle, artifact_id: u64, source: SpeechSource) {
       &source.project_folder,
       (&source.movie, source.microphone),
       vad.clone(),
-      VoiceProgress {
-        studio: &mut |fraction| studio_bar.tell(fraction),
-        noise: &mut |fraction| noise_bar.tell(fraction),
-        voice: &mut |fraction| voice_bar.tell(fraction),
+      VoiceSteps {
+        restore: &mut restore_bar,
+        noise: &mut noise_bar,
+        voice: &mut voice_bar,
       },
     );
-    if let Err(error) = made {
-      eprintln!("Could not ready the microphone's voice: {error}");
+    if let Err(error) = made.as_ref().map_err(String::as_str) {
+      if !screenwide_speech::stop::is_stopped(error) {
+        eprintln!("Could not ready the microphone's voice: {error}");
+      }
     }
-    drop((studio_bar, noise_bar, voice_bar));
+    drop((restore_bar, noise_bar, voice_bar));
     let mut level_bar = bar(&app, artifact_id, MicrophoneTool::AutoVolume);
     let mut singing = singing(&app, artifact_id, &source);
-    level_heard(&source, vad, &mut singing, &mut |fraction| {
-      level_bar.tell(fraction)
-    });
+    level_heard(&source, vad, &mut singing, &mut level_bar);
     drop((level_bar, singing));
     heard_changed(&app, artifact_id, &source);
   });
@@ -70,9 +70,9 @@ pub(super) fn ready(app: &AppHandle, artifact_id: u64, source: SpeechSource) {
 
 fn has_work(app: &AppHandle, source: &SpeechSource) -> bool {
   let (folder, stream) = (&source.project_folder, source.microphone);
-  let studio_on = studio::choice(folder, stream) == StudioSound::On;
-  if studio_on && crate::editor::speech::studio_model(app).is_some() {
-    if !studio::is_made(folder, stream) {
+  let restore_on = restore_voice::choice(folder, stream) == RestoreVoice::On;
+  if restore_on && crate::editor::speech::restore_voice_model(app).is_some() {
+    if !restore_voice::is_made(folder, stream) {
       return true;
     }
   } else {
@@ -87,8 +87,8 @@ fn has_work(app: &AppHandle, source: &SpeechSource) -> bool {
       return true;
     }
   }
-  // Studio ducking makes the system audio make way only with its model.
-  let ducking = studio_ducking::wanted(app, folder, stream).is_some();
+  // Smart ducking makes the system audio make way only with its model.
+  let ducking = smart_ducking::wanted(app, folder, stream).is_some();
   let unducked = source
     .system
     .is_some_and(|system| !duck::is_made_for(folder, system, stream));

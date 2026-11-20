@@ -23,6 +23,7 @@ import { Background, BackgroundPreset } from "./frame/background/background";
 import { TranscriptRequest } from "./tool-panel-transcript";
 
 import type { ToolPanelExportPatch } from "./tool-panel-export";
+import type { ModelWork } from "../../../bindings/ModelWork";
 import type { TextStyle } from "../../../bindings/TextStyle";
 import type { AnnotationPinAction } from "../island/annotation/annotation-pin";
 import type { AudioClipChange } from "../island/audio-clip/audio-clip-island";
@@ -135,9 +136,16 @@ export type ToolPanelHandlers = {
   onLullPlayChange?: (play: "keep" | "squeeze") => void;
   /** Trim the lull chosen on the strip to a breath. */
   onLullTrimToBreath?: () => void;
+  /** Stop the models' work for this tool and turn the tool off. */
+  onModelWorkCancel?: (work: ModelWork) => void;
   /** Take the room's steady noise out of the selected microphone, or put it
    * back. */
   onReduceNoiseChange?: (reduce: boolean) => void;
+  /** Restore the selected microphone, or bring back Reduce noise and Vocal
+   * cleanup. */
+  onRestoreVoiceChange?: (enabled: boolean) => void;
+  /** Download the model Restore voice restores the microphone with. */
+  onRestoreVoiceDownload?: () => void;
   /** Make the auto zooms again, the scenes of your own left as they are. */
   onSceneAutoZoom?: () => void;
   /** Take every auto zoom off the timeline, the scenes of your own left as
@@ -202,22 +210,17 @@ export type ToolPanelHandlers = {
   onSelectionRecenter?: () => void;
   /** Turn the selected layer in depth, a field at a time. */
   onSelectionRotationChange?: (rotation: Partial<SceneRotation>) => void;
+  /** Move the singing in the system audio out of the selected microphone's
+   * way while it speaks, or let the system audio make way as a whole. */
+  onSmartDuckingChange?: (enabled: boolean) => void;
+  /** Download the model Smart ducking separates the singing with. */
+  onSmartDuckingDownload?: () => void;
   /** Add a song or sound effect from the library to the timeline. */
   onSoundAdd?: (addition: SoundAddition) => void;
   /** Cut what is chosen on the strip, and its time with it. */
   onStripItemCut?: () => void;
   /** Let go of what is chosen on the strip. */
   onStripItemDeselect?: () => void;
-  /** Move the singing in the system audio out of the selected microphone's
-   * way while it speaks, or let the system audio make way as a whole. */
-  onStudioDuckingChange?: (enabled: boolean) => void;
-  /** Download the model Studio ducking separates the singing with. */
-  onStudioDuckingDownload?: () => void;
-  /** Rebuild the selected microphone as a studio recording, or bring back
-   * Reduce noise and Vocal cleanup. */
-  onStudioSoundChange?: (enabled: boolean) => void;
-  /** Download the model Studio sound rebuilds the microphone with. */
-  onStudioSoundDownload?: () => void;
   /** Hold the recorded track `trackId` in the export and the preview, or
    * leave it out. */
   onTrackEnabledChange?: (trackId: string, isEnabled: boolean) => void;

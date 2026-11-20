@@ -8,7 +8,7 @@
 //! program (`screenwide_speech::runner`), so a GPU
 //! runtime the computer lacks stops only that program and its memory is all
 //! given back when it exits. Voice notes are queued for it in `notes`; the
-//! microphone's Studio sound uses it from the editor.
+//! microphone's Restore voice uses it from the editor.
 //!
 //! Each use has a model of its own, so nobody has to pick one; a
 //! transcription whose model is missing borrows any other transcription

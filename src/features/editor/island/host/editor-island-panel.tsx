@@ -18,6 +18,7 @@ import {
   isStripIsland,
   type PopupPanelIslandContent,
 } from "./editor-island-kind";
+import { useIslandBounds } from "./island-bounds";
 import { PlacedIsland } from "./placed-island";
 import { useSnapshotIsland } from "./use-snapshot-island";
 
@@ -28,12 +29,13 @@ import { useSnapshotIsland } from "./use-snapshot-island";
 // at the picture's foot. The Script island, for the Captions and
 // Transcript modes, stands at the opposite corner, the top start, in both,
 // so moving between the two modes never moves it: only the Captions island
-// comes and goes at the end. The window lets clicks through everywhere but
-// the islands, whose parts each reports as it changes shape. The Export
-// island is the exception: before its export and once done, a press
-// anywhere off it puts it away, so while it is out the window takes every
-// press, the strip's included, and the press that puts it away reaches
-// nothing beneath.
+// comes and goes at the end. The models' work stands in the bottom start
+// corner while there is any, whatever else is out. The window lets clicks
+// through everywhere but the islands, whose parts each reports as it
+// changes shape. The Export island is the exception: before its export and
+// once done, a press anywhere off it puts it away, so while it is out the
+// window takes every press, the strip's included, and the press that puts
+// it away reaches nothing beneath.
 
 export function EditorIslandPanel({
   content,
@@ -41,7 +43,7 @@ export function EditorIslandPanel({
   content: PopupPanelIslandContent;
 }) {
   usePanelShortcuts(content.workspace);
-  const { corner, script } = useSnapshotIsland(
+  const { corner, script, work } = useSnapshotIsland(
     content.island,
     content.workspace,
   );
@@ -73,9 +75,12 @@ export function EditorIslandPanel({
       shown.gif === null
     );
   });
-  const partsRef = useRef<Record<"corner" | "script", PopupPanelPart[]>>({
+  const partsRef = useRef<
+    Record<"corner" | "script" | "work", PopupPanelPart[]>
+  >({
     corner: [],
     script: [],
+    work: [],
   });
   const takesWholeRef = useRef(false);
   takesWholeRef.current = dismissesOnPress;
@@ -84,12 +89,19 @@ export function EditorIslandPanel({
       label,
       takesWholeRef.current
         ? [{ height: window.innerHeight, width: window.innerWidth, x: 0, y: 0 }]
-        : [...partsRef.current.corner, ...partsRef.current.script],
+        : [
+            ...partsRef.current.corner,
+            ...partsRef.current.script,
+            ...partsRef.current.work,
+          ],
     );
   };
+  // A strip item's island keeps clear of the models' work at the foot.
+  const workPlace = useIslandBounds();
   const reportOf =
-    (island: "corner" | "script") => (parts: PopupPanelPart[]) => {
+    (island: "corner" | "script" | "work") => (parts: PopupPanelPart[]) => {
       partsRef.current[island] = parts;
+      if (island === "work") workPlace.track(parts);
       reportHitArea();
     };
   // eslint-disable-next-line @eslint-react/exhaustive-deps -- reported again whenever the window starts or stops taking every press.
@@ -119,6 +131,7 @@ export function EditorIslandPanel({
       ) : null}
       <PlacedIsland
         at={at}
+        clearOf={workPlace.bounds}
         inset={content.inset}
         onParts={reportOf("corner")}
         shown={corner}
@@ -128,6 +141,13 @@ export function EditorIslandPanel({
         inset={content.inset}
         onParts={reportOf("script")}
         shown={script}
+      />
+      <PlacedIsland
+        corner="start"
+        edge="bottom"
+        inset={content.inset}
+        onParts={reportOf("work")}
+        shown={work}
       />
     </div>
   );

@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { useCameraEffects } from "../../recording/camera/use-camera-effects";
+import { CameraEffectsTool } from "../../recording/camera/use-camera-effects";
 
 import {
   EditorSelectionTarget,
@@ -14,10 +14,10 @@ import {
  * the camera's effects with it: they go with the camera wherever it is
  * drawn, as a pane of its own or baked into the screen's video.
  */
-export function useLayerSelectionTarget(
+export function layerSelectionTarget(
   inputs: SelectionTargetInputs,
+  cameraEffects: CameraEffectsTool | null,
 ): EditorSelectionTarget | null {
-  const cameraEffects = useCameraEffects(inputs.artifact);
   const target = editorSelectionTarget(inputs);
   // The camera's effects sit with the camera, or with the recording itself
   // where it is of the camera alone.

@@ -3,7 +3,6 @@
 
 import { useState } from "react";
 
-import { useIsFindingFace } from "../../recording/scenes/use-face-tracking-progress";
 import { useBuiltInBackgroundPresets } from "../../tools/frame/use-background-presets";
 import { useToolPanelSnapshot } from "../../tools/use-tool-panel-snapshot";
 import { EditorKind } from "../../types";
@@ -21,6 +20,7 @@ import {
   screenIslandContent,
 } from "./layer-island-content";
 import { libraryIslandContent } from "./library-island-content";
+import { modelWorkIslandContent } from "./model-work-island-content";
 import {
   cursorIslandContent,
   keyboardIslandContent,
@@ -41,11 +41,13 @@ import { useScriptIsland } from "./use-script-island";
 // island's kind in this folder.
 
 /** The islands shown at once: the one in the picture's top end corner (or
- * over a strip item), and the Script island in its top start corner, for
- * the Captions and Transcript modes. */
+ * over a strip item), the Script island in its top start corner, for the
+ * Captions and Transcript modes, and the models' work in its bottom start
+ * corner while there is any. */
 export type SnapshotIslands = {
   corner: EditorIslandContent | null;
   script: EditorIslandContent | null;
+  work: EditorIslandContent | null;
 };
 
 export function useSnapshotIsland(
@@ -54,7 +56,6 @@ export function useSnapshotIsland(
 ): SnapshotIslands {
   const { change, snapshot } = useToolPanelSnapshot(workspace);
   const presets = useBuiltInBackgroundPresets();
-  const isFindingFace = useIsFindingFace();
   // The Scene island's open group, which opens again for the next scene.
   const [sceneGroup, setSceneGroup] = useState<SceneToolGroup>("layout");
   const script = useScriptIsland({ change, island, snapshot, workspace });
@@ -67,10 +68,17 @@ export function useSnapshotIsland(
   // next snapshot, a moment after the island it was standing in for comes
   // back, which would put that island away for the moment and bring it out
   // again, rather than reshaping the Export island into it.
-  if (island === null || (island !== "export" && snapshot.export?.progress))
-    return { corner: null, script: null };
-  const capture = workspace === "screenshot" ? "screenshot" : "recording";
   const inputs = { change, snapshot };
+  // The models' work goes on whatever is in hand, so its island stays out
+  // until there is none; the Export island, out or exporting, puts it away
+  // with the rest.
+  const work =
+    island === "export" || snapshot.export?.progress
+      ? null
+      : modelWorkIslandContent(inputs);
+  if (island === null || (island !== "export" && snapshot.export?.progress))
+    return { corner: null, script: null, work };
+  const capture = workspace === "screenshot" ? "screenshot" : "recording";
   const corner = (): EditorIslandContent | null => {
     switch (island) {
       case "audioClip":
@@ -91,7 +99,7 @@ export function useSnapshotIsland(
       case "annotation":
         return annotationIslandContent({ ...inputs, workspace });
       case "camera":
-        return cameraIslandContent({ ...inputs, isFindingFace });
+        return cameraIslandContent(inputs);
       case "captions":
         return script.transcript
           ? captionsIslandContent({ ...inputs, transcript: script.transcript })
@@ -128,6 +136,6 @@ export function useSnapshotIsland(
   // The Captions mode's pair comes out together, each in its place, rather
   // than one standing alone until the other is ready.
   if (island === "captions" && (shown === null || script.script === null))
-    return { corner: null, script: null };
-  return { corner: shown, script: script.script };
+    return { corner: null, script: null, work };
+  return { corner: shown, script: script.script, work };
 }

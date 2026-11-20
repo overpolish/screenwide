@@ -4,7 +4,7 @@
 //! Auto volume for the system audio: brought to sit a set distance under the
 //! voice as it is heard, whatever the app or the game recorded played it
 //! at, and its peaks held below -1 dB, always, as the songs and sound effects
-//! laid under the recording are. Studio ducking takes it further down while
+//! laid under the recording are. Smart ducking takes it further down while
 //! the voice speaks. The system audio is measured once, as recorded, and
 //! the same lift or cut is played over whichever file it is heard from, so
 //! its ducked file is not lifted back up.
@@ -109,13 +109,13 @@ pub(super) const SYSTEM_FILES: [Processing; 2] = [
     noise: false,
     voice: false,
     duck: false,
-    studio: false,
+    restored: false,
   },
   Processing {
     noise: false,
     voice: false,
     duck: true,
-    studio: false,
+    restored: false,
   },
 ];
 

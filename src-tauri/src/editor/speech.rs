@@ -6,13 +6,18 @@
 //! microphone is heard from. The tools themselves are `screenwide_speech`.
 
 pub(crate) mod commands;
+mod handler;
 pub(crate) mod marks;
-pub(crate) mod studio_ducking;
+pub(crate) mod smart_ducking;
+mod step;
 pub(crate) mod transcript;
 
 use screenwide_export::track_selection;
-use screenwide_speech::{auto_volume, duck, heard, noise, studio, voice};
+use screenwide_speech::{auto_volume, duck, heard, noise, restore_voice, voice};
 use std::path::{Path, PathBuf};
+
+pub(crate) use self::handler::with_commands;
+use self::step::{Step, Unwatched};
 
 use tauri::{AppHandle, Manager};
 
@@ -24,7 +29,7 @@ use screenwide_export::recording_model::{AudioTrackKind, RecordingAudioTrack};
 struct SpeechSource {
   duration_ms: u64,
   microphone: usize,
-  /// The system audio, which Studio ducking makes make way for the voice.
+  /// The system audio, which Smart ducking makes make way for the voice.
   system: Option<usize>,
   /// Every audio track of the recording.
   streams: Vec<usize>,
@@ -89,36 +94,38 @@ fn ready_auto_volume(
   project_folder: &Path,
   (microphone, system): (usize, Option<usize>),
   (movie, duration_ms): (&Path, u64),
-  progress: &mut dyn FnMut(f32),
+  step: &mut dyn Step,
 ) -> Result<(), String> {
   let levels_voice = auto_volume::choice(project_folder, microphone) == auto_volume::AutoVolume::On;
   // The system audio is read once, as recorded, which is quick beside
   // measuring the voice three times over.
   let voice_share = if system.is_some() { 0.75 } else { 1.0 };
-  if levels_voice {
-    auto_volume::measure(
+  step::run(step, |progress| {
+    if levels_voice {
+      auto_volume::measure(
+        project_folder,
+        microphone,
+        movie,
+        duration_ms,
+        &mut |fraction| {
+          progress(fraction * voice_share);
+        },
+      )?;
+    }
+    let Some(system) = system else {
+      return Ok(());
+    };
+    auto_volume::measure_system(
       project_folder,
-      microphone,
+      (system, microphone),
       movie,
       duration_ms,
-      &mut |fraction| {
-        progress(fraction * voice_share);
-      },
-    )?;
-  }
-  let Some(system) = system else {
-    return Ok(());
-  };
-  auto_volume::measure_system(
-    project_folder,
-    (system, microphone),
-    movie,
-    duration_ms,
-    &mut |fraction| progress(voice_share + fraction * (1.0 - voice_share)),
-  )
+      &mut |fraction| progress(voice_share + fraction * (1.0 - voice_share)),
+    )
+  })
 }
 
-/// Readies Studio ducking for the `microphone`th track of `movie`, where it
+/// Readies Smart ducking for the `microphone`th track of `movie`, where it
 /// is on and has its `models`, the voice activity model and the separation
 /// model: makes the `system` audio make way for the voice, its singing out
 /// of the way entirely.
@@ -127,31 +134,33 @@ fn ready_ducking(
   (microphone, system): (usize, Option<usize>),
   (movie, duration_ms): (&Path, u64),
   models: Option<(PathBuf, PathBuf)>,
-  progress: &mut dyn FnMut(f32),
+  step: &mut dyn Step,
 ) -> Result<(), String> {
   let Some((system, models)) = system.zip(models) else {
     return Ok(());
   };
-  duck::prepare(
-    movie,
-    (system, microphone),
-    project_folder,
-    models,
-    duration_ms,
-    progress,
-  )
+  step::run(step, |progress| {
+    duck::prepare(
+      movie,
+      (system, microphone),
+      project_folder,
+      models,
+      duration_ms,
+      progress,
+    )
+  })
 }
 
-/// Where the work [`ready_voice`] does is told: Studio sound's, Reduce
-/// noise's and Vocal cleanup's.
-pub(super) struct VoiceProgress<'a> {
-  pub studio: &'a mut dyn FnMut(f32),
-  pub noise: &'a mut dyn FnMut(f32),
-  pub voice: &'a mut dyn FnMut(f32),
+/// Where the work [`ready_voice`] does is told, and what stops it: Restore
+/// voice's, Reduce noise's and Vocal cleanup's.
+pub(super) struct VoiceSteps<'a> {
+  pub restore: &'a mut dyn Step,
+  pub noise: &'a mut dyn Step,
+  pub voice: &'a mut dyn Step,
 }
 
 /// Makes the files the `microphone`th track of `movie` is heard from where
-/// its switches are on and the file is not made yet. Studio sound, on and
+/// its switches are on and the file is not made yet. Restore voice, on and
 /// with its model downloaded, stands in for the other two; otherwise the
 /// noise is taken out, with the voice activity model at `vad`, and the voice
 /// cleaned up from what that leaves.
@@ -160,26 +169,26 @@ pub(super) fn ready_voice(
   project_folder: &Path,
   (movie, microphone): (&Path, usize),
   vad: Option<PathBuf>,
-  progress: VoiceProgress<'_>,
+  steps: VoiceSteps<'_>,
 ) -> Result<(), String> {
-  if studio::choice(project_folder, microphone) == studio::StudioSound::On {
-    if let Some(model) = studio_model(app) {
-      return studio::prepare(
-        movie,
-        microphone,
-        project_folder,
-        (model, vad),
-        progress.studio,
-      );
+  if restore_voice::choice(project_folder, microphone) == restore_voice::RestoreVoice::On {
+    if let Some(model) = restore_voice_model(app) {
+      return step::run(steps.restore, |progress| {
+        restore_voice::prepare(movie, microphone, project_folder, (model, vad), progress)
+      });
     }
   }
   let noise_on = noise::choice(project_folder, microphone) == noise::NoiseReduction::On;
   if let Some(vad) = vad.filter(|_| noise_on) {
-    noise::prepare(movie, microphone, project_folder, vad, progress.noise)?;
+    step::run(steps.noise, |progress| {
+      noise::prepare(movie, microphone, project_folder, vad, progress)
+    })?;
   }
   if voice::choice(project_folder, microphone) == voice::VocalCleanup::On {
     let denoised = noise_on && noise::is_made(project_folder, microphone);
-    voice::prepare(movie, microphone, project_folder, denoised, progress.voice)?;
+    step::run(steps.voice, |progress| {
+      voice::prepare(movie, microphone, project_folder, denoised, progress)
+    })?;
   }
   Ok(())
 }
@@ -205,40 +214,52 @@ pub(crate) fn ready_for_export(
     return Ok(());
   };
   let model = vad_model(app).ok();
-  let separation = studio_ducking::wanted(app, project_folder, microphone);
+  let separation = smart_ducking::wanted(app, project_folder, microphone);
   ready_voice(
     app,
     project_folder,
     (recording.0, microphone),
     model.clone(),
-    VoiceProgress {
-      studio: &mut |_| {},
-      noise: &mut |_| {},
-      voice: &mut |_| {},
+    VoiceSteps {
+      restore: &mut Unwatched,
+      noise: &mut Unwatched,
+      voice: &mut Unwatched,
     },
   )?;
   let system = first_of(&on, AudioTrackKind::SystemAudio);
-  ready_auto_volume(project_folder, (microphone, system), recording, &mut |_| {})?;
+  ready_auto_volume(
+    project_folder,
+    (microphone, system),
+    recording,
+    &mut Unwatched,
+  )?;
   ready_ducking(
     project_folder,
     (microphone, system),
     recording,
     model.zip(separation),
-    &mut |_| {},
+    &mut Unwatched,
   )
 }
 
-/// Studio sound's model: its encoder and vocoder, where it is downloaded.
-fn studio_model(app: &AppHandle) -> Option<(PathBuf, PathBuf)> {
+/// Restore voice's models, where they are downloaded: the one that restores
+/// the voice and the one that widens it, in the catalogue's order, each
+/// with its weights beside it.
+fn restore_voice_model(app: &AppHandle) -> Option<(PathBuf, PathBuf)> {
   let model =
-    screenwide_speech::catalogue::for_purpose(screenwide_speech::catalogue::Purpose::StudioSound)?;
+    screenwide_speech::catalogue::for_purpose(screenwide_speech::catalogue::Purpose::RestoreVoice)?;
   if !crate::transcription::models::is_downloaded(app, model) {
     return None;
   }
-  let mut paths = crate::transcription::models::paths(app, model)
+  let mut graphs = crate::transcription::models::paths(app, model)
     .ok()?
-    .into_iter();
-  Some((paths.next()?, paths.next()?))
+    .into_iter()
+    .filter(|path| {
+      path
+        .extension()
+        .is_some_and(|extension| extension == "onnx")
+    });
+  Some((graphs.next()?, graphs.next()?))
 }
 
 /// `selection` with each of the `streams` it carries read as it is heard:

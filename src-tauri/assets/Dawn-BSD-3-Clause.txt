@@ -1,4 +1,4 @@
-On macOS, Studio sound runs on the GPU through WebGPU. Its library,
+On macOS, Restore voice runs on the GPU through WebGPU. Its library,
 libwebgpu_dawn.dylib, is Dawn (https://dawn.googlesource.com/dawn), from
 pyke's ONNX Runtime build. Its licence follows.
 

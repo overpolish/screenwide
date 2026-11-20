@@ -6,7 +6,6 @@
 //! correction's measure, that is made with its progress told and shown as
 //! soon as it is there.
 
-use std::collections::HashSet;
 use std::path::PathBuf;
 use std::sync::Mutex;
 
@@ -16,6 +15,7 @@ use ts_rs::TS;
 
 use super::make::{self, CameraTool};
 use super::{as_told, choice, image, keep, live, CameraEffects, CameraRecording, Choice};
+use crate::editor::model_work::{Job, ModelWork};
 use crate::editor::EditorState;
 
 /// The event that tells the editor how far a camera effect has got.
@@ -52,7 +52,8 @@ pub(crate) fn open(app: &AppHandle, artifact_id: u64) -> Result<CameraRecording,
 /// The bars being told, by recording and tool.
 static TOLD: Mutex<Vec<(u64, CameraTool)>> = Mutex::new(Vec::new());
 
-/// Tells the editor how far each tool has got. Once a tool has been told
+/// Tells the editor how far each tool has got, and lists its work with the
+/// models' (`crate::editor::model_work`). Once a tool has been told
 /// anything, it is told it is full when this goes, whether the work
 /// finished or failed, so no bar hangs part-way. Where other work on the
 /// same tool is telling its bar already, this keeps quiet about that tool,
@@ -60,7 +61,7 @@ static TOLD: Mutex<Vec<(u64, CameraTool)>> = Mutex::new(Vec::new());
 pub(super) struct Bars {
   app: AppHandle,
   artifact_id: u64,
-  told: HashSet<CameraTool>,
+  told: Vec<(CameraTool, Job)>,
 }
 
 impl Bars {
@@ -68,20 +69,30 @@ impl Bars {
     Self {
       app: app.clone(),
       artifact_id,
-      told: HashSet::new(),
+      told: Vec::new(),
     }
   }
 
   pub(super) fn tell(&mut self, tool: CameraTool, fraction: f32) {
-    if !self.told.contains(&tool) {
+    if !self.told.iter().any(|(each, _)| *each == tool) {
       let mut told = told();
       if told.contains(&(self.artifact_id, tool)) {
         return;
       }
       told.push((self.artifact_id, tool));
-      self.told.insert(tool);
+      let work = match tool {
+        CameraTool::Background => ModelWork::RemoveBackground,
+        CameraTool::Colour => ModelWork::Enhance,
+        CameraTool::Objects => ModelWork::CameraObjects,
+      };
+      self
+        .told
+        .push((tool, Job::begin(&self.app, self.artifact_id, work)));
     }
     self.emit(tool, fraction);
+    if let Some((_, job)) = self.told.iter().find(|(each, _)| *each == tool) {
+      job.tell(fraction);
+    }
   }
 
   fn emit(&self, tool: CameraTool, fraction: f32) {
@@ -99,9 +110,10 @@ impl Bars {
 impl Drop for Bars {
   fn drop(&mut self) {
     let tools = std::mem::take(&mut self.told);
-    told().retain(|(id, tool)| *id != self.artifact_id || !tools.contains(tool));
-    for tool in tools {
-      self.emit(tool, 1.0);
+    told()
+      .retain(|(id, tool)| *id != self.artifact_id || tools.iter().all(|(each, _)| each != tool));
+    for (tool, _) in &tools {
+      self.emit(*tool, 1.0);
     }
   }
 }

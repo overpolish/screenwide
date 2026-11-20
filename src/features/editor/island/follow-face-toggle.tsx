@@ -4,8 +4,6 @@
 import { motion } from "motion/react";
 
 import { t } from "../../../i18n/i18n";
-import { CircularProgress } from "../../../primitives/circular-progress/circular-progress";
-import { IslandParts } from "../../../primitives/island/island-parts";
 import { useGlyphMotion } from "../../annotations/options/glyph-motion";
 import { OptionToggle } from "../../annotations/options/option-toggle";
 
@@ -39,34 +37,20 @@ function FollowFaceGlyph({ isFollowing }: { isFollowing: boolean }) {
 
 /** Whether the camera keeps the speaker's face in the middle of its crop:
  * for the whole recording on the Camera island, for one scene on the Scene
- * island. While the face is first looked for, a spinner beside the toggle
- * comes and goes as the island's parts do (`IslandParts`). */
+ * island. Finding the face the first time is listed with the models' work. */
 export function FollowFaceToggle({
-  isFindingFace,
   isFollowing,
   onChange,
 }: {
-  isFindingFace: boolean;
   isFollowing: boolean;
   onChange: (isFollowing: boolean) => void;
 }) {
   return (
-    <IslandParts className="flex items-center gap-inline" direction="row">
-      {isFollowing && isFindingFace ? (
-        <CircularProgress
-          aria-label={t("editor-island-finding-face")}
-          isIndeterminate
-          key="finding"
-          size="small"
-        />
-      ) : null}
-      <OptionToggle
-        glyph={(isOn) => <FollowFaceGlyph isFollowing={isOn} />}
-        isOn={isFollowing}
-        key="toggle"
-        label={t("editor-island-follow-face")}
-        onChange={onChange}
-      />
-    </IslandParts>
+    <OptionToggle
+      glyph={(isOn) => <FollowFaceGlyph isFollowing={isOn} />}
+      isOn={isFollowing}
+      label={t("editor-island-follow-face")}
+      onChange={onChange}
+    />
   );
 }

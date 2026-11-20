@@ -1,4 +1,4 @@
-On Windows, Studio sound runs on the GPU through DirectML 1.15.4. DirectML.dll
+On Windows, Restore voice runs on the GPU through DirectML 1.15.4. DirectML.dll
 is Microsoft's redistributable, from pyke's ONNX Runtime build. Its licence
 and third-party notices follow.
 

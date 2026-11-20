@@ -7,9 +7,11 @@ import {
   useAnnotationSelectionCount,
 } from "../annotations/annotation-channel";
 import { composedVideoTracks } from "../export/camera-output";
+import { useCameraEffects } from "../recording/camera/use-camera-effects";
 import { useCaptionCanvasEdits } from "../recording/captions/use-caption-canvas-edits";
 import { useCaptionTools } from "../recording/captions/use-caption-tools";
 import { useMicrophoneTools } from "../recording/microphone/use-microphone-tools";
+import { useModelWork } from "../recording/model-work/use-model-work";
 import {
   recordingSceneControls,
   useRecordingSceneSelection,
@@ -28,11 +30,11 @@ import { editorToolPanelHandlers } from "./editor-tool-panel-handlers";
 import { EditorToolPanelInputs } from "./editor-tool-panel-inputs";
 import { BackgroundPreset } from "./frame/background/background";
 import { editorFrameTarget } from "./frame/frame-target";
+import { layerSelectionTarget } from "./selection/layer-selection-target";
 import {
   editorAudioSelection,
   editorSoundTracks,
 } from "./selection/selection-target";
-import { useLayerSelectionTarget } from "./selection/use-layer-selection-target";
 import { useToolPanelBridge } from "./tool-panel-bridge";
 import { DEFAULT_TOOL_PANEL_SNAPSHOT } from "./tool-panel-store";
 import { editorTracks } from "./tracks/editor-tracks";
@@ -87,20 +89,25 @@ export function useEditorToolPanels({
   const composedTracks = composedVideoTracks(enabledVideoTracks, bakeCamera);
   // Which layer the selection panel is placing, and the handler that commits
   // a new placement for it. Both workspaces already own one; this only says
-  // which of them the current selection means.
-  const selectionTarget = useLayerSelectionTarget({
-    artifact,
-    bakeCamera,
-    cameraOverlay,
-    composedVideoTracks: composedTracks,
-    onCameraOverlayChange,
-    onRecordingOutputChange,
-    onScreenshotOutputChange,
-    recordingOutput,
-    screenshotOutput,
-    selectedScreenshotItemId,
-    selectedTrack,
-  });
+  // which of them the current selection means. The camera's effects are
+  // read whatever is selected, as the models' work turns them off.
+  const cameraEffects = useCameraEffects(artifact);
+  const selectionTarget = layerSelectionTarget(
+    {
+      artifact,
+      bakeCamera,
+      cameraOverlay,
+      composedVideoTracks: composedTracks,
+      onCameraOverlayChange,
+      onRecordingOutputChange,
+      onScreenshotOutputChange,
+      recordingOutput,
+      screenshotOutput,
+      selectedScreenshotItemId,
+      selectedTrack,
+    },
+    cameraEffects,
+  );
   // The microphone's speech tools, made once: the Sound and Script islands
   // share one state and one listen.
   const microphone = useMicrophoneTools({
@@ -191,6 +198,16 @@ export function useEditorToolPanels({
     onGeneralChange: applyGeneralSettings,
   });
   useCaptionCanvasEdits(captions, transcript);
+  const modelWork = useModelWork({
+    artifact,
+    cameraEffects,
+    cameraOverlay,
+    edit: recordingTimelineEdit,
+    microphone,
+    onCameraOverlayChange,
+    onEditChange: onRecordingTimelineEditChange,
+    onTranscriptRequest: transcript.handle,
+  });
   useToolPanelBridge(
     workspace,
     {
@@ -215,6 +232,7 @@ export function useEditorToolPanels({
       hasSongRoom: strip.hasSongRoom,
       isLocked,
       keyboardEffects,
+      modelWork: modelWork.jobs,
       scene,
       sceneTemplates,
       selection: audioSelection ?? selectionTarget?.selection ?? null,
@@ -270,6 +288,7 @@ export function useEditorToolPanels({
           });
         exportIsland.onPatch(patch);
       },
+      onModelWorkCancel: modelWork.cancel,
     },
   );
   // Subtitles are made of the transcript, so the export offers them once

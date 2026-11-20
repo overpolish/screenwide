@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! The system audio making way for the voice, with Studio ducking on. While
+//! The system audio making way for the voice, with Smart ducking on. While
 //! the voice speaks (`gate`), all of the system audio comes down a little,
 //! and the bands the voice is using at that moment come down further
 //! (`plan`), worked out in the short-time spectrum of both tracks; the
@@ -11,8 +11,12 @@
 //! It depends only on the recording, the microphone as recorded and the
 //! speech heard in it, so it is made once into a file of its own in the
 //! project, which preview and export play in place of the system audio
-//! while Studio ducking is on for the microphone it was made against, and
+//! while Smart ducking is on for the microphone it was made against, and
 //! that microphone is heard.
+//!
+//! Separating the singing takes minutes on a long recording, so what is
+//! separated is kept as it goes (`singing_path`): work stopped part-way goes
+//! on from there the next time.
 
 mod choice;
 mod gate;
@@ -22,7 +26,7 @@ mod singing;
 #[cfg(test)]
 mod tests;
 
-pub use choice::{choice, keep, StudioDucking};
+pub use choice::{choice, keep, SmartDucking};
 
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
@@ -40,7 +44,7 @@ const FORMAT_VERSION: u16 = 1;
 /// separating the singing and making way in the system audio each take.
 const SHARES: [f32; 4] = [0.1, 0.1, 0.6, 0.2];
 
-/// What a file was made against. Files made before Studio ducking say
+/// What a file was made against. Files made before Smart ducking say
 /// nothing of singing: they had none separated, and are made again.
 #[derive(Clone, Copy, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -57,6 +61,21 @@ fn made_path(project_folder: &Path, stream: usize) -> PathBuf {
 /// The `stream`th track making way for the voice, in the project.
 pub(super) fn path(project_folder: &Path, stream: usize) -> PathBuf {
   project_folder.join(format!("duck-{stream}.flac"))
+}
+
+/// The singing separated from the `stream`th track so far, raw samples at
+/// the separation rate, kept until its file is made, so work stopped
+/// part-way goes on from there. Kept for a recording changed since, it
+/// starts again.
+fn singing_path(project_folder: &Path, stream: usize, movie: &Path) -> PathBuf {
+  let path = project_folder.join(format!("duck-{stream}.singing.f32"));
+  let modified = |path: &Path| std::fs::metadata(path).and_then(|metadata| metadata.modified());
+  if let (Ok(separated), Ok(recorded)) = (modified(&path), modified(movie)) {
+    if recorded > separated {
+      let _ = std::fs::remove_file(&path);
+    }
+  }
+  path
 }
 
 /// What the `stream`th track was made against, if a file of this make is
@@ -81,7 +100,7 @@ pub fn is_made_for(project_folder: &Path, stream: usize, microphone: usize) -> b
 }
 
 /// Whether the `stream`th track is heard making way: its file is made and
-/// Studio ducking is on for the microphone it makes way for, which is among
+/// Smart ducking is on for the microphone it makes way for, which is among
 /// `heard`, the tracks that are on.
 pub(super) fn is_heard(project_folder: &Path, stream: usize, heard: &[usize]) -> bool {
   made(project_folder, stream).is_some_and(
@@ -91,7 +110,7 @@ pub(super) fn is_heard(project_folder: &Path, stream: usize, heard: &[usize]) ->
      }| {
       singing
         && heard.contains(&microphone)
-        && choice(project_folder, microphone) == StudioDucking::On
+        && choice(project_folder, microphone) == SmartDucking::On
     },
   )
 }
@@ -105,7 +124,7 @@ pub fn ducked_by(project_folder: &Path, streams: &[usize]) -> Vec<(usize, usize)
 }
 
 /// Separates frames `from` to `to` of `sound`, a song from the sound
-/// library, at the separation rate, with Studio ducking's model at `model`,
+/// library, at the separation rate, with Smart ducking's model at `model`,
 /// into the song's two parts, its singing and the rest of it: FLACs lined
 /// up with the song's own timestamps, kept as they were elsewhere, at
 /// `level` of their loudness. Tells `progress` how far it has got. Each
@@ -126,7 +145,7 @@ static MAKING: Mutex<()> = Mutex::new(());
 
 /// Makes the `system`th track of `movie` make way for the `microphone`th,
 /// unless a file of this make is there already, with the voice activity
-/// model and Studio ducking's separation model at `models`, telling
+/// model and Smart ducking's separation model at `models`, telling
 /// `progress` how far it has got, and only once there is work to do. The
 /// singing in the track is separated and gets out of the way entirely.
 pub fn prepare(
@@ -165,7 +184,8 @@ pub fn prepare(
   let step_ms = HOP as f64 * 1_000.0 / f64::from(RATE);
   let gate = gate::gate(&speech, duration_ms as f64, frames, frame_ms, step_ms);
   let before_singing = SHARES[0] + SHARES[1];
-  let singing = singing::separate(movie, system, separation, &mut |fraction| {
+  let singing = singing_path(project_folder, system, movie);
+  singing::separate(movie, system, separation, &singing, &mut |fraction| {
     progress(before_singing + SHARES[2] * fraction);
   })?;
   let singer = Plan::singer(&gate, RATE);
@@ -178,7 +198,7 @@ pub fn prepare(
   let written = pipe::make_way(
     movie,
     system,
-    Some(singing.path()),
+    Some(&singing),
     &partial,
     &mut plans,
     &mut |read| {
@@ -199,5 +219,7 @@ pub fn prepare(
       singing: true,
     },
   )
-  .map_err(|error| format!("Could not keep the system audio: {error}"))
+  .map_err(|error| format!("Could not keep the system audio: {error}"))?;
+  let _ = std::fs::remove_file(&singing);
+  Ok(())
 }

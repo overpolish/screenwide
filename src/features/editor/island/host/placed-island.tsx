@@ -14,34 +14,27 @@ import { EditorIsland, type EditorIslandContent } from "../editor-island";
 import { ISLAND_ROOM } from "../island-room";
 
 import { type PictureInset } from "./editor-island-kind";
+import { type Bounds, boundsOf } from "./island-bounds";
 
 // One island in the window laid over the editor's content, at one of the
-// picture's top corners: the end one, whatever brought it out, or the
-// start one, as the Script island stands; or at the picture's foot over a
-// point along it, as a strip item's island stands over the item. It
-// reports where its parts are as it changes shape, moved to where it now
-// stands. The picture lies `inset` in from the window's edges; a corner's
-// island may reach down past the picture's foot to the window's, as the
-// tall Export island does.
+// picture's corners: the top end one, whatever brought it out, the top
+// start one, as the Script island stands, or the bottom start one, as the
+// models' work stands; or at the picture's foot over a point along it, as a
+// strip item's island stands over the item. It reports where its parts are
+// as it changes shape, moved to where it now stands. The picture lies
+// `inset` in from the window's edges; a top corner's island may reach down
+// past the picture's foot to the window's, as the tall Export island does.
+// An island over a strip item keeps clear of the models' work in the bottom
+// start corner, moving toward the end as it moves to stay on the picture.
 
 /** Between the island and the picture's edges, in px. */
 const EDGE_PX = 12;
 
-type Bounds = { bottom: number; end: number; start: number; top: number };
-
-const boundsOf = (parts: PopupPanelPart[]): Bounds | null =>
-  parts.length === 0
-    ? null
-    : {
-        bottom: Math.max(...parts.map((part) => part.y + part.height)),
-        end: Math.max(...parts.map((part) => part.x + part.width)),
-        start: Math.min(...parts.map((part) => part.x)),
-        top: Math.min(...parts.map((part) => part.y)),
-      };
-
 export function PlacedIsland({
   at = null,
+  clearOf = null,
   corner = "end",
+  edge = "top",
   inset,
   onParts,
   shown,
@@ -56,9 +49,15 @@ export function PlacedIsland({
    * at the picture's foot, kept over the picture; at a top corner where
    * null. */
   at?: number | null;
-  /** Which of the picture's top corners it stands in, along the line of
-   * the text, where `at` is null. */
+  /** Where another island at the picture's foot stands in the window, the
+   * models' work in its start corner, which an island over a strip item
+   * moves toward the end to keep clear of, as it keeps inside the picture. */
+  clearOf?: Bounds | null;
+  /** Which of the picture's corners it stands in, along the line of the
+   * text, where `at` is null. */
   corner?: "end" | "start";
+  /** Whether that corner is at the picture's top or its foot. */
+  edge?: "bottom" | "top";
 }) {
   const { direction } = useLocale();
   // The island's distance from the window's end edge runs from its right
@@ -117,31 +116,48 @@ export function PlacedIsland({
   const holderRef = useRef<HTMLDivElement>(null);
   /** How far the middle of an island `width` wide over `point` stands from
    * the holder's edge, the window's left running left to right, kept over
-   * the picture. */
-  const fromSide = (point: number, width: number) => {
-    const middle = Math.max(
-      inset.left + EDGE_PX + width / 2,
-      Math.min(point, window.innerWidth - inset.right - EDGE_PX - width / 2),
-    );
+   * the picture and, standing `top` to `bottom` in the window, clear of
+   * `clearOf`, toward the end. */
+  const fromSide = (
+    point: number,
+    width: number,
+    [top, bottom]: [number, number],
+  ) => {
+    const least = inset.left + EDGE_PX + width / 2;
+    const most = window.innerWidth - inset.right - EDGE_PX - width / 2;
+    const over = Math.max(least, Math.min(point, most));
+    const clashes = (clear: Bounds) =>
+      top < clear.bottom + EDGE_PX &&
+      bottom > clear.top - EDGE_PX &&
+      over - width / 2 < clear.end + EDGE_PX &&
+      over + width / 2 > clear.start - EDGE_PX;
+    const middle =
+      clearOf === null || !clashes(clearOf)
+        ? over
+        : fromRight
+          ? Math.min(most, clearOf.end + EDGE_PX + width / 2)
+          : Math.max(least, clearOf.start - EDGE_PX - width / 2);
     return fromRight ? window.innerWidth - middle : middle;
   };
 
   // Moved directly rather than through state: the island reports its shape
   // on every frame it changes. In a corner, its end or start edge stays
-  // `EDGE_PX` in from the picture's, and its top `EDGE_PX` down; over a
-  // strip item, its middle over `at` while that keeps it over the picture,
-  // and its foot `EDGE_PX` up from the picture's. Placed from where its
-  // parts are from its own middle (`bounds`), as its shape's values have
-  // them: placed from where they were measured on the page, a frame behind
-  // the values, it chased its own move and rocked as it grew or shrank.
+  // `EDGE_PX` in from the picture's, and its top `EDGE_PX` down, or at the
+  // foot its foot `EDGE_PX` up; over a strip item, its middle over `at`
+  // while that keeps it over the picture, and its foot `EDGE_PX` up from the
+  // picture's. Placed from where its parts are from its own middle
+  // (`bounds`), as its shape's values have them: placed from where they
+  // were measured on the page, a frame behind the values, it chased its own
+  // move and rocked as it grew or shrank.
   // Returns where the island's middle and top now stand in the window.
   const place = (bounds: Bounds | null) => {
     const holder = holderRef.current;
-    // A corner's island may reach the window's foot; a strip item's stands
-    // on the picture.
+    // A top corner's island may reach the window's foot; one at the foot
+    // stands on the picture.
+    const onPicture = placeAt !== null || edge === "bottom";
     holder?.style.setProperty(
       ISLAND_ROOM,
-      `${String(window.innerHeight - inset.top - (placeAt === null ? 0 : inset.bottom) - 2 * EDGE_PX)}px`,
+      `${String(window.innerHeight - inset.top - (onPicture ? inset.bottom : 0) - 2 * EDGE_PX)}px`,
     );
     if (!holder || !bounds) return null;
     const width = bounds.end - bounds.start;
@@ -153,20 +169,20 @@ export function PlacedIsland({
     const lean = (bounds.start + bounds.end) / 2;
     const endInset = fromRight ? inset.right : inset.left;
     const startInset = fromRight ? inset.left : inset.right;
-    const middle =
-      placeAt !== null
-        ? fromSide(placeAt, width)
-        : corner === "end"
-          ? EDGE_PX + endInset + width / 2
-          : window.innerWidth - EDGE_PX - startInset - width / 2;
-    const x = middle + (fromRight ? lean : -lean);
     const y =
-      placeAt === null
+      placeAt === null && edge === "top"
         ? EDGE_PX + inset.top
         : Math.max(
             EDGE_PX + inset.top,
             window.innerHeight - inset.bottom - height - EDGE_PX,
           );
+    const middle =
+      placeAt !== null
+        ? fromSide(placeAt, width, [y, y + height])
+        : corner === "end"
+          ? EDGE_PX + endInset + width / 2
+          : window.innerWidth - EDGE_PX - startInset - width / 2;
+    const x = middle + (fromRight ? lean : -lean);
     holder.style.transform = `translate(${String(fromRight ? -x : x)}px, ${String(y)}px)`;
     return { left: fromRight ? window.innerWidth - x : x, top: y };
   };
@@ -195,7 +211,17 @@ export function PlacedIsland({
   reportRef.current = report;
   useLayoutEffect(() => {
     reportRef.current(partsRef.current);
-  }, [placeAt, inset.bottom, inset.left, inset.right, inset.top]);
+  }, [
+    placeAt,
+    inset.bottom,
+    inset.left,
+    inset.right,
+    inset.top,
+    clearOf?.bottom,
+    clearOf?.end,
+    clearOf?.start,
+    clearOf?.top,
+  ]);
   useEffect(() => {
     const replace = () => {
       reportRef.current(partsRef.current);

@@ -105,9 +105,11 @@ pub fn run() {
     .manage(shortcuts::ShortcutSettingsState::default())
     .manage(text_recognition::TextRecognitionState::default())
     .manage(tooltip_window::TooltipState::default())
-    .invoke_handler(editor::sound_library::with_commands(
-      editor::annotation_clipboard::with_commands(teleprompter::with_commands(
-        app_windows::commands::with_commands(invoke_handler::invoke_handler()),
+    .invoke_handler(editor::speech::with_commands(
+      editor::sound_library::with_commands(editor::annotation_clipboard::with_commands(
+        teleprompter::with_commands(app_windows::commands::with_commands(
+          invoke_handler::invoke_handler(),
+        )),
       )),
     ))
     .setup(startup::setup)

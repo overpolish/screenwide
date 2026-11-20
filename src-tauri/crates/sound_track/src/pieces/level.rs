@@ -15,7 +15,7 @@ use super::SoundFile;
 /// The loudness a clip is brought to with no voice to play under, in LUFS:
 /// the loudness voices are commonly published at.
 const NO_VOICE_LUFS: f64 = -16.0;
-/// How far under the voice a song plays by default, in dB. Studio ducking
+/// How far under the voice a song plays by default, in dB. Smart ducking
 /// takes it further down while the voice speaks.
 const SONG_UNDER_VOICE_DB: f64 = 6.0;
 /// How far under the voice a sound effect plays by default, in dB.

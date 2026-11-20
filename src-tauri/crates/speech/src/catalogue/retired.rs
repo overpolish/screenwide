@@ -5,8 +5,10 @@
 //! uses, removed so it does not take room for nothing.
 
 /// Files models no longer in the catalogue were kept in: HT Demucs, which
-/// Studio ducking ran before, whose weights are licensed for research only.
-pub const RETIRED_FILES: &[&str] = &["htdemucs.onnx"];
+/// Smart ducking ran before, whose weights are licensed for research only,
+/// and Sidon, which Restore voice ran before and which wobbled the pitch of
+/// a voice it rebuilt.
+pub const RETIRED_FILES: &[&str] = &["htdemucs.onnx", "sidon-encoder.onnx", "sidon-vocoder.onnx"];
 
 /// How the folders of compiles kept under names no longer used start:
 /// object following's CoreML compiles, before each compile's folder was

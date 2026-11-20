@@ -71,8 +71,8 @@ export function keyboardIslandContent({
 const SOUND_TOOL_PATCH: Record<SoundTool, (isOn: boolean) => ToolPanelPatch> = {
   autoVolume: (autoVolume) => ({ autoVolume }),
   reduceNoise: (reduceNoise) => ({ reduceNoise }),
-  studioDucking: (studioDucking) => ({ studioDucking }),
-  studioSound: (studioSound) => ({ studioSound }),
+  restoreVoice: (restoreVoice) => ({ restoreVoice }),
+  smartDucking: (smartDucking) => ({ smartDucking }),
   vocalCleanup: (vocalCleanup) => ({ vocalCleanup }),
 };
 
@@ -83,11 +83,11 @@ export function soundIslandContent({
   const tracks = snapshot.soundTracks ?? [];
   if (tracks.length === 0) return null;
   return soundIsland({
-    onDownloadStudioDucking: () => {
-      change({ downloadStudioDucking: true });
+    onDownloadRestoreVoice: () => {
+      change({ downloadRestoreVoice: true });
     },
-    onDownloadStudioSound: () => {
-      change({ downloadStudioSound: true });
+    onDownloadSmartDucking: () => {
+      change({ downloadSmartDucking: true });
     },
     onToolChange: (tool, isOn) => {
       change(SOUND_TOOL_PATCH[tool](isOn));

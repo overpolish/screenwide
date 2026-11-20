@@ -55,14 +55,13 @@ const inOrder = (
 
 /**
  * The objects picked in the camera of the recording `artifactId`, once its
- * matte is made: `isMatted`. Each tells how far following it has got;
- * `progress` is how far laying them into the matte has, as the app tells it. Picking happens on the preview,
- * which draws the camera as recorded and takes a click on it as a pick.
+ * matte is made: `isMatted`. Each tells how far following it has got.
+ * Picking happens on the preview, which draws the camera as recorded and
+ * takes a click on it as a pick.
  */
 export function useCameraPicks(
   artifactId: number | null,
   isMatted: boolean,
-  progress: number | undefined,
 ): CameraPicksTool | null {
   const model = useModel("cameraObjects");
   const isDownloaded = model.shown?.status === "downloaded";
@@ -212,8 +211,6 @@ export function useCameraPicks(
         keep: pick.keep,
         painted: pick.line.length > 1,
       })),
-      progress: progress ?? 0,
-      working: progress !== undefined && progress > 0 && progress < 1,
     },
   };
 }

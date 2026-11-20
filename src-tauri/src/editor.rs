@@ -19,6 +19,8 @@ mod directory;
 mod export_picture;
 /// The pictures images show.
 pub(crate) mod images;
+/// The models' work under way on the recording open, with its Cancel.
+pub(crate) mod model_work;
 mod naming;
 /// Songs, sound effects and pictures found on Openverse, for the Library.
 pub(crate) mod openverse;

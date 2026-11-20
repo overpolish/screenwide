@@ -34,7 +34,7 @@ use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
 use super::{choice_file, noise};
-use crate::runner::samples::{decode_audio_stream, Samples};
+use crate::runner::samples::decode_audio_stream;
 
 /// Bumped when a cleaned file of an older make should be made again.
 const FORMAT_VERSION: u16 = 8;
@@ -138,16 +138,4 @@ pub fn prepare(
   }
   std::fs::rename(&partial, &destination)
     .map_err(|error| format!("Could not keep the cleaned up microphone: {error}"))
-}
-
-/// Cleans up the voice Studio sound rebuilt, the samples in `rebuilt` at the
-/// cleaning rate, into a FLAC file at `output`, telling `progress` how far it
-/// has got. Every stage runs but the plosives': it takes the bursts of a
-/// laugh for plosives, and softening them is heard on the rebuilt voice.
-pub(super) fn clean_up_rebuilt(
-  rebuilt: &Samples,
-  output: &Path,
-  progress: &mut dyn FnMut(f32),
-) -> Result<(), String> {
-  encode::encode(rebuilt, output, false, progress)
 }

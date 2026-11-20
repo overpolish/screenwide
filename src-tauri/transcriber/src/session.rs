@@ -36,7 +36,7 @@ fn builder() -> ort::Result<SessionBuilder> {
 
 /// Whether DirectML may fuse the model's graph into one piece of GPU work.
 /// Fused, a large model can hold the GPU for long enough that Windows resets
-/// it, as Studio ducking's did, taking every program on it along; unfused,
+/// it, as Smart ducking's did, taking every program on it along; unfused,
 /// the same model ran faster in many short steps. Only DirectML reads this.
 #[derive(Clone, Copy)]
 pub(crate) enum Fusion {

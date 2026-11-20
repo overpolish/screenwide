@@ -198,15 +198,15 @@ settings-voice-notes-transcription = Transcription
 settings-voice-notes-needs-model = Needs the { $model } model ({ $size }).
 settings-voice-notes-microphone-denied = { -app-name } needs microphone access for voice notes.
 
-## Models: transcription, Studio sound, Studio ducking and background removal. $model is a model's name.
+## Models: transcription, Restore voice, Smart ducking and background removal. $model is a model's name.
 
 settings-transcription-local = Models run on this computer. Recordings are never uploaded.
-# The model the microphone's Studio sound switch uses, named for what it does.
-settings-transcription-studio-sound = Studio sound
-settings-transcription-studio-sound-description = Enhances your voice.
-# The model the microphone's Studio ducking switch uses, named for what it does.
-settings-transcription-studio-ducking = Studio ducking
-settings-transcription-studio-ducking-description = Keeps your voice clear over other audio.
+# The model the microphone's Restore voice switch uses, named for what it does.
+settings-transcription-restore-voice = Restore voice
+settings-transcription-restore-voice-description = Makes your voice sound like a studio recording.
+# The model the microphone's Smart ducking switch uses, named for what it does.
+settings-transcription-smart-ducking = Smart ducking
+settings-transcription-smart-ducking-description = Keeps your voice clear over other audio.
 # The model the camera's Remove background switch uses, named for what it does.
 settings-transcription-camera-background = Background removal
 settings-transcription-camera-background-description = Removes the background behind you on camera.

@@ -1,5 +1,5 @@
 The speech-to-text helper links ONNX Runtime (https://github.com/microsoft/onnxruntime)
-to run the Studio sound model. Its licence follows.
+to run the Restore voice and Smart ducking models. Its licence follows.
 
 MIT License
 

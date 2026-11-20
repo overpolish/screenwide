@@ -2,112 +2,28 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 //! The microphone's switches: Reduce noise, Vocal cleanup, Auto volume and
-//! Studio ducking. Each does its work the first time it is turned a way,
+//! Smart ducking. Each does its work the first time it is turned a way,
 //! which can take a while on a long recording, and is instant after.
 //! Turning one can call for another's work too: Vocal cleanup is made again
 //! from what Reduce noise leaves, and Auto volume measures whatever is
 //! heard. Each kind of work fills its own switch's bar, whichever switch
 //! called for it.
 
-use std::path::PathBuf;
-
 use tauri::AppHandle;
 
-use super::super::studio_ducking;
-use super::super::{ready_auto_volume, ready_ducking, vad_model, SpeechSource};
-use super::{reporter, MicrophoneTool};
+use self::bars::{bar, level_heard, ready, singing};
+use super::super::step;
+use super::super::{vad_model, SpeechSource};
+use super::MicrophoneTool;
 use crate::editor::recording_preview_player::{refresh_processing, PreviewProcessing};
 use screenwide_speech::auto_volume::{self, AutoVolume};
 use screenwide_speech::noise::{self, NoiseReduction};
 use screenwide_speech::voice::{self, VocalCleanup};
 
+mod bars;
 pub(crate) mod ducking_switch;
 mod opening;
-pub(crate) mod studio_switch;
-
-/// A tool's progress bar. Once anything has been told, the bar is told it is
-/// full when this goes, whether the work finished or failed, so it never
-/// hangs part-way.
-struct Bar<F: FnMut(f32)> {
-  report: F,
-  told: bool,
-}
-
-impl<F: FnMut(f32)> Bar<F> {
-  fn tell(&mut self, fraction: f32) {
-    self.told = true;
-    (self.report)(fraction);
-  }
-}
-
-impl<F: FnMut(f32)> Drop for Bar<F> {
-  fn drop(&mut self) {
-    if self.told {
-      (self.report)(1.0);
-    }
-  }
-}
-
-fn bar(app: &AppHandle, artifact_id: u64, tool: MicrophoneTool) -> Bar<impl FnMut(f32)> {
-  Bar {
-    report: reporter(app, artifact_id, tool),
-    told: false,
-  }
-}
-
-/// Studio ducking's part in readying the recording `source` reads: its
-/// separation model, where the switch is on and the model is downloaded,
-/// and its own bar for making the system audio make way.
-struct Singing<F: FnMut(f32)> {
-  model: Option<PathBuf>,
-  bar: Bar<F>,
-}
-
-fn singing(app: &AppHandle, artifact_id: u64, source: &SpeechSource) -> Singing<impl FnMut(f32)> {
-  Singing {
-    model: studio_ducking::wanted(app, &source.project_folder, source.microphone),
-    bar: bar(app, artifact_id, MicrophoneTool::StudioDucking),
-  }
-}
-
-/// Readies Auto volume and Studio ducking for the track as it is heard now,
-/// where each is on: measures it, and makes the system audio make way for
-/// it with the voice activity model at `model` and `singing`'s separation
-/// model. Work that fails leaves the track heard unleveled rather than
-/// undoing the switch that called for it.
-fn level_heard(
-  source: &SpeechSource,
-  model: Option<PathBuf>,
-  singing: &mut Singing<impl FnMut(f32)>,
-  progress: &mut dyn FnMut(f32),
-) {
-  if let Err(error) = ready(source, model, singing, progress) {
-    eprintln!("Could not ready the microphone's volume: {error}");
-  }
-}
-
-fn ready(
-  source: &SpeechSource,
-  model: Option<PathBuf>,
-  singing: &mut Singing<impl FnMut(f32)>,
-  progress: &mut dyn FnMut(f32),
-) -> Result<(), String> {
-  let recording = (source.movie.as_path(), source.duration_ms);
-  ready_auto_volume(
-    &source.project_folder,
-    (source.microphone, source.system),
-    recording,
-    progress,
-  )?;
-  let bar = &mut singing.bar;
-  ready_ducking(
-    &source.project_folder,
-    (source.microphone, source.system),
-    recording,
-    model.zip(singing.model.clone()),
-    &mut |fraction| bar.tell(fraction),
-  )
-}
+pub(crate) mod restore_voice_switch;
 
 /// Whether the microphone of the recording open in the editor has its noise
 /// taken out, as its project says. A recording starts with it on, so the
@@ -142,13 +58,13 @@ pub async fn set_recording_noise_reduction(
   let choice = tauri::async_runtime::spawn_blocking(move || {
     let (folder, stream) = (&source.project_folder, source.microphone);
     if let Some(model) = model {
-      noise::prepare(&source.movie, stream, folder, model, &mut |fraction| {
-        noise_bar.tell(fraction);
+      step::run(&mut noise_bar, |progress| {
+        noise::prepare(&source.movie, stream, folder, model, progress)
       })?;
     }
     if voice::choice(folder, stream) == VocalCleanup::On {
-      voice::prepare(&source.movie, stream, folder, enabled, &mut |fraction| {
-        voice_bar.tell(fraction);
+      step::run(&mut voice_bar, |progress| {
+        voice::prepare(&source.movie, stream, folder, enabled, progress)
       })?;
     }
     let choice = if enabled {
@@ -157,9 +73,7 @@ pub async fn set_recording_noise_reduction(
       NoiseReduction::Off
     };
     noise::keep(folder, stream, choice)?;
-    level_heard(&source, level_model, &mut singing, &mut |fraction| {
-      level_bar.tell(fraction)
-    });
+    level_heard(&source, level_model, &mut singing, &mut level_bar);
     Ok::<_, String>((choice, source))
   })
   .await
@@ -200,17 +114,15 @@ pub async fn set_recording_vocal_cleanup(
     let choice = if enabled {
       let denoised =
         noise::choice(folder, stream) == NoiseReduction::On && noise::is_made(folder, stream);
-      voice::prepare(&source.movie, stream, folder, denoised, &mut |fraction| {
-        voice_bar.tell(fraction);
+      step::run(&mut voice_bar, |progress| {
+        voice::prepare(&source.movie, stream, folder, denoised, progress)
       })?;
       VocalCleanup::On
     } else {
       VocalCleanup::Off
     };
     voice::keep(folder, stream, choice)?;
-    level_heard(&source, level_model, &mut singing, &mut |fraction| {
-      level_bar.tell(fraction)
-    });
+    level_heard(&source, level_model, &mut singing, &mut level_bar);
     Ok::<_, String>((choice, source))
   })
   .await
@@ -222,7 +134,7 @@ pub async fn set_recording_vocal_cleanup(
 /// Whether the microphone of the recording open in the editor is brought to
 /// a steady loudness, as its project says. A recording starts with it on, so
 /// the first time one opens, or whenever what is heard has not been
-/// measured or the system audio not made to make way with Studio ducking
+/// measured or the system audio not made to make way with Smart ducking
 /// on, that work is done in the background, with its progress told.
 #[tauri::command]
 pub fn get_recording_auto_volume(app: AppHandle, artifact_id: u64) -> Result<AutoVolume, String> {
@@ -254,8 +166,7 @@ pub async fn set_recording_auto_volume(
     };
     auto_volume::keep(folder, stream, choice)?;
     if enabled {
-      let level = &mut |fraction| level_bar.tell(fraction);
-      if let Err(error) = ready(&source, model, &mut singing, level) {
+      if let Err(error) = ready(&source, model, &mut singing, &mut level_bar) {
         auto_volume::keep(folder, stream, AutoVolume::Off)?;
         return Err(error);
       }

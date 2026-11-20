@@ -129,16 +129,12 @@ describe("actions while the editor answers", () => {
 describe("the Sound island's switches while the editor answers", () => {
   const microphone: ToolPanelMicrophone = {
     autoVolume: "on",
-    autoVolumeProgress: 0,
     ducking: null,
     noise: "off",
-    noiseProgress: 0,
+    restore: "off",
+    restoreModel: null,
     silences: { count: 0, durationMs: 0, progress: null, status: "idle" },
-    studio: "off",
-    studioModel: null,
-    studioProgress: 0,
     voice: "on",
-    voiceProgress: 0,
   };
   const sounding: ToolPanelSnapshot = {
     ...snapshot("standard"),

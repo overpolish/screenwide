@@ -14,8 +14,22 @@ use super::silences::{speech_ranges, KEEP_AFTER_SPEECH_MS, KEEP_BEFORE_SPEECH_MS
 /// How far below the voice a pause is held: 40 dB, low enough that what the
 /// enhancer let through is gone, without the dead stop of true silence.
 const PAUSE_GAIN: f32 = 0.01;
-/// How long the gain takes to go between voice and pause.
-const FADE_MS: f64 = 80.0;
+
+/// How close to speech a gate holds open, in milliseconds, and how long it
+/// takes to go between voice and pause.
+#[derive(Clone, Copy)]
+pub(super) struct Margins {
+  pub(super) before_ms: f64,
+  pub(super) after_ms: f64,
+  pub(super) fade_ms: f64,
+}
+
+/// Remove silences' margins, eased over 80 ms.
+const PAUSE_MARGINS: Margins = Margins {
+  before_ms: KEEP_BEFORE_SPEECH_MS,
+  after_ms: KEEP_AFTER_SPEECH_MS,
+  fade_ms: 80.0,
+};
 
 pub(super) struct PauseGate {
   /// The stretches at full gain, in samples, sorted and apart.
@@ -29,19 +43,24 @@ impl PauseGate {
   /// The gate for a track at `rate` whose speech `speech` maps, `length`
   /// samples long.
   pub(super) fn new(speech: &SpeechMap, rate: u32, length: u64) -> Self {
+    Self::with_margins(speech, rate, length, PAUSE_MARGINS)
+  }
+
+  /// [`Self::new`], open `margins` either side of speech.
+  pub(super) fn with_margins(speech: &SpeechMap, rate: u32, length: u64, margins: Margins) -> Self {
     let per_ms = f64::from(rate) / 1_000.0;
     let duration_ms = length as f64 / per_ms;
     let mut open: Vec<(u64, u64)> = Vec::new();
     for (start, end) in speech_ranges(speech, duration_ms) {
-      let start = ((start - KEEP_BEFORE_SPEECH_MS).max(0.0) * per_ms) as u64;
-      let end = ((end + KEEP_AFTER_SPEECH_MS) * per_ms) as u64;
+      let start = ((start - margins.before_ms).max(0.0) * per_ms) as u64;
+      let end = ((end + margins.after_ms) * per_ms) as u64;
       match open.last_mut() {
         Some(last) if start <= last.1 => last.1 = last.1.max(end),
         _ => open.push((start, end)),
       }
     }
     Self {
-      fade: ((FADE_MS * per_ms) as u64).max(1),
+      fade: ((margins.fade_ms * per_ms) as u64).max(1),
       next: 0,
       open,
     }

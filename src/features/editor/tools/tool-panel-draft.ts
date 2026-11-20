@@ -71,6 +71,7 @@ export function resolveToolPanelSnapshot(
     autoVolume,
     autoZoomScenes: _autoZoomScenes,
     cameraEffects,
+    cancelModelWork: _cancelModelWork,
     captionDefaults: _captionDefaults,
     captions,
     chooseCameraBackground: _chooseCameraBackground,
@@ -84,8 +85,8 @@ export function resolveToolPanelSnapshot(
     deselectStripItem: _deselectStripItem,
     downloadCameraBackground: _downloadCameraBackground,
     downloadCameraObjects: _downloadCameraObjects,
-    downloadStudioDucking: _downloadStudioDucking,
-    downloadStudioSound: _downloadStudioSound,
+    downloadRestoreVoice: _downloadRestoreVoice,
+    downloadSmartDucking: _downloadSmartDucking,
     frameRadius,
     frameSize,
     gapBackground: _gapBackground,
@@ -103,6 +104,7 @@ export function resolveToolPanelSnapshot(
     resetFrame: _resetFrame,
     resetPlacement: _resetPlacement,
     restoreShortcuts: _restoreShortcuts,
+    restoreVoice,
     reverseAnnotation: _reverseAnnotation,
     saveAnnotationColor: _saveAnnotationColor,
     savePreset: _savePreset,
@@ -126,9 +128,8 @@ export function resolveToolPanelSnapshot(
     selectionRotation,
     showCameraObject: _showCameraObject,
     shuffleAnnotation: _shuffleAnnotation,
+    smartDucking,
     soundAddition: _soundAddition,
-    studioDucking,
-    studioSound,
     swapScenePanes: _swapScenePanes,
     trackEnabled: _trackEnabled,
     trackVolume: _trackVolume,
@@ -166,17 +167,17 @@ export function resolveToolPanelSnapshot(
     reduceNoise !== undefined ||
     vocalCleanup !== undefined ||
     autoVolume !== undefined ||
-    studioSound !== undefined ||
-    studioDucking !== undefined;
+    restoreVoice !== undefined ||
+    smartDucking !== undefined;
   const flipped = (microphone: ToolPanelMicrophone): ToolPanelMicrophone => ({
     ...microphone,
     autoVolume: flippedSwitch(microphone.autoVolume, autoVolume),
     ducking: microphone.ducking && {
       ...microphone.ducking,
-      state: flippedSwitch(microphone.ducking.state, studioDucking),
+      state: flippedSwitch(microphone.ducking.state, smartDucking),
     },
     noise: flippedSwitch(microphone.noise, reduceNoise),
-    studio: flippedSwitch(microphone.studio, studioSound),
+    restore: flippedSwitch(microphone.restore, restoreVoice),
     voice: flippedSwitch(microphone.voice, vocalCleanup),
   });
   const audio =

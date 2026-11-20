@@ -442,6 +442,9 @@ export type Messages = {
   "editor-island-marquee-delete": null;
   "editor-island-model-download": null;
   "editor-island-model-downloading": null;
+  "editor-island-model-work": null;
+  "editor-island-model-work-cancel": null;
+  "editor-island-model-work-estimating": null;
   "editor-island-moment-confirm-cut": null;
   "editor-island-moment-cut": null;
   "editor-island-moment-no-speech": null;
@@ -529,6 +532,8 @@ export type Messages = {
   "editor-island-reset-crop": null;
   "editor-island-reset-placement": null;
   "editor-island-reset-rotation": null;
+  "editor-island-restore-voice": null;
+  "editor-island-restore-voice-working": null;
   "editor-island-rotation": null;
   "editor-island-rotation-x": null;
   "editor-island-rotation-y": null;
@@ -610,6 +615,8 @@ export type Messages = {
   "editor-island-script-transcript-hint": { key: string | number };
   "editor-island-shape": null;
   "editor-island-size": null;
+  "editor-island-smart-ducking": null;
+  "editor-island-smart-ducking-working": null;
   "editor-island-sound": null;
   "editor-island-sound-library": null;
   "editor-island-sound-library-add": {
@@ -633,10 +640,6 @@ export type Messages = {
   "editor-island-strip-group": { count: number };
   "editor-island-strip-group-confirm-cut": null;
   "editor-island-strip-group-cut": null;
-  "editor-island-studio-ducking": null;
-  "editor-island-studio-ducking-working": null;
-  "editor-island-studio-sound": null;
-  "editor-island-studio-sound-working": null;
   "editor-island-text": null;
   "editor-island-text-accent-font-current": { font: string | number };
   "editor-island-text-color-accent": null;
@@ -1564,10 +1567,10 @@ export type Messages = {
   "settings-transcription-notes": null;
   "settings-transcription-notes-description": null;
   "settings-transcription-remove": { model: string | number };
-  "settings-transcription-studio-ducking": null;
-  "settings-transcription-studio-ducking-description": null;
-  "settings-transcription-studio-sound": null;
-  "settings-transcription-studio-sound-description": null;
+  "settings-transcription-restore-voice": null;
+  "settings-transcription-restore-voice-description": null;
+  "settings-transcription-smart-ducking": null;
+  "settings-transcription-smart-ducking-description": null;
   "settings-transcription-system-language": { language: string | number };
   "settings-transcription-transcripts": null;
   "settings-transcription-transcripts-description": null;

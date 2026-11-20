@@ -88,16 +88,13 @@ export type ToolPanelCameraEffects = {
   /** Objects picked to fix the matte, once the background is taken away;
    * `null` before. */
   objects: ToolPanelCameraObjects | null;
-  /** How far each tool's work has got, 0 to 1, while it is working. */
-  progress: Record<"background" | "colour", number>;
-  working: Record<"background" | "colour", boolean>;
 };
 
 /**
  * Objects picked in the camera where the matte has them wrong, each kept
  * with the person or removed with the room. Each is picked in one frame and
  * followed through the recording, which takes a while, then laid into the
- * matte: `working`, at `progress`, while that is.
+ * matte.
  */
 export type ToolPanelCameraObjects = {
   /** The object chosen while picking, which the bin takes away. */
@@ -116,8 +113,6 @@ export type ToolPanelCameraObjects = {
     keep: boolean;
     painted: boolean;
   }[];
-  progress: number;
-  working: boolean;
 };
 
 /** Where Remove silences stands for the recording's microphone, as the
@@ -139,7 +134,7 @@ export type ToolPanelSilences = {
 /**
  * Where the microphone's speech tools stand. Reduce noise and Remove
  * silences work from the same listen through the track for speech, which
- * runs once, the first time either asks. Studio sound stands in for Reduce
+ * runs once, the first time either asks. Restore voice stands in for Reduce
  * noise and Vocal cleanup while it is on and its model is downloaded.
  */
 export type ToolPanelMicrophone = {
@@ -147,39 +142,29 @@ export type ToolPanelMicrophone = {
    * made to make way for it while it speaks: `cleaning` while that work is
    * done for the track as it is heard, once for each way it can be heard. */
   autoVolume: "cleaning" | "off" | "on";
-  /** How far measuring has got, 0 to 1, while `autoVolume` is `cleaning`. */
-  autoVolumeProgress: number;
-  /** Studio ducking, for a recording with system audio, `null` without: the
+  /** Smart ducking, for a recording with system audio, `null` without: the
    * singing in the system audio moved out of the voice's way while it
    * speaks, by a downloaded model, where the rest only makes way. `cleaning`
    * while the singing is found, which happens once and can take a while. */
   ducking: {
     model: ToolPanelModel | null;
-    /** How far finding the singing has got, 0 to 1, while `cleaning`. */
-    progress: number;
     state: "cleaning" | "off" | "on";
   } | null;
   /** Everything but the voice taken out of the track: `cleaning` while the
    * track is cleaned, which happens once and can take a while. */
   noise: "cleaning" | "off" | "on";
-  /** How far cleaning has got, 0 to 1, while `noise` is `cleaning`. */
-  noiseProgress: number;
-  silences: ToolPanelSilences;
-  /** The voice rebuilt as a studio recording by a downloaded model, in place
-   * of Reduce noise and Vocal cleanup: `cleaning` while the track is
-   * rebuilt, which happens once and can take a while. */
-  studio: "cleaning" | "off" | "on";
-  /** The model Studio sound needs, and how far it is on this computer;
+  /** The voice restored by a downloaded model, in place of Reduce noise
+   * and Vocal cleanup: `cleaning` while the track is restored, which
+   * happens once and can take a while. */
+  restore: "cleaning" | "off" | "on";
+  /** The model Restore voice needs, and how far it is on this computer;
    * `null` until the app has said. */
-  studioModel: ToolPanelModel | null;
-  /** How far rebuilding has got, 0 to 1, while `studio` is `cleaning`. */
-  studioProgress: number;
+  restoreModel: ToolPanelModel | null;
+  silences: ToolPanelSilences;
   /** The voice cleaned up: mouth clicks and harsh "s" sounds softened, its
    * tone eased and its level evened out. `cleaning` while that is done to
    * the track as it is heard, once each way Reduce noise is set. */
   voice: "cleaning" | "off" | "on";
-  /** How far cleaning up has got, 0 to 1, while `voice` is `cleaning`. */
-  voiceProgress: number;
 };
 
 /** A model a microphone switch needs, and how far it is on this computer.

@@ -17,6 +17,7 @@ use tauri::{AppHandle, Emitter};
 use ts_rs::TS;
 
 use super::{vad_model, SpeechSource};
+use crate::editor::model_work::{Job, ModelWork};
 use crate::transcription::{language, models};
 use screenwide_speech::catalogue::Purpose;
 use screenwide_speech::runner::samples::decode_audio_stream;
@@ -96,7 +97,9 @@ pub async fn transcribe_recording(
   let language = language::resolved(&language::current());
   let vad = vad_model(&app)?;
 
-  let stop = Arc::new(AtomicBool::new(false));
+  // The island's Cancel and the transcript's own share one flag.
+  let work = Job::begin(&app, artifact_id, ModelWork::Transcript);
+  let stop = work.stop();
   {
     let mut running = RUNNING
       .lock()
@@ -118,7 +121,10 @@ pub async fn transcribe_recording(
       language,
       vad,
       stop,
-      &mut progress,
+      &mut |fraction| {
+        progress(fraction);
+        work.tell(fraction);
+      },
     )
   })
   .await

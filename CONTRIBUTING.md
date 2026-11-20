@@ -39,7 +39,7 @@ setx LIBCLANG_PATH "C:\Program Files\LLVM\bin"
 
 Then fully restart the terminal app (Windows Terminal, VS Code and so on) so `VULKAN_SDK`, `LIBCLANG_PATH` and the CMake path are picked up: a new tab or pane inherits the environment the app started with. Then run `pnpm transcriber:prepare`.
 
-Building the helper also downloads a prebuilt ONNX Runtime with DirectML, which runs the Studio sound and Studio ducking models on the GPU, links it in, and puts `DirectML.dll` beside the helper.
+Building the helper also downloads a prebuilt ONNX Runtime with DirectML, which runs the Restore voice and Smart ducking models on the GPU, links it in, and puts `DirectML.dll` beside the helper.
 
 The helpers build in `%ProgramData%\swb\<hash of the checkout's path>` rather than in the checkout: the GPU shader builds nest CMake projects deep enough that a longer folder, such as one in the checkout or in your profile, takes them past Windows' path limits, which turning on long paths does not lift. Delete that folder to start the helpers' build afresh.
 

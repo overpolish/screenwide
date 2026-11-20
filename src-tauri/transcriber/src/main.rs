@@ -67,13 +67,13 @@ fn main() {
           Job::CleanSpeech { audio, output } => clean::clean_speech(audio, output, &mut progress)
             .map(|gain| Reply::Cleaned { id, gain }),
           Job::RestoreSpeech {
-            features,
-            decoder,
+            restorer,
+            widener,
             audio,
             output,
             stretches,
           } => {
-            restore::restore_speech((features, decoder), audio, stretches, output, &mut progress)
+            restore::restore_speech((restorer, widener), audio, stretches, output, &mut progress)
               .map(|()| Reply::Restored { id })
           }
           Job::SeparateVocals {

@@ -43,9 +43,15 @@ pub(super) fn integrated(
     let _ = stderr.read_to_string(&mut text);
     text
   });
+  let mut stopped = false;
   if let Some(stdout) = child.stdout.take() {
     let total_us = duration_ms.max(1) as f64 * 1_000.0;
     for line in BufReader::new(stdout).lines().map_while(Result::ok) {
+      if crate::stop::requested() {
+        stopped = true;
+        let _ = child.kill();
+        break;
+      }
       if let Some(us) = line
         .strip_prefix("out_time_us=")
         .and_then(|value| value.parse::<f64>().ok())
@@ -58,6 +64,9 @@ pub(super) fn integrated(
     .wait()
     .map_err(|error| format!("FFmpeg did not finish: {error}"))?;
   let said = said.join().unwrap_or_default();
+  if stopped {
+    return Err(crate::stop::STOPPED.to_owned());
+  }
   if !status.success() {
     return Err(format!(
       "Could not measure the microphone's volume: {}",

@@ -1,19 +1,19 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! Which file each track is heard from. Studio sound, Reduce noise and Vocal
-//! cleanup each make files of their own from the microphone, and the
+//! Which file each track is heard from. Restore voice, Reduce noise and
+//! Vocal cleanup each make files of their own from the microphone, and the
 //! switches pick one: the recording itself, the track cleaned of noise, the
-//! cleaned-up file made from either, or, while Studio sound is on, its
-//! rebuilt voice in place of them all. Studio ducking makes the system audio
-//! make way for the voice (`duck`), heard while the microphone is on too. A
-//! switch whose file is not made yet is heard as off.
+//! cleaned-up file made from either, or, while Restore voice is on, its
+//! restored voice in place of them all. Smart ducking makes the system
+//! audio make way for the voice (`duck`), heard while the microphone is on
+//! too. A switch whose file is not made yet is heard as off.
 
 use std::path::{Path, PathBuf};
 
 use super::duck;
 use super::noise::{self, NoiseReduction};
-use super::studio;
+use super::restore_voice;
 use super::voice::{self, VocalCleanup};
 
 #[cfg(test)]
@@ -26,8 +26,8 @@ pub struct Processing {
   pub voice: bool,
   /// Made to make way for the voice; only ever of the system audio.
   pub duck: bool,
-  /// Rebuilt by Studio sound; never together with noise or voice.
-  pub studio: bool,
+  /// Restored by Restore voice; never together with noise or voice.
+  pub restored: bool,
 }
 
 impl Processing {
@@ -50,7 +50,7 @@ impl Processing {
       ..Self::NONE
     },
     Self {
-      studio: true,
+      restored: true,
       ..Self::NONE
     },
   ];
@@ -58,7 +58,7 @@ impl Processing {
     noise: false,
     voice: false,
     duck: false,
-    studio: false,
+    restored: false,
   };
 }
 
@@ -67,8 +67,9 @@ fn made(project_folder: &Path, stream: usize, processing: Processing) -> Option<
   if processing.duck {
     return duck::is_made(project_folder, stream).then(|| duck::path(project_folder, stream));
   }
-  if processing.studio {
-    return studio::is_made(project_folder, stream).then(|| studio::path(project_folder, stream));
+  if processing.restored {
+    return restore_voice::is_made(project_folder, stream)
+      .then(|| restore_voice::path(project_folder, stream));
   }
   let noise_made = || noise::is_made(project_folder, stream);
   let made = match processing {
@@ -109,9 +110,9 @@ pub fn files(project_folder: &Path, streams: &[usize]) -> Vec<(usize, Processing
 /// its switches say, as far as their files are made.
 fn processing(project_folder: &Path, stream: usize, streams: &[usize]) -> Processing {
   let duck = duck::is_heard(project_folder, stream, streams);
-  if studio::is_heard(project_folder, stream) {
+  if restore_voice::is_heard(project_folder, stream) {
     return Processing {
-      studio: true,
+      restored: true,
       duck,
       ..Processing::NONE
     };
@@ -124,7 +125,7 @@ fn processing(project_folder: &Path, stream: usize, streams: &[usize]) -> Proces
     noise,
     voice,
     duck,
-    studio: false,
+    restored: false,
   }
 }
 

@@ -4,8 +4,8 @@
 //! Face tracking: where the face is over a recording's camera, found once by
 //! the helper and kept beside the camera file, for the camera and the scenes
 //! that follow it. The face is found the first time the camera or a scene
-//! asks to follow it; the preview follows it from then on, and every export
-//! reads it.
+//! asks to follow it, listed with the models' work (`model_work`) while it
+//! is; the preview follows it from then on, and every export reads it.
 
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
@@ -13,26 +13,13 @@ use std::sync::Mutex;
 use screenwide_export::scenes::face_track::{load, track_path};
 use screenwide_speech::runner::Transcriber;
 use screenwide_transcriber::Job;
-use serde::Serialize;
-use tauri::{AppHandle, Emitter, Manager};
-use ts_rs::TS;
+use tauri::{AppHandle, Manager};
 
 use super::CameraRecording;
+use crate::editor::model_work::{self, ModelWork};
 
 /// The face detection model, bundled as a resource.
 const MODEL: &str = "blazeface-short-range.onnx";
-/// The event that tells the editor how far finding the face has got.
-const PROGRESS_EVENT: &str = "editor://face-tracking-progress";
-
-/// How far finding the face in a recording's camera has got, 0 to 1; 1 once
-/// it is found or has failed.
-#[derive(Clone, Copy, Debug, PartialEq, Serialize, TS)]
-#[serde(rename_all = "camelCase")]
-#[ts(export)]
-pub struct FaceTrackingProgress {
-  pub artifact_id: u64,
-  pub fraction: f32,
-}
 
 /// The cameras whose face is being found.
 static FINDING: Mutex<Vec<PathBuf>> = Mutex::new(Vec::new());
@@ -82,11 +69,11 @@ pub fn find_recording_faces(app: AppHandle, artifact_id: u64) -> Result<bool, St
       .lock()
       .unwrap_or_else(|poisoned| poisoned.into_inner())
       .retain(|other| *other != path);
-    tell(&app, artifact_id, 1.0);
     match found {
       Ok(()) => {
         crate::editor::recording_preview_player::set_face_path(&app, artifact_id, load(&path))
       }
+      Err(error) if screenwide_speech::stop::is_stopped(&error) => {}
       Err(error) => eprintln!("Could not find the face in the camera: {error}"),
     }
   });
@@ -105,7 +92,8 @@ fn find(
     .ok_or_else(|| "The camera recording cannot be read".to_owned())?;
   #[cfg(not(any(target_os = "macos", target_os = "windows")))]
   let (width, height) = (0, 0);
-  Transcriber::start()?.find_faces(
+  let work = model_work::Job::begin(app, artifact_id, ModelWork::FollowFace);
+  Transcriber::start()?.stopped_by(work.stop()).find_faces(
     Job::FindFaces {
       model,
       ffmpeg: screenwide_sidecar::ffmpeg_path(),
@@ -115,16 +103,6 @@ fn find(
       duration_ms: camera.duration_ms,
       output: track_path(&camera.path),
     },
-    &mut |fraction| tell(app, artifact_id, fraction),
+    &mut |fraction| work.tell(fraction),
   )
-}
-
-fn tell(app: &AppHandle, artifact_id: u64, fraction: f32) {
-  let _ = app.emit(
-    PROGRESS_EVENT,
-    FaceTrackingProgress {
-      artifact_id,
-      fraction,
-    },
-  );
 }
