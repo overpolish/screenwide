@@ -5,10 +5,12 @@ import { useReducedMotion } from "motion/react";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useLocale } from "react-aria-components";
 
+import { IslandHolder } from "../../../../primitives/island/island-holder";
 import {
   closesAfter,
   glide,
 } from "../../../../primitives/island/island-motion";
+import { useIslandPlace } from "../../../../primitives/island/island-place";
 import { type PopupPanelPart } from "../../../popup-panel/api";
 import { EditorIsland, type EditorIslandContent } from "../editor-island";
 import { ISLAND_ROOM } from "../island-room";
@@ -114,6 +116,7 @@ export function PlacedIsland({
     };
   }, [isMoving, reduce]);
   const holderRef = useRef<HTMLDivElement>(null);
+  const islandPlace = useIslandPlace();
   /** How far the middle of an island `width` wide over `point` stands from
    * the holder's edge, the window's left running left to right, kept over
    * the picture and, standing `top` to `bottom` in the window, clear of
@@ -183,7 +186,7 @@ export function PlacedIsland({
           ? EDGE_PX + endInset + width / 2
           : window.innerWidth - EDGE_PX - startInset - width / 2;
     const x = middle + (fromRight ? lean : -lean);
-    holder.style.transform = `translate(${String(fromRight ? -x : x)}px, ${String(y)}px)`;
+    islandPlace.move(fromRight ? -x : x, y);
     return { left: fromRight ? window.innerWidth - x : x, top: y };
   };
 
@@ -233,9 +236,10 @@ export function PlacedIsland({
   }, []);
 
   return (
-    <div
+    <IslandHolder
       className="absolute top-0 flex w-0 justify-center"
       data-island-room
+      place={islandPlace}
       ref={holderRef}
       style={{ insetInlineEnd: 0 }}
     >
@@ -258,6 +262,6 @@ export function PlacedIsland({
           }}
         />
       ) : null}
-    </div>
+    </IslandHolder>
   );
 }

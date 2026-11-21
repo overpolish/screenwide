@@ -158,9 +158,10 @@ export function Island({
                 mirrored back. */}
             {/* A layout root, measured itself (`layout`, which a root
                 moves at once), so what it holds glides only as it moves
-                inside the island: the island carried elsewhere, as a strip
-                item's island follows the strip, takes it along at once
-                rather than leaving it to catch up (#40). */}
+                inside the island, not as the island moves in its frame. A
+                host carrying the island elsewhere, as a strip item's island
+                follows the strip, moves it with `IslandHolder`, which Motion
+                takes out of what it measures (#40, #89). */}
             <motion.div
               className="relative rtl:-scale-x-100"
               layout

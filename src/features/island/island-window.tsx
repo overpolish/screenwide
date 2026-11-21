@@ -13,6 +13,8 @@ import {
 import { motionDurations } from "../../lib/motion";
 import { useTauriEvent } from "../../lib/use-tauri-event";
 import { ISLAND } from "../../primitives/island/island-geometry";
+import { IslandHolder } from "../../primitives/island/island-holder";
+import { useIslandPlace } from "../../primitives/island/island-place";
 
 import type { IslandNotch } from "../../primitives/island/island-geometry";
 import type { IslandPart } from "../../primitives/island/island-outline-sync";
@@ -73,7 +75,7 @@ export function IslandWindow({
   // What the window is told outranks what it asked before being told.
   const isToldRef = useRef(false);
   const frameRef = useRef(0);
-  const holderRef = useRef<HTMLDivElement>(null);
+  const islandPlace = useIslandPlace();
   const anchorRef = useRef<BoxAnchor | null>(null);
   const widthRef = useRef(0);
   const shiftRef = useRef(0);
@@ -86,11 +88,7 @@ export function IslandWindow({
     const shift = anchor ? shiftFor(anchor, widthRef.current) : 0;
     const moved = shift - shiftRef.current;
     shiftRef.current = shift;
-    if (holderRef.current) {
-      holderRef.current.style.transform = shift
-        ? `translateX(${String(shift)}px)`
-        : "";
-    }
+    islandPlace.move(shift);
     return moved;
   };
 
@@ -112,6 +110,8 @@ export function IslandWindow({
   useLayoutEffect(() => {
     anchorRef.current = presence.anchor;
     place();
+    // `place` reads only refs and the holder's place, which never changes.
+    // eslint-disable-next-line @eslint-react/exhaustive-deps
   }, [presence.anchor]);
 
   // A move under way: the island tucks away where it is, then is laid out
@@ -194,7 +194,11 @@ export function IslandWindow({
 
   return (
     <div className="fixed inset-0">
-      <div className="absolute inset-x-0" ref={holderRef} style={{ top }}>
+      <IslandHolder
+        className="absolute inset-x-0"
+        place={islandPlace}
+        style={{ top }}
+      >
         {children({
           isShown: presence.isShown,
           notch: presence.notch,
@@ -202,7 +206,7 @@ export function IslandWindow({
           onShapeChange: reportShape,
           showing,
         })}
-      </div>
+      </IslandHolder>
     </div>
   );
 }
