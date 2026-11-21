@@ -31,6 +31,14 @@ static LOST: AtomicBool = AtomicBool::new(false);
 /// What Windows answers once the GPU is gone: removed, hung or reset.
 const DEVICE_LOST: [&str; 3] = ["887A0005", "887A0006", "887A0007"];
 
+/// What a step answers when the GPU gave it nothing back. Windows resets a
+/// GPU that one piece of work holds too long, and DirectML then hands back
+/// zeros rather than an error, so only the step, which knows its answer
+/// cannot be empty, can tell; its answer counts as the GPU hung.
+pub(crate) fn came_back_empty(what: &str) -> String {
+  format!("{what} came back empty from the GPU, which Windows reset (887A0006)")
+}
+
 /// Where a step runs.
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub(crate) enum On {
@@ -156,7 +164,7 @@ fn half_the_processor() -> usize {
 
 #[cfg(test)]
 mod tests {
-  use super::is_device_lost;
+  use super::{came_back_empty, is_device_lost};
 
   #[test]
   fn only_a_lost_gpu_is_remembered() {
@@ -170,5 +178,10 @@ mod tests {
     assert!(!is_device_lost(
       "the GPU answered 1800 for audio peaking at 0.3"
     ));
+  }
+
+  #[test]
+  fn an_empty_answer_counts_as_the_gpu_reset() {
+    assert!(is_device_lost(&came_back_empty("Restore voice")));
   }
 }

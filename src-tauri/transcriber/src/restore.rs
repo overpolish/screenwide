@@ -8,10 +8,12 @@
 //!
 //! It runs as two models. The first (`restore`, a speech model that has
 //! learnt to hear past damage, with an adapter and a vocoder) restores the
-//! voice at 16 kHz on the GPU. The second (`widen`, a TF-GridNet) adds the
-//! band above 8 kHz that a headset's microphone never sent, at 48 kHz; its
-//! recurrent layers run far faster on the CPU than on a GPU through
-//! WebGPU, so it stays there.
+//! voice at 16 kHz on the GPU. A piece that comes back silent from the GPU,
+//! as DirectML hands back work Windows reset the GPU under, is restored
+//! again on the CPU (`came_back_empty`). The second (`widen`, a TF-GridNet)
+//! adds the band above 8 kHz that a headset's microphone never sent, at
+//! 48 kHz; its recurrent layers run far faster on the CPU than on a GPU
+//! through WebGPU, so it stays there.
 //!
 //! The voice goes through in pieces of about ten seconds (`pieces`). The
 //! first model hears eight seconds of speech before each piece and two
@@ -31,7 +33,7 @@ use self::output::Output;
 use self::pieces::{Kept, Piece};
 use self::widen::{Restored, Widening};
 use crate::session::{gpu_session, Fusion};
-use crate::shared_gpu::Shared;
+use crate::shared_gpu::{came_back_empty, On, Shared};
 
 const RATE: usize = SAMPLE_RATE as usize;
 /// Output samples for each input sample: 16 kHz in, 48 kHz out.
@@ -169,7 +171,7 @@ fn restore_piece(
 
 fn run_restore(restore: &mut Shared, heard: &[f32]) -> Result<Vec<f32>, String> {
   let failed = |error: ort::Error| format!("{WHAT} could not run: {error}");
-  restore.run(|session, _| {
+  restore.run(|session, on| {
     let speech = TensorRef::from_array_view(([1_usize, heard.len()], heard)).map_err(failed)?;
     let outputs = session
       .run(ort::inputs!["speech" => speech])
@@ -177,8 +179,17 @@ fn run_restore(restore: &mut Shared, heard: &[f32]) -> Result<Vec<f32>, String> 
     let (_, restored) = outputs["restored"]
       .try_extract_tensor::<f32>()
       .map_err(failed)?;
+    if on == On::Gpu && is_silent(restored) && !is_silent(heard) {
+      return Err(came_back_empty(WHAT));
+    }
     Ok(restored.to_vec())
   })
+}
+
+/// Whether `samples` hold nothing at all, quieter than any recording's own
+/// noise: what DirectML hands back from a GPU Windows reset.
+fn is_silent(samples: &[f32]) -> bool {
+  samples.iter().all(|sample| sample.abs() < 1e-6)
 }
 
 fn read_samples(audio: &Path) -> Result<Vec<f32>, String> {

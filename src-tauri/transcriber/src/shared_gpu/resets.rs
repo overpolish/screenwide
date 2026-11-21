@@ -2,8 +2,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 //! Models that have reset the GPU, remembered in a file beside each with the
-//! graphics drivers there were when it did, so later jobs leave the GPU alone
-//! until a driver changes, which may be what mends it. Only Windows resets a
+//! graphics drivers there were when it did and the model file it was, so
+//! later jobs leave the GPU alone until a driver changes, which may be what
+//! mends it, or a new download replaces the model. Only Windows resets a
 //! GPU for being held too long, so elsewhere nothing is remembered.
 
 use std::path::{Path, PathBuf};
@@ -18,7 +19,7 @@ fn note(model: &Path) -> PathBuf {
 /// are now.
 pub(super) fn reset_before(model: &Path) -> bool {
   #[cfg(windows)]
-  return std::fs::read_to_string(note(model)).is_ok_and(|kept| kept == drivers());
+  return std::fs::read_to_string(note(model)).is_ok_and(|kept| kept == conditions(model));
   #[cfg(not(windows))]
   {
     let _ = note(model);
@@ -29,11 +30,23 @@ pub(super) fn reset_before(model: &Path) -> bool {
 /// Remembers that the model at `model` reset the GPU.
 pub(super) fn remember(model: &Path) {
   #[cfg(windows)]
-  if let Err(error) = std::fs::write(note(model), drivers()) {
+  if let Err(error) = std::fs::write(note(model), conditions(model)) {
     eprintln!("Could not remember the GPU reset: {error}");
   }
   #[cfg(not(windows))]
   let _ = model;
+}
+
+/// The model file's size and when it was written, then the drivers.
+#[cfg(windows)]
+fn conditions(model: &Path) -> String {
+  let file = std::fs::metadata(model).ok();
+  format!(
+    "{:?} {:?}\n{}",
+    file.as_ref().map(std::fs::Metadata::len),
+    file.and_then(|file| file.modified().ok()),
+    drivers()
+  )
 }
 
 /// Every graphics adapter's name and driver version, a line each.

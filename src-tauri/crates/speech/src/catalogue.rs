@@ -173,33 +173,34 @@ pub const MODELS: &[Model] = &[
   notes::NOTES,
   // UniPASE from Nanjing University (Apache-2.0), exported to ONNX as two
   // models: one restores the voice at 16 kHz, its weights stored at half
-  // precision; the other adds the band above 8 kHz. Each keeps its weights
-  // in a file beside it, under the name the model looks for.
+  // precision and its graph written so DirectML runs it; the other adds the
+  // band above 8 kHz. Each keeps its weights in a file beside it, under the
+  // name the model looks for.
   Model {
     files: &[
       ModelFile {
         name: "unipase-restore.onnx",
-        sha256: "cf5622c58265e9119aa96129f0693be32df5c964d864abd33ec6181af6400d09",
-        size_bytes: 1_258_296,
-        url: "https://huggingface.co/overpolish/unipase-onnx/resolve/0c1b990d66bda448ea3ce13c7c5582e9818a6b28/unipase-restore.onnx",
+        sha256: "c3d9e66b85b891b7659536c7b3fbfd2fcc0394723fb7498ca3dd02eb2c2a9b3b",
+        size_bytes: 1_476_912,
+        url: "https://huggingface.co/overpolish/unipase-onnx/resolve/ab6bf6fe847846d5f096e6c7da9768086168b891/unipase-restore.onnx",
       },
       ModelFile {
         name: "unipase-restore.onnx.data",
         sha256: "b689f4bf1e27f8cae473559e945e3f15832b344e3409da7129c6ae749e17a580",
         size_bytes: 1_091_734_536,
-        url: "https://huggingface.co/overpolish/unipase-onnx/resolve/0c1b990d66bda448ea3ce13c7c5582e9818a6b28/unipase-restore.onnx.data",
+        url: "https://huggingface.co/overpolish/unipase-onnx/resolve/ab6bf6fe847846d5f096e6c7da9768086168b891/unipase-restore.onnx.data",
       },
       ModelFile {
         name: "unipase-widen.onnx",
         sha256: "b2efe957b414569cceb82a8528783e57be7d014b501aa2f9c7967606d90a6fcc",
         size_bytes: 376_606,
-        url: "https://huggingface.co/overpolish/unipase-onnx/resolve/0c1b990d66bda448ea3ce13c7c5582e9818a6b28/unipase-widen.onnx",
+        url: "https://huggingface.co/overpolish/unipase-onnx/resolve/ab6bf6fe847846d5f096e6c7da9768086168b891/unipase-widen.onnx",
       },
       ModelFile {
         name: "unipase-widen.onnx.data",
         sha256: "3b3ebe46adc8c2536d12cb48beaf58e13adef16fb1718b8a09c6be2e4cbaff11",
         size_bytes: 29_980_420,
-        url: "https://huggingface.co/overpolish/unipase-onnx/resolve/0c1b990d66bda448ea3ce13c7c5582e9818a6b28/unipase-widen.onnx.data",
+        url: "https://huggingface.co/overpolish/unipase-onnx/resolve/ab6bf6fe847846d5f096e6c7da9768086168b891/unipase-widen.onnx.data",
       },
     ],
     id: "unipase",
