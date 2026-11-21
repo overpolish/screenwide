@@ -52,17 +52,20 @@ function trackWidths(durations: number[]) {
 }
 
 /** A scroll area the strip's view is laid on: its scroll position, and the
- * scroll event it sends, fired by hand. */
+ * events it sends, fired by hand. */
 function scrollArea() {
-  const listeners = new Map<string, () => void>();
+  const listeners = new Map<string, (event: unknown) => void>();
   return {
-    addEventListener: (type: string, listener: () => void) => {
+    addEventListener: (type: string, listener: (event: unknown) => void) => {
       listeners.set(type, listener);
     },
+    fire: (type: string, event: object) =>
+      listeners.get(type)?.({ ...event, preventDefault: () => undefined }),
+    getBoundingClientRect: () => ({ left: 0, width: 800 }),
     removeEventListener: (type: string) => {
       listeners.delete(type);
     },
-    scroll: () => listeners.get("scroll")?.(),
+    scroll: () => listeners.get("scroll")?.({}),
     scrollLeft: 0,
   };
 }
@@ -100,6 +103,9 @@ function laidOn(area: ReturnType<typeof scrollArea>) {
 beforeEach(() => {
   // React only flushes `act` work where it is told it runs under tests.
   vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
+  // The strip's zoom waits for a frame; none comes in these tests.
+  vi.stubGlobal("requestAnimationFrame", () => 0);
+  vi.stubGlobal("cancelAnimationFrame", () => undefined);
   vi.stubGlobal("window", {
     HTMLIFrameElement: Object,
     document: { activeElement: null },
@@ -165,6 +171,33 @@ describe("the strip's view", () => {
       held.view?.set({ end: 0.5 + span, start: 0.5 });
     });
     expect(area.scrollLeft).toBeCloseTo(0.5 * trackWidth, 3);
+    act(() => {
+      root.unmount();
+    });
+  });
+
+  it("zooms in as a pinch spreads, telling the pinch once", () => {
+    // A frame comes at once, so the zoom lands within the pinch's own act.
+    vi.stubGlobal("requestAnimationFrame", (draw: () => void) => {
+      draw();
+      return 1;
+    });
+    const area = scrollArea();
+    const { held, root } = laidOn(area);
+    const before = held.view?.now.get() ?? { end: 0, start: 0 };
+    act(() => {
+      area.fire("gesturestart", { clientX: 400, scale: 1 });
+      area.fire("gesturechange", { clientX: 400, scale: 2 });
+      // The same pinch, as WebKit may tell it a second way.
+      area.fire("wheel", { clientX: 400, ctrlKey: true, deltaY: -20 });
+      area.fire("gestureend", { clientX: 400, scale: 2 });
+    });
+    const after = held.view?.now.get() ?? { end: 0, start: 0 };
+    // Spread to twice the distance, the strip zooms in eightfold.
+    expect((after.end - after.start) / (before.end - before.start)).toBeCloseTo(
+      1 / 8,
+      6,
+    );
     act(() => {
       root.unmount();
     });

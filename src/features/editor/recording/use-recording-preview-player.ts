@@ -248,7 +248,6 @@ export function useRecordingPreviewPlayer({
         if (event.data.requestId < seekRequestRef.current) return;
         finishPreparing();
         positionRef.current = event.data.positionMs;
-        onPositionRef.current(event.data.positionMs);
         if (pendingResumeRequestRef.current === event.data.requestId) {
           pendingResumeRequestRef.current = null;
           settleRequestRef.current = null;
@@ -269,9 +268,9 @@ export function useRecordingPreviewPlayer({
           settleRequestRef.current = null;
           scrubFinishedRef.current = true;
         }
-        return;
       }
-      // Ignore stale worker positions during a frontend-driven scrub.
+      // Mid-scrub nothing is told: the worker's positions are stale, and the
+      // scrub's own rough frames would each draw the whole editor again.
       if (!scrubFinishedRef.current) return;
       if (event.event === "position" && !isPlayingRef.current) return;
       positionRef.current = event.data.positionMs;

@@ -13,6 +13,7 @@ import { type Playhead } from "../scrub-playhead";
 import { clampView, type View } from "../timeline-scale";
 
 import { stripViewNow } from "./strip-view-now";
+import { listenToZoom } from "./strip-zoom-input";
 
 // What part of the recording the strip shows. The strip scrolls in a
 // ScrollArea, as every scrolling region does, so it fades where there is
@@ -42,8 +43,6 @@ const LEAD = 0.15;
 /** Room at each end of the track, in px, so the playhead's knob at the very
  * start or end of the recording is drawn whole. */
 const TRACK_INSET_PX = 8;
-/** How much a pinch, or a wheel step with ⌘ or Ctrl, zooms per pixel. */
-const ZOOM_PER_PX = 0.01;
 
 export function useStripView({
   duration,
@@ -191,30 +190,13 @@ export function useStripView({
       startRef.current = (viewport.scrollLeft / track) * playing;
       now.hold(viewNow());
     };
-    // An upright wheel moves along the strip, which only scrolls sideways.
-    const onWheel = (event: WheelEvent) => {
-      if (event.ctrlKey || event.metaKey) {
-        event.preventDefault();
-        const box = viewport.getBoundingClientRect();
-        const x =
-          (event.clientX - box.left - TRACK_INSET_PX) /
-          Math.max(box.width - TRACK_INSET_PX * 2, 1);
-        // A pinch sends small steps; a mouse wheel's notch is a large one,
-        // held to a gentle zoom.
-        const step = Math.min(Math.max(event.deltaY, -40), 40);
-        actionsRef.current.zoomAt(Math.exp(step * ZOOM_PER_PX), x);
-        return;
-      }
-      if (Math.abs(event.deltaY) > Math.abs(event.deltaX)) {
-        event.preventDefault();
-        viewport.scrollLeft += event.deltaY;
-      }
-    };
+    const stopZooming = listenToZoom(viewport, TRACK_INSET_PX, (factor, at) => {
+      actionsRef.current.zoomAt(factor, at);
+    });
     viewport.addEventListener("scroll", onScroll, { passive: true });
-    viewport.addEventListener("wheel", onWheel, { passive: false });
     return () => {
+      stopZooming();
       viewport.removeEventListener("scroll", onScroll);
-      viewport.removeEventListener("wheel", onWheel);
     };
   }, [now, viewport]);
 
