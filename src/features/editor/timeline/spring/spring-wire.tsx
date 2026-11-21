@@ -34,10 +34,12 @@ const PACKED_BELOW_PX = 12;
 const PACKED_PX = 9;
 
 /** A kept lull is drawn firm, as set; dead air a little stronger than an
- * ordinary lull, to be noticed. */
-export type SpringLook = "dead-air" | "kept" | "plain";
+ * ordinary lull, to be noticed; a chosen one on the primary fill it is
+ * chosen with. */
+export type SpringLook = "chosen" | "dead-air" | "kept" | "plain";
 
 const INK: Record<SpringLook, string> = {
+  chosen: "text-on-primary",
   "dead-air": "text-fg-secondary",
   kept: "text-fg",
   plain: "text-fg-tertiary",

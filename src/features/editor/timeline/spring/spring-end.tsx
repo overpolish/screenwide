@@ -50,12 +50,13 @@ export function SpringEnd({
         isTrimRef.current = null;
       }}
     >
+      {/* Drawn as a chosen beat's ends are (`beat-trim.tsx`). */}
       {isAltHeld ? (
-        <span className="flex size-5 items-center justify-center rounded-full bg-primary text-on-primary ring-2 ring-recess">
+        <span className="flex size-5 items-center justify-center rounded-full bg-on-primary text-primary ring-2 ring-primary">
           <Scissors className="size-icon-xs" />
         </span>
       ) : (
-        <span className="h-5 w-1.5 rounded-full bg-primary ring-2 ring-recess" />
+        <span className="h-5 w-1.5 rounded-full bg-on-primary ring-2 ring-primary" />
       )}
     </span>
   );

@@ -34,9 +34,9 @@ export function useBadgeSize() {
   return { ref, size };
 }
 
-/** A mask fading the badge's room out of the top middle of a surface whose
- * top edge sits `above` px over the box's, where the badge is centred. */
-export const notched = (size: BadgeSize, above = 0) => {
+/** A mask fading the badge's room out of the top middle of the box, where
+ * the badge is centred on its top edge. */
+export const notched = (size: BadgeSize) => {
   const pill = {
     height: size.height + AIR_PX * 2,
     width: size.width + AIR_PX * 2,
@@ -44,11 +44,11 @@ export const notched = (size: BadgeSize, above = 0) => {
   // Only the part of the pill on the surface is drawn; the blur reaches a
   // feather's width past the pill on every side.
   const width = pill.width + FEATHER_PX * 2;
-  const height = above + pill.height / 2 + FEATHER_PX;
+  const height = pill.height / 2 + FEATHER_PX;
   const svg = [
     `<svg xmlns='http://www.w3.org/2000/svg' width='${String(width)}' height='${String(height)}'>`,
     `<filter id='f' x='-50%' y='-50%' width='200%' height='200%'><feGaussianBlur stdDeviation='${String(FEATHER_PX / 2)}'/></filter>`,
-    `<rect filter='url(#f)' x='${String(FEATHER_PX)}' y='${String(above - pill.height / 2)}' width='${String(pill.width)}' height='${String(pill.height)}' rx='${String(pill.height / 2)}'/>`,
+    `<rect filter='url(#f)' x='${String(FEATHER_PX)}' y='${String(-pill.height / 2)}' width='${String(pill.width)}' height='${String(pill.height)}' rx='${String(pill.height / 2)}'/>`,
     `</svg>`,
   ].join("");
   return {

@@ -28,8 +28,6 @@ import type { LullPlay } from "../../island/lull/lull-island";
 
 /** The narrowest a lull shows its badge at, in px, unless chosen. */
 const BADGE_PX = 56;
-/** How far, in px, a chosen lull's outline stands out past its box. */
-const SELECTED_OUTLINE_PX = 2;
 /** How near its recorded length, in px, a dragged end snaps to keeping it. */
 const KEEP_SNAP_PX = 8;
 /** The least width, in px, a lull can be pressed at. */
@@ -92,27 +90,28 @@ export function Spring({
   // beats beside it, and sits above them there, so it can still be pressed.
   const isNarrow = px < HIT_PX;
   const isSet = play.kind !== "squeeze";
-  const look = play.kind === "keep" ? "kept" : isDeadAir ? "dead-air" : "plain";
+  const look = isSelected
+    ? "chosen"
+    : play.kind === "keep"
+      ? "kept"
+      : isDeadAir
+        ? "dead-air"
+        : "plain";
   const speed = speedOf(recorded, plays);
   const hasBadge = isSet || isDeadAir || speed !== null;
   const isBadgeShown = px > BADGE_PX || isSelected;
-  // The outline: chosen, or dead air still to be dealt with. Unchosen and
-  // narrow, it keeps to the drawn width, off the beats beside it.
-  const outline = isSelected
-    ? "-inset-0.5 border-2 border-primary"
-    : isDeadAir && !isSet
-      ? "inset-y-0 border border-dashed border-fg-tertiary"
-      : null;
-  const outlineInset = isSelected || !isNarrow ? 0 : (HIT_PX - px) / 2;
+  // Chosen, it is filled primary, as a chosen beat is. Dead air still to be
+  // dealt with is outlined; narrow, the outline keeps to the drawn width,
+  // off the beats beside it.
+  const isOutlined = !isSelected && isDeadAir && !isSet;
+  const outlineInset = isNarrow ? (HIT_PX - px) / 2 : 0;
   const badge = useBadgeSize();
   // Under the badge, the box's fill and outline are cut away, so the
   // translucent badge reads as standing over them. The fill only shows
   // with the badge; the outline also shows while the badge waits.
   const fillNotch = hasBadge && badge.size ? notched(badge.size) : undefined;
   const outlineNotch =
-    hasBadge && isBadgeShown && badge.size
-      ? notched(badge.size, isSelected ? SELECTED_OUTLINE_PX : 0)
-      : undefined;
+    hasBadge && isBadgeShown && badge.size ? notched(badge.size) : undefined;
   // A screen playing in the middle of each moving stretch, on the coil's
   // line, however short the stretch is; stretches close together share one.
   const glyphs = isNarrow
@@ -162,25 +161,25 @@ export function Spring({
         aria-hidden
         className={cn(
           "pointer-events-none absolute inset-0 rounded-part transition-colors",
-          isSelected ? "bg-selected" : "group-hover:bg-fill",
+          isSelected ? "bg-primary" : "group-hover:bg-fill",
         )}
         style={fillNotch}
       />
-      {outline ? (
+      {isOutlined ? (
         <span
           aria-hidden
-          className={cn("pointer-events-none absolute rounded-part", outline)}
-          style={{
-            ...(isSelected ? undefined : { insetInline: outlineInset }),
-            ...outlineNotch,
-          }}
+          className="pointer-events-none absolute inset-y-0 rounded-part border border-dashed border-fg-tertiary"
+          style={{ insetInline: outlineInset, ...outlineNotch }}
         />
       ) : null}
       <SpringWire gaps={glyphs} look={look} seconds={recorded} width={px} />
       {glyphs.map((at) => (
         <MonitorPlay
           aria-hidden
-          className="pointer-events-none absolute top-1/2 size-icon-xs -translate-1/2 text-fg-secondary"
+          className={cn(
+            "pointer-events-none absolute top-1/2 size-icon-xs -translate-1/2",
+            isSelected ? "text-on-primary" : "text-fg-secondary",
+          )}
           key={at}
           style={{ insetInlineStart: `${String((at / px) * 100)}%` }}
         />
