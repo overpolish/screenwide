@@ -1,12 +1,11 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { Measure } from "../layer-measure";
+import { Measure, snappedCorners } from "../layer-measure";
 import { EditorArtifact } from "../types";
 
 import { blankLayerOutput } from "./screenshot-blank";
 import {
-  cornersIn,
   snappedTemplate,
   withSnappedMeasures,
 } from "./screenshot-measure-snap";
@@ -59,7 +58,7 @@ export const seedScreenshotWorkspace = ({
   persisted: ScreenshotOutputSettings | null;
   radius: Measure;
 }): ScreenshotWorkspaceOutputSettings => {
-  const corners = cornersIn(radius, "points");
+  const corners = snappedCorners(radius, { circle: false });
   const defaults = defaultScreenshotOutput(
     artifact?.width ?? 1,
     artifact?.height ?? 1,
@@ -70,7 +69,9 @@ export const seedScreenshotWorkspace = ({
     ? resetScreenshotLayout(
         {
           ...defaults,
-          ...screenshotOutputTemplate(snappedTemplate(persisted, "points")),
+          ...screenshotOutputTemplate(
+            snappedTemplate(persisted, { circle: false }),
+          ),
           backgroundRadiusPercent: backgroundRadius,
           height: defaults.height,
           radius: corners,
@@ -101,7 +102,7 @@ export const reopenedScreenshotWorkspace = (
   const { items: savedItems, ...canvas } = saved;
   const workspace = {
     ...defaultScreenshotOutput(artifact.width, artifact.height),
-    ...snappedTemplate(canvas, "points"),
+    ...snappedTemplate(canvas, { circle: false }),
     recenterInsetColor: null,
   };
   return {
@@ -116,7 +117,9 @@ export const reopenedScreenshotWorkspace = (
         return savedItem
           ? {
               id: item.id,
-              output: withSnappedMeasures(savedItem.output, item, "points"),
+              output: withSnappedMeasures(savedItem.output, item, {
+                circle: false,
+              }),
             }
           : {
               id: item.id,

@@ -3,8 +3,7 @@
 
 import type { Measure } from "../../bindings/Measure";
 
-/** A capture's size in pixels and how many of them span a point: what a
- * length in points is drawn against. */
+/** A capture's size in pixels and how many of them span a point. */
 export type CaptureSource = {
   height: number;
   scaleFactor: number;
@@ -13,80 +12,84 @@ export type CaptureSource = {
 
 export type { Measure };
 
-// A layer's padding and corners are points of its capture, as its
-// annotations are, so a look pads and rounds a short strip as much as a
-// full screen and matches the corners of the windows in it. A camera's
-// corners are a share of its frame instead, so one drawn as a circle stays
-// one whatever its crop. Settings saved before lengths had a unit held a
-// bare share; they are snapped to the look in points they stood for when a
-// project opens (`withSnappedMeasures`).
+// A layer's padding and corners are shares of the canvas's shorter side, as
+// `screenwide_scenes::Measure` draws them, so a look pads and rounds a full
+// display and a small region alike, and a screen and a camera given the
+// same look have the same corners however large each is drawn. A camera
+// drawn as a circle is half its own frame's shorter side, so it stays one
+// whatever its crop. Settings saved before hold a share of the frame, or
+// points of the capture read as pixels of a 1080 high canvas; a project
+// opening snaps them to the look they were nearest (`withSnappedMeasures`).
 
-/** The padding looks, None, Tight, Medium and Large, in points. */
-export const INSET_LOOKS = [0, 16, 32, 64] as const;
+/** The padding looks, None, Tight, Medium and Large, in percent of the
+ * canvas's shorter side. */
+export const INSET_LOOKS = [0, 1.5, 3, 6] as const;
 
-/** The corner looks a capture is offered, square, soft and round, in
- * points. */
-export const CORNER_LOOKS = [0, 10, 24] as const;
+/** The corner looks every layer is offered, square, rounded and round, in
+ * percent of the canvas's shorter side. */
+export const CORNER_LOOKS = [0, 1, 3] as const;
 
-/** The same looks as they were kept before, in percent of the picture's or
- * frame's shorter side, in the order of the looks they became. */
+/** A camera's circle, in percent of its frame's shorter side. */
+export const CIRCLE_PERCENT = 50;
+
+/** A fresh project's camera corners: round, as the roundest of the looks
+ * the screen is offered. */
+export const DEFAULT_CAMERA_RADIUS: Measure = { canvas: CORNER_LOOKS[2] };
+
+/** The looks as they were kept as a share of the frame, in percent of its
+ * shorter side, in the order of the looks they became. */
 const LEGACY_INSET_PERCENTS = [0, 3, 6, 10] as const;
 const LEGACY_CORNER_PERCENTS = [0, 4, 12] as const;
 
-export const points = (value: number): Measure => ({ points: value });
+/** The canvas height a saved point was drawn on, near enough: a full
+ * display drawn on a 1080 high canvas is about a pixel per point. */
+const LEGACY_POINTS_CANVAS = 1080;
+
+export const canvasShare = (value: number): Measure => ({ canvas: value });
 export const percent = (value: number): Measure => ({ percent: value });
 
-export const unitOf = (measure: Measure): "percent" | "points" =>
-  "points" in measure ? "points" : "percent";
+const valueOf = (measure: Measure) =>
+  "canvas" in measure ? measure.canvas : measure.percent;
 
-/** `value` in the unit `reference` is kept in, a percent held to half the
- * frame. */
-export const measureLike = (reference: Measure, value: number): Measure =>
-  "points" in reference
-    ? points(Math.max(0, value))
-    : percent(Math.min(50, Math.max(0, value)));
+export const isSameMeasure = (a: Measure, b: Measure) =>
+  "canvas" in a === "canvas" in b && Math.abs(valueOf(a) - valueOf(b)) < 1e-9;
 
-/** The length in `unit`, or null for one kept in the other. Nothing is
- * nothing in either. */
-export const measureIn = (
-  measure: Measure | undefined,
-  unit: "percent" | "points",
-): number | null => {
-  if (!measure) return null;
-  const value = "points" in measure ? measure.points : measure.percent;
-  if (value <= 0) return 0;
-  return unit in measure ? value : null;
-};
+/** The length's share of the canvas, or null for one kept as a share of
+ * the frame. */
+export const canvasValue = (measure: Measure): number | null =>
+  "canvas" in measure ? measure.canvas : null;
 
-/** Canvas pixels per point of `source` drawn `imageWidth` canvas pixels
- * wide. */
-export const pixelsPerPoint = (imageWidth: number, source: CaptureSource) =>
-  (Math.max(0, imageWidth) * Math.max(source.scaleFactor, 1e-6)) /
-  Math.max(1, source.width);
+/** The canvas's shorter side, in its pixels. */
+export const canvasShortest = (canvas: { height: number; width: number }) =>
+  Math.max(0, Math.min(canvas.width, canvas.height));
 
-/** `measure` in canvas pixels on a frame whose shorter side is `shortest`
- * canvas pixels. */
+/** `measure` in canvas pixels on a frame whose shorter side is `frame`
+ * canvas pixels, on a canvas whose shorter side is `canvas`. */
 export const measurePixels = (
   measure: Measure,
-  shortest: number,
-  perPoint: number,
+  frame: number,
+  canvas: number,
 ) =>
   Math.max(
     0,
-    "points" in measure
-      ? measure.points * perPoint
-      : (Math.max(0, shortest) * measure.percent) / 100,
+    "canvas" in measure
+      ? (Math.max(0, canvas) * measure.canvas) / 100
+      : (Math.max(0, frame) * measure.percent) / 100,
   );
 
-/** As a corner radius: never more than half the shorter side. */
-const radiusPixels = (measure: Measure, shortest: number, perPoint: number) =>
-  Math.min(
-    measurePixels(measure, shortest, perPoint),
-    Math.max(0, shortest) / 2,
-  );
+/** As a corner radius: never more than half the frame's shorter side. */
+const radiusPixels = (measure: Measure, frame: number, canvas: number) =>
+  Math.min(measurePixels(measure, frame, canvas), Math.max(0, frame) / 2);
 
-export const isZeroMeasure = (measure: Measure) =>
-  ("points" in measure ? measure.points : measure.percent) <= 0;
+/** As a corner radius in percent of the frame's shorter side, as a
+ * selection's outline and a layout's drawing are rounded. */
+export const radiusFramePercent = (
+  measure: Measure,
+  frame: number,
+  canvas: number,
+) => (frame > 0 ? (radiusPixels(measure, frame, canvas) / frame) * 100 : 0);
+
+export const isZeroMeasure = (measure: Measure) => valueOf(measure) <= 0;
 
 /** `share` of the way from one length to another. Lengths in different
  * units cannot be mixed, so the change happens halfway. */
@@ -95,64 +98,86 @@ export const measureBetween = (
   to: Measure,
   share: number,
 ): Measure => {
-  if ("points" in from && "points" in to)
-    return points(from.points + (to.points - from.points) * share);
+  if ("canvas" in from && "canvas" in to)
+    return canvasShare(from.canvas + (to.canvas - from.canvas) * share);
   if ("percent" in from && "percent" in to)
     return percent(from.percent + (to.percent - from.percent) * share);
   return share < 0.5 ? from : to;
 };
 
+/** `share` of the way from one corner radius to another, `from` drawn on a
+ * frame whose shorter side is `frame` canvas pixels, on a canvas whose
+ * shorter side is `canvas`. A radius in the other unit is first measured in
+ * `to`'s as it is drawn, so a change to or from a circle eases as the looks
+ * do. */
+export const radiusBetween = (
+  from: Measure,
+  to: Measure,
+  { canvas, frame, share }: { canvas: number; frame: number; share: number },
+): Measure => {
+  if ("canvas" in from === "canvas" in to)
+    return measureBetween(from, to, share);
+  const drawn = radiusPixels(from, frame, canvas);
+  const start =
+    "canvas" in to
+      ? canvasShare(canvas > 0 ? (drawn / canvas) * 100 : 0)
+      : percent(frame > 0 ? (drawn / frame) * 100 : 0);
+  return measureBetween(start, to, share);
+};
+
 /** A layer's corner radius as a percent of its frame's shorter side, as
  * the selection's outline is rounded in the view. */
-export const cornerRadiusFramePercent = (
-  settings: {
-    cropHeight: number;
-    cropWidth: number;
-    imageWidth: number;
-    radius: Measure;
-  },
-  source: CaptureSource,
-) => {
-  const shortest = Math.min(settings.cropWidth, settings.cropHeight);
-  if (shortest <= 0) return 0;
-  const radius = radiusPixels(
+export const cornerRadiusFramePercent = (settings: {
+  cropHeight: number;
+  cropWidth: number;
+  height: number;
+  radius: Measure;
+  width: number;
+}) =>
+  radiusFramePercent(
     settings.radius,
-    shortest,
-    pixelsPerPoint(settings.imageWidth, source),
+    Math.min(settings.cropWidth, settings.cropHeight),
+    canvasShortest(settings),
   );
-  return (radius / shortest) * 100;
-};
 
-const nearestLook = (
-  value: number,
-  legacy: readonly number[],
-  looks: readonly number[],
-) => {
-  let best = 0;
-  legacy.forEach((candidate, index) => {
-    if (Math.abs(candidate - value) < Math.abs(legacy[best] - value))
-      best = index;
-  });
-  return looks[best];
-};
+const nearest = (value: number, candidates: readonly number[]) =>
+  candidates.reduce(
+    (best, candidate, index) =>
+      Math.abs(candidate - value) < Math.abs(candidates[best] - value)
+        ? index
+        : best,
+    0,
+  );
 
-/** A padding kept as a percent, as the look in points it was nearest. */
+/** A padding as the look it was nearest. */
 export const snappedInset = (measure: Measure): Measure =>
-  "points" in measure
-    ? measure
-    : points(nearestLook(measure.percent, LEGACY_INSET_PERCENTS, INSET_LOOKS));
+  canvasShare(
+    INSET_LOOKS[
+      "canvas" in measure
+        ? nearest(measure.canvas, INSET_LOOKS)
+        : nearest(measure.percent, LEGACY_INSET_PERCENTS)
+    ],
+  );
 
-/** A capture's corners kept as a percent, as the look in points they were
- * nearest. */
-export const snappedCorners = (measure: Measure): Measure =>
-  "points" in measure
-    ? measure
-    : points(
-        nearestLook(measure.percent, LEGACY_CORNER_PERCENTS, CORNER_LOOKS),
-      );
+/** Corners as the look they were nearest; a camera's circle stays one. */
+export const snappedCorners = (
+  measure: Measure,
+  { circle }: { circle: boolean },
+): Measure => {
+  if (circle && "percent" in measure && measure.percent >= CIRCLE_PERCENT)
+    return percent(CIRCLE_PERCENT);
+  return canvasShare(
+    CORNER_LOOKS[
+      "canvas" in measure
+        ? nearest(measure.canvas, CORNER_LOOKS)
+        : nearest(measure.percent, LEGACY_CORNER_PERCENTS)
+    ],
+  );
+};
 
-/** A length as saved before lengths had a unit, a bare share or percent,
- * read as a percent; a length with a unit as it is. */
+/** A length as saved before lengths had a unit, a bare share or percent of
+ * the frame, read as a percent; one saved in points as a share of a 1080
+ * high canvas; a length with a unit as it is. */
 export const savedMeasure = (
   saved: unknown,
   bareIs: "percent" | "share",
@@ -162,9 +187,11 @@ export const savedMeasure = (
   if (typeof saved !== "object" || saved === null) return undefined;
   const finiteNumber = (value: unknown): value is number =>
     typeof value === "number" && Number.isFinite(value);
-  if ("points" in saved && finiteNumber(saved.points))
-    return points(saved.points);
+  if ("canvas" in saved && finiteNumber(saved.canvas))
+    return canvasShare(saved.canvas);
   if ("percent" in saved && finiteNumber(saved.percent))
     return percent(saved.percent);
+  if ("points" in saved && finiteNumber(saved.points))
+    return canvasShare((saved.points / LEGACY_POINTS_CANVAS) * 100);
   return undefined;
 };

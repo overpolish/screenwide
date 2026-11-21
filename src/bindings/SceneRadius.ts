@@ -2,10 +2,9 @@
 import type { Measure } from "./Measure";
 
 /**
- * The corner radius a scene gives each pane, like the recording's own: the
- * screen's in points of its capture (a percent of the pane in clips saved
- * before, and for a recording of the camera alone, whose screen pane is the
- * camera), the camera's a percent of its pane's shorter side. A pane
- * without one keeps the recording's radius.
+ * The corner radius a scene gives each pane, like the recording's own: a
+ * share of the canvas, or of the pane for a camera drawn as a circle (and
+ * for clips saved before lengths had a unit). A pane without one keeps the
+ * recording's radius.
  */
-export type SceneRadius = { screen?: Measure, camera?: number, };
+export type SceneRadius = { screen?: Measure, camera?: Measure, };

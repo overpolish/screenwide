@@ -3,10 +3,10 @@
 
 import { invoke } from "@tauri-apps/api/core";
 
-import { CaptureSource, pixelsPerPoint, points } from "../layer-measure";
+import { canvasShare, canvasShortest, CaptureSource } from "../layer-measure";
 
 import { sourceRect, SourceRect } from "./screenshot-geometry";
-import { screenshotInsetPoints } from "./screenshot-inset";
+import { screenshotInset } from "./screenshot-inset";
 import {
   screenshotLayout,
   ScreenshotOutputSettings,
@@ -53,7 +53,7 @@ export const recenterScreenshotContent = (
   content: ScreenshotContentBounds,
 ): ScreenshotOutputSettings => {
   const layout = screenshotLayout(source, settings);
-  const insetPoints = screenshotInsetPoints(settings, source);
+  const share = screenshotInset(settings, source);
   const sourceCrop = sourceRect({
     height: content.height / source.height,
     width: content.width / source.width,
@@ -66,8 +66,8 @@ export const recenterScreenshotContent = (
     x: layout.image.x + layout.image.width * sourceCrop.x,
     y: layout.image.y + layout.image.height * sourceCrop.y,
   };
-  // The padding keeps its points round the picture it now frames.
-  const inset = insetPoints * pixelsPerPoint(settings.imageWidth, source);
+  // The padding keeps its share round the picture it now frames.
+  const inset = (share * canvasShortest(settings)) / 100;
   const deltaX =
     layout.crop.x +
     layout.crop.width / 2 -
@@ -85,7 +85,7 @@ export const recenterScreenshotContent = (
       cropY: contentRect.y + deltaY - inset,
       imageX: settings.imageX + deltaX,
       imageY: settings.imageY + deltaY,
-      inset: points(insetPoints),
+      inset: canvasShare(share),
     },
     sourceCrop,
   );

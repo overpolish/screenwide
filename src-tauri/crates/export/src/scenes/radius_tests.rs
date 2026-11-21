@@ -10,7 +10,7 @@ use screenwide_scenes::Measure;
 use screenwide_scenes::RecordingSceneClip;
 
 /// A side by side scene from 1s to 10s that rounds the screen's corners by
-/// 24 points, leaving the camera's to the recording.
+/// 3% of the canvas, leaving the camera's to the recording.
 fn rounded_split() -> RecordingSceneClip {
   RecordingSceneClip {
     id: "r".to_owned(),
@@ -21,7 +21,7 @@ fn rounded_split() -> RecordingSceneClip {
     camera: None,
     boxes: None,
     radius: Some(SceneRadius {
-      screen: Some(Measure::Points(24.0)),
+      screen: Some(Measure::Canvas(3.0)),
       camera: None,
     }),
     inset: None,
@@ -36,13 +36,12 @@ fn rounded_split() -> RecordingSceneClip {
   }
 }
 
-/// The screen's corners in points and the camera's in percent `source_ms`
-/// in, for a recording captured at two pixels to the point whose own screen
-/// is rounded 10 points and camera 50%.
+/// The screen's corners in percent of the canvas and the camera's in
+/// percent of its frame `source_ms` in, for a recording whose own screen is
+/// rounded by 1% of the canvas and camera drawn as a circle.
 fn radii(source_ms: u64) -> (f64, f64) {
   let mut output = test_output_settings(1_600, 900);
-  output.capture_width_points = output.image_width / 2.0;
-  output.radius = Measure::Points(10.0);
+  output.radius = Measure::Canvas(1.0);
   let mut overlay = CameraOverlaySettings {
     camera_x: 1_400.0,
     camera_y: 750.0,
@@ -51,7 +50,7 @@ fn radii(source_ms: u64) -> (f64, f64) {
     frame_width: 180.0,
     frame_x: 1_310.0,
     frame_y: 660.0,
-    radius_percent: 50.0,
+    radius: Measure::Percent(50.0),
     follow_face: false,
   };
   arrange(
@@ -62,20 +61,20 @@ fn radii(source_ms: u64) -> (f64, f64) {
     &mut output,
     Some((&mut overlay, (1_280, 720))),
   );
-  let Measure::Points(screen) = output.radius else {
-    panic!("the screen's corners are drawn in points");
+  let Measure::Canvas(screen) = output.radius else {
+    panic!("the screen's corners are drawn as a share of the canvas");
   };
-  (screen, overlay.radius_percent)
+  (screen, overlay.radius_frame_percent(900.0))
 }
 
 #[test]
 fn a_scene_rounds_its_panes_and_leaves_the_rest_to_the_recording() {
   let (screen, camera) = radii(5_000);
-  assert!((screen - 24.0).abs() < 1e-6, "{screen} is not the scene's");
-  assert_eq!(camera, 50.0);
+  assert!((screen - 3.0).abs() < 1e-6, "{screen} is not the scene's");
+  assert!((camera - 50.0).abs() < 1e-6, "{camera} is not a circle");
   let (screen, _) = radii(12_000);
   assert!(
-    (screen - 10.0).abs() < 1e-6,
+    (screen - 1.0).abs() < 1e-6,
     "{screen} is not the recording's"
   );
 }
@@ -83,8 +82,8 @@ fn a_scene_rounds_its_panes_and_leaves_the_rest_to_the_recording() {
 #[test]
 fn a_scene_eases_its_radius_in_with_its_arrival() {
   let (screen, camera) = radii(1_300);
-  assert!(screen > 10.0 && screen < 24.0, "{screen} is not on its way");
-  assert_eq!(camera, 50.0);
+  assert!(screen > 1.0 && screen < 3.0, "{screen} is not on its way");
+  assert!((camera - 50.0).abs() < 0.5, "{camera} is not a circle");
 }
 
 #[test]
@@ -92,7 +91,7 @@ fn a_radius_past_half_the_shorter_side_is_refused() {
   let mut clip = rounded_split();
   clip.radius = Some(SceneRadius {
     screen: None,
-    camera: Some(60.0),
+    camera: Some(Measure::Percent(60.0)),
   });
   assert!(validate_clips(&[clip]).is_err());
   assert!(validate_clips(&[rounded_split()]).is_ok());

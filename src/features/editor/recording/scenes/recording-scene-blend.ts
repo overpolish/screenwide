@@ -74,13 +74,13 @@ export const towardPlacement = (
     cameraFront: mixed(from.cameraFront, to.cameraFront, t),
     frame: mixedRect(from.frame, to.frame, t),
     image: mixedPicture(from.image, to.image, t),
-    inset: measureBetween(from.inset, to.inset, t),
+    inset: mixed(from.inset, to.inset, t),
     opacity: {
       camera: mixed(from.opacity.camera, to.opacity.camera, t),
       screen: mixed(from.opacity.screen, to.opacity.screen, t),
     },
     radius: {
-      camera: mixed(from.radius.camera, to.radius.camera, t),
+      camera: measureBetween(from.radius.camera, to.radius.camera, t),
       screen: measureBetween(from.radius.screen, to.radius.screen, t),
     },
     rotation: {
@@ -97,8 +97,8 @@ export const towardPlacement = (
     next.screen = held.box;
     next.image = held.picture;
     next.rotation = source.rotation;
-    // The padding is measured on the picture, which shrinks with the box.
-    next.inset = source.inset;
+    // The padding shrinks with the box, as `Placement::toward` scales it.
+    next.inset = source.inset * screen.factor;
   }
   const camera = settling(from.opacity.camera, to.opacity.camera, t);
   if (camera) {

@@ -6,9 +6,9 @@ import { PillGroup } from "../../../../primitives/pill-group/pill-group";
 import { INSET_LOOKS } from "../../layer-measure";
 
 // How far the picture's edges are extended, as four looks rather than a
-// figure: a padding is judged by eye against the picture. The padding is
-// kept in points of the capture, as annotations are, so each look pads
-// every capture alike, and each look is one number of points exactly.
+// figure: a padding is judged by eye against the picture. The padding is a
+// share of the canvas's shorter side, so each look pads a full display and
+// a small region alike, and each look is one share exactly.
 
 const [NONE, TIGHT, MEDIUM, LARGE] = INSET_LOOKS;
 
@@ -81,7 +81,7 @@ export function ScreenInsetChoice({
   inset,
   onChange,
 }: {
-  /** Points of the capture. */
+  /** Percent of the canvas's shorter side. */
   inset: number;
   onChange: (inset: number) => void;
 }) {

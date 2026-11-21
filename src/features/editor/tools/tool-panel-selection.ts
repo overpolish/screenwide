@@ -8,6 +8,7 @@ import {
 } from "../annotations/annotations";
 import { SceneRotation } from "../layer-rotation";
 
+import type { Measure } from "../../../bindings/Measure";
 import type { TextStyle } from "../../../bindings/TextStyle";
 import type { AnnotationKind } from "../../annotations/types";
 import type { AnnotationPinView } from "../island/annotation/annotation-pin";
@@ -20,7 +21,7 @@ export type ToolPanelLayerSelection = {
   /** Whether this layer casts a shadow onto the canvas behind it. */
   dropShadow: boolean;
   /** How far the padded frame runs past the layer's own picture on each
-   * side, as a share of the picture's shorter side. */
+   * side, in percent of the canvas's shorter side. */
   inset: number;
   /** Whether the layer sits where a fresh project places it, so Reset
    * placement has nothing to put back. */
@@ -28,9 +29,8 @@ export type ToolPanelLayerSelection = {
   /** Which of the workspace's layers this is, for wording that fits it. */
   kind: "camera" | "layer" | "primary";
   label: string;
-  /** How rounded the layer's corners are, as a share of its shorter side,
-   * 0 to 50. The same number the corner drag in the preview sets. */
-  radius: number;
+  /** How rounded the layer's corners are. */
+  radius: Measure;
   /** The camera's effects, offered for the camera. */
   cameraEffects?: ToolPanelCameraEffects;
   /** Whether the camera follows the face, offered for a camera drawn into

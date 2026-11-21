@@ -16,7 +16,7 @@
 
 use super::*;
 use screenwide_output::ScreenshotOutputSettings;
-use screenwide_scenes::{RecordingSceneClip, SceneRotation};
+use screenwide_scenes::{Measure, RecordingSceneClip, SceneRotation};
 
 #[derive(Clone, Copy, Debug, serde::Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
@@ -98,7 +98,7 @@ pub(super) fn ease_open(
   ease(&mut camera.camera_x, to.camera_x);
   ease(&mut camera.camera_y, to.camera_y);
   ease(&mut camera.camera_width, to.camera_width);
-  ease(&mut camera.radius_percent, to.radius_percent);
+  camera.radius = camera.radius.between(to.radius, open);
 }
 
 /// Whether the crop tool crops the pane `reframe` names in place in `clip`:
@@ -154,7 +154,7 @@ pub(super) fn show_camera_picture(overlay: &mut CameraOverlaySettings, camera: (
   overlay.frame_height = overlay.camera_width / aspect;
   overlay.frame_x = overlay.camera_x - overlay.frame_width / 2.0;
   overlay.frame_y = overlay.camera_y - overlay.frame_height / 2.0;
-  overlay.radius_percent = 0.0;
+  overlay.radius = Measure::default();
 }
 
 /// A camera overlay a scene arranged, drawn as its whole picture covering the
@@ -176,7 +176,7 @@ pub(super) fn show_whole_camera(overlay: &mut CameraOverlaySettings, camera: (u3
   overlay.frame_y = centre.1 - height / 2.0;
   overlay.frame_width = width;
   overlay.frame_height = height;
-  overlay.radius_percent = 0.0;
+  overlay.radius = Measure::default();
 }
 
 /// Tells the preview which pane of the scene under the playhead the crop tool

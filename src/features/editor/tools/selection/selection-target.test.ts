@@ -82,21 +82,21 @@ const croppedLayer = (settings: Partial<ScreenshotOutputSettings> = {}) =>
   );
 
 describe("selection padding", () => {
-  it("grows the frame past the picture by the same points on every side", () => {
+  it("grows the frame past the picture by the same share on every side", () => {
     const settings = croppedLayer();
     const { apply, target } = targetFor(settings);
 
-    target.applyInset(32);
+    target.applyInset(3);
 
     const next = apply.mock.calls[0][0];
     expect(apply).toHaveBeenCalledOnce();
     expect(apply.mock.calls[0][1]).toBe(7);
-    // 32 points at two pixels to the point on every side.
-    expect(next.cropHeight).toBeCloseTo(728);
-    expect(next.cropWidth).toBeCloseTo(728);
-    expect(next.cropX).toBeCloseTo(136);
-    expect(next.cropY).toBeCloseTo(136);
-    expect(next.inset).toEqual({ points: 32 });
+    // 3% of the 1000 pixel canvas on every side.
+    expect(next.cropHeight).toBeCloseTo(660);
+    expect(next.cropWidth).toBeCloseTo(660);
+    expect(next.cropX).toBeCloseTo(170);
+    expect(next.cropY).toBeCloseTo(170);
+    expect(next.inset).toEqual({ canvas: 3 });
     // The picture itself does not move: only the frame around it changes.
     expect(next.imageX).toBe(settings.imageX);
     expect(next.imageY).toBe(settings.imageY);
@@ -112,22 +112,22 @@ describe("selection padding", () => {
       ),
     );
 
-    target.applyInset(64);
+    target.applyInset(6);
 
     const next = apply.mock.calls[0][0];
-    expect(next.cropX).toBeCloseTo(-128);
-    expect(next.cropY).toBeCloseTo(-128);
-    expect(next.cropWidth).toBeCloseTo(1_256);
-    expect(next.cropHeight).toBeCloseTo(1_256);
+    expect(next.cropX).toBeCloseTo(-60);
+    expect(next.cropY).toBeCloseTo(-60);
+    expect(next.cropWidth).toBeCloseTo(1_120);
+    expect(next.cropHeight).toBeCloseTo(1_120);
   });
 
   it("measures each inset from the picture rather than from the last frame", () => {
     const first = targetFor(croppedLayer());
-    first.target.applyInset(16);
+    first.target.applyInset(1.5);
     const once = first.apply.mock.calls[0][0];
 
     const again = targetFor(once);
-    again.target.applyInset(16);
+    again.target.applyInset(1.5);
 
     expect(again.apply.mock.calls[0][0].cropWidth).toBe(once.cropWidth);
     expect(again.apply.mock.calls[0][0].cropX).toBe(once.cropX);
@@ -151,31 +151,34 @@ describe("selection padding", () => {
     expect(next.recenterInsetColor).toBe("#ffffff");
   });
 
-  it("shows a padding saved before points as the look it was nearest", () => {
+  it("shows a padding saved in another unit as the look it was nearest", () => {
     // 50 pixels round a 600 pixel picture, a share of a twelfth: Large.
     const framed = targetFor(
       croppedLayer({ cropHeight: 700, cropWidth: 700, cropX: 150, cropY: 150 }),
     ).target;
     const shared = targetFor(croppedLayer({ inset: { percent: 6 } })).target;
-    const pointed = targetFor(croppedLayer({ inset: { points: 16 } })).target;
+    // 16 points, read as pixels of a 1080 high canvas: Tight.
+    const pointed = targetFor(
+      croppedLayer({ inset: { canvas: (16 / 1_080) * 100 } }),
+    ).target;
 
-    expect(framed.selection.inset).toBe(64);
-    expect(shared.selection.inset).toBe(32);
-    expect(pointed.selection.inset).toBe(16);
+    expect(framed.selection.inset).toBe(6);
+    expect(shared.selection.inset).toBe(3);
+    expect(pointed.selection.inset).toBe(1.5);
   });
 });
 
 describe("selection corners", () => {
-  it("rounds a screenshot layer by points of its capture", () => {
+  it("rounds a screenshot layer by a look", () => {
     const { apply, target } = targetFor(croppedLayer());
 
-    target.applyRadius(24);
+    target.applyRadius({ canvas: 3 });
 
-    expect(apply.mock.calls[0][0].radius).toEqual({ points: 24 });
+    expect(apply.mock.calls[0][0].radius).toEqual({ canvas: 3 });
     expect(
-      targetFor(croppedLayer({ radius: { points: 10 } })).target.selection
+      targetFor(croppedLayer({ radius: { canvas: 1 } })).target.selection
         .radius,
-    ).toBe(10);
+    ).toEqual({ canvas: 1 });
   });
 });
 

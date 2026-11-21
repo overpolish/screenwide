@@ -44,7 +44,7 @@ export function normalizedRecordingSelection({
     image: selection.image,
     layerId: paneIndex,
     paneIndex,
-    radiusPercent: cornerRadiusFramePercent(output, source),
+    radiusPercent: cornerRadiusFramePercent(output),
     recenterBounds: selection.recenterBounds,
     rect: selection.rect,
   };

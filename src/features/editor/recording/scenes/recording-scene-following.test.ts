@@ -28,7 +28,7 @@ const overlay = {
   frameWidth: 240,
   frameX: 1080,
   frameY: 480,
-  radiusPercent: 0,
+  radius: { canvas: 0 },
 };
 const camera: SceneCamera = { aspect: 16 / 9, face, overlay };
 // A custom scene's camera box, a fifth of the canvas, following the face

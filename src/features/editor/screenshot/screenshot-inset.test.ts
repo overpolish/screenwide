@@ -3,14 +3,11 @@
 
 import { describe, expect, it } from "vitest";
 
-import { INSET_LOOKS, percent, points } from "../layer-measure";
+import { canvasShare, INSET_LOOKS, percent } from "../layer-measure";
 
 import { commitScreenshotCrop } from "./screenshot-crop";
 import { sourceRect } from "./screenshot-geometry";
-import {
-  insetScreenshotPadding,
-  screenshotInsetPoints,
-} from "./screenshot-inset";
+import { insetScreenshotPadding, screenshotInset } from "./screenshot-inset";
 import { withSnappedMeasures } from "./screenshot-measure-snap";
 import {
   defaultScreenshotOutput,
@@ -39,29 +36,27 @@ const padding = (
 };
 
 describe("the padding's looks", () => {
-  it("pad by points of the capture, read back as themselves", () => {
+  it("pad by a share of the canvas, read back as themselves", () => {
     for (const look of INSET_LOOKS) {
       const padded = insetScreenshotPadding(whole(), source, look);
-      expect(screenshotInsetPoints(padded, source)).toBe(look);
-      expect(padding(padded)).toBeCloseTo(look * 2);
+      expect(screenshotInset(padded, source)).toBe(look);
+      // A percent of the 1000 pixel canvas.
+      expect(padding(padded)).toBeCloseTo(look * 10);
     }
   });
 
-  it("pad a short strip as much as a tall capture", () => {
-    const strip = { height: 120, scaleFactor: 2, width: 2_000 };
-    const screen = { height: 1_200, scaleFactor: 2, width: 2_000 };
+  it("pad a capture at any display scale alike on the same canvas", () => {
+    const plain = { ...source, scaleFactor: 1 };
     const medium = INSET_LOOKS[2];
     expect(
-      padding(insetScreenshotPadding(whole(strip), strip, medium), strip),
-    ).toBeCloseTo(
-      padding(insetScreenshotPadding(whole(screen), screen, medium), screen),
-    );
+      padding(insetScreenshotPadding(whole(plain), plain, medium), plain),
+    ).toBeCloseTo(padding(insetScreenshotPadding(whole(), source, medium)));
   });
 });
 
 describe("a padded layer cropped again", () => {
-  it("keeps its padding in points round its new picture", () => {
-    const padded = insetScreenshotPadding(whole(), source, 64);
+  it("keeps its padding round its new picture", () => {
+    const padded = insetScreenshotPadding(whole(), source, 6);
     const cropped = commitScreenshotCrop(
       padded,
       withScreenshotSourceCrop(
@@ -70,24 +65,24 @@ describe("a padded layer cropped again", () => {
       ),
       source,
     );
-    expect(cropped.inset).toEqual(points(64));
-    expect(padding(cropped)).toBeCloseTo(128);
+    expect(cropped.inset).toEqual(canvasShare(6));
+    expect(padding(cropped)).toBeCloseTo(60);
   });
 
   it("keeps it as Recenter frames the content", () => {
-    const padded = insetScreenshotPadding(whole(), source, 32);
+    const padded = insetScreenshotPadding(whole(), source, 3);
     const recentred = recenterScreenshotContent(padded, source, {
       height: 200,
       width: 400,
       x: 100,
       y: 100,
     });
-    expect(recentred.inset).toEqual(points(32));
-    expect(padding(recentred)).toBeCloseTo(64);
+    expect(recentred.inset).toEqual(canvasShare(3));
+    expect(padding(recentred)).toBeCloseTo(30);
   });
 });
 
-describe("a layer saved before the padding was kept in points", () => {
+describe("a layer saved before the looks were shares of the canvas", () => {
   it("reads a frame-only padding as the look its share was nearest", () => {
     // 50 pixels round a 1000 pixel picture was a share of 0.05: Medium.
     const framed = {
@@ -97,10 +92,10 @@ describe("a layer saved before the padding was kept in points", () => {
       cropX: -50,
       cropY: -50,
     };
-    expect(screenshotInsetPoints(framed, source)).toBe(32);
+    expect(screenshotInset(framed, source)).toBe(INSET_LOOKS[2]);
   });
 
-  it("opens with its share and corners snapped to looks in points", () => {
+  it("opens with its share and corners snapped to looks", () => {
     // As a project saved it then: a bare share and a bare percent, under the
     // names they had, and no length with a unit.
     const { inset: _inset, radius: _radius, ...current } = whole();
@@ -113,18 +108,32 @@ describe("a layer saved before the padding was kept in points", () => {
       inset: 0.1,
       radiusPercent: 12,
     } as unknown as ScreenshotOutputSettings;
-    const opened = withSnappedMeasures(saved, source, "points");
-    expect(opened.inset).toEqual(points(64));
-    expect(opened.radius).toEqual(points(24));
-    expect(padding(opened)).toBeCloseTo(128);
+    const opened = withSnappedMeasures(saved, source, { circle: false });
+    expect(opened.inset).toEqual(canvasShare(INSET_LOOKS[3]));
+    expect(opened.radius).toEqual(canvasShare(3));
+    expect(padding(opened)).toBeCloseTo(60);
     expect("radiusPercent" in opened).toBe(false);
   });
 
-  it("keeps a camera's corners as a share", () => {
+  it("opens corners and padding saved in points as the looks they were", () => {
+    const opened = withSnappedMeasures(
+      {
+        ...insetScreenshotPadding(whole(), source, 3),
+        inset: { canvas: (32 / 1_080) * 100 },
+        radius: { canvas: (24 / 1_080) * 100 },
+      },
+      source,
+      { circle: false },
+    );
+    expect(opened.inset).toEqual(canvasShare(3));
+    expect(opened.radius).toEqual(canvasShare(3));
+  });
+
+  it("keeps a camera's circle", () => {
     const opened = withSnappedMeasures(
       { ...whole(), radius: percent(50) },
       source,
-      "percent",
+      { circle: true },
     );
     expect(opened.radius).toEqual(percent(50));
   });

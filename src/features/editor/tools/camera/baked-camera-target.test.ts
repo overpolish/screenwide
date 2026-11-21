@@ -83,17 +83,17 @@ describe("baked camera selection", () => {
     expect(target.selection).toMatchObject({
       kind: "camera",
       label: "Camera",
-      radius: overlay.radiusPercent,
+      radius: overlay.radius,
     });
   });
 
   it("rounds the overlay's corners and shadows the camera track's output", () => {
     const { output, overlay, target } = cameraTargetFor();
 
-    target.applyRadius(20);
+    target.applyRadius({ percent: 50 });
     target.applyDropShadow(true);
 
-    expect(overlay.mock.calls[0][0].radiusPercent).toBe(20);
+    expect(overlay.mock.calls[0][0].radius).toEqual({ percent: 50 });
     expect(output.mock.calls[0][0]).toBe("camera");
     expect(output.mock.calls[0][1].dropShadow).toBe(true);
   });

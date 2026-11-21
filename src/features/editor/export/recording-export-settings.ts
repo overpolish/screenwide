@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import { DEFAULT_CAMERA_RADIUS } from "../layer-measure";
 import { hasOutputComposition } from "../screenshot/screenshot-composition";
 import { RecordingOutputSettings } from "../screenshot/screenshot-output";
 import {
@@ -65,7 +66,7 @@ const cameraOverlayForDimensions = ({
     frameWidth,
     frameX,
     frameY,
-    radiusPercent: 8,
+    radius: DEFAULT_CAMERA_RADIUS,
   };
 };
 

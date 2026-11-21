@@ -46,11 +46,10 @@ impl RecordingScenePreset {
   }
 }
 
-/// The corner radius a scene gives each pane, like the recording's own: the
-/// screen's in points of its capture (a percent of the pane in clips saved
-/// before, and for a recording of the camera alone, whose screen pane is the
-/// camera), the camera's a percent of its pane's shorter side. A pane
-/// without one keeps the recording's radius.
+/// The corner radius a scene gives each pane, like the recording's own: a
+/// share of the canvas, or of the pane for a camera drawn as a circle (and
+/// for clips saved before lengths had a unit). A pane without one keeps the
+/// recording's radius.
 #[derive(Clone, Copy, Debug, Default, Deserialize, PartialEq, Serialize, TS)]
 #[ts(export)]
 pub struct SceneRadius {
@@ -61,17 +60,19 @@ pub struct SceneRadius {
   )]
   #[ts(optional)]
   pub screen: Option<Measure>,
-  #[serde(default, skip_serializing_if = "Option::is_none")]
+  #[serde(
+    default,
+    deserialize_with = "crate::measure::optional_measure_or_bare_percent",
+    skip_serializing_if = "Option::is_none"
+  )]
   #[ts(optional)]
-  pub camera: Option<f64>,
+  pub camera: Option<Measure>,
 }
 
 impl SceneRadius {
   pub(crate) fn is_valid(self) -> bool {
     self.screen.is_none_or(|screen| screen.is_valid(50.0))
-      && self
-        .camera
-        .is_none_or(|camera| (0.0..=50.0).contains(&camera))
+      && self.camera.is_none_or(|camera| camera.is_valid(50.0))
   }
 }
 
@@ -123,9 +124,9 @@ pub struct RecordingSceneClip {
   pub radius: Option<SceneRadius>,
   /// How far the scene pads its screen's box: the box grows outwards by it
   /// on every side, filled with the colour found behind the recording's
-  /// content, as the recording's own inset pads its crop. Points of the
-  /// recording's capture as the scene draws it; a percent of the box's
-  /// shorter side in clips saved before. None where unset.
+  /// content, as the recording's own inset pads its crop. A share of the
+  /// canvas's shorter side; a percent of the box's shorter side in clips
+  /// saved before. None where unset.
   #[serde(
     default,
     deserialize_with = "crate::measure::optional_measure_or_bare_share",

@@ -69,7 +69,7 @@ describe("drawnCameraFrame", () => {
         frameWidth: 300,
         frameX: 100,
         frameY: 120,
-        radiusPercent: 0,
+        radius: { canvas: 0 },
       },
       ASPECT,
     );

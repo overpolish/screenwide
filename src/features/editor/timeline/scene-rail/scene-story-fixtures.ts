@@ -20,7 +20,7 @@ import { drawnSceneSpan, LEAST_DRAWN_S } from "./scene-draw";
 const SHAPE = {
   aspect: 16 / 9,
   cameraAspect: 16 / 9,
-  cameraRadius: 50,
+  cameraRadius: { percent: 50 },
   screen: { height: 0.88, width: 0.792, x: 0.104, y: 0.06 },
   screenAspect: 16 / 10,
 };

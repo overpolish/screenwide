@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { validAnnotations } from "../annotations/annotation-documents";
-import { Measure, points, savedMeasure } from "../layer-measure";
+import { canvasShare, Measure, savedMeasure } from "../layer-measure";
 import { DEFAULT_GENERATOR_ID } from "../tools/frame/background/background-generators";
 
 import { randomMeshComposition } from "./screenshot-background";
@@ -36,7 +36,7 @@ export const defaultScreenshotOutput = (
     imageY: 0,
     meshGenerator: DEFAULT_GENERATOR_ID,
     meshLockedColors: mesh.meshColors.map(() => false),
-    radius: radii.screenshot ?? points(0),
+    radius: radii.screenshot ?? canvasShare(0),
     recenterInsetColor: null,
     sourceCrop: fullSourceRect(),
     width,
@@ -122,7 +122,7 @@ export const normalizedScreenshotOutput = (
     normalized[key] = finite(settings[key], defaults[key]);
   // Settings saved before lengths had a unit hold a bare percent under
   // another name, and a bare share for the padding; read as percents, which
-  // a project opening snaps to looks in points.
+  // a project opening snaps to looks.
   const legacyRadius =
     "radiusPercent" in settings ? settings.radiusPercent : undefined;
   normalized.radius =

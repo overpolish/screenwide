@@ -22,6 +22,7 @@ import { Background, BackgroundPreset } from "./frame/background/background";
 import { TranscriptRequest } from "./tool-panel-transcript";
 
 import type { ToolPanelExportPatch } from "./tool-panel-export";
+import type { Measure } from "../../../bindings/Measure";
 import type { ModelWork } from "../../../bindings/ModelWork";
 import type { TextStyle } from "../../../bindings/TextStyle";
 import type { AnnotationPinAction } from "../island/annotation/annotation-pin";
@@ -167,8 +168,8 @@ export type ToolPanelHandlers = {
   /** Have the camera in the scene under the playhead follow the face, or
    * stop following it. */
   onSceneFollowFaceChange?: (follow: boolean) => void;
-  /** Pad the screen in the scene under the playhead by this share of its
-   * box's shorter side. */
+  /** Pad the screen in the scene under the playhead by this share of the
+   * canvas's shorter side, in percent. */
   onSceneInsetChange?: (inset: number) => void;
   /** Show or hide a pane of the scene under the playhead. */
   onScenePaneShownChange?: (pane: "camera" | "screen", shown: boolean) => void;
@@ -181,7 +182,7 @@ export type ToolPanelHandlers = {
    * with it where there is none. */
   onScenePresetChoose?: (preset: RecordingScenePreset) => void;
   /** Round the selected pane's corners in the scene under the playhead. */
-  onSceneRadiusChange?: (radius: number) => void;
+  onSceneRadiusChange?: (radius: Measure) => void;
   /** Crop the screen in the scene under the playhead to its content, in the
    * middle of its box. */
   onSceneRecenter?: () => void;
@@ -201,12 +202,13 @@ export type ToolPanelHandlers = {
   onSelectionDropShadowChange?: (dropShadow: boolean) => void;
   /** Have the selected camera follow the face, or stop following it. */
   onSelectionFollowFaceChange?: (follow: boolean) => void;
-  /** Pad the selected layer by this many output pixels on each side. */
+  /** Pad the selected layer by this share of the canvas's shorter side, in
+   * percent, on each side. */
   onSelectionInsetChange?: (inset: number) => void;
   /** Put the selected layer back where a fresh project places it. */
   onSelectionPlacementReset?: () => void;
-  /** Round the selected layer's corners by this share of its shorter side. */
-  onSelectionRadiusChange?: (radius: number) => void;
+  /** Round the selected layer's corners. */
+  onSelectionRadiusChange?: (radius: Measure) => void;
   /** Put the layer's content in the middle of its padded frame. */
   onSelectionRecenter?: () => void;
   /** Turn the selected layer in depth, a field at a time. */

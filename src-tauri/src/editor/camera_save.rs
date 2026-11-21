@@ -29,7 +29,6 @@ pub(super) fn validate_camera_overlay(
     settings.frame_width,
     settings.frame_x,
     settings.frame_y,
-    settings.radius_percent,
   ];
   let width = f64::from(canvas.0.max(1));
   let height = f64::from(canvas.1.max(1));
@@ -43,7 +42,7 @@ pub(super) fn validate_camera_overlay(
     || !(width * 0.03..=width * 8.0).contains(&settings.frame_width)
     || !horizontal.contains(&settings.frame_x)
     || !vertical.contains(&settings.frame_y)
-    || !(0.0..=50.0).contains(&settings.radius_percent)
+    || !settings.radius.is_valid(50.0)
   {
     return Err("The camera overlay settings are not valid".to_owned());
   }

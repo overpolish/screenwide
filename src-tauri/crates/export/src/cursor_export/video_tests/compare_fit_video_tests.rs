@@ -166,7 +166,7 @@ fn lines_up_the_compared_frames_at_the_smaller_looks() {
   let mut plain = screenwide_output::fixtures::test_output_settings(WIDTH, HEIGHT);
   plain.background_color = "#000000".to_owned();
   plain.drop_shadow = false;
-  plain.radius = screenwide_scenes::Measure::Points(0.0);
+  plain.radius = screenwide_scenes::Measure::default();
   (plain.crop_x, plain.crop_y) = (0.0, 0.0);
   (plain.crop_width, plain.crop_height) = (f64::from(WIDTH), f64::from(HEIGHT));
   (plain.image_x, plain.image_y, plain.image_width) = (0.0, 0.0, f64::from(WIDTH));

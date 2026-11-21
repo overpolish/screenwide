@@ -68,7 +68,7 @@ export const selectionPanelHandlers = (
     target?.resetPlacement();
   },
   onSelectionRadiusChange: (radius) => {
-    target?.applyRadius(Math.min(50, Math.max(0, radius)));
+    target?.applyRadius(radius);
   },
   onSelectionRecenter: () => {
     target?.recenter();

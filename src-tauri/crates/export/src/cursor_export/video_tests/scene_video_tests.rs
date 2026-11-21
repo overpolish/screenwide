@@ -179,7 +179,7 @@ fn exports_the_screen_and_camera_where_the_scene_puts_them() {
       frame_width: 80.0,
       frame_x: 60.0,
       frame_y: 47.5,
-      radius_percent: 0.0,
+      radius: screenwide_scenes::Measure::Percent(0.0),
       follow_face: false,
     },
     screen_height: HEIGHT,

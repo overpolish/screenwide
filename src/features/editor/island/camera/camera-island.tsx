@@ -8,7 +8,6 @@ import { Button } from "../../../../primitives/button/button";
 import { IslandKeyHint } from "../../../../primitives/island/island-key-hint";
 import { IslandParts } from "../../../../primitives/island/island-parts";
 import { IslandRowTitle } from "../../../../primitives/island/row-title/island-row-title";
-import { CornerChoice } from "../../../annotations/options/corner-choice";
 import { OptionToggle } from "../../../annotations/options/option-toggle";
 import { ShadowToggle } from "../../../annotations/options/shadow-toggle";
 import {
@@ -20,6 +19,7 @@ import { CropLayerButton } from "../crop-layer-button";
 import { FollowFaceToggle } from "../follow-face-toggle";
 import { IslandModelLine } from "../island-model-line";
 import { IslandRotation } from "../island-rotation";
+import { LayerCornerChoice } from "../layer-corner-choice";
 import { SceneOnlyNote } from "../scene-only-note";
 import { ScreenInsetChoice } from "../screen/screen-inset-choice";
 
@@ -28,6 +28,7 @@ import { EnhanceGlyph, RemoveBackgroundGlyph } from "./camera-glyphs";
 import { CameraInVideoToggle } from "./camera-in-video-toggle";
 import { CameraObjectsLine } from "./camera-objects-line";
 
+import type { Measure } from "../../../../bindings/Measure";
 import type { ToolPanelCameraEffects } from "../../tools/tool-panel-selection";
 import type { EditorIslandContent } from "../editor-island";
 import type { ScreenIslandProps } from "../screen/screen-island";
@@ -77,7 +78,7 @@ export type CameraIslandProps = {
   onFollowFaceChange: (followFace: boolean) => void;
   /** Turns picking objects on the preview on or off. */
   onPickObjects: (isPicking: boolean) => void;
-  onRadiusChange: (radius: number) => void;
+  onRadiusChange: (radius: Measure) => void;
   onRemoveObject: (id: number) => void;
   /** Puts the camera back where a fresh project places it, its crop,
    * corners and shadow kept; the scene's pane back in the box its layout
@@ -86,9 +87,8 @@ export type CameraIslandProps = {
   onShadowChange: (hasShadow: boolean) => void;
   /** Goes to where an object was picked, choosing it. */
   onShowObject: (id: number) => void;
-  /** Percent of the camera's shorter side, the scene's own while
-   * `isInScene`; half is a circle. */
-  radius: number;
+  /** The scene's own while `isInScene`. */
+  radius: Measure;
   /** Draws the camera into the video, or saves it beside the video; absent
    * where there is no such choice (a camera-only recording, or the screen
    * left out of the export). */
@@ -144,10 +144,11 @@ export function cameraIsland(props: CameraIslandProps): EditorIslandContent {
               />
             </AnnotationChoiceRow>
           ) : null}
-          {/* Square, rounded and round: a camera is often drawn as a
-              circle, so its corners run all the way to one. */}
+          {/* The screen's looks, so the two match, and a circle past them,
+              as a camera is often drawn. */}
           <AnnotationChoiceRow key="corners" title={t("annotation-radius")}>
-            <CornerChoice
+            <LayerCornerChoice
+              hasCircle
               onChange={props.onRadiusChange}
               value={props.radius}
             />

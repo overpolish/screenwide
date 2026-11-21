@@ -22,7 +22,7 @@ const camera = {
     frameWidth: 180,
     frameX: 1310,
     frameY: 660,
-    radiusPercent: 50,
+    radius: { percent: 50 },
   },
 };
 const uncut = [{ playbackRate: 1, sourceEndMs: 20_000, sourceStartMs: 0 }];
@@ -33,7 +33,6 @@ const arranged = (preset: RecordingScenePreset, sourceMs: number) =>
     clips: [{ endMs: 10_000, id: "p", preset, startMs: 1000 }],
     output,
     ranges: uncut,
-    screen: { height: output.height, scaleFactor: 1, width: output.width },
     sourceMs,
   });
 
@@ -97,7 +96,7 @@ describe("arrangedRecordingScene with a pane hidden", () => {
       frameWidth: 1600,
       frameX: 0,
       frameY: 0,
-      radiusPercent: 0,
+      radius: { canvas: 0 },
     });
   });
 

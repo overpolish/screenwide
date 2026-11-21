@@ -51,9 +51,9 @@ radius?: SceneRadius,
 /**
  * How far the scene pads its screen's box: the box grows outwards by it
  * on every side, filled with the colour found behind the recording's
- * content, as the recording's own inset pads its crop. Points of the
- * recording's capture as the scene draws it; a percent of the box's
- * shorter side in clips saved before. None where unset.
+ * content, as the recording's own inset pads its crop. A share of the
+ * canvas's shorter side; a percent of the box's shorter side in clips
+ * saved before. None where unset.
  */
 inset?: Measure, 
 /**

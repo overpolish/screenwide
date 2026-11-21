@@ -7,7 +7,6 @@ import { t } from "../../../../i18n/i18n";
 import { Button } from "../../../../primitives/button/button";
 import { IslandParts } from "../../../../primitives/island/island-parts";
 import { IslandRowTitle } from "../../../../primitives/island/row-title/island-row-title";
-import { CornerChoice } from "../../../annotations/options/corner-choice";
 import { ShadowToggle } from "../../../annotations/options/shadow-toggle";
 import {
   AnnotationChoiceRow,
@@ -15,11 +14,12 @@ import {
 } from "../annotation/annotation-island-parts";
 import { CropLayerButton } from "../crop-layer-button";
 import { IslandRotation } from "../island-rotation";
-import { CAPTURE_CORNERS } from "../picture-corners";
+import { LayerCornerChoice } from "../layer-corner-choice";
 import { SceneOnlyNote } from "../scene-only-note";
 
 import { ScreenInsetChoice } from "./screen-inset-choice";
 
+import type { Measure } from "../../../../bindings/Measure";
 import type { SceneRotation } from "../../../../bindings/SceneRotation";
 import type { EditorIslandContent } from "../editor-island";
 
@@ -41,8 +41,8 @@ export type ScreenIslandProps = {
   capture: "recording" | "screenshot";
   /** Whether the screen casts a shadow onto the canvas behind it. */
   hasShadow: boolean;
-  /** How far the screen's edges are extended on each side, in points of
-   * the capture, the scene's own while `isInScene`. */
+  /** How far the screen's edges are extended on each side, in percent of
+   * the canvas's shorter side, the scene's own while `isInScene`. */
   inset: number;
   /** Whether the screen sits where a fresh project places it, the scene's
    * own pane where its layout puts it while `isInScene`. */
@@ -54,7 +54,7 @@ export type ScreenIslandProps = {
   /** Takes up the screen's crop. */
   onCrop: () => void;
   onInsetChange: (inset: number) => void;
-  onRadiusChange: (radius: number) => void;
+  onRadiusChange: (radius: Measure) => void;
   /** Puts what was captured back in the middle of the screen's box, the
    * scene's while `isInScene`. */
   onRecenter: () => void;
@@ -63,10 +63,9 @@ export type ScreenIslandProps = {
    * box its layout gives it while `isInScene`. */
   onResetPlacement: () => void;
   onShadowChange: (hasShadow: boolean) => void;
-  /** Points of the capture, the scene's own while `isInScene`; -1 for a
-   * radius no look gives. These are the screen's own corners, inside the
-   * canvas the Frame island rounds. */
-  radius: number;
+  /** The scene's own while `isInScene`. These are the screen's own
+   * corners, inside the canvas the Frame island rounds. */
+  radius: Measure;
   /** Turns the screen; left out where it cannot be turned. */
   onRotationChange?: (rotation: SceneRotation) => void;
   /** How the screen is turned, in degrees about each axis, the scene's own
@@ -91,8 +90,7 @@ export function screenIsland(props: ScreenIslandProps): EditorIslandContent {
             />
           </AnnotationChoiceRow>
           <AnnotationChoiceRow key="corners" title={t("annotation-radius")}>
-            <CornerChoice
-              corners={CAPTURE_CORNERS}
+            <LayerCornerChoice
               onChange={props.onRadiusChange}
               value={props.radius}
             />

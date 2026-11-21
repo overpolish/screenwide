@@ -41,9 +41,9 @@ imageWidth: number, imageX: number, imageY: number,
 /**
  * The padding the crop's frame is grown by on every side past the
  * picture, which the editor grows the frame by again when the picture
- * changes: points of the capture, a percent of the picture's shorter
- * side in settings saved before. Absent in settings older still, which
- * the editor reads from the frame.
+ * changes: a share of the canvas's shorter side, a percent of the
+ * picture's shorter side in settings saved before. Absent in settings
+ * older still, which the editor reads from the frame.
  */
 inset?: Measure, mode?: string | null, meshColors: Array<string>, 
 /**
@@ -52,9 +52,9 @@ inset?: Measure, mode?: string | null, meshColors: Array<string>,
  */
 meshGenerator: string, meshLockedColors: Array<boolean>, meshPoints: Array<MeshGradientPoint>, meshSeed: number, meshWarpPercent: number, 
 /**
- * The corners of the layer's frame, padding and all: points of the
- * capture for a screen or screenshot, a percent of the frame's shorter
- * side for a camera and in settings saved before corners had a unit.
+ * The corners of the layer's frame, padding and all: a share of the
+ * canvas's shorter side, or of the frame's for a camera drawn as a circle
+ * and in settings saved before corners had a unit.
  */
 radius: Measure, recenterInsetColor: string | null, 
 /**

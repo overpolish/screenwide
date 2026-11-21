@@ -79,11 +79,11 @@ describe("a recording's screen", () => {
       cropX: 300,
       cropY: 100,
       dropShadow: false,
-      radius: { points: 10 },
+      radius: { canvas: 1 },
       rotation: { x: 10, y: 0, z: 5 },
       sourceCrop: { height: 0.5, width: 0.28125, x: 0.1, y: 0.2 },
     };
-    const padded = insetScreenshotPadding(cropped, screen, 32);
+    const padded = insetScreenshotPadding(cropped, screen, 3);
     const moved = dragged(padded, { dx: -120, dy: 40, scale: 0.5 });
     const reset = layerAtDefaultPlacement(moved);
     // A square frame fills the canvas's height, in its middle.
@@ -103,7 +103,7 @@ describe("a recording's screen", () => {
     );
     expect(reset).toMatchObject({
       dropShadow: false,
-      radius: { points: 10 },
+      radius: { canvas: 1 },
       rotation: { x: 10, y: 0, z: 5 },
       sourceCrop: padded.sourceCrop,
     });
@@ -144,8 +144,10 @@ describe("a camera drawn into the screen's picture", () => {
       frameY: 500 - fresh.frameHeight,
     };
     expect(isOverlayAtDefaultPlacement(moved, fresh)).toBe(false);
-    const reset = overlayAtDefaultPlacement(moved, fresh);
-    expectClose(reset, fresh);
+    const { radius, ...reset } = overlayAtDefaultPlacement(moved, fresh);
+    const { radius: freshRadius, ...placed } = fresh;
+    expectClose(reset, placed);
+    expect(radius).toEqual(freshRadius);
   });
 
   it("keeps its crop, fitted in the fresh corner's window", () => {
@@ -158,7 +160,7 @@ describe("a camera drawn into the screen's picture", () => {
       frameWidth: fresh.frameHeight,
       frameX: 300 - fresh.frameHeight / 2,
       frameY: 300 - fresh.frameHeight / 2,
-      radiusPercent: 50,
+      radius: { percent: 50 },
     };
     const reset = overlayAtDefaultPlacement(square, fresh);
     expect(reset.frameWidth).toBeCloseTo(fresh.frameHeight, 6);
@@ -169,7 +171,7 @@ describe("a camera drawn into the screen's picture", () => {
     expect(reset.cameraX).toBeCloseTo(fresh.cameraX, 6);
     expect(reset.cameraY).toBeCloseTo(fresh.cameraY, 6);
     expect(reset.cameraWidth).toBeCloseTo(fresh.cameraWidth, 6);
-    expect(reset.radiusPercent).toBe(50);
+    expect(reset.radius).toEqual({ percent: 50 });
   });
 
   it("is placed for the canvas it is drawn on now", () => {

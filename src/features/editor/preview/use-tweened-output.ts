@@ -5,6 +5,7 @@ import { useReducedMotion } from "motion/react";
 import { useLayoutEffect, useRef, useState } from "react";
 
 import { motionDurations } from "../../../lib/motion";
+import { canvasShortest } from "../layer-measure";
 import { EditorKind } from "../types";
 
 import { cameraOverlayBetween, outputBetween } from "./picture-between";
@@ -48,11 +49,10 @@ export const recordingBetween = (
   to: RecordingComposition,
   share: number,
 ): RecordingComposition => ({
-  cameraOverlay: cameraOverlayBetween(
-    from.cameraOverlay,
-    to.cameraOverlay,
+  cameraOverlay: cameraOverlayBetween(from.cameraOverlay, to.cameraOverlay, {
+    canvas: canvasShortest(to.recordingOutput.primary),
     share,
-  ),
+  }),
   recordingOutput: {
     camera: outputBetween(
       from.recordingOutput.camera,

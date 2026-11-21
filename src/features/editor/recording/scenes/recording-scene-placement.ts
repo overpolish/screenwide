@@ -1,7 +1,12 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { Measure, points } from "../../layer-measure";
+import {
+  canvasShare,
+  canvasShortest,
+  Measure,
+  measurePixels,
+} from "../../layer-measure";
 import { UPRIGHT_ROTATION } from "../../layer-rotation";
 import { ScreenshotOutputSettings } from "../../screenshot/screenshot-output";
 import { CameraOverlaySettings } from "../../types";
@@ -28,24 +33,23 @@ export type Picture = { width: number; x: number; y: number };
 /** Where the panes are, in the canvas's output pixels: the screen's box and
  * the whole screen image behind it by its corner and width, then the
  * camera's box and the camera picture behind it by its centre and width;
- * the screen's corners as a length on its picture and the camera's in
- * percent of its box's shorter side; how opaque each pane is drawn, zero
- * for a pane the scene hides; how far the camera is drawn in front of the
- * screen, one in front and zero behind; how the screen is turned in depth
- * about its box's middle; and how far the scene pads the screen's box
- * outwards, as a length on its picture. The twin of `Placement` in
- * `src-tauri/crates/scenes/src/placement.rs`, which holds the screen's
- * corners and padding in canvas pixels; here they stay lengths until the
- * arrangement draws them at the picture's scale, which the selection alone
- * reads. */
+ * the corners as lengths; how opaque each pane is drawn, zero for a pane
+ * the scene hides; how far the camera is drawn in front of the screen, one
+ * in front and zero behind; how the screen is turned in depth about its
+ * box's middle; and how far the scene pads the screen's box outwards, in
+ * canvas pixels. The twin of `Placement` in
+ * `src-tauri/crates/scenes/src/placement.rs`, which holds the corners in
+ * canvas pixels too; here they stay lengths, which the selection alone
+ * reads, so a change between a circle and a look of the canvas happens
+ * halfway rather than easing. */
 export type Placement = {
   camera: Picture;
   cameraFront: number;
   frame: SceneRect;
   image: Picture;
-  inset: Measure;
+  inset: number;
   opacity: { camera: number; screen: number };
-  radius: { camera: number; screen: Measure };
+  radius: { camera: Measure; screen: Measure };
   rotation: SceneRotation;
   screen: SceneRect;
 };
@@ -95,10 +99,10 @@ export const basePlacement = (
     : { height: 0, width: 0, x: 0, y: 0 },
   image: { width: output.imageWidth, x: output.imageX, y: output.imageY },
   // The recording's own inset is already its crop's padding.
-  inset: points(0),
+  inset: 0,
   opacity: { camera: 1, screen: 1 },
   radius: {
-    camera: camera?.overlay.radiusPercent ?? 0,
+    camera: camera?.overlay.radius ?? canvasShare(0),
     screen: output.radius,
   },
   // A scene arrives from the screen's own turn and leaves for it.
@@ -171,6 +175,25 @@ export const sceneBoxes = (
   };
 };
 
+/** The shorter side of each pane's frame in `clip`, in output pixels: what a
+ * change of its corners between units is eased through. */
+export const scenePaneShortest = (
+  clip: RecordingSceneClip,
+  {
+    camera,
+    output,
+  }: { camera: SceneCamera | null; output: ScreenshotOutputSettings },
+) => {
+  const base = basePlacement(output, camera);
+  const canvas = { height: output.height, width: output.width };
+  const boxes = sceneBoxes(clip, { base, camera, canvas });
+  const shortest = (rect: SceneRect) => Math.min(rect.width, rect.height);
+  return {
+    camera: shortest(boxes.camera ?? base.frame),
+    screen: shortest(boxes.screen),
+  };
+};
+
 /** The largest rect of `shape`, width over height, inside `place`, about
  * its middle. The twin of `fitted` in `target.rs`. */
 const fitted = (place: SceneRect, shape: number): SceneRect => {
@@ -231,7 +254,9 @@ export const targeting =
     // A camera filling the canvas is cut by the canvas's own corners, not
     // rounded again inside them.
     const cameraRadius =
-      !clip.boxes && clip.preset === "camera-only" ? 0 : base.radius.camera;
+      !clip.boxes && clip.preset === "camera-only"
+        ? canvasShare(0)
+        : base.radius.camera;
     return {
       // A full scene keeps the recording's own crop, followed or still as
       // the scene says.
@@ -251,7 +276,13 @@ export const targeting =
       image,
       // The scene pads its box outwards, as the recording's inset pads its
       // crop.
-      inset: clip.inset ?? points(0),
+      inset: clip.inset
+        ? measurePixels(
+            clip.inset,
+            Math.min(screen.width, screen.height),
+            canvasShortest(canvas),
+          )
+        : 0,
       opacity: {
         camera: shown.camera ? 1 : 0,
         screen: shown.screen ? 1 : 0,

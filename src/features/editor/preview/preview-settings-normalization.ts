@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import { DEFAULT_CAMERA_RADIUS, savedMeasure } from "../layer-measure";
 import {
   CameraOverlaySettings,
   KeyboardEffectSettings,
@@ -31,7 +32,7 @@ export const normalizedCameraOverlay = (
     frameWidth: finite(settings.frameWidth, width * 0.25),
     frameX: finite(settings.frameX, width * 0.72),
     frameY: finite(settings.frameY, height * 0.03),
-    radiusPercent: finite(settings.radiusPercent, 8),
+    radius: savedMeasure(settings.radius, "percent") ?? DEFAULT_CAMERA_RADIUS,
     ...(settings.followFace ? { followFace: true as const } : {}),
   };
 };

@@ -151,14 +151,25 @@ pub fn arrange_following(
     placed.screen.width,
     placed.screen.height,
   ]);
-  // The placement holds the screen's corners in canvas pixels, whatever the
-  // scene measured them in; the layer draws points of its capture.
-  let pixels_per_point = output.canvas_pixels_per_point();
-  output.radius = Measure::Points(if pixels_per_point > 0.0 {
-    placed.radius.0 / pixels_per_point
-  } else {
-    0.0
-  });
+  // The placement holds the corners in canvas pixels, whatever the scene
+  // measured them in; the layers draw them as shares of the canvas. A length
+  // that already draws them is kept, so a pane the scene leaves alone keeps
+  // the recording's own, a circle included.
+  let canvas = output.canvas_shortest();
+  let held = |own: Measure, frame: f64, pixels: f64| {
+    if (own.radius_pixels(frame, canvas) - pixels).abs() < 1e-9 {
+      own
+    } else if canvas > 0.0 {
+      Measure::Canvas(pixels / canvas * 100.0)
+    } else {
+      Measure::default()
+    }
+  };
+  output.radius = held(
+    output.radius,
+    output.crop_width.min(output.crop_height),
+    placed.radius.0,
+  );
   output.scene_opacity = Some([
     placed.opacity.0 as f32,
     placed.opacity.1 as f32,
@@ -173,7 +184,11 @@ pub fn arrange_following(
     overlay.frame_width = placed.frame.width;
     overlay.frame_height = placed.frame.height;
     (overlay.camera_x, overlay.camera_y, overlay.camera_width) = placed.camera;
-    overlay.radius_percent = placed.radius.1;
+    overlay.radius = held(
+      overlay.radius,
+      placed.frame.width.min(placed.frame.height),
+      placed.radius.1,
+    );
   }
   true
 }

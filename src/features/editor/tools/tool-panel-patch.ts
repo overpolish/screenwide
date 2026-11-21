@@ -23,6 +23,7 @@ import { ToolPanelExportPatch } from "./tool-panel-export";
 import { TranscriptRequest } from "./tool-panel-transcript";
 
 import type { ToolPanelSnapshot } from "./tool-panel-store";
+import type { Measure } from "../../../bindings/Measure";
 import type { ModelWork } from "../../../bindings/ModelWork";
 import type { TextStyle } from "../../../bindings/TextStyle";
 import type { AnnotationPinAction } from "../island/annotation/annotation-pin";
@@ -196,8 +197,8 @@ export type ToolPanelPatch = Partial<
   /** Have the camera in the scene under the playhead follow the face, or
    * stop following it. */
   sceneFollowFace?: boolean;
-  /** Pad the screen in the scene under the playhead by this share of its
-   * box's shorter side on each side. */
+  /** Pad the screen in the scene under the playhead by this share of the
+   * canvas's shorter side, in percent, on each side. */
   sceneInset?: number;
   /** Show or hide a pane of the scene under the playhead, keeping where it
    * is. */
@@ -208,9 +209,8 @@ export type ToolPanelPatch = Partial<
   /** Give the scene under the playhead this preset, or add a scene there
    * with it where there is none. */
   scenePreset?: RecordingScenePreset;
-  /** Round the selected pane's corners in the scene under the playhead by
-   * this share of its shorter side, in percent. */
-  sceneRadius?: number;
+  /** Round the selected pane's corners in the scene under the playhead. */
+  sceneRadius?: Measure;
   /** Crop the screen in the scene under the playhead to the content found
    * in it, in the middle of where its box was. */
   sceneRecenter?: true;
@@ -224,10 +224,11 @@ export type ToolPanelPatch = Partial<
   /** Have the selected camera follow the face, outside every scene and in
    * each scene that says nothing of its own, or stop following it. */
   selectionFollowFace?: boolean;
-  /** Pad the selected layer by this many output pixels on each side. */
+  /** Pad the selected layer by this share of the canvas's shorter side, in
+   * percent, on each side. */
   selectionInset?: number;
-  /** Round the selected layer's corners by this share of its shorter side. */
-  selectionRadius?: number;
+  /** Round the selected layer's corners. */
+  selectionRadius?: Measure;
   /** Turn the selected layer in depth, in degrees about each axis, a field
    * at a time. */
   selectionRotation?: Partial<SceneRotation>;

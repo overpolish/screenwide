@@ -56,7 +56,7 @@ pub(crate) fn recording_scene(
           width: camera.frame_width / primary_canvas.0,
           height: camera.frame_height / primary_canvas.1,
         },
-        radius_percent: camera.radius_percent,
+        radius_percent: camera.radius_frame_percent(primary_canvas.0.min(primary_canvas.1)),
         z_index: i32::from(screenwide_export::recording_model::CAMERA_IN_FRONT),
       },
     ];

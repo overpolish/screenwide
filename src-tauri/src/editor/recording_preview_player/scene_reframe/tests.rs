@@ -14,7 +14,7 @@ fn the_whole_camera_overhangs_a_square_box_from_its_middle() {
     frame_width: 180.0,
     frame_x: 100.0,
     frame_y: 100.0,
-    radius_percent: 50.0,
+    radius: screenwide_scenes::Measure::Percent(50.0),
     follow_face: false,
   };
   show_whole_camera(&mut overlay, (1_920, 1_080));
@@ -31,7 +31,7 @@ fn the_whole_camera_overhangs_a_square_box_from_its_middle() {
     (overlay.camera_x, overlay.camera_y, overlay.camera_width),
     (190.0, 190.0, 320.0)
   );
-  assert_eq!(overlay.radius_percent, 0.0);
+  assert!(overlay.radius.is_zero());
 }
 
 #[test]

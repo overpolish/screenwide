@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import { Measure, radiusFramePercent } from "../layer-measure";
 import { isTurned } from "../layer-rotation";
 import { recordingScenePanes } from "../recording/scenes/recording-scene-geometry";
 
@@ -19,12 +20,12 @@ type Box = SceneBoxes["screen"];
 
 /** The video's shape and its sources', each width over height, where the
  * recording itself puts the screen, as shares of the video, how round the
- * camera is, in percent of its shorter side, and how the scene turns the
- * screen, which every layout of it keeps. */
+ * camera is, and how the scene turns the screen, which every layout of it
+ * keeps. */
 export type SceneShape = {
   aspect: number;
   cameraAspect: number;
-  cameraRadius: number;
+  cameraRadius: Measure;
   screen: Box;
   screenAspect: number;
   rotation?: SceneRotation;
@@ -43,6 +44,16 @@ export type SceneDrawing = {
 /** The shape's turn, where it turns the screen at all. */
 const turnOf = ({ rotation }: SceneShape) =>
   isTurned(rotation) ? { rotation } : {};
+
+/** The camera's corners in a box that is a share of the video, as a
+ * percent of the box's shorter side, both measured in heights of the
+ * video. */
+const boxRadius = (box: Box, shape: SceneShape) =>
+  radiusFramePercent(
+    shape.cameraRadius,
+    Math.min(box.width * shape.aspect, box.height),
+    Math.min(shape.aspect, 1),
+  );
 
 export type ScenePreset = Exclude<RecordingScenePreset, "full">;
 
@@ -78,7 +89,8 @@ export function presetDrawing(
       ? {
           ...share(camera),
           // A camera filling the video is cut by the video's own corners.
-          radius: preset === "camera-only" ? 0 : shape.cameraRadius,
+          radius:
+            preset === "camera-only" ? 0 : boxRadius(share(camera), shape),
         }
       : undefined,
     screen: screen ? share(screen) : undefined,
@@ -96,7 +108,7 @@ export function boxesDrawing(
     aspect: shape.aspect,
     camera:
       boxes.camera && !boxes.cameraHidden
-        ? { ...boxes.camera, radius: shape.cameraRadius }
+        ? { ...boxes.camera, radius: boxRadius(boxes.camera, shape) }
         : undefined,
     ...(boxes.screenHidden ? {} : { screen: boxes.screen, ...turnOf(shape) }),
   };

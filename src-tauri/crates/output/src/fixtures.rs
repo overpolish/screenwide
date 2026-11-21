@@ -100,7 +100,7 @@ pub fn test_output_settings(width: u32, height: u32) -> ScreenshotOutputSettings
     mesh_generator: default_generator(),
     mesh_seed: 42,
     mesh_warp_percent: 9.0,
-    radius: screenwide_scenes::Measure::Points(0.0),
+    radius: screenwide_scenes::Measure::default(),
     recenter_inset_color: None,
     source_crop: NormalizedSourceRect {
       height: 1.0,

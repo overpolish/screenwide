@@ -78,7 +78,7 @@ export const screenshotItemSelection = ({
       // picture (`screenshot-blank.ts`).
       isBlank: item.isBlank === true,
       paneIndex,
-      radiusPercent: cornerRadiusFramePercent(itemOutput, item),
+      radiusPercent: cornerRadiusFramePercent(itemOutput),
       rotation:
         withShareOfTurn(itemOutput, cropTurn.share).rotation ??
         UPRIGHT_ROTATION,
@@ -108,7 +108,7 @@ export function screenshotSelectionTargets(
         cropMode,
         isBlank: item.isBlank === true,
         paneIndex,
-        radiusPercent: cornerRadiusFramePercent(itemOutput.output, item),
+        radiusPercent: cornerRadiusFramePercent(itemOutput.output),
         ...screenshotLayerTurn(itemOutput.output, cropMode),
         ...normalizedScreenshotSelection(
           layout,

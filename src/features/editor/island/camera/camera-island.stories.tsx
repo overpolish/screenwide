@@ -87,7 +87,7 @@ const meta = {
     onResetPlacement: fn(),
     onShadowChange: fn(),
     onShowObject: fn(),
-    radius: 50,
+    radius: { percent: 50 },
   },
   component: CameraIsland,
   decorators: [featureStage({ height: 420, width: 520 })],
@@ -307,13 +307,13 @@ export const AtDefaultPlacement: Story = {
 export const CameraOnly: Story = {
   args: {
     picture: {
-      inset: 0.03,
+      inset: 1.5,
       onInsetChange: fn(),
       onRecenter: fn(),
       onRotationChange: fn(),
       rotation: { x: 0, y: 0, z: 0 },
     },
-    radius: 4,
+    radius: { canvas: 1 },
   },
 };
 

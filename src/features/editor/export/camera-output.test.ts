@@ -133,7 +133,7 @@ describe("exportedRecordingEdits", () => {
   });
   const edited = {
     ...recordingOutput,
-    camera: { ...recordingOutput.camera, cropX: 40, radiusPercent: 20 },
+    camera: { ...recordingOutput.camera, cropX: 40, radius: { canvas: 3 } },
   };
 
   it("saves a separate camera unedited, without its annotations", () => {

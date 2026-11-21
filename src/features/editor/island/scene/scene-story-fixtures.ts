@@ -76,7 +76,7 @@ export const FRAMING_ARGS = {
   camera: {
     focusX: 0.5,
     focusY: 0.5,
-    radius: 50,
+    radius: { percent: 50 },
     zoom: 1,
   },
   canPlaceCamera: true,

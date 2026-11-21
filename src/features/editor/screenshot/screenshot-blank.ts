@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { points } from "../layer-measure";
+import { canvasShare } from "../layer-measure";
 
 import { type ScreenshotOutputSettings } from "./screenshot-output";
 
@@ -22,8 +22,8 @@ export const blankLayerOutput = (
 ): ScreenshotOutputSettings => ({
   ...output,
   dropShadow: false,
-  inset: points(0),
-  radius: points(0),
+  inset: canvasShare(0),
+  radius: canvasShare(0),
 });
 
 /** The layer chosen; the picture chosen, none where the blank layer is, which

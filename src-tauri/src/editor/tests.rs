@@ -114,7 +114,7 @@ fn accepts_only_camera_overlay_values_the_window_can_produce() {
     frame_width: 600.0,
     frame_x: 400.0,
     frame_y: 300.0,
-    radius_percent: 50.0,
+    radius: screenwide_scenes::Measure::Percent(50.0),
     follow_face: false,
   };
   assert!(validate_camera_overlay(valid, canvas).is_ok());

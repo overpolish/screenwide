@@ -24,12 +24,12 @@ const layer = (id: number, isBlank = false) => ({
 describe("a blank canvas", () => {
   it("draws its blank layer with no shadow or corners", () => {
     const template = {
-      ...defaultScreenshotOutput(1_920, 1_080, { screenshot: { points: 24 } }),
+      ...defaultScreenshotOutput(1_920, 1_080, { screenshot: { canvas: 3 } }),
       dropShadow: true,
     };
     const output = seedScreenshotItemOutput(template, layer(1, true));
     expect(output.dropShadow).toBe(false);
-    expect(output.radius).toEqual({ points: 0 });
+    expect(output.radius).toEqual({ canvas: 0 });
     // A picture takes the look.
     expect(seedScreenshotItemOutput(template, layer(2)).dropShadow).toBe(true);
   });

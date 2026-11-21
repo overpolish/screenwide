@@ -88,8 +88,8 @@ export const bakedCameraSelectionTarget = ({
       // A baked camera is placed in the screen's picture rather than padded
       // against a colour of its own, so it carries no pad.
     },
-    applyRadius: (radiusPercent) => {
-      onCameraOverlayChange?.({ ...cameraOverlay, radiusPercent });
+    applyRadius: (radius) => {
+      onCameraOverlayChange?.({ ...cameraOverlay, radius });
     },
     recenter: () => {
       // Nothing to recentre: there is no pad to put the camera back inside of.
@@ -104,7 +104,7 @@ export const bakedCameraSelectionTarget = ({
       isAtDefaultPlacement: isOverlayAtDefaultPlacement(cameraOverlay, fresh),
       kind: "camera",
       label: t("editor-island-camera"),
-      radius: cameraOverlay.radiusPercent,
+      radius: cameraOverlay.radius,
     },
   };
 };

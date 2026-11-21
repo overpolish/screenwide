@@ -13,6 +13,7 @@ import { SceneTemplate, SceneTemplateLayout } from "./recording-scene-template";
 import { SceneVariant } from "./recording-scene-variant";
 import { RecordingScenePreset, SceneRotation } from "./recording-scenes";
 
+import type { Measure } from "../../../../bindings/Measure";
 import type { Arrangement } from "../../annotations/annotation-order";
 import type { Background } from "../../tools/frame/background/background";
 
@@ -62,13 +63,13 @@ export type RecordingSceneControls = {
   /** Have the camera follow the face, which starts it in the middle of the
    * camera's box, or stop following it. */
   setFollowFace: (follow: boolean) => void;
-  /** Pad the scene's screen by this share of its box's shorter side on
-   * each side; none takes the padding away. */
+  /** Pad the scene's screen by this share of the canvas's shorter side, in
+   * percent, on each side; none takes the padding away. */
   setInset: (inset: number) => void;
   /** Show or hide the scene's `pane`, keeping where it is. */
   setPaneShown: (pane: ScenePane, shown: boolean) => void;
-  /** Round the selected pane's corners, in percent of its shorter side. */
-  setRadius: (radius: number) => void;
+  /** Round the selected pane's corners. */
+  setRadius: (radius: Measure) => void;
   /** Turn the screen in depth, in degrees about each axis, a field at a
    * time. */
   setRotation: (rotation: Partial<SceneRotation>) => void;

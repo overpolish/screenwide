@@ -188,7 +188,7 @@ export function useRecordingScenes({
     clips,
     edit,
     held: useSceneCropHold(clips),
-    look: { cameraOverlay, output },
+    look: { camera: sceneCamera, cameraOverlay, output },
     sessionId,
     sourceDurationMs,
   });

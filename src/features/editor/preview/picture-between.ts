@@ -1,7 +1,11 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { measureBetween } from "../layer-measure";
+import {
+  canvasShortest,
+  measureBetween,
+  radiusBetween,
+} from "../layer-measure";
 
 import type { CameraOverlaySettings } from "../../../bindings/CameraOverlaySettings";
 import type { MeshGradientPoint } from "../../../bindings/MeshGradientPoint";
@@ -126,7 +130,11 @@ export const outputBetween = <T extends ScreenshotOutputSettings>(
       ? { inset: measureBetween(from.inset, to.inset, share) }
       : {}),
     ...meshBetween(from, to, share),
-    radius: measureBetween(from.radius, to.radius, share),
+    radius: radiusBetween(from.radius, to.radius, {
+      canvas: canvasShortest(from),
+      frame: Math.min(from.cropWidth, from.cropHeight),
+      share,
+    }),
     recenterInsetColor: to.recenterInsetColor ?? from.recenterInsetColor,
     ...(rotation ? { rotation } : {}),
     sourceCrop: {
@@ -140,12 +148,13 @@ export const outputBetween = <T extends ScreenshotOutputSettings>(
   };
 };
 
-/** The camera drawn into the picture between `from` and `to`: its frame,
- * its crop and its corners part of the way. */
+/** The camera drawn into the picture between `from` and `to`, on a canvas
+ * whose shorter side is `canvas` pixels: its frame, its crop and its
+ * corners part of the way. */
 export const cameraOverlayBetween = (
   from: CameraOverlaySettings,
   to: CameraOverlaySettings,
-  share: number,
+  { canvas, share }: { canvas: number; share: number },
 ): CameraOverlaySettings => ({
   ...to,
   cameraWidth: between(from.cameraWidth, to.cameraWidth, share),
@@ -155,5 +164,9 @@ export const cameraOverlayBetween = (
   frameWidth: between(from.frameWidth, to.frameWidth, share),
   frameX: between(from.frameX, to.frameX, share),
   frameY: between(from.frameY, to.frameY, share),
-  radiusPercent: between(from.radiusPercent, to.radiusPercent, share),
+  radius: radiusBetween(from.radius, to.radius, {
+    canvas,
+    frame: Math.min(from.frameWidth, from.frameHeight),
+    share,
+  }),
 });

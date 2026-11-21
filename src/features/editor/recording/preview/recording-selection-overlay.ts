@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import { canvasShortest, radiusFramePercent } from "../../layer-measure";
 import { cameraOverlayGeometry } from "../../preview/camera-overlay-geometry";
 import {
   RecordingOutputSettings,
@@ -81,7 +82,11 @@ function bakedCameraSelection({
     image: share(drawnCameraRect(geometry.camera)),
     layerId: 1,
     paneIndex: 0,
-    radiusPercent: cameraOverlay.radiusPercent,
+    radiusPercent: radiusFramePercent(
+      cameraOverlay.radius,
+      Math.min(geometry.frame.width, geometry.frame.height),
+      canvasShortest(output),
+    ),
     rect: share(geometry.frame),
   };
 }

@@ -32,7 +32,7 @@ const output = {
 const zoom = (inset?: number): RecordingSceneClip => ({
   endMs: 10_000,
   id: "z",
-  ...(inset === undefined ? {} : { inset: { points: inset } }),
+  ...(inset === undefined ? {} : { inset: { canvas: inset } }),
   preset: "full",
   screen: { focusX: 0.5, focusY: 0.5, zoom: 2 },
   startMs: 1_000,
@@ -43,7 +43,6 @@ const arranged = (clip: RecordingSceneClip, sourceMs = 5_000) =>
     clips: [clip],
     output,
     ranges: [{ playbackRate: 1, sourceEndMs: 20_000, sourceStartMs: 0 }],
-    screen: source,
     sourceMs,
   });
 
@@ -71,14 +70,13 @@ const targetAndSelection = (
 };
 
 describe("a scene that pads its screen", () => {
-  it("pads the crop outwards round its box by points of the capture", () => {
+  it("pads the crop outwards round its box by a share of the canvas", () => {
     const bare = arranged(zoom());
-    const padded = arranged(zoom(32));
+    const padded = arranged(zoom(3));
     if (!bare || !padded) throw new Error("the scene places the screen");
     const box = bare.screen.box;
-    // Two pixels to the point, drawn at the scale the scene draws the
-    // picture.
-    const pad = (32 * 2 * padded.output.imageWidth) / source.width;
+    // 3% of the 900 pixel high canvas, whatever the scene's zoom.
+    const pad = 27;
     expect(padded.screen.box).toEqual(box);
     expect(padded.output.cropX).toBeCloseTo(box.x - pad);
     expect(padded.output.cropY).toBeCloseTo(box.y - pad);
@@ -90,11 +88,9 @@ describe("a scene that pads its screen", () => {
   });
 
   it("eases its padding in with its arrival", () => {
-    const halfway = arranged(zoom(32), 1_300);
+    const halfway = arranged(zoom(3), 1_300);
     if (!halfway) throw new Error("the scene places the screen");
-    expect(halfway.screen.box.x - halfway.output.cropX).toBeCloseTo(
-      (16 * 2 * halfway.output.imageWidth) / source.width,
-    );
+    expect(halfway.screen.box.x - halfway.output.cropX).toBeCloseTo(13.5);
   });
 
   it("hands the hit target the padded box the selection is drawn on", () => {

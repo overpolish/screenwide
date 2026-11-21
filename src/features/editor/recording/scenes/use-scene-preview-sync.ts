@@ -4,6 +4,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { useEffect, useRef } from "react";
 
+import { canvasShortest } from "../../layer-measure";
 import { useTweenedOutput } from "../../preview/use-tweened-output";
 import { ScreenshotOutputSettings } from "../../screenshot/screenshot-output";
 import { RecordingTimelineEdit } from "../../timeline/editing/recording-timeline-edit";
@@ -18,6 +19,7 @@ import {
   sceneCameraRadius,
   sceneScreenRadius,
 } from "./recording-scene-panel-snapshot";
+import { SceneCamera, scenePaneShortest } from "./recording-scene-placement";
 import { RecordingSceneClip } from "./recording-scenes";
 import { sceneClipsBetween } from "./scene-clips-between";
 
@@ -87,6 +89,8 @@ export function useScenePreviewSync({
   /** The scene the crop tool holds where its panes stood. */
   held: RecordingSceneClip | null;
   look: {
+    /** The camera a scene can place: one drawn into the picture. */
+    camera: SceneCamera | null;
     cameraOverlay: CameraOverlaySettings;
     output: ScreenshotOutputSettings;
   };
@@ -99,6 +103,8 @@ export function useScenePreviewSync({
     { part: "scenes", workspace: "recording" },
     sceneClipsBetween({
       camera: (clip) => sceneCameraRadius(clip, look.cameraOverlay),
+      canvas: canvasShortest(look.output),
+      frames: (clip) => scenePaneShortest(clip, look),
       screen: (clip) => sceneScreenRadius(clip, look.output),
     }),
   );

@@ -8,7 +8,7 @@
 use screenwide_output::ScreenshotOutputSettings;
 use screenwide_scenes::geometry::Rect;
 use screenwide_scenes::model::{RecordingScenePreset, SceneBox, SceneBoxes, SceneRadius};
-use screenwide_scenes::{CameraOverlaySettings, RecordingSceneClip, SceneFraming};
+use screenwide_scenes::{CameraOverlaySettings, Measure, RecordingSceneClip, SceneFraming};
 
 use super::target::{fitted, Base};
 
@@ -85,7 +85,7 @@ pub fn made_custom(
       camera: Some(_), ..
     }) => clip.radius,
     _ if camera_only => Some(SceneRadius {
-      camera: Some(0.0),
+      camera: Some(Measure::default()),
       ..clip.radius.unwrap_or_default()
     }),
     _ => clip.radius,

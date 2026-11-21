@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import { snappedCorners } from "../layer-measure";
 import {
   cameraResolutionScales,
   resolutionScales,
@@ -106,7 +107,6 @@ export const restoredCameraOverlay = ({
     frameWidth,
     frameX,
     frameY,
-    radiusPercent: overlay.radiusPercent,
   };
   const valid =
     Object.values(restored).every(Number.isFinite) &&
@@ -114,7 +114,12 @@ export const restoredCameraOverlay = ({
     frameWidth >= screen.width * MIN_OVERLAY_SHARE &&
     frameHeight >= screen.height * MIN_OVERLAY_SHARE;
   if (!valid) return null;
-  return overlay.followFace ? { ...restored, followFace: true } : restored;
+  const radius = snappedCorners(overlay.radius, { circle: true });
+  return {
+    ...restored,
+    radius,
+    ...(overlay.followFace ? { followFace: true as const } : {}),
+  };
 };
 
 /** The remembered share of "Original", where this recording offers it. A

@@ -214,7 +214,7 @@ mod tests {
       mesh_points: Vec::<MeshGradientPoint>::new(),
       mesh_seed: 0,
       mesh_warp_percent: 0.0,
-      radius: screenwide_scenes::Measure::Points(0.0),
+      radius: screenwide_scenes::Measure::default(),
       recenter_inset_color: None,
       source_crop: NormalizedSourceRect {
         height: 1.0,

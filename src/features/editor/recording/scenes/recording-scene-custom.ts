@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import { canvasShare } from "../../layer-measure";
 import { ScreenshotOutputSettings } from "../../screenshot/screenshot-output";
 
 import { cameraFramingOf, framingWithin } from "./recording-scene-framing";
@@ -147,7 +148,7 @@ export function customRecordingSceneClip({
     },
     ...(cameraFraming ? { camera: cameraFraming } : {}),
     ...(isCameraOnly && clip.radius?.camera === undefined
-      ? { radius: { ...clip.radius, camera: 0 } }
+      ? { radius: { ...clip.radius, camera: canvasShare(0) } }
       : {}),
   };
 }

@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { CaptureSource, measureIn, percent, points } from "../../layer-measure";
+import { CaptureSource, Measure } from "../../layer-measure";
 import {
   isLayerAtDefaultPlacement,
   layerAtDefaultPlacement,
@@ -18,7 +18,7 @@ import {
 import { CameraEffectsTool } from "../../recording/camera/use-camera-effects";
 import {
   insetScreenshotPadding,
-  screenshotInsetPoints,
+  screenshotInset,
 } from "../../screenshot/screenshot-inset";
 import { ScreenshotOutputSettings } from "../../screenshot/screenshot-output";
 import { EditorKind } from "../../types";
@@ -35,11 +35,10 @@ import { ToolPanelLayerSelection } from "../tool-panel-store";
 export type EditorSelectionTarget = {
   /** Cast the layer's shadow onto the canvas, or take it away. */
   applyDropShadow: (dropShadow: boolean) => void;
-  /** Pad the layer by this many points of its capture on each side. */
+  /** Pad the layer by this share of the canvas's shorter side, in percent,
+   * on each side. */
   applyInset: (inset: number) => void;
-  /** Round the layer's corners: points of its capture for a screen or
-   * screenshot, a share of its shorter side for a camera. */
-  applyRadius: (radius: number) => void;
+  applyRadius: (radius: Measure) => void;
   /** Put the layer's content in the middle of its padded frame. */
   recenter: () => void;
   /** Put the layer back where a fresh project places it, keeping what it
@@ -65,7 +64,6 @@ export type EditorSelectionTarget = {
  */
 export const placedSelectionTarget = ({
   apply,
-  corners,
   kind,
   label,
   settings,
@@ -74,9 +72,6 @@ export const placedSelectionTarget = ({
   workspace,
 }: {
   apply: (next: ScreenshotOutputSettings) => void;
-  /** Whether the layer's corners are points of its capture, as a screen's
-   * and a screenshot's are, or a percent of its frame, as a camera's are. */
-  corners: "percent" | "points";
   kind: ToolPanelLayerSelection["kind"];
   label: string;
   settings: ScreenshotOutputSettings;
@@ -108,10 +103,7 @@ export const placedSelectionTarget = ({
       else pad();
     },
     applyRadius: (radius) => {
-      apply({
-        ...settings,
-        radius: corners === "points" ? points(radius) : percent(radius),
-      });
+      apply({ ...settings, radius });
     },
     ...(turns
       ? {
@@ -128,11 +120,11 @@ export const placedSelectionTarget = ({
     },
     selection: {
       dropShadow: settings.dropShadow,
-      inset: screenshotInsetPoints(settings, source),
+      inset: screenshotInset(settings, source),
       isAtDefaultPlacement: isLayerAtDefaultPlacement(settings),
       kind,
       label,
-      radius: measureIn(settings.radius, corners) ?? -1,
+      radius: settings.radius,
       ...(turns ? { rotation } : {}),
     },
   };

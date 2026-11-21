@@ -46,13 +46,13 @@ describe("frame radius target", () => {
     const output = {
       ...defaultScreenshotOutput(1_600, 900, {
         background: 4,
-        screenshot: { points: 10 },
+        screenshot: { canvas: 1 },
       }),
       items: [
         {
           id: 7,
           output: defaultScreenshotOutput(800, 450, {
-            screenshot: { points: 24 },
+            screenshot: { canvas: 3 },
           }),
         },
       ],
@@ -75,14 +75,14 @@ describe("frame radius target", () => {
     expect(target?.snapshot.radius).toBe(4);
     expect(apply.mock.calls[0][0].backgroundRadiusPercent).toBe(11);
     expect(apply.mock.calls[0][0].items[0].output.radius).toEqual({
-      points: 24,
+      canvas: 3,
     });
   });
 
   it("changes the selected recording canvas radius", () => {
     const output = defaultScreenshotOutput(1_600, 900, {
       background: 3,
-      screenshot: { points: 10 },
+      screenshot: { canvas: 1 },
     });
     const apply = vi.fn<(next: ScreenshotOutputSettings) => void>();
     const target = editorFrameTarget({
@@ -103,7 +103,7 @@ describe("frame radius target", () => {
 
     expect(target?.snapshot.radius).toBe(3);
     expect(apply.mock.calls[0][0].backgroundRadiusPercent).toBe(9);
-    expect(apply.mock.calls[0][0].radius).toEqual({ points: 10 });
+    expect(apply.mock.calls[0][0].radius).toEqual({ canvas: 1 });
   });
 });
 

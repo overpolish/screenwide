@@ -3,10 +3,7 @@
 
 import { t } from "../../../../i18n/i18n";
 import { MicrophoneTools } from "../../recording/microphone/use-microphone-tools";
-import {
-  cornersInPoints,
-  recordingCaptures,
-} from "../../recording/recording-captures";
+import { recordingCaptures } from "../../recording/recording-captures";
 import {
   RecordingOutputSettings,
   ScreenshotOutputSettings,
@@ -85,7 +82,6 @@ const recordingSelectionTarget = (
     apply: (next) => {
       inputs.onRecordingOutputChange?.(track, next);
     },
-    corners: cornersInPoints(artifact, track) ? "points" : "percent",
     kind: track,
     label:
       track === "primary"
@@ -118,7 +114,6 @@ const screenshotSelectionTarget = (
     apply: (next) => {
       inputs.onScreenshotOutputChange?.(next, item.id);
     },
-    corners: "points",
     kind: "layer",
     label:
       pictures.length > 1

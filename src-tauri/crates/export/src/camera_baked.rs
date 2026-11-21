@@ -164,7 +164,7 @@ mod tests {
       frame_width: 200.0,
       frame_x: 700.0,
       frame_y: 325.0,
-      radius_percent: 50.0,
+      radius: screenwide_scenes::Measure::Percent(50.0),
       follow_face: false,
     };
     baked_camera_annotations(camera, (400, 300), overlay, onto, &screen, (2_000, 1_000))

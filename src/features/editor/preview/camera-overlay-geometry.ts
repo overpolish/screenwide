@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import { canvasShare } from "../layer-measure";
 import { CameraOverlaySettings, RecordingPreviewPane } from "../types";
 
 type OverlayRect = {
@@ -13,7 +14,6 @@ type OverlayRect = {
 export type CameraOverlayGeometry = {
   camera: OverlayRect;
   frame: OverlayRect;
-  radius: number;
 };
 
 /**
@@ -45,8 +45,6 @@ export const cameraOverlayGeometry = (
       y: settings.cameraY - cameraHeight / 2,
     },
     frame,
-    radius:
-      (Math.min(frame.width, frame.height) * settings.radiusPercent) / 100,
   };
 };
 
@@ -68,6 +66,6 @@ export const uncroppedCameraPreviewOverlay = (
     frameWidth: image.width,
     frameX: image.x,
     frameY: image.y,
-    radiusPercent: 0,
+    radius: canvasShare(0),
   };
 };

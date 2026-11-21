@@ -1,9 +1,8 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { snappedInset } from "../layer-measure";
+import { snappedCorners, snappedInset } from "../layer-measure";
 import {
-  cornersIn,
   snappedTemplate,
   withSnappedMeasures,
 } from "../screenshot/screenshot-measure-snap";
@@ -45,21 +44,17 @@ export const recordingCaptures = (
     : {}),
 });
 
-/** Whether `track`'s corners are points of its capture, as a screen's are,
- * or a share of its frame, as a camera's are, a camera recorded alone
- * included. */
-export const cornersInPoints = (
+/** Which looks `track`'s corners are offered: a camera's picture, a camera
+ * recorded alone included, may be a circle. */
+const looksOf = (
   artifact: RecordingArtifact,
   track: RecordingVideoTrackId,
-) => track === "primary" && artifact.primaryKind === "screen";
+) => ({
+  circle: track === "camera" || artifact.primaryKind !== "screen",
+});
 
-const cornerUnit = (
-  artifact: RecordingArtifact,
-  track: RecordingVideoTrackId,
-) => (cornersInPoints(artifact, track) ? "points" : "percent");
-
-/** The look a recording's project saved, its padding and corners kept in
- * the units each picture takes them in (`withSnappedMeasures`). */
+/** The look a recording's project saved, its padding and corners snapped
+ * to the looks they were nearest (`withSnappedMeasures`). */
 const snappedRecordingOutput = (
   saved: RecordingOutputSettings,
   artifact: RecordingArtifact,
@@ -68,54 +63,52 @@ const snappedRecordingOutput = (
   const snapped = (track: RecordingVideoTrackId) => {
     const source = captures[track];
     return source
-      ? withSnappedMeasures(saved[track], source, cornerUnit(artifact, track))
-      : snappedTemplate(saved[track], cornerUnit(artifact, track));
+      ? withSnappedMeasures(saved[track], source, looksOf(artifact, track))
+      : snappedTemplate(saved[track], looksOf(artifact, track));
   };
   return { camera: snapped("camera"), primary: snapped("primary") };
 };
 
-/** The remembered look, for this recording: its padding and corners in the
- * units this recording's pictures take them in. */
+/** The remembered look, for this recording: its padding and corners
+ * snapped to the looks this recording's pictures are offered. */
 const snappedRecordingTemplate = (
   persisted: Partial<RecordingOutputSettings>,
   artifact: RecordingArtifact,
 ): Partial<RecordingOutputSettings> => ({
   ...(persisted.camera
-    ? { camera: snappedTemplate(persisted.camera, "percent") }
+    ? { camera: snappedTemplate(persisted.camera, { circle: true }) }
     : {}),
   ...(persisted.primary
     ? {
         primary: snappedTemplate(
           persisted.primary,
-          cornerUnit(artifact, "primary"),
+          looksOf(artifact, "primary"),
         ),
       }
     : {}),
 });
 
-/** A recording's output with each picture's corners in the unit it takes
- * them in, whatever look it was seeded from, so the unit a radius is kept
- * in says what it measures: the screen's in points, a camera's, a camera
- * recorded alone included, in percent. */
-const withRecordingCornerUnits = (
+/** A recording's output with each picture's corners a look it is offered,
+ * whatever look it was seeded from: a screen seeded from a camera's circle
+ * takes the roundest of its own. */
+const withRecordingCornerLooks = (
   output: RecordingOutputSettings,
   artifact: RecordingArtifact,
 ): RecordingOutputSettings => ({
   camera: {
     ...output.camera,
-    radius: cornersIn(output.camera.radius, "percent"),
+    radius: snappedCorners(output.camera.radius, { circle: true }),
   },
   primary: {
     ...output.primary,
-    radius: cornersIn(output.primary.radius, cornerUnit(artifact, "primary")),
+    radius: snappedCorners(output.primary.radius, looksOf(artifact, "primary")),
   },
 });
 
 /**
  * The output a recording opens with: a project's own look exactly as it was
  * left, or else the remembered look fitted to this recording. Padding and
- * corners saved as percents become the looks in points they were nearest,
- * and each picture's corners are kept in the unit it takes them in.
+ * corners saved in another unit become the looks they were nearest.
  */
 export const openedRecordingOutput = (
   artifact: EditorArtifact | null,
@@ -128,7 +121,7 @@ export const openedRecordingOutput = (
   };
   if (!recording) return restoredRecordingOutput({ ...sources, persisted });
   const look = recording.projectLook;
-  return withRecordingCornerUnits(
+  return withRecordingCornerLooks(
     look
       ? reopenedRecordingOutput({
           ...sources,
@@ -143,9 +136,8 @@ export const openedRecordingOutput = (
   );
 };
 
-/** A project's scenes as it opens: paddings and the screen's corners saved
- * as percents snapped to the looks in points they were nearest, the screen's
- * corners in the unit the recording's own are in. */
+/** A project's scenes as it opens: paddings and corners saved in another
+ * unit snapped to the looks they were nearest. */
 export const withSnappedScenes = (
   edit: RecordingTimelineEdit,
   artifact: RecordingArtifact,
@@ -156,14 +148,24 @@ export const withSnappedScenes = (
         sceneClips: edit.sceneClips.map((clip) => ({
           ...clip,
           ...(clip.inset ? { inset: snappedInset(clip.inset) } : {}),
-          ...(clip.radius?.screen
+          ...(clip.radius
             ? {
                 radius: {
-                  ...clip.radius,
-                  screen: cornersIn(
-                    clip.radius.screen,
-                    cornerUnit(artifact, "primary"),
-                  ),
+                  ...(clip.radius.screen
+                    ? {
+                        screen: snappedCorners(
+                          clip.radius.screen,
+                          looksOf(artifact, "primary"),
+                        ),
+                      }
+                    : {}),
+                  ...(clip.radius.camera
+                    ? {
+                        camera: snappedCorners(clip.radius.camera, {
+                          circle: true,
+                        }),
+                      }
+                    : {}),
                 },
               }
             : {}),

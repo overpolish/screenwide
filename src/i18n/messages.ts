@@ -8,6 +8,7 @@ export type Messages = {
   "annotate-clear": null;
   "annotate-clear-label": null;
   "annotate-close-label": null;
+  "annotate-island-corners-circle": null;
   "annotate-island-corners-round": null;
   "annotate-island-corners-rounded": null;
   "annotate-island-corners-square": null;

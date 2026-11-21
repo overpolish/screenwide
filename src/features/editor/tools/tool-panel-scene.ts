@@ -11,18 +11,19 @@ import {
 import { SchematicComposition } from "./scene/scene-schematic";
 
 import type { Background } from "./frame/background/background";
+import type { Measure } from "../../../bindings/Measure";
 
 /** A pane of the scene under the playhead: what part of it the scene
- * shows, how round its corners are, in percent of its shorter side, and how
- * far it is padded, as a share of its box's shorter side (the screen's
- * alone; the camera is never padded). */
+ * shows, how round its corners are, and how far it is padded, in percent
+ * of the canvas's shorter side (the screen's alone; the camera is never
+ * padded). */
 export type ToolPanelScenePane = {
   framing: SceneFraming;
   inset: number;
   /** Whether the pane sits in the box the scene's layout gives it, so
    * Reset placement has nothing to put back: always so for a preset's. */
   isAtLayout: boolean;
-  radius: number;
+  radius: Measure;
 };
 
 /**
@@ -85,9 +86,9 @@ export type ToolPanelScene = {
    * on and off; null where no scene is in hand. */
   panesShown: { camera: boolean; screen: boolean } | null;
   preset: RecordingScenePreset | null;
-  /** The selected pane's corner radius in the scene under the playhead, in
-   * percent of its shorter side, null where there is no scene. */
-  radius: number | null;
+  /** The selected pane's corner radius in the scene under the playhead,
+   * null where there is no scene. */
+  radius: Measure | null;
   /** How the scene under the playhead turns the screen, in degrees about
    * each axis, whichever pane is selected; null where there is no scene. */
   rotation: SceneRotation | null;

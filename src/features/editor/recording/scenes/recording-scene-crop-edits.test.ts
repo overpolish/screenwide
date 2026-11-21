@@ -24,7 +24,7 @@ const camera = {
     frameWidth: 180,
     frameX: 1310,
     frameY: 660,
-    radiusPercent: 50,
+    radius: { percent: 50 },
   },
 };
 const split: RecordingSceneClip = {

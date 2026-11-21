@@ -60,7 +60,7 @@ fn look(background: Option<&Path>) -> ProjectLook {
       frame_width: 180.0,
       frame_x: 1_310.0,
       frame_y: 660.0,
-      radius_percent: 50.0,
+      radius: screenwide_scenes::Measure::Percent(50.0),
       follow_face: false,
     },
     cursor_effects: screenwide_cursor_effects::CursorEffectSettings::default(),

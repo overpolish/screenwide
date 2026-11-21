@@ -23,7 +23,7 @@ const camera = {
     frameWidth: 180,
     frameX: 1310,
     frameY: 660,
-    radiusPercent: 50,
+    radius: { percent: 50 },
   },
 };
 const uncut = [{ playbackRate: 1, sourceEndMs: 20_000, sourceStartMs: 0 }];
@@ -34,7 +34,6 @@ const arranged = (clip: RecordingSceneClip) =>
     clips: [clip],
     output,
     ranges: uncut,
-    screen: { height: output.height, scaleFactor: 1, width: output.width },
     sourceMs: 5_000,
   });
 
@@ -99,7 +98,7 @@ describe("customRecordingSceneClip", () => {
       output,
     });
     expect(custom.boxes?.screenHidden).toBe(true);
-    expect(custom.radius?.camera).toBe(0);
+    expect(custom.radius?.camera).toEqual({ canvas: 0 });
     const after = arranged(custom);
     expect(after?.opacity).toEqual(before?.opacity);
     expect(after?.cameraOverlay?.frameWidth).toBeCloseTo(

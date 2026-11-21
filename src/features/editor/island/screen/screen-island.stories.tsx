@@ -44,7 +44,7 @@ const meta = {
     onRecenter: fn(),
     onResetPlacement: fn(),
     onShadowChange: fn(),
-    radius: 4,
+    radius: { canvas: 1 },
   },
   component: ScreenIsland,
   decorators: [featureStage({ height: 220, width: 520 })],

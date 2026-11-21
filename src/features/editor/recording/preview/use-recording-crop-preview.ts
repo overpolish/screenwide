@@ -3,6 +3,7 @@
 
 import { useMemo } from "react";
 
+import { canvasShortest } from "../../layer-measure";
 import { uncroppedCameraPreviewOverlay } from "../../preview/camera-overlay-geometry";
 import { cameraOverlayBetween } from "../../preview/picture-between";
 import { croppingScreenshotPreviewOutput } from "../../screenshot/screenshot-crop";
@@ -102,7 +103,10 @@ export function useRecordingCropPreview({
     );
     return cropTurn.isFlat
       ? whole
-      : cameraOverlayBetween(followedCameraOverlay, whole, cropTurn.open);
+      : cameraOverlayBetween(followedCameraOverlay, whole, {
+          canvas: canvasShortest(output),
+          share: cropTurn.open,
+        });
   }, [
     bakeCamera,
     cameraOverlay,

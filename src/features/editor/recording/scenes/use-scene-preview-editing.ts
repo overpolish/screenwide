@@ -106,7 +106,6 @@ export function useScenePreviewEditing({
             clips: drawnClips,
             output,
             ranges: recordingTimelinePlaybackRanges(edit, durationMs),
-            screen: screenSource,
             sourceMs: positionMs,
           })
         : null,
@@ -123,7 +122,6 @@ export function useScenePreviewEditing({
             clips: edit.sceneClips,
             output,
             ranges: recordingTimelinePlaybackRanges(edit, durationMs),
-            screen: screenSource,
             sourceMs: positionMs,
           })
         : arrangement,

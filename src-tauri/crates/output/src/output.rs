@@ -88,9 +88,9 @@ pub struct ScreenshotOutputSettings {
   pub image_y: f64,
   /// The padding the crop's frame is grown by on every side past the
   /// picture, which the editor grows the frame by again when the picture
-  /// changes: points of the capture, a percent of the picture's shorter
-  /// side in settings saved before. Absent in settings older still, which
-  /// the editor reads from the frame.
+  /// changes: a share of the canvas's shorter side, a percent of the
+  /// picture's shorter side in settings saved before. Absent in settings
+  /// older still, which the editor reads from the frame.
   #[serde(
     default,
     deserialize_with = "screenwide_scenes::measure::optional_measure_or_bare_share",
@@ -138,9 +138,9 @@ pub struct ScreenshotOutputSettings {
   pub mesh_points: Vec<MeshGradientPoint>,
   pub mesh_seed: u32,
   pub mesh_warp_percent: f64,
-  /// The corners of the layer's frame, padding and all: points of the
-  /// capture for a screen or screenshot, a percent of the frame's shorter
-  /// side for a camera and in settings saved before corners had a unit.
+  /// The corners of the layer's frame, padding and all: a share of the
+  /// canvas's shorter side, or of the frame's for a camera drawn as a circle
+  /// and in settings saved before corners had a unit.
   #[serde(
     alias = "radiusPercent",
     deserialize_with = "screenwide_scenes::measure::measure_or_bare_percent"

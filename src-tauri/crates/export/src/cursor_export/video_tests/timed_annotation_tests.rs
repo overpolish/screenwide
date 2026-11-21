@@ -183,7 +183,7 @@ fn exports_timed_arrows_across_a_cut_and_speed_change() {
                 frame_height: 30.0,
                 frame_x: 0.0,
                 frame_y: 0.0,
-                radius_percent: 0.0,
+                radius: screenwide_scenes::Measure::default(),
                 follow_face: false,
               },
               video: VideoExportOptions {

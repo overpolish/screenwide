@@ -127,7 +127,7 @@ fn places_a_baked_camera_on_the_frame_at_the_same_scale() {
     frame_width: 600.0,
     frame_x: 1_500.0,
     frame_y: 1_800.0,
-    radius_percent: 10.0,
+    radius: screenwide_scenes::Measure::Percent(10.0),
     follow_face: false,
   };
   let fit = FrameFit::of(3_600, 2_338, at(75, 100));
@@ -136,5 +136,5 @@ fn places_a_baked_camera_on_the_frame_at_the_same_scale() {
   assert_eq!(placed.camera_width, 600.0);
   assert_eq!((placed.frame_x, placed.frame_y), (1_125.0, 1_350.25));
   assert_eq!((placed.frame_width, placed.frame_height), (450.0, 300.0));
-  assert_eq!(placed.radius_percent, 10.0);
+  assert_eq!(placed.radius, screenwide_scenes::Measure::Percent(10.0));
 }

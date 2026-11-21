@@ -20,7 +20,7 @@ struct EditorPreferences {
   screenshot_output: Option<ScreenshotOutputSettings>,
   /// The corners the last screenshot was exported with, which the next one
   /// starts with: a percent in preferences saved before corners had a unit,
-  /// which the editor snaps to the look in points it was nearest.
+  /// which the editor snaps to the look it was nearest.
   #[serde(
     alias = "screenshot_radius_percent",
     deserialize_with = "screenwide_scenes::measure::measure_or_bare_percent"

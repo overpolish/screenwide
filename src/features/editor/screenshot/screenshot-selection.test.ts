@@ -3,8 +3,6 @@
 
 import { describe, expect, it } from "vitest";
 
-import { pixelsPerPoint } from "../layer-measure";
-
 import { insetScreenshotPadding } from "./screenshot-inset";
 import {
   ScreenshotWorkspaceOutputSettings,
@@ -25,7 +23,7 @@ describe("a padded screenshot layer", () => {
     const padded = insetScreenshotPadding(
       resetScreenshotLayout(canvas, item),
       item,
-      64,
+      6,
     );
     const workspace: ScreenshotWorkspaceOutputSettings = {
       ...canvas,
@@ -44,9 +42,8 @@ describe("a padded screenshot layer", () => {
     );
     expect(target.rect).toEqual(selection.rect);
     const { crop, sourceCrop } = screenshotLayout(item, padded);
-    expect(crop.width - sourceCrop.width).toBeCloseTo(
-      2 * 64 * pixelsPerPoint(padded.imageWidth, item),
-    );
+    // 6% of the 900 pixel high canvas on each side.
+    expect(crop.width - sourceCrop.width).toBeCloseTo(2 * 54);
     expect(target.rect.width).toBeCloseTo(crop.width / dimensions.width);
     expect(target.rect.x).toBeCloseTo(crop.x / dimensions.width);
   });

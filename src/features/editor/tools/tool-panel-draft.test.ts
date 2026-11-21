@@ -42,7 +42,7 @@ const layered = (acknowledgedSeq = 0): ToolPanelSnapshot => ({
     isAtDefaultPlacement: true,
     kind: "primary",
     label: "Screen",
-    radius: 0,
+    radius: { canvas: 0 },
   },
 });
 

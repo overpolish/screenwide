@@ -1,7 +1,12 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { Measure, measureBetween, points } from "../../layer-measure";
+import {
+  canvasShare,
+  Measure,
+  measureBetween,
+  radiusBetween,
+} from "../../layer-measure";
 import { between, rotationBetween } from "../../preview/picture-between";
 
 import { ScenePane } from "./recording-scene-order";
@@ -38,9 +43,13 @@ const framingBetween = (
     : to;
 
 /** How round a scene draws each pane: the recording's own radius where the
- * scene sets none. */
+ * scene sets none, and the shorter side of each pane's frame and of the
+ * canvas, in canvas pixels, which a change between units is eased
+ * through. */
 type RadiusOf = {
-  camera: (clip: RecordingSceneClip) => number;
+  camera: (clip: RecordingSceneClip) => Measure;
+  canvas: number;
+  frames: (clip: RecordingSceneClip) => Record<ScenePane, number>;
   screen: (clip: RecordingSceneClip) => Measure;
 };
 
@@ -52,17 +61,23 @@ const clipBetween = (
 ): RecordingSceneClip => {
   const unset = (pane: ScenePane) =>
     from.radius?.[pane] === undefined && to.radius?.[pane] === undefined;
-  const screenRadius = unset("screen")
-    ? undefined
-    : measureBetween(radiusOf.screen(from), radiusOf.screen(to), share);
-  const cameraRadius = unset("camera")
-    ? undefined
-    : between(radiusOf.camera(from), radiusOf.camera(to), share);
+  const radius = (pane: ScenePane) =>
+    radiusBetween(radiusOf[pane](from), radiusOf[pane](to), {
+      canvas: radiusOf.canvas,
+      frame: radiusOf.frames(from)[pane],
+      share,
+    });
+  const screenRadius = unset("screen") ? undefined : radius("screen");
+  const cameraRadius = unset("camera") ? undefined : radius("camera");
   const rotation = rotationBetween(from.rotation, to.rotation, share);
   const inset =
     from.inset === undefined && to.inset === undefined
       ? undefined
-      : measureBetween(from.inset ?? points(0), to.inset ?? points(0), share);
+      : measureBetween(
+          from.inset ?? canvasShare(0),
+          to.inset ?? canvasShare(0),
+          share,
+        );
   const camera = framingBetween(from.camera, to.camera, share);
   const screen = framingBetween(from.screen, to.screen, share);
   return {

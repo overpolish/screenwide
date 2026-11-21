@@ -8,7 +8,9 @@ import {
   type ScenePreset,
   type SceneShape,
 } from "../../glyphs/scene-layout-drawing";
+import { canvasShare } from "../../layer-measure";
 
+import type { Measure } from "../../../../bindings/Measure";
 import type { SceneBoxes } from "../../../../bindings/SceneBoxes";
 import type { SceneFraming } from "../../../../bindings/SceneFraming";
 import type { SceneVariant } from "../../../../bindings/SceneVariant";
@@ -25,10 +27,9 @@ type SceneLayout =
   | { boxes: SceneBoxes; kind: "custom" }
   | { kind: "preset"; preset: ScenePreset };
 
-/** A pane's framing, and how round its corners are, in percent of its
- * shorter side. */
+/** A pane's framing, and how round its corners are. */
 export type ScenePane = SceneFraming & {
-  radius: number;
+  radius: Measure;
 };
 
 export type SceneFramingProps = {
@@ -69,7 +70,7 @@ export type SceneFramingProps = {
 
 /** The shape the layouts are drawn on, the camera as round as it is. */
 export function sceneShape({ camera, video }: SceneFramingProps): SceneShape {
-  return { ...video, cameraRadius: camera?.radius ?? 0 };
+  return { ...video, cameraRadius: camera?.radius ?? canvasShare(0) };
 }
 
 export function layoutDrawing(props: SceneFramingProps): SceneDrawing {

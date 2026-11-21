@@ -26,7 +26,7 @@ const custom: RecordingSceneClip = {
   endMs: 6000,
   id: "c",
   preset: "full",
-  radius: { camera: 50 },
+  radius: { camera: { percent: 50 } },
   screen: { focusX: 0.2, focusY: 0.3, zoom: 2 },
   startMs: 1000,
 };
@@ -51,7 +51,7 @@ describe("scene templates", () => {
       canvasAspect: WIDE,
       id: "t",
       name: "Template 1",
-      radius: { camera: 50 },
+      radius: { camera: { percent: 50 } },
     });
     expect(sceneTemplateLayout(plain, WIDE)).toBeNull();
   });
@@ -69,7 +69,7 @@ describe("scene templates", () => {
     expect(laid.boxes?.camera?.x).toBeCloseTo(0.7);
     expect(laid.screen).toEqual(zoomed.screen);
     expect(laid.camera).toBeUndefined();
-    expect(laid.radius).toEqual({ camera: 50 });
+    expect(laid.radius).toEqual({ camera: { percent: 50 } });
     expect(laid.preset).toBe("split-two-thirds");
     expect(
       isTemplateLayout(laid.boxes ?? { screen: CAMERA }, {

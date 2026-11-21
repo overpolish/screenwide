@@ -91,7 +91,7 @@ pub(super) fn placed_selection(
           camera.camera_width,
           camera_height,
         ),
-        camera.radius_percent,
+        camera.radius_frame_percent(screen.canvas_shortest()),
       )
     }
     _ => return given,
@@ -212,7 +212,7 @@ mod tests {
         frame_width: 0.0,
         frame_x: 0.0,
         frame_y: 0.0,
-        radius_percent: 0.0,
+        radius: screenwide_scenes::Measure::Percent(0.0),
         follow_face: false,
       },
       recording_output: RecordingOutputSettings { camera, primary },

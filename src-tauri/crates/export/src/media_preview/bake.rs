@@ -65,7 +65,12 @@ pub fn bake_geometry(options: BakedVideoExportOptions) -> Result<BakeGeometry, S
     frame_y: frame_y.round() as i32,
     output_height,
     output_width,
-    radius: (f64::from(frame_width.min(frame_height)) * options.overlay.radius_percent / 100.0)
+    radius: overlay
+      .radius
+      .radius_pixels(
+        f64::from(frame_width.min(frame_height)),
+        f64::from(output_width.min(output_height)),
+      )
       .round() as u32,
   })
 }
@@ -94,7 +99,7 @@ mod tests {
         frame_width,
         frame_x: (screen.0 - frame_width) / 2.0,
         frame_y: (screen.1 - frame_height) / 2.0,
-        radius_percent: 8.0,
+        radius: screenwide_scenes::Measure::Percent(8.0),
         follow_face: false,
       },
       screen_height: 924,
@@ -129,7 +134,7 @@ mod tests {
         frame_width: 768.0,
         frame_x: -384.0,
         frame_y: 378.0,
-        radius_percent: 10.0,
+        radius: screenwide_scenes::Measure::Percent(10.0),
         follow_face: false,
       },
       screen_height: 1_080,

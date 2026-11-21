@@ -20,6 +20,8 @@ annotate-island-highlight-box-hint = Hold { $key } to fit the highlight to text 
 annotate-island-corners-square = Square
 annotate-island-corners-rounded = Rounded
 annotate-island-corners-round = Round
+# A camera's corner preset past Round: rounded all the way into a circle, or a capsule on a wide frame.
+annotate-island-corners-circle = Circle
 # The island's note beside the freehand pen: resting at the end of a stroke replaces it with a cleaned-up version of what was drawn, whether a line, a curve, an arrow or a closed shape.
 annotate-island-draw-hint = Pause at the end to smooth it out.
 # The island's focus tool, which draws attention to a box by treating what lies around it: its name, and the toggle that dims the surroundings rather than blurring them.

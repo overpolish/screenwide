@@ -54,7 +54,7 @@ const bottomLeft = {
     frameWidth: 320,
     frameX: 240,
     frameY: 710,
-    radiusPercent: 12,
+    radius: { canvas: 3 },
   },
   screenHeight: 1_080,
   screenWidth: 1_920,
@@ -94,7 +94,7 @@ describe("restoredCameraOverlay", () => {
     expect(
       (restored.frameX + restored.frameWidth / 2) / screen.width,
     ).toBeCloseTo((240 + 160) / 1_920);
-    expect(restored.radiusPercent).toBe(12);
+    expect(restored.radius).toEqual({ canvas: 3 });
   });
 
   it("stays inside a much narrower screen", () => {

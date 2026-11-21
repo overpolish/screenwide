@@ -50,7 +50,7 @@ describe("recording Crop and Recenter parity", () => {
     const settings = {
       ...defaultScreenshotOutput(1_000, 1_000),
       dropShadow: true,
-      radius: { points: 10 },
+      radius: { canvas: 1 },
     };
     const live = applyScreenshotCropGesture({
       deltaX: 0.1,
@@ -75,7 +75,7 @@ describe("recording Crop and Recenter parity", () => {
     }).toEqual({ height: 1_000, width: 1_000, x: 0, y: 0 });
     expect(preview.cropPreview).toEqual(layout.sourceCrop);
     expect(preview.dropShadow).toBe(true);
-    expect(preview.radius).toEqual({ points: 10 });
+    expect(preview.radius).toEqual({ canvas: 1 });
   });
 
   it("stands a turned layer upright under the crop overlay", () => {

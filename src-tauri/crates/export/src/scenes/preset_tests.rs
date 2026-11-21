@@ -67,7 +67,7 @@ fn arranged(
     frame_width: 180.0,
     frame_x: 1_310.0,
     frame_y: 660.0,
-    radius_percent: 50.0,
+    radius: screenwide_scenes::Measure::Percent(50.0),
     follow_face: false,
   };
   arrange(
@@ -146,7 +146,7 @@ fn camera_only_fills_the_canvas_and_hides_the_screen() {
     (0.0, 0.0, 1_600.0, 900.0)
   );
   // The canvas's own corners cut it, not a radius of its own.
-  assert_eq!(overlay.radius_percent, 0.0);
+  assert!(overlay.radius.is_zero());
 }
 
 #[test]
