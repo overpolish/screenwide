@@ -1,6 +1,8 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import { use } from "react";
+
 import { cn } from "../../../../lib/styling";
 import { BeatClip } from "../beat-clip/beat-clip";
 import { type TimelineBeat } from "../beat-clip/beat-label";
@@ -12,6 +14,7 @@ import { type Span, type TimelineScale, type TimeMap } from "../timeline-scale";
 
 import { slideGap } from "./gap-slide";
 import { beatTrimOf } from "./strip-beat-trim";
+import { isNear, StripNearContext } from "./strip-near";
 import {
   chosenItems,
   isChosen,
@@ -130,6 +133,12 @@ export function StripBeatRow({
     lifted?.some(
       (each) => span.start >= each.start - 1e-6 && span.end <= each.end + 1e-6,
     ) ?? false;
+  // What is chosen or carried is drawn wherever it is (`strip-near.ts`).
+  const near = use(StripNearContext);
+  const isDrawn = (kind: StripItem["kind"], id: string, span: Span) =>
+    isNear(near, scale, span) ||
+    isChosen(selection, kind, id) ||
+    isLifted(span);
   // A chosen item takes the rest of what is chosen with it.
   const grab = (event: React.PointerEvent, item: StripItem, span: Span) => {
     onGrab(
@@ -141,73 +150,77 @@ export function StripBeatRow({
   };
   return (
     <div className={cn("relative h-11", className)}>
-      {lulls.map((lull) => (
-        <Spring
-          isAltHeld={isAltHeld}
-          isDeadAir={lull.isDeadAir}
-          isLifted={isLifted(lull.span)}
-          isSelected={isChosen(selection, "lull", lull.id)}
-          key={lull.id}
-          moving={lull.moving}
-          onGrab={(event) => {
-            grab(event, { id: lull.id, kind: "lull" }, lull.span);
-          }}
-          onPlayChange={(play) => {
-            onLullPlayChange(lull.id, play);
-          }}
-          onPress={(event) => {
-            choose(event, { id: lull.id, kind: "lull" });
-          }}
-          onTrim={(end) => {
-            onLullTrim(lull.id, end);
-          }}
-          play={lull.play}
-          plays={lull.plays}
-          scale={scale}
-          span={lull.span}
-          width={width}
-        />
-      ))}
-      {beats.map((beat) => (
-        <BeatClip
-          beat={beat.beat}
-          isHidden={beat.isHidden}
-          isLifted={isLifted(beat.span)}
-          isSelected={isChosen(selection, "beat", beat.id)}
-          key={beat.id}
-          onGrab={(event) => {
-            if (beat.beat.kind === "gap" && onGapSlide) {
-              slideGap(event, {
-                from: map.toPlayed(beat.span.start),
-                onSlide: (at) => {
-                  onGapSlide(beat.id, at);
-                },
-                pxPerSecond: width / Math.max(map.duration, 1e-6),
-              });
-              return;
-            }
-            grab(event, { id: beat.id, kind: "beat" }, beat.span);
-          }}
-          onPress={(event) => {
-            choose(event, { id: beat.id, kind: "beat" });
-          }}
-          peaks={beat.peaks}
-          pictureAspect={pictureAspect}
-          scale={scale}
-          span={beat.span}
-          thumbnail={beat.thumbnail}
-          trim={beatTrimOf({
-            beat,
-            captions,
-            cuts,
-            map,
-            onGapStart,
-            onTrim: onBeatTrim,
-            width,
-          })}
-          width={width}
-        />
-      ))}
+      {lulls
+        .filter((lull) => isDrawn("lull", lull.id, lull.span))
+        .map((lull) => (
+          <Spring
+            isAltHeld={isAltHeld}
+            isDeadAir={lull.isDeadAir}
+            isLifted={isLifted(lull.span)}
+            isSelected={isChosen(selection, "lull", lull.id)}
+            key={lull.id}
+            moving={lull.moving}
+            onGrab={(event) => {
+              grab(event, { id: lull.id, kind: "lull" }, lull.span);
+            }}
+            onPlayChange={(play) => {
+              onLullPlayChange(lull.id, play);
+            }}
+            onPress={(event) => {
+              choose(event, { id: lull.id, kind: "lull" });
+            }}
+            onTrim={(end) => {
+              onLullTrim(lull.id, end);
+            }}
+            play={lull.play}
+            plays={lull.plays}
+            scale={scale}
+            span={lull.span}
+            width={width}
+          />
+        ))}
+      {beats
+        .filter((beat) => isDrawn("beat", beat.id, beat.span))
+        .map((beat) => (
+          <BeatClip
+            beat={beat.beat}
+            isHidden={beat.isHidden}
+            isLifted={isLifted(beat.span)}
+            isSelected={isChosen(selection, "beat", beat.id)}
+            key={beat.id}
+            onGrab={(event) => {
+              if (beat.beat.kind === "gap" && onGapSlide) {
+                slideGap(event, {
+                  from: map.toPlayed(beat.span.start),
+                  onSlide: (at) => {
+                    onGapSlide(beat.id, at);
+                  },
+                  pxPerSecond: width / Math.max(map.duration, 1e-6),
+                });
+                return;
+              }
+              grab(event, { id: beat.id, kind: "beat" }, beat.span);
+            }}
+            onPress={(event) => {
+              choose(event, { id: beat.id, kind: "beat" });
+            }}
+            peaks={beat.peaks}
+            pictureAspect={pictureAspect}
+            scale={scale}
+            span={beat.span}
+            thumbnail={beat.thumbnail}
+            trim={beatTrimOf({
+              beat,
+              captions,
+              cuts,
+              map,
+              onGapStart,
+              onTrim: onBeatTrim,
+              width,
+            })}
+            width={width}
+          />
+        ))}
       <CutSeams cuts={cuts} onRestore={onRestore} scale={scale} />
       {/* Drawn across every lane by the strip; here it is taken hold of,
         and drawn only while carried. */}

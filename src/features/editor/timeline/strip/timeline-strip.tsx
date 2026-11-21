@@ -23,6 +23,7 @@ import { GLIDE, GlideCue } from "./strip-glide";
 import { StripLane } from "./strip-lane";
 import { laneLayout, laneSnapParts } from "./strip-lane-time";
 import { StripMinimap } from "./strip-minimap";
+import { StripNearContext } from "./strip-near";
 import { StripScrubBand } from "./strip-scrub-band";
 import { stripSnap } from "./strip-snap";
 import { splitParts } from "./strip-split";
@@ -56,8 +57,7 @@ import { useWidth } from "./use-width";
 export function TimelineStrip(props: TimelineStripProps) {
   const { map, selection } = props;
   const frame = useWidth();
-  /** Where a scene's or song's end has snapped while drawn or dragged, if
-   * anywhere. */
+  /** Where a scene's or song's end has snapped as it moves, if anywhere. */
   const [guide, setGuide] = useState<number | null>(null);
   const length = Math.max(map.duration, 1e-6);
   const { choose, chosen, chosenId } = stripChoice(props);
@@ -164,99 +164,101 @@ export function TimelineStrip(props: TimelineStripProps) {
             >
               <StripScrubBand onScrub={scrub.scrub} playhead={props.playhead} />
               {/* Locked, a press falls through the lanes and scrubs. */}
-              <div className="contents" inert={props.isLocked}>
-                <SceneRail
-                  duration={map.duration}
-                  gaps={lanes.gaps}
-                  onDraw={props.onSceneDraw}
-                  onGuide={setGuide}
-                  onRetime={props.onSceneRetime}
-                  onSelect={(id) => {
-                    choose({ id, kind: "scene" });
-                  }}
-                  scale={lanes.scale}
-                  scenes={lanes.scenes}
-                  selected={chosenId("scene")}
-                  snap={snap}
-                  width={width}
-                />
-                <StripLane>
-                  {lanes.annotations.length > 0 || isPictureCarried ? (
-                    <AnnotationDropLane
-                      annotations={lanes.annotations}
-                      onRestack={props.onAnnotationRestack}
-                      onRetime={props.onAnnotationRetime}
-                      onSelect={(id) => {
-                        choose({ id, kind: "annotation" });
-                      }}
-                      scale={lanes.scale}
-                      selected={chosenId("annotation")}
-                      snap={snap}
-                      width={width}
-                    />
-                  ) : null}
-                </StripLane>
-                <StripLane>
-                  {drawn.shortcuts.length > 0 ? (
-                    <ShortcutLane
-                      onDelete={(ids) => {
-                        props.onDeleteShortcuts(ids);
-                        choose(null);
-                      }}
-                      onSelect={(ids) => {
-                        choose(
-                          ids.length > 0 ? { ids, kind: "shortcuts" } : null,
-                        );
-                      }}
-                      scale={shown}
-                      selected={chosenShortcuts}
-                      shortcuts={drawn.shortcuts}
-                      width={width}
-                    />
-                  ) : null}
-                </StripLane>
-                <StripBeats
-                  {...drawn}
-                  lifted={reorder.lifted}
-                  onGapStart={view.shiftSinceHold}
-                  onGrab={reorder.grab}
-                  onPutBack={props.onPutBack}
-                  onRemoveSplit={props.onRemoveSplit}
-                  onSelect={choose}
-                  pxPerSecond={view.pxPerSecond}
-                  reshape={reshape}
-                  rowRef={reorder.rowRef}
-                  scale={shown}
-                  taken={taken}
-                  width={width}
-                />
-                <StripLane>
-                  {drawn.captions ? (
-                    <CaptionLane
-                      isHidden={props.isCaptionsHidden}
-                      lines={drawn.captions}
-                      // The playhead goes to the line, to show its caption.
-                      onPress={(line) => {
-                        props.onSeek(line.start);
-                        props.onCaptionPress(line);
-                      }}
-                      scale={shown}
-                      width={width}
-                    />
-                  ) : null}
-                </StripLane>
-                <AudioLanes
-                  audio={lanes.audio}
-                  onGuide={setGuide}
-                  onSelect={(id) => {
-                    choose({ id, kind: "audioClip" });
-                  }}
-                  scale={lanes.scale}
-                  selected={chosenId("audioClip")}
-                  snap={snap}
-                  width={width}
-                />
-              </div>
+              <StripNearContext value={view.near}>
+                <div className="contents" inert={props.isLocked}>
+                  <SceneRail
+                    duration={map.duration}
+                    gaps={lanes.gaps}
+                    onDraw={props.onSceneDraw}
+                    onGuide={setGuide}
+                    onRetime={props.onSceneRetime}
+                    onSelect={(id) => {
+                      choose({ id, kind: "scene" });
+                    }}
+                    scale={lanes.scale}
+                    scenes={lanes.scenes}
+                    selected={chosenId("scene")}
+                    snap={snap}
+                    width={width}
+                  />
+                  <StripLane>
+                    {lanes.annotations.length > 0 || isPictureCarried ? (
+                      <AnnotationDropLane
+                        annotations={lanes.annotations}
+                        onRestack={props.onAnnotationRestack}
+                        onRetime={props.onAnnotationRetime}
+                        onSelect={(id) => {
+                          choose({ id, kind: "annotation" });
+                        }}
+                        scale={lanes.scale}
+                        selected={chosenId("annotation")}
+                        snap={snap}
+                        width={width}
+                      />
+                    ) : null}
+                  </StripLane>
+                  <StripLane>
+                    {drawn.shortcuts.length > 0 ? (
+                      <ShortcutLane
+                        onDelete={(ids) => {
+                          props.onDeleteShortcuts(ids);
+                          choose(null);
+                        }}
+                        onSelect={(ids) => {
+                          choose(
+                            ids.length > 0 ? { ids, kind: "shortcuts" } : null,
+                          );
+                        }}
+                        scale={shown}
+                        selected={chosenShortcuts}
+                        shortcuts={drawn.shortcuts}
+                        width={width}
+                      />
+                    ) : null}
+                  </StripLane>
+                  <StripBeats
+                    {...drawn}
+                    lifted={reorder.lifted}
+                    onGapStart={view.shiftSinceHold}
+                    onGrab={reorder.grab}
+                    onPutBack={props.onPutBack}
+                    onRemoveSplit={props.onRemoveSplit}
+                    onSelect={choose}
+                    pxPerSecond={view.pxPerSecond}
+                    reshape={reshape}
+                    rowRef={reorder.rowRef}
+                    scale={shown}
+                    taken={taken}
+                    width={width}
+                  />
+                  <StripLane>
+                    {drawn.captions ? (
+                      <CaptionLane
+                        isHidden={props.isCaptionsHidden}
+                        lines={drawn.captions}
+                        // The playhead goes to the line, to show its caption.
+                        onPress={(line) => {
+                          props.onSeek(line.start);
+                          props.onCaptionPress(line);
+                        }}
+                        scale={shown}
+                        width={width}
+                      />
+                    ) : null}
+                  </StripLane>
+                  <AudioLanes
+                    audio={lanes.audio}
+                    onGuide={setGuide}
+                    onSelect={(id) => {
+                      choose({ id, kind: "audioClip" });
+                    }}
+                    scale={lanes.scale}
+                    selected={chosenId("audioClip")}
+                    snap={snap}
+                    width={width}
+                  />
+                </div>
+              </StripNearContext>
               {/* Over every lane; carried, its row draws it (`RangeBand`). */}
               {shownRange && reorder.lifted === null ? (
                 <RangeBand

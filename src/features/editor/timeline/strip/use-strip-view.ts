@@ -12,6 +12,7 @@ import {
 import { type Playhead } from "../scrub-playhead";
 import { clampView, type View } from "../timeline-scale";
 
+import { useStripNear } from "./strip-near";
 import { stripViewNow } from "./strip-view-now";
 import { listenToZoom } from "./strip-zoom-input";
 
@@ -217,11 +218,14 @@ export function useStripView({
       actionsRef.current.reveal(ratio, ratio);
     });
   }, [isPlaying, playhead]);
+  const near = useStripNear(now);
 
   return {
     /** How wide, in px, the room past the track's end for what was taken
      * out is: as wide as it would play. */
     bandWidth: trackWidth * (extent - 1),
+    /** The part of the strip whose parts are drawn (`strip-near.ts`). */
+    near,
     /** The view shown this moment, which a pan changes without the strip
      * drawing again (`useStripViewNow`). */
     now,

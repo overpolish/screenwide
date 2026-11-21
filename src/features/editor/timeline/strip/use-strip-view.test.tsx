@@ -142,20 +142,32 @@ describe("the strip's view", () => {
     });
   });
 
-  it("pans without drawing the strip again, the minimap following", () => {
+  it("pans without drawing the strip again until it nears what is drawn", () => {
     const area = scrollArea();
     const { held, renders, root } = laidOn(area);
     const drawn = renders();
     const trackWidth = held.view?.trackWidth ?? 0;
     act(() => {
-      for (const left of [300, 700, 1_100]) {
+      for (const left of [100, 200, 300]) {
         area.scrollLeft = left;
         area.scroll();
       }
     });
     expect(renders()).toBe(drawn);
     expect(held.view?.trackWidth).toBe(trackWidth);
-    expect(held.view?.now.get().start).toBeCloseTo(1_100 / trackWidth, 9);
+    expect(held.view?.now.get().start).toBeCloseTo(300 / trackWidth, 9);
+    // Past half a view, what is drawn moves round the view, once.
+    act(() => {
+      for (const left of [1_100, 1_150]) {
+        area.scrollLeft = left;
+        area.scroll();
+      }
+    });
+    expect(renders()).toBe(drawn + 1);
+    const near = held.view?.near ?? { end: 0, start: 0 };
+    const now = held.view?.now.get() ?? { end: 0, start: 0 };
+    expect(near.start).toBeLessThan(now.start);
+    expect(near.end).toBeGreaterThan(now.end);
     act(() => {
       root.unmount();
     });

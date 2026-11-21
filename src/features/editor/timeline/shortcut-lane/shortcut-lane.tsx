@@ -1,8 +1,9 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { useRef, useState } from "react";
+import { use, useRef, useState } from "react";
 
+import { isNear, StripNearContext } from "../strip/strip-near";
 import { type TimelineScale } from "../timeline-scale";
 
 import { ShortcutChip, type TimelineShortcut } from "./shortcut-chip";
@@ -39,6 +40,7 @@ export function ShortcutLane({
   shortcuts,
   width,
 }: ShortcutLaneProps) {
+  const near = use(StripNearContext);
   // How wide each shortcut's keys are drawn, by id, as they report it.
   const [widths, setWidths] = useState<Record<string, number>>({});
   const measuresRef = useRef(new Map<string, (px: number) => void>());
@@ -80,26 +82,32 @@ export function ShortcutLane({
         onDelete(selected);
       }}
     >
-      {placed.map(({ from, shortcut, x }) => (
-        <ShortcutChip
-          isSelected={selected.includes(shortcut.id)}
-          key={shortcut.id}
-          labelOffset={from - x}
-          onMeasure={measureOf(shortcut.id)}
-          onPress={(event) => {
-            const isIn = selected.includes(shortcut.id);
-            onSelect(
-              !event.shiftKey
-                ? [shortcut.id]
-                : isIn
-                  ? selected.filter((id) => id !== shortcut.id)
-                  : [...selected, shortcut.id],
-            );
-          }}
-          shortcut={shortcut}
-          x={x}
-        />
-      ))}
+      {placed
+        .filter(
+          ({ shortcut }) =>
+            selected.includes(shortcut.id) ||
+            isNear(near, scale, { end: shortcut.start, start: shortcut.start }),
+        )
+        .map(({ from, shortcut, x }) => (
+          <ShortcutChip
+            isSelected={selected.includes(shortcut.id)}
+            key={shortcut.id}
+            labelOffset={from - x}
+            onMeasure={measureOf(shortcut.id)}
+            onPress={(event) => {
+              const isIn = selected.includes(shortcut.id);
+              onSelect(
+                !event.shiftKey
+                  ? [shortcut.id]
+                  : isIn
+                    ? selected.filter((id) => id !== shortcut.id)
+                    : [...selected, shortcut.id],
+              );
+            }}
+            shortcut={shortcut}
+            x={x}
+          />
+        ))}
     </div>
   );
 }
