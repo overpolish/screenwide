@@ -15,15 +15,21 @@ const SHADER: &str = include_str!(concat!(env!("OUT_DIR"), "/osc.wgsl"));
 
 /// One triangle-list vertex. `position` is already in NDC: the pixel-to-clip
 /// mapping happens on the CPU so the vertex shader stays a pass-through. The
-/// twin of `ScreenwideRegionOscVertex`.
+/// twin of `ScreenwideRegionOscVertex`. `fade` is how far the quad it belongs
+/// to has faded out, out of [`FADED_OUT`]: zero, as every builder leaves it,
+/// draws it in full, which the editor's chrome raises to crossfade what it
+/// gives way to.
 #[repr(C)]
 #[derive(Clone, Copy, Debug, Default, PartialEq, bytemuck::Pod, bytemuck::Zeroable)]
 pub struct Vertex {
   pub position: [f32; 2],
   pub uv: [f32; 2],
   pub kind: u32,
-  pub padding: u32,
+  pub fade: u32,
 }
+
+/// A vertex's `fade` once its quad is gone.
+pub const FADED_OUT: u32 = 65_535;
 
 const _: () = assert!(std::mem::size_of::<Vertex>() == 24);
 const _: () = assert!(
@@ -86,6 +92,11 @@ pub struct RenderConstants {
   pub reference: [f32; 4],
   /// The wash over a table Text Recognition found.
   pub ocr_table: [f32; 4],
+  /// `.x`: how much of the crop's shade shows, and `.y` how far the gap
+  /// between its ants is open, 1 each in full, which the editor's chrome
+  /// eases through as the crop opens and closes: solid outline and no shade
+  /// at zero, as the select tool draws it.
+  pub opacity: [f32; 4],
 }
 
 /// The rows of `RenderConstants::turn_rings`.
@@ -139,6 +150,7 @@ impl RenderConstants {
       window_shape: [0.0; 4],
       reference: [0.0; 4],
       ocr_table: ocr.table_fill,
+      opacity: [1.0, 1.0, 0.0, 0.0],
     }
   }
 }

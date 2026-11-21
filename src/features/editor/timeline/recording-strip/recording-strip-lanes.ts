@@ -6,7 +6,6 @@ import {
   type ScenePreset,
 } from "../../glyphs/scene-layout-drawing";
 import { presetName } from "../../island/scene/scene-names";
-import { sceneLandingMs } from "../../recording/scenes/recording-scene-arrangement";
 import { LEAST_SCENE_MS } from "../../recording/scenes/recording-scene-gaps";
 import { sceneCustomLabel } from "../../recording/scenes/recording-scene-labels";
 import { type TimelineAnnotation } from "../annotation-lane/annotation-lane";
@@ -14,10 +13,7 @@ import { type TimelineScene } from "../scene-rail/scene-clip";
 import { drawnSceneSpan, LEAST_DRAWN_S } from "../scene-rail/scene-draw";
 import { type Playhead } from "../scrub-playhead";
 import { baseOf } from "../strip/strip-part";
-import {
-  isPlayheadOutside,
-  type StripSelection,
-} from "../strip/strip-selection";
+import { type StripSelection } from "../strip/strip-selection";
 import { type Span, type TimeMap } from "../timeline-scale";
 
 import { type RecordingStripSteps } from "./use-recording-strip-edits";
@@ -129,7 +125,6 @@ export function recordingStripLanes(source: RecordingStripLaneSource) {
       ...playedOf(clip),
       drawing: scenes.drawingOf(clip),
       id: clip.id,
-      landsAt: sceneLandingMs(clip) / 1000,
       name: clip.boxes ? sceneCustomLabel() : presetName(preset),
     };
   });
@@ -191,16 +186,10 @@ export function recordingStripLanes(source: RecordingStripLaneSource) {
       steps.step(() => {
         scenes.onClipsChange(sortedScenes([...scenes.clips, clip]));
       });
+      // Drawn, the scene is chosen as one pressed is: the Scene island acts
+      // on it wherever the playhead stands, which stays where it is.
       scenes.selection.onSelect(clip.id, false);
       source.changeCanvasTool("scene");
-      // Drawn, the scene is chosen as one pressed is, so the playhead comes
-      // to it, once arrived, where it stands outside it: the picture and the
-      // Scene island show the scene under the playhead, which would
-      // otherwise be another or none, and a layout chosen there would add a
-      // scene.
-      const played = source.playhead.ratio() * map.duration;
-      if (isPlayheadOutside(played, playedOf(clip)))
-        source.seek(map.toRecorded(sceneLandingMs(clip) / 1000));
     },
     onSceneRetime: (id, start, end) => {
       const own = scenes.clips.find((clip) => clip.id === baseOf(id));

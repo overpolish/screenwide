@@ -21,11 +21,12 @@ fn quad_kinds(vertices: &[Vertex]) -> Vec<u32> {
 #[test]
 fn constants_match_the_shader_register_packing() {
   use std::mem::offset_of;
-  assert_eq!(size_of::<RenderConstants>(), 1232);
+  assert_eq!(size_of::<RenderConstants>(), 1248);
   assert_eq!(offset_of!(RenderConstants, window_cutout), 1168);
   assert_eq!(offset_of!(RenderConstants, window_shape), 1184);
   assert_eq!(offset_of!(RenderConstants, reference), 1200);
   assert_eq!(offset_of!(RenderConstants, ocr_table), 1216);
+  assert_eq!(offset_of!(RenderConstants, opacity), 1232);
   assert_eq!(offset_of!(RenderConstants, light_mode), 0);
   assert_eq!(offset_of!(RenderConstants, magnifier_box), 16);
   assert_eq!(offset_of!(RenderConstants, action_fills), 32);
@@ -97,7 +98,7 @@ fn vertices_land_in_normalized_device_coordinates() {
   assert_eq!(out[5].uv, [0.0, 1.0]);
   assert!(out
     .iter()
-    .all(|vertex| vertex.kind == 6 && vertex.padding == 0));
+    .all(|vertex| vertex.kind == 6 && vertex.fade == 0));
 }
 
 #[test]

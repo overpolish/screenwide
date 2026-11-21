@@ -44,6 +44,8 @@ impl GapScene {
       inset: None,
       rotation: None,
       variant: None,
+      layout_before: None,
+      shapes: None,
       auto: false,
     }
   }

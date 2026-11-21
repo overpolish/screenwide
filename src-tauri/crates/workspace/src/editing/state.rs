@@ -207,17 +207,24 @@ pub struct SurfaceInner {
   pub callbacks: Mutex<EditorCallbacks>,
   pub state: Mutex<SurfaceState>,
   pub host: Box<dyn Host>,
+  /// How the selection chrome is changing from one thing to another. Locked
+  /// only with `state` held, after it.
+  pub(crate) chrome_fade: Mutex<chrome_fade::ChromeFade>,
+  /// The surface itself, for a change-over to redraw it from a thread.
+  pub(crate) this: std::sync::Weak<SurfaceInner>,
 }
 
 impl SurfaceInner {
-  pub fn new(host: Box<dyn Host>, state: SurfaceState) -> Self {
-    Self {
+  pub fn new(host: Box<dyn Host>, state: SurfaceState) -> Arc<Self> {
+    Arc::new_cyclic(|this| Self {
       batch_depth: AtomicU32::new(0),
       commit_pending: false.into(),
       selection_pending: false.into(),
       callbacks: Mutex::default(),
       state: Mutex::new(state),
       host,
-    }
+      chrome_fade: Mutex::default(),
+      this: this.clone(),
+    })
   }
 }

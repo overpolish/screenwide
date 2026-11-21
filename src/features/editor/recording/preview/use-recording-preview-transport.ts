@@ -118,7 +118,6 @@ export function useRecordingPreviewTransport(
       activeVideoTrack,
       bakeCamera,
       cameraOverlay,
-      canvasTool,
       effectiveRecordingOutput,
       previewSourceDimensions,
       selection,

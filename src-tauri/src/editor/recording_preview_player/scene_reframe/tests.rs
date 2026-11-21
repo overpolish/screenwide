@@ -49,14 +49,13 @@ fn a_custom_screen_cropped_in_place_shows_its_picture_where_it_sits() {
   .expect("a custom clip");
   assert!(crops_in_place(&clip, SceneReframe::Screen));
   assert!(!crops_in_place(&clip, SceneReframe::Camera));
-  assert_eq!(
-    reframed_clips(
-      std::slice::from_ref(&clip),
-      Some(SceneReframe::Screen),
-      5_000
-    ),
-    None
-  );
+  // A preset's panes are cropped in place too, both of them.
+  let preset = RecordingSceneClip {
+    boxes: None,
+    ..clip.clone()
+  };
+  assert!(crops_in_place(&preset, SceneReframe::Screen));
+  assert!(crops_in_place(&preset, SceneReframe::Camera));
   let base = screenwide_output::fixtures::test_output_settings(1_600, 900);
   let mut output = base.clone();
   assert!(screenwide_export::scenes::arrange(
@@ -80,7 +79,7 @@ fn a_custom_screen_cropped_in_place_shows_its_picture_where_it_sits() {
 }
 
 #[test]
-fn the_scenes_turn_of_the_screen_eases_and_a_reframed_screen_stands_upright() {
+fn the_scenes_turn_of_the_screen_eases() {
   let clip: RecordingSceneClip = serde_json::from_value(serde_json::json!({
     "id": "t",
     "startMs": 0,
@@ -99,11 +98,12 @@ fn the_scenes_turn_of_the_screen_eases_and_a_reframed_screen_stands_upright() {
       &mut output,
       None
     ));
-    ease_screen_turn(&mut output, crop.screen_turn());
+    ease_screen_turn(&mut output, crop.screen_turn);
     output.rotation
   };
   let halfway = SceneCrop {
     pane: None,
+    open: 0.0,
     screen_turn: 0.5,
   };
   assert_eq!(
@@ -114,10 +114,5 @@ fn the_scenes_turn_of_the_screen_eases_and_a_reframed_screen_stands_upright() {
       z: 5.0
     })
   );
-  let reframing = SceneCrop {
-    pane: Some(SceneReframe::Screen),
-    screen_turn: 1.0,
-  };
-  assert_eq!(turned(reframing), None);
   assert!(turned(SceneCrop::default()).is_some_and(|rotation| rotation.x == 20.0));
 }

@@ -10,16 +10,16 @@ use screenwide_scenes::geometry::Rect;
 use screenwide_scenes::model::{RecordingScenePreset, SceneBox, SceneBoxes, SceneRadius};
 use screenwide_scenes::{CameraOverlaySettings, RecordingSceneClip, SceneFraming};
 
-use super::target::Base;
+use super::target::{fitted, Base};
 
 /// `clip` made custom: its panes kept in the boxes its preset puts them in
 /// on the screen's `output`, and showing what they show there, so the change
 /// alone moves nothing. `camera` is the camera drawn into the picture, with
 /// its source size, where there is one; a full scene's camera then gets the
 /// recording's own box. A camera-only scene keeps the screen hidden in the
-/// recording's own place. `None` for a clip already custom, for a blank
-/// scene, which has no pane to place, and for an output with no placement
-/// to measure from.
+/// recording's own place, and a screen-only one the camera. `None` for a
+/// clip already custom, for a blank scene, which has no pane to place, and
+/// for an output with no placement to measure from.
 pub fn made_custom(
   clip: &RecordingSceneClip,
   output: &ScreenshotOutputSettings,
@@ -33,12 +33,22 @@ pub fn made_custom(
     .map(|(overlay, (width, height))| (overlay, f64::from(width) / f64::from(height)));
   let base = Base::of(output, camera, None);
   let crop = base.placement.screen;
+  // Where the scene crops a pane to a shape of its own, its box has that
+  // shape already (`Base::target`), and keeps it.
+  let shapes = clip.shapes.unwrap_or_default();
   let (screen, preset_camera) = match base.preset_panes(clip) {
     Some(panes) => (panes.screen.unwrap_or(crop), panes.camera),
-    None => (crop, None),
+    None => (
+      shapes.screen.map_or(crop, |shape| fitted(crop, shape)),
+      None,
+    ),
   };
   let camera_box = preset_camera.or_else(|| {
-    (camera.is_some() && clip.preset == RecordingScenePreset::Full).then_some(base.placement.frame)
+    (camera.is_some() && clip.preset == RecordingScenePreset::Full).then_some(
+      shapes.camera.map_or(base.placement.frame, |shape| {
+        fitted(base.placement.frame, shape)
+      }),
+    )
   });
   // An unset camera framing means a different picture once the camera has
   // a box of its own, so the one the clip shows now is written down.
@@ -86,9 +96,14 @@ pub fn made_custom(
       camera: camera_box.map(share),
       camera_behind: false,
       screen_hidden: camera_only,
+      camera_hidden: clip.preset == RecordingScenePreset::ScreenOnly,
     }),
     camera: framing,
     radius,
+    // A pane moved by hand keeps its place, so a pane turned back on stays
+    // where this scene puts it rather than going back to a layout.
+    layout_before: None,
+    shapes: None,
     ..clip.clone()
   })
 }

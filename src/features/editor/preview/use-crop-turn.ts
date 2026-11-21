@@ -7,34 +7,38 @@ import { useCallback, useEffect, useSyncExternalStore } from "react";
 import { motionDurations, motionEasings } from "../../../lib/motion";
 
 export type CropTurn = {
-  /** The crop is shown: the tool is in hand and the layer stands upright. */
+  /** The crop is shown: the tool is in hand, the layer stands upright and
+   * the whole picture is open around the crop. */
   isFlat: boolean;
+  /** How far the picture is opened out around its crop, from as cropped at
+   * zero to whole at one. */
+  open: number;
   /** How much of the layer's turn the preview draws, from upright at zero to
    * as turned at one. */
   share: number;
 };
 
 /**
- * How much of a turned layer's turn the preview draws as the crop tool comes
- * and goes. The crop overlay and the magnifier work on the upright picture, so
- * taking the tool up eases the turn out with the layer still cropped, and the
- * crop is only shown once it stands upright; putting the tool down takes the
- * crop away at once and eases the turn back in. The turn eases about the
- * layer's own middle, which the whole uncropped picture would move. A layer
- * that is not turned, or reduced motion, switches at once.
+ * How the picture moves as the crop tool comes and goes. The crop overlay
+ * and the magnifier work on the whole, upright picture, so taking the tool
+ * up opens the picture out around its crop while a turned layer's turn eases
+ * out, and the crop is only shown once both are done; putting the tool down
+ * takes the crop away and eases both back, so the picture is seen closing
+ * onto its crop rather than jumping (user asked). The turn eases about the
+ * layer's own middle, which the whole uncropped picture would move. Reduced
+ * motion switches at once.
  */
 export function useCropTurn(isCropping: boolean, isTurned: boolean): CropTurn {
   const reduceMotion = useReducedMotion() === true;
-  const target = isCropping ? 0 : 1;
-  const eases = isTurned && !reduceMotion;
+  const target = isCropping ? 1 : 0;
   const value = useMotionValue(target);
   const subscribe = useCallback(
     (onChange: () => void) => value.on("change", onChange),
     [value],
   );
-  const share = useSyncExternalStore(subscribe, () => value.get());
+  const progress = useSyncExternalStore(subscribe, () => value.get());
   useEffect(() => {
-    if (!eases) {
+    if (reduceMotion) {
       value.jump(target);
       return;
     }
@@ -45,7 +49,11 @@ export function useCropTurn(isCropping: boolean, isTurned: boolean): CropTurn {
     return () => {
       controls.stop();
     };
-  }, [eases, target, value]);
-  const drawn = eases ? share : target;
-  return { isFlat: isCropping && drawn === 0, share: drawn };
+  }, [reduceMotion, target, value]);
+  const open = reduceMotion ? target : progress;
+  return {
+    isFlat: isCropping && open === 1,
+    open,
+    share: isTurned ? 1 - open : 1,
+  };
 }

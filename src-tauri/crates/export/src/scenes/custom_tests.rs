@@ -35,11 +35,14 @@ fn custom(preset: RecordingScenePreset, camera: Option<SceneBox>) -> RecordingSc
       camera,
       camera_behind: false,
       screen_hidden: false,
+      camera_hidden: false,
     }),
     radius: None,
     inset: None,
     rotation: None,
     variant: None,
+    layout_before: None,
+    shapes: None,
     follow_face: None,
     cursor: None,
     background: None,
@@ -187,11 +190,11 @@ fn a_preset_made_custom_keeps_every_pane_where_the_preset_put_it() {
         camera.frame_height,
       ]),
       round([camera.camera_x, camera.camera_y, camera.camera_width, 0.0]),
-      // Whether the screen, and what is drawn on it, shows; a camera shown
-      // where none is drawn in makes no difference.
-      output
-        .scene_opacity
-        .map(|[screen, _, annotations]| [screen, annotations]),
+      // Whether the screen, the camera and what is drawn on the screen
+      // show; a camera shown where none is drawn in makes no difference.
+      output.scene_opacity.map(|[screen, camera, annotations]| {
+        [screen, if with_camera { camera } else { 0.0 }, annotations]
+      }),
     )
   };
   let cases = [
@@ -266,6 +269,7 @@ fn boxes_whose_middle_leaves_the_canvas_are_refused() {
     camera: None,
     camera_behind: false,
     screen_hidden: false,
+    camera_hidden: false,
   });
   assert!(validate_clips(&[lost]).is_err());
 }

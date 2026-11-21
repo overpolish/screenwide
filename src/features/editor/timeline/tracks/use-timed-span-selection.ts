@@ -29,11 +29,12 @@ export type TimedSpanSelection = {
  * deleted or undone away, leaves the choice with it, so undoing it back never
  * brings it back chosen.
  *
- * Once clips are chosen, the choice follows the playhead the way the panel
- * that edits them does: the clip it moves onto is chosen alone, and none
- * while it is between clips. It follows until the choice is let go, deleted
- * or taken by a choice elsewhere; until the playhead moves onto another
- * clip, a choice of several stays as it was made.
+ * Once clips are chosen, the choice follows the playhead onto the next clip
+ * it moves onto, which is chosen alone, so the panel that edits them shows
+ * that clip. Moving off a clip into a stretch between clips keeps the choice
+ * as it is. It follows until the choice is let go, deleted or taken by a
+ * choice elsewhere; until the playhead moves onto another clip, a choice of
+ * several stays as it was made.
  */
 export function useTimedSpanSelection<Clip extends TimedSpanClip>({
   clips,
@@ -51,8 +52,7 @@ export function useTimedSpanSelection<Clip extends TimedSpanClip>({
   const editGesture = useEditorEditGesture();
   if (followedId !== currentId) {
     setFollowedId(currentId);
-    if (isFollowing)
-      setIds(currentId === null ? NOTHING_CHOSEN : new Set([currentId]));
+    if (isFollowing && currentId !== null) setIds(new Set([currentId]));
   } else if ([...ids].some((id) => !clips.some((clip) => clip.id === id)))
     setIds(new Set([...ids].filter((id) => clips.some((c) => c.id === id))));
   const onClear = useCallback(() => {

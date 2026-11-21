@@ -5,7 +5,7 @@ use super::*;
 use screenwide_output::fixtures::test_output_settings;
 use screenwide_output::ScreenshotOutputSettings;
 use screenwide_scenes::geometry::{preset_panes, PresetPanes, Rect};
-use screenwide_scenes::model::RecordingScenePreset;
+use screenwide_scenes::model::{RecordingScenePreset, SceneShapes};
 use screenwide_scenes::variant::{SceneBubbleSize, SceneCameraSize, SceneCorner, SceneVariant};
 use screenwide_scenes::CameraOverlaySettings;
 use screenwide_scenes::RecordingSceneClip;
@@ -43,6 +43,8 @@ fn clip(preset: RecordingScenePreset) -> RecordingSceneClip {
     inset: None,
     rotation: None,
     variant: None,
+    layout_before: None,
+    shapes: None,
     follow_face: None,
     cursor: None,
     background: None,
@@ -178,4 +180,56 @@ fn a_blank_scene_hides_both_panes_but_keeps_what_is_drawn_on_the_screen() {
   let [screen, camera, annotations] = arriving.scene_opacity.unwrap();
   assert!(screen > 0.0 && screen < 1.0 && camera > 0.0 && camera < 1.0);
   assert_eq!(annotations, 1.0);
+}
+
+#[test]
+fn a_preset_lays_a_cropped_screen_out_at_the_crop_shape() {
+  let shaped = RecordingSceneClip {
+    shapes: Some(SceneShapes {
+      screen: Some(1.0),
+      camera: None,
+    }),
+    ..clip(RecordingScenePreset::SplitTwoThirds)
+  };
+  let (output, _) = arranged(shaped, 5_000);
+  let PresetPanes { screen, .. } = preset_panes(
+    RecordingScenePreset::SplitTwoThirds,
+    CANVAS,
+    (1.0, 16.0 / 9.0),
+    SceneVariant::default(),
+  )
+  .unwrap();
+  assert_rect(
+    Rect {
+      x: output.crop_x,
+      y: output.crop_y,
+      width: output.crop_width,
+      height: output.crop_height,
+    },
+    {
+      let screen = screen.unwrap();
+      (screen.x, screen.y, screen.width, screen.height)
+    },
+  );
+}
+
+#[test]
+fn a_full_scene_fits_a_cropped_camera_inside_its_own_place() {
+  let shaped = RecordingSceneClip {
+    shapes: Some(SceneShapes {
+      screen: None,
+      camera: Some(2.0),
+    }),
+    ..clip(RecordingScenePreset::Full)
+  };
+  let (_, overlay) = arranged(shaped, 5_000);
+  assert_rect(
+    Rect {
+      x: overlay.frame_x,
+      y: overlay.frame_y,
+      width: overlay.frame_width,
+      height: overlay.frame_height,
+    },
+    (1_310.0, 705.0, 180.0, 90.0),
+  );
 }

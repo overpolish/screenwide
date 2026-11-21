@@ -25,7 +25,7 @@ export function cursorIslandContent({
   snapshot,
 }: Inputs): EditorIslandContent {
   const { cursorEffects, scene } = snapshot;
-  const isInScene = scene?.hasSceneAtPlayhead ?? false;
+  const isInScene = scene?.hasSceneInHand ?? false;
   const sceneCursor = isInScene ? (scene?.cursor ?? null) : null;
   return cursorIsland({
     isCursorShown: sceneCursor ?? cursorEffects.bake,

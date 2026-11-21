@@ -90,6 +90,19 @@ export function useRecordingColumn({
     onSelectedTrackChange?.(null);
     setPanel(null);
   };
+  /** Select taken up: from Crop, on the track the crop was on, as a
+   * screenshot's Crop put away leaves its layer chosen, since cropping and
+   * then moving or resizing is the common way on (user asked); from any
+   * other tool, with nothing chosen. */
+  const selectTool = () => {
+    if (canvasTool !== "crop") {
+      backToSelect();
+      return;
+    }
+    changeCanvasTool("select");
+    annotations.clearSelection();
+    setPanel(null);
+  };
   /** Opens `next`, letting go of the annotations chosen, or puts the open
    * mode away for none, with nothing chosen at all. */
   const chooseMode = (next: EditorMode | null) => {
@@ -116,7 +129,7 @@ export function useRecordingColumn({
    * or Crop, which takes the screen's track in hand where none is. */
   const takeUp = (next: EditorTool) => {
     if (next === "select") {
-      backToSelect();
+      selectTool();
       return;
     }
     if (next === "crop" && activeVideoTrack === null)
@@ -141,6 +154,8 @@ export function useRecordingColumn({
       if (mode !== next) chooseMode(next);
     },
     ownsEscape,
+    /** Select taken up by its key, or Crop's confirmed with Return. */
+    selectTool,
     /** C: Crop taken up, or put down while it is in hand. */
     toggleCrop: () => {
       takeUp(canvasTool === "crop" ? "select" : "crop");

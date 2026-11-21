@@ -100,32 +100,19 @@ impl Base {
     clip.follow_face.unwrap_or(self.follows)
   }
 
-  /// The framing a drag on the camera in `clip` starts from where the clip
-  /// keeps none of its own: the whole picture for an arrangement, and for a
-  /// full scene the recording's crop, which following centres on the face.
-  pub(super) fn unframed(
-    &self,
-    clip: &RecordingSceneClip,
-    overlay: &CameraOverlaySettings,
-  ) -> SceneFraming {
-    match (clip.needs_camera(), self.follows(clip), self.camera_aspect) {
-      (true, _, _) | (false, _, None) => SceneFraming::WHOLE,
-      (false, true, Some(_)) => SceneFraming::centred(self.own_zoom),
-      (false, false, Some(aspect)) => SceneFraming::of_camera(overlay, aspect),
-    }
-  }
-
-  /// Where `clip`'s preset puts the panes on this canvas; `None` for the
-  /// presets that keep the composition's own (full and screen only).
+  /// Where `clip`'s preset puts the panes on this canvas, each at the shape
+  /// the scene crops it to, else its picture's; `None` for the presets that
+  /// keep the composition's own (full and screen only).
   pub(super) fn preset_panes(&self, clip: &RecordingSceneClip) -> Option<PresetPanes> {
     let crop = self.placement.screen;
+    let shapes = clip.shapes.unwrap_or_default();
     // Without a camera no preset that places one plays, so any shape will do.
     preset_panes(
       clip.preset,
       self.canvas,
       (
-        crop.width / crop.height,
-        self.camera_aspect.unwrap_or(16.0 / 9.0),
+        shapes.screen.unwrap_or(crop.width / crop.height),
+        shapes.camera.or(self.camera_aspect).unwrap_or(16.0 / 9.0),
       ),
       clip.variant.unwrap_or_default(),
     )
@@ -142,13 +129,15 @@ impl Base {
       (Some(boxes), _) => (
         boxes.screen.on(self.canvas),
         match boxes.camera {
-          Some(camera) => {
+          // A camera the scene hides needs none drawn into the picture.
+          Some(camera) if !boxes.camera_hidden => {
             self.camera_aspect?;
             camera.on(self.canvas)
           }
+          Some(camera) => camera.on(self.canvas),
           None => base.frame,
         },
-        (!boxes.screen_hidden, true),
+        (!boxes.screen_hidden, !boxes.camera_hidden),
       ),
       (None, Some(panes)) => {
         if panes.camera.is_some() {
@@ -160,11 +149,18 @@ impl Base {
           (panes.screen.is_some(), panes.camera.is_some()),
         )
       }
-      (None, None) => (
-        crop,
-        base.frame,
-        (true, clip.preset != RecordingScenePreset::ScreenOnly),
-      ),
+      // The composition's own places, each pane cropped to a shape of the
+      // scene's own fitted inside its place, about its middle.
+      (None, None) => {
+        let shapes = clip.shapes.unwrap_or_default();
+        (
+          shapes.screen.map_or(crop, |shape| fitted(crop, shape)),
+          shapes
+            .camera
+            .map_or(base.frame, |shape| fitted(base.frame, shape)),
+          (true, clip.preset != RecordingScenePreset::ScreenOnly),
+        )
+      }
     };
     // The screen's framing places the visible crop as if it were the
     // picture, so a zoom shows less of what the crop shows; the whole image
@@ -231,5 +227,18 @@ impl Base {
       // crop.
       inset,
     })
+  }
+}
+
+/// The largest rect of `shape`, width over height, inside `place`, about its
+/// middle.
+pub(super) fn fitted(place: Rect, shape: f64) -> Rect {
+  let width = place.width.min(place.height * shape);
+  let height = width / shape;
+  Rect {
+    x: place.x + (place.width - width) / 2.0,
+    y: place.y + (place.height - height) / 2.0,
+    width,
+    height,
   }
 }

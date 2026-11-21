@@ -4,12 +4,8 @@
 import { useEffect, useReducer, useRef } from "react";
 
 import { type SceneDrawing } from "../../glyphs/scene-layout-drawing";
-import { screenshotLayout } from "../../screenshot/screenshot-layout";
 import { ScreenshotOutputSettings } from "../../screenshot/screenshot-output";
-import {
-  createRecordingTimelineEdit,
-  RecordingTimelineEdit,
-} from "../../timeline/editing/recording-timeline-edit";
+import { RecordingTimelineEdit } from "../../timeline/editing/recording-timeline-edit";
 import {
   recordingTimelineLengthMs,
   recordingTimelineMsAt,
@@ -22,18 +18,14 @@ import {
 } from "../../timeline/tracks/use-timed-span-selection";
 import { CameraOverlaySettings, RecordingVideoTrackId } from "../../types";
 import { withSceneClips } from "../annotations/recording-annotation-scenes";
-import { retimedSpanClips } from "../recording-overlay-retime";
 
-import {
-  ownEditedAutoZooms,
-  planRecordingAutoZoom,
-  visibleScreenArea,
-  withAutoZooms,
-} from "./recording-scene-auto-zoom";
+import { sceneAnalysisControls } from "./recording-scene-analysis-controls";
+import { ownEditedAutoZooms } from "./recording-scene-auto-zoom";
 import {
   RecordingSceneControls,
   usePublishRecordingScene,
 } from "./recording-scene-channel";
+import { useSceneCropHold } from "./recording-scene-crop-hold";
 import { sceneClipDrawing } from "./recording-scene-drawing";
 import { recordingSceneEdits } from "./recording-scene-edits";
 import {
@@ -41,7 +33,6 @@ import {
   selectedPaneFraming,
 } from "./recording-scene-pane-framing";
 import { toolPanelSceneOf } from "./recording-scene-panel-snapshot";
-import { recenterSceneScreen } from "./recording-scene-recenter";
 import { RecordingSceneClip } from "./recording-scenes";
 import { useScenePreviewSync } from "./use-scene-preview-sync";
 
@@ -190,10 +181,12 @@ export function useRecordingScenes({
           output,
           selectsCamera,
         });
-  const currentPane = current ? paneOf(current) : null;
+  // A preset the crop tool is on is drawn held where its panes stood, which
+  // the preview does only while the crop tool is on a pane.
   const showDraft = useScenePreviewSync({
     clips,
     edit,
+    held: useSceneCropHold(clips),
     look: { cameraOverlay, output },
     sessionId,
     sourceDurationMs,
@@ -203,9 +196,16 @@ export function useRecordingScenes({
     commit,
     currentId: current?.id ?? null,
   });
+  // The scene the Scene island and its asks act on: the one chosen on the
+  // strip, where one alone is, wherever the playhead stands, else the one
+  // under the playhead. The picture shows the playhead's moment either way,
+  // and what is done on it acts on what it shows.
+  const chosenId = selection.ids.size === 1 ? [...selection.ids][0] : null;
+  const inHand = clips.find((clip) => clip.id === chosenId) ?? current;
   const controls: RecordingSceneControls = {
     ...recordingSceneEdits({
       camera: sceneCamera,
+      chosenId,
       clips,
       commit,
       getTimelineMs: () => timelineMsAt(getPositionMs()),
@@ -213,64 +213,29 @@ export function useRecordingScenes({
       output,
       paneOf,
     }),
-    autoZoom: () => {
-      planRecordingAutoZoom(
-        artifactId,
-        visibleScreenArea(output, frames.primary),
-      )
-        .then((planned) => {
-          // The plan is timed on the whole recording; it lands on the
-          // timeline as it now stands.
-          const latest = editRef.current;
-          commitClips(
-            withAutoZooms(
-              latest.sceneClips ?? EMPTY_CLIPS,
-              retimedSpanClips(planned, {
-                next: latest.segments,
-                previous: createRecordingTimelineEdit(latest.artifactId)
-                  .segments,
-                sourceDurationMs,
-              }),
-            ),
-          );
-        })
-        .catch((cause: unknown) => {
-          console.error("Could not make the auto zooms", cause);
-        });
-    },
-    clearAutoZooms: () => {
-      commitClips(withAutoZooms(editRef.current.sceneClips ?? EMPTY_CLIPS, []));
-    },
-    recenterScreen: () => {
-      const positionMs = getPositionMs();
-      const target = timedSpanClipAt(clips, timelineMsAt(positionMs));
-      if (!target || !frames.primary) return;
-      recenterSceneScreen({
-        artifactId,
-        camera: sceneCamera,
-        clipId: target.id,
-        commit: (next) => {
-          const latest = editRef.current.sceneClips ?? EMPTY_CLIPS;
-          commitClips(ownEditedAutoZooms(latest, next));
-        },
-        latest: () => editRef.current.sceneClips ?? EMPTY_CLIPS,
-        layout: screenshotLayout(frames.primary, output),
-        output,
-        positionMs,
-        source: frames.primary,
-      });
-    },
+    ...sceneAnalysisControls({
+      artifactId,
+      camera: sceneCamera,
+      commitClips,
+      getPositionMs,
+      inHand: () => inHand,
+      latestEdit: () => editRef.current,
+      output,
+      screen: frames.primary,
+      sourceDurationMs,
+    }),
   };
   usePublishRecordingScene(
     "recording",
     isAvailable
       ? toolPanelSceneOf({
+          atPlayhead: current,
           camera: sceneCamera,
           cameraAspect,
           cameraOverlay,
           clips,
-          current,
-          currentPane,
+          current: inHand,
+          currentPane: inHand ? paneOf(inHand) : null,
           hasCamera,
           isBaked,
           output,

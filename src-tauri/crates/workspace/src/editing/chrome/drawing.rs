@@ -22,8 +22,9 @@ pub(crate) fn chrome(
   // The objects picked in the camera while they are, drawn in place of
   // every other chrome.
   objects: Option<&crate::editing::object_picking::ObjectChrome>,
-  // A turned layer's frame and rings, and the turn its annotation chrome
-  // is carried through.
+  // A turned layer's frame, and the turn its annotation chrome is carried
+  // through. Its rings are laid over the chrome as they fade
+  // (`chrome_fade::add_rings`).
   turned: &crate::editing::turn::TurnChrome,
   scale: f64,
   light: bool,
@@ -80,15 +81,6 @@ pub(crate) fn chrome(
     } else {
       osc_gpu::add_selection(&mut vertices, view, logical_frame, scale);
     }
-  }
-  if let Some(rings) = turned.rings.as_ref().filter(|_| objects.is_none()) {
-    constants.turn_rings = rings.rows;
-    osc_gpu::add_quad(
-      &mut vertices,
-      view,
-      logical_rect(rings.quad, scale),
-      crate::editing::turn::RING_KIND,
-    );
   }
   // A turned layer's annotation guides run across it, and are carried with
   // it; the layer's own guides are the canvas's, which never turns.

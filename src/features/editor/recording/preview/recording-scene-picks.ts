@@ -16,7 +16,9 @@ const layerOf = (selection: RecordingPreviewSelection) =>
  * resizes like any layer, but the canvas it sits on is the scene's to size,
  * so dragging it never grows the canvas. The screen carries how it is
  * turned, by the scene or, outside every scene, by its own turn, which its
- * chrome is drawn through and the rotation gizmo turns. `freeScreen` frees
+ * chrome is drawn through and the rotation gizmo turns; its crop window
+ * carries it too, for the gizmo to fade as the crop opens
+ * (`openingCropChrome`). `freeScreen` frees
  * the screen of a scene that otherwise fixes its panes, a preset's, which
  * its first move or resize makes custom, so the select tool's handles resize
  * it as a box rather than zoom it in place; `freeCamera` frees a camera-only
@@ -62,7 +64,7 @@ export function scenePanePicks({
       layerOf(selection) <= 1
         ? { ...selection, inScene: true }
         : selection;
-    return layerOf(placed) === 0 && !placed.cropMode
+    return layerOf(placed) === 0
       ? {
           ...placed,
           rotation: arrangement

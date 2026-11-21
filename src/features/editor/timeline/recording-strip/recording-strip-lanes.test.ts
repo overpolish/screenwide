@@ -34,6 +34,7 @@ function lanesAt(
   playhead.publish(atSeconds, atSeconds / RECORDED);
   const seeks: number[] = [];
   const changed: RecordingSceneClip[][] = [];
+  const chosen: string[] = [];
   const source: RecordingStripLaneSource = {
     annotations: {
       clearSelection: () => undefined,
@@ -58,7 +59,9 @@ function lanesAt(
       selection: {
         ids: new Set(),
         onClear: () => undefined,
-        onSelect: () => undefined,
+        onSelect: (id) => {
+          chosen.push(id);
+        },
       },
     },
     seek: (seconds) => {
@@ -71,29 +74,24 @@ function lanesAt(
       },
     },
   };
-  return { changed, lanes: recordingStripLanes(source).lanes, seeks };
+  return {
+    changed,
+    chosen,
+    lanes: recordingStripLanes(source).lanes,
+    seeks,
+  };
 }
 
 describe("a scene drawn on the rail", () => {
-  it("brings the playhead to it, once arrived, where it stood before it", () => {
-    const { lanes, seeks } = lanesAt(1, [
-      { endMs: 3000, id: "before", preset: "full", startMs: 500 },
-    ]);
-    lanes.onSceneDraw(4, 6);
-    expect(seeks).toEqual([4.6]);
-  });
-
-  it("brings the playhead to it, once arrived, where it stood after it", () => {
-    const { lanes, seeks } = lanesAt(8);
-    lanes.onSceneDraw(6, 4);
-    expect(seeks).toEqual([4.6]);
-  });
-
-  it("leaves the playhead where it stands inside it", () => {
-    const { lanes, seeks } = lanesAt(5);
-    lanes.onSceneDraw(4, 6);
-    expect(seeks).toEqual([]);
-  });
+  it.each([1, 5, 8])(
+    "is chosen and leaves the playhead where it stands, at %d s",
+    (at) => {
+      const { changed, chosen, lanes, seeks } = lanesAt(at);
+      lanes.onSceneDraw(4, 6);
+      expect(chosen).toEqual([changed[0]?.[0]?.id]);
+      expect(seeks).toEqual([]);
+    },
+  );
 
   it("grows a drag too short to the shortest drawn scene, from the press", () => {
     const { changed, lanes } = lanesAt(0);
@@ -176,12 +174,5 @@ describe("a scene played across a jump", () => {
     const { changed, lanes } = across();
     lanes.onSceneRetime("across", 3, 5.5);
     expect(changed).toMatchObject([[{ endMs: 5500, startMs: 3000 }]]);
-  });
-
-  it("brings the playhead to where it lands, as recorded", () => {
-    const { lanes, seeks } = lanesAt(0, [], { map: MOVED });
-    lanes.onSceneDraw(4.5, 6);
-    // Arrived 0.6 s in, at 5.1 s as it plays: 7.1 s into the recording.
-    expect(seeks.map((at) => Number(at.toFixed(3)))).toEqual([7.1]);
   });
 });

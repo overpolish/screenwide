@@ -5,8 +5,10 @@ import type { SceneBox } from "./SceneBox";
  * Where a custom scene puts its panes in place of its preset's boxes, and
  * which of them is drawn in front. The camera keeps the recording's own box
  * where it has none, and is drawn in front unless `camera_behind` says
- * otherwise. The screen is shown unless `screen_hidden` says otherwise: a
- * camera-only scene made custom keeps the screen's box, unseen, so the
- * screen has somewhere to arrive from as the scene leaves.
+ * otherwise. Each pane is shown unless its `_hidden` says otherwise, and
+ * keeps its place while hidden, so it comes back where it was and has
+ * somewhere to arrive from as the scene leaves: a camera-only scene made
+ * custom keeps the screen's box unseen, a screen-only one the camera in the
+ * recording's own place.
  */
-export type SceneBoxes = { screen: SceneBox, camera?: SceneBox, cameraBehind?: true, screenHidden?: true, };
+export type SceneBoxes = { screen: SceneBox, camera?: SceneBox, cameraBehind?: true, screenHidden?: true, cameraHidden?: true, };

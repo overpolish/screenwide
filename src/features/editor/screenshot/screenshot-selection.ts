@@ -3,6 +3,7 @@
 
 import { CaptureSource, cornerRadiusFramePercent } from "../layer-measure";
 import { UPRIGHT_ROTATION, withShareOfTurn } from "../layer-rotation";
+import { openingCropChrome } from "../preview/opening-crop-chrome";
 
 import {
   ScreenshotLayout,
@@ -10,6 +11,8 @@ import {
   ScreenshotWorkspaceOutputSettings,
   screenshotLayout,
 } from "./screenshot-output";
+
+import type { CropTurn } from "../preview/use-crop-turn";
 
 /** Convert output-pixel layout into the pane fractions native OSCs consume. */
 export function normalizedScreenshotSelection(
@@ -47,38 +50,46 @@ const screenshotLayerTurn = (
 
 /** The selection the native overlay draws round the chosen layer: its frame,
  * or its crop while the crop tool shows it, turned as far as the crop's ease
- * (`turnShare`) has brought it. */
+ * (`cropTurn`) has brought it, the crop's chrome opening with it
+ * (`openingCropChrome`), which keeps the turn on the crop only while the
+ * gizmo fades. */
 export const screenshotItemSelection = ({
   cropKeepsShape,
   cropMode,
+  cropTurn,
   item,
   itemOutput,
   paneIndex,
   target,
-  turnShare,
 }: {
   cropKeepsShape: boolean;
   cropMode: boolean;
+  cropTurn: CropTurn;
   item: CaptureSource & { isBlank?: boolean };
   itemOutput: ScreenshotOutputSettings;
   paneIndex: number;
   target: { height: number; width: number };
-  turnShare: number;
-}) => ({
-  cropKeepsShape: cropMode && cropKeepsShape,
-  cropMode,
-  // A blank canvas's own layer draws no frame and is never pressed as a
-  // picture (`screenshot-blank.ts`).
-  isBlank: item.isBlank === true,
-  paneIndex,
-  radiusPercent: cornerRadiusFramePercent(itemOutput, item),
-  ...screenshotLayerTurn(withShareOfTurn(itemOutput, turnShare), cropMode),
-  ...normalizedScreenshotSelection(
-    screenshotLayout(item, itemOutput),
-    target,
-    cropMode ? "crop" : "select",
-  ),
-});
+}) =>
+  openingCropChrome(
+    {
+      cropKeepsShape: cropMode && cropKeepsShape,
+      cropMode,
+      // A blank canvas's own layer draws no frame and is never pressed as a
+      // picture (`screenshot-blank.ts`).
+      isBlank: item.isBlank === true,
+      paneIndex,
+      radiusPercent: cornerRadiusFramePercent(itemOutput, item),
+      rotation:
+        withShareOfTurn(itemOutput, cropTurn.share).rotation ??
+        UPRIGHT_ROTATION,
+      ...normalizedScreenshotSelection(
+        screenshotLayout(item, itemOutput),
+        target,
+        cropMode ? "crop" : "select",
+      ),
+    },
+    cropTurn,
+  );
 
 /** One selectable target per workspace pane, in pane order, for the native
  * select and crop overlays to hit-test. Panes whose item is gone are skipped. */

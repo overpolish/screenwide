@@ -10,7 +10,7 @@ use std::sync::{Arc, Mutex};
 
 use objc2::rc::Retained;
 use objc2::MainThreadMarker;
-use objc2_app_kit::{NSEvent, NSEventModifierFlags, NSResponder, NSView};
+use objc2_app_kit::{NSEvent, NSEventModifierFlags, NSResponder, NSView, NSWorkspace};
 use objc2_foundation::NSPoint;
 use objc2_quartz_core::CATransaction;
 
@@ -226,6 +226,10 @@ impl Host for MacHost {
 
   fn light_mode(&self) -> bool {
     self.light.load(Ordering::Relaxed)
+  }
+
+  fn reduces_motion(&self) -> bool {
+    NSWorkspace::sharedWorkspace().accessibilityDisplayShouldReduceMotion()
   }
 
   fn is_suspended(&self) -> bool {

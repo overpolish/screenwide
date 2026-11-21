@@ -23,11 +23,13 @@ import { sceneClipsBetween } from "./scene-clips-between";
 
 import type { GapScene } from "../../../../bindings/GapScene";
 
-/** Scenes with the timeline they are timed on and the gaps drawn among
- * them. */
+/** Scenes with the timeline they are timed on, the gaps drawn among them,
+ * and the scene the crop tool holds where its panes stood, which the preview
+ * draws only while the crop tool is on a pane. */
 type TimedScenes = {
   clips: RecordingSceneClip[];
   gaps: GapScene[];
+  held: RecordingSceneClip | null;
   playbackRanges: RecordingTimelinePlaybackRange[];
 };
 
@@ -75,12 +77,15 @@ const sendScenes = (
 export function useScenePreviewSync({
   clips,
   edit,
+  held,
   look,
   sessionId,
   sourceDurationMs,
 }: {
   clips: RecordingSceneClip[];
   edit: RecordingTimelineEdit;
+  /** The scene the crop tool holds where its panes stood. */
+  held: RecordingSceneClip | null;
   look: {
     cameraOverlay: CameraOverlaySettings;
     output: ScreenshotOutputSettings;
@@ -100,13 +105,14 @@ export function useScenePreviewSync({
   const timed = (sent: RecordingSceneClip[]): TimedScenes => ({
     clips: sent,
     gaps: recordingTimelineGaps(edit, sourceDurationMs),
+    held,
     playbackRanges: recordingTimelinePlaybackRanges(edit, sourceDurationMs),
   });
   useEffect(() => {
     if (sessionId !== null)
       sendScenes(queueRef.current, timed(drawnClips), sessionId);
-    // eslint-disable-next-line @eslint-react/exhaustive-deps -- `timed` reads only `edit` and `sourceDurationMs`.
-  }, [drawnClips, edit, sessionId, sourceDurationMs]);
+    // eslint-disable-next-line @eslint-react/exhaustive-deps -- `timed` reads only `edit`, `held` and `sourceDurationMs`.
+  }, [drawnClips, edit, held, sessionId, sourceDurationMs]);
   return (draft: RecordingSceneClip[] | null) => {
     if (sessionId !== null)
       sendScenes(queueRef.current, timed(draft ?? clips), sessionId);

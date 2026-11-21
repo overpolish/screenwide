@@ -3,14 +3,16 @@
 
 //! Reframing a scene's pane with the crop tool. While it is in hand the
 //! preview draws that pane so the crop window the webview lays over it shows
-//! what the scene picks from. A preset's pane is drawn unzoomed, the screen at
-//! the scene's box showing all of its crop and the camera as its whole picture
-//! covering its box. A custom scene's pane is cropped the way the recording's
-//! own composition is, so its picture is drawn where it already sits, uncut by
-//! its box. The screen is drawn upright either way, since the crop window is
-//! never turned, and the webview eases the scene's turn of it out before the
-//! reframe and back in after. Only the paused frame is drawn this way; the
-//! clip itself is not changed.
+//! what the scene picks from: cropped the way the recording's own
+//! composition is, its picture drawn where it already sits, uncut by its
+//! box, so nothing moves as the crop tool takes it. A preset's crop keeps
+//! its layout, which makes room for the crop's shape; only a custom scene's
+//! camera with no box of its own, sitting in the recording's place, is drawn
+//! as its whole picture covering that place instead. The screen is drawn
+//! upright either way, since the crop window is never turned, and the
+//! webview eases the scene's turn of it out before the reframe and back in
+//! after. Only the paused frame is drawn this way; the clip itself is not
+//! changed.
 
 use super::*;
 use screenwide_output::ScreenshotOutputSettings;
@@ -23,12 +25,15 @@ pub(crate) enum SceneReframe {
   Camera,
 }
 
-/// What the crop tool asks of the scenes: the pane it reframes, if any, and
-/// how much of a scene's turn of the screen is drawn, from upright at zero
-/// to as turned at one, while that turn eases out or back in.
+/// What the crop tool asks of the scenes: the pane it reframes, if any, how
+/// far that pane is opened out around its crop, from as the scene lays it at
+/// zero to its whole picture at one, and how much of a scene's turn of the
+/// screen is drawn, from upright at zero to as turned at one. The webview
+/// eases both as the tool comes and goes.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub(super) struct SceneCrop {
   pub(super) pane: Option<SceneReframe>,
+  pub(super) open: f64,
   pub(super) screen_turn: f64,
 }
 
@@ -36,52 +41,73 @@ impl Default for SceneCrop {
   fn default() -> Self {
     Self {
       pane: None,
+      open: 0.0,
       screen_turn: 1.0,
     }
   }
 }
 
-impl SceneCrop {
-  /// How much of the screen's turn is drawn: none while the screen itself is
-  /// reframed, whose crop window is never turned.
-  pub(super) fn screen_turn(self) -> f64 {
-    if self.pane == Some(SceneReframe::Screen) {
-      0.0
-    } else {
-      self.screen_turn
+/// Draws the pane `reframe` names in `composition` as the crop tool shows it
+/// once open: cropped `in_place` its whole picture where it sits, else the
+/// camera's whole picture covering its place. `camera` is the camera's
+/// source size, `base` the screen as the recording composes it.
+pub(super) fn open_pane(
+  composition: &mut PreviewCompositionSettings,
+  (reframe, in_place, camera): (SceneReframe, bool, Option<(u32, u32)>),
+  base: &ScreenshotOutputSettings,
+) {
+  match (reframe, camera.filter(|_| composition.bake_camera)) {
+    (SceneReframe::Screen, _) if in_place => {
+      show_screen_picture(&mut composition.recording_output.primary, base)
     }
+    (SceneReframe::Camera, Some(camera)) if in_place => {
+      show_camera_picture(&mut composition.camera_overlay, camera)
+    }
+    (SceneReframe::Camera, Some(camera)) => {
+      show_whole_camera(&mut composition.camera_overlay, camera)
+    }
+    _ => {}
   }
 }
 
-/// Whether the pane `reframe` names has a box of its own in `clip`, which the
-/// crop tool then crops in place rather than reframing.
+/// `laid_out` drawn `open` of the way to `opened`: the screen's window and
+/// picture and the camera's box and picture each that part of the way, so
+/// the crop tool opens a pane out of its place and closes it back into it.
+pub(super) fn ease_open(
+  laid_out: &mut PreviewCompositionSettings,
+  opened: &PreviewCompositionSettings,
+  open: f64,
+) {
+  let ease = |from: &mut f64, to: f64| *from += (to - *from) * open;
+  let (screen, to) = (
+    &mut laid_out.recording_output.primary,
+    &opened.recording_output.primary,
+  );
+  ease(&mut screen.crop_x, to.crop_x);
+  ease(&mut screen.crop_y, to.crop_y);
+  ease(&mut screen.crop_width, to.crop_width);
+  ease(&mut screen.crop_height, to.crop_height);
+  ease(&mut screen.image_x, to.image_x);
+  ease(&mut screen.image_y, to.image_y);
+  ease(&mut screen.image_width, to.image_width);
+  let (camera, to) = (&mut laid_out.camera_overlay, &opened.camera_overlay);
+  ease(&mut camera.frame_x, to.frame_x);
+  ease(&mut camera.frame_y, to.frame_y);
+  ease(&mut camera.frame_width, to.frame_width);
+  ease(&mut camera.frame_height, to.frame_height);
+  ease(&mut camera.camera_x, to.camera_x);
+  ease(&mut camera.camera_y, to.camera_y);
+  ease(&mut camera.camera_width, to.camera_width);
+  ease(&mut camera.radius_percent, to.radius_percent);
+}
+
+/// Whether the crop tool crops the pane `reframe` names in place in `clip`:
+/// every pane but a custom scene's camera with no box of its own.
 pub(super) fn crops_in_place(clip: &RecordingSceneClip, reframe: SceneReframe) -> bool {
-  clip.boxes.is_some_and(|boxes| match reframe {
+  clip.boxes.is_none_or(|boxes| match reframe {
     SceneReframe::Screen => true,
     SceneReframe::Camera => boxes.camera.is_some(),
   })
-}
-
-/// `clips` as the preview draws them while `reframe` is in hand: the screen's
-/// framing of the clip `timeline_ms` into the edited video taken away, so
-/// the screen shows whole, unless that screen is cropped in place.
-pub(super) fn reframed_clips(
-  clips: &[RecordingSceneClip],
-  reframe: Option<SceneReframe>,
-  timeline_ms: u64,
-) -> Option<Vec<RecordingSceneClip>> {
-  if reframe != Some(SceneReframe::Screen) {
-    return None;
-  }
-  let mut clips = clips.to_vec();
-  let clip = clips
-    .iter_mut()
-    .find(|clip| clip.start_ms <= timeline_ms && timeline_ms < clip.end_ms)?;
-  if crops_in_place(clip, SceneReframe::Screen) {
-    return None;
-  }
-  clip.screen = None;
-  Some(clips)
 }
 
 /// The screen of an `output` a scene arranged from `base`, its box opened out
@@ -154,17 +180,20 @@ pub(super) fn show_whole_camera(overlay: &mut CameraOverlaySettings, camera: (u3
 }
 
 /// Tells the preview which pane of the scene under the playhead the crop tool
-/// is reframing, if any, and how much of the scene's turn of the screen to
-/// draw, redrawing a paused frame they change.
+/// is reframing, if any, how far it is opened out, and how much of the
+/// scene's turn of the screen to draw, redrawing a paused frame they change.
 #[tauri::command]
 pub async fn set_recording_preview_scene_reframe(
   state: tauri::State<'_, RecordingPreviewPlayerState>,
   session_id: u64,
   pane: Option<SceneReframe>,
+  open: f64,
   screen_turn: f64,
 ) -> Result<(), String> {
-  if !(0.0..=1.0).contains(&screen_turn) {
-    return Err("The screen's turn must be a share between 0 and 1".to_owned());
+  if !(0.0..=1.0).contains(&screen_turn) || !(0.0..=1.0).contains(&open) {
+    return Err(
+      "The crop's opening and the screen's turn must be shares between 0 and 1".to_owned(),
+    );
   }
   let mut manager = state
     .0
@@ -180,7 +209,11 @@ pub async fn set_recording_preview_scene_reframe(
     .crop
     .write()
     .map_err(|_| "The scenes are unavailable".to_owned())?;
-  let next = SceneCrop { pane, screen_turn };
+  let next = SceneCrop {
+    pane,
+    open,
+    screen_turn,
+  };
   if *current == next {
     return Ok(());
   }

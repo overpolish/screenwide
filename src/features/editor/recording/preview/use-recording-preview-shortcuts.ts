@@ -36,6 +36,7 @@ export function useRecordingPreviewShortcuts({
   offered,
   ownsEscape,
   player,
+  selectTool,
   step,
   toggleCrop,
   toggleMode,
@@ -68,6 +69,8 @@ export function useRecordingPreviewShortcuts({
   /** Whether anything is in hand for Escape to put down. */
   ownsEscape: boolean;
   player: ReturnType<typeof useRecordingPreviewPlayer>;
+  /** Select taken up, on the track Crop was on where Crop was in hand. */
+  selectTool: () => void;
   step: ReturnType<typeof useRecordingTimelineBlade>["step"];
   /** C: the Crop tool taken up or put down. */
   toggleCrop: () => void;
@@ -94,7 +97,7 @@ export function useRecordingPreviewShortcuts({
           annotations.arrangeSelected(move);
         }
       : arrangeScenePane,
-    onConfirm: isCropping ? backToSelect : undefined,
+    onConfirm: isCropping ? selectTool : undefined,
     // ⌘C and ⌘X copy and cut the annotations chosen; with none, ⌘C is the
     // title bar's copy of the frame.
     onCopy: annotations.clipboard.copy,
@@ -125,7 +128,7 @@ export function useRecordingPreviewShortcuts({
       hasVisiblePanes && hasAnnotations
         ? annotations.clipboard.selectAll
         : undefined,
-    onSelectTool: hasVisiblePanes ? backToSelect : undefined,
+    onSelectTool: hasVisiblePanes ? selectTool : undefined,
     onStep: !canNudgeActiveTrack && layout ? step : undefined,
     onToggleCameraPanel: offered.has("camera") ? mode("camera") : undefined,
     onToggleCaptionsPanel:

@@ -15,6 +15,10 @@ pub struct ScreenshotSurfacePane {
 #[derive(serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ScreenshotSelectionOverlay {
+  /// How far the crop's chrome has taken over from the select tool's, from
+  /// none at zero to all of it at one, as the crop opens; unset, all of it.
+  #[serde(default)]
+  pub(super) crop_open: Option<f64>,
   #[serde(default)]
   pub(super) crop_mode: bool,
   /// Whether the crop keeps its shape as its handles are pulled.
@@ -46,6 +50,7 @@ impl ScreenshotSelectionOverlay {
       recenter_width: self.recenter_bounds.map_or(0.0, |bounds| bounds.width),
       recenter_x: self.recenter_bounds.map_or(0.0, |bounds| bounds.x),
       recenter_y: self.recenter_bounds.map_or(0.0, |bounds| bounds.y),
+      crop_closing: 1.0 - self.crop_open.unwrap_or(1.0).clamp(0.0, 1.0),
       crop_mode: u32::from(self.crop_mode),
       crop_keeps_shape: u32::from(self.crop_keeps_shape),
       image_height: self.image.map_or(0.0, |image| image.height),

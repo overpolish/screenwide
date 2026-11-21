@@ -8,7 +8,7 @@ use super::gap_preview::SceneClips;
 use super::scene_reframe::{SceneCrop, SceneReframe};
 use super::*;
 use screenwide_export::scenes::arrange_following;
-use screenwide_scenes::{validate_clips, FacePath, GapScene, RecordingSceneClip};
+use screenwide_scenes::{FacePath, GapScene, RecordingSceneClip};
 
 /// The scenes the preview draws: the clips and the gaps drawn among them, the
 /// timeline they are timed on, how long the recording is, past which its gaps
@@ -116,9 +116,6 @@ impl PlayerSources {
       .map(|crop| *crop)
       .unwrap_or_default();
     let reframe = crop.pane;
-    // A reframed clip is drawn among the gaps as the clips it stands for.
-    let reframed = super::scene_reframe::reframed_clips(clips.own(), reframe, timeline_ms)
-      .map(|reframed| screenwide_scenes::with_gaps(&reframed, clips.gaps()));
     let camera = self.camera_source_size();
     // While the crop tool reframes the camera it is drawn still, the picture
     // where the webview's crop window expects it; the face is followed again
@@ -131,9 +128,22 @@ impl PlayerSources {
       .filter(|_| reframe != Some(SceneReframe::Camera))
       .and_then(|path| path.as_ref().map(|path| path.at(source_ms as f64)));
     let base = composition.recording_output.primary.clone();
+    // What the crop tool opens out: a preset it holds where its panes stood,
+    // else the scenes as they are. While the pane opens or closes the frame
+    // is drawn part of the way between the scenes laid out and that, so
+    // putting the tool away closes the picture onto where the scene lays it.
+    let held = reframe
+      .and_then(|_| clips.held_drawn())
+      .unwrap_or(clips.drawn());
+    let opening = reframe.filter(|_| crop.open < 1.0);
+    let mut opened = opening.map(|_| composition.clone());
     let placed = arrange_composition(
       composition,
-      reframed.as_deref().unwrap_or(clips.drawn()),
+      if opening.is_some() {
+        clips.drawn()
+      } else {
+        held
+      },
       &ranges,
       (source_ms, frame_ms),
       camera,
@@ -142,7 +152,7 @@ impl PlayerSources {
     if placed {
       super::scene_reframe::ease_screen_turn(
         &mut composition.recording_output.primary,
-        crop.screen_turn(),
+        crop.screen_turn,
       );
     }
     let Some(reframe) = reframe.filter(|_| placed) else {
@@ -153,17 +163,18 @@ impl PlayerSources {
       .iter()
       .find(|clip| clip.start_ms <= timeline_ms && timeline_ms < clip.end_ms)
       .is_some_and(|clip| super::scene_reframe::crops_in_place(clip, reframe));
-    match (reframe, camera.filter(|_| composition.bake_camera)) {
-      (SceneReframe::Screen, _) if in_place => {
-        super::scene_reframe::show_screen_picture(&mut composition.recording_output.primary, &base)
+    let pane = (reframe, in_place, camera);
+    match opened.as_mut() {
+      None => super::scene_reframe::open_pane(composition, pane, &base),
+      Some(opened) => {
+        arrange_composition(opened, held, &ranges, (source_ms, frame_ms), camera, face);
+        super::scene_reframe::ease_screen_turn(
+          &mut opened.recording_output.primary,
+          crop.screen_turn,
+        );
+        super::scene_reframe::open_pane(opened, pane, &base);
+        super::scene_reframe::ease_open(composition, opened, crop.open);
       }
-      (SceneReframe::Camera, Some(camera)) if in_place => {
-        super::scene_reframe::show_camera_picture(&mut composition.camera_overlay, camera)
-      }
-      (SceneReframe::Camera, Some(camera)) => {
-        super::scene_reframe::show_whole_camera(&mut composition.camera_overlay, camera)
-      }
-      _ => {}
     }
     placed
   }
@@ -233,67 +244,4 @@ impl PreviewPlayerManager {
     }
     Ok(())
   }
-}
-
-/// Hands the preview the recording's scene clips, the gaps drawn among them
-/// and the timeline they are timed on, as `playback_ranges` lay it out,
-/// redrawing a paused frame that they change. Where a scene follows the face
-/// before it has been found in the camera, finding it starts.
-#[tauri::command]
-pub async fn set_recording_preview_scenes(
-  app: tauri::AppHandle,
-  state: tauri::State<'_, RecordingPreviewPlayerState>,
-  session_id: u64,
-  clips: Vec<RecordingSceneClip>,
-  gaps: Vec<GapScene>,
-  playback_ranges: Vec<RecordingPreviewPlaybackRange>,
-) -> Result<(), String> {
-  validate_clips(&clips)?;
-  let ranges = super::animation_timeline_ranges(&playback_ranges);
-  let mut manager = state
-    .0
-    .lock()
-    .map_err(|_| "The recording preview player is unavailable".to_owned())?;
-  manager.require_session(session_id)?;
-  let sources = manager
-    .sources
-    .as_ref()
-    .ok_or_else(|| "The recording preview player is not open".to_owned())?;
-  let camera_follows = sources
-    .composition_settings
-    .as_ref()
-    .and_then(|settings| {
-      settings
-        .read()
-        .ok()
-        .map(|settings| settings.camera_overlay.follow_face)
-    })
-    .unwrap_or(false);
-  let unfound =
-    sources.awaits_face(camera_follows || clips.iter().any(|clip| clip.follow_face == Some(true)));
-  let mut current = sources
-    .scenes
-    .clips
-    .write()
-    .map_err(|_| "The scenes are unavailable".to_owned())?;
-  let mut current_ranges = sources
-    .scenes
-    .ranges
-    .write()
-    .map_err(|_| "The scenes are unavailable".to_owned())?;
-  let changed = current.set(clips, Some(gaps)) || *current_ranges != ranges;
-  *current_ranges = ranges;
-  drop(current);
-  drop(current_ranges);
-  let artifact_id = manager.artifact_id;
-  let redrawn = if changed {
-    manager.redraw_paused_frame()
-  } else {
-    Ok(())
-  };
-  drop(manager);
-  // A project reopened with a scene that follows the face, but no face kept
-  // beside it, finds it again as well as a scene just set to follow.
-  super::face_preview::find_face_when(unfound, app, artifact_id);
-  redrawn
 }

@@ -11,6 +11,8 @@ mod annotation;
 mod batch;
 mod callbacks;
 mod chrome;
+/// How the selection chrome changes from one thing to another.
+mod chrome_fade;
 mod controls;
 mod drop_landing;
 mod geometry;

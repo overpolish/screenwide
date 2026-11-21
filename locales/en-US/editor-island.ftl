@@ -394,11 +394,6 @@ editor-island-scene = Scene
 editor-island-scene-groups = Scene options
 # The groups of the scene's options, one shown beneath its row at a time.
 editor-island-scene-layout = Layout
-editor-island-scene-camera = Camera
-editor-island-scene-screen = Screen
-# Put one of a pane's figures back: its zoom to the whole picture, its position to the middle.
-editor-island-scene-reset-zoom = Reset zoom
-editor-island-scene-reset-position = Reset position
 editor-island-scene-delete = Delete the scene
 editor-island-scene-confirm-delete = Confirm deleting
 # The scene's layout places the camera, which is left out of the video when the camera is exported as its own file; choosing a layout without the camera brings the scene back.
@@ -443,14 +438,10 @@ editor-island-scene-saved-layout = Saved { $number }
 editor-island-follow-face = Follow face
 # Names the spinner beside Follow face for assistive technology, while the camera looks for the speaker's face.
 editor-island-finding-face = Finding your face
-editor-island-scene-zoom = Zoom
-# Which part of the pane's picture sits in the middle of its box.
-editor-island-scene-position = Position
-editor-island-scene-position-x = Horizontal position
-editor-island-scene-position-y = Vertical position
-# The axes the two position fields are for.
-editor-island-scene-x = X
-editor-island-scene-y = Y
+# Names a glyph toggle at the end of the Scene island's row, for assistive technology: whether this scene shows the camera. Turned off, a layout's camera gives way to the screen alone; turned back on, the layout comes back.
+editor-island-scene-show-camera = Show camera
+# Names a glyph toggle at the end of the Scene island's row, for assistive technology: whether this scene shows the screen. Turned off, a layout's screen gives way to the camera alone; turned back on, the layout comes back.
+editor-island-scene-show-screen = Show screen
 # Something on the picture turned in depth and flat: the screen in a scene, or a placed image.
 editor-island-rotation = Rotation
 editor-island-rotation-x = X rotation

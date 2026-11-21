@@ -283,3 +283,8 @@ pub(super) fn holds_existing(state: &SurfaceState) -> bool {
     .drag
     .is_some_and(|drag| !matches!(drag.target_kind, TARGET_NEW | TARGET_MARQUEE))
 }
+
+/// Whether a press is under way with an annotation tool in hand.
+pub(super) fn is_dragging(state: &SurfaceState) -> bool {
+  state.annotation.drag.is_some()
+}

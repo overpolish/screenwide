@@ -34,9 +34,9 @@ export const scenePanelHandlers = (
   | "onSceneBackgroundChange"
   | "onSceneCursorChange"
   | "onSceneDelete"
-  | "onSceneFramingChange"
   | "onSceneFollowFaceChange"
   | "onSceneInsetChange"
+  | "onScenePaneShownChange"
   | "onScenePanesSwap"
   | "onScenePlacementReset"
   | "onScenePresetChoose"
@@ -66,9 +66,6 @@ export const scenePanelHandlers = (
   onSceneFollowFaceChange: (follow) => {
     recordingSceneControls(workspace)?.setFollowFace(follow);
   },
-  onSceneFramingChange: (framing, pane) => {
-    recordingSceneControls(workspace)?.setFraming(framing, pane);
-  },
   // The pad is filled with the colour behind the recording's content, so
   // the first pad asks for that colour if none was read yet.
   onSceneInsetChange: (inset) => {
@@ -77,6 +74,9 @@ export const scenePanelHandlers = (
     };
     if (inset > 0) padWithInsetColor(workspace, setInset);
     else setInset();
+  },
+  onScenePaneShownChange: (pane, shown) => {
+    recordingSceneControls(workspace)?.setPaneShown(pane, shown);
   },
   onScenePanesSwap: () => {
     recordingSceneControls(workspace)?.swapPanes();

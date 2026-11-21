@@ -7,6 +7,7 @@ import {
   withRotation,
   withShareOfTurn,
 } from "../layer-rotation";
+import { outputBetween } from "../preview/picture-between";
 
 import {
   fullSourceRect,
@@ -205,16 +206,30 @@ export const uncroppedScreenshotPreviewOutput = (
 };
 
 /** A layer of `source` as the preview draws it while the crop tool comes and
- * goes: whole and upright once `cropTurn` stands it up, and until then
- * cropped as committed with the share of its turn the ease has reached. */
+ * goes: cropped as committed with the share of its turn the ease has
+ * reached, opened out around its crop as far as `cropTurn` has, and whole and
+ * upright once it is. */
 export const croppingScreenshotPreviewOutput = (
   source: { height: number; width: number },
   settings: ScreenshotOutputSettings,
-  { isFlat, share }: CropTurn,
-): ScreenshotOutputSettings =>
-  isFlat
-    ? uncroppedScreenshotPreviewOutput(source, settings)
-    : withShareOfTurn(settings, share);
+  { isFlat, open, share }: CropTurn,
+): ScreenshotOutputSettings => {
+  if (isFlat) return uncroppedScreenshotPreviewOutput(source, settings);
+  const turned = withShareOfTurn(settings, share);
+  if (open === 0) return turned;
+  // The whole picture turned as far as the cropped one, so only the crop
+  // opens between them. It opens as the one picture, its corners and shadow
+  // its own: the crop's result drawn again over a flat ghost (`cropPreview`)
+  // read as a second layer coming out from under it, so that waits until the
+  // crop is open, under the crop's shade.
+  const { cropPreview: _cropPreview, ...whole } =
+    uncroppedScreenshotPreviewOutput(source, settings);
+  return outputBetween(
+    turned,
+    turned.rotation ? withRotation(whole, turned.rotation) : whole,
+    open,
+  );
+};
 
 /** `workspace` as the preview draws it while the crop tool works on the
  * layer of `item`, as `croppingScreenshotPreviewOutput` draws it. */
@@ -223,7 +238,11 @@ export const croppingScreenshotWorkspace = (
   item: { height: number; id: number; width: number } | undefined,
   cropTurn: CropTurn,
 ): ScreenshotWorkspaceOutputSettings => {
-  if (!item || (!cropTurn.isFlat && cropTurn.share === 1)) return workspace;
+  if (
+    !item ||
+    (!cropTurn.isFlat && cropTurn.share === 1 && cropTurn.open === 0)
+  )
+    return workspace;
   return {
     ...workspace,
     items: workspace.items.map((itemOutput) =>

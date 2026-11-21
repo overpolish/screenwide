@@ -120,9 +120,8 @@ export function PreviewViewport({
     selectedItemId === null
       ? undefined
       : items.find((item) => item.id === selectedItemId);
-  // The crop tool works on the upright picture, so the layer's turn eases out
-  // before its crop is shown and back in once the tool is put down; the
-  // select chrome turns with it on the way.
+  // The crop tool works on the whole upright picture, which opens out round
+  // its crop and closes once put down, the crop's chrome fading with it.
   const cropTurn = useCropTurn(
     isEditing,
     isTurned(selectedItemOutput?.rotation),
@@ -341,12 +340,12 @@ export function PreviewViewport({
           selectedItemOutput
         ? screenshotItemSelection({
             cropKeepsShape,
-            cropMode: isCropShown,
+            cropMode: isEditing || cropTurn.open > 0,
+            cropTurn,
             item: selectedItem,
             itemOutput: selectedItemOutput,
             paneIndex: selectedItemIndex,
             target: output,
-            turnShare: cropTurn.share,
           })
         : null;
   const selectionTargets =

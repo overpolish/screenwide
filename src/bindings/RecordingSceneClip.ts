@@ -6,6 +6,7 @@ import type { SceneBoxes } from "./SceneBoxes";
 import type { SceneFraming } from "./SceneFraming";
 import type { SceneRadius } from "./SceneRadius";
 import type { SceneRotation } from "./SceneRotation";
+import type { SceneShapes } from "./SceneShapes";
 import type { SceneVariant } from "./SceneVariant";
 
 export type RecordingSceneClip = { id: string, startMs: number, endMs: number, preset: RecordingScenePreset, 
@@ -64,6 +65,19 @@ rotation?: SceneRotation,
  * How the preset is laid out, each option its default where unset.
  */
 variant?: SceneVariant, 
+/**
+ * The layout a preset scene had before one of its panes was turned off,
+ * which turning the pane back on returns to. Unset where no pane was
+ * turned off, and once a layout is chosen or a pane moved by hand.
+ */
+layoutBefore?: RecordingScenePreset, 
+/**
+ * The shape a preset scene crops each pane to, which its layout fits the
+ * pane at, so a crop keeps the preset and the layout makes room for it.
+ * Unset, each pane keeps the shape of its picture as the recording crops
+ * it. A custom scene's boxes carry their own shapes instead.
+ */
+shapes?: SceneShapes, 
 /**
  * Set on a zoom the auto zoom made that nobody has edited since. Making
  * the auto zooms again replaces these and leaves every other scene alone.

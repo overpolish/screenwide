@@ -42,7 +42,7 @@ export const rotatedSceneClip = (
 
 /** Whether a scene places a camera, which it can only do where the camera is
  * drawn into the picture. A custom scene places one where it has a box for
- * it. */
+ * it and does not hide it. The twin of `needs_camera` in `model.rs`. */
 export const sceneNeedsCamera = ({
   boxes,
   preset,
@@ -51,7 +51,7 @@ export const sceneNeedsCamera = ({
   boxes?: SceneBoxes;
 }) =>
   boxes
-    ? boxes.camera !== undefined
+    ? boxes.camera !== undefined && boxes.cameraHidden !== true
     : preset !== "full" && preset !== "screen-only" && preset !== "blank";
 
 /** Whether a scene shows the screen: every scene but camera only and blank,

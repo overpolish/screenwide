@@ -20,7 +20,7 @@ pub(super) fn push_quad(
     position: corners[index],
     uv: uvs[index],
     kind,
-    padding: 0,
+    fade: 0,
   };
   out.extend_from_slice(&[
     vertex(0),

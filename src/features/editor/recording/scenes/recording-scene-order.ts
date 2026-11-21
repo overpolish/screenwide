@@ -26,7 +26,9 @@ const isInFront = (clip: RecordingSceneClip, pane: ScenePane) =>
 
 /** Whether `clip` is custom and shows a box for each pane. */
 const hasTwoPanes = (clip: RecordingSceneClip) =>
-  Boolean(clip.boxes?.camera) && !clip.boxes?.screenHidden;
+  Boolean(clip.boxes?.camera) &&
+  !clip.boxes?.screenHidden &&
+  !clip.boxes?.cameraHidden;
 
 /**
  * The moves a menu on `pane` offers through `clip`'s order. Only a custom

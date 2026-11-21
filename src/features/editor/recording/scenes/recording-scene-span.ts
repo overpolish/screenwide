@@ -4,7 +4,10 @@
 import { RECORDING_SCENE_MINIMUM_MS } from "./recording-scenes";
 
 import type { SceneTemplate } from "./recording-scene-template";
-import type { RecordingScenePreset } from "./recording-scenes";
+import type {
+  RecordingSceneClip,
+  RecordingScenePreset,
+} from "./recording-scenes";
 
 /** How a scene is laid out when it is made or changed from outside the Scene
  * panel: as Custom, a preset, or one of your templates. */
@@ -101,4 +104,52 @@ export function sceneSpanTarget({
   // A scene with no room to be the shortest one keeps where it is.
   const { endMs, startMs } = timed ?? under;
   return { endMs, id: under.id, startMs, type: "change" };
+}
+
+/**
+ * `clips` with the scene `target` names laid out anew by `arrange` and moved
+ * to its span while it is still there, or a new one added over it, in
+ * order. Null where the span no longer fits between the other scenes, in
+ * whole milliseconds and within `lengthMs`, or is shorter than the shortest
+ * scene, unless a short scene keeps its place.
+ */
+export function clipsWithSpanChosen({
+  arrange,
+  clips,
+  lengthMs,
+  target,
+}: {
+  arrange: (clip: RecordingSceneClip) => RecordingSceneClip;
+  clips: readonly RecordingSceneClip[];
+  lengthMs: number;
+  target: SceneSpanTarget;
+}): RecordingSceneClip[] | null {
+  const { endMs, startMs } = target;
+  const changed =
+    target.type === "change"
+      ? clips.find((clip) => clip.id === target.id)
+      : undefined;
+  if (target.type === "change" && !changed) return null;
+  const keepsTiming = changed?.startMs === startMs && changed.endMs === endMs;
+  if (
+    !Number.isInteger(startMs) ||
+    !Number.isInteger(endMs) ||
+    startMs < 0 ||
+    endMs > lengthMs ||
+    (endMs - startMs < RECORDING_SCENE_MINIMUM_MS && !keepsTiming) ||
+    clips.some(
+      (clip) =>
+        clip !== changed && clip.startMs < endMs && startMs < clip.endMs,
+    )
+  )
+    return null;
+  const next = changed
+    ? clips.map((clip) =>
+        clip === changed ? arrange({ ...clip, endMs, startMs }) : clip,
+      )
+    : [
+        ...clips,
+        arrange({ endMs, id: crypto.randomUUID(), preset: "full", startMs }),
+      ];
+  return next.sort((a, b) => a.startMs - b.startMs);
 }

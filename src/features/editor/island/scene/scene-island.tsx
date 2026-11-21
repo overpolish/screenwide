@@ -9,13 +9,9 @@ import { SceneLayoutGlyph } from "../../glyphs/scene-layout-glyph";
 
 import { SceneActions, type SceneToolGroup } from "./scene-actions";
 import { SceneAutoZoomGroup } from "./scene-auto-zoom-group";
-import {
-  framingGroups,
-  layoutDrawing,
-  type SceneFramingProps,
-} from "./scene-framing";
+import { layoutDrawing, type SceneFramingProps } from "./scene-framing";
 import { SceneLayoutGroup } from "./scene-layout-group";
-import { ScenePaneGroup } from "./scene-pane-group";
+import { ScenePaneToggles } from "./scene-pane-toggles";
 
 import type { EditorIslandContent } from "../editor-island";
 
@@ -23,14 +19,16 @@ import type { EditorIslandContent } from "../editor-island";
 // that scene's stretch, and can delete it; with none, it frames the
 // recording wherever no scene covers it, and holds the zooms planned from
 // the cursor and keys. The row, drawn as the layout, chooses which group of
-// options hangs beneath; one always does, and the one last chosen opens
-// again for the next scene, or the layout where that group is missing.
-// Nothing here adds a scene: one is drawn along the strip's scene line and
-// set up once in hand, which the row's note says while none is. Moving,
-// zooming and rounding a pane is done on the picture; the groups hold the
-// choices, and exact figures for the framing. A pane's corners, and whether
-// the camera follows the face, belong to its layer and are set on the
-// Screen and Camera islands.
+// options hangs beneath where there is more than one; the one last chosen
+// opens again, or the layout where that group is missing. Nothing here adds
+// a scene: one is drawn along the strip's scene line and set up once in
+// hand, which the row's note says while none is. The row also ends with
+// whether the scene shows each pane, as glyphs (`ScenePaneToggles`), and
+// the layout group holds the layouts; moving, zooming and rounding a pane
+// is done on the picture (Select moves and resizes a box, the crop tool
+// picks what a pane shows). A pane's corners, and whether the camera
+// follows the face, belong to its layer and are set on the Screen and
+// Camera islands.
 
 export type SceneIslandProps = SceneFramingProps & {
   /** The planned zooms, where the recording has the cursor and keys to plan
@@ -53,14 +51,10 @@ export type SceneIslandProps = SceneFramingProps & {
 
 export function sceneIsland(props: SceneIslandProps): EditorIslandContent {
   const { autoZoom, scene } = props;
-  // A paused scene can still be given a layout that needs no camera, and
-  // its screen framed; its camera, out of the video, has nothing to frame.
-  const groups: SceneToolGroup[] = scene?.isPaused
-    ? framingGroups(props).filter((group) => group !== "camera")
-    : [
-        ...framingGroups(props),
-        ...(scene === null && autoZoom ? (["autoZoom"] as const) : []),
-      ];
+  const groups: SceneToolGroup[] = [
+    "layout",
+    ...(scene === null && autoZoom ? (["autoZoom"] as const) : []),
+  ];
   const open: SceneToolGroup | null = groups.includes(props.group)
     ? props.group
     : groups.length > 0
@@ -68,12 +62,15 @@ export function sceneIsland(props: SceneIslandProps): EditorIslandContent {
       : null;
   return {
     actions: (
-      <SceneActions
-        groups={groups}
-        onDelete={scene ? props.onDelete : undefined}
-        onGroupChange={props.onGroupChange}
-        open={open}
-      />
+      <>
+        {props.panesShown ? <ScenePaneToggles {...props} /> : null}
+        <SceneActions
+          groups={groups}
+          onDelete={scene ? props.onDelete : undefined}
+          onGroupChange={props.onGroupChange}
+          open={open}
+        />
+      </>
     ),
     anchor: "end",
     key: scene ? `scene-${scene.id}` : "scene",
@@ -91,9 +88,7 @@ export function sceneIsland(props: SceneIslandProps): EditorIslandContent {
             onClear={props.onClearAutoZooms}
             onRegenerate={props.onRegenerateAutoZooms}
           />
-        ) : open === null ? null : (
-          <ScenePaneGroup {...props} pane={open} />
-        )}
+        ) : null}
         {scene?.isPaused ? (
           <Alert className="w-0 min-w-full" role="status">
             {t("editor-island-scene-paused")}

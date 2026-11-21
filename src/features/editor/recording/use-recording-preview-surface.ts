@@ -18,6 +18,11 @@ import {
   audioRibbonViewport,
   createRecordingLayoutQueue,
 } from "./recording-preview-layout";
+import {
+  frameCoalescedGestures,
+  gestureFromPayload,
+  SelectionGesturePayload,
+} from "./recording-selection-gesture-events";
 
 import type { RecordingPreviewChrome } from "./recording-preview-layout";
 import type { SceneRotation } from "./scenes/recording-scenes";
@@ -56,6 +61,7 @@ export type RecordingPreviewSelection = {
   /** The crop window keeps its shape as its handles are dragged. */
   cropKeepsShape?: boolean;
   cropMode?: boolean;
+  cropOpen?: number; // how far the crop's chrome has taken over, 0 to 1
   /** A scene fixes where this pane sits: a move pans its picture and a
    * resize zooms it, and the outline stays put. */
   framed?: boolean;
@@ -158,6 +164,10 @@ export function useRecordingPreviewSurface({
     if (!isEnabled || !nativeEditorOwnsLayout) return;
     let disposed = false;
     const disposers: (() => void)[] = [];
+    const gestures = frameCoalescedGestures((gesture) => {
+      if (!disposed) onSelectionGestureRef.current?.(gesture);
+    });
+    disposers.push(gestures.dispose);
     void listen<{ paneIndex: number | null; sessionId: number }>(
       "recording-preview://selection-change",
       (event) => {
@@ -174,64 +184,35 @@ export function useRecordingPreviewSurface({
       if (disposed) dispose();
       else disposers.push(dispose);
     });
-    void listen<
-      Omit<RecordingSelectionGestureEvent, "operation"> & {
-        operation: number;
-        sessionId: number;
-      }
-    >("recording-preview://selection-gesture", (event) => {
-      const payload = event.payload;
-      if (
-        disposed ||
-        payload.sessionId !== sessionIdRef.current ||
-        !Number.isFinite(payload.deltaX) ||
-        !Number.isFinite(payload.deltaY) ||
-        !Number.isInteger(payload.edges) ||
-        ![0, 1, 2, 3, 4, 5, 6].includes(payload.operation) ||
-        !Number.isInteger(payload.paneIndex) ||
-        !Number.isFinite(payload.scale) ||
-        !["begin", "update", "end", "cancel"].includes(payload.phase)
-      )
-        return;
-      // Crop is a React-mirrored display mode. Its uncropped composition must
-      // be allowed to follow a layer selection immediately; freezing layout
-      // here leaves the native OSC on the new layer over the previous layer's
-      // pixels until mouse-up.
-      // A turn, like a move or a resize, is drawn natively at pointer rate.
-      if (payload.phase === "begin")
-        selectionGestureActiveRef.current =
-          payload.operation < 3 || payload.operation === 6;
-      else if (payload.phase === "end" || payload.phase === "cancel")
-        selectionGestureActiveRef.current = false;
-      onSelectionGestureRef.current?.({
-        cameraOverlay: payload.cameraOverlay,
-        deltaX: payload.deltaX,
-        deltaY: payload.deltaY,
-        edges: payload.edges,
-        operation: [
-          "move",
-          "resize",
-          "frameResize",
-          "cropMove",
-          "cropResize",
-          "cropDraw",
-          "rotate",
-        ][payload.operation] as RecordingSelectionGestureEvent["operation"],
-        paneIndex: payload.paneIndex,
-        phase: payload.phase,
-        recordingOutput: payload.recordingOutput,
-        scale: payload.scale,
-      });
-      if (payload.phase === "end" || payload.phase === "cancel") {
-        // Pointer-rate composition is native, so React-driven layout sync is
-        // suppressed during the gesture. Reconcile once React has committed
-        // its final semantic frame; otherwise the native state can remain
-        // newer than React until some unrelated workarea interaction.
-        requestAnimationFrame(() => {
-          if (!disposed) measureRef.current();
-        });
-      }
-    }).then((dispose) => {
+    void listen<SelectionGesturePayload>(
+      "recording-preview://selection-gesture",
+      (event) => {
+        const payload = event.payload;
+        const gesture = gestureFromPayload(payload);
+        if (disposed || payload.sessionId !== sessionIdRef.current || !gesture)
+          return;
+        // Crop is a React-mirrored display mode. Its uncropped composition
+        // must be allowed to follow a layer selection immediately; freezing
+        // layout here leaves the native OSC on the new layer over the
+        // previous layer's pixels until mouse-up.
+        // A turn, like a move or a resize, is drawn natively at pointer rate.
+        if (payload.phase === "begin")
+          selectionGestureActiveRef.current =
+            payload.operation < 3 || payload.operation === 6;
+        else if (payload.phase === "end" || payload.phase === "cancel")
+          selectionGestureActiveRef.current = false;
+        gestures.take(gesture);
+        if (payload.phase === "end" || payload.phase === "cancel") {
+          // Pointer-rate composition is native, so React-driven layout sync
+          // is suppressed during the gesture. Reconcile once React has
+          // committed its final semantic frame; otherwise the native state
+          // can stay newer than React until an unrelated workarea interaction.
+          requestAnimationFrame(() => {
+            if (!disposed) measureRef.current();
+          });
+        }
+      },
+    ).then((dispose) => {
       if (disposed) dispose();
       else disposers.push(dispose);
     });

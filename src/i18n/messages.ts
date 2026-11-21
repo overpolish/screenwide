@@ -545,7 +545,6 @@ export type Messages = {
   "editor-island-scene-bottom": null;
   "editor-island-scene-bottom-left": null;
   "editor-island-scene-bottom-right": null;
-  "editor-island-scene-camera": null;
   "editor-island-scene-camera-only": null;
   "editor-island-scene-camera-place": null;
   "editor-island-scene-camera-size": null;
@@ -564,18 +563,14 @@ export type Messages = {
   "editor-island-scene-left": null;
   "editor-island-scene-paused": null;
   "editor-island-scene-picture-in-picture": null;
-  "editor-island-scene-position": null;
-  "editor-island-scene-position-x": null;
-  "editor-island-scene-position-y": null;
   "editor-island-scene-regenerate-auto-zooms": null;
   "editor-island-scene-remove-layout": null;
-  "editor-island-scene-reset-position": null;
-  "editor-island-scene-reset-zoom": null;
   "editor-island-scene-right": null;
   "editor-island-scene-save-layout": null;
   "editor-island-scene-saved-layout": { number: string | number };
-  "editor-island-scene-screen": null;
   "editor-island-scene-screen-only": null;
+  "editor-island-scene-show-camera": null;
+  "editor-island-scene-show-screen": null;
   "editor-island-scene-side-by-side": null;
   "editor-island-scene-size": null;
   "editor-island-scene-small": null;
@@ -584,9 +579,6 @@ export type Messages = {
   "editor-island-scene-top": null;
   "editor-island-scene-top-left": null;
   "editor-island-scene-top-right": null;
-  "editor-island-scene-x": null;
-  "editor-island-scene-y": null;
-  "editor-island-scene-zoom": null;
   "editor-island-screen": null;
   "editor-island-screen-in-scene": null;
   "editor-island-screen-inset": null;

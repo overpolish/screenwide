@@ -39,6 +39,8 @@ fn screen(source_ms: u64, frame_ms: f32) -> ScreenshotOutputSettings {
     inset: None,
     rotation: None,
     variant: None,
+    layout_before: None,
+    shapes: None,
     follow_face: None,
     cursor: None,
     background: None,

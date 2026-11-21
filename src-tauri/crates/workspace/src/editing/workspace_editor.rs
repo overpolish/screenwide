@@ -13,7 +13,7 @@ pub struct WorkspaceEditor {
 impl WorkspaceEditor {
   pub fn new(host: Box<dyn Host>) -> Self {
     Self {
-      inner: Arc::new(SurfaceInner::new(host, SurfaceState::default())),
+      inner: SurfaceInner::new(host, SurfaceState::default()),
     }
   }
 

@@ -3,7 +3,7 @@
 
 import { fn } from "storybook/test";
 
-import type { SceneFramingProps, ScenePane } from "./scene-framing";
+import type { SceneFramingProps } from "./scene-framing";
 import type { SceneBoxes } from "../../../../bindings/SceneBoxes";
 
 // The framing behind the scene island's stories, and handlers that write
@@ -81,37 +81,17 @@ export const FRAMING_ARGS = {
   },
   canPlaceCamera: true,
   layout: { kind: "preset", preset: "split-two-thirds" },
-  onCameraChange: fn(),
   onLayoutChange: fn(),
-  onPaneReset: fn(),
+  onPaneShownChange: fn(),
   onRemoveSavedLayout: fn(),
   onSaveLayout: fn(),
-  onScreenChange: fn(),
   onSwapPanes: fn(),
   onVariantChange: fn(),
+  panesShown: { camera: true, screen: true },
   savedLayouts: SAVED_LAYOUTS,
-  screen: {
-    focusX: 0.5,
-    focusY: 0.5,
-    radius: 12,
-    zoom: 1,
-  },
   variant: {},
   video: WIDE_VIDEO,
 } satisfies SceneFramingProps;
-
-const changed = <Pane extends ScenePane>(
-  pane: Pane,
-  patch: Partial<ScenePane>,
-): Pane => ({ ...pane, ...patch });
-
-const reset = <Pane extends ScenePane>(
-  pane: Pane,
-  figure: "position" | "zoom",
-): Pane =>
-  figure === "zoom"
-    ? { ...pane, zoom: 1 }
-    : { ...pane, focusX: 0.5, focusY: 0.5 };
 
 /** The framing's handlers for a story's render: each logs through the arg
  * and writes its change back with `updateArgs`. */
@@ -119,12 +99,7 @@ export function framingHandlers(
   args: SceneFramingProps,
   updateArgs: (patch: Partial<SceneFramingProps>) => void,
 ): Partial<SceneFramingProps> {
-  const { camera, screen } = args;
   return {
-    onCameraChange: (pane) => {
-      args.onCameraChange(pane);
-      if (camera) updateArgs({ camera: changed(camera, pane) });
-    },
     onLayoutChange: (layout) => {
       args.onLayoutChange(layout);
       updateArgs({
@@ -140,16 +115,10 @@ export function framingHandlers(
               },
       });
     },
-    onPaneReset: (pane, figure) => {
-      args.onPaneReset(pane, figure);
-      if (pane === "camera" && camera)
-        updateArgs({ camera: reset(camera, figure) });
-      if (pane === "screen" && screen)
-        updateArgs({ screen: reset(screen, figure) });
-    },
-    onScreenChange: (pane) => {
-      args.onScreenChange(pane);
-      if (screen) updateArgs({ screen: changed(screen, pane) });
+    onPaneShownChange: (pane, shown) => {
+      args.onPaneShownChange(pane, shown);
+      if (args.panesShown)
+        updateArgs({ panesShown: { ...args.panesShown, [pane]: shown } });
     },
     onSwapPanes: () => {
       args.onSwapPanes();

@@ -129,6 +129,23 @@ impl Host for WindowsHost {
     crate::app_windows::overlay_surface::light_mode()
   }
 
+  fn reduces_motion(&self) -> bool {
+    use windows::core::BOOL;
+    use windows::Win32::UI::WindowsAndMessaging::{
+      SystemParametersInfoW, SPI_GETCLIENTAREAANIMATION, SYSTEM_PARAMETERS_INFO_UPDATE_FLAGS,
+    };
+    let mut animates = BOOL(1);
+    let read = unsafe {
+      SystemParametersInfoW(
+        SPI_GETCLIENTAREAANIMATION,
+        0,
+        Some(std::ptr::from_mut(&mut animates).cast()),
+        SYSTEM_PARAMETERS_INFO_UPDATE_FLAGS::default(),
+      )
+    };
+    read.is_ok() && !animates.as_bool()
+  }
+
   fn is_suspended(&self) -> bool {
     self.editor.is_suspended()
   }

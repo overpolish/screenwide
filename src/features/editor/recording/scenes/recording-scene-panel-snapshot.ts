@@ -13,6 +13,7 @@ import {
   scenePaneFraming,
 } from "./recording-scene-pane-framing";
 import { isScenePaneAtLayout } from "./recording-scene-pane-reset";
+import { scenePaneIsShown } from "./recording-scene-pane-shown";
 import { SceneCamera } from "./recording-scene-placement";
 import { RecordingSceneClip } from "./recording-scenes";
 
@@ -82,12 +83,13 @@ export const sceneScreenRadius = (
 ): Measure => clip.radius?.screen ?? output.radius;
 
 /**
- * What the scene islands are shown of the scene under the playhead,
- * `current`, on the screen's `output`: its layout and each pane's framing
- * and corners, where it shows that pane, with the selected track's pane on
- * its own.
+ * What the scene islands are shown of the scene in hand, `current` (the one
+ * chosen on the strip, else the one under the playhead, `atPlayhead`), on
+ * the screen's `output`: its layout and each pane's framing and corners,
+ * where it shows that pane, with the selected track's pane on its own.
  */
 export function toolPanelSceneOf({
+  atPlayhead,
   camera,
   cameraAspect,
   cameraOverlay,
@@ -98,6 +100,8 @@ export function toolPanelSceneOf({
   isBaked,
   output,
 }: {
+  /** The scene under the playhead, null between scenes. */
+  atPlayhead: RecordingSceneClip | null;
   /** The camera a scene can place: one drawn into the picture. */
   camera: SceneCamera | null;
   cameraAspect: number;
@@ -145,6 +149,7 @@ export function toolPanelSceneOf({
       ? {
           camera: current.boxes.camera ?? null,
           cameraBehind: current.boxes.cameraBehind ?? false,
+          cameraHidden: current.boxes.cameraHidden ?? false,
           screen: current.boxes.screen,
           screenHidden: current.boxes.screenHidden ?? false,
         }
@@ -158,10 +163,17 @@ export function toolPanelSceneOf({
     framingPane: currentPane?.pane ?? "screen",
     hasAutoZooms: clips.some((clip) => clip.auto),
     hasCamera,
-    hasSceneAtPlayhead: current !== null,
+    hasSceneInHand: current !== null,
     hasScenes: clips.length > 0,
+    isAtPlayhead: current !== null && current.id === atPlayhead?.id,
     isBaked,
     panes: { camera: paneOf("camera"), screen: paneOf("screen") },
+    panesShown: current
+      ? {
+          camera: scenePaneIsShown(current, "camera"),
+          screen: scenePaneIsShown(current, "screen"),
+        }
+      : null,
     preset: current?.preset ?? null,
     radius: current && currentPane ? radiusOf(current, currentPane.pane) : null,
     rotation: current ? (current.rotation ?? UPRIGHT_ROTATION) : null,

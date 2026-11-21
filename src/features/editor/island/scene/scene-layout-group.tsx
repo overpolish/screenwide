@@ -202,7 +202,7 @@ export function SceneLayoutGroup(props: SceneFramingProps) {
         SCENE_ISLAND_WIDTH.part,
       )}
     >
-      <ScrollingTiles>
+      <ScrollingTiles key="tiles">
         <TileChoice
           aria-label={t("editor-island-scene-layouts")}
           items={tiles}

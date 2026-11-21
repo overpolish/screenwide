@@ -64,13 +64,37 @@ describe("crop preview of a turned layer", () => {
     rotation: { x: 20, y: -30, z: 10 },
   };
 
-  it("keeps the committed crop while the turn eases", () => {
+  it("keeps the committed crop while the turn eases, before it opens", () => {
     const easing = croppingScreenshotPreviewOutput(source, turned, {
       isFlat: false,
+      open: 0,
       share: 0.5,
     });
     expect(easing.rotation).toEqual({ x: 10, y: -15, z: 5 });
     expect(easing.sourceCrop).toEqual(turned.sourceCrop);
     expect(easing.cropPreview).toBeUndefined();
+  });
+
+  it("opens the crop out towards the whole picture as the tool comes", () => {
+    const cropped = croppingScreenshotPreviewOutput(source, turned, {
+      isFlat: false,
+      open: 0,
+      share: 0.5,
+    });
+    const whole = croppingScreenshotPreviewOutput(source, turned, {
+      isFlat: true,
+      open: 1,
+      share: 0,
+    });
+    const halfway = croppingScreenshotPreviewOutput(source, turned, {
+      isFlat: false,
+      open: 0.5,
+      share: 0.5,
+    });
+    // The part of the capture shown grows from the crop to all of it.
+    expect(halfway.sourceCrop.width).toBeGreaterThan(cropped.sourceCrop.width);
+    expect(halfway.sourceCrop.width).toBeLessThan(whole.sourceCrop.width);
+    // Only the crop opens: the turn stays where its own ease has it.
+    expect(halfway.rotation).toEqual({ x: 10, y: -15, z: 5 });
   });
 });

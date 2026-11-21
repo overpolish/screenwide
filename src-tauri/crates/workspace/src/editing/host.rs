@@ -85,6 +85,10 @@ pub trait Host: Any + Send + Sync {
   /// outline and the backstop follow.
   fn light_mode(&self) -> bool;
 
+  /// Whether the person has asked the system for less motion, in which
+  /// case the chrome crossfades where it would glide.
+  fn reduces_motion(&self) -> bool;
+
   /// Whether the frontend has the workarea covered with its own chrome, in
   /// which case the workspace answers no press.
   fn is_suspended(&self) -> bool;

@@ -153,9 +153,10 @@ pub(super) fn draw_selection(inner: &SurfaceInner, state: &SurfaceState) {
   });
   let objects = object_picking::chrome(state);
   // A turned layer's frame and annotation chrome are drawn through its turn,
-  // and the select tool's rings over it.
-  let turned = turn::chrome(state, scale);
-  let (size, vertices, constants) = chrome::chrome(
+  // and the select tool's rings over it, which fade and glide on their own.
+  let mut turned = turn::chrome(state, scale);
+  let rings = turned.rings.take().filter(|_| objects.is_none());
+  let (size, vertices, mut constants) = chrome::chrome(
     (
       (viewport_right - viewport_x).max(2) as u32,
       (viewport_bottom - viewport_y).max(2) as u32,
@@ -171,5 +172,33 @@ pub(super) fn draw_selection(inner: &SurfaceInner, state: &SurfaceState) {
     scale,
     luminance > 0.5,
   );
+  // The crop's shade fades and its ants part as its chrome takes over from
+  // the select tool's.
+  let shown = state.selection.map_or(1.0, |selection| {
+    (1.0 - selection.crop_closing).clamp(0.0, 1.0) as f32
+  });
+  constants.opacity[0] = shown;
+  constants.opacity[1] = shown;
+  let key = chrome_fade::key(
+    state,
+    objects.is_some(),
+    annotation_chrome.is_some(),
+    frame.is_some(),
+  );
+  let Ok(mut fade) = inner.chrome_fade.lock() else {
+    return;
+  };
+  let (mut vertices, rings) = fade.ease(
+    key,
+    vertices,
+    rings,
+    chrome_fade::is_held(state),
+    || !inner.host.reduces_motion(),
+    std::time::Instant::now(),
+  );
+  if let Some(rings) = rings {
+    chrome_fade::add_rings(&mut vertices, &mut constants, size, scale, rings);
+  }
+  chrome_fade::keep_drawing(inner, &mut fade);
   inner.host.present_chrome(size, &vertices, &constants);
 }

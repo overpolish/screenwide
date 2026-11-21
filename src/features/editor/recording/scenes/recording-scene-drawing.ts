@@ -33,6 +33,7 @@ export const WHOLE_FRAME = { height: 1, width: 1, x: 0, y: 0 };
 export const compositionBoxes = ({
   camera,
   cameraBehind,
+  cameraHidden,
   screen,
   screenHidden,
 }: SchematicComposition): SceneBoxes => ({
@@ -40,7 +41,19 @@ export const compositionBoxes = ({
   ...(camera ? { camera } : {}),
   ...(cameraBehind ? { cameraBehind } : {}),
   ...(screenHidden ? { screenHidden } : {}),
+  ...(cameraHidden ? { cameraHidden } : {}),
 });
+
+/** `boxes` with the camera drawn where the recording puts it, where the
+ * scene shows the camera but gives it no box of its own, as one made custom
+ * from a full or screen-only scene does; the picture puts it there too. */
+export const withCompositionCamera = (
+  boxes: SceneBoxes,
+  composition: SchematicComposition,
+): SceneBoxes =>
+  boxes.camera || boxes.cameraHidden || !composition.camera
+    ? boxes
+    : { ...boxes, camera: composition.camera };
 
 export function sceneClipDrawing(
   clip: RecordingSceneClip,
@@ -61,8 +74,17 @@ export function sceneClipDrawing(
     screen: look.composition.screen,
     screenAspect: look.screenAspect,
   };
-  if (clip.boxes) return boxesDrawing(clip.boxes, shape);
+  if (clip.boxes)
+    return boxesDrawing(
+      withCompositionCamera(clip.boxes, look.composition),
+      shape,
+    );
   if (clip.preset === "full")
     return boxesDrawing(compositionBoxes(look.composition), shape);
-  return presetDrawing(clip.preset, clip.variant ?? {}, shape);
+  // A preset lays its panes out at the shapes the scene crops them to.
+  return presetDrawing(clip.preset, clip.variant ?? {}, {
+    ...shape,
+    cameraAspect: clip.shapes?.camera ?? shape.cameraAspect,
+    screenAspect: clip.shapes?.screen ?? shape.screenAspect,
+  });
 }

@@ -14,7 +14,7 @@ use screenwide_shader_layout::{
 /// then the label, secondary label, frozen desktop and magnifier source
 /// textures, then the linear and point samplers. Binding 3 is unassigned, so
 /// the bindings after it keep their numbers. Vertices are `Vertex`: a
-/// position already in NDC, a texture coordinate and a kind.
+/// position already in NDC, a texture coordinate, a kind and a fade.
 pub(crate) const OSC: ShaderLayout = ShaderLayout {
   groups: &[&[
     fragment(0, Binding::DynamicUniform),
@@ -41,6 +41,11 @@ pub(crate) const OSC: ShaderLayout = ShaderLayout {
       Attribute {
         location: 2,
         offset: 16,
+        format: VertexFormat::Uint32,
+      },
+      Attribute {
+        location: 3,
+        offset: 20,
         format: VertexFormat::Uint32,
       },
     ],

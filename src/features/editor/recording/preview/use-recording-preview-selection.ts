@@ -9,6 +9,7 @@ import {
   useMemo,
 } from "react";
 
+import { openingCropChrome } from "../../preview/opening-crop-chrome";
 import {
   RecordingOutputSettings,
   ScreenshotOutputSettings,
@@ -141,7 +142,9 @@ export function useRecordingPreviewSelection(
   const turn = useRecordingCropTurn({
     activeVideoTrack,
     arrangement: sceneArrangement,
+    bakesCamera: canPreviewBakedCamera,
     canvasTool,
+    isFramed,
     screenRotation: effectiveRecordingOutput.primary.rotation,
   });
   const { chromeTool } = turn;
@@ -202,14 +205,11 @@ export function useRecordingPreviewSelection(
       selectionOutput,
     ],
   );
-  // While the crop tool reframes a scene's pane, its selection is the crop
-  // window over the pane's unzoomed picture, once the screen stands upright.
-  // Panes not in hand keep their boxes, which is what the preview draws for
-  // them.
+  // While the crop tool is in hand or the crop has yet to close on a scene's
+  // pane, its selection is the crop window; other panes keep their boxes.
+  const cropTrack = activeVideoTrack ?? turn.turnedTrack ?? "primary";
   const reframe =
-    activeVideoTrack && turn.cropTurn.isFlat
-      ? scene.reframeSelections?.[activeVideoTrack]
-      : undefined;
+    chromeTool === "crop" ? scene.reframeSelections?.[cropTrack] : undefined;
   const picks = scenePanePicks({
     arrangement: turn.arrangement,
     canPreviewBakedCamera,
@@ -227,7 +227,8 @@ export function useRecordingPreviewSelection(
   const sceneId = sceneArrangement?.clip.id ?? null;
   const shaped = (selection: RecordingPreviewSelection) =>
     withCropShape(selection, cropAspects, sceneId);
-  const selectionOverlay = picks.overlay && shaped(picks.overlay);
+  const selectionOverlay =
+    picks.overlay && shaped(openingCropChrome(picks.overlay, turn.cropTurn));
   // Last, so they are under the pointer before the panes they are drawn over.
   const selectionTargets =
     toolInHand === "select"
@@ -280,19 +281,15 @@ export function useRecordingPreviewSelection(
     captionSelection,
     /** Lets go of the shortcuts and captions chosen. */
     clearOverlaySelection,
-    /** The crop tool's turn ease, as the screen takes it. */
+    /** The crop tool's ease, and the track it eases, kept while it closes. */
     cropTurn: turn.cropTurn,
+    cropTurnTrack: turn.turnedTrack,
     /** Whether a scene places the panes at the playhead. */
     isFramed,
     keyboardTimeline,
     nudgeActiveTrack,
-    /** The pane of the scene the crop tool is reframing, which the preview
-     * draws unzoomed. */
-    reframePane: reframe
-      ? reframe.layerId === 0
-        ? ("screen" as const)
-        : ("camera" as const)
-      : null,
+    /** The pane of the scene the crop opens out, which the preview draws. */
+    reframePane: turn.openPane,
     selectionOverlay,
     selectionTargets,
   };

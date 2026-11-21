@@ -36,7 +36,7 @@ export function screenIslandContent({
   if (!selection || selection.kind === "audio") return null;
   // Until the screen's track is in hand the selection is another layer's.
   if (capture === "recording" && selection.kind !== "primary") return null;
-  const scenePane = scene?.hasSceneAtPlayhead ? scene.panes.screen : null;
+  const scenePane = scene?.hasSceneInHand ? scene.panes.screen : null;
   const sceneRotation = scenePane ? scene?.rotation : null;
   const rotation = sceneRotation ?? selection.rotation;
   // A scene's inset is a share of its box's shorter side, offered as the
@@ -111,7 +111,7 @@ export function cameraIslandContent({
     return null;
   const isOwnPicture = selection.kind === "primary";
   const paneName = isOwnPicture ? "screen" : "camera";
-  const scenePane = scene?.hasSceneAtPlayhead ? scene.panes[paneName] : null;
+  const scenePane = scene?.hasSceneInHand ? scene.panes[paneName] : null;
   const followFace =
     scene && scenePane ? scene.followsFace : (selection.followsFace ?? false);
   const sceneRotation = scenePane ? scene?.rotation : null;
@@ -215,10 +215,12 @@ export function cropIslandContent({
 }: Inputs): EditorIslandContent | null {
   const { crop, scene, selection } = snapshot;
   if (!crop || !selection || selection.kind === "audio") return null;
+  // A crop is made on the picture, which shows the playhead's moment.
+  const isScene = scene?.hasSceneInHand === true && scene.isAtPlayhead;
   const pane =
-    scene?.hasSceneAtPlayhead && selection.kind === "camera"
+    isScene && selection.kind === "camera"
       ? scene.panes.camera
-      : scene?.hasSceneAtPlayhead
+      : isScene
         ? scene.panes.screen
         : null;
   return cropIsland({

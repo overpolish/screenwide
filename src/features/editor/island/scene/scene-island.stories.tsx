@@ -92,7 +92,10 @@ export const Turned: Story = {
 };
 
 export const CameraOnly: Story = {
-  args: { layout: { kind: "preset", preset: "camera-only" }, screen: null },
+  args: {
+    layout: { kind: "preset", preset: "camera-only" },
+    panesShown: { camera: true, screen: false },
+  },
 };
 
 export const Custom: Story = {
@@ -109,17 +112,13 @@ export const ManySavedLayouts: Story = {
   args: { savedLayouts: MANY_SAVED_LAYOUTS },
 };
 
-export const Camera: Story = { args: { group: "camera" } };
-
-export const Screen: Story = {
+// A screen-only scene: its camera can be shown again, which goes back to
+// the layout it was turned off from.
+export const CameraHidden: Story = {
   args: {
-    group: "screen",
-    screen: {
-      focusX: 0.4,
-      focusY: 0.5,
-      radius: 12,
-      zoom: 2,
-    },
+    camera: null,
+    layout: { kind: "preset", preset: "screen-only" },
+    panesShown: { camera: false, screen: true },
   },
 };
 
@@ -141,10 +140,17 @@ export const Paused: Story = {
 };
 
 // The tool with no scene in hand frames the recording itself.
-export const Global: Story = { args: { scene: null } };
+export const Global: Story = { args: { panesShown: null, scene: null } };
 
-export const AutoZoom: Story = { args: { group: "autoZoom", scene: null } };
+export const AutoZoom: Story = {
+  args: { group: "autoZoom", panesShown: null, scene: null },
+};
 
 export const AutoZoomCleared: Story = {
-  args: { autoZoom: { hasAutoZooms: false }, group: "autoZoom", scene: null },
+  args: {
+    autoZoom: { hasAutoZooms: false },
+    group: "autoZoom",
+    panesShown: null,
+    scene: null,
+  },
 };

@@ -5,35 +5,25 @@ import { type Span } from "../timeline-scale";
 
 import { playedSpan } from "./strip-lane-time";
 import { baseOf } from "./strip-part";
-import {
-  isPlayheadOutside,
-  selectionSpan,
-  type StripSelection,
-} from "./strip-selection";
+import { selectionSpan, type StripSelection } from "./strip-selection";
 import { type TimelineStripProps } from "./timeline-strip-props";
 
-// What is chosen on the strip, and choosing: pressing a part chooses it
-// and brings the playhead to its start where the playhead stands outside
-// it, so the picture shows what was chosen. Every part is found where it
+// What is chosen on the strip, and choosing: pressing a part chooses it and
+// leaves the playhead where it is (#83). The islands act on what is chosen;
+// the picture shows the playhead's moment. Every part is found where it
 // plays, in played seconds: the lanes' are there already, the beats' and
-// lulls' are read from the recorded seconds they keep, and each says the
-// recorded moment the playhead is brought to (`seek`).
+// lulls' are read from the recorded seconds they keep.
 
 export function stripChoice(props: TimelineStripProps) {
   const { map, selection } = props;
-  /** A lane's part, in played seconds, brought to at its landing. */
-  const onLane = (each: Span & { id: string; landsAt?: number }) => ({
+  const onLane = (each: Span & { id: string }) => ({
     id: each.id,
-    span: {
-      end: each.end,
-      seek: map.toRecorded(each.landsAt ?? each.start),
-      start: each.start,
-    },
+    span: { end: each.end, start: each.start },
   });
   /** A part of the footage, kept in recorded seconds, where it plays. */
   const onFootage = (each: { id: string; span: Span }) => ({
     id: each.id,
-    span: { ...playedSpan(map, each.span), seek: each.span.start },
+    span: playedSpan(map, each.span),
   });
   const parts = {
     annotation: props.annotations.map(onLane),
@@ -42,17 +32,8 @@ export function stripChoice(props: TimelineStripProps) {
     lull: props.lulls.map(onFootage),
     scene: props.scenes.map(onLane),
   };
-  /** Chooses `next`, bringing the playhead to where it lands where it
-   * stands outside it; what Shift gathers leaves the playhead alone, as
-   * does a drawn range, whose drag brought the playhead along its edge. */
-  const choose = (next: StripSelection | null, isGathered = false) => {
+  const choose = (next: StripSelection | null) => {
     props.onSelect(next);
-    if (isGathered || next === null) return;
-    if (next.kind === "shortcuts" || next.kind === "range") return;
-    const span = selectionSpan(next, parts);
-    if (!span) return;
-    if (isPlayheadOutside(props.playhead.ratio() * map.duration, span))
-      props.onSeek(span.seek ?? map.toRecorded(span.start));
   };
   const chosenId = (kind: "annotation" | "audioClip" | "scene") =>
     selection?.kind === kind ? baseOf(selection.id) : undefined;

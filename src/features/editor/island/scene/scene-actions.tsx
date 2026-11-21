@@ -4,9 +4,7 @@
 import {
   LayoutDashboard,
   type LucideIcon,
-  Monitor,
   Trash2,
-  Video,
   WandSparkles,
 } from "lucide-react";
 import { ToggleButtonGroup } from "react-aria-components";
@@ -16,40 +14,27 @@ import { t } from "../../../../i18n/i18n";
 import { IconToggleButton } from "../../../../primitives/button/icon-button";
 import { IslandParts } from "../../../../primitives/island/island-parts";
 
-import type { SceneGroup } from "./scene-framing";
-
 // The end of a scene island's row: one choice of the group hanging open
-// beneath, filled while it is, and, for a scene, deleting it, which asks
-// twice. A group is always open, so pressing the open one leaves it open.
-// A group comes and goes with the layout, as the camera's does with a
-// layout that places it, in its place among the others (`IslandParts`).
+// beneath, filled while it is, where there is more than one, and, for a
+// scene, deleting it, which asks twice. A group is always open, so pressing
+// the open one leaves it open.
 
-/** The groups of options the scene tool opens: a scene's framing, and with
+/** The groups of options the scene tool opens: a scene's layout, and with
  * no scene in hand the planned zooms too. */
-export type SceneToolGroup = SceneGroup | "autoZoom";
+export type SceneToolGroup = "autoZoom" | "layout";
 
 const GROUP_GLYPHS: Record<SceneToolGroup, LucideIcon> = {
   autoZoom: WandSparkles,
-  camera: Video,
   layout: LayoutDashboard,
-  screen: Monitor,
 };
 
 /** Every group, in the order the row shows those it has. */
-const GROUPS: SceneToolGroup[] = ["layout", "camera", "screen", "autoZoom"];
+const GROUPS: SceneToolGroup[] = ["layout", "autoZoom"];
 
-const groupLabel = (group: SceneToolGroup) => {
-  switch (group) {
-    case "autoZoom":
-      return t("editor-island-scene-auto-zoom");
-    case "camera":
-      return t("editor-island-scene-camera");
-    case "layout":
-      return t("editor-island-scene-layout");
-    case "screen":
-      return t("editor-island-scene-screen");
-  }
-};
+const groupLabel = (group: SceneToolGroup) =>
+  group === "autoZoom"
+    ? t("editor-island-scene-auto-zoom")
+    : t("editor-island-scene-layout");
 
 export function SceneActions({
   groups,
@@ -65,7 +50,7 @@ export function SceneActions({
 }) {
   return (
     <>
-      {groups.length > 0 ? (
+      {groups.length > 1 ? (
         <ToggleButtonGroup
           aria-label={t("editor-island-scene-groups")}
           className="flex min-w-0 items-center"

@@ -16,32 +16,35 @@ import {
   uncroppedSceneScreen,
 } from "./recording-scene-crop-edits";
 import { customRecordingSceneClip } from "./recording-scene-custom";
-import { framingWithin } from "./recording-scene-framing";
 import { arrangedScenePane, swappedScenePanes } from "./recording-scene-order";
 import { ScenePaneFraming } from "./recording-scene-pane-framing";
 import { scenePaneAtLayout } from "./recording-scene-pane-reset";
+import { sceneWithPaneShown } from "./recording-scene-pane-shown";
 import { SceneCamera } from "./recording-scene-placement";
-import { SceneChoice } from "./recording-scene-span";
+import { clipsWithSpanChosen, SceneChoice } from "./recording-scene-span";
 import {
   clipFromTemplate,
   sceneTemplateLayout,
 } from "./recording-scene-template";
 import {
   insertRecordingSceneClip,
-  RECORDING_SCENE_MINIMUM_MS,
   RecordingSceneClip,
   rotatedSceneClip,
 } from "./recording-scenes";
 
 /**
- * What the Scene panel's asks do to `clips`: each changes the scene under
- * the playhead, read when it is asked, or adds one there, and hands the
- * clips that result to `commit`. A choice for a stretch of words in the
- * Transcript panel acts on the scene it names instead. The clips and the
- * playhead are both on the edited video, `lengthMs` long.
+ * What the Scene panel's asks do to `clips`: each changes the scene in hand,
+ * the one chosen on the strip or else the one under the playhead, read when
+ * it is asked, or adds one at the playhead where there is none, and hands
+ * the clips that result to `commit`. What is done on the picture (a pane's
+ * order, a crop) changes the scene under the playhead, which the picture
+ * shows. A choice for a stretch of words in the Transcript panel acts on the
+ * scene it names instead. The clips and the playhead are both on the edited
+ * video, `lengthMs` long.
  */
 export function recordingSceneEdits({
   camera,
+  chosenId,
   clips,
   commit,
   getTimelineMs,
@@ -51,6 +54,8 @@ export function recordingSceneEdits({
 }: {
   /** The camera a scene can place: one drawn into the picture. */
   camera: SceneCamera | null;
+  /** The scene chosen on the strip, where one alone is. */
+  chosenId: string | null;
   clips: RecordingSceneClip[];
   commit: (clips: RecordingSceneClip[]) => void;
   getTimelineMs: () => number;
@@ -66,23 +71,31 @@ export function recordingSceneEdits({
   RecordingSceneControls,
   "autoZoom" | "clearAutoZooms" | "recenterScreen"
 > {
-  const reframeCurrent = (
-    reframe: (clip: RecordingSceneClip) => RecordingSceneClip,
-  ) => {
-    const target = timedSpanClipAt(clips, getTimelineMs());
-    if (target)
-      commit(
-        clips.map((clip) => (clip.id === target.id ? reframe(clip) : clip)),
-      );
-  };
+  const atPlayhead = () => timedSpanClipAt(clips, getTimelineMs());
+  const inHand = () =>
+    clips.find((clip) => clip.id === chosenId) ?? atPlayhead();
+  const reframeOf =
+    (target: () => RecordingSceneClip | null) =>
+    (reframe: (clip: RecordingSceneClip) => RecordingSceneClip) => {
+      const found = target();
+      if (found)
+        commit(
+          clips.map((clip) => (clip.id === found.id ? reframe(clip) : clip)),
+        );
+    };
+  const reframeCurrent = reframeOf(inHand);
+  const reframeShown = reframeOf(atPlayhead);
   const canvasAspect = output.width / Math.max(1, output.height);
   // A preset chosen for a custom scene puts its panes back in the preset's
   // boxes. The variant stays, so a swapped pair stays swapped. Custom keeps
-  // the panes where the scene puts them now.
+  // the panes where the scene puts them now. A layout chosen is the one the
+  // scene has from then on, so a pane turned off before no longer leads back
+  // to another.
   const arranged = (
-    clip: RecordingSceneClip,
+    scene: RecordingSceneClip,
     choice: SceneChoice,
   ): RecordingSceneClip => {
+    const { layoutBefore: _layoutBefore, ...clip } = scene;
     switch (choice.type) {
       case "custom":
         return customRecordingSceneClip({ camera, clip, output });
@@ -90,18 +103,22 @@ export function recordingSceneEdits({
         const { boxes: _boxes, ...rest } = clip;
         return { ...rest, preset: choice.preset };
       }
-      case "template":
-        return clipFromTemplate(clip, {
+      case "template": {
+        // A template's boxes carry their own shapes.
+        const { shapes: _shapes, ...rest } = clip;
+        return clipFromTemplate(rest, {
           canvasAspect,
           template: choice.template,
         });
+      }
     }
   };
-  // Changes the scene under the playhead, or where there is none adds a full
-  // one there and changes that at once.
-  const chooseAtPlayhead = (choice: SceneChoice) => {
+  // Changes the scene in hand, or where there is none adds a full one at
+  // the playhead and changes that at once.
+  const chooseInHand = (choice: SceneChoice) => {
     const atMs = getTimelineMs();
-    const next = timedSpanClipAt(clips, atMs)
+    const held = inHand();
+    const next = held
       ? clips
       : insertRecordingSceneClip({
           atMs,
@@ -110,7 +127,7 @@ export function recordingSceneEdits({
           lengthMs,
           preset: "full",
         })?.clips;
-    const target = next ? timedSpanClipAt(next, atMs) : null;
+    const target = held ?? (next ? timedSpanClipAt(next, atMs) : null);
     if (!next || !target) return;
     commit(
       next.map((clip) =>
@@ -120,61 +137,30 @@ export function recordingSceneEdits({
   };
   return {
     arrangePane: (pane, move) => {
-      reframeCurrent((clip) => arrangedScenePane(clip, pane, move));
+      reframeShown((clip) => arrangedScenePane(clip, pane, move));
     },
-    // The scene named is laid out anew and moved to the span while it is
-    // still there, or a new one is added over it. Either lands only where the
-    // span still fits between the other scenes, in whole milliseconds, and
-    // is at least the shortest scene, unless a short scene keeps its place.
     chooseForSpan: (target, choice) => {
-      const { endMs, startMs } = target;
-      const changed =
-        target.type === "change"
-          ? clips.find((clip) => clip.id === target.id)
-          : undefined;
-      if (target.type === "change" && !changed) return;
-      const keepsTiming =
-        changed?.startMs === startMs && changed.endMs === endMs;
-      if (
-        !Number.isInteger(startMs) ||
-        !Number.isInteger(endMs) ||
-        startMs < 0 ||
-        endMs > lengthMs ||
-        (endMs - startMs < RECORDING_SCENE_MINIMUM_MS && !keepsTiming) ||
-        clips.some(
-          (clip) =>
-            clip !== changed && clip.startMs < endMs && startMs < clip.endMs,
-        )
-      )
-        return;
-      const next = changed
-        ? clips.map((clip) =>
-            clip === changed
-              ? arranged({ ...clip, endMs, startMs }, choice)
-              : clip,
-          )
-        : [
-            ...clips,
-            arranged(
-              { endMs, id: crypto.randomUUID(), preset: "full", startMs },
-              choice,
-            ),
-          ];
-      commit(next.sort((a, b) => a.startMs - b.startMs));
+      const next = clipsWithSpanChosen({
+        arrange: (clip) => arranged(clip, choice),
+        clips,
+        lengthMs,
+        target,
+      });
+      if (next) commit(next);
     },
     choosePreset: (preset) => {
-      chooseAtPlayhead({ preset, type: "preset" });
+      chooseInHand({ preset, type: "preset" });
     },
     chooseTemplate: (template) => {
-      chooseAtPlayhead({ template, type: "template" });
+      chooseInHand({ template, type: "template" });
     },
     cropScreen: (aspect) => {
-      reframeCurrent((clip) =>
+      reframeShown((clip) =>
         croppedSceneScreen(clip, aspect, { camera, output }),
       );
     },
     remove: () => {
-      const target = timedSpanClipAt(clips, getTimelineMs());
+      const target = inHand();
       if (target) commit(clips.filter((clip) => clip.id !== target.id));
     },
     resetPanePlacement: (pane) => {
@@ -183,7 +169,7 @@ export function recordingSceneEdits({
       );
     },
     resetScreenCrop: () => {
-      reframeCurrent((clip) => uncroppedSceneScreen(clip, { camera, output }));
+      reframeShown((clip) => uncroppedSceneScreen(clip, { camera, output }));
     },
     // Kept as the canvas would draw it, so a composition chosen without its
     // blobs takes the ones the canvas would give it. Unset, the scene shows
@@ -228,22 +214,6 @@ export function recordingSceneEdits({
         };
       });
     },
-    // The framing is held where the picture still fills its box, so a
-    // position typed past the edge lands on the edge.
-    setFraming: (framing, paneName) => {
-      reframeCurrent((clip) => {
-        const pane = paneOf(clip, paneName);
-        if (!pane) return clip;
-        return {
-          ...clip,
-          [pane.pane]: framingWithin(
-            { ...pane.framing, ...framing },
-            pane.box,
-            pane.aspect,
-          ),
-        };
-      });
-    },
     // A scene pads its screen's box whatever lays it out, so a preset's
     // stays a preset's.
     setInset: (inset) => {
@@ -251,6 +221,9 @@ export function recordingSceneEdits({
         const { inset: _inset, ...rest } = clip;
         return inset > 0 ? { ...rest, inset: points(inset) } : rest;
       });
+    },
+    setPaneShown: (pane, shown) => {
+      reframeCurrent((clip) => sceneWithPaneShown(clip, { pane, shown }));
     },
     // The screen's corners are in the unit the recording's own are in.
     setRadius: (radius) => {
@@ -287,7 +260,7 @@ export function recordingSceneEdits({
       reframeCurrent(swappedScenePanes);
     },
     templateLayout: () => {
-      const current = timedSpanClipAt(clips, getTimelineMs());
+      const current = inHand();
       return current ? sceneTemplateLayout(current, canvasAspect) : null;
     },
   };

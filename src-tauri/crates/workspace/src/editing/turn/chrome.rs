@@ -23,6 +23,7 @@ const RING_DRAG_LIGHT: f32 = 0.35;
 const RING_FAR_ALPHA: f32 = 0.3;
 
 /// The rings' constants rows and their quad, in device pixels.
+#[derive(Clone, Copy)]
 pub(in super::super) struct Rings {
   pub(in super::super) rows: [[f32; 4]; TURN_RING_ROWS],
   pub(in super::super) quad: [f32; 4],
@@ -75,11 +76,16 @@ fn turned_frame(
 
 /// The rings shown: the chosen image's, or else the selected layer's.
 fn rings(state: &SurfaceState, scale: f64) -> Option<Rings> {
-  let (turn, (x, y), radius) = match annotation::image_gizmo(state) {
-    Some(gizmo) => (gizmo.seen, gizmo.centre, gizmo.radius),
-    None if rings_shown(state) => {
+  let (turn, (x, y), radius, opacity) = match annotation::image_gizmo(state) {
+    Some(gizmo) => (gizmo.seen, gizmo.centre, gizmo.radius, 1.0),
+    None if rings_opacity(state) > 0.0 => {
       let (centre, radius) = ring_frame(state)?;
-      (rotation(state.selection?), centre, radius)
+      (
+        rotation(state.selection?),
+        centre,
+        radius,
+        rings_opacity(state),
+      )
     }
     None => return None,
   };
@@ -114,7 +120,7 @@ fn rings(state: &SurfaceState, scale: f64) -> Option<Rings> {
       RING_HOVER_LIGHT
     },
     RING_FAR_ALPHA,
-    0.0,
+    opacity as f32,
   ];
   // The rings and a pixel round them for the shader to anti-alias across.
   let reach = radius + RING_CORE + RING_OUTLINE + 1.0 / scale;

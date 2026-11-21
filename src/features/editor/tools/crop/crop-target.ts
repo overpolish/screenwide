@@ -219,9 +219,10 @@ const recordingCropTarget = (
       ? "camera"
       : "primary";
   const { scene, sceneControls } = inputs;
+  // A crop is made on the picture, so only on the scene the picture shows.
   if (
     track === "primary" &&
-    scene?.hasSceneAtPlayhead &&
+    scene?.isAtPlayhead &&
     scene.panes.screen &&
     scene.sceneId &&
     sceneControls

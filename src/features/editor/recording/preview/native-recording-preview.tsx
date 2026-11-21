@@ -233,6 +233,7 @@ export function NativeRecordingPreview(rawProps: ScrubPreviewProps) {
     offered,
     ownsEscape: column.ownsEscape,
     player,
+    selectTool: column.selectTool,
     step: transport.timelineBlade.step,
     toggleCrop: column.toggleCrop,
     toggleMode: column.toggleMode,

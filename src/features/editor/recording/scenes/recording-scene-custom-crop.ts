@@ -16,11 +16,12 @@ import {
 } from "./recording-scenes";
 
 /**
- * Cropping a custom scene's pane, which works the way the crop tool works on
- * the recording's own composition: the pane's picture stays where it sits on
- * the canvas and the crop window is the pane's box, moved and resized freely
- * over it. The screen of a preset's scene is made custom first, so it crops
- * the same way; a preset's camera is reframed instead, see `reframeWindow`.
+ * Cropping a scene's pane, which works the way the crop tool works on the
+ * recording's own composition: the pane's picture stays where it sits on the
+ * canvas and the crop window is the pane's box, moved and resized freely
+ * over it. A custom scene's box takes the window; a preset keeps only its
+ * shape and lays the pane out at it. A custom scene's camera with no box of
+ * its own is reframed instead, see `reframeWindow`.
  */
 
 /** One pane of a custom scene: its picture's aspect, its box in output
@@ -66,18 +67,19 @@ const within = (
 
 type Canvas = { height: number; width: number };
 
-/** `rect`, in output pixels, as a box: shares of `canvas` held to the limits
- * every box keeps, and that box back in output pixels. */
-const heldBox = (rect: SceneRect, canvas: Canvas) => {
-  const box = movedSceneBox(
-    {
-      height: rect.height / Math.max(1, canvas.height),
-      width: rect.width / Math.max(1, canvas.width),
-      x: rect.x / Math.max(1, canvas.width),
-      y: rect.y / Math.max(1, canvas.height),
-    },
-    { delta: { x: 0, y: 0 }, scale: 1 },
-  );
+/** `rect`, in output pixels, as a box: shares of `canvas`, held to the
+ * limits every box keeps where it is to stay `onCanvas`, and that box back
+ * in output pixels. */
+const heldBox = (rect: SceneRect, canvas: Canvas, onCanvas = true) => {
+  const shares = {
+    height: rect.height / Math.max(1, canvas.height),
+    width: rect.width / Math.max(1, canvas.width),
+    x: rect.x / Math.max(1, canvas.width),
+    y: rect.y / Math.max(1, canvas.height),
+  };
+  const box = onCanvas
+    ? movedSceneBox(shares, { delta: { x: 0, y: 0 }, scale: 1 })
+    : shares;
   return {
     box,
     held: {
@@ -150,7 +152,10 @@ const heldToLimits = (
  * keeps and to the furthest a scene zooms (`heldToLimits`, `next`'s `moving`
  * edges growing it), and the framing that leaves the picture where it was. A
  * window that `slides`, one carried rather than reshaped, stops at the
- * picture's edge instead of being cut by it.
+ * picture's edge instead of being cut by it. A custom scene's box keeps its
+ * middle on the canvas; a preset's crop only picks a shape and a part of the
+ * picture, so its window may go wherever the picture does (`onCanvas`
+ * false), as far as a part of the screen drawn past the canvas's edge.
  */
 export const croppedCustomPane = (
   pane: CustomPane,
@@ -158,12 +163,14 @@ export const croppedCustomPane = (
     canvas,
     moving,
     next,
+    onCanvas = true,
     slides,
   }: {
     canvas: Canvas;
     moving: number;
     next: SceneRect;
     slides: boolean;
+    onCanvas?: boolean;
   },
 ): { box: SceneBox; framing: SceneFraming } => {
   const picture = pictureRect(pane);
@@ -176,7 +183,7 @@ export const croppedCustomPane = (
     }),
     { bounds: picture, slides: true },
   );
-  const { box, held } = heldBox(cut, canvas);
+  const { box, held } = heldBox(cut, canvas, onCanvas);
   const cover = Math.max(held.width, held.height * pane.aspect);
   return {
     box,

@@ -159,6 +159,10 @@ pub struct PreviewSelection {
   /// and a drawing press on empty canvas joins it, but it is never pressed
   /// as a picture and draws no frame or grips.
   pub blank: u32,
+  /// How far the crop's chrome is from shown while the crop opens or
+  /// closes: at zero the crop's, its shade and its ants, and at one the
+  /// select tool's, a solid outline and, over a turned layer, the gizmo.
+  pub crop_closing: f64,
 }
 
 impl PreviewSelection {

@@ -1,10 +1,10 @@
 {
-  "src/features/editor/preview/preview-viewport.tsx": 409,
+  "src/features/editor/preview/preview-viewport.tsx": 408,
   "src/features/editor/editor-window.tsx": 681,
   "src/features/editor/timeline/editing/recording-timeline-edit.test.ts": 363,
   "src/features/editor/timeline/editing/recording-timeline-edit.ts": 333,
   "src/features/editor/screenshot/screenshot-output.ts": 417,
   "src/features/editor/recording/use-recording-preview-player.ts": 484,
-  "src/features/editor/recording/use-recording-preview-surface.ts": 482,
+  "src/features/editor/recording/use-recording-preview-surface.ts": 463,
   "src/features/editor/screenshot/use-screenshot-preview-surface.ts": 332
 }

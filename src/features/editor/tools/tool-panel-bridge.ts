@@ -128,8 +128,6 @@ const applyPatch = (values: ToolPanelPatch, on: ToolPanelHandlers) => {
   if (values.deleteChosenShortcuts) on.onChosenShortcutsDelete?.();
   if (values.scenePreset !== undefined)
     on.onScenePresetChoose?.(values.scenePreset);
-  if (values.sceneFraming !== undefined)
-    on.onSceneFramingChange?.(values.sceneFraming, values.sceneFramingPane);
   if (values.sceneBackground !== undefined)
     on.onSceneBackgroundChange?.(values.sceneBackground);
   if (values.sceneCursor !== undefined)
@@ -155,6 +153,11 @@ const applyPatch = (values: ToolPanelPatch, on: ToolPanelHandlers) => {
   if (values.clearAutoZooms) on.onSceneAutoZoomsClear?.();
   if (values.deleteScene) on.onSceneDelete?.();
   if (values.swapScenePanes) on.onScenePanesSwap?.();
+  if (values.scenePaneShown)
+    on.onScenePaneShownChange?.(
+      values.scenePaneShown.pane,
+      values.scenePaneShown.shown,
+    );
   if (values.transcriptRequest)
     on.onTranscriptRequest?.(values.transcriptRequest);
   if (values.captions) on.onCaptionsChange?.(values.captions);

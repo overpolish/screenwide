@@ -14,7 +14,6 @@ import { SceneTemplate } from "../recording/scenes/recording-scene-template";
 import { SceneVariant } from "../recording/scenes/recording-scene-variant";
 import {
   RecordingScenePreset,
-  SceneFraming,
   SceneRotation,
 } from "../recording/scenes/recording-scenes";
 import { CursorEffectSettings, KeyboardEffectSettings } from "../types";
@@ -165,15 +164,11 @@ export type ToolPanelHandlers = {
   /** Have the camera in the scene under the playhead follow the face, or
    * stop following it. */
   onSceneFollowFaceChange?: (follow: boolean) => void;
-  /** Zoom the scene under the playhead into its selected pane, or move the
-   * part of the pane it shows. */
-  onSceneFramingChange?: (
-    framing: Partial<SceneFraming>,
-    pane?: "camera" | "screen",
-  ) => void;
   /** Pad the screen in the scene under the playhead by this share of its
    * box's shorter side. */
   onSceneInsetChange?: (inset: number) => void;
+  /** Show or hide a pane of the scene under the playhead. */
+  onScenePaneShownChange?: (pane: "camera" | "screen", shown: boolean) => void;
   /** Trade the panes of the custom scene under the playhead. */
   onScenePanesSwap?: () => void;
   /** Put the pane of the scene under the playhead back in the box its

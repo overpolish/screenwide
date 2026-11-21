@@ -4,7 +4,7 @@
 //! The camera following the face: in a scene, outside every scene, and in a
 //! scene that does as the recording's camera does or says otherwise.
 
-use super::{arrange_following, camera_target};
+use super::arrange_following;
 use screenwide_output::fixtures::test_output_settings;
 use screenwide_scenes::framing::drawn_frame;
 use screenwide_scenes::model::RecordingScenePreset;
@@ -46,6 +46,8 @@ fn clip(
     inset: None,
     rotation: None,
     variant: None,
+    layout_before: None,
+    shapes: None,
     follow_face,
     cursor: None,
     background: None,
@@ -185,14 +187,4 @@ fn a_full_scene_keeps_the_recordings_crop_followed_or_still_as_it_says() {
   let followed = camera_at(&[on], overlay(false), 5_000, face);
   assert!(close(shown(&followed).focus_x, 0.42));
   assert!(close(shown(&followed).zoom, shown(&overlay(false)).zoom));
-}
-
-#[test]
-fn a_drag_on_a_following_full_scene_starts_from_the_face_in_the_middle() {
-  let output = test_output_settings(1_600, 900);
-  let full = [clip(RecordingScenePreset::Full, None, None)];
-  let (_, _, framing) =
-    camera_target(&full, 5_000, &output, &overlay(true), CAMERA).expect("the camera is placed");
-  assert!(close(framing.focus_x, 0.5) && close(framing.focus_y, 0.5));
-  assert!(close(framing.zoom, shown(&overlay(true)).zoom));
 }

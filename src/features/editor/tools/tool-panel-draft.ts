@@ -113,9 +113,8 @@ export function resolveToolPanelSnapshot(
     sceneBackground,
     sceneCursor,
     sceneFollowFace,
-    sceneFraming,
-    sceneFramingPane: _sceneFramingPane,
     sceneInset,
+    scenePaneShown: _scenePaneShown,
     scenePlacementReset: _scenePlacementReset,
     scenePreset,
     sceneRadius,
@@ -245,7 +244,6 @@ export function resolveToolPanelSnapshot(
     // answers with the scene it changed.
     ...(resolved.scene &&
     (scenePreset ||
-      sceneFraming ||
       sceneBackground !== undefined ||
       sceneCursor !== undefined ||
       sceneFollowFace !== undefined ||
@@ -263,10 +261,6 @@ export function resolveToolPanelSnapshot(
             cursor:
               sceneCursor === undefined ? resolved.scene.cursor : sceneCursor,
             followsFace: sceneFollowFace ?? resolved.scene.followsFace,
-            framing:
-              resolved.scene.framing && sceneFraming
-                ? { ...resolved.scene.framing, ...sceneFraming }
-                : resolved.scene.framing,
             panes:
               sceneInset !== undefined && resolved.scene.panes.screen
                 ? {

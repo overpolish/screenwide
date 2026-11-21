@@ -27,7 +27,9 @@ pub use face::{FacePath, FaceSighting};
 pub use framing::SceneFraming;
 pub use gaps::{with_gaps, GapScene};
 pub use measure::Measure;
-pub use model::{validate_clips, RecordingSceneClip, RecordingScenePreset, SceneRadius};
+pub use model::{
+  validate_clips, validate_held_clip, RecordingSceneClip, RecordingScenePreset, SceneRadius,
+};
 pub use motion::SceneMotion;
 pub use rotation::SceneRotation;
 pub use template::SceneTemplate;

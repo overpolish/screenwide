@@ -41,6 +41,9 @@ export type PreviewSelectionLayout = {
   /** The crop keeps its shape as its handles are dragged. */
   cropKeepsShape?: boolean;
   cropMode?: boolean;
+  /** How far the crop's chrome has taken over from the select tool's, 0 to
+   * 1, as the crop opens and closes. */
+  cropOpen?: number;
   image?: { height: number; width: number; x: number; y: number };
   isBlank?: boolean;
   layerId?: number;

@@ -48,6 +48,7 @@ struct OscGpu {
   window_shape: vec4<f32>, // .x corner radius px, .y fade, .z blur px (0: none), .w feather px
   reference: vec4<f32>, // .x pixels per point, .y 1 where the picture has see-through pixels
   ocr_table: vec4<f32>, // the wash over a table Text Recognition found
+  opacity: vec4<f32>, // .x the crop's shade shown, .y the gap between ants, 1 each in full
 }
 
 @group(0) @binding(0) var<uniform> osc: OscGpu;
@@ -63,12 +64,15 @@ struct VertexIn {
   @location(0) position: vec2<f32>,
   @location(1) uv: vec2<f32>,
   @location(2) kind: u32,
+  @location(3) fade: u32,
 }
 
 struct VertexOut {
   @builtin(position) position: vec4<f32>,
   @location(0) uv: vec2<f32>,
   @location(1) @interpolate(flat) kind: u32,
+  // How much of the quad shows, 1 unless the editor's chrome fades it.
+  @location(2) @interpolate(flat) shown: f32,
 }
 
 // The magnifier lens. Crop corners already own 45.
@@ -113,6 +117,7 @@ fn vs_main(input: VertexIn) -> VertexOut {
   output.position = vec4<f32>(input.position, 0.0, 1.0);
   output.uv = input.uv;
   output.kind = input.kind;
+  output.shown = 1.0 - f32(input.fade) / 65535.0;
   return output;
 }
 
@@ -442,9 +447,12 @@ fn ocr_box(kind: u32, uv: vec2<f32>) -> vec4<f32> {
 // A marching ant: a capsule a period long, `offset` measured from its middle
 // in pixels along and across, of `radius` pixels round. The capsule leaves a
 // 3-pixel gap before the next, whatever `period` the vertices chose.
+// The gap between ants closes as `osc.opacity.y` falls to zero, the ants
+// running together into a solid line, so the select tool's outline splits
+// into the crop's as the crop opens.
 fn ant(along_offset: vec2<f32>, radius: f32, period: f32) -> vec4<f32> {
   var offset = along_offset;
-  let half_segment = max(period * 0.5 - radius - 1.5, 0.0);
+  let half_segment = max(period * 0.5 - (radius + 1.5) * osc.opacity.y, 0.0);
   offset.x -= clamp(offset.x, -half_segment, half_segment);
   let distance = length(offset) - radius;
   let aa = max(fwidth(distance), 0.0001);
@@ -630,7 +638,8 @@ fn turn_rings(at: vec2<f32>) -> vec4<f32> {
   if (color.a <= 0.0) {
     discard;
   }
-  return color;
+  // Row 7's `.w`: how much of the rings shows, as they fade with the crop.
+  return vec4<f32>(color.rgb, color.a * osc.turn_rings[7].w);
 }
 
 // How strongly the halo round a chosen object picked in the camera shows:
@@ -712,6 +721,11 @@ fn picked_line_halo(kind: u32, at: vec2<f32>) -> vec4<f32> {
 
 @fragment
 fn fs_main(input: VertexOut) -> @location(0) vec4<f32> {
+  let color = osc_color(input);
+  return vec4<f32>(color.rgb, color.a * input.shown);
+}
+
+fn osc_color(input: VertexOut) -> vec4<f32> {
   let kind = input.kind;
   let uv = input.uv;
   if (kind == LENS_KIND) {
@@ -836,11 +850,13 @@ fn fs_main(input: VertexOut) -> @location(0) vec4<f32> {
     // radius from diverging on composed controls such as the ruler loupe.
     return select(osc.action_fills[0], osc.action_fills[1], kind == 13u);
   }
+  // The crop's shade, faded in with the picture opening round the crop.
   if (kind == 6u) {
-    return osc.overlay_shade;
+    return vec4<f32>(osc.overlay_shade.rgb, osc.overlay_shade.a * osc.opacity.x);
   }
   if (kind == 45u) {
-    return crop_corner(uv);
+    let corner = crop_corner(uv);
+    return vec4<f32>(corner.rgb, corner.a * osc.opacity.x);
   }
   if (kind >= 17u && kind <= 21u) {
     return ocr_box(kind, uv);

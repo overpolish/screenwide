@@ -3,87 +3,77 @@
 
 import { useMemo } from "react";
 
-import { withShareOfTurn } from "../../layer-rotation";
 import { uncroppedCameraPreviewOverlay } from "../../preview/camera-overlay-geometry";
+import { cameraOverlayBetween } from "../../preview/picture-between";
 import { croppingScreenshotPreviewOutput } from "../../screenshot/screenshot-crop";
 import { RecordingOutputSettings } from "../../screenshot/screenshot-output";
 import { CameraOverlaySettings, RecordingVideoTrackId } from "../../types";
 
-import { RecordingCanvasTool } from "./recording-canvas-tool";
-
 import type { ScrubPreviewProps } from "./scrub-preview";
 import type { CropTurn } from "../../preview/use-crop-turn";
 
-/** What the player draws while a crop is in hand. The framed track is shown
- * whole - and a baked camera in the place its overlay holds - so the handles
- * sit on the picture the crop is taken out of. A turned screen is shown so
- * once the selection's `cropTurn` stands it upright, its turn eased on the
- * way there and back. Inside a scene the crop tool pans and zooms the picture
- * within its box instead, so nothing is shown whole: the scene would arrange
- * the whole picture as if it were the crop. The scene's own turn of the
- * screen eases in the native preview. */
+/** What the player draws as a crop comes and goes. The track in hand is
+ * opened out around its crop - a baked camera to the place its overlay
+ * holds - and turned upright as the selection's `cropTurn` eases, so the
+ * handles sit on the picture the crop is taken out of, and closes again as
+ * the tool is put down. Inside a scene the native preview opens the pane in
+ * place instead (`scene_reframe.rs`): the scene would arrange the whole
+ * picture as if it were the crop. */
 export function useRecordingCropPreview({
   activeVideoTrack,
   bakeCamera,
   cameraOverlay,
-  canvasTool,
   effectiveRecordingOutput,
   previewSourceDimensions,
-  selection: {
-    cropTurn: { isFlat, share },
-    isFramed,
-  },
+  selection: { cropTurn, cropTurnTrack, isFramed },
 }: {
   activeVideoTrack: RecordingVideoTrackId | null;
   bakeCamera: boolean;
   cameraOverlay: CameraOverlaySettings;
-  canvasTool: RecordingCanvasTool;
   effectiveRecordingOutput: RecordingOutputSettings;
   previewSourceDimensions: ScrubPreviewProps["previewSourceDimensions"];
-  selection: { cropTurn: CropTurn; isFramed: boolean };
+  selection: {
+    cropTurn: CropTurn;
+    /** The track the crop opens and closes on, kept while it closes after
+     * the track is let go. */
+    cropTurnTrack: RecordingVideoTrackId | null;
+    isFramed: boolean;
+  };
 }) {
+  const track = activeVideoTrack ?? cropTurnTrack;
   const cropSource =
-    activeVideoTrack === "primary"
+    track === "primary"
       ? previewSourceDimensions.primary
       : previewSourceDimensions.camera;
-  // With the camera a pane of its own, a scene only places the screen, so the
-  // camera's crop still shows it whole.
-  const isCropping =
-    canvasTool === "crop" &&
-    !(isFramed && (activeVideoTrack === "primary" || bakeCamera));
   const previewRecordingOutput = useMemo(() => {
-    if (!activeVideoTrack || !cropSource) return effectiveRecordingOutput;
-    if (bakeCamera && activeVideoTrack === "camera")
-      return effectiveRecordingOutput;
-    if (isFramed && activeVideoTrack === "primary")
-      return effectiveRecordingOutput;
-    const output = effectiveRecordingOutput[activeVideoTrack];
-    const drawn = isCropping
-      ? croppingScreenshotPreviewOutput(cropSource, output, { isFlat, share })
-      : withShareOfTurn(output, share);
+    if (!track || !cropSource) return effectiveRecordingOutput;
+    if (bakeCamera && track === "camera") return effectiveRecordingOutput;
+    if (isFramed && track === "primary") return effectiveRecordingOutput;
+    const output = effectiveRecordingOutput[track];
+    // Opened out while the tool is in hand and closing as it goes.
+    const drawn = croppingScreenshotPreviewOutput(cropSource, output, cropTurn);
     return drawn === output
       ? effectiveRecordingOutput
-      : { ...effectiveRecordingOutput, [activeVideoTrack]: drawn };
+      : { ...effectiveRecordingOutput, [track]: drawn };
   }, [
-    activeVideoTrack,
     bakeCamera,
     cropSource,
+    cropTurn,
     effectiveRecordingOutput,
-    isCropping,
-    isFlat,
     isFramed,
-    share,
+    track,
   ]);
   const previewCameraOverlay = useMemo(() => {
     if (
-      !isCropping ||
-      activeVideoTrack !== "camera" ||
+      cropTurn.open === 0 ||
+      track !== "camera" ||
       !bakeCamera ||
+      isFramed ||
       !previewSourceDimensions.camera
     )
       return cameraOverlay;
     const output = effectiveRecordingOutput.primary;
-    return uncroppedCameraPreviewOverlay(
+    const whole = uncroppedCameraPreviewOverlay(
       {
         height: output.height,
         kind: "screen",
@@ -104,13 +94,17 @@ export function useRecordingCropPreview({
       },
       cameraOverlay,
     );
+    return cropTurn.isFlat
+      ? whole
+      : cameraOverlayBetween(cameraOverlay, whole, cropTurn.open);
   }, [
-    activeVideoTrack,
     bakeCamera,
     cameraOverlay,
+    cropTurn,
     effectiveRecordingOutput.primary,
-    isCropping,
+    isFramed,
     previewSourceDimensions.camera,
+    track,
   ]);
   return { previewCameraOverlay, previewRecordingOutput };
 }

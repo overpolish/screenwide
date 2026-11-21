@@ -8,10 +8,8 @@
 //! outside them; a clip that starts the video is in place from its first
 //! frame, and one that runs on to the end never leaves.
 
-use screenwide_annotations::timing::{covers, scene_blend, video_ms, FrameTime};
+use screenwide_annotations::timing::{scene_blend, video_ms, FrameTime};
 use screenwide_output::ScreenshotOutputSettings;
-use screenwide_scenes::framing::SceneFraming;
-use screenwide_scenes::geometry::Rect;
 use screenwide_scenes::model::{RecordingSceneClip, RecordingScenePreset};
 use screenwide_scenes::motion::SceneMotion;
 use screenwide_scenes::placement::Placement;
@@ -178,33 +176,4 @@ pub fn arrange_following(
     overlay.radius_percent = placed.radius.1;
   }
   true
-}
-
-/// What a drag on the camera reframes `timeline_ms` into the edited video:
-/// the index of the clip it falls in, the box that clip settles the camera
-/// in, and the framing it shows there. `None` outside every clip, in a scene
-/// that stands idle, and in one that hides the camera.
-pub fn camera_target(
-  clips: &[RecordingSceneClip],
-  timeline_ms: u64,
-  output: &ScreenshotOutputSettings,
-  overlay: &CameraOverlaySettings,
-  camera: (u32, u32),
-) -> Option<(usize, Rect, SceneFraming)> {
-  if camera.0 == 0 || camera.1 == 0 || !output.has_placement() {
-    return None;
-  }
-  let aspect = f64::from(camera.0) / f64::from(camera.1);
-  let base = Base::of(output, Some((overlay, aspect)), None);
-  let index = clips
-    .iter()
-    .position(|clip| covers(None, [clip.start_ms, clip.end_ms], timeline_ms))?;
-  let clip = &clips[index];
-  let target = base.target(clip)?;
-  if target.opacity.1 == 0.0 {
-    return None;
-  }
-  let frame = target.frame;
-  let framing = clip.camera.unwrap_or_else(|| base.unframed(clip, overlay));
-  Some((index, frame, framing.within(frame, aspect)))
 }

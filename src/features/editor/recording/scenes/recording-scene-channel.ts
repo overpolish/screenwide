@@ -11,11 +11,7 @@ import { ScenePane } from "./recording-scene-order";
 import { SceneChoice, SceneSpanTarget } from "./recording-scene-span";
 import { SceneTemplate, SceneTemplateLayout } from "./recording-scene-template";
 import { SceneVariant } from "./recording-scene-variant";
-import {
-  RecordingScenePreset,
-  SceneFraming,
-  SceneRotation,
-} from "./recording-scenes";
+import { RecordingScenePreset, SceneRotation } from "./recording-scenes";
 
 import type { Arrangement } from "../../annotations/annotation-order";
 import type { Background } from "../../tools/frame/background/background";
@@ -66,12 +62,11 @@ export type RecordingSceneControls = {
   /** Have the camera follow the face, which starts it in the middle of the
    * camera's box, or stop following it. */
   setFollowFace: (follow: boolean) => void;
-  /** Zoom into `pane`, the selected pane where unset, or move the part of
-   * it shown, a field at a time. */
-  setFraming: (framing: Partial<SceneFraming>, pane?: ScenePane) => void;
   /** Pad the scene's screen by this share of its box's shorter side on
    * each side; none takes the padding away. */
   setInset: (inset: number) => void;
+  /** Show or hide the scene's `pane`, keeping where it is. */
+  setPaneShown: (pane: ScenePane, shown: boolean) => void;
   /** Round the selected pane's corners, in percent of its shorter side. */
   setRadius: (radius: number) => void;
   /** Turn the screen in depth, in degrees about each axis, a field at a
@@ -163,11 +158,11 @@ export function usePublishRecordingScene(
         setFollowFace: (follow) => {
           controlsRef.current.setFollowFace(follow);
         },
-        setFraming: (framing, pane) => {
-          controlsRef.current.setFraming(framing, pane);
-        },
         setInset: (inset) => {
           controlsRef.current.setInset(inset);
+        },
+        setPaneShown: (pane, shown) => {
+          controlsRef.current.setPaneShown(pane, shown);
         },
         setRadius: (radius) => {
           controlsRef.current.setRadius(radius);

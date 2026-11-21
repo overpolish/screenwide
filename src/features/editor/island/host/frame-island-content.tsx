@@ -59,7 +59,7 @@ export function frameIslandContent({
   if (!frame) return null;
   // Over a scene its background is the scene's own, the recording's where it
   // has none; the size stays the recording's.
-  const scene = snapshot.scene?.hasSceneAtPlayhead ? snapshot.scene : null;
+  const scene = snapshot.scene?.hasSceneInHand ? snapshot.scene : null;
   return frameIsland({
     ...backgroundChoices(change, { presets, snapshot }),
     background: scene?.background ?? snapshot.background,

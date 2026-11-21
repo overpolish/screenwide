@@ -51,6 +51,7 @@ mod scene_pane_gesture;
 pub(crate) mod scene_preview;
 pub(crate) mod scene_reframe;
 mod scene_selection;
+pub(crate) mod scenes_command;
 mod selection_gesture;
 mod selection_preview;
 pub(crate) mod sound_track;

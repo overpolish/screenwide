@@ -30,8 +30,15 @@ impl SceneBox {
   /// be found and dragged back.
   pub(crate) fn is_valid(self) -> bool {
     let (x, y) = (self.x + self.width / 2.0, self.y + self.height / 2.0);
-    (0.0..=1.0).contains(&x)
-      && (0.0..=1.0).contains(&y)
+    (0.0..=1.0).contains(&x) && (0.0..=1.0).contains(&y) && self.is_drawable()
+  }
+
+  /// A box with some size and a place, wherever it lies. The preview draws a
+  /// preset held where the crop tool left it, which may lie past the canvas's
+  /// edge with the part of the picture it picks there.
+  fn is_drawable(self) -> bool {
+    self.x.is_finite()
+      && self.y.is_finite()
       && self.width > 0.0
       && self.height > 0.0
       && self.width <= MAX_BOX_SHARE
@@ -84,9 +91,11 @@ impl SceneBox {
 /// Where a custom scene puts its panes in place of its preset's boxes, and
 /// which of them is drawn in front. The camera keeps the recording's own box
 /// where it has none, and is drawn in front unless `camera_behind` says
-/// otherwise. The screen is shown unless `screen_hidden` says otherwise: a
-/// camera-only scene made custom keeps the screen's box, unseen, so the
-/// screen has somewhere to arrive from as the scene leaves.
+/// otherwise. Each pane is shown unless its `_hidden` says otherwise, and
+/// keeps its place while hidden, so it comes back where it was and has
+/// somewhere to arrive from as the scene leaves: a camera-only scene made
+/// custom keeps the screen's box unseen, a screen-only one the camera in the
+/// recording's own place.
 #[derive(Clone, Copy, Debug, Deserialize, PartialEq, Serialize, TS)]
 #[serde(rename_all = "camelCase")]
 #[ts(export)]
@@ -101,14 +110,28 @@ pub struct SceneBoxes {
   #[serde(default, skip_serializing_if = "std::ops::Not::not")]
   #[ts(type = "true")]
   pub screen_hidden: bool,
+  #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+  #[ts(type = "true")]
+  pub camera_hidden: bool,
 }
 
 impl SceneBoxes {
-  /// Whether every box has some size and its middle on the canvas.
+  /// Whether every box has some size and its middle on the canvas, as a
+  /// saved layout's must.
   pub(crate) fn is_valid(self) -> bool {
     [Some(self.screen), self.camera]
       .into_iter()
       .flatten()
       .all(SceneBox::is_valid)
+  }
+
+  /// Whether every box has some size and a place, as the held scene's must:
+  /// a preset held while cropped is drawn at boxes that may lie past the
+  /// canvas.
+  pub(crate) fn is_drawable(self) -> bool {
+    [Some(self.screen), self.camera]
+      .into_iter()
+      .flatten()
+      .all(SceneBox::is_drawable)
   }
 }

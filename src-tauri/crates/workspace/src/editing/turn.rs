@@ -22,7 +22,7 @@ pub(super) use drag::{cancel, down, pointer_move, up};
 /// through the turn.
 mod chrome;
 pub(super) use chrome::{
-  carried_point, carried_rect, carried_segment, chrome, TurnChrome, RING_KIND,
+  carried_point, carried_rect, carried_segment, chrome, Rings, TurnChrome, RING_KIND,
 };
 
 /// A turned layer resized by one of its grips, worked out where it is drawn.
@@ -58,9 +58,11 @@ fn rotation(selection: PreviewSelection) -> SceneRotation {
   }
 }
 
-/// Whether `selection` is turned, which is when its chrome is carried.
+/// Whether `selection` is turned, which is when its chrome is carried. The
+/// crop's window stands upright, its turn there only for the rings fading
+/// as it opens.
 fn is_turned(selection: PreviewSelection) -> bool {
-  selection.turnable != 0 && !rotation(selection).is_upright()
+  selection.turnable != 0 && selection.crop_mode == 0 && !rotation(selection).is_upright()
 }
 
 /// The turn `selection`'s chrome goes through, in display points, and its
@@ -171,13 +173,26 @@ pub(super) fn layer_reading(inner: &SurfaceInner, point: (f64, f64)) -> Option<(
 /// Whether the gizmo's rings are shown: the select tool's chrome over a
 /// layer a scene turns.
 fn rings_shown(state: &SurfaceState) -> bool {
-  state.editor_active
-    && state
-      .selection
-      .is_some_and(|selection| selection.turnable != 0 && selection.crop_mode == 0)
+  rings_opacity(state) >= 1.0
+}
+
+/// How much of the gizmo's rings shows: all of them with the select tool's
+/// chrome over a layer a scene turns, and, while the crop's chrome takes over
+/// from it or gives way to it, as much as is still the select tool's
+/// (`PreviewSelection::crop_closing`). Only rings shown in full are pressed.
+pub(super) fn rings_opacity(state: &SurfaceState) -> f64 {
+  let shown = state.editor_active
     && matches!(state.annotation.mode, MODE_NONE | MODE_SELECT)
     && !annotation::owns_chrome(state)
-    && !state.object_picking.is_active()
+    && !state.object_picking.is_active();
+  match state
+    .selection
+    .filter(|selection| shown && selection.turnable != 0)
+  {
+    Some(selection) if selection.crop_mode == 0 => 1.0,
+    Some(selection) => selection.crop_closing.clamp(0.0, 1.0),
+    None => 0.0,
+  }
 }
 
 /// The gizmo's middle, the selected layer's, which its turn leaves in place,

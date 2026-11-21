@@ -16,9 +16,6 @@ export type TimelineScene = Span & {
   id: string;
   /** What its layout is called. */
   name: string;
-  // Once it has arrived; its start where not given.
-  /** Where choosing it puts the playhead, in played seconds. */
-  landsAt?: number;
 };
 
 export type SceneClipProps = RailClipProps & { scene: TimelineScene };

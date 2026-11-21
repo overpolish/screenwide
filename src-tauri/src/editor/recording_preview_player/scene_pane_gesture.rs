@@ -6,7 +6,7 @@
 //! move, and the screen turned with the rotation gizmo.
 
 use super::{PreviewCompositionSettings, PreviewPlayerManager};
-use screenwide_export::scenes::{camera_target, made_custom};
+use screenwide_export::scenes::made_custom;
 use screenwide_scenes::{RecordingSceneClip, RecordingScenePreset, SceneRotation};
 use screenwide_workspace::editing::SelectionGestureOperation;
 
@@ -19,10 +19,10 @@ fn clip_at(clips: &[RecordingSceneClip], timeline_ms: u64) -> Option<usize> {
 
 /// A select gesture on a pane of a custom scene `timeline_ms` into the
 /// edited video: the clips with that pane's box moved or resized. A preset
-/// scene's screen moves too, and a camera-only scene's camera: the gesture
-/// first makes the scene custom where it stands (`custom`, as the panel's
-/// Custom does), so nothing jumps as it starts. Any other preset's camera is
-/// left to pan and zoom inside its box. `None` where the clip there is
+/// scene's panes move too, the camera's wherever the preset shows it: the
+/// gesture first makes the scene custom where it stands (`custom`, as the
+/// panel's Custom does), so nothing jumps as it starts. What a pane shows
+/// inside its box is the crop tool's. `None` where the clip there is
 /// neither; `Some(None)` for a pane its boxes do not place, whose gestures
 /// stay the recording's own. `delta` is in shares of the `canvas`, as the
 /// boxes are; the screen's is measured on its box padded by the scene's
@@ -40,9 +40,10 @@ pub(super) fn custom_box_gesture(
   let index = clip_at(clips, timeline_ms)?;
   let mut next = clips.to_vec();
   if next[index].boxes.is_none() {
+    let preset = clips[index].preset;
     let frees = match layer_id {
       0 => true,
-      1 => bake_camera && clips[index].preset == RecordingScenePreset::CameraOnly,
+      1 => bake_camera && (clips[index].needs_camera() || preset == RecordingScenePreset::Full),
       _ => false,
     };
     if !frees {
@@ -153,25 +154,75 @@ impl PreviewPlayerManager {
     ) {
       return next.map(Some);
     }
-    // With the camera a pane of its own, no scene places it, so its gestures
-    // stay its own; the screen's are swallowed.
-    let camera = match (camera, layer_id) {
-      (Some(camera), 1) => camera,
-      (None, 1) => return None,
-      _ => return Some(None),
-    };
-    let Some((index, frame, framing)) =
-      camera_target(clips, timeline_ms, output, &snapshot.camera_overlay, camera)
-    else {
-      return Some(None);
-    };
-    let mut next = clips.to_vec();
-    next[index].camera = Some(framing.reframed(
-      frame,
-      f64::from(camera.0) / f64::from(camera.1.max(1)),
-      (delta.0 * canvas.0, delta.1 * canvas.1),
-      scale,
-    ));
-    Some(Some(next))
+    // A pane no scene places keeps its own gestures: the camera left out of
+    // the video. Anything else the scene hides is swallowed.
+    if camera.is_none() && layer_id == 1 {
+      return None;
+    }
+    Some(None)
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+  use screenwide_scenes::model::{SceneBox, SceneBoxes};
+
+  const CAMERA: SceneBox = SceneBox {
+    x: 0.7,
+    y: 0.2,
+    width: 0.25,
+    height: 0.3,
+  };
+
+  fn scene(preset: &str) -> Vec<RecordingSceneClip> {
+    vec![serde_json::from_value(serde_json::json!({
+      "id": "s", "startMs": 0, "endMs": 10_000, "preset": preset
+    }))
+    .unwrap()]
+  }
+
+  /// The scene made custom where it stands, its camera at `CAMERA`.
+  fn custom(clip: &RecordingSceneClip) -> Option<RecordingSceneClip> {
+    Some(RecordingSceneClip {
+      boxes: Some(SceneBoxes {
+        screen: SceneBox {
+          x: 0.05,
+          y: 0.2,
+          width: 0.6,
+          height: 0.6,
+        },
+        camera: Some(CAMERA),
+        camera_behind: false,
+        screen_hidden: false,
+        camera_hidden: false,
+      }),
+      ..clip.clone()
+    })
+  }
+
+  fn drag_camera(preset: &str, bake_camera: bool) -> Option<Option<Vec<RecordingSceneClip>>> {
+    custom_box_gesture(
+      &scene(preset),
+      5_000,
+      (bake_camera, custom),
+      1,
+      ((0.1, 0.0), 1.0, (1_600.0, 900.0), 0.0),
+    )
+  }
+
+  #[test]
+  fn a_presets_camera_moves_its_box_as_the_screen_does() {
+    for preset in ["split-two-thirds", "picture-in-picture", "full"] {
+      let moved = drag_camera(preset, true).flatten().expect(preset);
+      let camera = moved[0].boxes.and_then(|boxes| boxes.camera).expect(preset);
+      assert!((camera.x - (CAMERA.x + 0.1)).abs() < 1e-9, "{preset}");
+    }
+  }
+
+  #[test]
+  fn a_camera_out_of_the_video_or_hidden_is_not_taken() {
+    assert_eq!(drag_camera("split-two-thirds", false), None);
+    assert_eq!(drag_camera("screen-only", true), None);
   }
 }

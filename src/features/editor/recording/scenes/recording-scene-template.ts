@@ -60,6 +60,7 @@ export const fittedTemplateBoxes = (
     ...(template.boxes.camera ? { camera: fitted(template.boxes.camera) } : {}),
     ...(template.boxes.cameraBehind ? { cameraBehind: true } : {}),
     ...(template.boxes.screenHidden ? { screenHidden: true } : {}),
+    ...(template.boxes.cameraHidden ? { cameraHidden: true } : {}),
   };
 };
 
@@ -101,7 +102,8 @@ export const isTemplateLayout = (
     sameBox(boxes.screen, fitted.screen) &&
     sameBox(boxes.camera, fitted.camera) &&
     Boolean(boxes.cameraBehind) === Boolean(fitted.cameraBehind) &&
-    Boolean(boxes.screenHidden) === Boolean(fitted.screenHidden)
+    Boolean(boxes.screenHidden) === Boolean(fitted.screenHidden) &&
+    Boolean(boxes.cameraHidden) === Boolean(fitted.cameraHidden)
   );
 };
 
@@ -118,6 +120,7 @@ export const chosenSceneTemplate = (
       camera: SceneBox | null;
       screen: SceneBox | null;
       cameraBehind?: boolean;
+      cameraHidden?: boolean;
       screenHidden?: boolean;
     } | null;
     canvasAspect: number;
@@ -129,6 +132,7 @@ export const chosenSceneTemplate = (
     ...(boxes.camera ? { camera: boxes.camera } : {}),
     ...(boxes.cameraBehind ? { cameraBehind: true } : {}),
     ...(boxes.screenHidden ? { screenHidden: true } : {}),
+    ...(boxes.cameraHidden ? { cameraHidden: true } : {}),
   };
   return (
     templates.find((template) =>

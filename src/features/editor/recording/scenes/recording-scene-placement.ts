@@ -97,7 +97,7 @@ const onCanvas = (box: SceneBox, canvas: Canvas): SceneRect => ({
  * its custom boxes or else its preset, and which of the two it shows. The
  * camera's box is null where the scene places none and the recording's own
  * box stays. A pane the preset hides keeps the recording's own place,
- * unseen; a custom scene shows both, unless its boxes hide the screen.
+ * unseen; a custom scene shows both, unless its boxes hide one.
  */
 export const sceneBoxes = (
   clip: RecordingSceneClip,
@@ -112,25 +112,48 @@ export const sceneBoxes = (
     return {
       camera: boxes.camera ? onCanvas(boxes.camera, canvas) : null,
       screen: onCanvas(boxes.screen, canvas),
-      shown: { camera: true, screen: boxes.screenHidden !== true },
+      shown: {
+        camera: boxes.cameraHidden !== true,
+        screen: boxes.screenHidden !== true,
+      },
     };
+  const shapes = clip.shapes ?? {};
+  // The composition's own places, each pane cropped to a shape of the
+  // scene's own fitted inside its place, about its middle.
   if (clip.preset === "full" || clip.preset === "screen-only")
     return {
-      camera: null,
-      screen: base.screen,
+      camera:
+        clip.preset === "full" && camera && shapes.camera
+          ? fitted(base.frame, shapes.camera)
+          : null,
+      screen: shapes.screen ? fitted(base.screen, shapes.screen) : base.screen,
       shown: { camera: clip.preset === "full", screen: true },
     };
   // Without a camera no preset that places one plays, so any shape will do;
-  // `arrange.rs` takes the same.
+  // `arrange.rs` takes the same. Each pane is laid out at the shape the
+  // scene crops it to, else its picture's.
   const panes = recordingScenePanes(clip.preset, canvas, {
-    cameraAspect: camera?.aspect ?? 16 / 9,
-    screenAspect: base.screen.width / base.screen.height,
+    cameraAspect: shapes.camera ?? camera?.aspect ?? 16 / 9,
+    screenAspect: shapes.screen ?? base.screen.width / base.screen.height,
     variant: clip.variant,
   });
   return {
     camera: panes.camera,
     screen: panes.screen ?? base.screen,
     shown: { camera: panes.camera !== null, screen: panes.screen !== null },
+  };
+};
+
+/** The largest rect of `shape`, width over height, inside `place`, about
+ * its middle. The twin of `fitted` in `target.rs`. */
+const fitted = (place: SceneRect, shape: number): SceneRect => {
+  const width = Math.min(place.width, place.height * shape);
+  const height = width / shape;
+  return {
+    height,
+    width,
+    x: place.x + (place.width - width) / 2,
+    y: place.y + (place.height - height) / 2,
   };
 };
 
@@ -151,7 +174,7 @@ export const targeting =
     const crop = base.screen;
     const aspect = crop.width / crop.height;
     const boxes = sceneBoxes(clip, { base, camera, canvas });
-    if (boxes.camera && !camera) return null;
+    if (boxes.camera && boxes.shown.camera && !camera) return null;
     const { screen, shown } = boxes;
     const frame = boxes.camera ?? base.frame;
     // The screen's framing places the visible crop as if it were the

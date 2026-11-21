@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 
 import {
   ScreenshotOutputSettings,
@@ -13,10 +13,15 @@ import { CameraOverlaySettings, RecordingVideoTrackId } from "../../types";
 
 import { arrangedRecordingScene } from "./recording-scene-arrangement";
 import { ownEditedAutoZooms } from "./recording-scene-auto-zoom";
+import {
+  releaseSceneCrop,
+  useSceneCropHold,
+  withHeldScene,
+} from "./recording-scene-crop-hold";
 import { pictureRect } from "./recording-scene-custom-crop";
 import { reframeWindow } from "./recording-scene-framing";
 import { SceneRect } from "./recording-scene-geometry";
-import { sceneShowsScreen } from "./recording-scenes";
+import { sceneNeedsCamera, sceneShowsScreen } from "./recording-scenes";
 import {
   RecordingSceneTarget,
   useRecordingSceneGesture,
@@ -73,20 +78,31 @@ export function useScenePreviewEditing({
         : null,
     [cameraAspect, cameraOverlay, canPreviewBakedCamera],
   );
+  // Drawn as the preview draws them: a preset the crop tool is on held where
+  // its panes stood, until the crop has closed after the tool is put away.
+  const held = useSceneCropHold(edit?.sceneClips);
+  const drawnClips = useMemo(
+    () => edit?.sceneClips && withHeldScene(edit.sceneClips, held),
+    [edit?.sceneClips, held],
+  );
   const arrangement = useMemo(
     () =>
-      edit?.sceneClips && screenSource
+      edit && drawnClips && screenSource
         ? arrangedRecordingScene({
             camera,
-            clips: edit.sceneClips,
+            clips: drawnClips,
             output,
             ranges: recordingTimelinePlaybackRanges(edit, durationMs),
             screen: screenSource,
             sourceMs: positionMs,
           })
         : null,
-    [camera, durationMs, edit, output, positionMs, screenSource],
+    [camera, drawnClips, durationMs, edit, output, positionMs, screenSource],
   );
+  // A preset held while cropped is laid out at its new shapes once the crop
+  // has closed (`useRecordingCropTurn`) or the playhead leaves its scene.
+  const sceneId = arrangement?.clip.id ?? null;
+  useEffect(() => releaseSceneCrop, [sceneId]);
   const isEditing = canvasTool === "select" || canvasTool === "crop";
   // Each pane as the paused frame draws it: the box it sits in now and the
   // framing it shows there.
@@ -161,31 +177,31 @@ export function useScenePreviewEditing({
   };
   const reframeSelections: Partial<
     Record<RecordingVideoTrackId, RecordingPreviewSelection>
-  > | null =
-    target && canvasTool === "crop"
-      ? {
-          primary: cropWindow(target.screen, {
-            inPlace: true,
-            layerId: 0,
-          }),
-          ...(target.camera
-            ? {
-                camera: cropWindow(target.camera, {
-                  inPlace: Boolean(boxes?.camera),
-                  layerId: 1,
-                }),
-              }
-            : {}),
-        }
-      : null;
+  > | null = target
+    ? {
+        primary: cropWindow(target.screen, {
+          inPlace: true,
+          layerId: 0,
+        }),
+        ...(target.camera
+          ? {
+              camera: cropWindow(target.camera, {
+                inPlace: !boxes || Boolean(boxes.camera),
+                layerId: 1,
+              }),
+            }
+          : {}),
+      }
+    : null;
   const preset =
     arrangement && !arrangement.clip.boxes ? arrangement.clip.preset : null;
   return {
     arrangement,
-    /** Whether the scene at the playhead is a camera-only preset, whose
-     * camera the select tool moves and resizes as a custom scene's, making
-     * it custom (`scene_pane_gesture.rs`). */
-    freesCamera: preset === "camera-only",
+    /** Whether the scene at the playhead is a preset that shows the camera,
+     * whose camera the select tool moves and resizes as a custom scene's,
+     * making it custom (`scene_pane_gesture.rs`), as it does the screen. */
+    freesCamera:
+      preset !== null && (preset === "full" || sceneNeedsCamera({ preset })),
     /** Whether the scene at the playhead is a preset that shows the screen,
      * whose screen the select tool moves and resizes as a custom scene's,
      * making it custom (`scene_pane_gesture.rs`); camera only and blank

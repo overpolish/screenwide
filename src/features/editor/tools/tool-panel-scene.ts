@@ -61,10 +61,17 @@ export type ToolPanelScene = {
   hasAutoZooms: boolean;
   /** Whether the recording has a camera for an arrangement to place. */
   hasCamera: boolean;
-  hasSceneAtPlayhead: boolean;
+  /** Whether a scene is in hand: the one chosen on the strip, or the one
+   * under the playhead, which the islands edit. The rest of the snapshot
+   * describes it. */
+  hasSceneInHand: boolean;
   /** Whether the timeline holds any scene, for which the Frame island keeps
    * room for a scene's note and action as the playhead moves. */
   hasScenes: boolean;
+  /** Whether the scene in hand is the one under the playhead, which the
+   * picture shows, so what is done on the picture, such as a crop, reaches
+   * it. */
+  isAtPlayhead: boolean;
   /** Whether the camera is drawn into the screen's video, without which the
    * scenes that place it stand idle. */
   isBaked: boolean;
@@ -74,6 +81,9 @@ export type ToolPanelScene = {
     camera: ToolPanelScenePane | null;
     screen: ToolPanelScenePane | null;
   };
+  /** Whether the scene in hand shows each pane, which the Scene island turns
+   * on and off; null where no scene is in hand. */
+  panesShown: { camera: boolean; screen: boolean } | null;
   preset: RecordingScenePreset | null;
   /** The selected pane's corner radius in the scene under the playhead, in
    * percent of its shorter side, null where there is no scene. */

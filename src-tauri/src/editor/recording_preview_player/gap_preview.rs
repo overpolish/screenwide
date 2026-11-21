@@ -14,37 +14,81 @@ use super::PlayerSources;
 /// The recording's own scene clips, which gestures and annotations read, and
 /// the clips the picture is drawn by: those with the gaps among them as
 /// blank scenes ([`with_gaps`]), kept beside them so no frame makes them.
+/// A preset the crop tool holds where its panes stood is kept beside them
+/// too, drawn only while the crop tool is on a pane, so putting the tool
+/// away draws the preset laid out in that same frame.
 #[derive(Default)]
 pub(super) struct SceneClips {
   own: Vec<RecordingSceneClip>,
   gaps: Vec<GapScene>,
   drawn: Vec<RecordingSceneClip>,
+  held: Option<RecordingSceneClip>,
+  held_drawn: Option<Vec<RecordingSceneClip>>,
 }
 
 impl SceneClips {
   pub(super) fn new(own: Vec<RecordingSceneClip>, gaps: Vec<GapScene>) -> Self {
+    Self::holding(own, gaps, None)
+  }
+
+  fn holding(
+    own: Vec<RecordingSceneClip>,
+    gaps: Vec<GapScene>,
+    held: Option<RecordingSceneClip>,
+  ) -> Self {
     let drawn = with_gaps(&own, &gaps);
-    Self { own, gaps, drawn }
+    let held_drawn = held
+      .as_ref()
+      .filter(|held| own.iter().any(|clip| clip.id == held.id))
+      .map(|held| {
+        let swapped: Vec<_> = own
+          .iter()
+          .map(|clip| if clip.id == held.id { held } else { clip })
+          .cloned()
+          .collect();
+        with_gaps(&swapped, &gaps)
+      });
+    Self {
+      own,
+      gaps,
+      drawn,
+      held,
+      held_drawn,
+    }
   }
 
   pub(super) fn own(&self) -> &[RecordingSceneClip] {
     &self.own
   }
 
-  pub(super) fn gaps(&self) -> &[GapScene] {
-    &self.gaps
-  }
-
   pub(super) fn drawn(&self) -> &[RecordingSceneClip] {
     &self.drawn
+  }
+
+  /// The clips drawn while the crop tool is on a pane: the held scene in
+  /// place of the one it stands for, where one is held.
+  pub(super) fn held_drawn(&self) -> Option<&[RecordingSceneClip]> {
+    self.held_drawn.as_deref()
   }
 
   /// Takes `own` and, where given, `gaps`, answering whether either changed.
   pub(super) fn set(&mut self, own: Vec<RecordingSceneClip>, gaps: Option<Vec<GapScene>>) -> bool {
     let changed = own != self.own || gaps.as_ref().is_some_and(|gaps| *gaps != self.gaps);
     let gaps = gaps.unwrap_or_else(|| std::mem::take(&mut self.gaps));
-    *self = Self::new(own, gaps);
+    let held = self.held.take();
+    *self = Self::holding(own, gaps, held);
     changed
+  }
+
+  /// Takes the scene the crop tool holds, answering whether it changed.
+  pub(super) fn hold(&mut self, held: Option<RecordingSceneClip>) -> bool {
+    if held == self.held {
+      return false;
+    }
+    let own = std::mem::take(&mut self.own);
+    let gaps = std::mem::take(&mut self.gaps);
+    *self = Self::holding(own, gaps, held);
+    true
   }
 }
 

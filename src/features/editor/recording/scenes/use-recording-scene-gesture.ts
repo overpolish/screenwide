@@ -8,11 +8,11 @@ import {
   screenshotOutputDimensions,
 } from "../../screenshot/screenshot-output";
 
-import { customRecordingSceneClip } from "./recording-scene-custom";
 import {
-  croppedCustomPane,
-  customCropWindow,
-} from "./recording-scene-custom-crop";
+  SceneEditGesture,
+  sceneCropGesture,
+} from "./recording-scene-crop-gesture";
+import { customRecordingSceneClip } from "./recording-scene-custom";
 import {
   boxEdit,
   framingEdit,
@@ -21,7 +21,11 @@ import {
   ScenePane,
 } from "./recording-scene-gesture-edits";
 import { SceneCamera } from "./recording-scene-placement";
-import { RecordingSceneClip, rotatedSceneClip } from "./recording-scenes";
+import {
+  RecordingSceneClip,
+  rotatedSceneClip,
+  sceneNeedsCamera,
+} from "./recording-scenes";
 
 import type { RecordingSelectionGestureEvent } from "../use-recording-preview-surface";
 
@@ -38,37 +42,22 @@ export type RecordingSceneTarget = {
   screenInset: number;
 };
 
-type ActiveGesture =
-  | { kind: "screen" }
-  | {
-      clipId: string;
-      clips: RecordingSceneClip[];
-      /** Each event's edit of the clip, from the clip as the gesture found
-       * it; null leaves it as it was. */
-      edit: (
-        clip: RecordingSceneClip,
-        event: RecordingSelectionGestureEvent,
-      ) => RecordingSceneClip | null;
-      kind: "edit";
-    };
+type ActiveGesture = { kind: "screen" } | SceneEditGesture;
 
 /**
  * Takes the gestures on the screen and the camera while the playhead is
- * inside a scene. A custom scene's own boxes move and resize with the select
- * tool, and the crop tool crops them in place, freely, the picture staying
- * where it sits. A preset's screen moves and resizes too, which first makes
- * the scene custom where it stands, as the panel's Custom does; camera only,
- * which hides the screen, frees its camera that way instead, and blank has
- * no pane to move. The screen's crop is each scene's own, so the crop tool
- * crops any scene's screen in place too, a preset's made custom by the
- * crop's first travel. Any other preset's camera is fixed where the scene
- * puts it: with the select tool it pans its picture inside its box or zooms
- * it, and with the crop tool a window of the camera's box's shape laid over
- * its unzoomed picture picks the part the box shows. Each edits the clip
- * under the playhead; `scene_pane_gesture.rs` is the native twin. The
- * canvas's frame is left to the ordinary selection gesture, as is a camera
- * a custom scene has no box for and anything else `applyGesture` answers it
- * did not take.
+ * inside a scene, one rule for both panes: the select tool moves and resizes
+ * a pane's box, and the crop tool picks what the pane shows. A custom
+ * scene's own boxes move and resize, and are cropped in place, freely, the
+ * picture staying where it sits. A preset's panes move and resize too,
+ * which first makes the scene custom where it stands, as the panel's Custom
+ * does (user asked, 2026-11-21); blank has no pane to move. The crop tool
+ * crops a preset's panes in place too, keeping the preset: the pane is laid
+ * out at the crop's shape once the crop tool leaves the scene. Each edits
+ * the clip under the playhead; `scene_pane_gesture.rs` is the native twin.
+ * The canvas's frame is left to the ordinary selection gesture, as is a
+ * camera a custom scene has no box for and anything else `applyGesture`
+ * answers it did not take.
  */
 export function useRecordingSceneGesture({
   camera,
@@ -119,8 +108,10 @@ export function useRecordingSceneGesture({
     const placesBox = operation === "move" || operation === "resize";
     const frees =
       paneName === "screen"
-        ? crops || (found?.preset !== "camera-only" && placesBox)
-        : found?.preset === "camera-only" && placesBox;
+        ? found?.preset !== "camera-only" && placesBox
+        : placesBox &&
+          found !== undefined &&
+          (found.preset === "full" || sceneNeedsCamera(found));
     const owned =
       found && !found.boxes && frees
         ? customRecordingSceneClip({
@@ -138,55 +129,18 @@ export function useRecordingSceneGesture({
       (found?.followFace ?? camera?.overlay.followFace ?? false);
     const keptSpot = (framing: ScenePane["framing"]) =>
       follows ? keepingFaceSpot(framing, pane.framing) : framing;
-    // A scene's own boxes are cropped in place, drawn afresh included.
-    if (owned && boxes?.[paneName] && crops) {
-      const anchor = {
-        x: pane.box.x + event.deltaX * canvas.width,
-        y: pane.box.y + event.deltaY * canvas.height,
-      };
-      return {
-        clipId,
+    if (owned && crops && (boxes?.[paneName] || !boxes))
+      return sceneCropGesture({
+        camera,
+        canvas,
         clips,
-        edit: (_clip, next) => {
-          if (
-            next.operation !== "cropDraw" &&
-            next.operation !== "cropMove" &&
-            next.operation !== "cropResize"
-          )
-            return null;
-          // A press that takes a preset's crop without moving it leaves the
-          // scene as it was rather than making it custom.
-          if (
-            owned !== found &&
-            next.operation !== "cropDraw" &&
-            next.deltaX === 0 &&
-            next.deltaY === 0 &&
-            next.scale === 1
-          )
-            return null;
-          const cropped = croppedCustomPane(pane, {
-            canvas,
-            moving: next.operation === "cropMove" ? 0 : next.edges & 15,
-            next: customCropWindow(pane.box, {
-              anchor,
-              delta: {
-                x: next.deltaX * canvas.width,
-                y: next.deltaY * canvas.height,
-              },
-              edges: next.edges,
-              operation: next.operation,
-            }),
-            slides: next.operation === "cropMove",
-          });
-          return {
-            ...owned,
-            boxes: { ...boxes, [paneName]: cropped.box },
-            [paneName]: keptSpot(cropped.framing),
-          };
-        },
-        kind: "edit",
-      };
-    }
+        event,
+        keptSpot,
+        output: primaryOutput,
+        pane,
+        paneName,
+        scene: owned,
+      });
     // With the camera a pane of its own, no scene places it, so its gestures
     // stay its own.
     if (!isCrop && operation !== "move" && operation !== "resize") return null;
@@ -211,7 +165,9 @@ export function useRecordingSceneGesture({
         kind: "edit",
       };
     }
-    if (!isCrop && paneName === "screen") return { kind: "screen" };
+    // Select moves a pane's box, above; what is left is a crop of what a
+    // preset's camera shows, or a screen the scene keeps hidden.
+    if (!isCrop) return paneName === "screen" ? { kind: "screen" } : null;
     return {
       clipId,
       clips,
@@ -223,7 +179,7 @@ export function useRecordingSceneGesture({
           },
           event: next,
         });
-        return { ...clip, [paneName]: isCrop ? keptSpot(framing) : framing };
+        return { ...clip, [paneName]: keptSpot(framing) };
       },
       kind: "edit",
     };
@@ -239,6 +195,7 @@ export function useRecordingSceneGesture({
     if (event.phase === "end" || event.phase === "cancel")
       activeRef.current = null;
     if (active.kind === "screen") return true;
+    if (event.phase === "cancel") active.onCancel?.();
     onClipsChange(
       active.clips.map((clip) =>
         clip.id === active.clipId && event.phase !== "cancel"

@@ -142,6 +142,19 @@ pub struct RecordingSceneClip {
   #[serde(default, skip_serializing_if = "Option::is_none")]
   #[ts(optional)]
   pub variant: Option<SceneVariant>,
+  /// The layout a preset scene had before one of its panes was turned off,
+  /// which turning the pane back on returns to. Unset where no pane was
+  /// turned off, and once a layout is chosen or a pane moved by hand.
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  #[ts(optional)]
+  pub layout_before: Option<RecordingScenePreset>,
+  /// The shape a preset scene crops each pane to, which its layout fits the
+  /// pane at, so a crop keeps the preset and the layout makes room for it.
+  /// Unset, each pane keeps the shape of its picture as the recording crops
+  /// it. A custom scene's boxes carry their own shapes instead.
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  #[ts(optional)]
+  pub shapes: Option<SceneShapes>,
   /// Set on a zoom the auto zoom made that nobody has edited since. Making
   /// the auto zooms again replaces these and leaves every other scene alone.
   #[serde(default, skip_serializing_if = "std::ops::Not::not")]
@@ -149,13 +162,36 @@ pub struct RecordingSceneClip {
   pub auto: bool,
 }
 
+/// A preset scene's own crop shapes, each width over height; a pane without
+/// one keeps its picture's shape.
+#[derive(Clone, Copy, Debug, Default, Deserialize, PartialEq, Serialize, TS)]
+#[ts(export)]
+pub struct SceneShapes {
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  #[ts(optional)]
+  pub screen: Option<f64>,
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  #[ts(optional)]
+  pub camera: Option<f64>,
+}
+
+impl SceneShapes {
+  /// Whether every shape is one a box can take: neither a sliver nor a line.
+  fn is_valid(self) -> bool {
+    [self.screen, self.camera]
+      .into_iter()
+      .flatten()
+      .all(|shape| shape.is_finite() && (0.02..=50.0).contains(&shape))
+  }
+}
+
 impl RecordingSceneClip {
   /// Whether the scene places a camera, which it can only do where the
-  /// camera is drawn into the picture.
+  /// camera is drawn into the picture. One it hides it does not place.
   pub fn needs_camera(&self) -> bool {
-    self
-      .boxes
-      .map_or(self.preset.needs_camera(), |boxes| boxes.camera.is_some())
+    self.boxes.map_or(self.preset.needs_camera(), |boxes| {
+      boxes.camera.is_some() && !boxes.camera_hidden
+    })
   }
 
   /// One where the camera is drawn in front of the screen, zero where a
@@ -187,8 +223,23 @@ const MAX_SCENE_INSET_PERCENT: f64 = 50.0;
 /// Whether a recording's scene clips can be played: each spans time, has an
 /// id of its own and framings a scene can hold, and they run in order without
 /// overlapping, because only one scene can be on screen at a time. Bounds are
-/// half open, so one clip may end exactly where the next begins.
+/// half open, so one clip may end exactly where the next begins. Every box's
+/// middle stays on the canvas, so it can always be found and dragged back.
 pub fn validate_clips(clips: &[RecordingSceneClip]) -> Result<(), String> {
+  validated(clips, SceneBoxes::is_valid)
+}
+
+/// Whether the scene the crop tool holds can be drawn: a clip as
+/// [`validate_clips`] asks, except that its boxes may lie past the canvas's
+/// edge, where a preset held while cropped can leave a pane.
+pub fn validate_held_clip(clip: &RecordingSceneClip) -> Result<(), String> {
+  validated(std::slice::from_ref(clip), SceneBoxes::is_drawable)
+}
+
+fn validated(
+  clips: &[RecordingSceneClip],
+  boxes_hold: fn(SceneBoxes) -> bool,
+) -> Result<(), String> {
   let mut ids = std::collections::HashSet::with_capacity(clips.len());
   let mut previous_end = 0;
   for clip in clips {
@@ -200,12 +251,13 @@ pub fn validate_clips(clips: &[RecordingSceneClip]) -> Result<(), String> {
         .into_iter()
         .flatten()
         .any(|framing| !framing.is_valid())
-      || clip.boxes.is_some_and(|boxes| !boxes.is_valid())
+      || clip.boxes.is_some_and(|boxes| !boxes_hold(boxes))
       || clip.radius.is_some_and(|radius| !radius.is_valid())
       || clip
         .inset
         .is_some_and(|inset| !inset.is_valid(MAX_SCENE_INSET_PERCENT))
       || clip.rotation.is_some_and(|rotation| !rotation.is_valid())
+      || clip.shapes.is_some_and(|shapes| !shapes.is_valid())
     {
       return Err("The scene clips are invalid".to_owned());
     }

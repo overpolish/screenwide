@@ -87,16 +87,17 @@ export function presetDrawing(
 }
 
 /** A custom or saved layout, drawn from its boxes, which are shares of the
- * video. A screen the boxes hide is not drawn. */
+ * video. A pane the boxes hide is not drawn. */
 export function boxesDrawing(
   boxes: SceneBoxes,
   shape: SceneShape,
 ): SceneDrawing {
   return {
     aspect: shape.aspect,
-    camera: boxes.camera
-      ? { ...boxes.camera, radius: shape.cameraRadius }
-      : undefined,
+    camera:
+      boxes.camera && !boxes.cameraHidden
+        ? { ...boxes.camera, radius: shape.cameraRadius }
+        : undefined,
     ...(boxes.screenHidden ? {} : { screen: boxes.screen, ...turnOf(shape) }),
   };
 }
