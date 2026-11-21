@@ -105,7 +105,11 @@ export const Variants: Story = {
 // With `off`, the glyph shows the state, so being on does not fill the
 // button.
 export const WithOffIcon: Story = {
-  args: { "aria-label": "Play", children: <Pause />, off: <Play /> },
+  args: {
+    "aria-label": "Play",
+    children: <Pause className="fill-current" />,
+    off: <Play className="fill-current" />,
+  },
 };
 
 // Named beside its glyph, it is a pill as wide as both.

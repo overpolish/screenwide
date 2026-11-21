@@ -144,9 +144,9 @@ export function LiveControls({
         variant="ghost"
       >
         {isPaused ? (
-          <Play aria-hidden className="size-icon" />
+          <Play aria-hidden className="size-icon fill-current" />
         ) : (
-          <Pause aria-hidden className="size-icon" />
+          <Pause aria-hidden className="size-icon fill-current" />
         )}
       </IconButton>
       {/* Discarding sits beside stopping, so it asks twice: the bin gives
