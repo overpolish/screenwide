@@ -5,9 +5,10 @@ import type { CSSProperties, ReactNode } from "react";
 
 import { cn } from "../../../lib/styling";
 
-// A line down the beats with a small glyph at one end, pressed to undo what
-// it marks: a cut's seam, a split, a jump. Its glyph says what it undoes and
-// its end says which kind it is, so marks that meet still read apart.
+// A line down the beats with a small glyph at one end, which is pressed to
+// undo what the line marks: a cut's seam, a split, a jump. Its glyph says
+// what it undoes and its end says which kind it is, so marks that meet
+// still read apart.
 
 export function TimelineMark({
   end,
@@ -27,21 +28,18 @@ export function TimelineMark({
   isDashed?: boolean;
 }) {
   return (
-    <button
-      aria-label={label}
+    // Only the glyph is pressed: the line lets presses through to the beats
+    // under it, so a narrow one beside a mark can still be chosen.
+    <span
       className={cn(
-        "group absolute inset-y-0 z-10 flex w-4 -translate-x-1/2 cursor-default justify-center outline-none",
+        "pointer-events-none absolute inset-y-0 z-10 flex w-4 -translate-x-1/2 justify-center",
         end === "top" ? "items-start" : "items-end",
       )}
       dir="ltr"
-      onClick={onPress}
-      onPointerDown={(event) => {
-        event.stopPropagation();
-      }}
       style={style}
-      type="button"
     >
       <span
+        aria-hidden
         className={cn(
           "absolute inset-y-0 w-px",
           isDashed
@@ -49,14 +47,20 @@ export function TimelineMark({
             : "bg-fg-secondary",
         )}
       />
-      <span
+      <button
+        aria-label={label}
         className={cn(
-          "relative flex size-4 items-center justify-center rounded-full bg-fg text-surface group-focus-visible:outline-2 group-focus-visible:outline-offset-1 group-focus-visible:outline-focus [&_svg]:size-icon-xs",
+          "pointer-events-auto relative flex size-4 cursor-default items-center justify-center rounded-full bg-fg text-surface outline-none focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-focus [&_svg]:size-icon-xs",
           end === "top" ? "-mt-1" : "-mb-1",
         )}
+        onClick={onPress}
+        onPointerDown={(event) => {
+          event.stopPropagation();
+        }}
+        type="button"
       >
         {glyph}
-      </span>
-    </button>
+      </button>
+    </span>
   );
 }
