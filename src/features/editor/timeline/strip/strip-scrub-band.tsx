@@ -29,7 +29,7 @@ export function StripScrubBand({
         data-scrub-band
       />
       {/* Over the scenes, which its line crosses, but pressed only by its
-        knob, centred in the knob's room under the picture's. */}
+        knob, centred in the band. */}
       <span className="pointer-events-none absolute inset-x-0 top-5.5 bottom-0 z-20">
         <TimelinePlayhead onScrub={onScrub} playhead={playhead} />
       </span>

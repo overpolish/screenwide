@@ -4,25 +4,24 @@
 import { BetweenVerticalStart, Pause, Play, Scissors } from "lucide-react";
 
 import { t } from "../../../i18n/i18n";
-import { cn } from "../../../lib/styling";
 import { IconButton } from "../../../primitives/button/icon-button";
 import { ToolbarTool } from "../../../primitives/toolbar/toolbar-tool";
 import { TooltipTrigger } from "../../../primitives/tooltip/tooltip-trigger";
 import { formatDuration } from "../duration";
-import { EDITOR_LEFT_COLUMN } from "../editor-left-column";
 import { RangeToolIcon } from "../glyphs/range-tool-icon";
 import { ChromeSetBack } from "../panel/chrome-set-back";
 
 import { Playhead } from "./scrub-playhead";
 import { ElapsedTime } from "./timeline-elapsed-time";
 
-// The strip's own controls, centred in the editor's left column under the
-// tools: play at the top, where the playhead is over how long the recording
-// is, and at the foot the range tool, the blade and a gap inserted at the
-// playhead, beside the strip they work on. Tracks is in the title bar with
-// the modes (`EditorModeBar`). While the Export island stands over the
-// editor only play answers and the tools are set back, but for the range
-// tool while a GIF is made: it stays in hand, to choose the GIF's range.
+// The strip's own controls, in a row under its minimap: play, where the
+// playhead is over how long the recording is, then the range tool, the
+// blade and a gap inserted at the playhead. Laid along the strip rather
+// than stacked beside it, they never make the strip's band taller than the
+// strip and one row. Tracks is in the title bar with the modes
+// (`EditorModeBar`). While the Export island stands over the editor only
+// play answers and the tools are set back, but for the range tool while a
+// GIF is made: it stays in hand, to choose the GIF's range.
 
 export type EditorTransportProps = {
   /** How long the recording plays once squeezed and cut, in ms. */
@@ -65,12 +64,7 @@ export function EditorTransport({
     ? t("editor-timeline-pause-preview")
     : t("editor-timeline-play-preview");
   return (
-    <div
-      className={cn(
-        "flex h-full shrink-0 flex-col items-center gap-inline",
-        EDITOR_LEFT_COLUMN,
-      )}
-    >
+    <div className="flex shrink-0 items-center gap-separate">
       <TooltipTrigger tooltip={{ label: playLabel, shortcut: "Space" }}>
         <IconButton
           aria-keyshortcuts="Space"
@@ -87,14 +81,16 @@ export function EditorTransport({
           )}
         </IconButton>
       </TooltipTrigger>
-      <span className="flex flex-col items-center text-caption whitespace-nowrap tabular-nums">
+      <span className="flex items-center gap-inline text-caption whitespace-nowrap tabular-nums">
         <span className="text-fg">
           <ElapsedTime playhead={playhead} />
         </span>
+        <span aria-hidden className="text-fg-tertiary">
+          /
+        </span>
         <span className="text-fg-tertiary">{formatDuration(durationMs)}</span>
       </span>
-      {/* Kept clear of the time, however short the column. */}
-      <div className="mt-auto flex flex-col items-center gap-inline pt-separate">
+      <div className="flex items-center gap-inline">
         <ChromeSetBack isSetBack={isLocked && !isGifRange}>
           {/* ⇧R takes it up and puts it down; held, ⌥ draws a range without
             it. Making a GIF, it is held in hand and cannot be put down, and

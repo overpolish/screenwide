@@ -14,13 +14,15 @@ import {
 import { TimelineStrip } from "../strip/timeline-strip";
 import { type TimelineStripProps } from "../strip/timeline-strip-props";
 
-// Under the picture, laid out as the row above it: the transport in the
-// tool column's width, the strip under the picture. It keeps the window's
-// inset from the bottom edge, as the tool column's glyphs keep it from the
-// leading one. While the Export island stands over the editor the strip is
-// set back and nothing on it is edited, but the recording still plays and
-// its playhead still scrubs, so the export can be looked through. Making a
-// GIF, the strip stays in focus, as its range is what the GIF is made of.
+// Under the picture and the tool column, across the window: the strip, and
+// under its minimap the transport in a row, set apart from both the minimap
+// and the window's bottom edge. The row keeps the window's inset from the
+// start edge, lining up with the strip and minimap, which keep it inside
+// their own padding. It is only as tall as the strip and that row. While
+// the Export island stands over the editor the strip is set back and nothing
+// on it is edited, but the recording still plays and its playhead still
+// scrubs, so the export can be looked through. Making a GIF, the strip stays
+// in focus, as its range is what the GIF is made of.
 
 export function RecordingStripBand({
   isLocked = false,
@@ -40,14 +42,11 @@ export function RecordingStripBand({
       aria-label={t("editor-timeline-label")}
       // The room above it, which the editor leaves under the picture, is
       // taken into the strip's top, so a press there scrubs
-      // (`strip-scrub-band.tsx`); the transport keeps its place under it.
-      className="-mt-separate flex shrink-0 gap-inline pb-inset"
+      // (`strip-scrub-band.tsx`).
+      className="-mt-separate flex shrink-0 flex-col gap-separate pb-inset"
       // Sounds dragged in are dropped here (`use-sound-drag.ts`).
       data-sound-drop-area
     >
-      <div className="flex pt-separate">
-        <EditorTransport {...transport} isLocked={isLocked} />
-      </div>
       <ChromeSetBack
         className="flex min-w-0 grow"
         isSetBack={isLocked && !transport.isGifRange}
@@ -71,6 +70,9 @@ export function RecordingStripBand({
           <TimelineStrip {...strip} isLocked={isLocked} />
         </div>
       </ChromeSetBack>
+      <div className="ps-inset">
+        <EditorTransport {...transport} isLocked={isLocked} />
+      </div>
     </section>
   );
 }

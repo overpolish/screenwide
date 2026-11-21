@@ -33,7 +33,7 @@ const meta = {
     playhead: createPlayhead(),
   },
   component: EditorTransport,
-  decorators: [featureStage({ height: 320, width: 120 })],
+  decorators: [featureStage({ height: 80, width: 360 })],
   parameters: {
     controls: {
       include: ["durationMs", "isCutting", "isPlaying", "isRanging"],

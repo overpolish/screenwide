@@ -133,7 +133,7 @@ export function TimelineStrip(props: TimelineStripProps) {
 
   return (
     <div
-      className="relative flex min-w-0 grow flex-col gap-2 pe-1"
+      className="relative flex min-w-0 grow flex-col gap-2 px-1"
       style={
         { "--glide": motionDurationCss("rearrange") } as React.CSSProperties
       }
