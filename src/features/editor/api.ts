@@ -288,3 +288,9 @@ export const setRecordingPreviewEditorSuspended = (
     sessionId,
     suspended,
   });
+
+/** The calling editor window's picture back at 100%, centred: ⌘0. Every
+ * editor's picture is one native view, reset alike. */
+export const resetEditorView = () => {
+  void invoke<null>("reset_editor_view").catch(() => undefined);
+};

@@ -32,6 +32,56 @@ fn image_rect(selection: PreviewSelection) -> NormalizedRect {
   }
 }
 
+/// Whether `point` lies past the whole picture the crop in hand is cut from,
+/// where a press puts the crop away rather than drawing a new one.
+pub(super) fn past_picture(state: &SurfaceState, point: (f64, f64)) -> bool {
+  let Some(selection) = state.selection.filter(|selection| {
+    selection.crop_mode != 0 && selection.image_width > 0.0 && selection.image_height > 0.0
+  }) else {
+    return false;
+  };
+  let Some(pane) = display_pane(state, selection.pane_index) else {
+    return false;
+  };
+  let image = image_rect(selection);
+  let (x, y) = (
+    (point.0 - pane.x) / pane.width,
+    (point.1 - pane.y) / pane.height,
+  );
+  x < image.x || y < image.y || x > image.x + image.width || y > image.y + image.height
+}
+
+/// Whether a press at `point` that hit `hit` lands on the whole picture the
+/// crop in hand opens out, drawn over that layer: a layer listed before the
+/// one cropped is drawn under it. The press is then the crop's, as one on
+/// what it shows, rather than a choice of the layer hidden under it; a layer
+/// drawn over the cropped picture, the camera over an opened screen, still
+/// takes it.
+pub(in crate::editing) fn picture_covers(
+  state: &SurfaceState,
+  hit: PreviewSelection,
+  point: (f64, f64),
+) -> bool {
+  let Some(active) = state.selection.filter(|selection| {
+    selection.crop_mode != 0 && selection.image_width > 0.0 && selection.image_height > 0.0
+  }) else {
+    return false;
+  };
+  let same = |a: PreviewSelection, b: PreviewSelection| {
+    a.pane_index == b.pane_index && a.layer_id == b.layer_id
+  };
+  if same(hit, active) || past_picture(state, point) {
+    return false;
+  }
+  let order = |selection: PreviewSelection| {
+    state
+      .selection_targets
+      .iter()
+      .position(|target| same(*target, selection))
+  };
+  matches!((order(active), order(hit)), (Some(cropped), Some(hit)) if hit < cropped)
+}
+
 /// Arms a crop draw for a press that landed on nothing while a crop is being
 /// edited. The gesture carries the anchor's offset from the crop's origin,
 /// which is what its Begin reports once the press becomes a drag.

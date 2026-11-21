@@ -11,6 +11,7 @@ pub(super) fn down(inner: &std::sync::Arc<SurfaceInner>, scale: f64, x: f64, y: 
   let mut selected = None;
   let mut began = None;
   let mut took = false;
+  let mut leaves_crop = false;
   if let Ok(mut state) = inner.state.lock() {
     took = true;
     state.last_pointer = point;
@@ -141,6 +142,10 @@ pub(super) fn down(inner: &std::sync::Arc<SurfaceInner>, scale: f64, x: f64, y: 
         // A band is Select's own work, so the press counts as taken: under
         // the ⌘ hold it keeps Select in hand once ⌘ is let go.
         state.gesture = None;
+      } else if !layer_changed && crop_is_anchored(selection) {
+        // An anchored crop window stays about its middle; only its grips
+        // resize it.
+        state.gesture = None;
       } else {
         began = Some(start_move(&mut state, selection, point));
         if changed {
@@ -148,6 +153,12 @@ pub(super) fn down(inner: &std::sync::Arc<SurfaceInner>, scale: f64, x: f64, y: 
         }
       }
       draw_selection(inner, &state);
+    } else if super::crop_draw::past_picture(&state, point) {
+      // Past the whole picture being cropped there is nothing to crop: the
+      // press puts the crop away, the layer still chosen.
+      state.gesture = None;
+      leaves_crop = true;
+      took = false;
     } else if let Some(gesture) = super::crop_draw::start(&mut state, point) {
       // A press on nothing while cropping draws a new crop window. It
       // begins only once the press becomes a drag, from `pointer_move`.
@@ -169,6 +180,9 @@ pub(super) fn down(inner: &std::sync::Arc<SurfaceInner>, scale: f64, x: f64, y: 
   }
   if let Some(selection) = selected {
     emit_selection(inner, selection);
+  }
+  if leaves_crop {
+    emit_press(inner, PointerPress::LeaveCrop);
   }
   if let Some(gesture) = began {
     emit_gesture(inner, SelectionGesturePhase::Begin, gesture);

@@ -19,7 +19,7 @@ import { IslandParts } from "../../../../primitives/island/island-parts";
 // scene, deleting it, which asks twice. A group is always open, so pressing
 // the open one leaves it open.
 
-/** The groups of options the scene tool opens: a scene's layout, and with
+/** The groups of options the Scene mode opens: a scene's layout, and with
  * no scene in hand the planned zooms too. */
 export type SceneToolGroup = "autoZoom" | "layout";
 

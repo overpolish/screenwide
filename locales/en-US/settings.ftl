@@ -301,6 +301,7 @@ settings-shortcut-editor-add-cue = Add to the script as a cue
 settings-shortcut-editor-confirm-crop = Finish cropping
 settings-shortcut-editor-nudge = Nudge what is chosen
 settings-shortcut-editor-nudge-further = Nudge what is chosen further
+settings-shortcut-editor-reset-view = Reset the view to 100%
 settings-shortcut-editor-play = Play or pause
 settings-shortcut-editor-step-back = Step back a frame
 settings-shortcut-editor-step-forward = Step forward a frame

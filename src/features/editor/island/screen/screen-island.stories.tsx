@@ -38,6 +38,7 @@ const meta = {
     isAtDefaultPlacement: false,
     isInScene: false,
     isShown: true,
+    onCrop: fn(),
     onInsetChange: fn(),
     onRadiusChange: fn(),
     onRecenter: fn(),

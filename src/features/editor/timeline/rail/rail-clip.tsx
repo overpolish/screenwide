@@ -59,7 +59,9 @@ export function RailClip({
     <button
       aria-label={label}
       aria-pressed={isSelected}
-      className="group absolute inset-y-0 cursor-grab touch-none outline-none active:cursor-grabbing"
+      // The pointer stays the arrow over a block, as over a layer with Select
+      // in hand, though its body is dragged (user asked).
+      className="group absolute inset-y-0 touch-none outline-none"
       dir="ltr"
       // A keyboard press; a pointer's is taken at the press, below.
       onClick={onPress}

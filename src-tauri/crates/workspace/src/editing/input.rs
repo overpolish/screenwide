@@ -5,8 +5,11 @@ use super::*;
 mod band;
 mod cancel;
 mod context_menu;
-mod crop_draw;
+mod crop_anchored;
+pub(super) mod crop_draw;
 mod crop_resize;
+mod double_click;
+pub(super) use double_click::reset_view;
 mod down;
 mod framed;
 mod pointer_move;
@@ -149,7 +152,7 @@ pub(super) fn handle_editor_input(inner: &Arc<SurfaceInner>, input: PointerInput
       emit_press(inner, PointerPress::Down { took: false });
       // A platform reports a double-click in place of its second press. Over
       // a text box or the caption it opens it for typing, and in what is typed
-      // into it selects a word; only elsewhere does it fit the view.
+      // into it selects a word; elsewhere it crops a layer or fits the view.
       if object_picking::double_click(inner, logical(x, y))
         || annotation::typing_press(inner, turn::layer_point(inner, logical(x, y)), true)
         || annotation::open_text(inner, turn::layer_point(inner, logical(x, y)))
@@ -162,11 +165,7 @@ pub(super) fn handle_editor_input(inner: &Arc<SurfaceInner>, input: PointerInput
         refresh_cursor_for(inner);
         return;
       }
-      // Back to 100%, centred in the whole viewport.
-      if let Ok(mut state) = inner.state.lock() {
-        state.workspace_transform = WorkspaceTransform::default();
-        apply_workspace_transform(inner, &mut state, false);
-      }
+      double_click::double_click(inner, logical(x, y));
     }
   }
 }

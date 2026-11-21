@@ -53,21 +53,32 @@ pub(super) fn draw_selection(inner: &SurfaceInner, state: &SurfaceState) {
   let crop_image = frame.and_then(|_| {
     let selection = state.selection?;
     (selection.crop_mode != 0).then_some(())?;
-    let image = state
+    let pane = state
       .panes
       .get(selection.pane_index as usize)
-      .and_then(Option::as_ref)
-      .map(|pane| {
-        state.workspace_transform.apply(
-          state.viewport,
-          pane_canvas_rect(pane, state.frame_resize.is_some()),
-        )
-      })?;
+      .and_then(Option::as_ref)?;
+    // The shade lies on the picture where the workspace draws it, its
+    // canvas's corner on a whole pixel (`drawn_canvas`); a live Frame resize
+    // places the canvas itself.
+    let [x, y, width, height] = if state.frame_resize.is_none() && pane.seen {
+      super::workspace_draw::drawn_canvas(pane, state.viewport, scale)
+    } else {
+      let image = state.workspace_transform.apply(
+        state.viewport,
+        pane_canvas_rect(pane, state.frame_resize.is_some()),
+      );
+      [
+        image.x * scale,
+        image.y * scale,
+        image.width * scale,
+        image.height * scale,
+      ]
+    };
     Some([
-      ((image.x + selection.image_x * image.width) * scale) as f32,
-      ((image.y + selection.image_y * image.height) * scale) as f32,
-      (selection.image_width * image.width * scale) as f32,
-      (selection.image_height * image.height * scale) as f32,
+      (x + selection.image_x * width) as f32,
+      (y + selection.image_y * height) as f32,
+      (selection.image_width * width) as f32,
+      (selection.image_height * height) as f32,
     ])
   });
   // Crop mode keeps the layer's own radius so the shade can round with it.

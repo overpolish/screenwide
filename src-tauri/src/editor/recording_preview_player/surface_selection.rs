@@ -10,6 +10,10 @@ use screenwide_workspace::editing::{PreviewSelection, FRAMED_FIXED, FRAMED_FREE}
 #[derive(serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub(super) struct RecordingPreviewSelection {
+  /// A crop window held about its middle, the crop of a camera that follows
+  /// the face.
+  #[serde(default)]
+  crop_anchored: bool,
   /// How far the crop's chrome has taken over from the select tool's, from
   /// none at zero to all of it at one, as the crop opens; unset, all of it.
   #[serde(default)]
@@ -52,6 +56,7 @@ impl RecordingPreviewSelection {
       recenter_width: self.recenter_bounds.map_or(0.0, |bounds| bounds.width),
       recenter_x: self.recenter_bounds.map_or(0.0, |bounds| bounds.x),
       recenter_y: self.recenter_bounds.map_or(0.0, |bounds| bounds.y),
+      crop_anchored: u32::from(self.crop_anchored),
       crop_closing: 1.0 - self.crop_open.unwrap_or(1.0).clamp(0.0, 1.0),
       crop_mode: u32::from(self.crop_mode),
       crop_keeps_shape: u32::from(self.crop_keeps_shape),

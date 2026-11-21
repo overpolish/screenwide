@@ -110,7 +110,10 @@ pub(super) fn shared_selection_hit(
       return None;
     }
   }
-  Some((selection, hit.handle))
+  // While cropping, the opened picture is in front of the layers drawn under
+  // it: a press or the pointer there is the crop's, not theirs.
+  (!super::input::crop_draw::picture_covers(state, selection, point))
+    .then_some((selection, hit.handle))
 }
 
 pub(super) fn shared_handle_edges(handle: u8) -> u32 {
@@ -216,8 +219,12 @@ pub(super) fn cursor_for_state(
   };
   // The pointer stays the arrow over a body with Select in hand, a layer it
   // would move included, as most tools have it; the frame's body under the
-  // Frame tool moves nothing.
-  if handle == 0 && (selection.layer_id == FRAME_LAYER_ID || state.annotation.mode == MODE_SELECT) {
+  // Frame tool moves nothing, nor does an anchored crop window's.
+  if handle == 0
+    && (selection.layer_id == FRAME_LAYER_ID
+      || state.annotation.mode == MODE_SELECT
+      || crop_is_anchored(selection))
+  {
     return CursorKind::Arrow;
   }
   let edges = shared_handle_edges(handle);
@@ -258,7 +265,17 @@ pub(super) fn crop_press_draws(state: &SurfaceState, hit: Option<(PreviewSelecti
 }
 
 /// Whether `selection` is a crop a press can draw afresh: a scene's crop
-/// window keeps its box's shape, and a crop given a shape keeps that.
+/// window keeps its box's shape, a crop given a shape keeps that, and an
+/// anchored crop keeps its middle.
 pub(super) fn crop_draws_afresh(selection: PreviewSelection) -> bool {
-  selection.crop_mode != 0 && selection.framed == 0 && selection.crop_keeps_shape == 0
+  selection.crop_mode != 0
+    && selection.framed == 0
+    && selection.crop_keeps_shape == 0
+    && selection.crop_anchored == 0
+}
+
+/// Whether `selection` is a crop window held about its middle: it neither
+/// moves nor is drawn afresh, and its grips pull opposite sides together.
+pub(super) fn crop_is_anchored(selection: PreviewSelection) -> bool {
+  selection.crop_mode != 0 && selection.crop_anchored != 0
 }

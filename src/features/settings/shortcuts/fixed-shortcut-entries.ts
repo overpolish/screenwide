@@ -169,6 +169,10 @@ const editorEditing = (): Row[] => [
     label: t("settings-shortcut-editor-nudge-further"),
     value: `Shift+${ARROWS[0]}`,
   },
+  {
+    label: t("settings-shortcut-editor-reset-view"),
+    value: "CommandOrControl+Digit0",
+  },
   { label: t("editor-export"), value: "CommandOrControl+KeyE" },
   { label: t("settings-shortcut-editor-add-cue"), value: "Alt+KeyC" },
 ];

@@ -50,13 +50,13 @@ mod start_callbacks;
 mod start_menu_callback;
 mod state;
 
-pub(crate) use controls::stop_all;
 pub use controls::{
   __cmd__set_screenshot_preview_editor_suspended, __cmd__stop_screenshot_preview,
   __tauri_command_name_set_screenshot_preview_editor_suspended,
   __tauri_command_name_stop_screenshot_preview, set_screenshot_preview_editor_suspended,
   stop_screenshot_preview,
 };
+pub(crate) use controls::{reset_view, stop_all};
 pub use layout::{
   __cmd__layout_screenshot_preview_surface, __tauri_command_name_layout_screenshot_preview_surface,
   layout_screenshot_preview_surface,

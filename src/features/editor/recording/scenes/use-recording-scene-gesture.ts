@@ -24,6 +24,7 @@ import { SceneCamera } from "./recording-scene-placement";
 import {
   RecordingSceneClip,
   rotatedSceneClip,
+  SceneFraming,
   sceneNeedsCamera,
 } from "./recording-scenes";
 
@@ -34,6 +35,9 @@ import type { RecordingSelectionGestureEvent } from "../use-recording-preview-su
 export type RecordingSceneTarget = {
   /** Null where the scene places no camera. */
   camera: ScenePane | null;
+  /** Where a camera following the face has the face sit in its box, which
+   * a crop keeps; the camera's `framing` is its picture as drawn. */
+  cameraFaceSpot: SceneFraming | null;
   clipId: string;
   clips: RecordingSceneClip[];
   screen: ScenePane;
@@ -128,9 +132,12 @@ export function useRecordingSceneGesture({
       paneName === "camera" &&
       (found?.followFace ?? camera?.overlay.followFace ?? false);
     const keptSpot = (framing: ScenePane["framing"]) =>
-      follows ? keepingFaceSpot(framing, pane.framing) : framing;
+      follows
+        ? keepingFaceSpot(framing, target.cameraFaceSpot ?? pane.framing)
+        : framing;
     if (owned && crops && (boxes?.[paneName] || !boxes))
       return sceneCropGesture({
+        anchored: follows,
         camera,
         canvas,
         clips,

@@ -80,8 +80,9 @@ use screenwide_imaging::CapturedImage;
 use screenwide_output::ScreenshotOutputSettings;
 use selection_draw::{draw_selection, redraw_stale_selection};
 use selection_hit::{
-  clear_selection_snap_guides, crop_draws_afresh, crop_press_draws, cursor_for_state,
-  selection_pane_rect, selection_snap_targets, shared_handle_edges, shared_selection_hit,
+  clear_selection_snap_guides, crop_draws_afresh, crop_is_anchored, crop_press_draws,
+  cursor_for_state, selection_pane_rect, selection_snap_targets, shared_handle_edges,
+  shared_selection_hit,
 };
 use state::{ActiveGesture, CropDrawStart, EditorGesture, FrameResizeStart, MoveAutoFit};
 use workspace_draw::{clear_workspace, draw_workspace, present_workspace};

@@ -50,13 +50,10 @@ describe("the recording's mode follows the layer chosen with Select", () => {
     ).toBe("cursor");
   });
 
-  it("leaves the picture's own tools their modes, and pens none", () => {
+  it("leaves the frame's drag its mode, and pens and the crop none", () => {
     expect(
       columnMode({ ...SCREEN, panel: null, tool: "canvas", track: "primary" }),
     ).toBe("frame");
-    expect(
-      columnMode({ ...SCREEN, panel: null, tool: "scene", track: "camera" }),
-    ).toBe("scene");
     expect(
       columnMode({ ...SCREEN, panel: null, tool: "arrow", track: "primary" }),
     ).toBe(null);
@@ -65,6 +62,19 @@ describe("the recording's mode follows the layer chosen with Select", () => {
     ).toBe(null);
   });
 
+  it("opens Scene as an island over Select, which a pane chosen takes over", () => {
+    expect(
+      columnMode({ ...SCREEN, panel: "scene", tool: "select", track: null }),
+    ).toBe("scene");
+    expect(
+      columnMode({
+        ...SCREEN,
+        panel: "scene",
+        tool: "select",
+        track: "camera",
+      }),
+    ).toBe("camera");
+  });
   it("opens Screen and Camera by choosing their track, the others by letting it go", () => {
     expect(modeTool("screen", "screen")).toEqual({
       panel: null,
@@ -82,8 +92,9 @@ describe("the recording's mode follows the layer chosen with Select", () => {
       track: null,
     });
     expect(modeTool("scene", "screen")).toEqual({
-      panel: null,
-      tool: "scene",
+      panel: "scene",
+      tool: "select",
+      track: null,
     });
   });
 

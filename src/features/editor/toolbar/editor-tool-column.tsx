@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { Crop, Ellipsis, MousePointer2 } from "lucide-react";
+import { Ellipsis, MousePointer2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 import { t } from "../../../i18n/i18n";
@@ -28,11 +28,11 @@ import { usePenCapacity } from "./use-pen-capacity";
 import type { AnnotationKind } from "../../annotations/types";
 
 // The tools for working on the picture in one slim column at the
-// workspace's start edge: Select, Crop and the pens. The modes, which work
-// on the whole capture, are in the title bar (`EditorModeBar`). Whatever a
-// tool needs opens on the island, so the column never grows rows of its own.
-// Spotlight is drawn by the focus pen, as on the annotate island, so it has
-// no button.
+// workspace's start edge: Select and the pens. The modes, which work on the
+// whole capture, are in the title bar (`EditorModeBar`), and the crop is the
+// chosen layer's, taken up from its island. Whatever a tool needs opens on
+// the island, so the column never grows rows of its own. Spotlight is drawn
+// by the focus pen, as on the annotate island, so it has no button.
 //
 // A short window cannot hold every pen. The pens are in the order most used
 // first, so the tail goes into a menu at the end of the pens, and the pen
@@ -40,7 +40,7 @@ import type { AnnotationKind } from "../../annotations/types";
 
 const PENS = ANNOTATION_TOOLS.filter(({ id }) => id !== "spotlight");
 
-export type EditorTool = AnnotationKind | "crop" | "select";
+export type EditorTool = AnnotationKind | "select";
 
 export type EditorToolColumnProps = {
   /** Whether a mode is open, which puts the tool in hand down. */
@@ -51,12 +51,9 @@ export type EditorToolColumnProps = {
   onToolChange: (tool: EditorTool) => void;
   /** The tool in hand. */
   tool: EditorTool;
-  /** Whether there is a picture to crop: a blank canvas has none. */
-  canCrop?: boolean;
 };
 
 export function EditorToolColumn({
-  canCrop = true,
   isModeOpen,
   kind,
   onToolChange,
@@ -109,19 +106,6 @@ export function EditorToolColumn({
             >
               <MousePointer2 />
             </ToolbarTool>
-            {canCrop ? (
-              <ToolbarTool
-                aria-label={t("editor-tool-crop-name")}
-                isSelected={tool === "crop" && !isModeOpen}
-                label={t("editor-tool-crop")}
-                onChange={(isSelected) => {
-                  onToolChange(isSelected ? "crop" : "select");
-                }}
-                shortcut={toolShortcut("crop")}
-              >
-                <Crop />
-              </ToolbarTool>
-            ) : null}
             {shown.map(({ icon: Icon, id, shortcut }) => (
               <ToolbarTool
                 aria-label={

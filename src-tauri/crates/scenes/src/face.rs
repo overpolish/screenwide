@@ -11,7 +11,7 @@
 //! found, the path holds where it last was.
 
 /// The path's resolution in camera milliseconds: the camera's own rate.
-const STEP_MS: f64 = 1_000.0 / 30.0;
+pub const STEP_MS: f64 = 1_000.0 / 30.0;
 /// How long a run of misses is bridged by sliding from one sighting to the
 /// next; past it the path holds the last sighting until the next.
 const BRIDGE_MS: f64 = 500.0;
@@ -90,6 +90,13 @@ impl FacePath {
     Some(Self {
       points: xs.into_iter().zip(ys).collect(),
     })
+  }
+
+  /// The path's samples, [`STEP_MS`] apart from the camera's
+  /// start, which [`Self::at`] reads between: the editor reads them the same
+  /// way to place a camera that follows the face where the preview does.
+  pub fn points(&self) -> &[(f64, f64)] {
+    &self.points
   }
 
   /// Where the face is centred `ms` into the camera, held at either end.

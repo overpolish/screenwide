@@ -79,6 +79,7 @@ export function resolveToolPanelSnapshot(
     chooseSceneTemplate: _chooseSceneTemplate,
     clearAutoZooms: _clearAutoZooms,
     cropAspect,
+    cropTool: _cropTool,
     cutStripItem: _cutStripItem,
     deleteAnnotations: _deleteAnnotations,
     deleteChosenShortcuts: _deleteChosenShortcuts,

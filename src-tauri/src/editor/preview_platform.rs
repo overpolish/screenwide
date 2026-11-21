@@ -93,9 +93,20 @@ struct NativePointerEvent {
 
 pub(crate) const POINTER_ARRIVED_EVENT: &str = "preview://pointer-arrived";
 
+/// A crop asked for on the picture: `layerId` double-clicked to crop it, or
+/// none where a press past the picture puts the crop away.
+pub(crate) const CROP_REQUEST_EVENT: &str = "preview://crop-request";
+
+#[derive(Clone, Copy, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+struct CropRequest {
+  layer_id: Option<u32>,
+}
+
 /// Tells `window` of every press on its picture, which blurs the page's
-/// focus and lets the editor know a press is under way, and of the pointer
-/// coming onto the picture, which the page hears of no other way.
+/// focus and lets the editor know a press is under way, of the pointer
+/// coming onto the picture, which the page hears of no other way, and of a
+/// crop asked for on it.
 pub(crate) fn pointer_press_callback(
   window: tauri::WebviewWindow,
 ) -> screenwide_workspace::editing::PointerPressCallback {
@@ -110,6 +121,17 @@ pub(crate) fn pointer_press_callback(
       },
       PointerPress::Arrived => {
         let _ = window.emit(POINTER_ARRIVED_EVENT, ());
+        return;
+      }
+      PointerPress::Crop { layer_id } => {
+        let request = CropRequest {
+          layer_id: Some(layer_id),
+        };
+        let _ = window.emit(CROP_REQUEST_EVENT, request);
+        return;
+      }
+      PointerPress::LeaveCrop => {
+        let _ = window.emit(CROP_REQUEST_EVENT, CropRequest { layer_id: None });
         return;
       }
     };

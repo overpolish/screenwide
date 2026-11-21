@@ -7,6 +7,8 @@ import {
   isOverlayAtDefaultPlacement,
   overlayAtDefaultPlacement,
 } from "../../layer-placement";
+import { faceNow } from "../../recording/preview/face-path";
+import { ownCameraPicture } from "../../recording/scenes/recording-scene-placement";
 import { ScreenshotOutputSettings } from "../../screenshot/screenshot-output";
 import { CameraOverlaySettings, EditorArtifact } from "../../types";
 import { EditorSelectionTarget } from "../selection/placed-selection-target";
@@ -54,9 +56,33 @@ export const bakedCameraSelectionTarget = ({
     },
     // Following holds the face in the middle of the crop, wherever the
     // picture sat behind it, so the crop keeps its size, shape and zoom.
+    // Stopping keeps the picture where the face had it, rather than where
+    // the picture last sat before following began.
     applyFollowFace: (follow) => {
       const { followFace: _followFace, ...still } = cameraOverlay;
-      onCameraOverlayChange?.(follow ? { ...still, followFace: true } : still);
+      if (follow) {
+        onCameraOverlayChange?.({ ...still, followFace: true });
+        return;
+      }
+      const face = faceNow();
+      const picture =
+        face && camera.height > 0
+          ? ownCameraPicture({
+              aspect: camera.width / camera.height,
+              face,
+              overlay: cameraOverlay,
+            })
+          : null;
+      onCameraOverlayChange?.(
+        picture
+          ? {
+              ...still,
+              cameraWidth: picture.width,
+              cameraX: picture.x,
+              cameraY: picture.y,
+            }
+          : still,
+      );
     },
     applyInset: () => {
       // A baked camera is placed in the screen's picture rather than padded

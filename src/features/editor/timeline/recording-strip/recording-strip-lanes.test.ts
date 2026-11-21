@@ -47,6 +47,7 @@ function lanesAt(
     gaps,
     map,
     openCaptions: () => undefined,
+    openScenes: () => undefined,
     playhead,
     scenes: {
       canPlaceCamera,

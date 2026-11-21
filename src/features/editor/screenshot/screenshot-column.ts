@@ -32,9 +32,9 @@ export type ScreenshotTool =
 // Select. A spotlight is the focus pen's dimmed look, so the focus pen
 // stands for it.
 
-/** The pen, Crop or Select the column shows pressed for `tool`. */
+/** The pen or Select the column shows pressed for `tool`: Select under the
+ * crop, which is the chosen layer's rather than the column's. */
 export const columnTool = (tool: ScreenshotTool): EditorTool => {
-  if (tool === "crop") return "crop";
   const pen = drawingToolKind(tool);
   if (pen === "spotlight") return "focus";
   return pen ?? "select";

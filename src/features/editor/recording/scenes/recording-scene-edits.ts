@@ -16,6 +16,11 @@ import {
   uncroppedSceneScreen,
 } from "./recording-scene-crop-edits";
 import { customRecordingSceneClip } from "./recording-scene-custom";
+import {
+  type Face,
+  followingFace,
+  framingWithin,
+} from "./recording-scene-framing";
 import { arrangedScenePane, swappedScenePanes } from "./recording-scene-order";
 import { ScenePaneFraming } from "./recording-scene-pane-framing";
 import { scenePaneAtLayout } from "./recording-scene-pane-reset";
@@ -47,6 +52,7 @@ export function recordingSceneEdits({
   chosenId,
   clips,
   commit,
+  faceNow,
   getTimelineMs,
   lengthMs,
   output,
@@ -67,6 +73,9 @@ export function recordingSceneEdits({
     clip: RecordingSceneClip,
     pane?: ScenePaneFraming["pane"],
   ) => ScenePaneFraming | null;
+  /** Where the face is over the camera at the playhead, once it is found,
+   * which a scene that stops following keeps its picture by. */
+  faceNow?: () => Face | null;
 }): Omit<
   RecordingSceneControls,
   "autoZoom" | "clearAutoZooms" | "recenterScreen"
@@ -196,17 +205,32 @@ export function recordingSceneEdits({
     },
     // Following starts with the face in the middle of the camera's box at
     // the zoom the camera has now; a drag or the Position fields then set
-    // how far off the middle it sits. Stopping keeps that framing as it is.
-    // Either way the scene says so itself, whatever the camera does outside
-    // it.
+    // how far off the middle it sits. Stopping keeps the picture where the
+    // face had it, written down as the framing it then shows, since a
+    // framing that says where the face sits says something else once the
+    // face is not followed. Either way the scene says so itself, whatever
+    // the camera does outside it.
     setFollowFace: (follow) => {
       reframeCurrent((clip) => {
-        if (!follow) return { ...clip, followFace: false };
         const pane = paneOf(clip);
-        const zoom =
-          pane?.pane === "camera"
-            ? pane.framing.zoom
-            : (clip.camera?.zoom ?? 1);
+        const camera = pane?.pane === "camera" ? pane : null;
+        if (!follow) {
+          const face = faceNow?.();
+          return {
+            ...clip,
+            ...(camera && face
+              ? {
+                  camera: framingWithin(
+                    followingFace(camera.framing, face),
+                    camera.box,
+                    camera.aspect,
+                  ),
+                }
+              : {}),
+            followFace: false,
+          };
+        }
+        const zoom = camera?.framing.zoom ?? clip.camera?.zoom ?? 1;
         return {
           ...clip,
           camera: { focusX: 0.5, focusY: 0.5, zoom },

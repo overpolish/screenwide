@@ -16,6 +16,7 @@ import {
   AnnotationLine,
   AnnotationRows,
 } from "../annotation/annotation-island-parts";
+import { CropLayerButton } from "../crop-layer-button";
 import { FollowFaceToggle } from "../follow-face-toggle";
 import { IslandModelLine } from "../island-model-line";
 import { IslandRotation } from "../island-rotation";
@@ -32,22 +33,22 @@ import type { EditorIslandContent } from "../editor-island";
 import type { ScreenIslandProps } from "../screen/screen-island";
 
 // The camera, for the whole recording, as the Screen island is the
-// screen's; its crop is the Crop tool's. Its named rows first: its corners,
-// and on a recording of the camera alone its inset above them and its turn
-// below. Then a line of what it is drawn with: Enhance, its shadow, and
-// whether it follows the face, which holds the face in the middle of the
-// crop. Removing the room comes last, on a line of its own, since what it
-// brings follows it: what goes behind the person, drawn as each looks, with
-// choosing another picture at that row's end, and objects put right where
-// the cutout has them wrong. A tool whose model is not on this computer yet
-// offers the download in its place, on a line that comes and goes as the
-// others glide (`IslandParts`); the work its model does is listed on the
-// island of its own at the picture's foot. Over a scene, which may round
-// the camera and have it follow the face its own way, the corners and the
-// following are that scene's, and a note at the island's foot says so.
-// Reset placement, at the foot, puts the camera back where a fresh project
-// places it; a recording of the camera alone, whose camera is its own
-// picture, has Recenter beside it, as the Screen island does.
+// screen's; its crop is its own, taken up at the row's end. Its named rows
+// first: its corners, and on a recording of the camera alone its inset above
+// them and its turn below. Then a line of what it is drawn with: Enhance,
+// its shadow, and whether it follows the face, which holds the face in the
+// middle of the crop. Removing the room comes last, on a line of its own,
+// since what it brings follows it: what goes behind the person, drawn as
+// each looks, with choosing another picture at that row's end, and objects
+// put right where the cutout has them wrong. A tool whose model is not on
+// this computer yet offers the download in its place, on a line that comes
+// and goes as the others glide (`IslandParts`); the work its model does is
+// listed on the island of its own at the picture's foot. Over a scene, which
+// may round the camera and have it follow the face its own way, the corners
+// and the following are that scene's, and a note at the island's foot says
+// so. Reset placement, at the foot, puts the camera back where a fresh
+// project places it; a recording of the camera alone, whose camera is its
+// own picture, has Recenter beside it, as the Screen island does.
 
 export type CameraIslandProps = {
   effects: ToolPanelCameraEffects;
@@ -68,6 +69,8 @@ export type CameraIslandProps = {
   ) => void;
   /** Asks for a picture to show behind the person. */
   onChoosePicture: () => void;
+  /** Takes up the camera's crop. */
+  onCrop: () => void;
   onDownloadBackgroundModel: () => void;
   onDownloadObjectsModel: () => void;
   onEnhanceChange: (enhance: boolean) => void;
@@ -116,9 +119,16 @@ export function cameraIsland(props: CameraIslandProps): EditorIslandContent {
     (isRemoved && (hasBackgroundModel || objects?.model != null)) ||
     objects?.isPicking === true;
   return {
-    actions: props.onInVideoChange ? (
-      <CameraInVideoToggle isInVideo onChange={props.onInVideoChange} />
-    ) : undefined,
+    // The crop, then whether the camera is drawn into the video, which ends
+    // the row.
+    actions: (
+      <>
+        <CropLayerButton onPress={props.onCrop} />
+        {props.onInVideoChange ? (
+          <CameraInVideoToggle isInVideo onChange={props.onInVideoChange} />
+        ) : null}
+      </>
+    ),
     key: "camera",
     section: (
       <IslandParts className="flex flex-col gap-separate">

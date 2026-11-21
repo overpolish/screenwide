@@ -13,6 +13,7 @@ import {
   AnnotationChoiceRow,
   AnnotationRows,
 } from "../annotation/annotation-island-parts";
+import { CropLayerButton } from "../crop-layer-button";
 import { IslandRotation } from "../island-rotation";
 import { CAPTURE_CORNERS } from "../picture-corners";
 import { SceneOnlyNote } from "../scene-only-note";
@@ -23,17 +24,17 @@ import type { SceneRotation } from "../../../../bindings/SceneRotation";
 import type { EditorIslandContent } from "../editor-island";
 
 // What was captured, the screen of a recording or a screenshot, as it sits
-// on the canvas, as the Camera island is the camera's. Its crop is the Crop
-// tool's. Here, its named rows first: the opposite of a crop, the edges
-// extended and filled with the colour found behind what was captured; the
-// screen's corners; how it is turned. Then its shadow, a toggle on a line
-// of its own at the start. All of these hold for the whole recording but
-// the inset, the corners and the turn, which over a scene are that scene's,
-// as a note under the lines says: a scene may pad, round and turn the
-// screen its own way over its stretch. Then putting what was captured back
-// in the middle of its box, the scene's box over a scene, and the screen
-// back where a fresh project places it, the scene's pane back in its
-// layout's box over a scene.
+// on the canvas, as the Camera island is the camera's. Its crop is its own,
+// taken up at the row's end. Here, its named rows first: the opposite of a
+// crop, the edges extended and filled with the colour found behind what was
+// captured; the screen's corners; how it is turned. Then its shadow, a
+// toggle on a line of its own at the start. All of these hold for the whole
+// recording but the inset, the corners and the turn, which over a scene are
+// that scene's, as a note under the lines says: a scene may pad, round and
+// turn the screen its own way over its stretch. Then putting what was
+// captured back in the middle of its box, the scene's box over a scene, and
+// the screen back where a fresh project places it, the scene's pane back in
+// its layout's box over a scene.
 
 export type ScreenIslandProps = {
   /** What was captured, which names the island. */
@@ -50,6 +51,8 @@ export type ScreenIslandProps = {
    * corners, turn and Recenter the island then sets. A screenshot has no
    * scenes. */
   isInScene: boolean;
+  /** Takes up the screen's crop. */
+  onCrop: () => void;
   onInsetChange: (inset: number) => void;
   onRadiusChange: (radius: number) => void;
   /** Puts what was captured back in the middle of the screen's box, the
@@ -73,6 +76,7 @@ export type ScreenIslandProps = {
 
 export function screenIsland(props: ScreenIslandProps): EditorIslandContent {
   return {
+    actions: <CropLayerButton onPress={props.onCrop} />,
     key: "screen",
     section: (
       <IslandParts className="flex flex-col gap-separate">

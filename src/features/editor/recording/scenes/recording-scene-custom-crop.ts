@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { type CropAspect } from "../../island/crop-aspect-choice";
-import { drawnCropRect } from "../../screenshot/screenshot-crop";
 import { sizeOfAspect } from "../../tools/crop/crop-aspect-store";
 
 import { MIN_BOX_SHARE, movedSceneBox } from "./recording-scene-custom";
@@ -255,39 +254,4 @@ export const uncroppedCustomPane = (
     canvas,
   );
   return { box: whole, framing: framingWithin(WHOLE_FRAMING, held, aspect) };
-};
-
-/**
- * The crop window a crop gesture leaves on `pane`, in output pixels, from the
- * box as the gesture found it. `delta` is the gesture's travel in output
- * pixels; a move carries the window, a resize carries the edges `edges`
- * names, and a draw spans from `anchor`, a point in output pixels.
- */
-export const customCropWindow = (
-  box: SceneRect,
-  {
-    anchor,
-    delta,
-    edges,
-    operation,
-  }: {
-    anchor: { x: number; y: number };
-    delta: { x: number; y: number };
-    edges: number;
-    operation: "cropDraw" | "cropMove" | "cropResize";
-  },
-): SceneRect => {
-  if (operation === "cropMove")
-    return { ...box, x: box.x + delta.x, y: box.y + delta.y };
-  if (operation === "cropDraw")
-    return drawnCropRect(anchor, {
-      deltaX: delta.x,
-      deltaY: delta.y,
-      edges,
-    });
-  const left = box.x + ((edges & 1) !== 0 ? delta.x : 0);
-  const right = box.x + box.width + ((edges & 2) !== 0 ? delta.x : 0);
-  const top = box.y + ((edges & 4) !== 0 ? delta.y : 0);
-  const bottom = box.y + box.height + ((edges & 8) !== 0 ? delta.y : 0);
-  return { height: bottom - top, width: right - left, x: left, y: top };
 };

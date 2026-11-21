@@ -53,8 +53,8 @@ export function useRecordingPreviewCanvasTool({
   );
   const changeCanvasTool = useCallback(
     (next: RecordingCanvasTool) => {
-      // A mode (crop, frame, scene) lets the annotations in hand go, and
-      // putting it away does not bring them back.
+      // The crop and the frame's drag let the annotations in hand go, and
+      // putting either away does not bring them back.
       const isMode = drawingToolKind(next) === null && next !== "select";
       if (drawingToolKind(next) !== null) {
         if (toolDisagreesWithAnnotation(next, selectedKindRef.current))

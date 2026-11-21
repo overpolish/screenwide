@@ -25,7 +25,6 @@ import {
   withScreenshotSourceCrop,
 } from "../../screenshot/screenshot-output-settings";
 import { EditorArtifact, EditorKind, RecordingVideoTrackId } from "../../types";
-import { ToolPanelHandlers } from "../tool-panel-handlers";
 import { ToolPanelCrop } from "../tool-panel-store";
 
 import {
@@ -284,15 +283,3 @@ export const editorCropTarget = (
     ? recordingCropTarget(inputs, artifact)
     : screenshotCropTarget(inputs, artifact);
 };
-
-/** The crop panel's asks, answered against the workspace's own source. */
-export const cropPanelHandlers = (
-  target: EditorCropTarget | null,
-): Pick<ToolPanelHandlers, "onCropAspectChange" | "onCropReset"> => ({
-  onCropAspectChange: (aspect) => {
-    target?.chooseAspect(aspect);
-  },
-  onCropReset: () => {
-    target?.reset();
-  },
-});

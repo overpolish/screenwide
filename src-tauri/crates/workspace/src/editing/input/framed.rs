@@ -36,26 +36,27 @@ pub(super) fn apply(
   if gesture.operation == SelectionGestureOperation::CropResize {
     let start = gesture.selection_start;
     let zoom = state.workspace_transform.zoom;
-    let next = apply_framed_crop_resize(
-      NormalizedRect {
-        x: start.x,
-        y: start.y,
-        width: start.width,
-        height: start.height,
-      },
-      NormalizedRect {
-        x: start.image_x,
-        y: start.image_y,
-        width: start.image_width,
-        height: start.image_height,
-      },
-      gesture.edges,
-      (dx, dy),
-      (
-        CROP_MINIMUM_POINTS / (pane.width * zoom).max(1.0),
-        CROP_MINIMUM_POINTS / (pane.height * zoom).max(1.0),
-      ),
+    let crop = NormalizedRect {
+      x: start.x,
+      y: start.y,
+      width: start.width,
+      height: start.height,
+    };
+    let image = NormalizedRect {
+      x: start.image_x,
+      y: start.image_y,
+      width: start.image_width,
+      height: start.image_height,
+    };
+    let minimum = (
+      CROP_MINIMUM_POINTS / (pane.width * zoom).max(1.0),
+      CROP_MINIMUM_POINTS / (pane.height * zoom).max(1.0),
     );
+    let next = if start.crop_anchored != 0 {
+      super::crop_anchored::resize(crop, image, gesture.edges, (dx, dy), true, minimum)
+    } else {
+      apply_framed_crop_resize(crop, image, gesture.edges, (dx, dy), minimum)
+    };
     selection.x = next.x;
     selection.y = next.y;
     selection.width = next.width;

@@ -28,7 +28,7 @@ import type { RecordingSceneClip } from "../../../../bindings/RecordingSceneClip
 // piece wherever it runs. Retimed, restacked or drawn on the strip, they
 // change through the hooks that own them, as their lanes did; chosen, an
 // annotation takes up Select, whose island follows it to its pen, and a
-// scene takes up the Scene tool, whose island is its mode.
+// scene opens the Scene mode, whose island is the scene's.
 
 type TimedSpan = { endMs: number; startMs: number };
 
@@ -40,8 +40,8 @@ export type RecordingStripLaneSource = {
     onSelect: (id: string, toggle: boolean) => void;
     selectedIds: ReadonlySet<string>;
   };
-  /** Takes up a tool, as choosing an annotation or a scene does. */
-  changeCanvasTool: (tool: "scene" | "select") => void;
+  /** Takes up Select, as choosing an annotation does. */
+  changeCanvasTool: (tool: "select") => void;
   /** The gaps on the timeline, in ms, which a scene stops at the edges of
    * as at another scene's. */
   gaps: readonly TimedSpan[];
@@ -49,6 +49,8 @@ export type RecordingStripLaneSource = {
   map: TimeMap;
   /** Opens the Captions mode. */
   openCaptions: () => void;
+  /** Opens the Scene mode, as choosing or drawing a scene does. */
+  openScenes: () => void;
   /** Where the playhead stands, a share of what plays. */
   playhead: Playhead;
   scenes: {
@@ -189,7 +191,7 @@ export function recordingStripLanes(source: RecordingStripLaneSource) {
       // Drawn, the scene is chosen as one pressed is: the Scene island acts
       // on it wherever the playhead stands, which stays where it is.
       scenes.selection.onSelect(clip.id, false);
-      source.changeCanvasTool("scene");
+      source.openScenes();
     },
     onSceneRetime: (id, start, end) => {
       const own = scenes.clips.find((clip) => clip.id === baseOf(id));
@@ -243,7 +245,7 @@ export function recordingStripLanes(source: RecordingStripLaneSource) {
     if (selection?.kind === "scene") {
       annotations.clearSelection();
       scenes.selection.onSelect(baseOf(selection.id), false);
-      source.changeCanvasTool("scene");
+      source.openScenes();
       return true;
     }
     annotations.clearSelection();

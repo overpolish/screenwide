@@ -31,18 +31,23 @@ pub(super) fn apply(
     width: start.image_width,
     height: start.image_height,
   };
-  let next = if selection.crop_keeps_shape != 0 {
-    let zoom = state.workspace_transform.zoom;
-    apply_framed_crop_resize(
+  let zoom = state.workspace_transform.zoom;
+  let minimum = (
+    super::framed::CROP_MINIMUM_POINTS / (pane.width * zoom).max(1.0),
+    super::framed::CROP_MINIMUM_POINTS / (pane.height * zoom).max(1.0),
+  );
+  let anchored = selection.crop_anchored != 0;
+  let next = if anchored {
+    super::crop_anchored::resize(
       crop,
       image,
       gesture.edges,
       (dx, dy),
-      (
-        super::framed::CROP_MINIMUM_POINTS / (pane.width * zoom).max(1.0),
-        super::framed::CROP_MINIMUM_POINTS / (pane.height * zoom).max(1.0),
-      ),
+      selection.crop_keeps_shape != 0,
+      minimum,
     )
+  } else if selection.crop_keeps_shape != 0 {
+    apply_framed_crop_resize(crop, image, gesture.edges, (dx, dy), minimum)
   } else {
     apply_crop_resize(crop, image, gesture.edges, (dx, dy), false)
   };
@@ -51,22 +56,30 @@ pub(super) fn apply(
   selection.width = next.width;
   selection.height = next.height;
   let edges = gesture.edges;
-  gesture.last_delta = (
-    if edges & 1 != 0 {
-      next.x - start.x
-    } else if edges & 2 != 0 {
-      next.x + next.width - start.x - start.width
-    } else {
-      0.0
-    },
-    if edges & 4 != 0 {
-      next.y - start.y
-    } else if edges & 8 != 0 {
-      next.y + next.height - start.y - start.height
-    } else {
-      0.0
-    },
-  );
+  let right = next.x + next.width - start.x - start.width;
+  let bottom = next.y + next.height - start.y - start.height;
+  // An anchored window grows as far each way, so its right and bottom
+  // edges' travel says all of it.
+  gesture.last_delta = if anchored {
+    (right, bottom)
+  } else {
+    (
+      if edges & 1 != 0 {
+        next.x - start.x
+      } else if edges & 2 != 0 {
+        right
+      } else {
+        0.0
+      },
+      if edges & 4 != 0 {
+        next.y - start.y
+      } else if edges & 8 != 0 {
+        bottom
+      } else {
+        0.0
+      },
+    )
+  };
   gesture.last_scale = if start.width.abs() > f64::EPSILON {
     next.width / start.width
   } else {

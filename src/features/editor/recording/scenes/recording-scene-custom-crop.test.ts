@@ -3,9 +3,9 @@
 
 import { describe, expect, it } from "vitest";
 
+import { customCropWindow } from "./recording-scene-crop-gesture";
 import {
   croppedCustomPane,
-  customCropWindow,
   pictureRect,
   shapedCustomPane,
   uncroppedCustomPane,

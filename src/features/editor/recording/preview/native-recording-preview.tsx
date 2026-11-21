@@ -206,7 +206,7 @@ export function NativeRecordingPreview(rawProps: ScrubPreviewProps) {
   );
   // The scenes chosen go with the Scene mode, and the mode with them.
   useSceneModeChoice({
-    isSceneInHand: canvasTool === "scene",
+    isSceneInHand: column.mode === "scene",
     putAway: column.backToSelect,
     scenes: transport.scenes,
   });
@@ -240,6 +240,7 @@ export function NativeRecordingPreview(rawProps: ScrubPreviewProps) {
   });
   const band = useRecordingStripBand(props, {
     changeCanvasTool,
+    openMode: column.openMode,
     openOverlayTool,
     playhead,
     pressOverlayRef,

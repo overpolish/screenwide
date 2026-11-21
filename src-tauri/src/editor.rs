@@ -28,6 +28,7 @@ mod pointer;
 mod preferences;
 pub(crate) mod preview;
 pub(crate) mod preview_platform;
+pub(crate) mod preview_view;
 mod preview_workspace_model;
 mod project_open;
 pub(crate) mod recording_moments;

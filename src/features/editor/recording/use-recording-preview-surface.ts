@@ -58,8 +58,8 @@ export type RecordingPreviewSelection = {
   paneIndex: number;
   radiusPercent: number;
   rect: { height: number; width: number; x: number; y: number };
-  /** The crop window keeps its shape as its handles are dragged. */
-  cropKeepsShape?: boolean;
+  cropAnchored?: boolean; // held about its middle, as `cropAnchored` natively
+  cropKeepsShape?: boolean; // keeps its shape as its handles are dragged
   cropMode?: boolean;
   cropOpen?: number; // how far the crop's chrome has taken over, 0 to 1
   /** A scene fixes where this pane sits: a move pans its picture and a

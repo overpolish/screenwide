@@ -23,6 +23,7 @@ import { useRecordingScenes } from "../scenes/use-recording-scenes";
 import { useSceneReframeDisplay } from "../scenes/use-scene-reframe-display";
 import { useRecordingPreviewPlayer } from "../use-recording-preview-player";
 
+import { useFacePathLoader } from "./face-path";
 import { OverlayLayerId } from "./overlay-layers";
 import { RecordingCanvasTool } from "./recording-canvas-tool";
 import { pressedPane } from "./recording-pane-press";
@@ -240,6 +241,7 @@ export function useRecordingPreviewTransport(
   });
   clearAnnotationRef.current = annotations.clearSelection;
   useSceneReframeDisplay(player.sessionId, selection);
+  useFacePathLoader(player.sessionId, previewPositionMs);
   previewPlayingRef.current = player.isPlaying;
   usePausedPreviewPosition(player, previewPositionMs, setPreviewPositionMs);
   recenterRefreshRef.current = useRecordingRecenter({

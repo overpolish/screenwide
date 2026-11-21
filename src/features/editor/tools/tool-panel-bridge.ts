@@ -104,6 +104,7 @@ const applyPatch = (values: ToolPanelPatch, on: ToolPanelHandlers) => {
   if (values.cropAspect !== undefined)
     on.onCropAspectChange?.(values.cropAspect);
   if (values.resetCrop) on.onCropReset?.();
+  if (values.cropTool !== undefined) on.onCropToolChange?.(values.cropTool);
   if (values.selectionDropShadow !== undefined) {
     on.onSelectionDropShadowChange?.(values.selectionDropShadow);
   }

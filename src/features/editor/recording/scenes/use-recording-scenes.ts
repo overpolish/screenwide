@@ -18,6 +18,7 @@ import {
 } from "../../timeline/tracks/use-timed-span-selection";
 import { CameraOverlaySettings, RecordingVideoTrackId } from "../../types";
 import { withSceneClips } from "../annotations/recording-annotation-scenes";
+import { faceNow } from "../preview/face-path";
 
 import { sceneAnalysisControls } from "./recording-scene-analysis-controls";
 import { ownEditedAutoZooms } from "./recording-scene-auto-zoom";
@@ -208,6 +209,7 @@ export function useRecordingScenes({
       chosenId,
       clips,
       commit,
+      faceNow,
       getTimelineMs: () => timelineMsAt(getPositionMs()),
       lengthMs: recordingTimelineLengthMs(edit, sourceDurationMs),
       output,

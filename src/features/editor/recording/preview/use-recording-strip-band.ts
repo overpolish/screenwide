@@ -21,6 +21,7 @@ import { type Playhead } from "../../timeline/scrub-playhead";
 import { baseOf } from "../../timeline/strip/strip-part";
 import { type StripSelection } from "../../timeline/strip/strip-selection";
 import { type TimelineStripProps } from "../../timeline/strip/timeline-strip-props";
+import { type EditorMode } from "../../toolbar/editor-modes";
 
 import {
   CAPTIONS_LAYER_ID,
@@ -45,6 +46,7 @@ export function useRecordingStripBand(
   props: ResolvedScrubPreviewProps,
   {
     changeCanvasTool,
+    openMode,
     openOverlayTool,
     playhead,
     pressOverlayRef,
@@ -52,6 +54,8 @@ export function useRecordingStripBand(
     transport,
   }: {
     changeCanvasTool: (tool: RecordingCanvasTool) => void;
+    /** Opens a mode, as choosing a scene on the strip opens Scene. */
+    openMode: (mode: EditorMode) => void;
     openOverlayTool: (layerId: OverlayLayerId) => void;
     playhead: Playhead;
     pressOverlayRef: RefObject<(layerId: OverlayLayerId) => void>;
@@ -115,6 +119,9 @@ export function useRecordingStripBand(
     map: strip.time.map,
     openCaptions: () => {
       openOverlayTool(CAPTIONS_LAYER_ID);
+    },
+    openScenes: () => {
+      openMode("scene");
     },
     playhead,
     scenes,

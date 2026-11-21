@@ -10,6 +10,7 @@ import {
 import { RecordingTimelineEdit } from "../../timeline/editing/recording-timeline-edit";
 import { recordingTimelinePlaybackRanges } from "../../timeline/recording-timeline-playback";
 import { CameraOverlaySettings, RecordingVideoTrackId } from "../../types";
+import { faceAt, useFacePath } from "../preview/face-path";
 
 import { arrangedRecordingScene } from "./recording-scene-arrangement";
 import { ownEditedAutoZooms } from "./recording-scene-auto-zoom";
@@ -19,7 +20,7 @@ import {
   withHeldScene,
 } from "./recording-scene-crop-hold";
 import { pictureRect } from "./recording-scene-custom-crop";
-import { reframeWindow } from "./recording-scene-framing";
+import { drawnCameraRect, reframeWindow } from "./recording-scene-framing";
 import { SceneRect } from "./recording-scene-geometry";
 import { sceneNeedsCamera, sceneShowsScreen } from "./recording-scenes";
 import {
@@ -30,6 +31,12 @@ import {
 import type { CaptureSource } from "../../layer-measure";
 import type { RecordingCanvasTool } from "../preview/recording-canvas-tool";
 import type { RecordingPreviewSelection } from "../use-recording-preview-surface";
+
+/** A crop window over a scene's pane, and the box it settles into once the
+ * crop has closed, which `openingCropChrome` eases it toward. */
+type SceneCropWindow = RecordingPreviewSelection & {
+  settled?: { height: number; width: number; x: number; y: number };
+};
 
 /**
  * The scene under the paused preview's playhead, as the preview edits it: the
@@ -71,12 +78,18 @@ export function useScenePreviewEditing({
   const cameraAspect = cameraSource
     ? cameraSource.width / Math.max(1, cameraSource.height)
     : 0;
+  // A camera following the face is placed by it, as the preview places it.
+  const facePath = useFacePath();
+  const face = useMemo(
+    () => (facePath ? faceAt(facePath, positionMs) : null),
+    [facePath, positionMs],
+  );
   const camera = useMemo(
     () =>
       canPreviewBakedCamera && cameraAspect > 0
-        ? { aspect: cameraAspect, overlay: cameraOverlay }
+        ? { aspect: cameraAspect, face, overlay: cameraOverlay }
         : null,
-    [cameraAspect, cameraOverlay, canPreviewBakedCamera],
+    [cameraAspect, cameraOverlay, canPreviewBakedCamera, face],
   );
   // Drawn as the preview draws them: a preset the crop tool is on held where
   // its panes stood, until the crop has closed after the tool is put away.
@@ -99,13 +112,42 @@ export function useScenePreviewEditing({
         : null,
     [camera, drawnClips, durationMs, edit, output, positionMs, screenSource],
   );
+  // Where the panes settle once the crop has closed: a preset held while
+  // cropped is laid out at its new shapes then, which the crop's window
+  // eases toward as the picture closes onto it.
+  const settled = useMemo(
+    () =>
+      held && edit?.sceneClips && screenSource
+        ? arrangedRecordingScene({
+            camera,
+            clips: edit.sceneClips,
+            output,
+            ranges: recordingTimelinePlaybackRanges(edit, durationMs),
+            screen: screenSource,
+            sourceMs: positionMs,
+          })
+        : arrangement,
+    [
+      arrangement,
+      camera,
+      durationMs,
+      edit,
+      held,
+      output,
+      positionMs,
+      screenSource,
+    ],
+  );
   // A preset held while cropped is laid out at its new shapes once the crop
   // has closed (`useRecordingCropTurn`) or the playhead leaves its scene.
   const sceneId = arrangement?.clip.id ?? null;
   useEffect(() => releaseSceneCrop, [sceneId]);
   const isEditing = canvasTool === "select" || canvasTool === "crop";
-  // Each pane as the paused frame draws it: the box it sits in now and the
-  // framing it shows there.
+  const cameraFollows =
+    (arrangement?.clip.followFace ?? cameraOverlay.followFace) === true;
+  // Each pane as the paused frame draws it: the box it sits in now, the
+  // framing it shows there as drawn and, for a camera following the face,
+  // where its framing has the face sit, which a crop keeps.
   const target: RecordingSceneTarget | null =
     arrangement && edit?.sceneClips && isEditing
       ? {
@@ -122,9 +164,10 @@ export function useScenePreviewEditing({
                     x: arrangement.cameraOverlay.frameX,
                     y: arrangement.cameraOverlay.frameY,
                   },
-                  framing: arrangement.cameraTarget.framing,
+                  framing: arrangement.cameraTarget.picture,
                 }
               : null,
+          cameraFaceSpot: arrangement.cameraTarget?.framing ?? null,
           clipId: arrangement.clip.id,
           clips: edit.sceneClips,
           screen: arrangement.screen,
@@ -158,25 +201,44 @@ export function useScenePreviewEditing({
     y: rect.y / Math.max(1, canvas.height),
   });
   const boxes = arrangement?.clip.boxes;
+  const settledBox = (layerId: number): SceneRect | null => {
+    const overlay = settled?.cameraOverlay;
+    if (layerId === 0) return settled?.screen.box ?? null;
+    return overlay
+      ? {
+          height: overlay.frameHeight,
+          width: overlay.frameWidth,
+          x: overlay.frameX,
+          y: overlay.frameY,
+        }
+      : null;
+  };
   const cropWindow = (
     pane: NonNullable<RecordingSceneTarget["camera"]>,
     { inPlace, layerId }: { inPlace: boolean; layerId: number },
-  ): RecordingPreviewSelection => {
+  ): SceneCropWindow => {
     const { image, window } = inPlace
       ? { image: pictureRect(pane), window: pane.box }
       : reframeWindow(pane);
+    const settledWindow = inPlace ? settledBox(layerId) : null;
     return {
+      // A camera following the face holds it in the middle of the crop.
+      cropAnchored: layerId === 1 && cameraFollows,
       cropMode: true,
       framed: !inPlace,
-      image: share(image),
+      // The shade lies where the preview draws the camera's picture.
+      image: share(
+        layerId === 1 && canPreviewBakedCamera ? drawnCameraRect(image) : image,
+      ),
       layerId,
       paneIndex: canPreviewBakedCamera ? 0 : layerId,
       radiusPercent: 0,
       rect: share(window),
+      ...(settledWindow ? { settled: share(settledWindow) } : {}),
     };
   };
   const reframeSelections: Partial<
-    Record<RecordingVideoTrackId, RecordingPreviewSelection>
+    Record<RecordingVideoTrackId, SceneCropWindow>
   > | null = target
     ? {
         primary: cropWindow(target.screen, {

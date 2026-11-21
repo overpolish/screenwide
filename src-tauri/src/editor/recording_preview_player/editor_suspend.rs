@@ -30,3 +30,20 @@ pub fn set_recording_preview_editor_suspended(
   }
   Ok(())
 }
+
+/// Puts the recording editor's view back at 100%, centred: ⌘0 (Ctrl+0).
+pub(crate) fn reset_view(state: &RecordingPreviewPlayerState) -> Result<(), String> {
+  let manager = state
+    .0
+    .lock()
+    .map_err(|_| "The recording preview player is unavailable".to_owned())?;
+  if let Some(surface) = manager
+    .sources
+    .as_ref()
+    .and_then(|sources| sources.preview_surface.as_ref())
+  {
+    #[cfg(any(target_os = "macos", target_os = "windows"))]
+    surface.reset_view();
+  }
+  Ok(())
+}

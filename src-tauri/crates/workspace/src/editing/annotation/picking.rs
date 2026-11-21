@@ -179,7 +179,7 @@ use item_layer::{drawn_pictures, point_on_item_layer};
 /// an annotation takes hold of it whatever is in hand, and only a press on
 /// nothing drawn draws. The pen picks nothing, so its strokes always draw;
 /// a context menu still finds what is under it here, whatever the tool.
-pub(super) fn shaft_at_point(state: &SurfaceState, point: (f64, f64)) -> Option<usize> {
+pub(in crate::editing) fn shaft_at_point(state: &SurfaceState, point: (f64, f64)) -> Option<usize> {
   pick_at_point(state, point).map(|(index, _)| index)
 }
 

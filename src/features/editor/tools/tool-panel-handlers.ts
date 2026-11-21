@@ -115,6 +115,9 @@ export type ToolPanelHandlers = {
   onCropAspectChange?: (aspect: CropAspect) => void;
   /** Show the whole source again, the committed crop taken away. */
   onCropReset?: () => void;
+  /** Take up the crop of the layer in hand, or put it away with the layer
+   * still chosen. */
+  onCropToolChange?: (isCropping: boolean) => void;
   onCursorEffectsChange?: (settings: CursorEffectSettings) => void;
   /** Do what the Export island asks: a setting, or a step of the export. */
   onExportPatch?: (patch: ToolPanelExportPatch) => void;

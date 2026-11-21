@@ -69,10 +69,10 @@ export function useRecordingPreviewShortcuts({
   /** Whether anything is in hand for Escape to put down. */
   ownsEscape: boolean;
   player: ReturnType<typeof useRecordingPreviewPlayer>;
-  /** Select taken up, on the track Crop was on where Crop was in hand. */
+  /** Select taken up, the layer chosen kept. */
   selectTool: () => void;
   step: ReturnType<typeof useRecordingTimelineBlade>["step"];
-  /** C: the Crop tool taken up or put down. */
+  /** K: the crop taken up or put away. */
   toggleCrop: () => void;
   toggleMode: (mode: EditorMode) => void;
 }) {
@@ -106,7 +106,13 @@ export function useRecordingPreviewShortcuts({
       annotations.canDelete && !hasSceneSelection
         ? annotations.deleteTargeted
         : undefined,
-    onDeselect: ownsEscape ? backToSelect : undefined,
+    // Escape puts the crop away with its layer still chosen, and anything
+    // else back to Select with nothing chosen.
+    onDeselect: ownsEscape
+      ? isCropping
+        ? selectTool
+        : backToSelect
+      : undefined,
     // ⌘D duplicates the annotations chosen; with none it lets go of
     // everything chosen, whatever owns Escape: the track and the mode here,
     // and with the mode the scenes; the strip and the lanes let go of their

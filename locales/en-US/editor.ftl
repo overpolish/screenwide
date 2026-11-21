@@ -27,10 +27,8 @@ editor-toolbar-transcript = Transcript
 editor-tool-select = Select
 editor-tool-select-name = Select screenshot
 editor-tool-select-clip-name = Select recording clip
-# The tool that crops the layer pressed: the screen or the camera of a recording, or a screenshot.
+# The crop of the layer chosen, the screen or the camera of a recording, or a screenshot: its island's title and its key in the Shortcuts pane.
 editor-tool-crop = Crop
-# Names the Crop tool for assistive technology.
-editor-tool-crop-name = Crop a layer
 editor-tool-frame = Frame
 
 ## Menus

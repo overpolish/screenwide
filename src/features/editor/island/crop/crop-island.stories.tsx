@@ -37,10 +37,12 @@ const meta = {
     isInScene: false,
     isShown: true,
     onAspectChange: fn(),
+    onDone: fn(),
+    onFollowFaceChange: fn(),
     onReset: fn(),
   },
   component: CropIsland,
-  decorators: [featureStage({ height: 200, width: 520 })],
+  decorators: [featureStage({ height: 240, width: 520 })],
   // A shape chosen is the crop's from then on, until Reset crop frees it.
   render: function Render(args) {
     const [, updateArgs] = useArgs<CropIslandProps>();
@@ -50,6 +52,10 @@ const meta = {
         onAspectChange={(aspect) => {
           args.onAspectChange(aspect);
           updateArgs({ aspect });
+        }}
+        onFollowFaceChange={(followsFace) => {
+          args.onFollowFaceChange?.(followsFace);
+          updateArgs({ followsFace });
         }}
         onReset={() => {
           args.onReset();
@@ -71,3 +77,7 @@ export const InScene: Story = { args: { isInScene: true } };
 
 // With the whole capture still in, there is no drawn shape to lock.
 export const Uncropped: Story = { args: { canLock: false } };
+
+// A camera drawn into the screen offers Follow face, which holds the crop
+// about the face.
+export const CameraFollowingFace: Story = { args: { followsFace: true } };

@@ -27,6 +27,7 @@ import {
 } from "../screenshot/screenshot-column";
 import { screenshotWorkspaceItemOutput } from "../screenshot/screenshot-output";
 import { useScreenshotAnnotations } from "../screenshot/use-screenshot-annotations";
+import { useScreenshotCropAsks } from "../screenshot/use-screenshot-crop-asks";
 import { useScreenshotEditingKeys } from "../screenshot/use-screenshot-editing-keys";
 import { useScreenshotLayerActions } from "../screenshot/use-screenshot-layer-actions";
 import { useScreenshotLibrary } from "../screenshot/use-screenshot-library";
@@ -184,7 +185,7 @@ export function ScreenshotSection({
     ? pictureTool
     : undefined;
   const hasSelectedAnnotation = annotations.hasSelection;
-  const { backToSelect, chooseMode, takeUp, toggle } = screenshotChoices({
+  const choices = screenshotChoices({
     clearAnnotations: annotations.clearSelection,
     newestItemId,
     onSelectedItemChange,
@@ -192,6 +193,8 @@ export function ScreenshotSection({
     setTool,
     tool,
   });
+  const { backToSelect, chooseMode, selectTool, toggle } = choices;
+  useScreenshotCropAsks(choices, screenshotOutput?.items ?? []);
   const library = useScreenshotLibrary({ backToSelect, island });
   usePublishEditorModes({
     kind: "screenshot",
@@ -211,16 +214,17 @@ export function ScreenshotSection({
     onArrange: (move) => {
       if (!annotations.arrangeSelected(move)) moveSelectedLayer(move);
     },
-    onConfirm: isCropping ? backToSelect : undefined,
+    onConfirm: isCropping ? selectTool : undefined,
     // Backspace and Delete take away the annotation the hand is pointing at
     // first, and only the layer when there is no annotation under them.
     onDelete: () => {
       if (!annotations.deleteTargeted()) deleteSelectedLayer();
     },
-    // Escape puts Select back in hand with nothing chosen.
+    // Escape puts the crop away with its layer chosen, and anything else
+    // back to Select with nothing chosen.
     onDeselect:
       tool !== "select" || hasSelectedAnnotation || isScreenOpen
-        ? backToSelect
+        ? choices.deselect
         : undefined,
     // ⌘D lets go of everything chosen, the layer as well, with Select in
     // hand, where no annotation is chosen to duplicate.
@@ -228,7 +232,7 @@ export function ScreenshotSection({
     onResizeCanvas: () => {
       toggle("canvas");
     },
-    onSelectTool: backToSelect,
+    onSelectTool: selectTool,
     onToggleCrop: () => {
       if (hasPicture) toggle("crop");
     },
@@ -250,13 +254,9 @@ export function ScreenshotSection({
     <div className="flex min-h-0 min-w-0 grow gap-inline">
       <ChromeSetBack className="flex" isSetBack={isExportOpen}>
         <EditorToolColumn
-          canCrop={hasPicture}
           isModeOpen={mode !== null}
           kind="screenshot"
-          onToolChange={(next) => {
-            if (next === "select") backToSelect();
-            else takeUp(next);
-          }}
+          onToolChange={choices.fromColumn}
           tool={hold.isHeld ? "select" : columnTool(shown)}
         />
       </ChromeSetBack>

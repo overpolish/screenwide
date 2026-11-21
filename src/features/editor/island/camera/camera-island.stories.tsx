@@ -75,6 +75,7 @@ const meta = {
     isShown: true,
     onBackgroundChange: fn(),
     onChoosePicture: fn(),
+    onCrop: fn(),
     onDownloadBackgroundModel: fn(),
     onDownloadObjectsModel: fn(),
     onEnhanceChange: fn(),

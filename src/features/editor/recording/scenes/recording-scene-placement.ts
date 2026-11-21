@@ -6,11 +6,18 @@ import { UPRIGHT_ROTATION } from "../../layer-rotation";
 import { ScreenshotOutputSettings } from "../../screenshot/screenshot-output";
 import { CameraOverlaySettings } from "../../types";
 
-import { drawnCameraFrame, placedPicture } from "./recording-scene-framing";
+import {
+  type Face,
+  cameraFramingOf,
+  drawnCameraFrame,
+  followingFace,
+  placedPicture,
+} from "./recording-scene-framing";
 import { SceneRect, recordingScenePanes } from "./recording-scene-geometry";
 import {
   RecordingSceneClip,
   SceneBox,
+  SceneFraming,
   SceneRotation,
   WHOLE_FRAMING,
   sceneNeedsCamera,
@@ -43,9 +50,35 @@ export type Placement = {
   screen: SceneRect;
 };
 
-export type SceneCamera = { aspect: number; overlay: CameraOverlaySettings };
+/** The camera a scene can place: its picture's aspect, its overlay outside
+ * every scene, and where the face is over it at the playhead, which a
+ * camera that follows the face is placed by; none before it is found. */
+export type SceneCamera = {
+  aspect: number;
+  overlay: CameraOverlaySettings;
+  face?: Face | null;
+};
 
 type Canvas = { height: number; width: number };
+
+/** The zoom the recording's own crop gives the camera. */
+const ownZoom = (camera: SceneCamera) =>
+  cameraFramingOf(camera.overlay, camera.aspect).zoom;
+
+/** Where the recording's own composition draws the camera's picture: where
+ * its overlay puts it, or, following the face, at the crop's zoom with the
+ * face in the middle of its box. The twin of `drawn_camera` in
+ * `Base::of`. */
+export const ownCameraPicture = (camera: SceneCamera): Picture => {
+  const { aspect, face, overlay } = camera;
+  if (overlay.followFace === true && face)
+    return placedPicture(
+      followingFace({ focusX: 0.5, focusY: 0.5, zoom: ownZoom(camera) }, face),
+      drawnCameraFrame(overlay, aspect),
+      aspect,
+    );
+  return { width: overlay.cameraWidth, x: overlay.cameraX, y: overlay.cameraY };
+};
 
 /** Where the recording's own composition puts the panes, outside every
  * scene. */
@@ -53,13 +86,7 @@ export const basePlacement = (
   output: ScreenshotOutputSettings,
   camera: SceneCamera | null,
 ): Placement => ({
-  camera: camera
-    ? {
-        width: camera.overlay.cameraWidth,
-        x: camera.overlay.cameraX,
-        y: camera.overlay.cameraY,
-      }
-    : { width: 0, x: 0, y: 0 },
+  camera: camera ? ownCameraPicture(camera) : { width: 0, x: 0, y: 0 },
   cameraFront: 1,
   // Where the camera is drawn rather than where its box is stored, so a
   // scene arriving starts from the camera on screen.
@@ -188,17 +215,37 @@ export const targeting =
       x: picture.x - picture.width / 2 + (base.image.x - crop.x) * scale,
       y: picture.y - pictureHeight / 2 + (base.image.y - crop.y) * scale,
     };
-    const cameraFraming =
-      clip.camera ?? (sceneNeedsCamera(clip) ? WHOLE_FRAMING : null);
+    // A camera following the face is framed about it: its framing's focus
+    // says where the face sits in the box.
+    const recordingFollows = camera?.overlay.followFace === true;
+    const follows = clip.followFace ?? recordingFollows;
+    const face = follows ? camera?.face : null;
+    const placed = (framing: SceneFraming) =>
+      camera
+        ? placedPicture(
+            face ? followingFace(framing, face) : framing,
+            frame,
+            camera.aspect,
+          )
+        : base.camera;
     // A camera filling the canvas is cut by the canvas's own corners, not
     // rounded again inside them.
     const cameraRadius =
       !clip.boxes && clip.preset === "camera-only" ? 0 : base.radius.camera;
     return {
-      camera:
-        camera && cameraFraming
-          ? placedPicture(cameraFraming, frame, camera.aspect)
-          : base.camera,
+      // A full scene keeps the recording's own crop, followed or still as
+      // the scene says.
+      camera: !camera
+        ? base.camera
+        : clip.camera
+          ? placed(clip.camera)
+          : sceneNeedsCamera(clip)
+            ? placed(WHOLE_FRAMING)
+            : follows && !recordingFollows
+              ? placed({ focusX: 0.5, focusY: 0.5, zoom: ownZoom(camera) })
+              : !follows && recordingFollows
+                ? ownCameraPicture({ ...camera, face: null })
+                : base.camera,
       cameraFront: clip.boxes?.cameraBehind ? 0 : 1,
       frame,
       image,

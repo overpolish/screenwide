@@ -9,17 +9,24 @@ import { IslandParts } from "../../../../primitives/island/island-parts";
 import { IslandRowTitle } from "../../../../primitives/island/row-title/island-row-title";
 import { AnnotationLine } from "../annotation/annotation-island-parts";
 import { type CropAspect, CropAspectChoice } from "../crop-aspect-choice";
+import { FollowFaceToggle } from "../follow-face-toggle";
 import { SceneOnlyNote } from "../scene-only-note";
 
 import type { EditorIslandContent } from "../editor-island";
 
-// The Crop tool's island: the crop of the layer in hand, the screen or the
-// camera of a recording or a screenshot's layer. How much the crop keeps is
-// dragged on the picture with its handles, where a size can be seen rather
-// than read as a number; here it only takes a shape, kept as the handles
-// are dragged until another is chosen or the crop goes free again. Over a
-// scene the crop is that scene's own, as a note under the shapes says. Last,
-// giving the whole capture back, the scene's crop over a scene.
+// The crop's island: the crop of the layer in hand, the screen or the camera
+// of a recording or a screenshot's layer. How much the crop keeps is dragged
+// on the picture with its handles, where a size can be seen rather than read
+// as a number; here it only takes a shape, kept as the handles are dragged
+// until another is chosen or the crop goes free again. A camera drawn into
+// the screen offers Follow face here too: following, the face is held in
+// the middle of the crop, so the window only grows and shrinks about it and
+// cannot be moved, which without the toggle in sight reads as a crop that
+// does nothing (user asked, 2026-11-21). Over a scene the crop is that
+// scene's own, as a note under the shapes says. Last, giving the whole
+// capture back, the scene's crop over a scene, and Done, which puts the
+// crop away with the layer still chosen, as Return, Escape and a press past
+// the picture do.
 
 export type CropIslandProps = {
   /** The shape the crop keeps, the layer's own, and the scene's while
@@ -31,8 +38,14 @@ export type CropIslandProps = {
    * island then sets. A screenshot has no scenes. */
   isInScene: boolean;
   onAspectChange: (aspect: CropAspect) => void;
+  /** Puts the crop away, the layer still chosen. */
+  onDone: () => void;
   /** Gives the whole capture back, free of any shape. */
   onReset: () => void;
+  /** Whether a camera drawn into the screen follows the face; absent for
+   * any other layer. */
+  followsFace?: boolean;
+  onFollowFaceChange?: (followsFace: boolean) => void;
 };
 
 export function cropIsland(props: CropIslandProps): EditorIslandContent {
@@ -47,12 +60,23 @@ export function cropIsland(props: CropIslandProps): EditorIslandContent {
             value={props.aspect}
           />
         </AnnotationLine>
+        {props.followsFace !== undefined && props.onFollowFaceChange ? (
+          <AnnotationLine key="follow-face">
+            <FollowFaceToggle
+              isFollowing={props.followsFace}
+              onChange={props.onFollowFaceChange}
+            />
+          </AnnotationLine>
+        ) : null}
         {props.isInScene ? (
           <SceneOnlyNote key="scene-note" layer="crop" />
         ) : null}
-        <div className="flex justify-end" key="actions">
+        <div className="flex justify-end gap-separate" key="actions">
           <Button onPress={props.onReset}>
             {t("editor-island-reset-crop")}
+          </Button>
+          <Button color="primary" onPress={props.onDone}>
+            {t("editor-island-crop-done")}
           </Button>
         </div>
       </IslandParts>

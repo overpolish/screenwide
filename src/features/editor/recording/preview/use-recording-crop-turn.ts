@@ -39,22 +39,30 @@ export function useRecordingCropTurn<Tool extends RecordingCanvasTool>({
   /** How the screen turns itself, outside every scene. */
   screenRotation: SceneRotation | undefined;
 }) {
-  // Crop put away by letting the track go (Escape) still closes and eases
-  // the turn back in on the track it was on.
-  const [lastTrack, setLastTrack] = useState(activeVideoTrack);
-  if (activeVideoTrack !== null && activeVideoTrack !== lastTrack)
-    setLastTrack(activeVideoTrack);
-  const turnedTrack = activeVideoTrack ?? lastTrack;
+  // The track the crop is open on, kept while it closes: put away by
+  // letting the track go (Escape), it still closes and eases the turn back
+  // in on that track, and a press on another layer closes this one's crop
+  // before that one's opens, as putting the tool down and taking it up
+  // would, rather than snapping one shut and the other open (user report).
+  const [turnedTrack, setTurnedTrack] = useState(activeVideoTrack);
+  const wantedTrack = activeVideoTrack ?? turnedTrack;
+  const isSwitching = wantedTrack !== turnedTrack;
   const isScreen = turnedTrack === "primary";
   const { isFlat, open, share } = useCropTurn(
-    canvasTool === "crop",
+    canvasTool === "crop" && !isSwitching,
     isScreen && isTurned(arrangement ? arrangement.rotation : screenRotation),
   );
+  if (isSwitching && open === 0) setTurnedTrack(wantedTrack);
   const screenShare = isScreen ? share : 1;
   const isClosed = canvasTool !== "crop" && open === 0;
   useEffect(() => {
     if (isClosed) releaseSceneCrop();
   }, [isClosed]);
+  // A preset held while one layer is cropped is laid out once that crop has
+  // closed for another layer's, so the next crop opens on the scene laid out
+  // anew: held on, the first layer stayed where its crop window had moved it
+  // while the second was cropped (user report).
+  useEffect(() => releaseSceneCrop, [turnedTrack]);
   const openPane =
     isFramed && open > 0
       ? isScreen
@@ -78,6 +86,12 @@ export function useRecordingCropTurn<Tool extends RecordingCanvasTool>({
      * picture opens round it (`openingCropChrome`). */
     chromeTool:
       canvasTool === "crop" || open > 0 ? ("crop" as const) : canvasTool,
+    /** The track the selection chrome is drawn on: the crop's, kept until
+     * it has closed, so its chrome stays on the layer it is open on. */
+    chromeTrack:
+      canvasTool === "crop" || open > 0
+        ? (turnedTrack ?? activeVideoTrack)
+        : activeVideoTrack,
     /** The ease as the track takes it: a camera in hand never turns. */
     cropTurn: { isFlat, open, share: screenShare } satisfies CropTurn,
     /** The pane of the scene under the playhead the crop opens out, kept

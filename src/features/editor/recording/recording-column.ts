@@ -13,26 +13,27 @@ import type { RecordingCanvasTool } from "./preview/recording-canvas-tool";
 // The recording's tools as the tool column and the title bar show them,
 // and the island each brings out: the twin of `screenshot-column.ts`. The
 // picture's own tools keep their names (`canvas` drags the frame, `crop`
-// the crop of the track in hand, `scene` the scene's panes); the title bar
-// names the frame's and the scene's by the modes they belong to, and the
-// crop is the column's. The modes that work on the whole recording without
-// a drag of their own (Screen, Camera, Cursor, Keyboard, Captions,
-// Transcript, Sound) are only an island, so the picture keeps Select under
-// them. Screen and Camera are Select on their track, however it was chosen,
-// which Select then moves and sizes.
+// the crop of the track in hand); the title bar names the frame's by its
+// mode. The crop is the chosen layer's, taken up from its island, its key or
+// a double-click on it, so the column shows Select while it is in hand. The
+// modes that work on the whole recording without a drag of their own
+// (Scene, Cursor, Keyboard, Captions, Transcript, Sound) are only an island,
+// so the picture keeps Select under them. Screen and Camera are Select on
+// their track, however it was chosen, which Select then moves and sizes.
 
 /** A mode that is only an island, with Select kept in hand under it and no
- * track chosen: Screen and Camera are their track chosen instead. */
+ * track chosen: Screen and Camera are their track chosen instead, which
+ * takes over from it. */
 export type RecordingPanelMode =
-  "captions" | "cursor" | "keyboard" | "sound" | "transcript";
+  "captions" | "cursor" | "keyboard" | "scene" | "sound" | "transcript";
 
 /** What a recording's own picture is of: its screen, the camera where it
  * is of the camera alone, or none for audio. */
 export type RecordingPicture = "camera" | "screen" | null;
 
-/** The pen, Crop or Select the column shows pressed for `tool`. */
+/** The pen or Select the column shows pressed for `tool`: Select under the
+ * crop, which is the chosen layer's rather than the column's. */
 export const columnTool = (tool: RecordingCanvasTool): EditorTool => {
-  if (tool === "crop") return "crop";
   const pen = drawingToolKind(tool);
   if (pen === "spotlight") return "focus";
   return pen ?? "select";
@@ -59,8 +60,6 @@ export const columnMode = ({
   switch (tool) {
     case "canvas":
       return "frame";
-    case "scene":
-      return "scene";
     case "select":
       return track === "camera" || (track === "primary" && picture === "camera")
         ? "camera"
@@ -73,9 +72,10 @@ export const columnMode = ({
 };
 
 /** What a mode takes up: the picture's tool, the track it chooses (none for
- * an island-only mode, which a chosen track would override; left as it is
- * for Frame and Scene), and the island-only mode; none goes back to Select.
- * Camera chooses the recording's own track where that is the camera. */
+ * an island-only mode, Scene among them, which a chosen track would
+ * override; left as it is for Frame), and the island-only mode; none goes
+ * back to Select. Camera chooses the recording's own track where that is the
+ * camera. */
 export const modeTool = (
   mode: EditorMode | null,
   picture: RecordingPicture,
@@ -94,8 +94,6 @@ export const modeTool = (
       };
     case "frame":
       return { panel: null, tool: "canvas" };
-    case "scene":
-      return { panel: null, tool: "scene" };
     case "screen":
       return { panel: null, tool: "select", track: "primary" };
   }

@@ -25,15 +25,27 @@ export const openingCropChrome = <
     cropOpen?: number;
     image?: Box;
     rotation?: SceneRotation;
+    settled?: Box;
   },
 >(
-  selection: Selection,
+  { settled, ...selection }: Selection,
   { isFlat, open }: Pick<CropTurn, "isFlat" | "open">,
-): Selection => {
+): Omit<Selection, "settled"> => {
   if (selection.cropMode !== true) return selection;
   if (isFlat || open >= 1) return { ...selection, rotation: undefined };
-  const { image, rect } = selection;
+  const { image } = selection;
   const toward = (from: number, to: number) => from + (to - from) * open;
+  // A window that settles somewhere else once closed, a scene's pane laid
+  // out anew at the crop's shape, eases there as the picture closes onto
+  // it, rather than waiting where it was and jumping once closed.
+  const rect = settled
+    ? {
+        height: toward(settled.height, selection.rect.height),
+        width: toward(settled.width, selection.rect.width),
+        x: toward(settled.x, selection.rect.x),
+        y: toward(settled.y, selection.rect.y),
+      }
+    : selection.rect;
   return {
     ...selection,
     cropOpen: open,
@@ -43,5 +55,6 @@ export const openingCropChrome = <
       x: toward(rect.x, image.x),
       y: toward(rect.y, image.y),
     },
+    rect,
   };
 };

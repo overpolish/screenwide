@@ -368,8 +368,10 @@ export type Messages = {
   "editor-island-captions-words-unit": { count: number };
   "editor-island-counter": null;
   "editor-island-crop-aspect": null;
+  "editor-island-crop-done": null;
   "editor-island-crop-free": null;
   "editor-island-crop-in-scene": null;
+  "editor-island-crop-layer": null;
   "editor-island-crop-locked": null;
   "editor-island-crop-original": null;
   "editor-island-crop-ratio": {
@@ -782,7 +784,6 @@ export type Messages = {
   "editor-timeline-tracks-name": null;
   "editor-timeline-view": null;
   "editor-tool-crop": null;
-  "editor-tool-crop-name": null;
   "editor-tool-frame": null;
   "editor-tool-select": null;
   "editor-tool-select-clip-name": null;
@@ -1452,6 +1453,7 @@ export type Messages = {
   "settings-shortcut-editor-paste": null;
   "settings-shortcut-editor-play": null;
   "settings-shortcut-editor-redo": null;
+  "settings-shortcut-editor-reset-view": null;
   "settings-shortcut-editor-screen": null;
   "settings-shortcut-editor-select-all": null;
   "settings-shortcut-editor-snapping": null;

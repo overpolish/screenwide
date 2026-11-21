@@ -71,10 +71,19 @@ export function gesturedCameraOverlay({
     let top = start.frameY;
     let right = left + start.frameWidth;
     let bottom = top + start.frameHeight;
-    if ((event.edges & 1) !== 0) left += moveX;
-    if ((event.edges & 2) !== 0) right += moveX;
-    if ((event.edges & 4) !== 0) top += moveY;
-    if ((event.edges & 8) !== 0) bottom += moveY;
+    // Following the face, the crop grows about its middle (`cropAnchored`),
+    // reporting how far its right and bottom edges went.
+    if (start.followFace === true) {
+      left -= moveX;
+      right += moveX;
+      top -= moveY;
+      bottom += moveY;
+    } else {
+      if ((event.edges & 1) !== 0) left += moveX;
+      if ((event.edges & 2) !== 0) right += moveX;
+      if ((event.edges & 4) !== 0) top += moveY;
+      if ((event.edges & 8) !== 0) bottom += moveY;
+    }
     next = {
       ...start,
       frameHeight: bottom - top,

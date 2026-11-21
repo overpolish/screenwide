@@ -24,6 +24,12 @@ pub enum PointerPress {
   /// picture) sends it, so the page can stop showing what it last saw
   /// under the pointer as hovered.
   Arrived,
+  /// A double-click landed on the layer `layer_id` with Select in hand,
+  /// which asks for its crop.
+  Crop { layer_id: u32 },
+  /// A press landed past the picture being cropped, which puts the crop
+  /// away with the layer still chosen.
+  LeaveCrop,
 }
 
 /// A right press on a video layer or an annotation in the native canvas: the
@@ -163,6 +169,12 @@ pub struct PreviewSelection {
   /// closes: at zero the crop's, its shade and its ants, and at one the
   /// select tool's, a solid outline and, over a turned layer, the gizmo.
   pub crop_closing: f64,
+  /// Non-zero when a crop window is held about its middle, as a camera that
+  /// follows the face holds the face there: it neither moves nor is drawn
+  /// afresh, and its grips pull opposite sides together. Its resizes report
+  /// how far its right and bottom edges travelled, the same as its left and
+  /// top went the other way.
+  pub crop_anchored: u32,
 }
 
 impl PreviewSelection {

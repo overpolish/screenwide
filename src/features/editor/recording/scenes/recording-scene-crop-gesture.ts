@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import { drawnCropRect } from "../../screenshot/screenshot-crop";
 import { ScreenshotOutputSettings } from "../../screenshot/screenshot-output";
 
 import {
@@ -9,10 +10,8 @@ import {
   releaseSceneCrop,
 } from "./recording-scene-crop-hold";
 import { customRecordingSceneClip } from "./recording-scene-custom";
-import {
-  croppedCustomPane,
-  customCropWindow,
-} from "./recording-scene-custom-crop";
+import { croppedCustomPane } from "./recording-scene-custom-crop";
+import { SceneRect } from "./recording-scene-geometry";
 import { PaneName, ScenePane } from "./recording-scene-gesture-edits";
 import { SceneCamera } from "./recording-scene-placement";
 import { RecordingSceneClip } from "./recording-scenes";
@@ -45,6 +44,7 @@ export type SceneEditGesture = {
  * leaves the scene (`recording-scene-crop-hold.ts`).
  */
 export function sceneCropGesture({
+  anchored,
   camera,
   canvas,
   clips,
@@ -55,6 +55,9 @@ export function sceneCropGesture({
   paneName,
   scene,
 }: {
+  /** Whether the window is held about its middle, the crop of a camera
+   * that follows the face (`cropAnchored`). */
+  anchored: boolean;
   camera: SceneCamera | null;
   /** The canvas in output pixels; the native gesture reports its travel as
    * shares of it. */
@@ -98,9 +101,11 @@ export function sceneCropGesture({
         return null;
       const cropped = croppedCustomPane(pane, {
         canvas,
-        moving: next.operation === "cropMove" ? 0 : next.edges & 15,
+        // An anchored window grows about its middle.
+        moving: next.operation === "cropMove" || anchored ? 0 : next.edges & 15,
         next: customCropWindow(pane.box, {
           anchor,
+          anchored,
           delta: {
             x: next.deltaX * canvas.width,
             y: next.deltaY * canvas.height,
@@ -146,3 +151,49 @@ export function sceneCropGesture({
         }),
   };
 }
+
+/**
+ * The crop window a crop gesture leaves on `pane`, in output pixels, from the
+ * box as the gesture found it. `delta` is the gesture's travel in output
+ * pixels; a move carries the window, a resize carries the edges `edges`
+ * names, or, `anchored` about its middle, grows each side by `delta` (the
+ * right and bottom edges' travel), and a draw spans from `anchor`, a point
+ * in output pixels.
+ */
+export const customCropWindow = (
+  box: SceneRect,
+  {
+    anchor,
+    anchored = false,
+    delta,
+    edges,
+    operation,
+  }: {
+    anchor: { x: number; y: number };
+    delta: { x: number; y: number };
+    edges: number;
+    operation: "cropDraw" | "cropMove" | "cropResize";
+    anchored?: boolean;
+  },
+): SceneRect => {
+  if (operation === "cropMove")
+    return { ...box, x: box.x + delta.x, y: box.y + delta.y };
+  if (operation === "cropDraw")
+    return drawnCropRect(anchor, {
+      deltaX: delta.x,
+      deltaY: delta.y,
+      edges,
+    });
+  if (anchored)
+    return {
+      height: box.height + delta.y * 2,
+      width: box.width + delta.x * 2,
+      x: box.x - delta.x,
+      y: box.y - delta.y,
+    };
+  const left = box.x + ((edges & 1) !== 0 ? delta.x : 0);
+  const right = box.x + box.width + ((edges & 2) !== 0 ? delta.x : 0);
+  const top = box.y + ((edges & 4) !== 0 ? delta.y : 0);
+  const bottom = box.y + box.height + ((edges & 8) !== 0 ? delta.y : 0);
+  return { height: bottom - top, width: right - left, x: left, y: top };
+};

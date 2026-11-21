@@ -129,6 +129,24 @@ fn placement(pane: &Pane, origin: (i32, i32)) -> NativeWorkspacePlacement {
   }
 }
 
+/// Where `pane`'s canvas is drawn, in the drawable's pixels from the
+/// viewport's corner, as `draw_workspace` places it: its corner on a whole
+/// pixel. Chrome laid over the picture, the crop's shade, is placed by this
+/// rather than by the unrounded box, which put its edge up to a pixel off
+/// the picture's at some zooms and left a bright line along it (user
+/// report).
+pub(super) fn drawn_canvas(pane: &Pane, viewport: PreviewSurfaceRect, scale: f64) -> [f64; 4] {
+  let (x, _) = pixels::scaled_edges(viewport.x, viewport.width, scale);
+  let (y, _) = pixels::scaled_edges(viewport.y, viewport.height, scale);
+  let placed = placement(pane, (x, y));
+  [
+    f64::from(placed.x),
+    f64::from(placed.y),
+    f64::from(placed.width),
+    f64::from(placed.height),
+  ]
+}
+
 #[cfg(test)]
 mod tests {
   use super::{placement, set_pane_geometry, Pane, PreviewSurfaceRect};

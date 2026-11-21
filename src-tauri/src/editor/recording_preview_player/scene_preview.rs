@@ -5,7 +5,7 @@
 //! export arranges its frames.
 
 use super::gap_preview::SceneClips;
-use super::scene_reframe::{SceneCrop, SceneReframe};
+use super::scene_reframe::SceneCrop;
 use super::*;
 use screenwide_export::scenes::arrange_following;
 use screenwide_scenes::{FacePath, GapScene, RecordingSceneClip};
@@ -117,15 +117,14 @@ impl PlayerSources {
       .unwrap_or_default();
     let reframe = crop.pane;
     let camera = self.camera_source_size();
-    // While the crop tool reframes the camera it is drawn still, the picture
-    // where the webview's crop window expects it; the face is followed again
-    // once the crop is made.
+    // The camera follows the face while it is cropped too: the editor places
+    // it from the clips and the same face (`useFacePath`), so its crop window
+    // lies on the picture as the screen's does.
     let face = self
       .scenes
       .face_path
       .read()
       .ok()
-      .filter(|_| reframe != Some(SceneReframe::Camera))
       .and_then(|path| path.as_ref().map(|path| path.at(source_ms as f64)));
     let base = composition.recording_output.primary.clone();
     // What the crop tool opens out: a preset it holds where its panes stood,

@@ -23,6 +23,7 @@ import { useEditorEditGesture } from "../../use-editor-edit-history";
 import { useCaptionSelection } from "../captions/use-caption-selection";
 import { useScenePreviewEditing } from "../scenes/use-scene-preview-editing";
 
+import { useFollowedOverlay } from "./face-path";
 import { overlayTargets } from "./overlay-layers";
 import { RecordingCanvasTool } from "./recording-canvas-tool";
 import { scenePanePicks } from "./recording-scene-picks";
@@ -49,7 +50,7 @@ export function useRecordingPreviewSelection(
   {
     activeVideoTrack,
     canPreviewBakedCamera,
-    canvasTool: toolInHand,
+    canvasTool,
     editGesture,
     effectiveRecordingOutput,
     previewPositionMs,
@@ -86,10 +87,6 @@ export function useRecordingPreviewSelection(
     previewSourceDimensions,
     recordingTimelineEdit,
   } = props;
-  // The scene tool picks, moves and resizes the panes the way the select tool
-  // does, with the Scene panel up in place of the Selection panel. The
-  // overlays and the annotations stay the select tool's own.
-  const canvasTool = toolInHand === "scene" ? "select" : toolInHand;
   const laneEdit = useMemo(
     () => recordingTimelineEdit ?? createRecordingTimelineEdit(artifactId),
     [artifactId, recordingTimelineEdit],
@@ -147,9 +144,14 @@ export function useRecordingPreviewSelection(
     isFramed,
     screenRotation: effectiveRecordingOutput.primary.rotation,
   });
-  const { chromeTool } = turn;
+  const { chromeTool, chromeTrack } = turn;
+  const followedCameraOverlay = useFollowedOverlay(
+    cameraOverlay,
+    previewSourceDimensions.camera,
+    previewPositionMs,
+  );
   const selectionCameraOverlay =
-    sceneArrangement?.cameraOverlay ?? cameraOverlay;
+    sceneArrangement?.cameraOverlay ?? followedCameraOverlay;
   const selectionOutput = useMemo(
     () =>
       sceneArrangement
@@ -160,7 +162,7 @@ export function useRecordingPreviewSelection(
   const videoSelectionOverlay = useMemo(
     () =>
       recordingVideoSelectionOverlay({
-        activeVideoTrack,
+        activeVideoTrack: chromeTrack,
         cameraOverlay: selectionCameraOverlay,
         canPreviewBakedCamera,
         canvasTool: chromeTool,
@@ -173,7 +175,7 @@ export function useRecordingPreviewSelection(
         selectedVideoTracks,
       }),
     [
-      activeVideoTrack,
+      chromeTrack,
       canPreviewBakedCamera,
       chromeTool,
       framesPanes,
@@ -207,7 +209,7 @@ export function useRecordingPreviewSelection(
   );
   // While the crop tool is in hand or the crop has yet to close on a scene's
   // pane, its selection is the crop window; other panes keep their boxes.
-  const cropTrack = activeVideoTrack ?? turn.turnedTrack ?? "primary";
+  const cropTrack = chromeTrack ?? "primary";
   const reframe =
     chromeTool === "crop" ? scene.reframeSelections?.[cropTrack] : undefined;
   const picks = scenePanePicks({
@@ -231,7 +233,7 @@ export function useRecordingPreviewSelection(
     picks.overlay && shaped(openingCropChrome(picks.overlay, turn.cropTurn));
   // Last, so they are under the pointer before the panes they are drawn over.
   const selectionTargets =
-    toolInHand === "select"
+    canvasTool === "select"
       ? [
           ...(picks.targets ?? []),
           ...overlayTargets({
@@ -284,6 +286,7 @@ export function useRecordingPreviewSelection(
     /** The crop tool's ease, and the track it eases, kept while it closes. */
     cropTurn: turn.cropTurn,
     cropTurnTrack: turn.turnedTrack,
+    followedCameraOverlay,
     /** Whether a scene places the panes at the playhead. */
     isFramed,
     keyboardTimeline,

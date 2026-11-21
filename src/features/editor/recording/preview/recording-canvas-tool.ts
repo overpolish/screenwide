@@ -3,8 +3,7 @@
 
 import type { AnnotationKind } from "../../../annotations/types";
 
-/** What a press on the recording's picture does: Select, a pen, or a mode's
- * own drag, the frame's (`canvas`), the crop's or the scene's. Select is what
- * is in hand when nothing else is. */
-export type RecordingCanvasTool =
-  AnnotationKind | "canvas" | "crop" | "scene" | "select";
+/** What a press on the recording's picture does: Select, a pen, or the
+ * frame's own drag (`canvas`) or the crop of the layer chosen. Select is
+ * what is in hand when nothing else is. */
+export type RecordingCanvasTool = AnnotationKind | "canvas" | "crop" | "select";

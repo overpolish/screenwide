@@ -19,10 +19,7 @@ import type { AnnotationKind } from "../../../annotations/types";
 import type { CropAspect } from "../../island/crop-aspect-choice";
 import type { RecordingPreviewSelection } from "../use-recording-preview-surface";
 
-type SelectionTool = Exclude<
-  RecordingCanvasTool,
-  AnnotationKind | "canvas" | "scene"
->;
+type SelectionTool = Exclude<RecordingCanvasTool, AnnotationKind | "canvas">;
 
 /** Build the native OSC payload for an ordinary screen/camera output pane. */
 export function normalizedRecordingSelection({

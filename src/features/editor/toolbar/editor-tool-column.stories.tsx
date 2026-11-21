@@ -28,7 +28,6 @@ const meta = {
       control: "select",
       options: [
         "select",
-        "crop",
         "image",
         "arrow",
         "text",

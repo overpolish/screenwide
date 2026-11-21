@@ -14,18 +14,19 @@ import type { CropTurn } from "../../preview/use-crop-turn";
 
 /** What the player draws as a crop comes and goes. The track in hand is
  * opened out around its crop - a baked camera to the place its overlay
- * holds - and turned upright as the selection's `cropTurn` eases, so the
- * handles sit on the picture the crop is taken out of, and closes again as
- * the tool is put down. Inside a scene the native preview opens the pane in
- * place instead (`scene_reframe.rs`): the scene would arrange the whole
- * picture as if it were the crop. */
+ * holds, from where the face puts it when it follows the face - and turned
+ * upright as the selection's `cropTurn` eases, so the handles sit on the
+ * picture the crop is taken out of, and closes again as the tool is put
+ * down. Inside a scene the native preview opens the pane in place instead
+ * (`scene_reframe.rs`): the scene would arrange the whole picture as if it
+ * were the crop. */
 export function useRecordingCropPreview({
   activeVideoTrack,
   bakeCamera,
   cameraOverlay,
   effectiveRecordingOutput,
   previewSourceDimensions,
-  selection: { cropTurn, cropTurnTrack, isFramed },
+  selection: { cropTurn, cropTurnTrack, followedCameraOverlay, isFramed },
 }: {
   activeVideoTrack: RecordingVideoTrackId | null;
   bakeCamera: boolean;
@@ -37,10 +38,15 @@ export function useRecordingCropPreview({
     /** The track the crop opens and closes on, kept while it closes after
      * the track is let go. */
     cropTurnTrack: RecordingVideoTrackId | null;
+    /** The camera's overlay with its picture where the preview draws it,
+     * which a camera following the face opens from. */
+    followedCameraOverlay: CameraOverlaySettings;
     isFramed: boolean;
   };
 }) {
-  const track = activeVideoTrack ?? cropTurnTrack;
+  // The layer the crop is open on, kept while it closes, whether the track
+  // was let go or another layer was pressed (`useRecordingCropTurn`).
+  const track = cropTurnTrack ?? activeVideoTrack;
   const cropSource =
     track === "primary"
       ? previewSourceDimensions.primary
@@ -92,16 +98,17 @@ export function useRecordingCropPreview({
         x: 0,
         y: 0,
       },
-      cameraOverlay,
+      followedCameraOverlay,
     );
     return cropTurn.isFlat
       ? whole
-      : cameraOverlayBetween(cameraOverlay, whole, cropTurn.open);
+      : cameraOverlayBetween(followedCameraOverlay, whole, cropTurn.open);
   }, [
     bakeCamera,
     cameraOverlay,
     cropTurn,
     effectiveRecordingOutput.primary,
+    followedCameraOverlay,
     isFramed,
     previewSourceDimensions.camera,
     track,

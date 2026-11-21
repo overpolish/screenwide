@@ -51,3 +51,18 @@ pub fn set_screenshot_preview_editor_suspended(
   }
   Ok(())
 }
+
+/// Puts the screenshot editor's view back at 100%, centred: ⌘0 (Ctrl+0).
+pub(crate) fn reset_view(state: &ScreenshotPreviewState) -> Result<(), String> {
+  let surface = state
+    .0
+    .lock()
+    .map_err(|_| "The screenshot preview is unavailable".to_owned())?
+    .surface
+    .clone();
+  if let Some(surface) = surface {
+    #[cfg(any(target_os = "macos", target_os = "windows"))]
+    surface.reset_view();
+  }
+  Ok(())
+}

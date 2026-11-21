@@ -12,7 +12,8 @@ import {
 } from "../types";
 
 import { annotationPanelHandlers } from "./annotation/annotation-handlers";
-import { cropPanelHandlers, EditorCropTarget } from "./crop/crop-target";
+import { cropPanelHandlers } from "./crop/crop-panel-handlers";
+import { EditorCropTarget } from "./crop/crop-target";
 import { BackgroundPreset } from "./frame/background/background";
 import { EditorFrameTarget, framePanelHandlers } from "./frame/frame-target";
 import { scenePanelHandlers } from "./scene/scene-panel-handlers";

@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { Arrangement } from "../annotations/annotation-order";
+import { resetEditorView } from "../api";
 import {
   editorToolForShortcut,
   EditorToolId,
@@ -165,7 +166,8 @@ export type EditorCommandKeys = {
 
 /** What ⌘ or Ctrl with `code` does in this window, or null where it does
  * nothing. A field being typed in keeps its own cut, copy, paste and
- * select all, so only Export reaches past one. */
+ * select all, so only Export reaches past one. ⌘0 resets the view in every
+ * editor window alike. */
 export const editorCommandKeyAction = (
   code: string,
   keys: EditorCommandKeys,
@@ -174,6 +176,7 @@ export const editorCommandKeyAction = (
   (inTextField && code !== "KeyE"
     ? null
     : {
+        Digit0: resetEditorView,
         KeyA: keys.onSelectAll,
         KeyB: keys.onCutTimeline,
         KeyC: keys.onCopy,

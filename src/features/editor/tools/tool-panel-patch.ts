@@ -111,6 +111,9 @@ export type ToolPanelPatch = Partial<
   /** Give the crop a shape to keep as its handles are dragged, cutting it to
    * that shape about its middle, or let it go free. */
   cropAspect?: CropAspect;
+  /** Take up the crop of the layer in hand, or put it away with the layer
+   * still chosen. */
+  cropTool?: boolean;
   /** Cut what is chosen on the strip, a beat, lull, moment or drawn range,
    * or several beats and lulls, and its time with it. */
   cutStripItem?: true;

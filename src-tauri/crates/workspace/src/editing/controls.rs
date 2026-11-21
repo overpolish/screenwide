@@ -4,6 +4,12 @@
 use super::*;
 
 impl WorkspaceEditor {
+  /// Puts the view back at 100%, centred, as a double-click on empty space
+  /// does: ⌘0 (Ctrl+0).
+  pub fn reset_view(&self) {
+    super::input::reset_view(&self.inner);
+  }
+
   pub fn set_scale(&self, scale: f64) {
     if let Ok(mut state) = self.inner.state.lock() {
       let scale = scale.max(0.1);

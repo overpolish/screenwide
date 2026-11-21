@@ -48,8 +48,15 @@ export type RecordingSceneArrangement = {
   /** The camera's overlay as the scene draws it, null without a camera. */
   cameraOverlay: CameraOverlaySettings | null;
   /** Where the clip settles the camera's box and the framing it shows there,
-   * which a drag on the camera reframes; null without a camera. */
-  cameraTarget: { frame: SceneRect; framing: SceneFraming } | null;
+   * which a drag on the camera reframes, and that framing as drawn, the
+   * point of the picture in the box's middle, which a crop window is laid
+   * over: a camera following the face has its framing say where the face
+   * sits instead. Null without a camera. */
+  cameraTarget: {
+    frame: SceneRect;
+    framing: SceneFraming;
+    picture: SceneFraming;
+  } | null;
   /** The clip under the playhead. */
   clip: RecordingSceneClip;
   /** How opaque the scene draws each pane now, zero where it hides one. */
@@ -195,11 +202,20 @@ export function arrangedRecordingScene({
           length - elapsed < window
         ? towardPlacement(base, target, eased((length - elapsed) / window))
         : target;
+  // A full scene following the face keeps the recording's crop's zoom with
+  // the face in its middle, as `Base::target` places it.
   const cameraFraming = sceneCamera
     ? (clip.camera ??
       (sceneNeedsCamera(clip)
         ? WHOLE_FRAMING
-        : cameraFramingOf(sceneCamera.overlay, sceneCamera.aspect)))
+        : (clip.followFace ?? sceneCamera.overlay.followFace) === true
+          ? {
+              focusX: 0.5,
+              focusY: 0.5,
+              zoom: cameraFramingOf(sceneCamera.overlay, sceneCamera.aspect)
+                .zoom,
+            }
+          : cameraFramingOf(sceneCamera.overlay, sceneCamera.aspect)))
     : null;
   // A scene that pads its screen grows the crop outwards past its box, as the
   // recording's own inset pads its crop, by points of the screen's capture
@@ -231,6 +247,19 @@ export function arrangedRecordingScene({
             framing: framingWithin(
               cameraFraming,
               target.frame,
+              sceneCamera.aspect,
+            ),
+            picture: cameraFramingOf(
+              {
+                ...sceneCamera.overlay,
+                cameraWidth: target.camera.width,
+                cameraX: target.camera.x,
+                cameraY: target.camera.y,
+                frameHeight: target.frame.height,
+                frameWidth: target.frame.width,
+                frameX: target.frame.x,
+                frameY: target.frame.y,
+              },
               sceneCamera.aspect,
             ),
           }

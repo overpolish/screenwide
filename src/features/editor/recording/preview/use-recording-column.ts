@@ -4,6 +4,8 @@
 import { useState } from "react";
 
 import { shownTool } from "../../choice/editor-choice";
+import { useNativeCropRequest } from "../../preview/use-native-crop-request";
+import { usePublishCropTool } from "../../tools/crop/crop-panel-handlers";
 import {
   columnMode,
   columnTool,
@@ -21,14 +23,16 @@ import type { RecordingTrackId, RecordingVideoTrackId } from "../../types";
 
 /**
  * The recording's tool column, its modes in the title bar, and the island
- * they bring out: the pen, Crop or Select in hand, the mode open, and the
- * island for them, which `useRecordingIsland` shows. A mode with a drag of
- * its own (Frame, Scene) is the picture's tool. The rest are only an
- * island, open over Select, and put away by any of the picture's tools
- * being taken up, however it is. Screen and Camera are their track chosen
- * with Select in hand, however it was chosen, so choosing a layer opens its
- * mode over any other island-only one. Crop crops the track in hand, the
- * screen's where none is.
+ * they bring out: the pen, the crop or Select in hand, the mode open, and the
+ * island for them, which `useRecordingIsland` shows. Frame is the picture's
+ * tool, a drag of its own. The other modes are only an island, open over
+ * Select, and put away by any of the picture's tools being taken up,
+ * however it is. Screen and Camera are their track chosen with Select in
+ * hand, however it was chosen, so choosing a layer opens its mode over any
+ * other island-only one, Scene included. Select taken up never lets the
+ * layer go: only Escape, a press on nothing and ⌘D do. The crop is the
+ * chosen layer's, the screen's where none is, and put away it leaves the
+ * layer chosen.
  */
 export function useRecordingColumn({
   activeVideoTrack,
@@ -90,18 +94,21 @@ export function useRecordingColumn({
     onSelectedTrackChange?.(null);
     setPanel(null);
   };
-  /** Select taken up: from Crop, on the track the crop was on, as a
-   * screenshot's Crop put away leaves its layer chosen, since cropping and
-   * then moving or resizing is the common way on (user asked); from any
-   * other tool, with nothing chosen. */
+  /** Select taken up, by its button, V, or the crop put away by Done,
+   * Return, Escape or a press past its picture: the layer chosen stays
+   * chosen, so its mode opens or stays open (user asked: Select letting the
+   * camera go only to have it chosen again read as broken). The annotations
+   * go, as a mode lets them go. */
   const selectTool = () => {
-    if (canvasTool !== "crop") {
-      backToSelect();
-      return;
-    }
     changeCanvasTool("select");
     annotations.clearSelection();
-    setPanel(null);
+  };
+  /** The crop taken up on `track`, else on the track in hand, the screen's
+   * where none is. */
+  const takeUpCrop = (track?: RecordingVideoTrackId) => {
+    const layer = track ?? activeVideoTrack ?? "primary";
+    if (layer !== activeVideoTrack) onSelectedTrackChange?.(layer);
+    if (canvasTool !== "crop") changeCanvasTool("crop");
   };
   /** Opens `next`, letting go of the annotations chosen, or puts the open
    * mode away for none, with nothing chosen at all. */
@@ -125,17 +132,24 @@ export function useRecordingColumn({
   };
   const ownsEscape =
     canvasTool !== "select" || mode !== null || annotations.hasSelection;
-  /** Takes up `next` from the column: Select with nothing chosen, or a pen
-   * or Crop, which takes the screen's track in hand where none is. */
+  /** Takes up `next` from the column: Select, keeping the layer chosen, or
+   * a pen. */
   const takeUp = (next: EditorTool) => {
-    if (next === "select") {
-      selectTool();
-      return;
-    }
-    if (next === "crop" && activeVideoTrack === null)
-      onSelectedTrackChange?.("primary");
-    changeCanvasTool(next);
+    if (next === "select") selectTool();
+    else changeCanvasTool(next);
   };
+  // A crop asked for on the picture: the layer double-clicked, `0` the
+  // screen's and `1` the camera's, taken up for its crop, or none, a press
+  // past the picture being cropped, which puts the crop away.
+  useNativeCropRequest((layerId) => {
+    if (layerId !== null) takeUpCrop(layerId === 0 ? "primary" : "camera");
+    else if (canvasTool === "crop") selectTool();
+  });
+  // The crop taken up from the layer's island, or put away by its Done.
+  usePublishCropTool((isCropping) => {
+    if (isCropping) takeUpCrop();
+    else if (canvasTool === "crop") selectTool();
+  });
   return {
     backToSelect,
     column: {
@@ -154,11 +168,13 @@ export function useRecordingColumn({
       if (mode !== next) chooseMode(next);
     },
     ownsEscape,
-    /** Select taken up by its key, or Crop's confirmed with Return. */
+    /** Select taken up by its key, or the crop put away by Return or
+     * Escape: the layer stays chosen. */
     selectTool,
-    /** C: Crop taken up, or put down while it is in hand. */
+    /** K: the crop taken up, or put away while it is in hand. */
     toggleCrop: () => {
-      takeUp(canvasTool === "crop" ? "select" : "crop");
+      if (canvasTool === "crop") selectTool();
+      else takeUpCrop();
     },
     toggleMode,
   };

@@ -8,6 +8,7 @@ import {
 } from "../../screenshot/screenshot-output";
 import { drawingToolKind, isAnnotationTool } from "../../tools/tool-registry";
 import { CameraOverlaySettings, RecordingVideoTrackId } from "../../types";
+import { drawnCameraRect } from "../scenes/recording-scene-framing";
 
 import { RecordingCanvasTool } from "./recording-canvas-tool";
 import { normalizedRecordingSelection } from "./recording-selection";
@@ -73,8 +74,11 @@ function bakedCameraSelection({
     y: rect.y / Math.max(1, output.height),
   });
   return {
+    // Following the face holds it in the middle of the crop.
+    cropAnchored: isCropping && cameraOverlay.followFace === true,
     cropMode: isCropping,
-    image: share(geometry.camera),
+    // The shade lies where the preview draws the camera's picture.
+    image: share(drawnCameraRect(geometry.camera)),
     layerId: 1,
     paneIndex: 0,
     radiusPercent: cameraOverlay.radiusPercent,

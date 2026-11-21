@@ -57,6 +57,42 @@ export const placedPicture = (
   };
 };
 
+/** The face's centre over a camera picture, as shares of its width and
+ * height. */
+export type Face = { x: number; y: number };
+
+/** `framing` held on the face at `face`: following, a framing's focus says
+ * where the face sits in the box rather than which point of the picture is
+ * in its middle, so the middle is that far off the face. The twin of
+ * `SceneFraming::following`. */
+export const followingFace = (
+  framing: SceneFraming,
+  face: Face,
+): SceneFraming => ({
+  focusX: face.x + framing.focusX - 0.5,
+  focusY: face.y + framing.focusY - 0.5,
+  zoom: framing.zoom,
+});
+
+/** A length as `bake_geometry` sizes the camera: a whole, even number of
+ * pixels, two at least. */
+const even = (length: number) =>
+  Math.max(2, Math.max(2, Math.round(length)) & ~1);
+
+/**
+ * The camera's picture `rect`, in canvas pixels, where the preview draws it:
+ * snapped to whole pixels and even sizes, as `bake_geometry` places the
+ * camera drawn into the screen. A crop's shade laid over the unsnapped rect
+ * left up to a canvas pixel of the picture uncovered along an edge, which
+ * showed as a bright line at some zooms (user report).
+ */
+export const drawnCameraRect = (rect: SceneRect): SceneRect => ({
+  height: even(rect.height),
+  width: even(rect.width),
+  x: Math.round(rect.x),
+  y: Math.round(rect.y),
+});
+
 /**
  * The camera's box in the recording's own composition as it is drawn, for a
  * camera picture of `aspect`: no larger than the picture and held inside it,

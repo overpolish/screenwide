@@ -552,8 +552,12 @@ editor-island-crop-original = Original
 editor-island-crop-ratio = { $width }:{ $height }
 # An aspect ratio as it is spoken, such as "16 by 9".
 editor-island-crop-ratio-name = { $width } by { $height }
-# Gives a layer's whole capture back, free of any crop, on the Crop tool's island.
+# Gives a layer's whole capture back, free of any crop, on the crop's island.
 editor-island-reset-crop = Reset crop
+# Puts the crop away with the layer still chosen, on the crop's island.
+editor-island-crop-done = Done
+# Names the button at the end of the Screen, Screenshot and Camera islands' row that crops the layer, for assistive technology.
+editor-island-crop-layer = Crop
 # Downloads the model a tool needs, on any island whose tool needs one.
 editor-island-model-download = Download
 # Names a model's download progress bar for assistive technology.

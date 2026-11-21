@@ -49,6 +49,9 @@ export function screenIslandContent({
       ? scenePane.isAtLayout
       : selection.isAtDefaultPlacement,
     isInScene: scenePane !== null,
+    onCrop: () => {
+      change({ cropTool: true });
+    },
     onInsetChange: (inset) => {
       change(scenePane ? { sceneInset: inset } : { selectionInset: inset });
     },
@@ -130,6 +133,9 @@ export function cameraIslandContent({
     },
     onChoosePicture: () => {
       change({ chooseCameraBackground: true });
+    },
+    onCrop: () => {
+      change({ cropTool: true });
     },
     onDownloadBackgroundModel: () => {
       change({ downloadCameraBackground: true });
@@ -223,12 +229,35 @@ export function cropIslandContent({
       : isScene
         ? scene.panes.screen
         : null;
+  // A camera drawn into the screen follows the face or not here too, its
+  // scene's own over a scene, since following decides what its crop can do.
+  const follows =
+    selection.kind === "camera" && snapshot.cameraOutput !== "separate"
+      ? pane && scene
+        ? scene.followsFace
+        : (selection.followsFace ?? false)
+      : undefined;
   return cropIsland({
     aspect: crop.aspect,
     canLock: crop.canLock,
+    ...(follows === undefined
+      ? {}
+      : {
+          followsFace: follows,
+          onFollowFaceChange: (follow: boolean) => {
+            change(
+              pane
+                ? { sceneFollowFace: follow }
+                : { selectionFollowFace: follow },
+            );
+          },
+        }),
     isInScene: pane !== null,
     onAspectChange: (cropAspect) => {
       change({ cropAspect });
+    },
+    onDone: () => {
+      change({ cropTool: false });
     },
     onReset: () => {
       change({ resetCrop: true });

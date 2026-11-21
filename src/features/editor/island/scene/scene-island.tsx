@@ -15,7 +15,7 @@ import { ScenePaneToggles } from "./scene-pane-toggles";
 
 import type { EditorIslandContent } from "../editor-island";
 
-// The scene tool: how the picture is framed. With a scene in hand it frames
+// The Scene mode: how the picture is framed. With a scene in hand it frames
 // that scene's stretch, and can delete it; with none, it frames the
 // recording wherever no scene covers it, and holds the zooms planned from
 // the cursor and keys. The row, drawn as the layout, chooses which group of
@@ -25,8 +25,8 @@ import type { EditorIslandContent } from "../editor-island";
 // hand, which the row's note says while none is. The row also ends with
 // whether the scene shows each pane, as glyphs (`ScenePaneToggles`), and
 // the layout group holds the layouts; moving, zooming and rounding a pane
-// is done on the picture (Select moves and resizes a box, the crop tool
-// picks what a pane shows). A pane's corners, and whether the camera
+// is done on the picture (Select moves and resizes a box, the pane's crop
+// picks what it shows). A pane's corners, and whether the camera
 // follows the face, belong to its layer and are set on the Screen and
 // Camera islands.
 
