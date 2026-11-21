@@ -213,6 +213,7 @@ fn windows_standard_cursors_keep_their_recorded_native_hotspots() {
     style,
     timestamp_us: 0,
     width: 32.0,
+    picture: None,
   };
   assert_hotspot(output_hotspot(vector(CursorStyle::IBeam)), (8.0, 9.0));
   assert_hotspot(
