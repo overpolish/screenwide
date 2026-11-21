@@ -3,15 +3,22 @@
 
 use super::{raster, Appearance, CursorStyle, APPEARANCE_STABILITY_US};
 
+/// Whether two appearances draw the same artwork the same way: the same
+/// style's, or the same picture of an app's own cursor.
+fn same_artwork(left: &Appearance, right: &Appearance) -> bool {
+  left.picture == right.picture && raster::uses_same_artwork(left.style, right.style)
+}
+
 pub(super) fn stable_appearances(
   appearances: &[Appearance],
   recording_end_us: u64,
 ) -> Vec<Appearance> {
   let mut changes = Vec::new();
   for appearance in appearances {
-    if changes.last().is_some_and(|previous: &Appearance| {
-      raster::uses_same_artwork(previous.style, appearance.style)
-    }) {
+    if changes
+      .last()
+      .is_some_and(|previous: &Appearance| same_artwork(previous, appearance))
+    {
       continue;
     }
     changes.push(*appearance);
@@ -29,7 +36,7 @@ pub(super) fn stable_appearances(
     }
     if stable
       .last()
-      .is_none_or(|previous| !raster::uses_same_artwork(previous.style, appearance.style))
+      .is_none_or(|previous| !same_artwork(previous, appearance))
     {
       stable.push(*appearance);
     }
@@ -37,10 +44,11 @@ pub(super) fn stable_appearances(
   stable
 }
 
-/// Custom cursor pixels are not recorded yet, so they render with the arrow
-/// artwork. Give that stand-in the recording's arrow dimensions too: using a
-/// custom cursor's unrelated bitmap box makes the same arrow visibly jump in
-/// size even though the user's percentage setting has not changed.
+/// A custom cursor with no picture kept renders with the arrow artwork.
+/// Give that stand-in the recording's arrow dimensions too: using a custom
+/// cursor's unrelated bitmap box makes the same arrow visibly jump in size
+/// even though the user's percentage setting has not changed. One with its
+/// picture keeps its own box, which is that picture's.
 pub(super) fn normalize_custom_fallback_size(appearances: &mut [Appearance]) {
   let Some((width, height)) = appearances
     .iter()
@@ -51,7 +59,7 @@ pub(super) fn normalize_custom_fallback_size(appearances: &mut [Appearance]) {
   };
   for appearance in appearances
     .iter_mut()
-    .filter(|appearance| appearance.style == CursorStyle::Custom)
+    .filter(|appearance| appearance.style == CursorStyle::Custom && appearance.picture.is_none())
   {
     appearance.width = width;
     appearance.height = height;

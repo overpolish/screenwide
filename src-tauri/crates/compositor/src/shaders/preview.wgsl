@@ -613,8 +613,9 @@ fn artwork_sample(point: vec2<f32>, anchor: vec2<f32>) -> vec4<f32> {
   return artwork_texel(design / design_size * bitmap);
 }
 
-// System artwork already carries an antialiased edge, so only the hard-edged
-// drawn fallback is supersampled over the pixel's 4x4 box.
+// Artwork that asks for it (`GpuArtwork::supersample`) is read over the
+// pixel's 4x4 box: system bitmaps drawn from up to 16 times their size would
+// otherwise be skipped across, and the drawn fallback's edge is hard.
 fn artwork_draw_sample(point: vec2<f32>, anchor: vec2<f32>) -> vec4<f32> {
   if (canvas.cursor_model.w == 0u) {
     return artwork_sample(point, anchor);

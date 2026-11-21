@@ -59,6 +59,7 @@ export function resolveToolPanelSnapshot(
     annotationEmphasis,
     annotationImage: _annotationImage,
     annotationImagePlay: _annotationImagePlay,
+    annotationImageStretch: _annotationImageStretch,
     annotationImageSway,
     annotationKind: _annotationKind,
     annotationLook: _annotationLook,

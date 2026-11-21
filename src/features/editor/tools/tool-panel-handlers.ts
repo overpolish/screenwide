@@ -51,6 +51,9 @@ export type ToolPanelHandlers = {
   onAnnotationImageChange?: (art: ImageArt) => void;
   /** Change how the chosen moving image plays. */
   onAnnotationImagePlayChange?: (play: ImagePlayChange) => void;
+  /** Stretch the chosen image when it is drawn larger than its picture, or
+   * draw it larger with the upscaling model. */
+  onAnnotationImageStretchChange?: (stretched: boolean) => void;
   /** Sway the chosen image over its clip, or stand it still. */
   onAnnotationImageSwayChange?: (sway: boolean) => void;
   /** Turn the chosen focus into a spotlight, or the spotlight into a focus. */

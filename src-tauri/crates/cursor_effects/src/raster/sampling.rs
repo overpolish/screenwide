@@ -73,14 +73,8 @@ impl CursorRaster {
     x: f64,
     y: f64,
   ) -> [f64; 4] {
-    // The shader supersamples every artwork it places by a design frame
-    // (`artwork_draw_sample` in `preview.wgsl`), because that path clips
-    // against the frame's hard edge; stretched system artwork carries its own
-    // antialiased edge and is sampled once. The preview follows the same split.
-    if self.system_artwork.is_some() && self.system_design.is_none() {
-      return self.sample(destination_x, destination_y, x, y);
-    }
-
+    // Every artwork is read over the pixel's 4x4 box, as the shader reads it
+    // (`artwork_draw_sample` in `preview.wgsl`, `GpuArtwork::supersample`).
     const OFFSETS: [f64; 4] = [-0.375, -0.125, 0.125, 0.375];
     let mut alpha = 0.0;
     let mut color = [0.0; 3];

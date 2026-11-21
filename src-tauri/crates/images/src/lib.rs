@@ -40,3 +40,10 @@ pub fn picture(asset: &str) -> Option<StoredImage> {
   let name = asset.strip_prefix(store::IMAGE_PREFIX)?;
   store::is_name(name).then(|| store::load(name)).flatten()
 }
+
+/// The picture `asset` names drawn larger by the upscaling model, for an
+/// image drawn larger than its picture; `None` where it has none, as one
+/// with text, a photo, a moving picture or one not drawn yet has not.
+pub fn upscaled_picture(asset: &str) -> Option<StoredImage> {
+  store::upscaled(asset.strip_prefix(store::IMAGE_PREFIX)?).map(StoredImage::Still)
+}

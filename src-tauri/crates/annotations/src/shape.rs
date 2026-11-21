@@ -134,8 +134,10 @@ pub enum AnnotationShape {
   /// turned flat, clockwise, in radians, `tilt` how far it is turned in depth
   /// first, absent where it lies flat, and `flip` whether it is mirrored
   /// across its upright axis. `asset` names the picture in the image library,
-  /// `play` how it plays where the picture moves, and `sway` the seed of the
-  /// slight turn and drift a recording gives it, absent where it stands still.
+  /// `play` how it plays where the picture moves, `sway` the seed of the
+  /// slight turn and drift a recording gives it, absent where it stands still,
+  /// and `stretched` whether it is stretched when drawn larger than its
+  /// picture rather than drawn larger by the upscaling model.
   Image {
     center: AnnotationPoint,
     size: f64,
@@ -153,6 +155,9 @@ pub enum AnnotationShape {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[ts(optional)]
     sway: Option<u32>,
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    #[ts(as = "Option<bool>", optional)]
+    stretched: bool,
     /// How far into its clip the frame being drawn is, in milliseconds,
     /// where it plays or sways; absent on a screenshot and outside a clip.
     /// Derived every frame and never stored, as an annotation's reveal is.

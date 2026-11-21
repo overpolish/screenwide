@@ -34,6 +34,16 @@ impl StreamWriter {
     }
     self.last_position = Some((event.x, event.y));
     if self.last_appearance.as_ref() != Some(&event.appearance) {
+      // A picture that cannot be kept leaves the cursor drawn as the arrow,
+      // as before pictures were kept, rather than failing the recording.
+      let picture = event.appearance.picture.as_ref().and_then(|picture| {
+        self
+          .pictures
+          .keep(picture)
+          .inspect_err(|error| eprintln!("{error}"))
+          .ok()
+          .map(|()| picture.name.clone())
+      });
       self.write(&CursorRecord::Appearance {
         height: event.appearance.height,
         hotspot_x: event.appearance.hotspot_x,
@@ -41,6 +51,7 @@ impl StreamWriter {
         style: event.appearance.style,
         timestamp_us,
         width: event.appearance.width,
+        picture,
       })?;
       self.last_appearance = Some(event.appearance.clone());
     }

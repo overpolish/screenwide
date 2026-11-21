@@ -69,6 +69,8 @@ annotation-blur-strength-step = Strength { $strength } of { $count }
 annotation-shadow-drop = Shadow
 # A toggle: whether a recording gives a placed image a slight, slow turn and drift. Each time it is turned on the sway is new.
 annotation-sway-on = Sway
+# A toggle: whether an image drawn larger than its own picture is redrawn sharp by an AI model rather than stretched, which would blur it.
+annotation-upscale-on = Upscale
 # A toggle: whether a recording loops a moving image for its whole clip rather than playing it through once.
 annotation-playback-loop = Loop
 # A toggle: on, a highlight is one box over the area dragged; off, it fits the lines of text under it. Named for the look it turns on, as the live island's "highlight a box" hint words it.

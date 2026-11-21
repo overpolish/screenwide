@@ -19,6 +19,8 @@ mod appearance_timeline;
 use appearance_timeline::{fit_to_artwork, normalize_custom_fallback_size, stable_appearances};
 #[cfg(test)]
 mod gpu_cursor_tests;
+#[cfg(test)]
+mod picture_tests;
 mod raster;
 mod settings;
 #[cfg(test)]
@@ -54,6 +56,9 @@ struct Appearance {
   style: CursorStyle,
   timestamp_us: u64,
   width: f64,
+  /// The artwork index of an app's own cursor's picture, where the
+  /// recording kept one that could be read.
+  picture: Option<u32>,
 }
 
 #[derive(Clone, Copy)]
@@ -191,8 +196,11 @@ impl CursorCompositor {
     settings: CursorEffectSettings,
   ) -> Option<GpuCursor> {
     let output = self.output_cursor(position_ms, source_size.0, source_size.1, settings)?;
-    let artwork = raster::artwork_index(output.cursor.appearance.style);
-    let rotation_adjustment = raster::gpu_rotation_radians(output.cursor.appearance.style);
+    let appearance = output.cursor.appearance;
+    let artwork = appearance
+      .picture
+      .unwrap_or_else(|| raster::artwork_index(appearance.style));
+    let rotation_adjustment = raster::gpu_rotation_radians(appearance.style);
     Some(GpuCursor {
       opacity: self.visibility_opacity(
         position_ms
@@ -261,10 +269,16 @@ pub fn initialize_artwork() {
   raster::initialize_system_artwork();
 }
 
-pub use raster::GpuArtwork;
+/// A cursor as Windows draws it, for a custom cursor kept with a recording.
+#[cfg(target_os = "windows")]
+pub use raster::drawn_windows_cursor;
+pub use raster::{to_upscale, use_upscaled, GpuArtwork, Upscalable};
 
-/// The style-indexed artwork every compositor draws the cursor from.
-pub fn gpu_artworks() -> &'static [GpuArtwork] {
+/// The artwork every compositor draws the cursor from: each style's, then
+/// the pictures of apps' own cursors. Made again once any is upscaled
+/// (`use_upscaled`) or a recording opened shows a new picture, so a
+/// compositor holding another `Arc` knows to take this one.
+pub fn gpu_artworks() -> std::sync::Arc<[GpuArtwork]> {
   raster::gpu_artworks()
 }
 

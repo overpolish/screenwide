@@ -130,6 +130,7 @@ impl Compositor {
       .map(|plan| self.lens_ground.atlas(gpu, plan))
       .transpose()?;
     let fallback = &self.fallback_view;
+    let cursor_view = self.cursor_view();
     let lenses = atlas.as_ref().unwrap_or(fallback);
     let pictures = pictures
       .map(|picture| picture.map_or_else(|| fallback.clone(), |picture| picture.view.clone()));
@@ -141,7 +142,7 @@ impl Compositor {
           buffer(0, constants),
           buffer(1, &self.keyboard_constants),
           texture(2, &source_view),
-          texture(3, &self.cursor_view),
+          texture(3, &cursor_view),
           texture(4, camera.map_or(fallback, |(camera, _, _, _)| &camera.view)),
           texture(
             5,

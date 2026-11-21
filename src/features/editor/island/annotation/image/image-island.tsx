@@ -9,6 +9,7 @@ import { CornerChoice } from "../../../../annotations/options/corner-choice";
 import { LoopToggle } from "../../../../annotations/options/loop-toggle";
 import { ShadowToggle } from "../../../../annotations/options/shadow-toggle";
 import { SwayToggle } from "../../../../annotations/options/sway-toggle";
+import { UpscaleToggle } from "../../../../annotations/options/upscale-toggle";
 import { IslandRotation } from "../../island-rotation";
 import {
   AnnotationAnimateToggle,
@@ -32,11 +33,13 @@ import type { EditorIslandContent } from "../../editor-island";
 // depth and flat, as the screen in a scene is, its shape before its
 // placement as every island orders them. Then its toggles, two to a line:
 // whether it casts a shadow, and in a recording only whether it sways, a
-// sway of its own each time that is turned on, and, for a moving picture,
-// whether it loops, after the others so their coming and going moves
-// nothing else. Giving it another picture and mirroring it are one-shot
-// actions, at the end in their own row. The frame a moving picture starts
-// on is not offered: it starts on its first.
+// sway of its own each time that is turned on, then, for a still picture,
+// whether it is upscaled where it is drawn larger than its picture, and,
+// for a moving picture, whether it loops in its place, since a moving one
+// is never upscaled; the last after the others so their coming and going
+// moves nothing else. Giving it another picture and mirroring it are
+// one-shot actions, at the end in their own row. The frame a moving
+// picture starts on is not offered: it starts on its first.
 
 type ImageStyle = {
   hasShadow: boolean;
@@ -47,6 +50,9 @@ type ImageStyle = {
   radius: number;
   rotation: SceneRotation;
   sways: boolean;
+  /** Drawn larger than its picture, it is upscaled by the model rather
+   * than stretched. */
+  upscales: boolean;
 };
 
 export type ImageIslandProps = AnnotationPinProps & {
@@ -126,6 +132,15 @@ export function imageIsland(props: ImageIslandProps): EditorIslandContent {
               sways={style.sways}
             />
           ) : null}
+          {isMoving ? null : (
+            <UpscaleToggle
+              key="upscale"
+              onChange={(upscales) => {
+                onStyleChange({ upscales });
+              }}
+              upscales={style.upscales}
+            />
+          )}
           {canAnimate && isMoving ? (
             <LoopToggle
               key="loop"

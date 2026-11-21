@@ -13,12 +13,13 @@
 //! colour of its own: the record's white carries only how present it is. An
 //! image whose picture moves carries the frame it shows or starts on in
 //! `params[1]`, how far into its clip the frame is in `params[2]` (negative
-//! on a still), and `ONCE` where it plays through once; only the image atlas
-//! reads them.
+//! on a still), `ONCE` where it plays through once, and `STRETCHED` where it
+//! is stretched rather than upscaled when drawn larger than its picture; only
+//! the image atlas reads them.
 
 use super::model::{axes, half_extents};
 use super::{ImagePlay, ImageTilt};
-use crate::flags::{ONCE, SHADOW};
+use crate::flags::{ONCE, SHADOW, STRETCHED};
 use crate::native::NativeAnnotation;
 use crate::{AnnotationPoint, AnnotationStyle};
 
@@ -45,13 +46,14 @@ pub(crate) fn draw_points(
 
 /// Writes what an image's record carries beyond its points. `clock_ms` is
 /// how far into its clip the frame is, which only a moving picture's record
-/// carries.
+/// carries; `stretched` whether it is drawn larger by stretching rather than
+/// by the upscaling model, which only the image atlas reads.
 pub(crate) fn fill(
   record: &mut NativeAnnotation,
   style: &AnnotationStyle,
-  play: Option<&ImagePlay>,
-  clock_ms: Option<f64>,
+  (play, clock_ms): (Option<&ImagePlay>, Option<f64>),
   tilt: ImageTilt,
+  stretched: bool,
 ) {
   record.p3 = tilt.radians();
   let (frame, clock) = play.map_or((0.0, -1.0), |play| {
@@ -61,11 +63,9 @@ pub(crate) fn fill(
     )
   });
   record.params = [style.radius as f32, frame, clock];
-  record.flags = if style.shadow { SHADOW } else { 0 }
-    | if play.is_some_and(|play| play.once) {
-      ONCE
-    } else {
-      0
-    };
+  let flag = |on: bool, flag: u32| if on { flag } else { 0 };
+  record.flags = flag(style.shadow, SHADOW)
+    | flag(play.is_some_and(|play| play.once), ONCE)
+    | flag(stretched, STRETCHED);
   record.color = [1.0; 4];
 }

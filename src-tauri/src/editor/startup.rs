@@ -54,6 +54,9 @@ pub fn initialize(app: &AppHandle) {
   if let Ok(data) = app.path().app_data_dir() {
     screenwide_images::store::initialize(&data);
     screenwide_sound_track::store::initialize(&data);
+    // Pictures given images before upscaling was, or while the app was
+    // quit part-way through drawing one.
+    crate::upscale::prepare_pictures(app);
   }
   #[cfg(target_os = "macos")]
   super::pointer::listen(app);

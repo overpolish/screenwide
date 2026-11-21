@@ -54,6 +54,9 @@ export type ToolPanelPatch = Partial<
   /** Change how the chosen moving image plays: the frame it shows or
    * starts on, and whether a recording plays it through once. */
   annotationImagePlay?: ImagePlayChange;
+  /** Stretch the chosen image when it is drawn larger than its picture, or
+   * draw it larger with the upscaling model, as it is unless told. */
+  annotationImageStretch?: boolean;
   /** Sway the chosen image over its clip, or stand it still. Turning it on
    * gives it a sway of its own; the dice gives it another. */
   annotationImageSway?: boolean;

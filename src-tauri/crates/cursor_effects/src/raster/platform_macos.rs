@@ -10,12 +10,14 @@ use objc2_foundation::NSArray;
 
 use screenwide_records::cursor::CursorStyle;
 
+mod vector;
+
 /// One system cursor's bitmap plus the hotspot that bitmap addresses. The
 /// hotspot is stored in bitmap texels rather than points so callers can anchor
-/// the artwork without knowing what backing scale the decoded representation
-/// came from - `load` picks the largest representation the system ships, so
-/// that scale is whatever that representation carries (10x for the arrow, 2x
-/// for most styles) and never assumed to be 1x.
+/// the artwork without knowing what scale it was drawn at: `load` draws the
+/// system's vector cursors at [`vector::VECTOR_SCALE`] and takes the largest
+/// representation the system ships of the rest (10x for the arrow and the
+/// I-beam), so it is never assumed to be 1x.
 pub(super) struct StyleArtwork {
   pub hotspot_x: f64,
   pub hotspot_y: f64,
@@ -44,10 +46,6 @@ pub(super) fn style_artwork(style: CursorStyle) -> Option<&'static StyleArtwork>
         .iter()
         .find_map(|(candidate, entry)| (*candidate == canonical_style(style)).then_some(entry))
     })
-}
-
-pub(super) fn artwork(style: CursorStyle) -> Option<&'static RgbaImage> {
-  style_artwork(style).map(|entry| &entry.image)
 }
 
 pub(super) fn canonical_style(style: CursorStyle) -> CursorStyle {
@@ -93,28 +91,31 @@ fn load() -> Result<SystemArtwork, String> {
     .into_iter()
     .map(|(style, cursor)| {
       let native = cursor.image();
-      let image = decode_largest_representation(&native)
-        .or_else(|| decode_flattened(&native))
-        .ok_or_else(|| format!("Could not decode the {style:?} system cursor"))?;
-      // `hotSpot` is expressed in the image's points with the origin at its
-      // top-left corner, the same convention the rasters sample in, so it only
-      // needs the decoded representation's backing scale applied. `size` stays
-      // the point size whichever representation was decoded, so this scales
-      // naturally with the larger bitmaps.
+      // `size` is the point box the cursor is drawn in whichever
+      // representation is decoded, and the vector drawing is made to it.
       let size = native.size();
-      let hotspot = cursor.hotSpot();
-      let (hotspot_x, hotspot_y) = hotspot_texels(
-        (hotspot.x, hotspot.y),
-        (size.width, size.height),
-        (image.width(), image.height()),
-      );
+      let points = (size.width, size.height);
+      let (image, hotspot) = match vector::vector_artwork(style, points) {
+        Some((image, hotspot)) => (image, hotspot),
+        None => {
+          let image = decode_largest_representation(&native)
+            .or_else(|| decode_flattened(&native))
+            .ok_or_else(|| format!("Could not decode the {style:?} system cursor"))?;
+          let hotspot = cursor.hotSpot();
+          (image, (hotspot.x, hotspot.y))
+        }
+      };
+      // The hotspot is in points from the top-left corner, the same
+      // convention the rasters sample in, so it only needs the bitmap's
+      // texels per point applied.
+      let (hotspot_x, hotspot_y) = hotspot_texels(hotspot, points, (image.width(), image.height()));
       Ok((
         style,
         StyleArtwork {
           hotspot_x,
           hotspot_y,
           image,
-          points: (size.width, size.height),
+          points,
         },
       ))
     })
@@ -160,10 +161,10 @@ fn hotspot_texels(
 /// choice explicit: the TIFF handed to the decoder has exactly one page, so the
 /// sharpest artwork is the only thing it can produce.
 ///
-/// Cost: 16 styles at up to ~280x400 RGBA is ~450KB each, ~7MB in total, loaded
-/// once into the process and uploaded once into the GPU artwork texture array
-/// (which sizes its slices to the largest artwork) - the same bitmaps the
-/// flattened decode already yielded, so this is not new spend.
+/// Cost: the cursors drawn from their vectors at 16x are up to 512x640 RGBA,
+/// ~1.3MB each and ~15MB together, loaded once into the process and uploaded
+/// once into the GPU artwork texture array, which sizes its slices to the
+/// largest artwork: ~22MB for all seventeen.
 fn decode_largest_representation(native: &NSImage) -> Option<RgbaImage> {
   let representations = native.representations();
   let largest = representations

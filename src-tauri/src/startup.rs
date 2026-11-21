@@ -37,6 +37,7 @@ pub(crate) fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Erro
   // Before anything a paid tool starts from: each asks the gate as it opens.
   crate::licensing::initialize(app.handle());
   editor::initialize_cursor_artwork();
+  crate::upscale::upscale_small_cursors(app.handle());
   crate::references::clear_leftovers(app.handle());
   crate::references::start_drop_watch(app.handle());
   crate::transcription::models::remove_retired(app.handle());

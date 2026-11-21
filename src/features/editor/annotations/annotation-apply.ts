@@ -152,6 +152,15 @@ export const applyAnnotationSway = (workspace: EditorKind, sway: boolean) => {
   chosenAnnotation(workspace)?.applySway(sway);
 };
 
+/** Stretch the chosen image when it is drawn larger than its picture, or
+ * draw it larger with the upscaling model. A no-op with none chosen. */
+export const applyAnnotationStretch = (
+  workspace: EditorKind,
+  stretched: boolean,
+) => {
+  chosenAnnotation(workspace)?.applyStretch(stretched);
+};
+
 /** Delete every annotation this workspace has chosen. */
 export const applyAnnotationsDelete = (workspace: EditorKind) => {
   publishedAnnotations(workspace)?.applyDelete();

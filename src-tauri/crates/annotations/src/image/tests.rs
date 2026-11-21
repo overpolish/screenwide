@@ -64,6 +64,7 @@ fn a_press_drops_the_chosen_picture_and_the_drag_carries_it() {
       asset: PICTURE.to_owned(),
       play: None,
       sway: None,
+      stretched: false,
       clock_ms: None,
     }
   );
@@ -192,6 +193,7 @@ fn a_document_image_reads_back_unmirrored_and_still_when_it_does_not_say() {
       asset: PICTURE.to_owned(),
       play: None,
       sway: None,
+      stretched: false,
       clock_ms: None,
     }
   );

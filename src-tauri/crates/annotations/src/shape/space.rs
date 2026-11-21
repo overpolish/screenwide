@@ -190,6 +190,7 @@ impl super::AnnotationShape {
         asset,
         play,
         sway,
+        stretched,
         clock_ms,
       } => {
         // A length rides through as far as the space it moves into
@@ -211,6 +212,7 @@ impl super::AnnotationShape {
           asset: asset.clone(),
           play: *play,
           sway: *sway,
+          stretched: *stretched,
           clock_ms: *clock_ms,
         }
       }

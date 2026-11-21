@@ -56,7 +56,11 @@ export const publishedAnnotation = (
   ...textSelection(selected.shape),
   style: selected.style,
   ...(selected.shape.kind === "image"
-    ? { rotation, sway: selected.shape.sway !== undefined }
+    ? {
+        rotation,
+        stretched: selected.shape.stretched === true,
+        sway: selected.shape.sway !== undefined,
+      }
     : {}),
   ...(zoom === null ? {} : { zoom }),
   ...(pin === undefined ? {} : { pin }),

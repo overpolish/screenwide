@@ -3,13 +3,19 @@
 
 import { ImagePlayChange } from "./annotation-channel";
 import { rememberAnnotationImage } from "./annotation-defaults";
-import { freshSeed, swayedShape } from "./annotation-shape-edits";
+import {
+  freshSeed,
+  stretchedShape,
+  swayedShape,
+} from "./annotation-shape-edits";
 import { Annotation, AnnotationShape, ImageArt } from "./annotations";
 
 /**
  * The chosen image's picture, and the edits its island makes to it, each
  * given to `reshape` as the image's next shape: another picture, how a
- * moving one plays, and whether it sways. A no-op on anything but an image.
+ * moving one plays, whether it sways, and whether it is stretched rather
+ * than upscaled when drawn larger than its picture. A no-op on anything but
+ * an image.
  */
 export const imageEdits = (
   selected: Annotation | null,
@@ -45,5 +51,8 @@ export const imageEdits = (
     if (selected)
       reshape(swayedShape(selected.shape, sway ? freshSeed() : null));
   };
-  return { applyImage, applyImagePlay, applySway, art };
+  const applyStretch = (stretched: boolean) => {
+    if (selected) reshape(stretchedShape(selected.shape, stretched));
+  };
+  return { applyImage, applyImagePlay, applyStretch, applySway, art };
 };

@@ -37,8 +37,11 @@ windows = { workspace = true, features = [
 ] }
 
 [dev-dependencies]
+image.workspace = true
 screenwide-output = { workspace = true, features = ["test-support"] }
 screenwide-placement.workspace = true
+screenwide-records.workspace = true
+serde_json.workspace = true
 
 [build-dependencies]
 cc.workspace = true

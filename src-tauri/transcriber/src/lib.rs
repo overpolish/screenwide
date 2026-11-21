@@ -204,6 +204,18 @@ pub enum Job {
     width: u32,
     height: u32,
   },
+  /// A picture drawn four times as large by the upscaling model, answered
+  /// with [`Reply::Upscaled`] once it is written. Both pictures are files of
+  /// their pixels, red, green, blue and alpha a byte each, row by row from
+  /// the top, as [`Job::ReadText`]'s is; transparency is kept.
+  Upscale {
+    model: PathBuf,
+    image: PathBuf,
+    width: u32,
+    height: u32,
+    /// Where the picture four times as wide and as high goes.
+    output: PathBuf,
+  },
   /// What in each of `texts` may be private, such as a person's name or a
   /// client's, an address or a phone number, answered with
   /// [`Reply::SensitiveFound`]. The model stays loaded for the jobs after.
@@ -441,6 +453,10 @@ pub enum Reply {
   TextRead {
     id: u64,
     lines: Vec<TextLine>,
+  },
+  /// The upscaled picture is written.
+  Upscaled {
+    id: u64,
   },
   /// What may be private in each text asked about, in the same order.
   SensitiveFound {

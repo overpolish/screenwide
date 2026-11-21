@@ -1,8 +1,11 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! Windows cursor event adapter. Cursor pixels are never captured here: the
-//! sidecar stores semantic artwork plus geometry, matching the macOS format.
+//! Windows cursor event adapter. The system's own cursors are recorded by
+//! what they are, matching the macOS format; an app's own cursor keeps its
+//! picture (`picture`).
+
+mod picture;
 
 use std::{
   sync::{
@@ -83,7 +86,11 @@ impl StandardCursors {
   }
 }
 
-fn appearance(cursors: StandardCursors, cursor: HCURSOR) -> CursorAppearance {
+fn appearance(
+  cursors: StandardCursors,
+  cursor: HCURSOR,
+  pictures: &mut picture::Pictures,
+) -> CursorAppearance {
   let mut hotspot = (0.0, 0.0);
   let mut info = windows::Win32::UI::WindowsAndMessaging::ICONINFO::default();
   if unsafe { GetIconInfo(cursor.into(), &mut info) }.is_ok() {
@@ -95,12 +102,17 @@ fn appearance(cursors: StandardCursors, cursor: HCURSOR) -> CursorAppearance {
       let _ = unsafe { DeleteObject(info.hbmMask.into()) };
     }
   }
+  let width = unsafe { GetSystemMetrics(SM_CXCURSOR) }.max(1);
+  let style = cursors.style(cursor);
   CursorAppearance {
     height: f64::from(unsafe { GetSystemMetrics(SM_CYCURSOR) }.max(1)),
     hotspot_x: hotspot.0,
     hotspot_y: hotspot.1,
-    style: cursors.style(cursor),
-    width: f64::from(unsafe { GetSystemMetrics(SM_CXCURSOR) }.max(1)),
+    style,
+    width: f64::from(width),
+    picture: (style == CursorStyle::Custom)
+      .then(|| pictures.of(cursor, width as u32))
+      .flatten(),
   }
 }
 
@@ -170,6 +182,7 @@ fn run(stop: &AtomicBool, sink: &EventSink, ready: mpsc::Sender<Result<(), Strin
   let mut last_cursor = None;
   let mut current_appearance = None;
   let mut front = FrontApp::new();
+  let mut pictures = picture::Pictures::default();
   while !stop.load(Ordering::Acquire) {
     let kind = if wrote_initial {
       RawCursorEventKind::Move
@@ -181,7 +194,7 @@ fn run(stop: &AtomicBool, sink: &EventSink, ready: mpsc::Sender<Result<(), Strin
       continue;
     };
     if last_cursor != Some(cursor) {
-      current_appearance = Some(appearance(cursors, cursor));
+      current_appearance = Some(appearance(cursors, cursor, &mut pictures));
     }
     let Some(cursor_appearance) = current_appearance.clone() else {
       continue;

@@ -17,9 +17,11 @@ use super::import::PICTURE_EXTENSIONS;
 const LIBRARY_EVENT: &str = "editor://picture-library";
 
 /// Tells every window the library of pictures has changed: a picture was
-/// added, by any way an image takes one, or removed.
+/// added, by any way an image takes one, or removed. A picture added is
+/// drawn larger by the upscaling model in the background, if it is one to.
 pub(crate) fn changed(app: &AppHandle) {
   let _ = app.emit(LIBRARY_EVENT, ());
+  crate::upscale::prepare_pictures(app);
 }
 
 /// Every picture in the library, the most recently added first.

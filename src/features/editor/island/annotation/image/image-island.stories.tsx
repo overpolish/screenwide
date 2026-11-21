@@ -42,6 +42,7 @@ const meta = {
       radius: 25,
       rotation: { x: 0, y: 0, z: 0 },
       sways: false,
+      upscales: true,
     },
   },
   component: ImageIsland,

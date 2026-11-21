@@ -243,6 +243,7 @@ export const imageShape = (value: unknown): Shape<"image"> | null => {
         ...(play ? { play } : {}),
         size,
         ...(sway === null ? {} : { sway }),
+        ...(shape.stretched === true ? { stretched: true } : {}),
         ...(tilt ? { tilt } : {}),
       }
     : null;

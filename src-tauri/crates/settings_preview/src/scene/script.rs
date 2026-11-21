@@ -71,6 +71,7 @@ pub(super) fn cursor_records(
       hotspot_y: ARROW[3],
       style: CursorStyle::Arrow,
       timestamp_us: 0,
+      picture: None,
     },
   ];
   let mut pressed = false;

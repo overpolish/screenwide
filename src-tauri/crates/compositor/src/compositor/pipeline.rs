@@ -4,9 +4,11 @@
 use super::*;
 
 impl Compositor {
-  /// A compositor drawing the cursor from the platform's artwork.
+  /// A compositor drawing the cursor from the platform's artwork, taken
+  /// again whenever it changes.
   pub fn new(gpu: &std::sync::Arc<Gpu>) -> Result<Self, String> {
-    Self::with_cursor_artworks(gpu, screenwide_cursor_effects::gpu_artworks())
+    let artwork = super::cursor_artwork::CursorArtwork::platform(gpu)?;
+    Ok(Self::with_cursor_artwork(gpu, artwork))
   }
 
   /// A compositor drawing the cursor from `artworks`, one per style index.
@@ -14,6 +16,14 @@ impl Compositor {
     gpu: &std::sync::Arc<Gpu>,
     artworks: &[screenwide_cursor_effects::GpuArtwork],
   ) -> Result<Self, String> {
+    let artwork = super::cursor_artwork::CursorArtwork::fixed(gpu, artworks)?;
+    Ok(Self::with_cursor_artwork(gpu, artwork))
+  }
+
+  fn with_cursor_artwork(
+    gpu: &std::sync::Arc<Gpu>,
+    cursor_artwork: super::cursor_artwork::CursorArtwork,
+  ) -> Self {
     let device = &gpu.device;
     let (layout, canvas) = super::canvas_pipelines::shared(gpu);
     let uniform = |label, size: usize| {
@@ -24,11 +34,10 @@ impl Compositor {
         mapped_at_creation: false,
       })
     };
-    let (cursor_view, cursor_artworks) = super::cursor_artwork::upload(gpu, artworks)?;
     let fallback_view = gpu
       .texture_with_pixels("Screenwide preview fallback", (1, 1, 1), FORMAT, &[0; 4])
       .create_view(&Default::default());
-    Ok(Self {
+    Self {
       gpu: std::sync::Arc::clone(gpu),
       background_cache: BackgroundImageCache::default(),
       annotations: GpuBuffer::new(gpu, "Screenwide annotations"),
@@ -37,8 +46,7 @@ impl Compositor {
       annotation_text: GpuBuffer::new(gpu, "Screenwide annotation text"),
       constants: uniform("Screenwide canvas", size_of::<Constants>()),
       keyboard_constants: uniform("Screenwide keyboard", size_of::<KeyboardConstants>()),
-      cursor_view,
-      cursor_artworks,
+      cursor_artwork: std::sync::Mutex::new(cursor_artwork),
       counter_atlas: CounterAtlas::default(),
       image_atlas: ImageAtlas::default(),
       keyboard_cache: KeyboardArtworkCache::default(),
@@ -56,7 +64,7 @@ impl Compositor {
       lens_under: Default::default(),
       sampler: sampler(device, wgpu::FilterMode::Linear),
       point_sampler: sampler(device, wgpu::FilterMode::Nearest),
-    })
+    }
   }
 }
 

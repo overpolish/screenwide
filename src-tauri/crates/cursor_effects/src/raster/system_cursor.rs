@@ -3,12 +3,12 @@
 
 use screenwide_records::cursor::CursorStyle;
 
-use super::{natural_box, platform};
+use super::{natural_box, style_artwork};
 
 /// One of the system's pointers: its pixels, the box it is drawn in, in
 /// points, and its hotspot within that box.
 pub struct SystemCursorArtwork {
-  pub image: &'static image::RgbaImage,
+  pub image: image::RgbaImage,
   pub points: (f64, f64),
   pub hotspot: (f64, f64),
 }
@@ -16,7 +16,7 @@ pub struct SystemCursorArtwork {
 pub(crate) fn system_cursor(style: CursorStyle) -> Option<SystemCursorArtwork> {
   let [width, height, hotspot_x, hotspot_y] = natural_box(style)?;
   Some(SystemCursorArtwork {
-    image: &platform::style_artwork(style)?.image,
+    image: style_artwork(style)?.image.clone(),
     points: (width, height),
     hotspot: (hotspot_x, hotspot_y),
   })

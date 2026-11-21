@@ -127,6 +127,7 @@ mod tests {
         hotspot_y: 0.0,
         style: CursorStyle::Arrow,
         timestamp_us: 0,
+        picture: None,
       },
       CursorRecord::Position {
         timestamp_us: 0,

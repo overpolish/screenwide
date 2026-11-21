@@ -26,6 +26,7 @@ mod focus_region;
 /// An atlas's texture.
 mod gpu_atlas;
 mod image_artwork;
+mod image_pictures;
 mod prepare;
 /// The caret and selection of text typed into word by word.
 mod typing_bars;

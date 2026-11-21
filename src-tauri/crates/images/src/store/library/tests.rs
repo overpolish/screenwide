@@ -128,3 +128,36 @@ fn a_found_picture_keeps_its_credit_and_its_title() {
   assert_eq!(listed(&art).unwrap().title.as_deref(), Some("Arrow"));
   assert_eq!(super::super::credit_in(None, name), Some(credit));
 }
+
+#[test]
+fn a_still_is_drawn_from_its_upscaled_picture_once_one_is_kept() {
+  let art = import_file(&picture_file("Sticker.png", [250, 200, 20])).unwrap();
+  let name = art.asset.strip_prefix(IMAGE_PREFIX).unwrap();
+  assert!(super::super::undecided()
+    .iter()
+    .any(|(found, _)| found == name));
+  // Asked for while the model is still drawing it: the still is drawn as
+  // it is until the larger one lands.
+  assert!(super::super::upscaled(name).is_none());
+  let larger = RgbaImage::from_pixel(24, 12, Rgba([250, 200, 20, 128]));
+  super::super::keep_upscaled(name, &larger).unwrap();
+  let drawn = super::super::upscaled(name).unwrap();
+  assert_eq!(drawn.dimensions(), (24, 12));
+  // Held premultiplied, as every stored still is.
+  assert_eq!(drawn.get_pixel(0, 0).0, [125, 100, 10, 128]);
+  assert!(!super::super::undecided()
+    .iter()
+    .any(|(found, _)| found == name));
+}
+
+#[test]
+fn a_picture_not_to_be_upscaled_is_decided_once() {
+  let art = import_file(&picture_file("Photo.png", [90, 120, 140])).unwrap();
+  let name = art.asset.strip_prefix(IMAGE_PREFIX).unwrap();
+  super::super::skip_upscale(name, "photo").unwrap();
+  assert!(super::super::upscale_decided(name));
+  assert!(super::super::upscaled(name).is_none());
+  assert!(!super::super::undecided()
+    .iter()
+    .any(|(found, _)| found == name));
+}

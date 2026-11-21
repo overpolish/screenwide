@@ -184,6 +184,9 @@ fn sources_from(
     .as_ref()
     .map(|path| CursorCompositor::open(path, keyboard_path.as_deref()).map(Arc::new))
     .transpose()?;
+  // Apps' own cursors the recording kept are drawn larger in the background,
+  // as the system's small ones are.
+  crate::upscale::upscale_small_cursors(app);
   let keyboard = keyboard_path
     .as_ref()
     .map(|path| keyboard::keyboard_compositor(path, settings, persisted.as_ref()))

@@ -46,6 +46,9 @@ type PublishedAnnotation = {
   /** Turn the chosen image, a field at a time, in degrees about each axis. */
   applyRotation: (rotation: Partial<SceneRotation>) => void;
   applyShuffle: () => void;
+  /** Stretch the chosen image when it is drawn larger than its picture,
+   * or draw it larger with the upscaling model. */
+  applyStretch: (stretched: boolean) => void;
   applyStyle: (style: Partial<AnnotationStyle>) => void;
   /** Sway the chosen image over its clip, or stand it still. */
   applySway: (sway: boolean) => void;
@@ -128,6 +131,9 @@ export function usePublishAnnotationSelection(
       },
       applyShuffle: () => {
         applyRef.current.applyShuffle();
+      },
+      applyStretch: (stretched) => {
+        applyRef.current.applyStretch(stretched);
       },
       applyStyle: (style) => {
         applyRef.current.applyStyle(style);

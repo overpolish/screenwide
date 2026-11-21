@@ -40,10 +40,29 @@ struct SystemArtwork(Vec<(CursorStyle, StyleArtwork)>);
 /// process that never loads it, as the tests, draws the fallback artwork.
 static ARTWORK: OnceLock<Result<SystemArtwork, String>> = OnceLock::new();
 
-/// Cursor effects can enlarge the pointer to 500%. Asking user32 for a large
-/// cursor makes it pick the sharpest image the cursor resource carries rather
-/// than the nominal 32 px one.
-const ARTWORK_SIZE: u32 = 128;
+/// The size a cursor is drawn at when its file says nothing of its sizes, as
+/// a built-in cursor's does not. Asking user32 for a large cursor makes it
+/// pick the sharpest image the cursor resource carries rather than the
+/// nominal 32 px one. A cursor drawn smaller than the pointer can be
+/// enlarged to is upscaled by the app (`upscaled.rs`).
+const DEFAULT_SIZE: u32 = 128;
+
+/// The size to draw the cursor in the file `path` at: the largest picture it
+/// carries, so it is drawn from its own pixels rather than stretched by
+/// Windows, which the app's upscaling then keeps sharp.
+fn artwork_size(path: Option<&[u16]>) -> u32 {
+  let path = path.map(|wide| {
+    let end = wide
+      .iter()
+      .position(|unit| *unit == 0)
+      .unwrap_or(wide.len());
+    String::from_utf16_lossy(&wide[..end])
+  });
+  path
+    .and_then(|path| std::fs::read(path).ok())
+    .and_then(|bytes| super::cursor_file::largest_side(&bytes))
+    .map_or(DEFAULT_SIZE, |side| side.clamp(32, 256))
+}
 
 pub(super) fn initialize() {
   if let Err(error) = ARTWORK.get_or_init(load) {
@@ -62,10 +81,6 @@ pub(super) fn style_artwork(style: CursorStyle) -> Option<&'static StyleArtwork>
         .iter()
         .find_map(|(candidate, entry)| (*candidate == style).then_some(entry))
     })
-}
-
-pub(super) fn artwork(style: CursorStyle) -> Option<&'static RgbaImage> {
-  style_artwork(style).map(|entry| &entry.image)
 }
 
 /// The standard shape a style is drawn with.
@@ -137,8 +152,9 @@ fn cursor_artwork(
   scheme_value: &str,
   fallback_file: &str,
 ) -> Result<((f64, f64), RgbaImage), String> {
-  let size = ARTWORK_SIZE as i32;
   let scheme_path = scheme::cursor_path(scheme_value, fallback_file);
+  let side = artwork_size(scheme_path.as_deref());
+  let size = side as i32;
   let file_cursor = scheme_path.as_ref().and_then(|path| {
     unsafe {
       LoadImageW(
@@ -160,18 +176,19 @@ fn cursor_artwork(
       (HCURSOR(cursor.0), false)
     }
   };
-  let artwork = hotspot(cursor).and_then(|hotspot| {
-    let black = render(cursor, 0)?;
-    let white = render(cursor, 255)?;
-    Ok((hotspot, unmatted(&black, &white)))
-  });
+  let artwork = hotspot(cursor).and_then(|hotspot| Ok((hotspot, drawn(cursor, side)?)));
   if owned {
     let _ = unsafe { DestroyCursor(cursor) };
   }
-  let (hotspot, rgba) = artwork?;
-  let image = RgbaImage::from_raw(ARTWORK_SIZE, ARTWORK_SIZE, rgba)
-    .ok_or_else(|| "The cursor bitmap does not fill its size".to_owned())?;
-  Ok((hotspot, image))
+  artwork
+}
+
+/// `cursor` as Windows draws it, `side` pixels square, in straight alpha.
+pub fn drawn(cursor: HCURSOR, side: u32) -> Result<RgbaImage, String> {
+  let black = render(cursor, 0, side)?;
+  let white = render(cursor, 255, side)?;
+  RgbaImage::from_raw(side, side, unmatted(&black, &white))
+    .ok_or_else(|| "The cursor bitmap does not fill its size".to_owned())
 }
 
 fn hotspot(cursor: HCURSOR) -> Result<(f64, f64), String> {
@@ -187,8 +204,8 @@ fn hotspot(cursor: HCURSOR) -> Result<(f64, f64), String> {
 }
 
 /// The cursor drawn over an opaque `background` grey, as BGRA.
-fn render(cursor: HCURSOR, background: u8) -> Result<Vec<u8>, String> {
-  let size = ARTWORK_SIZE as i32;
+fn render(cursor: HCURSOR, background: u8, side: u32) -> Result<Vec<u8>, String> {
+  let size = side as i32;
   let info = BITMAPINFO {
     bmiHeader: BITMAPINFOHEADER {
       biSize: size_of::<BITMAPINFOHEADER>() as u32,
@@ -221,7 +238,7 @@ fn render(cursor: HCURSOR, background: u8) -> Result<Vec<u8>, String> {
     error.to_string()
   })?;
   let old = unsafe { SelectObject(dc, bitmap.into()) };
-  let length = (ARTWORK_SIZE * ARTWORK_SIZE * 4) as usize;
+  let length = (side * side * 4) as usize;
   let pixels = unsafe { std::slice::from_raw_parts_mut(bits.cast::<u8>(), length) };
   for pixel in pixels.as_chunks_mut::<4>().0 {
     pixel.fill(background);

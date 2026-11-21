@@ -59,6 +59,16 @@ export const swayedShape = (shape: AnnotationShape, seed: number | null) => {
 };
 
 /**
+ * An image stretched when drawn larger than its picture, or, by default,
+ * drawn larger by the upscaling model. Null for anything but an image.
+ */
+export const stretchedShape = (shape: AnnotationShape, stretched: boolean) => {
+  if (shape.kind !== "image") return null;
+  const { stretched: _stretched, ...upscaled } = shape;
+  return stretched ? { ...upscaled, stretched: true } : upscaled;
+};
+
+/**
  * The annotation in the other of a focus's two looks, blurred and dimmed,
  * or null where it is neither or already in `kind`. It keeps its box and its
  * corners and takes the other look's own first dress for the rest, its

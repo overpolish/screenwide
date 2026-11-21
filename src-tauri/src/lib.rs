@@ -65,6 +65,7 @@ mod transcription;
 #[cfg(desktop)]
 mod tray;
 mod updates;
+mod upscale;
 mod user_work;
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 mod window_front;

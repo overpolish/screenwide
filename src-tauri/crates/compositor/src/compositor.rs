@@ -122,8 +122,7 @@ pub struct Compositor {
   constants: wgpu::Buffer,
   keyboard_constants: wgpu::Buffer,
   /// Every cursor style's artwork, one layer each, and how each is drawn.
-  cursor_view: wgpu::TextureView,
-  cursor_artworks: Vec<ArtworkStyle>,
+  cursor_artwork: std::sync::Mutex<cursor_artwork::CursorArtwork>,
   counter_atlas: CounterAtlas,
   image_atlas: ImageAtlas,
   keyboard_cache: KeyboardArtworkCache,
@@ -217,6 +216,8 @@ mod band_render_tests;
 mod caption_render_tests;
 #[cfg(all(test, target_os = "windows"))]
 mod crop_preview_tests;
+#[cfg(all(test, any(target_os = "macos", target_os = "windows")))]
+mod cursor_picture_tests;
 #[cfg(all(test, any(target_os = "macos", target_os = "windows")))]
 mod cut_out_shadow_tests;
 #[cfg(all(test, any(target_os = "macos", target_os = "windows")))]

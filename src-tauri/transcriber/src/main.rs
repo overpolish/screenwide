@@ -15,6 +15,7 @@ mod sensitive;
 mod separate;
 mod session;
 mod shared_gpu;
+mod upscale;
 
 use std::io::{BufRead, Write};
 
@@ -187,6 +188,14 @@ fn main() {
               .map(|lines| Reply::TextRead { id, lines }),
             None => Err("The text reader is not loaded".to_owned()),
           },
+          Job::Upscale {
+            model,
+            image,
+            width,
+            height,
+            output,
+          } => upscale::upscale(model, image, (*width, *height), output, &mut progress)
+            .map(|()| Reply::Upscaled { id }),
           Job::FindSensitive {
             model,
             tokenizer,

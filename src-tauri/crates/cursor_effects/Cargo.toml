@@ -26,6 +26,8 @@ ts-rs.workspace = true
 objc2.workspace = true
 objc2-app-kit.workspace = true
 objc2-foundation.workspace = true
+# The system cursors' `info.plist`, beside their vector drawings.
+plist = "1"
 
 [target.'cfg(target_os = "windows")'.dependencies]
 windows = { workspace = true, features = [
@@ -35,3 +37,6 @@ windows = { workspace = true, features = [
   "Win32_System_Registry",
   "Win32_UI_WindowsAndMessaging",
 ] }
+
+[dev-dependencies]
+serde_json.workspace = true

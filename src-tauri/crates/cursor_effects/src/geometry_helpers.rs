@@ -4,13 +4,13 @@
 use super::*;
 
 pub(super) fn output_hotspot(appearance: Appearance) -> (f64, f64) {
-  if appearance.style == CursorStyle::Custom {
-    // The sidecar does not carry custom cursor pixels yet, so a custom cursor
-    // stands in the system arrow: the recorded hotspot addresses artwork that
-    // is not being drawn and is dropped here. The stand-in is anchored by its
-    // own hotspot instead, which travels with the artwork rather than the
-    // cursor frame (`custom_gpu_artwork`'s `origin`, cursor_effects/raster.rs).
-    // A zero here puts that origin at the recorded position.
+  if appearance.style == CursorStyle::Custom && appearance.picture.is_none() {
+    // A custom cursor with no picture kept stands in the system arrow: the
+    // recorded hotspot addresses artwork that is not being drawn and is
+    // dropped here. The stand-in is anchored by its own hotspot instead,
+    // which travels with the artwork rather than the cursor frame
+    // (`custom_gpu_artwork`'s `origin`, cursor_effects/raster.rs). A zero
+    // here puts that origin at the recorded position.
     return (0.0, 0.0);
   }
   (appearance.hotspot_x, appearance.hotspot_y)

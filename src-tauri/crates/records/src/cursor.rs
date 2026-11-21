@@ -3,12 +3,33 @@
 
 use std::fs::File;
 use std::io::{BufRead, BufReader};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
 
-/// Version 3 adds the moments the app in front changed.
+/// Version 3 adds the moments the app in front changed. A custom cursor's
+/// picture came later as a field older readers pass over, so it needed no
+/// new version.
 pub const FORMAT_VERSION: u16 = 3;
+
+/// The folder beside a sidecar that holds the pictures of the custom
+/// cursors it records, each a PNG named for its content.
+const PICTURES_FOLDER: &str = "cursors";
+
+/// Where the picture `name` an appearance in the sidecar at `sidecar`
+/// names is kept, or `None` for a name no recorder gives, which could
+/// reach outside the folder.
+pub fn picture_path(sidecar: &Path, name: &str) -> Option<PathBuf> {
+  let valid =
+    !name.is_empty() && name.len() <= 64 && name.bytes().all(|byte| byte.is_ascii_hexdigit());
+  valid.then(|| {
+    sidecar
+      .parent()
+      .unwrap_or_else(|| Path::new(""))
+      .join(PICTURES_FOLDER)
+      .join(format!("{name}.png"))
+  })
+}
 
 #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "kebab-case")]
@@ -94,6 +115,12 @@ pub enum CursorRecord {
     style: CursorStyle,
     timestamp_us: u64,
     width: f64,
+    /// A custom cursor's picture: the name of a PNG kept beside the sidecar
+    /// (`picture_path`), at the largest size the app gave it. None for a
+    /// system cursor, which is drawn from the system's own artwork, and for
+    /// recordings made before pictures were kept.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    picture: Option<String>,
   },
   Visibility {
     timestamp_us: u64,

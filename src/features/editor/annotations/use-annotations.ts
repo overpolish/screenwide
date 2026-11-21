@@ -127,10 +127,8 @@ export function useAnnotations({
       ),
     );
   };
-  const { applyImage, applyImagePlay, applySway, art } = imageEdits(
-    selected,
-    reshape,
-  );
+  const { applyImage, applyImagePlay, applyStretch, applySway, art } =
+    imageEdits(selected, reshape);
   const applyStyle = (style: Partial<AnnotationStyle>) => {
     if (!selected) return;
     const dressed = { ...selected.style, ...style };
@@ -231,6 +229,7 @@ export function useAnnotations({
       applyReverse,
       applyRotation,
       applyShuffle,
+      applyStretch,
       applyStyle,
       applySway,
       applyZoom,

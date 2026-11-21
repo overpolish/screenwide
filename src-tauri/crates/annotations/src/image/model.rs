@@ -135,6 +135,7 @@ pub fn new_image(
       asset: art.asset,
       play: art.play,
       sway: None,
+      stretched: false,
       clock_ms: None,
     },
     style: style.cloned().unwrap_or_else(default_image_style),

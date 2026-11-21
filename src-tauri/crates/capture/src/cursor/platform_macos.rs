@@ -30,6 +30,7 @@ use core_graphics::event_source::{CGEventSource, CGEventSourceStateID};
 use objc2_app_kit::NSCursor;
 
 use super::front_app::FrontApp;
+use super::CursorPicture;
 use super::{
   ButtonState, CursorAppearance, CursorButton, CursorStyle, EventSink, RawCursorEvent,
   RawCursorEventKind,
@@ -57,9 +58,9 @@ fn fingerprint(cursor: &NSCursor) -> CursorFingerprint {
   let data = image.TIFFRepresentation();
   let mut hasher = DefaultHasher::new();
   if let Some(data) = &data {
-    // These bytes are hashed and dropped; only the hash is kept, and only long
-    // enough to map AppKit's cursor to a semantic label. Cursor image bytes
-    // never enter the recording sidecar.
+    // These bytes are hashed and dropped; only the hash is kept, to map
+    // AppKit's cursor to what it is. A custom cursor's picture is read again
+    // from the cursor, once, to be kept beside the sidecar (`picture`).
     // SAFETY: `data` is immutable and retained for the lifetime of this slice.
     hasher.write(unsafe { data.as_bytes_unchecked() });
   }
@@ -78,9 +79,10 @@ struct CursorCatalog {
   // `currentSystemCursor().image()` hands back a fresh `NSImage` every call, so
   // a pointer key never hit the cache and every poll retained another copy of
   // the image's reps (measured ~2.5GB of live CGImage/NSBitmapImageRep over a
-  // seven minute recording). Only the resolved style is cached; the size and
-  // hotspot are cheap to read fresh from the cursor each call.
-  cache: RefCell<HashMap<CursorFingerprint, CursorStyle>>,
+  // seven minute recording). Only the resolved style, and a custom cursor's
+  // picture, are cached; the size and hotspot are cheap to read fresh from
+  // the cursor each call.
+  cache: RefCell<HashMap<CursorFingerprint, (CursorStyle, Option<CursorPicture>)>>,
   entries: Vec<(CursorStyle, CursorFingerprint)>,
 }
 
@@ -135,21 +137,26 @@ impl CursorCatalog {
         hotspot_y: 0.0,
         style: CursorStyle::Custom,
         width: 0.0,
+        picture: None,
       };
     };
     let hotspot = cursor.hotSpot();
     let size = cursor.image().size();
     let current = fingerprint(&cursor);
-    let style = self.cache.borrow().get(&current).copied();
-    let style = style.unwrap_or_else(|| {
+    let known = self.cache.borrow().get(&current).cloned();
+    let (style, picture) = known.unwrap_or_else(|| {
       // An exact match is the system's own cursor; anything else - an older
       // design an application still draws, or one of its own - is read by
       // its shape, once, since the result is cached by the same fingerprint.
+      // One that is none of the system's keeps its own picture.
       let style = self
         .entries
         .iter()
         .find_map(|(style, candidate)| (*candidate == current).then_some(*style))
         .unwrap_or_else(|| picture::recognised(&cursor));
+      let picture = (style == CursorStyle::Custom)
+        .then(|| picture::kept(&cursor))
+        .flatten();
       let mut cache = self.cache.borrow_mut();
       // Apps ship arbitrary custom cursors, so the key space is unbounded; a
       // hard cap with a full flush beats an LRU here because a real working set
@@ -157,8 +164,8 @@ impl CursorCatalog {
       if cache.len() >= CACHE_LIMIT {
         cache.clear();
       }
-      cache.insert(current, style);
-      style
+      cache.insert(current, (style, picture.clone()));
+      (style, picture)
     });
     CursorAppearance {
       height: size.height,
@@ -166,6 +173,7 @@ impl CursorCatalog {
       hotspot_y: hotspot.y,
       style,
       width: size.width,
+      picture,
     }
   }
 }

@@ -50,6 +50,7 @@ xcap.workspace = true
 
 [target.'cfg(target_os = "windows")'.dependencies]
 nokhwa = { workspace = true, features = ["input-msmf"] }
+screenwide-cursor-effects.workspace = true
 screenwide-h264.workspace = true
 screenwide-keyboard-hook.workspace = true
 wasapi.workspace = true

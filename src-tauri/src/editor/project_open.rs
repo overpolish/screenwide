@@ -126,6 +126,7 @@ fn open(app: &AppHandle, file: &Path) -> Result<(), OpenFailure> {
   // the pictures and sounds are tidied, in case it was last closed by the
   // app quitting, which leaves no chance to.
   super::project_look::adopt_pictures(file);
+  crate::upscale::prepare_pictures(app);
   super::sound_library::adopt(file);
   super::project_look::clean_pictures(file);
   super::sound_library::clean(file);

@@ -20,6 +20,7 @@ import {
   applyAnnotationSceneReset,
   applyAnnotationImagePlay,
   applyAnnotationStyle,
+  applyAnnotationStretch,
   applyAnnotationSway,
   applyAnnotationZoom,
 } from "../../annotations/annotation-apply";
@@ -45,6 +46,7 @@ export const annotationPanelHandlers = (
   | "onAnnotationEmphasisChange"
   | "onAnnotationImageChange"
   | "onAnnotationImagePlayChange"
+  | "onAnnotationImageStretchChange"
   | "onAnnotationImageSwayChange"
   | "onAnnotationKindChange"
   | "onAnnotationLookChange"
@@ -78,6 +80,9 @@ export const annotationPanelHandlers = (
   },
   onAnnotationImagePlayChange: (play) => {
     applyAnnotationImagePlay(workspace, play);
+  },
+  onAnnotationImageStretchChange: (stretched) => {
+    applyAnnotationStretch(workspace, stretched);
   },
   onAnnotationImageSwayChange: (sway) => {
     applyAnnotationSway(workspace, sway);

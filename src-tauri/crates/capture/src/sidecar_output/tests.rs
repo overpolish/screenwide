@@ -24,6 +24,7 @@ fn appearance(timestamp_us: u64, style: CursorStyle) -> CursorRecord {
     style,
     timestamp_us,
     width: 16.0,
+    picture: None,
   }
 }
 

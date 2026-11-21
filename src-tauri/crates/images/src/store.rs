@@ -24,9 +24,11 @@ mod cache;
 mod library;
 mod portable;
 mod removed;
+mod upscaled;
 pub(crate) use cache::load;
 pub use library::{pictures, remove, rename, Picture};
 pub use portable::{adopt, content_file_name, credit_in, record_file, stored_file};
+pub use upscaled::{keep_upscaled, skip_upscale, undecided, upscale_decided, upscaled};
 
 /// The prefix a stored picture's asset id carries.
 pub const IMAGE_PREFIX: &str = "image:";

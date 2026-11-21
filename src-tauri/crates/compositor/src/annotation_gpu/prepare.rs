@@ -244,6 +244,7 @@ pub(super) fn placed_native(
           frame: annotation.params[1].max(0.0) as u32,
           clock_ms: (clock >= 0.0).then_some(clock),
           once: annotation.flags & screenwide_annotations::flags::ONCE != 0,
+          stretched: annotation.flags & screenwide_annotations::flags::STRETCHED != 0,
         });
       }
       match (in_looks && annotation.shape_kind() == AnnotationKind::Text)

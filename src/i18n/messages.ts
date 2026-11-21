@@ -87,6 +87,7 @@ export type Messages = {
   "annotation-tool-spotlight-name": null;
   "annotation-tool-text": null;
   "annotation-tool-text-name": null;
+  "annotation-upscale-on": null;
   "background-color": null;
   "background-colors": null;
   "background-custom": null;

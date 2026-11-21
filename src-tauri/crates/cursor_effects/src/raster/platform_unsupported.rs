@@ -20,10 +20,6 @@ pub(super) fn style_artwork(_style: CursorStyle) -> Option<&'static StyleArtwork
   None
 }
 
-pub(super) fn artwork(_style: CursorStyle) -> Option<&'static RgbaImage> {
-  None
-}
-
 pub(super) fn canonical_style(style: CursorStyle) -> CursorStyle {
   style
 }

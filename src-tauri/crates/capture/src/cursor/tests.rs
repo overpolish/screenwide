@@ -12,6 +12,7 @@ fn test_event(at: Instant, kind: RawCursorEventKind) -> RawCursorEvent {
       hotspot_y: 3.0,
       style: CursorStyle::Arrow,
       width: 16.0,
+      picture: None,
     },
     at,
     kind,
@@ -115,6 +116,7 @@ fn initial_snapshot_starts_at_zero_and_motion_keeps_hardware_cadence() {
     last_visibility: None,
     last_position: None,
     output: SidecarOutput::File(std::io::BufWriter::new(file)),
+    pictures: pictures::KeptPictures::beside(&path),
   };
 
   stream
@@ -229,6 +231,7 @@ fn visibility_records_exact_landings_and_keeps_hidden_button_releases() {
     output: SidecarOutput::File(std::io::BufWriter::new(
       std::fs::File::create(&path).unwrap(),
     )),
+    pictures: pictures::KeptPictures::beside(&path),
   };
   stream
     .record(test_event(origin, RawCursorEventKind::Snapshot))

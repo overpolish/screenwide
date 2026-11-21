@@ -23,16 +23,36 @@ mod platform_windows;
 #[cfg(target_os = "windows")]
 use self::platform_windows as platform;
 
+#[cfg(any(target_os = "windows", test))]
+mod cursor_file;
+mod custom;
 mod fallback;
+mod gpu_set;
 pub(super) mod system_cursor;
+mod upscaled;
+
+#[cfg(test)]
+use gpu_set::custom_gpu_artwork;
+pub(crate) use gpu_set::gpu_artworks;
+pub use gpu_set::GpuArtwork;
+#[cfg(target_os = "windows")]
+pub use platform_windows::drawn as drawn_windows_cursor;
+use upscaled::style_artwork;
+pub use upscaled::{to_upscale, use_upscaled, Upscalable};
+
+/// The artwork index of an app's own cursor, its picture `name` read from
+/// `file`; `None` where it cannot be drawn, and the arrow stands in.
+pub(super) fn picture_index(name: &str, file: &std::path::Path) -> Option<u32> {
+  custom::artwork_index(name, file)
+}
 
 pub(super) fn uses_same_artwork(left: CursorStyle, right: CursorStyle) -> bool {
-  // A custom cursor is recorded without its pixels, so it draws the system
-  // arrow fitted inside its recorded box and anchored by the arrow's own
-  // hotspot, not stretched over the box from the recorded one. That is a
-  // different mapping from the `Arrow` style even though the bitmap matches,
-  // so collapsing the two would hold a custom cursor's box and hotspot over
-  // the arrow that follows it.
+  // A custom cursor without a picture draws the system arrow fitted inside
+  // its recorded box and anchored by the arrow's own hotspot, not stretched
+  // over the box from the recorded one. That is a different mapping from
+  // the `Arrow` style even though the bitmap matches, so collapsing the two
+  // would hold a custom cursor's box and hotspot over the arrow that
+  // follows it. Two custom cursors' pictures are told apart by the caller.
   if (left == CursorStyle::Custom) != (right == CursorStyle::Custom) {
     return false;
   }
@@ -50,7 +70,7 @@ pub(super) fn natural_box(style: CursorStyle) -> Option<[f64; 4]> {
   if style == CursorStyle::Custom {
     return None;
   }
-  let artwork = platform::style_artwork(style)?;
+  let artwork = style_artwork(style)?;
   let (width, height) = artwork.points;
   let (texels_wide, texels_high) = (artwork.image.width(), artwork.image.height());
   if width <= 0.0 || height <= 0.0 || texels_wide == 0 || texels_high == 0 {
@@ -87,12 +107,13 @@ pub(super) const GPU_ARTWORK_STYLES: [CursorStyle; 16] = [
 ];
 
 /// The slot after the system styles, holding the artwork a custom cursor
-/// draws. The sidecar records a custom cursor's box and hotspot but none of
-/// its pixels, and that box has no reason to share the system arrow's aspect,
-/// so stretching the arrow over it squashes the drawn cursor. This slot fits
-/// the system arrow inside the recorded box at the arrow's own aspect instead,
-/// anchored by the arrow's own hotspot, and falls back to the baked vector
-/// arrow only where the system artwork could not be loaded at all.
+/// with no picture draws: one recorded before pictures were kept, or whose
+/// picture could not be read. Its box has no reason to share the system
+/// arrow's aspect, so stretching the arrow over it squashes the drawn
+/// cursor. This slot fits the system arrow inside the recorded box at the
+/// arrow's own aspect instead, anchored by the arrow's own hotspot, and falls
+/// back to the baked vector arrow only where the system artwork could not be
+/// loaded at all. Apps' own pictures take the slots after it (`custom`).
 pub(super) const GPU_CUSTOM_ARTWORK_INDEX: u32 = GPU_ARTWORK_STYLES.len() as u32;
 
 pub(super) fn artwork_index(style: CursorStyle) -> u32 {
@@ -110,7 +131,7 @@ pub(super) fn artwork_index(style: CursorStyle) -> u32 {
 /// horizontal artwork, borrowed from another style or from the fallback.
 pub(super) fn turned_quarter(style: CursorStyle) -> bool {
   fallback::is_vertical(style)
-    && (platform::canonical_style(style) != style || platform::artwork(style).is_none())
+    && (platform::canonical_style(style) != style || style_artwork(style).is_none())
 }
 
 pub(super) fn gpu_rotation_radians(style: CursorStyle) -> f32 {
@@ -118,153 +139,6 @@ pub(super) fn gpu_rotation_radians(style: CursorStyle) -> f32 {
     std::f32::consts::FRAC_PI_2
   } else {
     0.0
-  }
-}
-
-/// One style's artwork bitmap plus the mapping the shader needs to place it,
-/// mirroring exactly what [`CursorRaster::sample`] does on the CPU. A system
-/// style's artwork stretches over the recorded cursor box; artwork placed by
-/// its own design frame (the vector fallback, and the arrow a custom cursor
-/// draws) keeps that frame's aspect inside the box and anchors `origin` at the
-/// recorded position, so the frame and origin travel with it.
-#[derive(Clone)]
-pub struct GpuArtwork {
-  pub design_height: f32,
-  pub design_width: f32,
-  pub height: u32,
-  pub origin_x: f32,
-  pub origin_y: f32,
-  pub pixels: Vec<u8>,
-  /// The fallback arrow deliberately draws outside the recorded cursor box so
-  /// its rounded tip stroke survives at the hotspot (`sample`, raster.rs:85).
-  pub clip_local_box: bool,
-  pub supersample: bool,
-  pub use_design: bool,
-  pub width: u32,
-}
-
-/// Texels per design unit when the vector fallback is baked for the GPU. The
-/// shader supersamples the same 4x4 box `sample_for_draw` uses, so the bake
-/// stays point-sampled rather than pre-filtered.
-const FALLBACK_BAKE_SCALE: u32 = 8;
-
-/// Every style's artwork in `GPU_ARTWORK_STYLES` order and the custom slot
-/// after them. A process that has not loaded the system artwork, as the tests,
-/// gets the fallback set; each set is made once.
-pub(super) fn gpu_artworks() -> &'static [GpuArtwork] {
-  static LOADED: std::sync::OnceLock<Vec<GpuArtwork>> = std::sync::OnceLock::new();
-  static FALLBACK: std::sync::OnceLock<Vec<GpuArtwork>> = std::sync::OnceLock::new();
-  let set = if platform::artwork(CursorStyle::Arrow).is_some() {
-    &LOADED
-  } else {
-    &FALLBACK
-  };
-  set.get_or_init(artworks)
-}
-
-fn artworks() -> Vec<GpuArtwork> {
-  GPU_ARTWORK_STYLES
-    .iter()
-    .copied()
-    .map(gpu_artwork)
-    // `GPU_CUSTOM_ARTWORK_INDEX`: a custom cursor draws the system arrow
-    // fitted inside its recorded box, never that arrow stretched over the box.
-    .chain(std::iter::once(custom_gpu_artwork(
-      platform::style_artwork(CursorStyle::Arrow),
-    )))
-    .collect()
-}
-
-/// The artwork a custom cursor draws. Taking the arrow entry as an argument
-/// keeps the routing testable in a process that never loaded system artwork.
-///
-/// Geometry, matching [`CursorRaster::sample`]:
-/// - the design frame is the arrow bitmap itself, so the shader's `use_design`
-///   path scales it by `min(box_width / frame_width, box_height / frame_height)`
-///   and never stretches it to the recorded box's aspect;
-/// - `origin` is the arrow's own hotspot, which the shader adds after that
-///   scale, so the arrow is anchored by its hotspot at the recorded position.
-///   The recorded hotspot addresses artwork that is not being drawn and stays
-///   out of it (`output_hotspot`, cursor_effects.rs:94);
-/// - the fitted arrow reaches outside the recorded box on the hotspot's side,
-///   so only the design frame clips it.
-fn custom_gpu_artwork(arrow: Option<&platform::StyleArtwork>) -> GpuArtwork {
-  // Last resort: with no system artwork at all (headless, tests) the baked
-  // vector arrow still draws by exactly the same rules.
-  let Some(arrow) = arrow else {
-    return fallback_gpu_artwork(CursorStyle::Custom);
-  };
-  GpuArtwork {
-    design_height: arrow.image.height() as f32,
-    design_width: arrow.image.width() as f32,
-    height: arrow.image.height(),
-    origin_x: arrow.hotspot_x as f32,
-    origin_y: arrow.hotspot_y as f32,
-    pixels: arrow.image.as_raw().clone(),
-    clip_local_box: false,
-    supersample: false,
-    use_design: true,
-    width: arrow.image.width(),
-  }
-}
-
-fn gpu_artwork(style: CursorStyle) -> GpuArtwork {
-  if let Some(image) = platform::artwork(style) {
-    return GpuArtwork {
-      design_height: 0.0,
-      design_width: 0.0,
-      height: image.height(),
-      origin_x: 0.0,
-      origin_y: 0.0,
-      pixels: image.as_raw().clone(),
-      clip_local_box: true,
-      supersample: false,
-      use_design: false,
-      width: image.width(),
-    };
-  }
-  fallback_gpu_artwork(style)
-}
-
-fn fallback_gpu_artwork(style: CursorStyle) -> GpuArtwork {
-  let artwork = fallback::artwork(style);
-  // The design frames and origin come from `CursorRaster::sample`
-  // (raster.rs:93-108); the bake reproduces its `fallback::sample` lookups.
-  let (design_width, design_height) = if artwork == fallback::Artwork::Hand {
-    (32.0_f64, 32.0_f64)
-  } else {
-    (28.0_f64, 40.0_f64)
-  };
-  let (origin_x, origin_y) = fallback::origin(artwork);
-  let width = design_width as u32 * FALLBACK_BAKE_SCALE;
-  let height = design_height as u32 * FALLBACK_BAKE_SCALE;
-  let mut pixels = vec![0_u8; width as usize * height as usize * 4];
-  for y in 0..height {
-    for x in 0..width {
-      // `sample_image` addresses texel `i` at coordinate `i`, so the bake
-      // must place its samples on that same grid rather than at texel centres.
-      let sample = fallback::sample(
-        artwork,
-        f64::from(x) / f64::from(FALLBACK_BAKE_SCALE),
-        f64::from(y) / f64::from(FALLBACK_BAKE_SCALE),
-      );
-      let offset = (y as usize * width as usize + x as usize) * 4;
-      for channel in 0..4 {
-        pixels[offset + channel] = sample[channel].round().clamp(0.0, 255.0) as u8;
-      }
-    }
-  }
-  GpuArtwork {
-    design_height: design_height as f32,
-    design_width: design_width as f32,
-    height,
-    origin_x: origin_x as f32,
-    origin_y: origin_y as f32,
-    pixels,
-    clip_local_box: artwork != fallback::Artwork::Arrow,
-    supersample: true,
-    use_design: true,
-    width,
   }
 }
 

@@ -18,8 +18,10 @@
 // only the image atlas reads. `CAPTION` marks a text box drawn as a
 // caption's word: its type alone, in the annotation's own colour, and no
 // box. `BARE` marks a text box drawn as its box alone, which a caption's
-// lines sit on. `CASTS` marks a caption's word that casts a shadow, and
-// `TURNED` a caption's piece drawn turned, by its geometry's `turn`.
+// lines sit on. `CASTS` marks a caption's word that casts a shadow,
+// `TURNED` a caption's piece drawn turned, by its geometry's `turn`, and
+// `STRETCHED` an image stretched rather than upscaled when it is drawn
+// larger than its picture, which only the image atlas reads.
 #![allow(dead_code)]
 
 pub(crate) const FILL: u32 = 1 << 0;
@@ -36,3 +38,4 @@ pub const CAPTION: u32 = 1 << 10;
 pub const BARE: u32 = 1 << 11;
 pub const CASTS: u32 = 1 << 12;
 pub const TURNED: u32 = 1 << 13;
+pub const STRETCHED: u32 = 1 << 14;

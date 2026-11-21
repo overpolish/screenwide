@@ -40,6 +40,7 @@ pub use snapshot::TextRecognitionState;
 mod recognition_worker;
 pub(crate) mod settings;
 use recognition_worker::recognize;
+pub(crate) use recognition_worker::shows_text;
 
 #[derive(Clone, Copy, Debug, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]

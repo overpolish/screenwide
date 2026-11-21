@@ -177,6 +177,9 @@ pub struct PreparedImage {
   pub(crate) clock_ms: Option<f32>,
   /// Whether a moving picture plays through once rather than looping.
   pub(crate) once: bool,
+  /// Whether it is stretched, rather than drawn from its upscaled picture,
+  /// where it is drawn larger than its picture.
+  pub(crate) stretched: bool,
 }
 
 /// Everything one composition draws for its annotations.

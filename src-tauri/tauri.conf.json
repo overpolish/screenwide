@@ -267,6 +267,8 @@
       "../FFMPEG.md": "licenses/FFMPEG.md",
       "assets/BlazeFace-Apache-2.0.txt": "licenses/BlazeFace-Apache-2.0.txt",
       "assets/blazeface-short-range.onnx": "models/blazeface-short-range.onnx",
+      "assets/Real-ESRGAN-BSD-3-Clause.txt": "licenses/Real-ESRGAN-BSD-3-Clause.txt",
+      "assets/realesrgan-x4plus-anime-6b.onnx": "models/realesrgan-x4plus-anime-6b.onnx",
       "assets/DeepFilterNet-MIT.txt": "licenses/DeepFilterNet-MIT.txt",
       "../LICENSE": "licenses/GPL-3.0.txt",
       "assets/Inter-OFL-1.1.txt": "licenses/Inter-OFL-1.1.txt",

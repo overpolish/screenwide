@@ -21,7 +21,7 @@
 //! one is drawn at the pace of the animation rather than once.
 
 use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
+use std::sync::Mutex;
 
 use super::gpu_atlas::GpuAtlas;
 use super::{PreparedArrows, PreviewArrow};
@@ -119,21 +119,9 @@ pub(crate) fn place_images(
     draws,
     shown,
   } = &mut *state;
-  // A moving picture is drawn at the frame this moment shows.
-  let pictures: Vec<Option<(StoredImage, Option<u32>)>> = prepared
-    .images
-    .iter()
-    .map(|image| {
-      Some(match screenwide_images::picture(&image.asset)? {
-        StoredImage::Animation(animation) => {
-          let index = animation.frame_index(image.frame, image.clock_ms, image.once);
-          let frame = Arc::clone(animation.frames.get(index)?);
-          (StoredImage::Still(frame), Some(index as u32))
-        }
-        still => (still, None),
-      })
-    })
-    .collect();
+  // A moving picture is drawn at the frame this moment shows, and a still
+  // drawn large from its upscaled picture where it has one.
+  let pictures = super::image_pictures::pick(prepared);
   let entries: Vec<Entry> = prepared
     .images
     .iter()
@@ -160,25 +148,28 @@ pub(crate) fn place_images(
       let picture = pictures[entry.image].as_ref();
       // Two images showing one moving picture may be at different frames,
       // so each has a cell of its own, told apart by which of them it is.
-      let slot = match picture {
-        Some((_, Some(_))) => prepared.images[..entry.image]
+      let slot = match picture.and_then(|picked| picked.frame) {
+        Some(_) => prepared.images[..entry.image]
           .iter()
           .filter(|earlier| earlier.asset == image.asset)
           .count() as u32,
-        _ => 0,
+        None => 0,
       };
       let side = raster_side(image.size[0].max(image.size[1]), prepared.pixel_scale);
       CounterNumber {
-        text: image.asset.as_bytes(),
+        text: picture.map_or(image.asset.as_bytes(), |picked| picked.key.as_slice()),
         radius: match picture {
           _ if entry.shadow => SHADOW_SIDE,
-          Some((StoredImage::Still(frame), Some(_))) => side.min(
-            frame
-              .width()
-              .max(frame.height())
-              .next_power_of_two()
-              .max(MIN_RASTER),
-          ),
+          Some(picked) if picked.frame.is_some() => match &picked.picture {
+            StoredImage::Still(frame) => side.min(
+              frame
+                .width()
+                .max(frame.height())
+                .next_power_of_two()
+                .max(MIN_RASTER),
+            ),
+            StoredImage::Animation(_) => side,
+          },
           _ => side,
         } as f32,
         style: slot << 1 | u32::from(entry.shadow),
@@ -222,11 +213,16 @@ pub(crate) fn place_images(
   // A moving picture's cell that holds another frame than this moment's is
   // drawn over, as well as the cells that are new.
   for (index, entry) in entries.iter().enumerate() {
-    let (Some((_, Some(frame))), rect) = (&pictures[entry.image], rects[index]) else {
+    let (Some(frame), rect) = (
+      pictures[entry.image]
+        .as_ref()
+        .and_then(|picked| picked.frame),
+      rects[index],
+    ) else {
       continue;
     };
     let fresh_frame =
-      rect.width > 0.0 && shown.insert((rect.x as u32, rect.y as u32), *frame) != Some(*frame);
+      rect.width > 0.0 && shown.insert((rect.x as u32, rect.y as u32), frame) != Some(frame);
     if fresh_frame && !draws.iter().any(|draw| draw.index == index) {
       draws.push(AtlasDraw {
         index,
@@ -239,7 +235,7 @@ pub(crate) fn place_images(
   };
   for draw in draws.iter() {
     let (rect, entry) = (rects[draw.index], entries[draw.index]);
-    let Some((picture, _)) = pictures[entry.image].as_ref() else {
+    let Some(picture) = pictures[entry.image].as_ref().map(|picked| &picked.picture) else {
       continue;
     };
     let pixels = if entry.shadow {

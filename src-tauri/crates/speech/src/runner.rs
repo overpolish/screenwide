@@ -17,6 +17,7 @@ pub mod notes;
 pub mod samples;
 pub mod sensitive;
 mod text;
+mod upscale;
 
 /// The transcriber program, started for a run of jobs and kept for the rest
 /// of them, since each start loads the model again. Dropping it closes its
@@ -250,6 +251,7 @@ impl Transcriber {
       | Reply::FacesFound { id }
       | Reply::TextReaderLoaded { id }
       | Reply::TextRead { id, .. }
+      | Reply::Upscaled { id }
       | Reply::SensitiveFound { id, .. }
       | Reply::Dictated { id, .. }
       | Reply::Noted { id, .. }

@@ -11,6 +11,7 @@ fn appearance(timestamp_us: u64, style: CursorStyle) -> Appearance {
     style,
     timestamp_us,
     width: 24.0,
+    picture: None,
   }
 }
 
@@ -77,6 +78,7 @@ fn custom_arrow_fallback_keeps_the_recorded_arrow_size() {
       style: CursorStyle::Arrow,
       timestamp_us: 0,
       width: 28.0,
+      picture: None,
     },
     CursorRecord::Position {
       timestamp_us: 0,
@@ -90,6 +92,7 @@ fn custom_arrow_fallback_keeps_the_recorded_arrow_size() {
       style: CursorStyle::Custom,
       timestamp_us: 1_000_000,
       width: 9.0,
+      picture: None,
     },
     CursorRecord::Position {
       timestamp_us: 2_000_000,
@@ -179,6 +182,7 @@ fn gpu_cursor_position_is_rounded_to_the_output_pixel_grid() {
       style: CursorStyle::Arrow,
       timestamp_us: 0,
       width: 24.0,
+      picture: None,
     },
     CursorRecord::Position {
       timestamp_us: 0,

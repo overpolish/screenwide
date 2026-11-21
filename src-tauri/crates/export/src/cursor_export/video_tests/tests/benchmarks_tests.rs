@@ -49,6 +49,7 @@ fn benchmarks_retina_gpu_cursor_export() {
       style: CursorStyle::Arrow,
       timestamp_us: 0,
       width: 16.0,
+      picture: None,
     },
     CursorRecord::Position {
       timestamp_us: 0,

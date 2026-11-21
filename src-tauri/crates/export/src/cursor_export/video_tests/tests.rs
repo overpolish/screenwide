@@ -124,6 +124,7 @@ fn exports_composited_cursor_pixels_into_a_real_movie() {
       style: CursorStyle::Arrow,
       timestamp_us: 0,
       width: 16.0,
+      picture: None,
     },
   ];
   records.extend((0..=50).map(|step| CursorRecord::Position {
@@ -377,6 +378,7 @@ fn exports_a_custom_cursor_at_the_fallback_arrows_aspect() {
       style: CursorStyle::Custom,
       timestamp_us: 0,
       width: 48.0,
+      picture: None,
     },
     CursorRecord::Position {
       timestamp_us: 0,
@@ -525,6 +527,7 @@ fn exports_camera_and_cursor_through_the_same_gpu_compositor() {
       style: CursorStyle::Arrow,
       timestamp_us: 0,
       width: 16.0,
+      picture: None,
     },
     CursorRecord::Position {
       timestamp_us: 0,

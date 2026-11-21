@@ -18,9 +18,8 @@ import { shapeIsland } from "../annotation/shape/shape-island";
 import { textIsland } from "../annotation/text/text-island";
 import { marqueeIsland } from "../marquee/marquee-island";
 
-import type { AnnotationAlign } from "../../../../bindings/AnnotationAlign";
-import type { AnnotationHead } from "../../../../bindings/AnnotationHead";
-import type { AnnotationRedaction } from "../../../../bindings/AnnotationRedaction";
+import { type IslandStyle, patchOf } from "./annotation-island-patch";
+
 import type { SceneRotation } from "../../../../bindings/SceneRotation";
 import type { ToolPanelPatch } from "../../tools/tool-panel-patch";
 import type { ToolPanelSnapshot } from "../../tools/tool-panel-store";
@@ -29,69 +28,7 @@ import type { AnnotationPinAction } from "../annotation/annotation-pin";
 import type { EditorIslandContent } from "../editor-island";
 
 // The annotation in hand on its pen's island, or the pen's next one with
-// nothing chosen, or how many Select's band chose. The islands speak of an
-// annotation as it looks (`isHandDrawn`, `size`); the editor dresses one
-// through the fields of a `ToolPanelPatch`, so each change is put in those
-// words here.
-
-/** Every field any annotation island changes, under the island's names. */
-type IslandStyle = Partial<{
-  align: AnnotationAlign;
-  angle: number;
-  color: string;
-  dims: boolean;
-  hasShadow: boolean;
-  head: AnnotationHead;
-  isAnimated: boolean;
-  isHandDrawn: boolean;
-  isManual: boolean;
-  isTinted: boolean;
-  loops: boolean;
-  radius: number;
-  redaction: AnnotationRedaction;
-  rotation: SceneRotation;
-  size: number;
-  strength: number;
-  sways: boolean;
-  width: number;
-  zoom: number;
-}>;
-
-/** An island's change, in the words the editor dresses an annotation by. */
-const patchOf = (style: IslandStyle): ToolPanelPatch => {
-  const {
-    angle,
-    dims: _dims,
-    hasShadow,
-    isAnimated,
-    isHandDrawn,
-    isManual,
-    isTinted,
-    loops,
-    rotation,
-    size,
-    sways,
-    zoom,
-    ...dress
-  } = style;
-  const annotationStyle = {
-    ...dress,
-    ...(hasShadow === undefined ? {} : { shadow: hasShadow }),
-    ...(isHandDrawn === undefined ? {} : { handDrawn: isHandDrawn }),
-    ...(isManual === undefined ? {} : { manual: isManual }),
-    ...(isTinted === undefined ? {} : { tint: isTinted }),
-    ...(size === undefined ? {} : { width: size }),
-  };
-  return {
-    ...(Object.keys(annotationStyle).length > 0 ? { annotationStyle } : {}),
-    ...(angle === undefined ? {} : { annotationAngle: angle }),
-    ...(isAnimated === undefined ? {} : { annotationAnimated: isAnimated }),
-    ...(loops === undefined ? {} : { annotationImagePlay: { once: !loops } }),
-    ...(rotation === undefined ? {} : { annotationRotation: rotation }),
-    ...(sways === undefined ? {} : { annotationImageSway: sways }),
-    ...(zoom === undefined ? {} : { annotationZoom: zoom }),
-  };
-};
+// nothing chosen, or how many Select's band chose.
 
 const NO_TURN: SceneRotation = { x: 0, y: 0, z: 0 };
 
@@ -235,6 +172,7 @@ export function annotationIslandContent({
           radius: style.radius,
           rotation: annotation.rotation ?? NO_TURN,
           sways: annotation.sway === true,
+          upscales: annotation.stretched !== true,
         },
       });
     case "magnify":

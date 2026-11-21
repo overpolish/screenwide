@@ -32,6 +32,7 @@ mod event_writer;
 mod follow_window;
 mod front_app;
 mod own_presses;
+mod pictures;
 mod rolling;
 
 use std::path::{Path, PathBuf};
@@ -40,6 +41,7 @@ use std::sync::{Arc, Mutex, OnceLock};
 use std::thread::JoinHandle;
 use std::time::{Duration, Instant};
 
+pub(crate) use self::pictures::CursorPicture;
 pub(crate) use self::rolling::CursorBaseline;
 use crate::clock::SidecarClock;
 use crate::sidecar_output::{self, RollingRecords, SidecarOutput};
@@ -57,6 +59,8 @@ pub(super) struct CursorAppearance {
   pub hotspot_y: f64,
   pub style: CursorStyle,
   pub width: f64,
+  /// A custom cursor's own picture, where it could be read.
+  pub picture: Option<CursorPicture>,
 }
 
 #[cfg_attr(not(target_os = "macos"), allow(dead_code))]
@@ -92,6 +96,7 @@ struct StreamWriter {
   last_visibility: Option<bool>,
   last_position: Option<(f64, f64)>,
   output: SidecarOutput<CursorRecord, CursorBaseline>,
+  pictures: pictures::KeptPictures,
 }
 
 type EventSink = Arc<dyn Fn(RawCursorEvent) -> bool + Send + Sync>;
@@ -125,6 +130,7 @@ impl Tap {
   /// (`follow_window`).
   fn start(
     output: SidecarOutput<CursorRecord, CursorBaseline>,
+    pictures: pictures::KeptPictures,
     origin: Arc<OnceLock<Instant>>,
     source: &CursorSource,
     include_own_windows: bool,
@@ -138,6 +144,7 @@ impl Tap {
       last_visibility: None,
       last_position: None,
       output,
+      pictures,
     }));
     let mut sink = visibility::sink(&state);
     if source.kind == CursorSourceKind::Window {
@@ -197,9 +204,11 @@ impl CursorRecorder {
     include_own_windows: bool,
   ) -> Result<Self, String> {
     let output = SidecarOutput::file(&path, &header(source.clone()))?;
-    let tap = Tap::start(output, origin, &source, include_own_windows).inspect_err(|_| {
-      let _ = std::fs::remove_file(&path);
-    })?;
+    let pictures = pictures::KeptPictures::beside(&path);
+    let tap =
+      Tap::start(output, pictures, origin, &source, include_own_windows).inspect_err(|_| {
+        let _ = std::fs::remove_file(&path);
+      })?;
     Ok(Self { path, tap })
   }
 
@@ -243,25 +252,27 @@ impl RollingCursorRecorder {
   ) -> Result<Self, String> {
     let horizon_us = u64::try_from(horizon.as_micros()).unwrap_or(u64::MAX);
     let output = SidecarOutput::Rolling(RollingRecords::new(horizon_us));
+    let pictures = pictures::KeptPictures::held();
     Ok(Self {
-      tap: Tap::start(output, origin, &source, include_own_windows)?,
+      tap: Tap::start(output, pictures, origin, &source, include_own_windows)?,
       header: header(source),
     })
   }
 
-  /// Writes the sidecar for the clip `start_us..=end_us` of recording time.
+  /// Writes the sidecar for the clip `start_us..=end_us` of recording time,
+  /// and beside it the pictures of the custom cursors it shows.
   pub fn write_clip(&self, path: &Path, start_us: u64, end_us: u64) -> Result<(), String> {
-    let records = {
-      let state = self.tap.state();
-      if let Some(failure) = &state.failure {
-        return Err(failure.clone());
-      }
-      state
-        .output
-        .rolling()
-        .expect("a rolling recorder writes to a rolling output")
-        .clip(start_us, end_us)
-    };
+    let state = self.tap.state();
+    if let Some(failure) = &state.failure {
+      return Err(failure.clone());
+    }
+    let records = state
+      .output
+      .rolling()
+      .expect("a rolling recorder writes to a rolling output")
+      .clip(start_us, end_us);
+    state.pictures.write_for(&records, path)?;
+    drop(state);
     sidecar_output::write_file(path, &self.header, &records)
   }
 }

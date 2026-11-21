@@ -146,15 +146,16 @@ impl NativeAnnotationData {
       play,
       clock_ms,
       tilt,
+      stretched,
       ..
     } = &annotation.shape
     {
       super::image::native::fill(
         &mut record,
         &annotation.style,
-        play.as_ref(),
-        *clock_ms,
+        (play.as_ref(), *clock_ms),
         tilt.unwrap_or_default(),
+        *stretched,
       );
     }
     if let super::AnnotationShape::Text {

@@ -63,6 +63,7 @@ fn recording(directory: &Path) -> (std::path::PathBuf, std::path::PathBuf) {
       style: CursorStyle::Arrow,
       timestamp_us: 0,
       width: 16.0,
+      picture: None,
     },
   ];
   records.extend((0..=100).map(|step| CursorRecord::Position {

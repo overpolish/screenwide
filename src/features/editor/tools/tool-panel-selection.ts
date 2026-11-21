@@ -221,6 +221,10 @@ export type ToolPanelAnnotation = {
   /** How a placed image is turned, in degrees about each axis, as the
    * Rotation row's dials show it. Absent on anything else. */
   rotation?: SceneRotation;
+  /** Whether a placed image is stretched, rather than drawn larger by the
+   * upscaling model, where it is drawn larger than its picture. Absent on
+   * anything else. */
+  stretched?: boolean;
   /** Whether a placed image sways over its clip. Absent on anything else. */
   sway?: boolean;
   /** What a placed text says. Absent on anything else. */

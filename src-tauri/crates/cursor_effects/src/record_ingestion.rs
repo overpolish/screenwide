@@ -13,13 +13,27 @@ impl CursorCompositor {
       .and_then(|path| screenwide_records::keyboard::read(path).ok())
       .map(|records| screenwide_records::keyboard::typing_times_us(&records))
       .unwrap_or_default();
-    Self::from_records(&records, &typing)
+    Self::build(&records, &typing, |name| {
+      let file = screenwide_records::cursor::picture_path(path, name)?;
+      raster::picture_index(name, &file)
+    })
   }
 
   /// The cursor in `records`, hidden from each of the `typing` moments
   /// until it next moves: a recording's tracks already read, or a pointer
-  /// scripted for a preview.
+  /// scripted for a preview. Apps' own cursors, whose pictures live beside
+  /// a sidecar, are drawn as the arrow.
   pub fn from_records(records: &[CursorRecord], typing: &[u64]) -> Result<Self, String> {
+    Self::build(records, typing, |_| None)
+  }
+
+  /// `picture` gives the artwork index of an app's own cursor's picture by
+  /// its name in the sidecar.
+  fn build(
+    records: &[CursorRecord],
+    typing: &[u64],
+    picture: impl Fn(&str) -> Option<u32>,
+  ) -> Result<Self, String> {
     let source = records
       .iter()
       .find_map(|record| match record {
@@ -37,6 +51,7 @@ impl CursorCompositor {
           style,
           timestamp_us,
           width,
+          picture: name,
         } => Some(Appearance {
           height: *height,
           hotspot_x: *hotspot_x,
@@ -44,6 +59,10 @@ impl CursorCompositor {
           style: *style,
           timestamp_us: *timestamp_us,
           width: *width,
+          picture: name
+            .as_deref()
+            .filter(|_| *style == CursorStyle::Custom)
+            .and_then(&picture),
         }),
         _ => None,
       })

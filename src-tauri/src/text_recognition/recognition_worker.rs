@@ -88,3 +88,17 @@ fn read_text(rgba: &[u8], width: u32, height: u32) -> Result<Vec<RecognizedLine>
 fn read_text(_: &[u8], _: u32, _: u32) -> Result<Vec<RecognizedLine>, String> {
   Err("Text recognition is not available on this platform".to_owned())
 }
+
+/// Whether a picture, `width` by `height` pixels of red, green, blue and
+/// alpha bytes, shows any words, as Text Recognition reads it: a line with a
+/// few letters or digits in it, not a stray mark taken for one.
+pub(crate) fn shows_text(rgba: &[u8], width: u32, height: u32) -> Result<bool, String> {
+  Ok(read_text(rgba, width, height)?.iter().any(|line| {
+    line
+      .text
+      .chars()
+      .filter(|character| character.is_alphanumeric())
+      .count()
+      >= 3
+  }))
+}
