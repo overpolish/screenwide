@@ -67,7 +67,7 @@ Most of Screenwide is under the GPL; the paid tools and their licence check are 
 - **Ideas and questions** start in [Discussions](https://github.com/overpolish/screenwide/discussions): ideas in Ideas, where you can upvote others, and questions in Q&A. An idea becomes an issue once it has been thought through to high-level acceptance criteria, so open issues are work that is decided.
 - **Security problems** are reported privately, through the repository's Security tab.
 
-Issues are labelled by type (`bug`, `feature`, `polish`, `chore`), by area (`area: editor`, `area: screenshot`, …), and by platform when only one is affected (`platform: windows`). There is no project board and there are no milestones; releases are cut from `main`, and their notes are drafted from the commits.
+Issues are labelled by type (`bug`, `feature`, `polish`, `chore`), by area (`area: editor`, `area: screenshot`, …), and by platform when only one is affected (`platform: windows`). There is no project board and there are no milestones; releases are cut from `main`, and their notes are drafted from the commits. A release's version is the year and month it ships in, then which release of that month it is: `26.11.0`, `26.11.1`, `26.12.0` ([RELEASING.md](RELEASING.md#versions)).
 
 Work is committed straight to `main`. A commit that finishes an issue ends with a `Closes #N` line, and one that only touches it with `Refs #N`.
 

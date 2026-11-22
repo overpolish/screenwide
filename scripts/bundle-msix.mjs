@@ -6,7 +6,7 @@
 // `.msixupload`. Once a release has shipped as a bundle, every later
 // submission must carry one. Prints the upload's path.
 //
-//   node scripts/bundle-msix.mjs <folder of .msix> <tag, such as v1.3.0>
+//   node scripts/bundle-msix.mjs <folder of .msix> <tag, such as v26.11.0>
 //
 // Windows only, as it needs the Windows SDK's makeappx.
 

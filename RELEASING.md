@@ -70,15 +70,19 @@ The project has no Windows code-signing certificate, so it ships no Windows inst
 
 The website deploys from GitHub Actions too. Between releases, a fix to the page goes out by running the Website workflow by hand on `main` (`gh workflow run site.yml`), or by `pnpm site:deploy` from a computer logged in to Wrangler.
 
+## Versions
+
+A version is the year and month its release ships in, then which release of that month it is, counting from zero: `26.11.0`, `26.11.1`, then `26.12.0` in December and `27.1.0` the next January. Screenwide does not make breaking changes that a major version would announce, and it releases often, so the version says when a release came out instead. The month has no leading zero, which a version may not carry. A prerelease adds a suffix, such as `26.12.0-rc.1`, and may be cut ahead of the month it is for. `pnpm release:check-version` rejects a version in any other form, and a release (not a prerelease) whose year and month are not the current ones in UTC, which is the time the Release workflow keeps. The scheme keeps what the updater and the packages need: each version is greater than the last, the Microsoft Store package takes it with `.0` appended, and its first two numbers stay under the 255 that Tauri's Windows bundles cap them at.
+
 ## Make a release
 
-1. Update the version in `package.json`, `src-tauri/Cargo.toml`, and `src-tauri/tauri.conf.json`.
+1. Set the version (see [Versions](#versions)) in `package.json`, `src-tauri/Cargo.toml`, and `src-tauri/tauri.conf.json`.
 2. Run `pnpm release:check-version` and `pnpm check`.
 3. Commit the version change, then tag and push it:
 
    ```sh
-   git tag v0.2.0
-   git push origin v0.2.0
+   git tag v26.11.0
+   git push origin v26.11.0
    ```
 
 4. Wait for the Release workflow to finish, including the **Verify updater assets** job. In the draft GitHub Release, verify the Apple Silicon macOS DMG (`Screenwide_aarch64.dmg`, the name the website's download button links to), its signed updater bundle, `latest.json` (macOS only), both Microsoft Store packages (`.msix`) and the Store upload that bundles them (`.msixupload`); a prerelease has no Store files.
@@ -99,7 +103,7 @@ Windows draws a yellow border round whatever a Graphics Capture session reads, u
 
 A packaged copy checks for updates as the macOS app does, but asks the Store (`src-tauri/src/microsoft_store/updates.rs`). `StoreContext` says whether the Store has an update for the installed package but not which version: the update it lists names the installed package. The version comes from the Store's public catalog (`displaycatalog.mp.microsoft.com`), which is undocumented; when it cannot be read, or does not yet list a version newer than the one installed, the offer names no version, shows no release notes and cannot be skipped. With a version, the release notes are those of the GitHub Release for that tag, as on macOS. **Open Microsoft Store** opens Screenwide's Store page, where the person installs it; the app never installs the update itself. A Store copy finds updates only once it was installed from the Store: a folder registered for testing finds none. To try the offer against the real Store, install Screenwide from the Store, keep that copy older than the latest Store release, and start a build in its package context with `Invoke-CommandInDesktopPackage -PackageFamilyName overpolish.Screenwide_y93s1f9758jx8 -AppId Screenwide -Command <path to screenwide.exe>`.
 
-Not every release goes to the Store. To send one, run the Microsoft Store workflow (`.github/workflows/store.yml`) by hand with its tag once the release is published: `gh workflow run store.yml -f tag=v1.2.0`, or **Run workflow** under Actions → Microsoft Store. It bundles both `.msix` packages into one upload, replaces the last release's packages with it, sets What's new from the release notes, cut to the Store's 1500 characters, and commits the submission, which starts certification. Once a release has shipped as a bundle, every later submission must carry one, as the workflow's does. Partner Center shows a submission made through the API only once it is committed, and changing such a submission in Partner Center can leave it stuck, so make changes through the workflow, not by hand. The submission is kept on manual publishing: once it passes certification, it waits for **Publish now** in Partner Center. To submit a release again, run the workflow again; msstore deletes a submission still in progress before making its own. The Store signs the packages. The listing's privacy policy is <https://getscreenwide.com/privacy>, and the `runFullTrust` capability needs a line saying why: Screenwide captures the screen, hides chosen windows from capture and moves other apps' windows, which a sandboxed app cannot.
+Not every release goes to the Store. To send one, run the Microsoft Store workflow (`.github/workflows/store.yml`) by hand with its tag once the release is published: `gh workflow run store.yml -f tag=v26.11.0`, or **Run workflow** under Actions → Microsoft Store. It bundles both `.msix` packages into one upload, replaces the last release's packages with it, sets What's new from the release notes, cut to the Store's 1500 characters, and commits the submission, which starts certification. Once a release has shipped as a bundle, every later submission must carry one, as the workflow's does. Partner Center shows a submission made through the API only once it is committed, and changing such a submission in Partner Center can leave it stuck, so make changes through the workflow, not by hand. The submission is kept on manual publishing: once it passes certification, it waits for **Publish now** in Partner Center. To submit a release again, run the workflow again; msstore deletes a submission still in progress before making its own. The Store signs the packages. The listing's privacy policy is <https://getscreenwide.com/privacy>, and the `runFullTrust` capability needs a line saying why: Screenwide captures the screen, hides chosen windows from capture and moves other apps' windows, which a sandboxed app cannot.
 
 To submit by hand instead, download the release's `.msixupload` and upload it in a new submission in Partner Center, removing the last release's packages there, then set What's new from the release notes.
 
@@ -119,8 +123,8 @@ A registered folder stays where it was built, without the install folder's restr
 $cert = New-SelfSignedCertificate -Type Custom -Subject "CN=20209A30-FD28-4F20-817F-331CCDE1D196" -KeyUsage DigitalSignature -FriendlyName "Screenwide MSIX test" -CertStoreLocation Cert:\CurrentUser\My -TextExtension @("2.5.29.37={text}1.3.6.1.5.5.7.3.3", "2.5.29.19={text}")
 Export-Certificate -Cert $cert -FilePath screenwide-msix-test.cer
 Import-Certificate -FilePath screenwide-msix-test.cer -CertStoreLocation Cert:\LocalMachine\TrustedPeople
-signtool sign /fd SHA256 /sha1 $cert.Thumbprint src-tauri\target\x86_64-pc-windows-msvc\release\bundle\msix\Screenwide_1.0.0_x64.msix
-Add-AppxPackage -Path src-tauri\target\x86_64-pc-windows-msvc\release\bundle\msix\Screenwide_1.0.0_x64.msix
+signtool sign /fd SHA256 /sha1 $cert.Thumbprint src-tauri\target\x86_64-pc-windows-msvc\release\bundle\msix\Screenwide_26.11.0_x64.msix
+Add-AppxPackage -Path src-tauri\target\x86_64-pc-windows-msvc\release\bundle\msix\Screenwide_26.11.0_x64.msix
 ```
 
 ## The app icon
@@ -150,14 +154,14 @@ The real updater cannot run against `tauri dev`: its macOS debug executable is l
 Build an older packaged client against that exact prerelease tag:
 
 ```sh
-pnpm update:staging -- v0.2.0-rc.1
+pnpm update:staging -- v26.12.0-rc.1
 ```
 
 If the tag has the same version as the working tree, the staging command packages the test client as version `0.0.1` without changing any source files. This lets a newly published first release exercise the real updater immediately.
 
 This produces an app with:
 
-- the updater endpoint overridden to `releases/download/v0.2.0-rc.1/latest.json`;
+- the updater endpoint overridden to `releases/download/v26.12.0-rc.1/latest.json`;
 - updater artifact generation disabled for the older test client;
 - updater diagnostics enabled; and
 - Tauri's release-build devtools feature enabled.
@@ -171,4 +175,4 @@ localStorage.removeItem("screenwide.updates.remindAfter");
 localStorage.removeItem("screenwide.updates.skippedVersion");
 ```
 
-For a future staged release, use a prerelease version such as `0.2.0-rc.1` in all three version files, tag it `v0.2.0-rc.1`, and publish the workflow's draft as a prerelease. For a release matching the working tree, the staging command's automatic `0.0.1` package version is sufficient. The remote updater bundle must be signed with the same private key whose public key is embedded in the client; Tauri does not permit bypassing signature verification.
+For a future staged release, use a prerelease version such as `26.12.0-rc.1` in all three version files, tag it `v26.12.0-rc.1`, and publish the workflow's draft as a prerelease. For a release matching the working tree, the staging command's automatic `0.0.1` package version is sufficient. The remote updater bundle must be signed with the same private key whose public key is embedded in the client; Tauri does not permit bypassing signature verification.

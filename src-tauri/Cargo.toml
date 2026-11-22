@@ -23,7 +23,7 @@ members = ["crates/*"]
 exclude = ["transcriber", "vendor", "window-hider"]
 
 [workspace.package]
-version = "1.3.0"
+version = "26.11.0"
 authors = ["overpolish"]
 license = "GPL-3.0-or-later"
 edition = "2021"
