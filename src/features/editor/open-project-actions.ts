@@ -1,12 +1,16 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { deleteOpenProject, renameOpenProject } from "./editor-actions";
+import {
+  deleteOpenProject,
+  keepScreenshotProject,
+  renameOpenProject,
+} from "./editor-actions";
 
-/** What the title bar does to the project itself: rename it, or delete it
- * to Recently Deleted, which closes the editor. The editor has no place to
- * show a failure outside the Export island, which speaks only of exports, so
- * one is logged. */
+/** What the title bar does to the project itself: rename it, delete it to
+ * Recently Deleted, which closes the editor, or keep a screenshot made from
+ * a capture in Projects. The editor has no place to show a failure outside
+ * the Export island, which speaks only of exports, so one is logged. */
 export function openProjectActions() {
   const fail = (action: string) => (cause: unknown) => {
     console.error(`Could not ${action} the project`, cause);
@@ -14,6 +18,9 @@ export function openProjectActions() {
   return {
     onDeleteProject: () => {
       deleteOpenProject().catch(fail("delete"));
+    },
+    onKeepScreenshot: () => {
+      keepScreenshotProject().catch(fail("save"));
     },
     onRenameProject: (title: string) => {
       renameOpenProject(title).catch(fail("rename"));

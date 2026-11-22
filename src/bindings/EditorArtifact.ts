@@ -19,6 +19,10 @@ export type EditorArtifact = { "kind": "screenshot",
  */
 deletedItemIds: Array<number>, id: number, items: Array<ScreenshotItemSnapshot>, 
 /**
+ * Kept out of Projects until the editor's Save keeps it there.
+ */
+isTemporary: boolean, 
+/**
  * The canvas and layers saved in the project, which the window shows in
  * place of the remembered look.
  */

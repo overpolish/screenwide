@@ -7,11 +7,13 @@
 //! it open is added to it as another layer, until the editor lets it go.
 //! Each layer's picture is written to `media/` as it arrives, losslessly, and
 //! the canvas and layers are saved in the project's look as they change, so
-//! the project reopens as it was left. A capture copied to the clipboard
-//! makes a project only when its island's Edit opens it here, or its Save
-//! keeps it without opening it (`save_screenshot`).
+//! the project reopens as it was left. A capture opened in the editor is kept
+//! in a temporary project until the editor's Save keeps it in Projects
+//! (`temporary`); one copied to the clipboard is kept in Projects at once
+//! only by its island's Save (`save_screenshot`).
 
 pub(crate) mod blank;
+pub(crate) mod temporary;
 pub(crate) mod workspace;
 
 use super::artifact::next_id;
@@ -26,14 +28,16 @@ pub(crate) use workspace::restored_workspace;
 /// Hands a freshly captured still to the editor window, seeding its layer
 /// with the live annotations the still covered. `scale_factor` is the
 /// display scale it was captured at. The still is kept in the open
-/// screenshot's project as another layer, or in a new project when the
-/// editor has none.
+/// screenshot's project as another layer, or in a new temporary project when
+/// the editor has none. `kept_elsewhere` says the still is on the clipboard
+/// or on screen too, so closing it unchanged loses nothing.
 pub fn present_screenshot(
   app: &AppHandle,
   image: CapturedImage,
   scale_factor: f64,
   annotations: Vec<Annotation>,
   suggested_file_stem: String,
+  kept_elsewhere: bool,
 ) -> Result<(), String> {
   let item = ScreenshotItem {
     annotations,
@@ -53,7 +57,13 @@ pub fn present_screenshot(
     Some(EditorArtifact::Screenshot { project, .. }) => Some(project.clone()),
     _ => None,
   };
-  let project = keep_layer(app, open_project.as_deref(), &suggested_file_stem, &item)?;
+  let project = keep_layer(
+    app,
+    open_project.as_deref(),
+    &suggested_file_stem,
+    &item,
+    open_project.is_none(),
+  )?;
 
   if open_project.is_some() {
     let mut artifact = state
@@ -72,6 +82,7 @@ pub fn present_screenshot(
       return open(app, &project).map_err(|failure| failure.into_reason(&project));
     };
     items.push(item);
+    temporary::set_unsaved(app, true);
     super::workspace::settle(app, EditorKind::Screenshot);
     drop(artifact);
     emit_snapshot(app, EditorKind::Screenshot);
@@ -81,6 +92,7 @@ pub fn present_screenshot(
     return Ok(());
   }
 
+  temporary::set_unsaved(app, !kept_elsewhere);
   present_new(
     app,
     EditorArtifact::Screenshot {
@@ -110,7 +122,7 @@ pub fn save_screenshot(
     image: Arc::new(image),
     scale_factor,
   };
-  keep_layer(app, None, title, &item)
+  keep_layer(app, None, title, &item, false)
 }
 
 /// Writes `image` as the PNG `name` in the project, through a neighbouring
@@ -146,12 +158,14 @@ fn layer(item: &ScreenshotItem, image: String) -> ScreenshotLayer {
 }
 
 /// Keeps `item` as a new layer of `project`, or as the first of a new
-/// project called `title` when there is none, and says which project.
+/// project called `title` when there is none, and says which project. A new
+/// project is `temporary`, out of Projects, or kept in Projects.
 pub(super) fn keep_layer(
   app: &AppHandle,
   project: Option<&Path>,
   title: &str,
   item: &ScreenshotItem,
+  temporary: bool,
 ) -> Result<PathBuf, String> {
   if let Some(file) = project {
     let mut written = Ok(());
@@ -169,7 +183,11 @@ pub(super) fn keep_layer(
     })?;
     return written.map(|()| file.to_path_buf());
   }
-  let created = crate::projects_folder::create(app, title)?;
+  let created = if temporary {
+    temporary::create(app, title)?
+  } else {
+    crate::projects_folder::create(app, title)?
+  };
   let name = "media/layer-1.png".to_owned();
   let kept = write_picture(&created.file, &name, &item.image).and_then(|()| {
     screenwide_project::write(
@@ -183,7 +201,9 @@ pub(super) fn keep_layer(
     created.remove();
     return Err(error);
   }
-  screenwide_project::library::remember(app, &created.file);
+  if !temporary {
+    screenwide_project::library::remember(app, &created.file);
+  }
   Ok(created.file)
 }
 

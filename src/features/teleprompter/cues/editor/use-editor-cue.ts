@@ -70,6 +70,26 @@ export const addEditorCue = async (
   });
 };
 
+/** The item another menu offers to add what its editor has open to a script
+ * (`addEditorCueFromMenu`). */
+export const addCueMenuItem = () => ({
+  id: "add-cue",
+  label: t("teleprompter-cue-add-to-script"),
+  shortcut: "Alt+KeyC",
+});
+
+/** `addEditorCue` for an item picked in a menu opened at `anchor`, once that
+ * menu has closed: the script picker opens in the panel it leaves. */
+export const addEditorCueFromMenu = (
+  editor: EditorKind,
+  artifactId: number,
+  anchor: PopupMenuAnchor,
+) => {
+  afterMenuCloses()
+    .then(() => addEditorCue(editor, artifactId, anchor))
+    .catch(report("Could not add the cue"));
+};
+
 /** A menu, opened under the anchor it is given, offering to add the frame
  * under the playhead of the recording open as `artifactId` to a script. */
 export function useRecordingCueMenu(artifactId: number) {
@@ -79,17 +99,15 @@ export function useRecordingCueMenu(artifactId: number) {
     label: t("teleprompter-cue-menu"),
     mode: "menu",
     onSelect: () => {
-      afterMenuCloses()
-        .then(() => addEditorCue("recording", artifactId, anchorRef.current))
-        .catch(report("Could not add the cue"));
+      if (anchorRef.current)
+        addEditorCueFromMenu("recording", artifactId, anchorRef.current);
     },
     width: MENU_WIDTH,
   });
   return (anchor: PopupMenuAnchor) => {
     anchorRef.current = anchor;
-    openMenu({
-      anchor,
-      items: [{ id: "add", label: t("teleprompter-cue-add-to-script") }],
-    }).catch(report("Could not open the cue menu"));
+    openMenu({ anchor, items: [addCueMenuItem()] }).catch(
+      report("Could not open the cue menu"),
+    );
   };
 }

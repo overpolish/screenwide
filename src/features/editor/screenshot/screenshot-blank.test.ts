@@ -46,6 +46,7 @@ describe("a blank canvas", () => {
       extension: "png",
       height: 1_080,
       id: 9,
+      isTemporary: false,
       items: [layer(1), layer(2, true)],
       kind: "screenshot",
       suggestedFileStem: "canvas",

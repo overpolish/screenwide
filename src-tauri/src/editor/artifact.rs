@@ -60,9 +60,10 @@ pub(super) fn take_artifact(app: &AppHandle, kind: EditorKind) -> Option<EditorA
 }
 
 /// Closes one workspace and its window. What it held stays in its project,
-/// to be opened again. The other workspace is untouched. Returns the
-/// project's manifest once its name has settled, for a caller that goes on
-/// to move it or put it in the Trash.
+/// to be opened again, unless it was a temporary screenshot, which goes.
+/// The other workspace is untouched. Returns the project's manifest once its
+/// name has settled, for a caller that goes on to move it or put it in the
+/// Trash.
 pub fn close(app: &AppHandle, kind: EditorKind) -> Option<PathBuf> {
   if kind == EditorKind::Recording {
     clear_recording_preview(app);
@@ -72,11 +73,14 @@ pub fn close(app: &AppHandle, kind: EditorKind) -> Option<PathBuf> {
   let project = take_artifact(app, kind)
     .as_ref()
     .and_then(EditorArtifact::project)
-    .map(|project| {
+    .and_then(|project| {
+      if super::screenshot_project::temporary::let_go(app, project) {
+        return None;
+      }
       if kind == EditorKind::Recording {
         super::camera_effects::tidy::on_close(project);
       }
-      super::project_name::settle_name(app, project)
+      Some(super::project_name::settle_name(app, project))
     });
   window::close(app, kind);
   emit_snapshot(app, kind);

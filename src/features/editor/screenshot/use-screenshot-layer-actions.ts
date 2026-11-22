@@ -5,7 +5,15 @@ import { listen } from "@tauri-apps/api/event";
 import { useEffect, useRef } from "react";
 
 import { t } from "../../../i18n/i18n";
-import { pointerAnchor, usePopupMenu } from "../../popup-panel/use-popup-menu";
+import {
+  type PopupMenuAnchor,
+  pointerAnchor,
+  usePopupMenu,
+} from "../../popup-panel/use-popup-menu";
+import {
+  addCueMenuItem,
+  addEditorCueFromMenu,
+} from "../../teleprompter/cues/editor/use-editor-cue";
 import {
   annotationArrangeItems,
   annotationArrangementPicked,
@@ -31,17 +39,21 @@ const meet = () => true;
  * The workspace's layers moved through the stacking or taken away, by the
  * keyboard or from the menu a right press on a bare layer opens. The menu
  * offers the same moves, under the same words and keys, as an annotation's,
- * then Delete; the native side has already selected the layer the press
- * landed on. Every picture can be deleted, the last leaving a blank canvas;
- * the blank layer itself never is.
+ * then adding the screenshot to a script as a cue, then Delete; the native
+ * side has already selected the layer the press landed on. Every picture can
+ * be deleted, the last leaving a blank canvas; the blank layer itself never
+ * is.
  */
 export function useScreenshotLayerActions({
+  artifactId,
   isBlank,
   onCanvasResize,
   onSelectedItemChange,
   screenshotOutput,
   selectedItemId,
 }: {
+  /** The screenshot open, which a cue adds whole. */
+  artifactId: number;
   /** Whether a layer is a blank canvas's own (`screenshot-blank.ts`). */
   isBlank: (itemId: number) => boolean;
   screenshotOutput: ScreenshotWorkspaceOutputSettings | undefined;
@@ -68,11 +80,19 @@ export function useScreenshotLayerActions({
     onCanvasResize?.(result.settings);
     onSelectedItemChange?.(result.nextSelectedItemId);
   };
+  // Where the menu opened, for the script picker a cue may open there.
+  const anchorRef = useRef<PopupMenuAnchor | null>(null);
+  const cueItem = addCueMenuItem();
   const openMenu = usePopupMenu({
     idPrefix: "screenshot-layer:",
     label: t("editor-layer-actions"),
     mode: "menu",
     onSelect: (itemId, layerId) => {
+      if (itemId === cueItem.id) {
+        if (anchorRef.current)
+          addEditorCueFromMenu("screenshot", artifactId, anchorRef.current);
+        return;
+      }
       const id = Number(layerId);
       if (!Number.isInteger(id)) return;
       if (itemId === DELETE_ITEM) {
@@ -91,23 +111,26 @@ export function useScreenshotLayerActions({
     const items = screenshotOutput?.items ?? [];
     if (paneIndex < 0 || paneIndex >= items.length) return;
     const layer = items[paneIndex];
-    const moves = [
-      ...annotationArrangeItems(availableArrangements(items, paneIndex, meet)),
-      ...(isBlank(layer.id)
-        ? []
-        : [
-            {
-              id: DELETE_ITEM,
-              label: t("editor-delete"),
-              shortcut: "Backspace",
-            },
-          ]),
-    ];
-    if (moves.length === 0) return;
+    const anchor = pointerAnchor(x, y);
+    anchorRef.current = anchor;
     void openMenu({
-      anchor: pointerAnchor(x, y),
+      anchor,
       context: String(layer.id),
-      items: moves,
+      items: [
+        ...annotationArrangeItems(
+          availableArrangements(items, paneIndex, meet),
+        ),
+        cueItem,
+        ...(isBlank(layer.id)
+          ? []
+          : [
+              {
+                id: DELETE_ITEM,
+                label: t("editor-delete"),
+                shortcut: "Backspace",
+              },
+            ]),
+      ],
     });
   };
   useEffect(() => {

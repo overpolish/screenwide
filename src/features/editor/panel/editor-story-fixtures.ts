@@ -10,6 +10,7 @@ export const screenshot: EditorArtifact = {
   extension: "png",
   height: 2234,
   id: 1,
+  isTemporary: false,
   items: [
     {
       annotations: [],

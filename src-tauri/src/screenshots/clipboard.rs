@@ -42,6 +42,7 @@ pub(crate) fn open_in_export(app: &AppHandle) {
         1.0,
         Vec::new(),
         capture_file_stem(Local::now().naive_local()),
+        true,
       )
     });
     if let Err(error) = result {

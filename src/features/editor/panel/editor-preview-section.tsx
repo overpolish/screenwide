@@ -144,14 +144,14 @@ export function ScreenshotSection({
     "screenshot",
     selectedItemId ?? newestItemId,
   );
-  const { deleteLayer: deleteSelectedLayer, moveLayer: moveSelectedLayer } =
-    useScreenshotLayerActions({
-      isBlank,
-      onCanvasResize,
-      onSelectedItemChange,
-      screenshotOutput,
-      selectedItemId,
-    });
+  const layerActions = useScreenshotLayerActions({
+    artifactId: artifact.id,
+    isBlank,
+    onCanvasResize,
+    onSelectedItemChange,
+    screenshotOutput,
+    selectedItemId,
+  });
   const recenter = useScreenshotRecenter({
     artifactId: artifact.id,
     onOutputChange,
@@ -212,13 +212,13 @@ export function ScreenshotSection({
     // A chosen annotation moves through its layer's stacking; with none in
     // hand the layer itself moves.
     onArrange: (move) => {
-      if (!annotations.arrangeSelected(move)) moveSelectedLayer(move);
+      if (!annotations.arrangeSelected(move)) layerActions.moveLayer(move);
     },
     onConfirm: isCropping ? selectTool : undefined,
     // Backspace and Delete take away the annotation the hand is pointing at
     // first, and only the layer when there is no annotation under them.
     onDelete: () => {
-      if (!annotations.deleteTargeted()) deleteSelectedLayer();
+      if (!annotations.deleteTargeted()) layerActions.deleteLayer();
     },
     // Escape puts the crop away with its layer chosen, and anything else
     // back to Select with nothing chosen.

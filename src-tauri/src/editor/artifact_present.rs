@@ -65,11 +65,15 @@ pub(super) fn present_new(
     }
     replaced
   };
-  // A project replaced by another is let go of as surely as one closed.
+  // A project replaced by another is let go of as surely as one closed. A
+  // temporary screenshot holding work kept nowhere else is kept in Projects
+  // rather than asked about: what replaced it is already open.
   if let Some(project) = replaced.as_ref().and_then(EditorArtifact::project) {
     super::project_look::clean_pictures(project);
     super::sound_library::clean(project);
-    super::project_name::settle_name(app, project);
+    if !super::screenshot_project::temporary::let_go(app, project) {
+      super::project_name::settle_name(app, project);
+    }
   }
   reveal(app, kind);
   Ok(())

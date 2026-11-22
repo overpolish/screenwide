@@ -145,6 +145,7 @@ pub async fn open_reference_in_editor(app: AppHandle, window: WebviewWindow) -> 
         scale,
         annotations,
         crate::screenshots::capture_file_stem(Local::now().naive_local()),
+        true,
       )
     });
   if opened.is_err() {

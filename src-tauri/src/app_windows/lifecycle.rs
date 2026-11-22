@@ -16,12 +16,13 @@ pub fn hide_instead_of_close(app: &AppHandle, label: WindowLabel) {
         match label {
           // Closing an editor window closes only what it holds, which stays
           // in its project to be opened again. The recording editor first
-          // makes any pictures its last change still owes the browser.
+          // makes any pictures its last change still owes the browser; the
+          // screenshot editor asks before it deletes unsaved work.
           WindowLabel::EditorRecording => {
             crate::editor::close_recording_editor(&app);
           }
           WindowLabel::EditorScreenshot => {
-            crate::editor::close(&app, crate::editor::EditorKind::Screenshot);
+            crate::editor::close_screenshot_editor(&app);
           }
           WindowLabel::Settings => {
             let _ = crate::settings::hide_settings(app.clone());

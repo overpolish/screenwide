@@ -26,6 +26,7 @@ const artifact: EditorArtifact = {
   extension: "png",
   height: source.height,
   id: 1,
+  isTemporary: false,
   items: [
     {
       annotations: [],

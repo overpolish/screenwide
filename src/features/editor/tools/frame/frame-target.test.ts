@@ -18,6 +18,7 @@ const screenshotArtifact: EditorArtifact = {
   extension: "png",
   height: 900,
   id: 1,
+  isTemporary: false,
   items: [
     {
       annotations: [],

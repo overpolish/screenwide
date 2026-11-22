@@ -488,6 +488,7 @@ export function EditorWindow() {
   return (
     <EditorEditGestureContext value={editGesture}>
       <EditorPanel
+        {...openProject}
         artifact={artifact}
         audioTrackVolumes={currentAudioTrackVolumes}
         bakeCamera={effectiveBakeCamera}
@@ -565,7 +566,6 @@ export function EditorWindow() {
           ).catch(report("copy"));
         }}
         onCursorEffectsChange={setCursorEffects}
-        onDeleteProject={openProject.onDeleteProject}
         onDeleteProjectAfterExportChange={setDeleteProjectAfterExport}
         onEnabledTracksChange={onEnabledTracksChange}
         onEnabledVideoTracksChange={(tracks) => {
@@ -587,7 +587,6 @@ export function EditorWindow() {
           clearExportFailure();
         }}
         onRecordingTimelineEditChange={commitTimelineEdit}
-        onRenameProject={openProject.onRenameProject}
         onResolutionScaleChange={(scale) => {
           setResolutionScalePercent(scale);
           if (scale < originalResolutionScale && compression === 0) {

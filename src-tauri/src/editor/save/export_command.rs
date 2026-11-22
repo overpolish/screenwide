@@ -168,6 +168,8 @@ pub async fn save_export(
     .lock()
     .unwrap_or_else(|poisoned| poisoned.into_inner()) = Some(path.clone());
   if kind == EditorKind::Screenshot {
+    // The exported file holds the work now, so closing need not ask.
+    super::super::screenshot_project::temporary::set_unsaved(&app, false);
     if let Err(error) =
       remember_screenshot_delete_project_after_export(&app, delete_project_after_export)
     {
@@ -179,7 +181,11 @@ pub async fn save_export(
     // The window keeps showing the project under the finished island and is
     // only told it has gone once the island is put away, which then hides
     // the editor: told now, it would go blank under the island.
-    if let Some(project) = project {
+    // A temporary screenshot is deleted outright; any other project goes
+    // to Recently Deleted.
+    let to_delete = project
+      .filter(|project| !super::super::screenshot_project::temporary::discard(&app, project));
+    if let Some(project) = to_delete {
       if let Err(error) = screenwide_project::delete(&app, &project) {
         eprintln!("Could not delete the exported project: {error}");
       }
@@ -191,7 +197,9 @@ pub async fn save_export(
     // project is let go of as one closed is.
     super::super::project_look::clean_pictures(&project);
     super::super::sound_library::clean(&project);
-    super::super::project_name::settle_name(&app, &project);
+    if !super::super::screenshot_project::temporary::let_go(&app, &project) {
+      super::super::project_name::settle_name(&app, &project);
+    }
   }
   if crate::settings::current(&app).open_location_after_export {
     if let Err(error) = crate::file_browser::reveal(&path) {

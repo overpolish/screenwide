@@ -61,6 +61,7 @@ pub use project_open::is_project_file;
 pub use project_open::{
   choose_project, open_kind, open_project, open_project_detached, project_argument,
 };
+pub use screenshot_project::temporary::close_screenshot_editor;
 pub use screenshot_project::{present_screenshot, save_screenshot};
 pub(crate) mod project_look;
 mod project_name;
@@ -266,6 +267,9 @@ pub struct EditorState {
   screenshot_background_radius_percent: Mutex<f64>,
   screenshot_output: Mutex<Option<ScreenshotOutputSettings>>,
   screenshot_delete_project_after_export: Mutex<Option<bool>>,
+  /// The open screenshot holds work kept nowhere else, which matters while
+  /// it is temporary (`screenshot_project::temporary`).
+  screenshot_unsaved: AtomicBool,
   recording_preview: Mutex<Option<screenwide_export::media_preview::RecordingPreview>>,
   recording_preview_preparation: Mutex<()>,
   /// Set to stop an export preview frame being made once a newer one of the

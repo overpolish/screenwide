@@ -56,6 +56,8 @@ pub async fn capture_scrolling_still(
     crate::screenshots::capture_scale(target),
     Vec::new(),
     crate::screenshots::capture_file_stem(Local::now().naive_local()),
+    // A scrolling capture is on no clipboard: closing it unsaved asks.
+    false,
   ) {
     finish(&app).await;
     crate::editor::release_screenshot_workspace(&app);

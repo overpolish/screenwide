@@ -189,7 +189,6 @@ export type Messages = {
   "dictation-island-word-failed": { word: string | number };
   "dictation-island-word-not-listed": { word: string | number };
   "dictation-island-word-removed": { word: string | number };
-  "editor-add-to-script": null;
   "editor-annotation-actions": null;
   "editor-arrange": null;
   "editor-arrange-back": null;
@@ -739,6 +738,7 @@ export type Messages = {
   "editor-recording-preparing-recording": null;
   "editor-recording-preview": null;
   "editor-recording-screen-preview": null;
+  "editor-save-screenshot": null;
   "editor-scene-blank": null;
   "editor-scene-camera-only": null;
   "editor-scene-custom": null;
@@ -794,6 +794,11 @@ export type Messages = {
   "editor-toolbar-more-tools": null;
   "editor-toolbar-tools": null;
   "editor-toolbar-transcript": null;
+  "editor-unsaved-screenshot-cancel": null;
+  "editor-unsaved-screenshot-discard": null;
+  "editor-unsaved-screenshot-message": null;
+  "editor-unsaved-screenshot-save": null;
+  "editor-unsaved-screenshot-title": null;
   "format-size": { size: string | number; unit: string | number };
   "format-size-unknown": null;
   "glide-destination": { region: string | number };

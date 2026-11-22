@@ -35,6 +35,12 @@ export const deleteOpenProject = async () => {
   await invoke<null>("delete_open_project");
 };
 
+/** Keeps the screenshot open in the editor, made from a capture, in
+ * Projects. */
+export const keepScreenshotProject = async () => {
+  await invoke<null>("keep_screenshot_project");
+};
+
 export const cancelExportJob = () => invoke<boolean>("cancel_export_job");
 
 export const browseExportDirectory = () =>

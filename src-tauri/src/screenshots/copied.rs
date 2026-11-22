@@ -202,7 +202,8 @@ pub fn dismiss_copied_screenshot(app: AppHandle, id: u32) {
   release(&app, Some(id));
 }
 
-/// Edit: shot `id` opens in the editor, which keeps it as a project.
+/// Edit: shot `id` opens in the editor, kept out of Projects until the
+/// editor's Save keeps it there.
 #[tauri::command]
 pub async fn edit_copied_screenshot(app: AppHandle, id: u32) -> Result<(), String> {
   let Some(kept) = release(&app, Some(id)).and_then(|released| released.kept) else {
@@ -215,6 +216,7 @@ pub async fn edit_copied_screenshot(app: AppHandle, id: u32) -> Result<(), Strin
     kept.scale,
     kept.annotations,
     kept.file_stem,
+    true,
   )
   .inspect_err(|_| crate::editor::release_screenshot_workspace(&app))
 }

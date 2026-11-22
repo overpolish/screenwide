@@ -112,7 +112,11 @@ pub fn copy_editor_to_clipboard(
 
   window::close(&app, kind);
   emit_snapshot(&app, kind);
-  // Only once the picture is on the clipboard and the editor has let go of it.
+  // Only once the picture is on the clipboard and the editor has let go of
+  // it. A temporary screenshot is on the clipboard now, and goes.
+  if super::screenshot_project::temporary::discard(&app, &project) {
+    return Ok(());
+  }
   if delete_project_after_export {
     if let Err(error) = screenwide_project::delete(&app, &project) {
       eprintln!("Could not delete the copied project: {error}");
@@ -148,12 +152,17 @@ pub fn rename_open_project(
 
 /// Closes the asking window's editor, as closing its window would, and
 /// deletes its project to Recently Deleted, for a take found wanting before
-/// it was ever exported.
+/// it was ever exported. A temporary screenshot is deleted outright.
 #[tauri::command]
 pub fn delete_open_project(app: AppHandle, window: tauri::WebviewWindow) -> Result<(), String> {
   let kind = kind_of_window(&window)?;
-  let project =
-    super::close(&app, kind).ok_or_else(|| "There is no project to delete".to_owned())?;
+  if kind == EditorKind::Screenshot {
+    // So closing deletes it rather than keeping its unsaved work.
+    super::screenshot_project::temporary::set_unsaved(&app, false);
+  }
+  let Some(project) = super::close(&app, kind) else {
+    return Ok(());
+  };
   screenwide_project::delete(&app, &project).map(|_| ())
 }
 

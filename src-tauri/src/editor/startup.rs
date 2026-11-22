@@ -41,6 +41,7 @@ pub fn initialize(app: &AppHandle) {
     .unwrap_or_else(|poisoned| poisoned.into_inner()) =
     load_screenshot_delete_project_after_export(app);
   crate::projects_folder::sweep_cancelled(app);
+  super::screenshot_project::temporary::sweep(app);
   // Off the launch path: what has waited 30 days in Recently Deleted goes to
   // the Trash, which can take a moment for a large project, and voice clips
   // kept a week with notes whose speakers were never named are deleted.

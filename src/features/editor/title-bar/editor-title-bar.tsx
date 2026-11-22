@@ -1,7 +1,8 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { ClipboardCopy, ScrollText, Upload, Trash2 } from "lucide-react";
+import { ClipboardCopy, Save, Trash2, Upload } from "lucide-react";
+import { AnimatePresence } from "motion/react";
 import { type ReactNode, useCallback, useLayoutEffect, useRef } from "react";
 
 import { ConfirmActionButton } from "../../../composites/confirm-action-button/confirm-action-button";
@@ -16,6 +17,8 @@ import { useRecordingFrameCopy } from "../recording/use-copy-recording-frame";
 import { useEditorWindowShortcuts } from "../shortcuts/use-editor-window-shortcuts";
 import { EditorArtifact } from "../types";
 
+import { TitleBarPresence } from "./title-bar-presence";
+
 export function EditorTitleBar({
   artifact,
   canExport,
@@ -27,6 +30,7 @@ export function EditorTitleBar({
   onCopy,
   onDelete,
   onExport,
+  onKeepScreenshot,
   onMinimize,
   onRename,
   onToggleMaximize,
@@ -47,6 +51,9 @@ export function EditorTitleBar({
    * a take that is not worth exporting. */
   onDelete?: () => void;
   onExport?: () => void;
+  /** Keeps a screenshot made from a capture in Projects; shown while it is
+   * not yet a project. */
+  onKeepScreenshot?: () => void;
   onMinimize?: () => void;
   /** Renames the project, which the title names. */
   onRename?: (title: string) => void;
@@ -105,33 +112,56 @@ export function EditorTitleBar({
   return (
     <WindowHeader
       actions={
-        <div className="flex shrink-0 items-center gap-inline">
-          {onDelete ? (
-            // Two presses: it sits beside Export, and the editor closes
-            // behind it.
-            <ConfirmActionButton
-              confirmLabel={t("editor-confirm-delete")}
-              icon={<Trash2 />}
-              isDisabled={!artifact || isSaving}
-              label={t("editor-delete")}
-              onConfirm={onDelete}
-              variant="ghost"
-            />
-          ) : null}
-          {copy ? (
-            <Button isDisabled={isSaving} onPress={copy} variant="ghost">
-              <ClipboardCopy />
-              {artifact?.kind === "recording"
-                ? t("editor-copy-frame")
-                : t("editor-copy")}
-            </Button>
-          ) : null}
-          {artifact?.kind === "screenshot" ? (
-            <Button isDisabled={isSaving} onPress={addCue} variant="ghost">
-              <ScrollText />
-              {t("editor-add-to-script")}
-            </Button>
-          ) : null}
+        // Gapless, each part that may come and go holding the gap after
+        // it, so the gap leaves with it and its neighbours slide over.
+        <div className="flex shrink-0 items-center">
+          {/* The first render, as the window opens, is drawn as it is. */}
+          <AnimatePresence initial={false}>
+            {onDelete ? (
+              <TitleBarPresence key="delete">
+                <div className="flex pe-inline">
+                  {/* Two presses: it sits beside Export, and the editor
+                    closes behind it. */}
+                  <ConfirmActionButton
+                    confirmLabel={t("editor-confirm-delete")}
+                    icon={<Trash2 />}
+                    isDisabled={!artifact || isSaving}
+                    label={t("editor-delete")}
+                    onConfirm={onDelete}
+                    variant="ghost"
+                  />
+                </div>
+              </TitleBarPresence>
+            ) : null}
+            {copy ? (
+              <TitleBarPresence key="copy">
+                <div className="flex pe-inline">
+                  <Button isDisabled={isSaving} onPress={copy} variant="ghost">
+                    <ClipboardCopy />
+                    {artifact?.kind === "recording"
+                      ? t("editor-copy-frame")
+                      : t("editor-copy")}
+                  </Button>
+                </div>
+              </TitleBarPresence>
+            ) : null}
+            {artifact?.kind === "screenshot" &&
+            artifact.isTemporary &&
+            onKeepScreenshot ? (
+              <TitleBarPresence key="save">
+                <div className="flex pe-inline">
+                  <Button
+                    isDisabled={isSaving}
+                    onPress={onKeepScreenshot}
+                    variant="ghost"
+                  >
+                    <Save />
+                    {t("editor-save-screenshot")}
+                  </Button>
+                </div>
+              </TitleBarPresence>
+            ) : null}
+          </AnimatePresence>
           <Button
             aria-pressed={isExportOpen}
             className={isExportOpen ? "primary-raised-pressed" : undefined}

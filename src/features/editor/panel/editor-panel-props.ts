@@ -77,6 +77,9 @@ export type EditorPanelProps = {
   onEnabledTracksChange?: (streamIndices: number[]) => void;
   onEnabledVideoTracksChange?: (tracks: RecordingVideoTrackId[]) => void;
   onFileStemChange?: (fileStem: string) => void;
+  /** Keeps a screenshot made from a capture, not yet a project, in
+   * Projects. */
+  onKeepScreenshot?: () => void;
   onKeyboardEffectsChange?: (settings: KeyboardEffectSettings) => void;
   onMinimize?: () => void;
   onRecordingFormatChange?: (format: RecordingFormat) => void;

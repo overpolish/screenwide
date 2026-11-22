@@ -51,6 +51,7 @@ export function EditorPanel(props: EditorPanelProps) {
     onDeleteProject,
     onEnabledTracksChange,
     onEnabledVideoTracksChange,
+    onKeepScreenshot,
     onKeyboardEffectsChange,
     onMinimize,
     onRecordingOutputChange,
@@ -146,6 +147,7 @@ export function EditorPanel(props: EditorPanelProps) {
           onCopy={onCopy}
           onDelete={onDeleteProject}
           onExport={exportIsland.toggle}
+          onKeepScreenshot={onKeepScreenshot}
           onMinimize={onMinimize}
           onRename={onRenameProject}
           onToggleMaximize={onToggleMaximize}

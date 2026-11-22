@@ -24,7 +24,7 @@ pub(crate) fn open_blank_canvas(app: &AppHandle) {
   tauri::async_runtime::spawn_blocking(move || {
     let item = ScreenshotItem::blank(next_id(&app), CANVAS_WIDTH, CANVAS_HEIGHT);
     let title = crate::screenshots::capture_file_stem(chrono::Local::now().naive_local());
-    let opened = keep_layer(&app, None, &title, &item).and_then(|project| {
+    let opened = keep_layer(&app, None, &title, &item, false).and_then(|project| {
       present_new(
         &app,
         EditorArtifact::Screenshot {
@@ -60,7 +60,7 @@ pub async fn add_blank_screenshot_layer(
   );
   let kept_app = app.clone();
   let item = tauri::async_runtime::spawn_blocking(move || {
-    keep_layer(&kept_app, Some(&project), "", &item).map(|_| item)
+    keep_layer(&kept_app, Some(&project), "", &item, false).map(|_| item)
   })
   .await
   .map_err(|error| error.to_string())??;

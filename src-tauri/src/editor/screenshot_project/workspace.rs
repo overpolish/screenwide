@@ -98,15 +98,21 @@ fn deleted(saved: &Value, ids: &[u64]) -> Vec<u64> {
     .collect()
 }
 
-/// Saves the open screenshot's canvas and layers in its project.
+/// Saves the open screenshot's canvas and layers in its project. `edited`
+/// is false for the save that only lays a newly opened screenshot out, so
+/// it is not taken for a change the user made.
 #[tauri::command]
 pub async fn set_screenshot_project_workspace(
   app: AppHandle,
   artifact_id: u64,
+  edited: bool,
   revision: u64,
   workspace: Value,
 ) -> Result<(), String> {
   let (project, ids) = open_project(&app, artifact_id)?;
+  if edited {
+    super::temporary::set_unsaved(&app, true);
+  }
   // Off the async runtime: a background picture is copied in the first time
   // it is saved.
   tauri::async_runtime::spawn_blocking(move || {

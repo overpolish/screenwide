@@ -43,6 +43,8 @@ pub enum EditorArtifactSnapshot {
     deleted_item_ids: Vec<u64>,
     id: u64,
     items: Vec<ScreenshotItemSnapshot>,
+    /// Kept out of Projects until the editor's Save keeps it there.
+    is_temporary: bool,
     /// The canvas and layers saved in the project, which the window shows in
     /// place of the remembered look.
     #[ts(as = "Option<crate::editor::ScreenshotWorkspaceOutputSettings>", optional = nullable)]
@@ -117,6 +119,7 @@ pub(super) fn snapshot(app: &AppHandle, kind: EditorKind) -> EditorSnapshot {
               width: item.image.width,
             })
             .collect(),
+          is_temporary: super::screenshot_project::temporary::is_temporary(app, project),
           project_workspace,
           suggested_file_stem: suggested_file_stem.clone(),
           extension: SCREENSHOT_EXTENSION.to_owned(),

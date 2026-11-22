@@ -18,7 +18,8 @@ const PREVIEW_SETTLE_MS = 1_000;
  * the last change is written before the window can close; and its preview
  * composed once each change settles. Nothing is saved until the window has
  * seeded the screenshot, so the placeholder it starts with never lands in a
- * project.
+ * project. Every save after the one that lays a screenshot out is an edit,
+ * which a screenshot not yet in Projects asks about before it closes.
  */
 export function useScreenshotProject(
   screenshotId: number | undefined,
@@ -27,15 +28,34 @@ export function useScreenshotProject(
   const queueRef = useRef<{
     next: {
       artifactId: number;
+      edited: boolean;
       workspace: ScreenshotWorkspaceOutputSettings;
     } | null;
     saving: boolean;
   }>({ next: null, saving: false });
+  const laidOutRef = useRef<{
+    id: number;
+    workspace: ScreenshotWorkspaceOutputSettings;
+  } | null>(null);
 
   useEffect(() => {
     if (screenshotId === undefined) return;
+    // Compared by the workspace too, so an effect run again with nothing
+    // changed (StrictMode's remount) is not taken for an edit.
+    const laidOut = laidOutRef.current;
+    const edited =
+      laidOut?.id === screenshotId && laidOut.workspace !== workspace;
+    if (laidOut?.id !== screenshotId) {
+      laidOutRef.current = { id: screenshotId, workspace };
+    }
     const queue = queueRef.current;
-    queue.next = { artifactId: screenshotId, workspace };
+    queue.next = {
+      artifactId: screenshotId,
+      edited:
+        edited ||
+        (queue.next?.artifactId === screenshotId && queue.next.edited),
+      workspace,
+    };
     const pump = () => {
       const next = queue.next;
       if (queue.saving || !next) return;
@@ -43,6 +63,7 @@ export function useScreenshotProject(
       queue.saving = true;
       invoke<null>("set_screenshot_project_workspace", {
         artifactId: next.artifactId,
+        edited: next.edited,
         // Time orders the saves: Rust keeps whichever is newest.
         revision: Date.now(),
         workspace: normalizedScreenshotWorkspaceOutput(next.workspace),
