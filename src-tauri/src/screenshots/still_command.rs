@@ -29,9 +29,6 @@ pub(crate) async fn take_still(
   show_cursor: bool,
   destination: ScreenshotDestination,
 ) -> Result<(), String> {
-  if !crate::recording::is_idle(&app) {
-    return Err("A screenshot cannot be taken while a recording is active".to_owned());
-  }
   crate::editor::reserve_screenshot_workspace(&app)?;
   // The preview of the last shot would be in this one wherever Screenwide's
   // windows are recorded, and this one replaces it anyway.

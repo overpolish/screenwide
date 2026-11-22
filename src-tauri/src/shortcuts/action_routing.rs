@@ -160,17 +160,11 @@ pub(super) fn run_action(app: &AppHandle, action: ShortcutAction) {
     action,
     ShortcutAction::TakeScreenshot | ShortcutAction::TakeReferenceScreenshot
   ) {
-    let reason = if !crate::recording::is_idle(app) {
-      Some("recording_not_idle")
-    } else if crate::editor::focus_if_screenshot_workspace_blocked(app) {
-      Some("capture_reserved")
-    } else {
-      None
-    };
-    if let Some(reason) = reason {
+    // A recording under way is no reason: a still is taken beside it.
+    if crate::editor::focus_if_screenshot_workspace_blocked(app) {
       diagnostics::record(
         "action_blocked",
-        serde_json::json!({"action": action, "reason": reason}),
+        serde_json::json!({"action": action, "reason": "capture_reserved"}),
       );
       return;
     }

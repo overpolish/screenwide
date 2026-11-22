@@ -51,6 +51,27 @@ pub(crate) fn is_screenshot_region_session() -> bool {
   SCREENSHOT_REGION_SESSION.load(Ordering::Acquire)
 }
 
+/// Whether captures may see the region overlay: as the "record Screenwide's
+/// windows" preference says, except while a screenshot session borrows it
+/// during a recording. The area being drawn then belongs to the still, not to
+/// what is recorded.
+pub(crate) fn region_overlay_capturable(app: &AppHandle) -> bool {
+  crate::settings::current(app).record_screenwide_windows
+    && !(is_screenshot_region_session() && crate::recording::is_recording(app))
+}
+
+/// Puts the overlay's window and the native surfaces drawn beside it on
+/// `region_overlay_capturable`, as a screenshot session starts or ends.
+#[cfg(any(target_os = "macos", target_os = "windows"))]
+fn apply_region_overlay_capturability(app: &AppHandle) -> tauri::Result<()> {
+  let Some(region) = app.get_webview_window(WindowLabel::RegionSelector.as_str()) else {
+    return Ok(());
+  };
+  let capturable = region_overlay_capturable(app);
+  super::set_window_capture_affinity(&region, capturable)?;
+  super::screenshot_region::set_recording_overlay_capture_affinity(&region, capturable)
+}
+
 pub(crate) fn screenshot_region_scene_owner(
   app: &AppHandle,
 ) -> screenwide_osc::scene::RegionSceneOwner {
@@ -220,10 +241,16 @@ const fn recording_controls_may_raise(
 }
 
 /// The region overlay may take clicks only while its frontend has made the
-/// editor available, and only outside a recording. During a recording the same
-/// window remains visible as a boundary but must let desktop clicks through.
-const fn region_selector_is_interactive(is_interactive: bool, is_recording_idle: bool) -> bool {
-  is_interactive && is_recording_idle
+/// editor available, and only outside a recording, unless a screenshot
+/// session has borrowed it to draw a still's area. Otherwise, during a
+/// recording the same window remains visible as a boundary but must let
+/// desktop clicks through.
+const fn region_selector_is_interactive(
+  is_interactive: bool,
+  is_recording_idle: bool,
+  screenshot_session: bool,
+) -> bool {
+  is_interactive && (is_recording_idle || screenshot_session)
 }
 
 /// The region boundary belongs to the recording UI while idle. Delayed

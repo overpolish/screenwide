@@ -115,7 +115,6 @@ pub(crate) fn set_desktop_presented(
   })
 }
 
-#[cfg(target_os = "windows")]
 pub(crate) fn set_capture_affinity(
   window: &tauri::WebviewWindow,
   capturable: bool,

@@ -12,6 +12,12 @@ pub fn hide_recording_ui(app: AppHandle) -> tauri::Result<()> {
   if !region::recording_ui_may_hide(region::SCREENSHOT_REGION_SESSION.load(Ordering::Acquire)) {
     return Ok(());
   }
+  // While a recording runs, what shows of it is the recording's island and its
+  // region's outline, not controls to put away: a still taken or an editor
+  // opened meanwhile leaves them as they are.
+  if crate::recording::is_recording(&app) {
+    return Ok(());
+  }
 
   crate::recording_sources::window_pick::cancel(&app);
   close_recording_controls(&app)?;

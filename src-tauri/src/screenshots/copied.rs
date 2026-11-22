@@ -96,6 +96,9 @@ pub(crate) fn is_up() -> bool {
 /// so an island that cannot show it is only reported.
 pub(crate) fn show(app: &AppHandle, shot: Shot) {
   COMING.store(true, Ordering::Release);
+  // Before the island changes, so a recording under way never takes a frame
+  // of the shot.
+  app_windows::island_overlay::keep_still_out_of_recording(app, true);
   let app = app.clone();
   tauri::async_runtime::spawn(async move {
     let id = NEXT_ID.fetch_add(1, Ordering::Relaxed);
@@ -162,6 +165,7 @@ fn step_back(app: &AppHandle) {
   if let Err(error) = result {
     eprintln!("Could not put the island away after the copied screenshot: {error}");
   }
+  app_windows::island_overlay::keep_still_out_of_recording(app, false);
 }
 
 /// Lets the shot held as `id` go, if it is still the one held, and the

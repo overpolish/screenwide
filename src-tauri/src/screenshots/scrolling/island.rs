@@ -91,17 +91,23 @@ pub(super) fn phase(app: &AppHandle, phase: ScrollingCapturePhase) {
   }
 }
 
-/// The capture is over: the island says so as it tucks away, rather than
-/// spinning on a phase that has ended, and captures may see it again. How it
-/// ended is not said here: an unalignable seam is stitched best-effort rather
-/// than failed, and what remains is reported by the command rejecting.
+/// The capture is over: the island says so as it tucks away, or as it goes
+/// back to the recording under way, rather than spinning on a phase that has
+/// ended, and captures may see it again. How it ended is not said here: an
+/// unalignable seam is stitched best-effort rather than failed, and what
+/// remains is reported by the command rejecting.
 pub(super) async fn withdraw(app: &AppHandle) {
   if shown().is_none() {
     return;
   }
   phase(app, ScrollingCapturePhase::Finishing);
   tell(app, None);
-  if let Err(error) = app_windows::island::hide(app) {
+  let result = if crate::recording::is_idle(app) {
+    app_windows::island::hide(app)
+  } else {
+    app_windows::island::hand_over(app, IslandPlacement::Top)
+  };
+  if let Err(error) = result {
     eprintln!("Could not put the island away after a scrolling capture: {error}");
   }
   island_overlay::keep_out_of_captures(app, false).await;

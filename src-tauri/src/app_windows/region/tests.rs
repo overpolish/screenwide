@@ -30,10 +30,16 @@ fn borrowed_recording_controls_restore_only_to_the_idle_visible_ui() {
 
 #[test]
 fn the_region_overlay_takes_clicks_only_while_interactive_outside_a_recording() {
-  assert!(region_selector_is_interactive(true, true));
-  assert!(!region_selector_is_interactive(false, true));
-  assert!(!region_selector_is_interactive(true, false));
-  assert!(!region_selector_is_interactive(false, false));
+  assert!(region_selector_is_interactive(true, true, false));
+  assert!(!region_selector_is_interactive(false, true, false));
+  assert!(!region_selector_is_interactive(true, false, false));
+  assert!(!region_selector_is_interactive(false, false, false));
+}
+
+#[test]
+fn a_screenshot_session_takes_the_overlay_s_clicks_during_a_recording() {
+  assert!(region_selector_is_interactive(true, false, true));
+  assert!(!region_selector_is_interactive(false, false, true));
 }
 
 #[test]
@@ -99,8 +105,9 @@ fn a_screenshot_session_keeps_its_driver_window_alive_for_cleanup() {
 }
 
 #[test]
-fn a_saved_region_mode_restores_only_with_visible_recording_controls() {
-  assert!(screenshot_region_may_restore(true, true));
-  assert!(!screenshot_region_may_restore(true, false));
-  assert!(!screenshot_region_may_restore(false, true));
+fn a_saved_region_mode_restores_only_where_its_region_shows() {
+  assert!(screenshot_region_may_restore(true, true, false));
+  assert!(screenshot_region_may_restore(true, false, true));
+  assert!(!screenshot_region_may_restore(true, false, false));
+  assert!(!screenshot_region_may_restore(false, true, true));
 }

@@ -20,9 +20,6 @@ pub async fn capture_scrolling_still(
   app: AppHandle,
   target: ScreenshotTarget,
 ) -> Result<(), String> {
-  if !crate::recording::is_idle(&app) {
-    return Err("A screenshot cannot be taken while a recording is active".to_owned());
-  }
   if !matches!(target, ScreenshotTarget::Region { .. }) {
     return Err("Scrolling capture requires a region".to_owned());
   }

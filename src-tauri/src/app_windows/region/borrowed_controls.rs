@@ -24,8 +24,11 @@ pub fn set_screenshot_region_session(
       .map_err(std::io::Error::other)?;
   }
   if !active && session_was_active {
-    let restore_region =
-      screenshot_region_may_restore(restore_region.unwrap_or(false), controls_visible);
+    let restore_region = screenshot_region_may_restore(
+      restore_region.unwrap_or(false),
+      controls_visible,
+      crate::recording::is_recording(&app),
+    );
     restoring_region = restore_region;
     SCREENSHOT_REGION_SESSION.store(false, Ordering::Release);
     SCREENSHOT_REGION_RESTORING.store(restore_region, Ordering::Release);
@@ -57,6 +60,14 @@ pub fn set_screenshot_region_session(
   if !active && session_was_active {
     crate::annotate::set_screenshot_mode(&app, false);
     crate::screenshots::quick_island::withdraw(&app);
+  }
+  // A still's area drawn during a recording is kept out of it, and the
+  // overlay goes back on the preference once the session is over.
+  #[cfg(any(target_os = "macos", target_os = "windows"))]
+  if active != session_was_active {
+    if let Err(error) = super::apply_region_overlay_capturability(&app) {
+      eprintln!("Could not change the region overlay's capture affinity: {error}");
+    }
   }
   escape::sync(
     &app,
@@ -138,6 +149,13 @@ pub(super) const fn recording_controls_may_restore(
   controls_visible && recording_idle
 }
 
-pub(super) const fn screenshot_region_may_restore(requested: bool, controls_visible: bool) -> bool {
-  requested && controls_visible
+/// The overlay goes back to the recording region it was borrowed from where
+/// that region is on screen: the idle controls show it, or a region recording
+/// under way draws its boundary on it.
+pub(super) const fn screenshot_region_may_restore(
+  requested: bool,
+  controls_visible: bool,
+  recording: bool,
+) -> bool {
+  requested && (controls_visible || recording)
 }

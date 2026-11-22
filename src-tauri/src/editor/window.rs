@@ -26,10 +26,10 @@ pub fn show(app: &AppHandle, kind: EditorKind, then: impl FnOnce(&AppHandle) + S
           .artifact
           .lock()
           .unwrap_or_else(|poisoned| poisoned.into_inner()) = None;
-        *state
-          .capture_reservation
-          .lock()
-          .unwrap_or_else(|poisoned| poisoned.into_inner()) = None;
+        state
+          .slot(kind)
+          .reserved
+          .store(false, std::sync::atomic::Ordering::Release);
         emit_snapshot(&presenter, kind);
       }
     }

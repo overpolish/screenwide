@@ -57,6 +57,37 @@ fn exempt_from_crosshair(app: &AppHandle, exempt: bool) {
   }
 }
 
+/// Keeps the island out of a recording under way while it shows a still's
+/// own tools or shot, which belong to the still rather than to what is
+/// recorded, whatever the "record Screenwide's windows" preference says; or
+/// lets captures see it again. Outside a recording nothing is kept out.
+/// Queued on the main thread rather than waited for, so it can be asked from
+/// a command running there.
+pub(crate) fn keep_still_out_of_recording(app: &AppHandle, kept_out: bool) {
+  if kept_out && !crate::recording::is_recording(app) {
+    return;
+  }
+  let Some(window) = island::window(app) else {
+    return;
+  };
+  #[cfg(target_os = "macos")]
+  let result = super::set_window_capture_affinity(&window, !kept_out);
+  #[cfg(target_os = "windows")]
+  let result = if kept_out {
+    super::set_window_capture_affinity(&window, false)
+  } else {
+    super::apply_capture_policy(app)
+  };
+  #[cfg(not(any(target_os = "macos", target_os = "windows")))]
+  let result: tauri::Result<()> = {
+    let _ = window;
+    Ok(())
+  };
+  if let Err(error) = result {
+    eprintln!("Could not change the island's capture affinity: {error}");
+  }
+}
+
 /// Keeps the island out of captures while a tool freezes the desktop, or
 /// lets them see it again. The island stays on screen and changes into the
 /// tool's over the frozen desktop; frozen into it as well, its old shape

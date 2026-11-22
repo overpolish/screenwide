@@ -23,7 +23,7 @@ mod unavailable;
 #[cfg(not(any(target_os = "macos", target_os = "windows")))]
 use self::unavailable as platform;
 
-#[cfg(target_os = "windows")]
+#[cfg(any(target_os = "macos", target_os = "windows"))]
 pub(super) use platform::set_capture_affinity;
 pub(super) use platform::{
   acquire_quick_screenshot_cursor, apply_region_scene, prepare_for_region_restore,

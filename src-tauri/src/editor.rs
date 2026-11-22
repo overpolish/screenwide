@@ -247,15 +247,16 @@ struct EditorWorkspaceSlot {
   /// The file the last export wrote, which the Export island's finish
   /// reveals, copies, shares and drags out; never a path the webview names.
   exported: Mutex<Option<PathBuf>>,
+  /// A capture of this kind being set up, which a second of the same kind
+  /// waits for. A recording and a screenshot each have their own, so a still
+  /// can be taken while a recording runs.
+  reserved: AtomicBool,
 }
 
 #[derive(Default)]
 pub struct EditorState {
   recording: EditorWorkspaceSlot,
   screenshot: EditorWorkspaceSlot,
-  /// A capture being set up. Any in-flight capture blocks any other, of either
-  /// kind, because the machine can only point its camera at one thing at once.
-  capture_reservation: Mutex<Option<EditorKind>>,
   generation: AtomicU64,
   cursor_effects: Mutex<screenwide_cursor_effects::CursorEffectSettings>,
   keyboard_effects: Mutex<screenwide_keyboard_effects::KeyboardEffectSettings>,

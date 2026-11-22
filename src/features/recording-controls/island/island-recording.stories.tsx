@@ -20,6 +20,14 @@ export const Starting: Story = { args: { initialPhase: "starting" } };
 
 export const Recording: Story = { args: { initialPhase: "recording" } };
 
+export const ScreenshotOptions: Story = {
+  args: {
+    initialMode: "region",
+    initialPanel: "screenshot",
+    initialPhase: "recording",
+  },
+};
+
 export const ConfidenceChecks: Story = {
   args: { hasConfidenceChecks: true, initialPhase: "recording" },
 };

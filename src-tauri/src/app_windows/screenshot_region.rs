@@ -27,7 +27,7 @@ pub(super) fn set_recording_overlay_desktop_presented(
   adapter::set_desktop_presented(window, presented)
 }
 
-#[cfg(target_os = "windows")]
+#[cfg(any(target_os = "macos", target_os = "windows"))]
 pub(super) fn set_recording_overlay_capture_affinity(
   window: &tauri::WebviewWindow,
   capturable: bool,

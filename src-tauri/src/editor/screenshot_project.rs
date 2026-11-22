@@ -68,17 +68,11 @@ pub fn present_screenshot(
       // The editor let the project go while the picture was being kept: it
       // is opened again, now holding this layer too.
       drop(artifact);
-      *state
-        .capture_reservation
-        .lock()
-        .unwrap_or_else(|poisoned| poisoned.into_inner()) = None;
+      super::workspace::settle(app, EditorKind::Screenshot);
       return open(app, &project).map_err(|failure| failure.into_reason(&project));
     };
     items.push(item);
-    *state
-      .capture_reservation
-      .lock()
-      .unwrap_or_else(|poisoned| poisoned.into_inner()) = None;
+    super::workspace::settle(app, EditorKind::Screenshot);
     drop(artifact);
     emit_snapshot(app, EditorKind::Screenshot);
     window::show(app, EditorKind::Screenshot, |app| {

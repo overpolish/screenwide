@@ -49,10 +49,6 @@ pub(super) fn present_new(
       workspace::focus_pending(app, kind);
       return Err("An editor workspace is already open".to_owned());
     }
-    let mut reservation = state
-      .capture_reservation
-      .lock()
-      .unwrap_or_else(|poisoned| poisoned.into_inner());
     let defaults = crate::settings::current(app);
     let default_directory = match &artifact {
       EditorArtifact::Screenshot { .. } => defaults.screenshot_directory,
@@ -65,7 +61,7 @@ pub(super) fn present_new(
       .unwrap_or_else(|poisoned| poisoned.into_inner()) = default_directory;
     let replaced = artifact_slot.replace(artifact);
     if origin == Origin::Capture {
-      *reservation = None;
+      workspace::settle(app, kind);
     }
     replaced
   };

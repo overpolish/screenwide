@@ -13,6 +13,10 @@ import { IconButton } from "../../../primitives/button/icon-button";
 import { CircularProgress } from "../../../primitives/circular-progress/circular-progress";
 import { Text } from "../../../primitives/text/text";
 
+import { ScreenshotButton } from "./island-screenshot-button";
+
+import type { ScreenshotState } from "../types";
+
 // The island while it records: a countdown that can be pressed to cancel,
 // then a dot that pulses beside the time, with the controls opening under
 // the pointer; paused, the dot goes grey and still and the controls stay.
@@ -118,21 +122,38 @@ export function BreathingDot({ isPaused }: { isPaused: boolean }) {
  * island shows while recording. */
 const LIVE = "text-fg-secondary enabled:hover:text-fg";
 
+/** While recording: a screenshot taken beside the recording, then pausing,
+ * discarding and stopping it. */
 export function LiveControls({
   isPaused,
+  isScreenshotOpen,
   onDiscard,
   onPause,
   onResume,
+  onScreenshot,
+  onScreenshotOptions,
   onStop,
+  screenshotState,
 }: {
   isPaused: boolean;
+  isScreenshotOpen: boolean;
+  onScreenshotOptions: () => void;
   onDiscard?: () => void;
   onPause?: () => void;
   onResume?: () => void;
+  onScreenshot?: (action: "still") => void;
   onStop?: () => void;
+  screenshotState?: ScreenshotState;
 }) {
   return (
     <span className="flex items-center gap-1">
+      <ScreenshotButton
+        className={LIVE}
+        isOpen={isScreenshotOpen}
+        onOpen={onScreenshotOptions}
+        onScreenshot={() => onScreenshot?.("still")}
+        state={screenshotState}
+      />
       <IconButton
         aria-label={
           isPaused

@@ -57,9 +57,6 @@ pub(crate) fn remaining() -> Option<u8> {
 
 /// Begins a countdown, replacing any already running.
 pub(crate) fn start(app: &AppHandle, target: DelayedTarget) -> Result<(), String> {
-  if !crate::recording::is_idle(app) {
-    return Err("A screenshot cannot be taken while a recording is active".to_owned());
-  }
   // The live annotations stay, to arrive in the editor as a layer of their
   // own. Every other capture tool owns the pointer, which would leave nothing
   // to hover.
@@ -102,12 +99,6 @@ fn set_remaining(generation: u64, seconds: u8) -> bool {
 
 async fn run(app: AppHandle, generation: u64, seconds: u8, target: DelayedTarget) {
   for left in (1..=seconds).rev() {
-    // A recording started meanwhile takes the tray and the screen; the shot
-    // it would interrupt is dropped rather than taken afterwards.
-    if !crate::recording::is_idle(&app) {
-      cancel(&app);
-      return;
-    }
     if !set_remaining(generation, left) {
       return;
     }

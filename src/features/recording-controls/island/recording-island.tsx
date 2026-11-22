@@ -14,6 +14,7 @@ import { notesSection } from "../../notes/island/notes-section";
 
 import { Countdown, Finishing, Starting } from "./island-live";
 import { PanelBody } from "./island-panel-body";
+import { ScreenshotPanel } from "./island-panels";
 import { RecordingRow } from "./island-recording";
 import { RestingRow } from "./island-resting";
 import { islandFailure, islandWarning } from "./island-warning";
@@ -140,7 +141,15 @@ export function RecordingIsland(props: RecordingIslandProps) {
     ? `failure-${String(props.failure.id)}`
     : "warning";
   const isLive = phase === "recording" || phase === "paused";
-  const showsControls = phase === "paused" || isHovered;
+  // Going into a recording or out of it starts the island's choices afresh,
+  // so one left open at rest does not hang under the recording.
+  const [wasLive, setWasLive] = useState(isLive);
+  if (isLive !== wasLive) {
+    setWasLive(isLive);
+    setPanel(initialPanel);
+  }
+  const isScreenshotOpen = isLive && panel === "screenshot";
+  const showsControls = phase === "paused" || isHovered || isScreenshotOpen;
 
   let row: ReactNode = null;
   let section: ReactNode = null;
@@ -203,14 +212,37 @@ export function RecordingIsland(props: RecordingIslandProps) {
   } else if (phase === "finishing") {
     row = <IslandRow end={<Finishing />} />;
   } else if (isLive) {
-    row = <RecordingRow props={props} showsControls={showsControls} />;
+    row = (
+      <RecordingRow
+        isScreenshotOpen={isScreenshotOpen}
+        onScreenshotOptions={() => {
+          toggle("screenshot");
+        }}
+        props={props}
+        showsControls={showsControls}
+      />
+    );
     if (props.annotate) {
       // The annotate tools lie in the row's black under the recording's own
       // row, and their options hang from them as on the annotate island.
       below = props.annotate.tools;
       section = props.annotate.options;
       anchor = props.annotate.anchor;
-    } else if (failure) {
+    }
+    if (isScreenshotOpen) {
+      // The screenshot's choices hang under the button that opens them, as
+      // at rest; taking one puts them away, the recording going on.
+      section = (
+        <ScreenshotPanel
+          canScroll={props.mode === "region"}
+          onScreenshot={(action) => {
+            props.onScreenshot?.(action);
+            setPanel("source");
+          }}
+        />
+      );
+      anchor = "end";
+    } else if (!props.annotate && failure) {
       // A failure while recording, such as the replay buffer stopping,
       // hangs under the row at a reading width rather than waiting for the
       // recording to end.

@@ -57,7 +57,10 @@ fn build_menu(app: &AppHandle, status: RecordingStatus) -> tauri::Result<Menu<Wr
   } else {
     IconMenuItemBuilder::with_id(DELAYED_SCREENSHOT_MENU_ID, t!("tray-delayed-screenshot"))
       .icon(icons::load(icons::TIMER)?)
-      .enabled(status == RecordingStatus::Idle)
+      .enabled(matches!(
+        status,
+        RecordingStatus::Idle | RecordingStatus::Recording | RecordingStatus::Paused
+      ))
   }
   .build(app)?;
   let mut builder = MenuBuilder::new(app)

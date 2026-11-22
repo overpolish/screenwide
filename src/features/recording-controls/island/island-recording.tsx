@@ -148,9 +148,13 @@ function RecordedSize({ bytes }: { bytes: number | null }) {
 }
 
 export function RecordingRow({
+  isScreenshotOpen,
+  onScreenshotOptions,
   props,
   showsControls,
 }: {
+  isScreenshotOpen: boolean;
+  onScreenshotOptions: () => void;
   props: RecordingIslandProps;
   showsControls: boolean;
 }) {
@@ -215,7 +219,12 @@ export function RecordingRow({
             </span>
             {isShowingControls ? (
               <span className="flex" key="controls">
-                <LiveControls {...props} isPaused={isPaused} />
+                <LiveControls
+                  {...props}
+                  isPaused={isPaused}
+                  isScreenshotOpen={isScreenshotOpen}
+                  onScreenshotOptions={onScreenshotOptions}
+                />
               </span>
             ) : null}
           </IslandParts>

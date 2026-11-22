@@ -1,25 +1,17 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import {
-  Check,
-  Circle,
-  ImageDown,
-  NotebookPen,
-  OctagonAlert,
-  X,
-} from "lucide-react";
+import { Circle, NotebookPen, X } from "lucide-react";
 
 import { t } from "../../../i18n/i18n";
-import { cn } from "../../../lib/styling";
 import { Button } from "../../../primitives/button/button";
 import { IconButton } from "../../../primitives/button/icon-button";
-import { IconSwap } from "../../../primitives/icon-swap/icon-swap";
 import { IslandRow } from "../../../primitives/island/island-row";
 import { IslandOptions } from "../../../primitives/island/options/island-options";
 
 import { InputGlyph, SourceChip } from "./island-glyphs";
 import { INPUTS } from "./island-names";
+import { ScreenshotButton } from "./island-screenshot-button";
 import { canRecord, canScreenshot } from "./island-warning";
 
 import type {
@@ -87,53 +79,15 @@ export function RestingRow({
     <IslandRow
       end={
         <>
-          <IslandOptions
+          <ScreenshotButton
             isDisabled={!canScreenshot(props)}
             isOpen={panel === "screenshot"}
-            label={t("recording-controls-screenshot-options")}
             onOpen={() => {
               toggle("screenshot");
             }}
-          >
-            <IconButton
-              aria-label={t("recording-controls-screenshot")}
-              className={cn(
-                props.screenshotState === "pending" && "text-fg-secondary",
-              )}
-              isDisabled={!canScreenshot(props)}
-              onPress={() => props.onScreenshot?.("still")}
-              variant="ghost"
-            >
-              {/* Status is carried by the glyph alone, as in the recording
-                  bar, and the glyphs crossfade as it changes. */}
-              <IconSwap
-                swapKey={
-                  props.screenshotState === "done" ||
-                  props.screenshotState === "failed"
-                    ? props.screenshotState
-                    : "ready"
-                }
-              >
-                {props.screenshotState === "done" ? (
-                  <span className="flex text-success">
-                    <Check aria-hidden className="size-icon" />
-                  </span>
-                ) : props.screenshotState === "failed" ? (
-                  <span className="flex text-error">
-                    <OctagonAlert aria-hidden className="size-icon" />
-                  </span>
-                ) : (
-                  <ImageDown
-                    aria-hidden
-                    className={cn(
-                      "size-icon",
-                      props.screenshotState === "pending" && "animate-pulse",
-                    )}
-                  />
-                )}
-              </IconSwap>
-            </IconButton>
-          </IslandOptions>
+            onScreenshot={() => props.onScreenshot?.("still")}
+            state={props.screenshotState}
+          />
           {/* Record's options are the replay buffer's, so where it cannot
               run Record stands alone. */}
           {props.replay ? (

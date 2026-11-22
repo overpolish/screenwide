@@ -117,7 +117,7 @@ pub(super) fn sync_peers(window: &WebviewWindow, binding: &DesktopBinding) {
       return;
     }
   }
-  let capturable = crate::settings::current(window.app_handle()).record_screenwide_windows;
+  let capturable = crate::app_windows::region::region_overlay_capturable(window.app_handle());
   // Windows must be created on the thread that owns the host, and that thread
   // must not be blocked while a surface lock is held.
   let mut built = Vec::new();

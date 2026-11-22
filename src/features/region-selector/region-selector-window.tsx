@@ -68,6 +68,9 @@ export function RegionSelectorWindow() {
   const isDrawingBegunRef = useRef(false);
   const nativeMonitorRef = useRef<number | null>(null);
   const isIdle = recordingStatus === "idle";
+  // Outside a recording the overlay is edited, and a screenshot session draws
+  // on it even during one; otherwise a recording's boundary only shows.
+  const takesInput = isIdle || isScreenshotSurface;
   // Built when first wanted, the window is ready once it can hear the
   // screenshot shortcut it may have been built for.
   useScreenshotShortcut(announceWindowReady);
@@ -131,7 +134,7 @@ export function RegionSelectorWindow() {
     bounds: activeMonitor?.size ?? EMPTY_BOUNDS,
     desktop: true,
     enabled: nativeOscEnabled,
-    inputEnabled: isIdle && !isPicking,
+    inputEnabled: takesInput && !isPicking,
     monitorId: activeMonitor?.id,
     onFinished: (nextRegion, gesture, monitorId) => {
       if (isPicking) return;
@@ -186,9 +189,7 @@ export function RegionSelectorWindow() {
     showHandles: !isPicking && !isScreenshotSurface && isIdle,
     visible: isPicking
       ? windowPick.hovered !== null
-      : isScreenshotSurface
-        ? isIdle
-        : nativeOscEnabled,
+      : isScreenshotSurface || nativeOscEnabled,
     windowHighlight: isPicking,
     windowLabel: nativeOscEnabled ? getCurrentWindow().label : undefined,
   });
@@ -272,8 +273,8 @@ export function RegionSelectorWindow() {
 
     // Fading out after a pick, the overlay already lets clicks through to the
     // window picked.
-    void setRegionSelectorPassthrough(!isIdle || windowPick.isLeaving);
-    if (!isIdle || captureRequest === 0 || !nativeOscAvailable) return;
+    void setRegionSelectorPassthrough(!takesInput || windowPick.isLeaving);
+    if (!takesInput || captureRequest === 0 || !nativeOscAvailable) return;
     void prepareScreenshotRegionMagnifier(
       activeMonitor.id,
       getCurrentWindow().label,
@@ -283,9 +284,9 @@ export function RegionSelectorWindow() {
   }, [
     activeMonitor,
     captureRequest,
-    isIdle,
     isScreenshotSurface,
     nativeOscAvailable,
+    takesInput,
     windowPick.isLeaving,
   ]);
 

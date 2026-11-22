@@ -16,6 +16,7 @@ pub(super) fn apply_region_selector_interactivity(app: &AppHandle) -> tauri::Res
   let is_interactive = region_selector_is_interactive(
     REGION_SELECTOR_INTERACTIVE.load(Ordering::Relaxed),
     crate::recording::is_idle(app),
+    SCREENSHOT_REGION_SESSION.load(Ordering::Acquire),
   );
 
   super::visibility::set_passthrough(&region, !is_interactive)?;

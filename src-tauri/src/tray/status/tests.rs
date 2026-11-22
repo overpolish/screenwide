@@ -24,13 +24,15 @@ fn a_countdown_shows_over_the_replay_buffer() {
 }
 
 #[test]
-fn a_recording_shows_over_a_countdown_and_the_replay_buffer() {
-  for status in [
-    RecordingStatus::Starting,
-    RecordingStatus::Recording,
-    RecordingStatus::Paused,
-    RecordingStatus::Stopping,
-  ] {
+fn a_countdown_shows_over_a_recording_under_way() {
+  for status in [RecordingStatus::Recording, RecordingStatus::Paused] {
+    assert_eq!(Shown::of(status, Some(3), true, false), Shown::Countdown(3));
+  }
+}
+
+#[test]
+fn a_recording_starting_or_stopping_shows_over_a_countdown() {
+  for status in [RecordingStatus::Starting, RecordingStatus::Stopping] {
     assert_eq!(
       Shown::of(status, Some(3), true, false),
       Shown::Status(status)

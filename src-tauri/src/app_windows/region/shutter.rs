@@ -82,13 +82,13 @@ fn apply_capture_affinity(
   // Screenwide window continues to follow the user's capture preference.
   super::super::sync_capture_affinity(window.app_handle(), affinity.other_windows)
     .map_err(|error| error.to_string())?;
-  super::super::set_window_capture_affinity(window, affinity.region_selector)
+  // A still's area drawn during a recording stays out of it once shown again.
+  let region_selector =
+    affinity.region_selector && super::region_overlay_capturable(window.app_handle());
+  super::super::set_window_capture_affinity(window, region_selector)
     .map_err(|error| error.to_string())?;
-  super::super::screenshot_region::set_recording_overlay_capture_affinity(
-    window,
-    affinity.region_selector,
-  )
-  .map_err(|error| error.to_string())?;
+  super::super::screenshot_region::set_recording_overlay_capture_affinity(window, region_selector)
+    .map_err(|error| error.to_string())?;
   let mut left_out_since = LEFT_OUT_SINCE
     .lock()
     .unwrap_or_else(PoisonError::into_inner);

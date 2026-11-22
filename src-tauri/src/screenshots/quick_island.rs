@@ -66,6 +66,9 @@ pub fn show_quick_screenshot_island(app: AppHandle, destination: QuickScreenshot
   if !app_windows::region::is_screenshot_region_session() {
     return;
   }
+  // Before the island changes, so a recording under way never takes a frame
+  // of the still's island.
+  app_windows::island_overlay::keep_still_out_of_recording(&app, true);
   tell(&app, Some(destination));
   // A shot copied before gives its island to this session, which reshapes
   // it in place.
@@ -130,6 +133,7 @@ pub(crate) fn withdraw(app: &AppHandle) {
   if let Err(error) = result {
     eprintln!("Could not put the island away after Quick Screenshot: {error}");
   }
+  app_windows::island_overlay::keep_still_out_of_recording(app, false);
 }
 
 #[tauri::command]

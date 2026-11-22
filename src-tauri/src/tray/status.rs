@@ -31,13 +31,13 @@ const REPLAY: &[u8] = include_bytes!("../../icons/tray-replay.png");
 const REPLAY_SAVED: &[u8] = include_bytes!("../../icons/tray-replay-saved.png");
 
 /// What the tray shows, in order of precedence: a replay clip just saved,
-/// then a recording's own state, then a Delayed Screenshot's countdown, then
+/// then a Delayed Screenshot's countdown, then a recording's own state, then
 /// a running replay buffer, then the plain mark. A save is confirmed over
 /// everything, for the moment it shows: it is the only answer a save gets. A
-/// countdown only runs while idle and is shown only then too, so a recording
-/// started a moment before the countdown notices and stops is never hidden
-/// behind it. The replay buffer runs beside everything, so it only ever shows
-/// when nothing else has anything to say.
+/// countdown, asked for and over in seconds, shows over a recording under way
+/// too, but not over one starting or stopping, whose state is the news then.
+/// The replay buffer runs beside everything, so it only ever shows when
+/// nothing else has anything to say.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub(super) enum Shown {
   Countdown(u8),
@@ -55,7 +55,10 @@ impl Shown {
   ) -> Self {
     match (status, countdown) {
       _ if replay_saved => Self::ReplaySaved,
-      (RecordingStatus::Idle, Some(seconds)) => Self::Countdown(seconds),
+      (
+        RecordingStatus::Idle | RecordingStatus::Recording | RecordingStatus::Paused,
+        Some(seconds),
+      ) => Self::Countdown(seconds),
       (RecordingStatus::Idle, None) if replay_on => Self::Replay,
       _ => Self::Status(status),
     }
