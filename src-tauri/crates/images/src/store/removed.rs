@@ -9,8 +9,18 @@
 
 use std::collections::BTreeSet;
 use std::path::Path;
+use std::sync::{Mutex, MutexGuard};
 
 const FILE: &str = "removed.json";
+
+/// Held while the list is read and written back, so two changes at once do
+/// not lose one.
+fn changing() -> MutexGuard<'static, ()> {
+  static CHANGING: Mutex<()> = Mutex::new(());
+  CHANGING
+    .lock()
+    .unwrap_or_else(|poisoned| poisoned.into_inner())
+}
 
 fn read(folder: &Path) -> BTreeSet<String> {
   std::fs::read(folder.join(FILE))
@@ -19,10 +29,17 @@ fn read(folder: &Path) -> BTreeSet<String> {
     .unwrap_or_default()
 }
 
+/// Written beside the list and renamed over it, so a reader never sees half
+/// of one and takes it for an empty list.
 fn write(folder: &Path, names: &BTreeSet<String>) {
+  let partial = folder.join(format!("{FILE}.tmp"));
   let written = serde_json::to_vec(names)
     .map_err(|error| error.to_string())
-    .and_then(|bytes| std::fs::write(folder.join(FILE), bytes).map_err(|error| error.to_string()));
+    .and_then(|bytes| {
+      std::fs::write(&partial, bytes)
+        .and_then(|()| std::fs::rename(&partial, folder.join(FILE)))
+        .map_err(|error| error.to_string())
+    });
   if let Err(error) = written {
     eprintln!("Could not note the pictures taken out of the library: {error}");
   }
@@ -35,6 +52,7 @@ pub(super) fn names(folder: &Path) -> BTreeSet<String> {
 
 /// Notes that the picture `name` was taken out of the library in `folder`.
 pub(super) fn note(folder: &Path, name: &str) {
+  let _changing = changing();
   let mut names = read(folder);
   if names.insert(name.to_owned()) {
     write(folder, &names);
@@ -43,6 +61,7 @@ pub(super) fn note(folder: &Path, name: &str) {
 
 /// Lets the picture `name` back into the library in `folder`, added again.
 pub(super) fn forget(folder: &Path, name: &str) {
+  let _changing = changing();
   let mut names = read(folder);
   if names.remove(name) {
     write(folder, &names);

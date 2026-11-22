@@ -8,6 +8,7 @@
 //! size, and the time its file was last written.
 
 use std::path::Path;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use serde::{Deserialize, Serialize};
@@ -70,17 +71,38 @@ pub(super) fn read_kept(folder: &Path, name: &str) -> Option<Picture> {
   (kept.version == FORMAT_VERSION && kept.picture.name == name).then_some(kept.picture)
 }
 
-fn write_kept(folder: &Path, picture: &Picture) -> Result<(), String> {
+/// Keeps `picture`'s description, in place of one kept already when
+/// `replace` says so, or else only where none is.
+fn write_kept(folder: &Path, picture: &Picture, replace: bool) -> Result<(), String> {
   let kept = Kept {
     version: FORMAT_VERSION,
     picture: picture.clone(),
   };
   let bytes = serde_json::to_vec(&kept).map_err(|error| error.to_string())?;
   let path = kept_path(folder, &picture.name);
-  let partial = folder.join(format!("{}.json.tmp", picture.name));
-  std::fs::write(&partial, bytes)
-    .and_then(|()| std::fs::rename(&partial, &path))
-    .map_err(|error| format!("The picture could not be described: {error}"))
+  // Each write has a partial file of its own: listing describes a picture
+  // the moment its file lands, which can be while it is being noted or
+  // renamed, and two writers sharing one would rename it from under each
+  // other.
+  static WRITES: AtomicU64 = AtomicU64::new(0);
+  let write = WRITES.fetch_add(1, Ordering::Relaxed);
+  let partial = folder.join(format!("{}.json.{write}.tmp", picture.name));
+  let written = std::fs::write(&partial, bytes).and_then(|()| {
+    if replace {
+      return std::fs::rename(&partial, &path);
+    }
+    // A link fails where a description is kept already, which stands.
+    let linked = match std::fs::hard_link(&partial, &path) {
+      Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => Ok(()),
+      linked => linked,
+    };
+    let _ = std::fs::remove_file(&partial);
+    linked
+  });
+  written.map_err(|error| {
+    let _ = std::fs::remove_file(&partial);
+    format!("The picture could not be described: {error}")
+  })
 }
 
 /// The store's name for the picture `art` shows, if it is one of the
@@ -115,7 +137,7 @@ pub(super) fn note(art: &ImageArt, title: Option<&str>) {
       credit: None,
     },
   };
-  if let Err(error) = write_kept(folder, &picture) {
+  if let Err(error) = write_kept(folder, &picture, true) {
     eprintln!("Could not note the picture {name}: {error}");
   }
 }
@@ -137,7 +159,7 @@ pub(super) fn credit_found(art: &ImageArt, title: &str, credit: Credit) {
     credit: Some(credit),
     ..picture
   };
-  if let Err(error) = write_kept(folder, &credited) {
+  if let Err(error) = write_kept(folder, &credited, true) {
     eprintln!("Could not credit the picture {name}: {error}");
   }
 }
@@ -196,7 +218,9 @@ fn picture(folder: &Path, name: &str) -> Option<Picture> {
     Some(picture) => picture,
     None => {
       let picture = described(name, &file)?;
-      let _ = write_kept(folder, &picture);
+      // Only where nothing has been kept since it was read: a picture
+      // being noted or renamed meanwhile keeps what that wrote.
+      let _ = write_kept(folder, &picture, false);
       picture
     }
   };
@@ -286,6 +310,7 @@ pub fn rename(name: &str, title: &str) -> Result<(), String> {
       title: Some(title.to_owned()),
       ..picture
     },
+    true,
   )
 }
 
