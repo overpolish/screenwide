@@ -97,6 +97,24 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      # CMake keeps the paths of the MSVC tools a build folder was configured
+      # with, and a runner image update can remove that toolset, so a folder
+      # kept from another toolset fails to link. On Windows the cache is kept
+      # per toolset, which starts the helpers' build afresh when it changes.
+      - name: Name the native helpers' cache
+        id: helpers-cache
+        shell: bash
+        run: |
+          set -euo pipefail
+          prefix="helpers-$RUNNER_OS"
+          if [ "$RUNNER_OS" = Windows ]; then
+            file=$("/c/Program Files (x86)/Microsoft Visual Studio/Installer/vswhere.exe" \
+              -latest -products '*' -find 'VC\Auxiliary\Build\Microsoft.VCToolsVersion.default.txt')
+            [ -n "$file" ] || { echo "No MSVC toolset found"; exit 1; }
+            prefix="$prefix-msvc$(tr -d '[:space:]' < "$(cygpath -u "$file")")"
+          fi
+          echo "prefix=$prefix" >> "$GITHUB_OUTPUT"
+
       # The native helpers take the longest to build from nothing, a quarter
       # of an hour or more, and change rarely. Their build folder is kept
       # between runs, with cargo's downloads that the build scripts' change
@@ -112,8 +130,8 @@ jobs:
             ~/.cargo/registry/cache
             ~/.cargo/git
             ${{ runner.os == 'Windows' && 'C:\ProgramData\swb' || 'src-tauri/target/stt' }}
-          key: helpers-${{ runner.os }}-${{ hashFiles('rust-toolchain.toml', 'src-tauri/transcriber/Cargo.lock') }}
-          restore-keys: helpers-${{ runner.os }}-
+          key: ${{ steps.helpers-cache.outputs.prefix }}-${{ hashFiles('rust-toolchain.toml', 'src-tauri/transcriber/Cargo.lock') }}
+          restore-keys: ${{ steps.helpers-cache.outputs.prefix }}-
 
       - name: Check formatting, lint, and builds
         run: pnpm check
@@ -127,4 +145,4 @@ jobs:
             ~/.cargo/registry/cache
             ~/.cargo/git
             ${{ runner.os == 'Windows' && 'C:\ProgramData\swb' || 'src-tauri/target/stt' }}
-          key: helpers-${{ runner.os }}-${{ hashFiles('rust-toolchain.toml', 'src-tauri/transcriber/Cargo.lock') }}
+          key: ${{ steps.helpers-cache.outputs.prefix }}-${{ hashFiles('rust-toolchain.toml', 'src-tauri/transcriber/Cargo.lock') }}
