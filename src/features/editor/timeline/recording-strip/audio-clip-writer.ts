@@ -30,13 +30,23 @@ export type AudioClipWriter = {
   write: (next: RecordingAudioClip[], options?: WriteOptions) => void;
 };
 
+// Clips are timed in whole ms, as Rust reads them. A place worked out from
+// the playhead, or cut off at a squeezed timeline's end, is a fraction of
+// one, which would fail every command the edit is sent to.
+const inWholeMs = (clip: RecordingAudioClip): RecordingAudioClip => ({
+  ...clip,
+  endMs: Math.round(clip.endMs),
+  offsetMs: Math.round(clip.offsetMs),
+  startMs: Math.round(clip.startMs),
+});
+
 export function audioClipWriter(latestRef: LatestEdit): AudioClipWriter {
   const write = (
     next: RecordingAudioClip[],
     { isDragged = false }: WriteOptions = {},
   ) => {
     const { edit, steps } = latestRef.current;
-    const changed = { ...edit, audioClips: next };
+    const changed = { ...edit, audioClips: next.map(inWholeMs) };
     if (isDragged) steps.step(changed);
     else steps.once(changed);
   };

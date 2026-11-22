@@ -144,7 +144,9 @@ export function useRecordingStripBand(
     select: strip.select,
     selection: strip.selection,
     steps: strip.steps,
-    timelineMs: timelineBlade.timelineDurationMs,
+    // Songs are cut off at the timeline's end, in whole ms as clips are
+    // timed; squeezed lulls make its length a fraction of one.
+    timelineMs: Math.round(timelineBlade.timelineDurationMs),
   });
   useSoundTrackReplay(edit, props.enabledStreamIndices, player);
   usePictureDrop({
