@@ -70,6 +70,7 @@ fn recording(colour: [u8; 4]) -> std::path::PathBuf {
 }
 
 #[test]
+#[cfg_attr(screenwide_no_gpu, ignore = "requires a hardware GPU")]
 fn a_compositor_draws_an_app_s_cursor_opened_after_it() {
   let compositor = compositor();
   let cursor = CursorCompositor::open(&recording([20, 180, 60, 255]), None).unwrap();
