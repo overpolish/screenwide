@@ -73,6 +73,40 @@ describe("lulls", () => {
     ]);
   });
 
+  it("keeps a lull as recorded before anything is squeezed", () => {
+    const kept = lullPlayed(whole, lullsOf(whole), {
+      id: "still",
+      play: { kind: "keep" },
+      recorded: RECORDED,
+    });
+    expect(lullsOf(kept).lulls.map(({ play }) => play.kind)).toEqual([
+      "keep",
+      "squeeze",
+    ]);
+    // The squeeze then passes it by, and only the moving lull hurries.
+    const squeezed = squeezedTo(kept, lullsOf(kept), {
+      recorded: RECORDED,
+      squeeze: 1,
+    });
+    expect(rateAt(squeezed, 2, RECORDED)).toBe(1);
+    expect(rateAt(squeezed, 8, RECORDED)).toBeGreaterThan(1);
+    expect(lullsOf(squeezed).lulls.map(({ play }) => play.kind)).toEqual([
+      "keep",
+      "squeeze",
+    ]);
+    // Squeezed with the rest again, nothing keeps it.
+    const given = lullPlayed(squeezed, lullsOf(squeezed), {
+      id: "still",
+      play: { kind: "squeeze" },
+      recorded: RECORDED,
+    });
+    expect(given.keptLulls).toBeUndefined();
+    expect(lullsOf(given).lulls.map(({ play }) => play.kind)).toEqual([
+      "squeeze",
+      "squeeze",
+    ]);
+  });
+
   it("leaves a retimed beat's speed alone as the lulls squeeze", () => {
     // The beat between the two lulls, played twice as fast.
     const retimed = atRate(whole, { end: 0.6, rate: 2, start: 0.4 });

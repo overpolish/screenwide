@@ -83,6 +83,7 @@ fn recording_with_a_song(folder: &Path, makes_way: bool) -> (PathBuf, TimelinePl
         playback_rate: 1.0,
         background: None,
       }],
+      kept_lulls: Vec::new(),
     },
     3_000,
   )

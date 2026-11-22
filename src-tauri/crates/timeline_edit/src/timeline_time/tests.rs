@@ -55,6 +55,7 @@ fn edit(segments: Vec<RecordingTimelineSegment>) -> RecordingTimelineEdit {
     camera_background_ranges: Vec::new(),
     next_segment_id: 3,
     segments,
+    kept_lulls: Vec::new(),
   }
 }
 

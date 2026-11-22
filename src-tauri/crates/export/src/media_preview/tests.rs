@@ -372,6 +372,7 @@ fn compresses_a_real_movie_when_x264_is_available() {
           background: None,
         },
       ],
+      kept_lulls: Vec::new(),
     },
     3_000,
   )
@@ -420,6 +421,7 @@ fn compresses_a_real_movie_when_x264_is_available() {
         playback_rate: 1.0,
         background: None,
       }],
+      kept_lulls: Vec::new(),
     },
     3_000,
   )

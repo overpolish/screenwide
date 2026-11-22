@@ -35,6 +35,7 @@ fn edit(artifact_id: u64, split: f64) -> RecordingTimelineEdit {
         background: None,
       },
     ],
+    kept_lulls: Vec::new(),
   }
 }
 

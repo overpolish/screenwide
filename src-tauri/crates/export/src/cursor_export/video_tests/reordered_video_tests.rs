@@ -43,6 +43,7 @@ fn exports_reordered_segments_in_the_order_they_play() {
       camera_background_ranges: Vec::new(),
       next_segment_id: 2,
       segments: vec![segment(1, 0.5, 1.0), segment(0, 0.0, 0.5)],
+      kept_lulls: Vec::new(),
     },
     2_000,
   )
@@ -121,6 +122,7 @@ fn exports_the_stretch_after_a_long_cut() {
       camera_background_ranges: Vec::new(),
       next_segment_id: 2,
       segments: vec![segment(0, 0.0, 1.0 / 7.0), segment(1, 6.0 / 7.0, 1.0)],
+      kept_lulls: Vec::new(),
     },
     7_000,
   )

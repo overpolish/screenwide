@@ -15,7 +15,8 @@ editor-island-lull-confirm-cut = Confirm cutting
 editor-island-lull-plays = How it plays
 # The lull plays faster along with every other lull.
 editor-island-lull-squeeze = Squeeze with the rest
-editor-island-lull-keep = Keep as recorded
+# The lull plays at the speed it was recorded at, out of the squeeze. Worded as the beat's island words it (editor-island-beat-as-recorded).
+editor-island-lull-keep = Play as recorded
 # The lull has a speed of its own, set by dragging its end. $speed is how many times as fast as recorded, such as 2.5.
 editor-island-lull-retimed-faster = Retimed, { $speed }× faster
 # As above, for a lull slowed down. $speed is less than 1, such as 0.5.

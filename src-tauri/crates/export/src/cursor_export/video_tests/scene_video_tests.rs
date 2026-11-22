@@ -107,6 +107,7 @@ pub(super) fn timeline(scene: serde_json::Value) -> TimelinePlan {
         source_start: 0.0,
         background: None,
       }],
+      kept_lulls: Vec::new(),
     },
     2_000,
   )

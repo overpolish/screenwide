@@ -12,19 +12,31 @@ import { atRate, rateAt } from "./recording-strip-source";
 
 import type { LullPlay } from "../../island/lull/lull-island";
 
-// How the lulls play, read from the speed the timeline edit plays them at,
-// which is all the edit keeps of them. Squeezed, every lull is hurried by
-// the same share of what it can give: up to four times as fast, or twice
+// How the lulls play, read from the speed the timeline edit plays them at
+// and from the lulls it keeps as recorded. Squeezed, every lull is hurried
+// by the same share of what it can give: up to four times as fast, or twice
 // where the picture moves by itself, since motion played faster cannot be
 // followed. That share is the one most lulls play at; a lull at its own
-// speed is retimed, and one as recorded while the rest are squeezed is
-// kept. With nothing squeezed, every lull is squeezed with the rest, by
-// nothing: the edit cannot tell a kept lull from one that waits to be.
+// speed is retimed. A lull as recorded is kept where the edit keeps it,
+// since with nothing squeezed every lull plays as recorded and its speed
+// cannot tell; and, for an edit saved before it kept any, where the rest
+// are squeezed.
 
 /** How long, in seconds, a squeezed lull can still play and be dead air. */
 const DEAD_AIR_S = 3;
 /** How near two shares of give are to be one. */
 const SAME_SHARE = 2e-3;
+/** Closer than this to a lull's edge, as a share of the recording, is in
+ * it. */
+const EDGE = 1e-6;
+
+/** Where the edit marks `found` as kept: its middle, as a share of the
+ * recording, which stays inside it however its ends are trimmed. */
+const keptMark = (found: Span, recorded: number) =>
+  (found.start + found.end) / 2 / recorded;
+
+const marks = (found: Span, recorded: number) => (at: number) =>
+  at >= found.start / recorded - EDGE && at <= found.end / recorded + EDGE;
 
 /** A lull as the strip draws it, with what changing it needs. */
 type PlayedLull = StripLull & {
@@ -90,10 +102,12 @@ export function recordingStripLulls({
     return [{ fastest, lull, rate, share, span }];
   });
   const share = commonShare(read.flatMap((each) => each.share ?? []));
+  const keptLulls = edit.keptLulls ?? [];
   const lulls = read.map(({ fastest, lull, rate, share: own, span }) => {
+    const isKept = keptLulls.some(marks(lull.span, recorded));
     const play: LullPlay =
       rate === 1
-        ? { kind: share > 0 ? "keep" : "squeeze" }
+        ? { kind: isKept || share > 0 ? "keep" : "squeeze" }
         : own !== null && Math.abs(own - share) < SAME_SHARE
           ? { kind: "squeeze" }
           : { kind: "retimed", speed: rate };
@@ -147,7 +161,7 @@ export function squeezedTo(
     );
 }
 
-/** `edit` playing the lull `id` as `play` says. */
+/** `edit` playing the lull `id` as `play` says, kept as recorded or not. */
 export function lullPlayed(
   edit: RecordingTimelineEdit,
   { lulls, share }: RecordingStripLulls,
@@ -161,5 +175,25 @@ export function lullPlayed(
       : play.kind === "retimed"
         ? play.speed
         : squeezedRate(share, lull.fastest);
-  return spanAt(edit, lull.span, { rate, recorded });
+  const isMarked = marks(lull.found, recorded);
+  const others = (edit.keptLulls ?? []).filter((at) => !isMarked(at));
+  const keptLulls =
+    play.kind === "keep"
+      ? [...others, keptMark(lull.found, recorded)].sort((a, b) => a - b)
+      : others;
+  const next = spanAt(edit, lull.span, { rate, recorded });
+  if (keptLulls.length === 0) return withoutKeptLulls(next);
+  const isSame =
+    next === edit &&
+    keptLulls.length === edit.keptLulls?.length &&
+    keptLulls.every((at, index) => at === edit.keptLulls?.[index]);
+  return isSame ? edit : { ...next, keptLulls };
+}
+
+/** `edit` keeping no lull, without the empty list a saved edit leaves
+ * out. */
+function withoutKeptLulls(edit: RecordingTimelineEdit): RecordingTimelineEdit {
+  if (edit.keptLulls === undefined) return edit;
+  const { keptLulls: _kept, ...rest } = edit;
+  return rest;
 }

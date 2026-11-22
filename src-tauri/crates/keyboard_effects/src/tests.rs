@@ -31,6 +31,7 @@ fn speed_plan(rate: f64) -> TimelinePlan {
         playback_rate: rate,
         background: None,
       }],
+      kept_lulls: Vec::new(),
     },
     10_000,
   )

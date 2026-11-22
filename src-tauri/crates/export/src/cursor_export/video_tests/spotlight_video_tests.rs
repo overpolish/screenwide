@@ -96,6 +96,7 @@ fn exported(source: &Path, destination: &Path, clips: &[RecordingAnnotationClip]
         playback_rate: 1.0,
         background: None,
       }],
+      kept_lulls: Vec::new(),
     },
     2_000,
   );

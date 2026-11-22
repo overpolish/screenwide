@@ -104,6 +104,7 @@ fn exported(name: &str, camera: Vec<Annotation>) -> impl Fn(u32, u32) -> [u8; 3]
         playback_rate: 1.0,
         background: None,
       }],
+      kept_lulls: Vec::new(),
     },
     2_000,
   );

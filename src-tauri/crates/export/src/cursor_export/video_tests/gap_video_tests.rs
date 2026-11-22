@@ -53,6 +53,7 @@ fn plan(
       camera_background_ranges: Vec::new(),
       next_segment_id: 3,
       segments,
+      kept_lulls: Vec::new(),
     },
     2_000,
   )

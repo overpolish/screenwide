@@ -53,4 +53,12 @@ transcriptAllowedWords?: Array<string>,
  * The captions made from the transcript, once any were asked for; see
  * [`screenwide_text::captions`].
  */
-captions?: RecordingCaptions, nextSegmentId: number, segments: Array<RecordingTimelineSegment>, deletedKeyboardShortcutFragments?: Array<DeletedKeyboardShortcutFragment>, deletedKeyboardShortcutIds?: Array<number>, };
+captions?: RecordingCaptions, 
+/**
+ * Where each lull kept as recorded, out of the squeeze, starts, as a
+ * share of the recording. A lull's speed alone cannot say it is kept
+ * while nothing is squeezed, since every lull then plays as recorded;
+ * the strip finds the lull each point falls in. Plays and exports as
+ * nothing.
+ */
+keptLulls?: Array<number>, nextSegmentId: number, segments: Array<RecordingTimelineSegment>, deletedKeyboardShortcutFragments?: Array<DeletedKeyboardShortcutFragment>, deletedKeyboardShortcutIds?: Array<number>, };

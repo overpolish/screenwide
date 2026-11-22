@@ -132,6 +132,7 @@ fn exports_timed_arrows_across_a_cut_and_speed_change() {
           background: None,
         },
       ],
+      kept_lulls: Vec::new(),
     },
     3000,
   )

@@ -46,6 +46,7 @@ pub(in crate::editor) fn untouched(artifact_id: u64) -> RecordingTimelineEdit {
     transcript_corrections: Vec::new(),
     transcript_allowed_words: Vec::new(),
     captions: None,
+    kept_lulls: Vec::new(),
     scene_clips: Vec::new(),
     camera_background_ranges: Vec::new(),
     next_segment_id: 1,

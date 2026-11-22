@@ -442,6 +442,7 @@ fn an_exported_video_carries_the_highlight_on_both_planes() {
         playback_rate: 1.0,
         background: None,
       }],
+      kept_lulls: Vec::new(),
     },
     1_000,
   );

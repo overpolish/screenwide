@@ -148,6 +148,14 @@ pub struct RecordingTimelineEdit {
   #[serde(default, skip_serializing_if = "Option::is_none")]
   #[ts(optional)]
   pub captions: Option<screenwide_text::captions::RecordingCaptions>,
+  /// Where each lull kept as recorded, out of the squeeze, starts, as a
+  /// share of the recording. A lull's speed alone cannot say it is kept
+  /// while nothing is squeezed, since every lull then plays as recorded;
+  /// the strip finds the lull each point falls in. Plays and exports as
+  /// nothing.
+  #[serde(default, skip_serializing_if = "Vec::is_empty")]
+  #[ts(optional, as = "Option<Vec<f64>>")]
+  pub kept_lulls: Vec<f64>,
   pub next_segment_id: u64,
   pub segments: Vec<RecordingTimelineSegment>,
 }
