@@ -13,7 +13,7 @@ site-download-windows = Download for Windows
 # Under the download buttons.
 site-hero-note = Free and open source. Tools sold separately.
 # Names the recording of the editor at work, for assistive technology.
-site-edit-recording = A recording playing in the editor, zooming in where the clicks and typing are
+site-edit-recording = A magnifier added to a chart's peak in the editor, then the recording playing, zooming in where the clicks are and following the typing
 site-free-title = Free and open source
 site-free-body = Recording, editing, screenshots, text recognition, dictation and meeting notes, under the GPL.
 site-read-title = Read

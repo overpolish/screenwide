@@ -13,7 +13,7 @@
 
 <br />
 
-<img alt="A recording playing in the editor, zooming in where the clicks and typing are" src="./.github/assets/demo.gif" />
+<img alt="A magnifier added to a chart's peak in the editor, then the recording playing, zooming in where the clicks are and following the typing" src="./.github/assets/demo.gif" />
 
 ## Recording
 
