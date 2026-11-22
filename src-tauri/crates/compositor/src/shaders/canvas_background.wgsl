@@ -87,6 +87,13 @@ fn ground_color(ground: Ground, outgoing: bool, pixel: vec2<f32>) -> vec3<f32> {
   // the seed, and the same timeline seconds the classic mesh drifts with,
   // which `gen_pixel_shifted` scales by the generator's own speed.
   if (feature_kept(feature_background_generator) && ground.style.x != 0u) {
+    // The canvas's own generator drawn at half resolution this frame, read
+    // inside the canvas; past its edge, or giving way, it is evaluated here.
+    let along = pixel / canvas.output_source.xy;
+    if (!outgoing && (canvas.background_options.w & 1u) != 0u &&
+        all(along >= vec2<f32>(0.0)) && all(along <= vec2<f32>(1.0))) {
+      return textureSampleLevel(background_field, linear_sampler, along, 0.0).rgb;
+    }
     let palette = GenPalette(ground.mesh_colors[0].rgb, ground.mesh_colors[1].rgb,
                              ground.mesh_colors[2].rgb, ground.mesh_colors[3].rgb,
                              ground.style.y);

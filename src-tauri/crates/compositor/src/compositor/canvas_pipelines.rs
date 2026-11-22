@@ -36,13 +36,19 @@
 //! On macOS each of those draws changes to a slim variant once one is ready:
 //! the same kinds, keeping only the shader's other paths the frame takes
 //! ([`super::canvas_features`]). Metal compiles it in the background the
-//! first time a frame asks for it, in about a second, and the system keeps
-//! it for later launches. The frames until then are drawn as above, with
-//! every path kept, which on Apple's GPUs costs 25 to 50 ms a frame against
-//! 1 to 4, so a pen taken up has the variant its first stroke will need
-//! compiled at once (`Compositor::prepare_annotation_kind`), and the variant
-//! keeping every path is never compiled for a set of its own there: no
-//! frame would draw with it once the slim one is ready.
+//! first time a frame asks for it, in half a second to a second, and the
+//! system keeps it for later launches. The frames until then are drawn by
+//! the smallest ready slim variant keeping all their paths and kinds, which
+//! draws the same picture: a preview warms one keeping every path but a
+//! focus, with no annotation, so a scene that first moves, turns or blooms
+//! a background in costs 2 to 6 ms a 1080p frame while its own compiles
+//! (`Compositor::compile_annotation_kinds_in_background`). Failing that,
+//! they are drawn as above, with every path kept, which on Apple's GPUs
+//! costs 15 to 50 ms a frame against 1 to 4, so a pen taken up has the
+//! variant its first stroke will need compiled at once
+//! (`Compositor::prepare_annotation_kind`), and the variant keeping every
+//! path is never compiled for a set of its own there: no frame would draw
+//! with it once the slim one is ready.
 
 /// Whether every annotated draw takes the variant with every kind; see the
 /// module's notes.
@@ -171,8 +177,9 @@ impl CanvasPipelines {
 
   /// The pipeline that draws `kinds` into `target` keeping `features`: the
   /// slim variant keeping only those where it is ready, starting it compiling
-  /// in the background where it is not; otherwise one keeping every feature:
-  /// with `every`, the one with every kind for any annotated draw; otherwise
+  /// in the background where it is not, and meanwhile the smallest ready slim
+  /// variant holding them all; otherwise one keeping every feature: with
+  /// `every`, the one with every kind for any annotated draw; otherwise
   /// their own where it is ready, else the smallest ready one holding them
   /// all, else the one with every kind, which the build compiled.
   pub(super) fn get(
@@ -192,6 +199,9 @@ impl CanvasPipelines {
         return slim.pipeline(&self.device, target).clone();
       }
       self.compile_in_background(&slim, target);
+      if let Some(pipeline) = self.ready_slim_cover(target, kinds, features) {
+        return pipeline;
+      }
     }
     if (every || ALWAYS_EVERY_KIND) && kinds != 0 {
       return self
@@ -234,6 +244,33 @@ impl CanvasPipelines {
         Some((variant.kinds.count_ones(), pipeline))
       })
       .min_by_key(|(count, _)| *count)
+      .map(|(_, pipeline)| pipeline.clone())
+  }
+
+  /// The smallest ready slim variant for `target` keeping every path in
+  /// `features` and holding every kind in `kinds`, if one is. A path kept
+  /// that the frame does not take returns at once, so it draws the same
+  /// picture; it costs the GPU a little for the registers its path reserves.
+  fn ready_slim_cover(
+    &self,
+    target: Target,
+    kinds: KindMask,
+    features: FeatureMask,
+  ) -> Option<wgpu::RenderPipeline> {
+    let variants = self.variants.lock().ok()?;
+    variants
+      .values()
+      .filter(|variant| {
+        variant.features != ALL_FEATURES
+          && variant.features & features == features
+          && covers(variant.kinds, kinds)
+      })
+      .filter_map(|variant| {
+        let pipeline = variant.pipelines[target as usize].get()?;
+        let kept = variant.features.count_ones() + variant.kinds.count_ones();
+        Some((kept, pipeline))
+      })
+      .min_by_key(|(kept, _)| *kept)
       .map(|(_, pipeline)| pipeline.clone())
   }
 

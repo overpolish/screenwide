@@ -75,6 +75,11 @@ pub(crate) fn precompile() {
       assembled("annotation_blur"),
       &shader_layouts::MARK_BLUR,
     ),
+    drawing(
+      "BACKGROUND_FIELD",
+      assembled("background_field"),
+      &shader_layouts::BACKGROUND_FIELD,
+    ),
   ];
   // Only the macOS export splits frames into planes on the GPU.
   if std::env::var("CARGO_CFG_TARGET_OS").as_deref() == Ok("macos") {

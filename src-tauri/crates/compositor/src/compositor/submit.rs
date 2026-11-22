@@ -68,6 +68,8 @@ impl Compositor {
         );
       }
     }
+    let field = super::background_field::FieldConstants::of(&values);
+    values.background_options[3] |= u32::from(field.is_some());
     gpu
       .queue
       .write_buffer(&self.constants, 0, bytemuck::bytes_of(&values));
@@ -93,6 +95,9 @@ impl Compositor {
       .create_command_encoder(&wgpu::CommandEncoderDescriptor {
         label: Some("Screenwide preview frame"),
       });
+    let field = field
+      .map(|field| self.background_field.record(gpu, &mut encoder, field))
+      .transpose()?;
     let tile_buffer = self.tiles.bin(
       gpu,
       &mut encoder,
@@ -171,6 +176,7 @@ impl Compositor {
           texture(18, under.as_ref().unwrap_or(fallback)),
           texture(19, lenses),
           texture(20, &pictures[1]),
+          texture(21, field.as_ref().unwrap_or(fallback)),
         ],
       })
     };

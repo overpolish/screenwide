@@ -36,6 +36,20 @@ impl Compositor {
   /// what the annotations under a blurring spotlight add. One with none of
   /// its own ready would otherwise be compiled where it is drawn, holding
   /// the frame.
+  ///
+  /// Where frames are drawn slim (macOS), two slim variants keeping every
+  /// path but a focus come last ([`canvas_features::ALL_BUT_FOCUS`]): one
+  /// with no annotation, and one with every kind but a lens and a focus
+  /// (`playback_kinds`). A frame whose own slim variant is still compiling
+  /// draws with the smaller of them that holds it rather than with every
+  /// path kept: the first scene a recording's playback moves, turns or
+  /// blooms a background into, and the first annotation of a kind it shows,
+  /// ask for a variant of their own. Measured on a 1080p canvas while that
+  /// compiled, a frame without annotations cost the GPU 10 to 17 ms with
+  /// every path kept and 2 to 6 with the first; one with an arrow, a shape
+  /// and text 31 ms, and 7 with the second. A focus's path, and a lens's,
+  /// each cost nearly as much as every path does, so a frame with either
+  /// draws as before.
   pub fn compile_annotation_kinds_in_background(&self) {
     let canvas = &self.canvas;
     canvas.in_background.store(true, Ordering::Relaxed);
@@ -43,12 +57,25 @@ impl Compositor {
       canvas.variant(0, ALL_FEATURES),
       canvas.variant(every_kind(), ALL_FEATURES),
     );
-    let warm = [
+    let mut warm = vec![
       (none, Target::Canvas),
       (Arc::clone(&every), Target::Canvas),
       (Arc::clone(&every), Target::Layer),
       (every, Target::Delta),
     ];
+    if cfg!(target_os = "macos") {
+      let plain = canvas.variant(0, canvas_features::ALL_BUT_FOCUS);
+      let annotated = canvas.variant(playback_kinds(), canvas_features::ALL_BUT_FOCUS);
+      // A preview places its canvas, so it is drawn as a layer; a
+      // spotlight's blur is drawn into its own.
+      warm.extend([
+        (Arc::clone(&plain), Target::Layer),
+        (plain, Target::Canvas),
+        (Arc::clone(&annotated), Target::Layer),
+        (Arc::clone(&annotated), Target::Delta),
+        (annotated, Target::Canvas),
+      ]);
+    }
     let device = canvas.device.clone();
     // One thread, the variant with none first: a preview mostly draws with
     // it, and the one with every kind takes many times as long to compile.
@@ -110,6 +137,13 @@ impl super::CanvasPipelines {
       drawn.insert((slot, target as usize), (target, kinds, features));
     }
   }
+}
+
+/// The kinds the annotated playback variant holds: every kind but a lens
+/// (`Magnify`), whose path alone made a frame cost nearly what keeping every
+/// path does, and a focus, whose path the variant leaves out.
+fn playback_kinds() -> KindMask {
+  every_kind() & !kind_bit(AnnotationKind::Magnify) & !kind_bit(AnnotationKind::Focus)
 }
 
 /// See [`Compositor::hold_every_annotation_kind`].

@@ -61,6 +61,7 @@ impl Compositor {
       mips: screenwide_gpu::mips::Mips::new(&gpu.device, FORMAT),
       focus: super::focus::FocusBlur::new(gpu),
       lens_ground: super::lens_ground::LensGround::new(device),
+      background_field: super::background_field::BackgroundField::new(device),
       lens_under: Default::default(),
       sampler: sampler(device, wgpu::FilterMode::Linear),
       point_sampler: sampler(device, wgpu::FilterMode::Nearest),

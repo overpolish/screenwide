@@ -8,6 +8,15 @@ mod precompiled_shaders;
 const MODULES: &[(&str, &[&str])] = &[
   ("annotation_blur", &["src/shaders/annotation_blur.wgsl"]),
   (
+    "background_field",
+    &[
+      "src/shaders/background_field.wgsl",
+      "../output/src/mesh_generator_common.wgsl",
+      "../output/src/mesh_generators.wgsl",
+      "../output/src/mesh_generators_layered.wgsl",
+    ],
+  ),
+  (
     "focus_blur",
     &[
       "src/shaders/focus_blur.wgsl",

@@ -7,6 +7,7 @@
 //! platform brings the frames in and takes the canvas out.
 
 mod background;
+mod background_field;
 mod background_turn;
 mod band_needs;
 mod bands;
@@ -144,6 +145,8 @@ pub struct Compositor {
   mips: screenwide_gpu::mips::Mips,
   focus: focus::FocusBlur,
   lens_ground: lens_ground::LensGround,
+  /// The canvas's generator at half resolution; see `background_field`.
+  background_field: background_field::BackgroundField,
   lens_under: lens_under::LensUnder,
   sampler: wgpu::Sampler,
   point_sampler: wgpu::Sampler,

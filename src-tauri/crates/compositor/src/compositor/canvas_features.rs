@@ -35,6 +35,21 @@ const BACKGROUND_MESH: FeatureMask = 512;
 const BACKGROUND_GENERATOR: FeatureMask = 1024;
 const BACKGROUND_TURN: FeatureMask = 2048;
 
+/// Every path but a focus's, which costs a frame more than all the others
+/// together while kept: a preview's stand-in for a frame whose own slim
+/// variant is still compiling (`Compositor::compile_annotation_kinds_in_background`).
+pub(super) const ALL_BUT_FOCUS: FeatureMask = CURSOR
+  | CAMERA
+  | KEYBOARD
+  | MAGNIFIER
+  | SCENE_MOTION
+  | TURN
+  | CROP_PREVIEW
+  | BACKGROUND_PICTURE
+  | BACKGROUND_MESH
+  | BACKGROUND_GENERATOR
+  | BACKGROUND_TURN;
+
 /// The line every slim variant replaces.
 const ALL_LINE: &str = "const canvas_features: u32 = 0xffffffffu;";
 

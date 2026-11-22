@@ -58,7 +58,15 @@ pub(crate) const PREVIEW: ShaderLayout = ShaderLayout {
     // The picture of the background giving way while a scene's blooms in:
     // `compositor/background_turn.rs`.
     fragment(20, TEXTURE),
+    // The canvas's generator at half resolution: `compositor/background_field.rs`.
+    fragment(21, TEXTURE),
   ]],
+  vertex_buffers: &[],
+};
+
+/// The half-size generator pass's: its constants.
+pub(crate) const BACKGROUND_FIELD: ShaderLayout = ShaderLayout {
+  groups: &[&[fragment(0, UNIFORM)]],
   vertex_buffers: &[],
 };
 

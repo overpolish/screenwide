@@ -36,6 +36,18 @@
 //!
 //! Zero is a still, which is what a thumbnail and a screenshot export ask
 //! for. There the seed shift alone tells two pictures of one generator apart.
+//!
+//! # Which generators a canvas may draw at half resolution
+//!
+//! A canvas draws a generator again for every frame it shows, and the costly
+//! ones held a 1080p export to two thirds of its speed or less. A generator
+//! whose picture has no hard edge looks the same drawn at half the resolution
+//! it is shown at and scaled back up, so a canvas draws those once a frame into
+//! such a picture and reads it (`half_resolution`). Measured against the
+//! full-resolution picture on a 1080p canvas: Gentle 65 dB, Currents 61,
+//! Aurora 60, Silk 57, Fluid 51. Paint (49 dB), Strata (42) and Ribbons (35)
+//! have hard edges, which scaling up visibly softens or steps, so they are
+//! drawn at full resolution.
 
 /// One generator: the name settings carry, the number every shader switches
 /// on, how many colours its palette takes, and how fast it drifts.
@@ -47,6 +59,8 @@ pub struct MeshGenerator {
   /// them, tabled above. The dispatch applies it once, so a shader never
   /// carries a factor of its own.
   pub speed: f32,
+  /// Whether a canvas may draw it at half its size; see the module's notes.
+  pub half_resolution: bool,
 }
 
 const GENERATORS: [MeshGenerator; 9] = [
@@ -55,54 +69,63 @@ const GENERATORS: [MeshGenerator; 9] = [
     id: 0,
     name: "mesh",
     speed: 1.0,
+    half_resolution: false,
   },
   MeshGenerator {
     color_count: 4,
     id: 1,
     name: "silk",
     speed: 0.025,
+    half_resolution: true,
   },
   MeshGenerator {
     color_count: 3,
     id: 2,
     name: "aurora",
     speed: 0.025,
+    half_resolution: true,
   },
   MeshGenerator {
     color_count: 4,
     id: 3,
     name: "fluid",
     speed: 0.025,
+    half_resolution: true,
   },
   MeshGenerator {
     color_count: 3,
     id: 4,
     name: "gentle",
     speed: 0.075,
+    half_resolution: true,
   },
   MeshGenerator {
     color_count: 4,
     id: 5,
     name: "currents",
     speed: 0.025,
+    half_resolution: true,
   },
   MeshGenerator {
     color_count: 4,
     id: 6,
     name: "paint",
     speed: 0.025,
+    half_resolution: false,
   },
   MeshGenerator {
     color_count: 4,
     id: 7,
     name: "ribbons",
     speed: 0.025,
+    half_resolution: false,
   },
   MeshGenerator {
     color_count: 4,
     id: 8,
     name: "strata",
     speed: 0.025,
+    half_resolution: false,
   },
 ];
 
@@ -171,7 +194,7 @@ pub fn generator_palette(colors: &[String]) -> Result<[[f32; 4]; 4], String> {
   Ok(palette)
 }
 
-#[cfg(any(test, feature = "test-support"))]
+/// Every generator, in id order.
 pub fn every_generator() -> &'static [MeshGenerator] {
   &GENERATORS
 }

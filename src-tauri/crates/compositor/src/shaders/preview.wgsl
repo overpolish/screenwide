@@ -47,7 +47,9 @@ struct Canvas {
   magnifier_bounds: vec4<f32>,
   options: vec4<u32>, // seed, mesh enabled, point count, shadow enabled
   cursor_options: vec4<u32>, // artwork, enabled, clip to video, foreground only
-  background_options: vec4<u32>, // has background image, generator, palette size
+  // Has background image, generator, palette size, and whether this frame's
+  // generator is read from `background_field` (1).
+  background_options: vec4<u32>,
   // Annotations below the camera are sorted ahead of those above it, so `x` is
   // both the below-camera count and where the above-camera run starts.
   annotation_options: vec4<u32>, // below-camera count, total count, number atlas size
@@ -278,6 +280,9 @@ struct Keyboard {
 @group(0) @binding(6) var background_image: texture_2d<f32>;
 // The picture of the background giving way while a scene's blooms in.
 @group(0) @binding(20) var turn_image: texture_2d<f32>;
+// The canvas's generator drawn at half resolution, where
+// `background_options.w` says so; see `canvas_background.wgsl`.
+@group(0) @binding(21) var background_field: texture_2d<f32>;
 @group(0) @binding(12) var linear_sampler: sampler;
 @group(0) @binding(13) var point_sampler: sampler;
 // What the annotations under the spotlights' shade add to the canvas, and the
@@ -1449,6 +1454,33 @@ fn panes_camera_behind(start: vec4<f32>, pixel: vec2<f32>, screen: ScreenPoint,
   return Panes(result, base, false);
 }
 
+// Whether the screen covers `pixel` wholly, so nothing of the background
+// under it shows. A generator is evaluated at every pixel it is drawn at, and
+// the screen covers most of a canvas, so the canvas leaves it out there: only
+// where the screen is upright, still and fully shown, inside every edge it
+// is cut to, and its picture opaque there, which a screenshot with clear
+// corners or a person cut out is not everywhere.
+fn screen_hides_generator(pixel: vec2<f32>) -> bool {
+  if (!feature_kept(feature_background_generator) || screen_turned() || scene_samples() != 1u ||
+      canvas.scene_opacity.x < 1.0 || annotation_blur_mode() != 0u ||
+      (feature_kept(feature_crop_preview) && canvas.crop_preview_effects.y != 0.0)) {
+    return false;
+  }
+  if (rounded_coverage(pixel, canvas.crop_rect, canvas.effects.x) < 1.0) {
+    return false;
+  }
+  // An inset fills the crop under the picture.
+  if (canvas.recenter_inset_color.a > 0.0) {
+    return true;
+  }
+  if (rounded_coverage(pixel, canvas.image_rect, canvas.source_shape.x) < 1.0 ||
+      rounded_coverage(pixel, canvas.source_crop_rect, 0.0) < 1.0) {
+    return false;
+  }
+  let uv = (pixel - canvas.image_rect.xy) / canvas.image_rect.zw;
+  return textureSampleLevel(source_image, linear_sampler, source_texture_uv(uv), 0.0).a >= 1.0;
+}
+
 @fragment
 fn fs_main(@builtin(position) position: vec4<f32>) -> @location(0) vec4<f32> {
   let pixel = (position.xy - canvas.placement.xy) * canvas.placement.zw;
@@ -1493,7 +1525,8 @@ fn fs_main(@builtin(position) position: vec4<f32>) -> @location(0) vec4<f32> {
   let near_canvas = all(pixel >= vec2<f32>(-edge_reach)) &&
       all(pixel <= canvas.output_source.xy + edge_reach);
   var result = vec4<f32>(0.0);
-  if (!foreground_only && !over_focus && (!overflow || near_canvas)) {
+  if (!foreground_only && !over_focus && (!overflow || near_canvas) &&
+      !screen_hides_generator(pixel)) {
     result = vec4<f32>(background(pixel), 1.0) * select(1.0, background_alpha, overflow);
   }
   // While a scene crosses the order over, both orders are drawn and mixed:

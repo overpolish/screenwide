@@ -7,11 +7,14 @@
 use super::*;
 use std::ffi::OsString;
 
-/// How many threads x264 encodes with. Four more than doubled the media
-/// engine at 4K (143 against 60 frames a second on an M4 Pro) while keeping
-/// about a quarter of its cores busy; every core was twice as fast again but
-/// ran a laptop hot, and at 1080p four already outran decoding the recording.
-const X264_THREADS: &str = "4";
+/// How many threads x264 encodes with: zero lets it pick from the machine's
+/// cores. On an M4 Pro a 1080p export drew 455 frames a second on four
+/// threads, its frame loop waiting on the encoder, and 530 to 540 on six or
+/// more, where drawing the frames on the GPU limits it; x264's own choice
+/// matches that without a count tuned to one machine. The extra threads cost
+/// CPU, and so heat, only where the GPU is the limit: about a third more CPU
+/// over a generator background.
+const X264_THREADS: &str = "0";
 
 /// The x264 quality for each compression level, the media engine's equal or
 /// better. Measured against a lossless export of a 4K screen recording and a
