@@ -4,9 +4,10 @@
 //! Zoom scenes made from what the recording's cursor and keys show of where
 //! the work happened. Clicks, drags and typing are gathered into beats, the
 //! moments another app came to the front split them, and the beats are
-//! planned into shots across the whole recording at once. Each shot becomes
-//! an ordinary full scene that zooms the screen, marked as made here so that
-//! making them again replaces only these.
+//! planned into shots across the whole recording at once. Where the
+//! recording kept the text caret, typing is framed on it and followed along
+//! the text. Each shot becomes an ordinary full scene that zooms the screen,
+//! marked as made here so that making them again replaces only these.
 
 mod beats;
 mod shots;

@@ -466,3 +466,88 @@ fn typing_holds_its_zoom_with_the_pointer_parked_aside() {
   let typed = zoom_at(&clips, 14_000).expect("the typing is zoomed into");
   assert!(typed.end_ms >= 16_200, "{clips:#?}");
 }
+
+/// Where the caret was at `ms` on a line at `y`, in points.
+fn caret(ms: u64, (x, y): (f64, f64)) -> KeyboardRecord {
+  KeyboardRecord::Caret {
+    timestamp_us: ms * 1_000,
+    x,
+    y,
+    width: 1.0,
+    height: 16.0,
+  }
+}
+
+/// Typing from `from` to `to` with the caret moving along a line from
+/// `start` to `end`, as the recorder keeps it: a typing mark each half
+/// second, the caret each quarter.
+fn typed_along(from: u64, to: u64, start: (f64, f64), end: (f64, f64)) -> Vec<KeyboardRecord> {
+  let mut keyboard = Vec::new();
+  for ms in (from..=to).step_by(250) {
+    if (ms - from).is_multiple_of(500) {
+      keyboard.push(KeyboardRecord::Typing {
+        timestamp_us: ms * 1_000,
+      });
+    }
+    let share = (ms - from) as f64 / (to - from) as f64;
+    keyboard.push(caret(
+      ms,
+      (
+        start.0 + (end.0 - start.0) * share,
+        start.1 + (end.1 - start.1) * share,
+      ),
+    ));
+  }
+  keyboard
+}
+
+#[test]
+fn a_long_line_of_typing_is_followed_along_its_caret() {
+  // A click into a field near the left, then ten seconds of typing that runs
+  // across most of the screen.
+  let cursor = [vec![header()], click(10_000, (100.0, 500.0)).to_vec()].concat();
+  let keyboard = typed_along(10_400, 20_400, (110.0, 500.0), (900.0, 500.0));
+  let signals = Signals::read(&cursor, &keyboard, VisibleArea::WHOLE);
+  let clips = clips(&signals, DURATION_MS);
+  assert_playable(&clips);
+  for record in &keyboard {
+    let KeyboardRecord::Caret {
+      timestamp_us, x, ..
+    } = *record
+    else {
+      continue;
+    };
+    let ms = timestamp_us / 1_000;
+    let clip =
+      zoom_at(&clips, ms).unwrap_or_else(|| panic!("typing at {ms} ms is zoomed into: {clips:#?}"));
+    let framing = clip.screen.unwrap();
+    let half = 0.5 / framing.zoom;
+    // A moment after a pan sets off, the caret may still be ahead of it.
+    let settled = clip.start_ms + 600 <= ms;
+    assert!(
+      !settled || (x / 1_000.0 - framing.focus_x).abs() <= half,
+      "the caret at {ms} ms is in frame: {clips:#?}"
+    );
+  }
+  assert!(
+    clips.len() >= 2,
+    "the camera pans along the line: {clips:#?}"
+  );
+}
+
+#[test]
+fn typing_that_wraps_to_the_next_line_comes_back_to_its_start() {
+  let cursor = [vec![header()], click(10_000, (100.0, 300.0)).to_vec()].concat();
+  let keyboard = [
+    typed_along(10_400, 16_400, (110.0, 300.0), (850.0, 300.0)),
+    typed_along(16_650, 20_650, (110.0, 330.0), (400.0, 330.0)),
+  ]
+  .concat();
+  let signals = Signals::read(&cursor, &keyboard, VisibleArea::WHOLE);
+  let clips = clips(&signals, DURATION_MS);
+  assert_playable(&clips);
+  let late = zoom_at(&clips, 15_500).expect("the end of the first line is zoomed into");
+  let wrapped = zoom_at(&clips, 20_000).expect("the second line is zoomed into");
+  assert!(late.screen.unwrap().focus_x > 0.6, "{clips:#?}");
+  assert!(wrapped.screen.unwrap().focus_x < 0.45, "{clips:#?}");
+}

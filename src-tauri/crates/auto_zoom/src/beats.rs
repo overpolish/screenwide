@@ -3,7 +3,10 @@
 
 //! Beats: runs of clicks, drags and typing close together in time and place,
 //! each one stretch of work a single framing can show. Planning shots merges
-//! beats further; a beat itself is never split.
+//! beats further; a beat itself is split only where the caret shows its
+//! typing running further than one framing shows.
+
+mod typing;
 
 use super::signals::{CursorSample, Signals};
 use super::Area;
@@ -97,21 +100,35 @@ pub(super) fn group(signals: &Signals) -> Vec<Beat> {
     .map(|beat| beat.start_ms)
     .chain(std::iter::once(u64::MAX))
     .collect();
-  for (beat, next_start) in beats.iter_mut().zip(next_starts) {
-    if !beat.is_switch {
-      hold_for_typing(beat, signals, next_start);
-      take_in_pointer(beat, &signals.cursor);
+  let mut followed = Vec::with_capacity(beats.len());
+  for (mut beat, next_start) in beats.into_iter().zip(next_starts) {
+    if beat.is_switch {
+      followed.push(beat);
+      continue;
+    }
+    let typing_weight = hold_for_typing(&mut beat, signals, next_start);
+    match typing::follow_caret(&beat, typing_weight, signals) {
+      Some((mut lead, runs)) => {
+        take_in_pointer(&mut lead, &signals.cursor);
+        followed.push(lead);
+        followed.extend(runs);
+      }
+      None => {
+        take_in_pointer(&mut beat, &signals.cursor);
+        followed.push(beat);
+      }
     }
   }
-  beats
+  followed
 }
 
 /// Keys pressed during `beat`, or soon after and before the next beat starts,
-/// hold it on and make it matter more: typed text is small on screen.
-fn hold_for_typing(beat: &mut Beat, signals: &Signals, next_start: u64) {
+/// hold it on and make it matter more: typed text is small on screen. Says
+/// how much the keys added.
+fn hold_for_typing(beat: &mut Beat, signals: &Signals, next_start: u64) -> f64 {
   let keys = &signals.keys;
   let first = keys.partition_point(|&key| key < beat.start_ms);
-  let mut typed = 0_u32;
+  let mut typed = 0_usize;
   for &key in &keys[first..] {
     if key >= next_start || key > beat.end_ms + TYPING_GAP_MS {
       break;
@@ -119,10 +136,17 @@ fn hold_for_typing(beat: &mut Beat, signals: &Signals, next_start: u64) {
     beat.end_ms = beat.end_ms.max(key);
     typed += 1;
   }
-  beat.weight += (f64::from(typed) * TYPING_WEIGHT_PER_KEY).min(MAX_TYPING_WEIGHT);
+  let weight = key_weight(typed);
+  beat.weight += weight;
   let typing = &signals.typing;
   beat.typed = typing.partition_point(|&key| key < beat.start_ms)
     < typing.partition_point(|&key| key <= beat.end_ms);
+  weight
+}
+
+/// What `keys` pressed add to a beat's weight.
+fn key_weight(keys: usize) -> f64 {
+  (keys as f64 * TYPING_WEIGHT_PER_KEY).min(MAX_TYPING_WEIGHT)
 }
 
 /// Widens `beat` to where the pointer spent most of its time over it, where

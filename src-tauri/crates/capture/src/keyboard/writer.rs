@@ -7,7 +7,7 @@ use std::collections::HashSet;
 
 use super::rolling::KeyboardBaseline;
 use super::{
-  FocusContext, KeyboardModifier, KeyboardRecord, RawKeyboardEvent, RawKeyboardEventKind,
+  CaretRect, FocusContext, KeyboardModifier, KeyboardRecord, RawKeyboardEvent, RawKeyboardEventKind,
 };
 use crate::clock::SidecarClock;
 use crate::sidecar_output::SidecarOutput;
@@ -16,6 +16,13 @@ use crate::sidecar_output::SidecarOutput;
 /// and holds a zoom on, both of which need only roughly when it happened, so
 /// the pace of the keys is not kept.
 const TYPING_MARK_US: u64 = 500_000;
+/// The least time between two caret records. A zoom pans along the text
+/// from where the caret went, which it needs a few times a second, not at
+/// every key.
+const CARET_MARK_US: u64 = 250_000;
+/// How far the caret must move, in the cursor file's units, to be written
+/// again.
+const CARET_MOVED: f64 = 0.5;
 
 pub(super) struct StreamWriter {
   pub(super) active_keys: HashSet<u16>,
@@ -24,6 +31,8 @@ pub(super) struct StreamWriter {
   pub(super) output: SidecarOutput<KeyboardRecord, KeyboardBaseline>,
   /// When the last typing mark was written.
   pub(super) last_typing_us: Option<u64>,
+  /// The last caret written, and when.
+  last_caret: Option<(u64, CaretRect)>,
   /// Modifier presses not written yet. Until the key they go with arrives
   /// they may belong to a hidden shortcut, which takes them away with it.
   pending_modifiers: Vec<KeyboardRecord>,
@@ -44,6 +53,7 @@ impl StreamWriter {
       failure: None,
       output,
       last_typing_us: None,
+      last_caret: None,
       pending_modifiers: Vec::new(),
     }
   }
@@ -54,6 +64,30 @@ impl StreamWriter {
       self.output.write(&record)?;
     }
     Ok(())
+  }
+
+  /// The caret record to write for a key typed at `timestamp_us`, where the
+  /// caret was read and has moved since the last one written, which is a
+  /// while ago.
+  fn caret_record(
+    &mut self,
+    caret: Option<CaretRect>,
+    timestamp_us: u64,
+  ) -> Option<KeyboardRecord> {
+    let caret = caret?;
+    if let Some((at, last)) = self.last_caret {
+      if timestamp_us < at + CARET_MARK_US || !caret.moved_from(last, CARET_MOVED) {
+        return None;
+      }
+    }
+    self.last_caret = Some((timestamp_us, caret));
+    Some(KeyboardRecord::Caret {
+      timestamp_us,
+      x: caret.x,
+      y: caret.y,
+      width: caret.width,
+      height: caret.height,
+    })
   }
 
   pub(super) fn accepts(event: &RawKeyboardEvent) -> bool {
@@ -116,14 +150,25 @@ impl StreamWriter {
     }
     let record = match event.kind {
       RawKeyboardEventKind::KeyDown { .. } if Self::types(&event) => {
-        if self
+        let caret = self.caret_record(event.caret, timestamp_us);
+        let marks = !self
           .last_typing_us
-          .is_some_and(|last| timestamp_us < last + TYPING_MARK_US)
-        {
+          .is_some_and(|last| timestamp_us < last + TYPING_MARK_US);
+        if !marks && caret.is_none() {
           return Ok(false);
         }
-        self.last_typing_us = Some(timestamp_us);
-        KeyboardRecord::Typing { timestamp_us }
+        self.write_pending()?;
+        if marks {
+          self.last_typing_us = Some(timestamp_us);
+          self
+            .output
+            .write(&KeyboardRecord::Typing { timestamp_us })?;
+        }
+        if let Some(caret) = caret {
+          self.output.write(&caret)?;
+        }
+        self.output.flush()?;
+        return Ok(true);
       }
       RawKeyboardEventKind::KeyDown { .. } => {
         if !Self::accepts(&event) || !self.active_keys.insert(event.key_code) {

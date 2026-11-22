@@ -26,6 +26,13 @@ const CLICK_WEIGHT: f64 = 1.0;
 const DOUBLE_CLICK_WEIGHT: f64 = 1.2;
 const DRAG_WEIGHT: f64 = 1.5;
 
+/// How far past the caret a typing shot takes in, in caret heights: the
+/// line before it, which was just typed, and more of the line after it,
+/// where the text is going.
+const CARET_BEFORE: f64 = 1.5;
+const CARET_AFTER: f64 = 4.0;
+const CARET_ABOVE_BELOW: f64 = 0.5;
+
 /// One thing done at a place: a click or a drag.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub(super) struct Activity {
@@ -47,6 +54,14 @@ pub(super) struct CursorSample {
   pub y: f64,
 }
 
+/// Where the text caret was at `ms`, with room round it for the text just
+/// typed and the text to come, in shares of the visible picture.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub(super) struct CaretSample {
+  pub ms: u64,
+  pub area: Area,
+}
+
 #[derive(Debug, Default)]
 pub(super) struct Signals {
   /// Sorted by start.
@@ -56,8 +71,13 @@ pub(super) struct Signals {
   /// When text was typed, sorted: the keys that are typing rather than a
   /// shortcut.
   pub typing: Vec<u64>,
-  /// Sorted by time.
+  /// Sorted by time. While text is typed the caret stands in for the
+  /// pointer, since that is where the attention is and the pointer is
+  /// hidden.
   pub cursor: Vec<CursorSample>,
+  /// Where the caret was while text was typed, sorted by time. Recordings
+  /// made before the caret was kept have none.
+  pub carets: Vec<CaretSample>,
   /// When another app came to the front, sorted.
   pub switches: Vec<u64>,
 }
@@ -149,16 +169,46 @@ impl Signals {
       move_to_switch(activity, &signals.switches);
     }
     signals.activities.sort_by_key(|activity| activity.start_ms);
-    signals.cursor.sort_by_key(|sample| sample.ms);
     signals.keys = keyboard
       .iter()
       .filter_map(|record| match record {
         KeyboardRecord::Shortcut { timestamp_us, .. }
         | KeyboardRecord::KeyDown { timestamp_us, .. }
-        | KeyboardRecord::Typing { timestamp_us } => Some(timestamp_us / 1_000),
+        | KeyboardRecord::Typing { timestamp_us }
+        | KeyboardRecord::Caret { timestamp_us, .. } => Some(timestamp_us / 1_000),
         _ => None,
       })
       .collect();
+    for record in keyboard {
+      if let KeyboardRecord::Caret {
+        timestamp_us,
+        x,
+        y,
+        width,
+        height,
+      } = *record
+      {
+        let ms = timestamp_us / 1_000;
+        let (left, top) = share(x - CARET_BEFORE * height, y - CARET_ABOVE_BELOW * height);
+        let (right, bottom) = share(
+          x + width + CARET_AFTER * height,
+          y + (1.0 + CARET_ABOVE_BELOW) * height,
+        );
+        let (x, y) = share(x + width / 2.0, y + height / 2.0);
+        signals.carets.push(CaretSample {
+          ms,
+          area: Area {
+            left,
+            top,
+            right,
+            bottom,
+          },
+        });
+        signals.cursor.push(CursorSample { ms, x, y });
+      }
+    }
+    signals.carets.sort_by_key(|caret| caret.ms);
+    signals.cursor.sort_by_key(|sample| sample.ms);
     signals.keys.sort_unstable();
     signals.typing = screenwide_records::keyboard::typing_times_us(keyboard)
       .into_iter()

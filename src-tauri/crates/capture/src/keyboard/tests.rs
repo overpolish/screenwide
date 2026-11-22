@@ -11,6 +11,7 @@ fn event(
 ) -> RawKeyboardEvent {
   RawKeyboardEvent {
     at: Instant::now(),
+    caret: None,
     focus,
     kind: RawKeyboardEventKind::KeyDown {
       is_printable,
@@ -24,6 +25,7 @@ fn event(
 fn key_up(key_code: u16) -> RawKeyboardEvent {
   RawKeyboardEvent {
     at: Instant::now(),
+    caret: None,
     focus: FocusContext::NonText,
     kind: RawKeyboardEventKind::KeyUp,
     key_code,
@@ -193,6 +195,7 @@ fn a_hidden_shortcut_leaves_no_keys_not_even_its_modifiers() {
   set_hidden_shortcuts(&["Super+Control+Digit7".to_owned()]);
   let flags = |key_code: u16, modifier: KeyboardModifier, is_down: bool| RawKeyboardEvent {
     at: Instant::now(),
+    caret: None,
     focus: FocusContext::NonText,
     kind: RawKeyboardEventKind::FlagsChanged { is_down, modifier },
     key_code,
@@ -272,6 +275,52 @@ fn typing_in_a_field_is_marked_by_time_alone_and_never_in_a_password() {
     [
       r#"{"type":"typing","timestampUs":100000}"#,
       r#"{"type":"typing","timestampUs":600000}"#,
+    ]
+  );
+}
+
+#[test]
+fn the_caret_is_kept_while_it_moves_and_never_in_a_password() {
+  let origin = Instant::now();
+  let shared_origin = Arc::new(OnceLock::new());
+  shared_origin.set(origin).unwrap();
+  let path = std::env::temp_dir().join(format!(
+    "screenwide-keyboard-caret-{}.jsonl",
+    std::process::id()
+  ));
+  let file = std::fs::File::create(&path).unwrap();
+  let mut writer = StreamWriter::new(
+    SidecarClock::new(shared_origin),
+    SidecarOutput::File(std::io::BufWriter::new(file)),
+  );
+  let at = |focus, ms, x: f64| {
+    let mut key = event(focus, true, vec![]);
+    key.at = origin + Duration::from_millis(ms);
+    key.caret = Some(CaretRect {
+      x,
+      y: 40.0,
+      width: 1.0,
+      height: 16.0,
+    });
+    key
+  };
+  assert!(!writer.record(at(FocusContext::Secure, 0, 10.0)).unwrap());
+  // A caret read again within a quarter of a second, or where it was, is
+  // not kept again; one that moved after that is, between typing marks too.
+  let written: Vec<bool> = [(100, 10.0), (200, 30.0), (400, 10.0), (450, 60.0)]
+    .into_iter()
+    .map(|(ms, x)| writer.record(at(FocusContext::Text, ms, x)).unwrap())
+    .collect();
+  assert_eq!(written, [true, false, false, true]);
+  writer.output.flush().unwrap();
+  let lines = std::fs::read_to_string(&path).unwrap();
+  let _ = std::fs::remove_file(path);
+  assert_eq!(
+    lines.lines().collect::<Vec<_>>(),
+    [
+      r#"{"type":"typing","timestampUs":100000}"#,
+      r#"{"type":"caret","timestampUs":100000,"x":10.0,"y":40.0,"width":1.0,"height":16.0}"#,
+      r#"{"type":"caret","timestampUs":450000,"x":60.0,"y":40.0,"width":1.0,"height":16.0}"#,
     ]
   );
 }

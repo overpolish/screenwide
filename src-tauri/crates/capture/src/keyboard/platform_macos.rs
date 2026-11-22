@@ -8,6 +8,7 @@ use std::sync::{mpsc, Arc};
 use std::thread::JoinHandle;
 use std::time::{Duration, Instant};
 
+mod caret;
 mod classifier;
 
 use core_foundation::runloop::{kCFRunLoopDefaultMode, CFRunLoop};
@@ -16,11 +17,14 @@ use core_graphics::event::{
   CGEventType, CallbackResult, EventField,
 };
 
-use super::{EventSink, FocusContext, RawKeyboardEvent};
+use super::{EventSink, FocusContext, RawKeyboardEvent, RawKeyboardEventKind};
 
 const EVENT_QUEUE_CAPACITY: usize = 128;
 const RUN_LOOP_POLL: Duration = Duration::from_millis(25);
 const START_TIMEOUT: Duration = Duration::from_secs(2);
+/// How often the caret is read while typing: the writer keeps it a few
+/// times a second, and each read asks the app in front.
+const CARET_EVERY: Duration = Duration::from_millis(150);
 
 #[derive(Clone, Copy)]
 struct PendingKeyDown {
@@ -68,6 +72,7 @@ fn run(stop: &AtomicBool, sink: &EventSink, ready: mpsc::Sender<Result<(), Strin
       if let Some(ready) = ready.borrow_mut().take() {
         let _ = ready.send(Ok(()));
       }
+      let mut caret_read: Option<(Instant, Option<super::CaretRect>)> = None;
       while !stop.load(Ordering::Acquire) {
         cached_focus.set(classifier::focus_context());
         // SAFETY: Core Foundation owns this process-global constant.
@@ -81,8 +86,25 @@ fn run(stop: &AtomicBool, sink: &EventSink, ready: mpsc::Sender<Result<(), Strin
           else {
             continue;
           };
+          let types = focus == FocusContext::Text
+            && matches!(
+              event_kind,
+              RawKeyboardEventKind::KeyDown {
+                is_printable: true,
+                is_repeat: false,
+              }
+            );
+          let caret = if types {
+            if caret_read.is_none_or(|(at, _)| at.elapsed() >= CARET_EVERY) {
+              caret_read = Some((Instant::now(), caret::caret()));
+            }
+            caret_read.and_then(|(_, caret)| caret)
+          } else {
+            None
+          };
           sink(RawKeyboardEvent {
             at: event.at,
+            caret,
             focus,
             kind: event_kind,
             key_code: event.key_code,

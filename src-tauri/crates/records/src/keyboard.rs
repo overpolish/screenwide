@@ -7,7 +7,8 @@ use std::path::Path;
 
 use serde::{Deserialize, Serialize};
 
-pub const FORMAT_VERSION: u16 = 2;
+/// Version 3 adds where the text caret was while typing.
+pub const FORMAT_VERSION: u16 = 3;
 
 #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "kebab-case")]
@@ -19,7 +20,7 @@ pub enum KeyboardModifier {
   Shift,
 }
 
-#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 #[serde(
   rename_all = "camelCase",
   rename_all_fields = "camelCase",
@@ -49,6 +50,17 @@ pub enum KeyboardRecord {
   /// Text was being typed. A key typed into a text field is never recorded,
   /// so this says only when, and no more often than the writer allows.
   Typing { timestamp_us: u64 },
+  /// Where the text caret was while text was typed, in the coordinates the
+  /// cursor file's header names: a box a line high and, for a caret, about a
+  /// point wide. It says where the text goes on the screen, never what it
+  /// is, and is never kept for a password field.
+  Caret {
+    timestamp_us: u64,
+    x: f64,
+    y: f64,
+    width: f64,
+    height: f64,
+  },
 }
 
 /// Whether `key_code` is a modifier: Command, Shift, Caps Lock, Option,
@@ -114,7 +126,7 @@ pub fn read(path: &Path) -> Result<Vec<KeyboardRecord>, String> {
     }
   }
   match records.first() {
-    Some(KeyboardRecord::Header { version, .. }) if *version == 1 || *version == FORMAT_VERSION => {
+    Some(KeyboardRecord::Header { version, .. }) if (1..=FORMAT_VERSION).contains(version) => {
       Ok(records)
     }
     Some(KeyboardRecord::Header { version, .. }) => Err(format!(

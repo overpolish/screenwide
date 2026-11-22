@@ -101,6 +101,11 @@ impl Focus {
     }
   }
 
+  /// Where the caret is in the focused control, where it says.
+  pub(super) fn caret(&self) -> Option<super::super::CaretRect> {
+    super::caret::caret(self.automation.as_ref()?)
+  }
+
   pub(super) fn context(&self) -> FocusContext {
     let Some(automation) = self.automation.as_ref() else {
       return FocusContext::Unknown;

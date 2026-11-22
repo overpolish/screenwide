@@ -15,7 +15,8 @@ impl TimedRecord for KeyboardRecord {
       Self::Shortcut { timestamp_us, .. }
       | Self::KeyDown { timestamp_us, .. }
       | Self::KeyUp { timestamp_us, .. }
-      | Self::Typing { timestamp_us } => Some(*timestamp_us),
+      | Self::Typing { timestamp_us }
+      | Self::Caret { timestamp_us, .. } => Some(*timestamp_us),
     }
   }
 
@@ -26,7 +27,8 @@ impl TimedRecord for KeyboardRecord {
       Self::Shortcut { timestamp_us, .. }
       | Self::KeyDown { timestamp_us, .. }
       | Self::KeyUp { timestamp_us, .. }
-      | Self::Typing { timestamp_us } => *timestamp_us = at,
+      | Self::Typing { timestamp_us }
+      | Self::Caret { timestamp_us, .. } => *timestamp_us = at,
     }
     record
   }
@@ -52,6 +54,7 @@ impl Baseline<KeyboardRecord> for KeyboardBaseline {
       // Moments, not state.
       KeyboardRecord::Shortcut { .. }
       | KeyboardRecord::Typing { .. }
+      | KeyboardRecord::Caret { .. }
       | KeyboardRecord::Header { .. } => {}
     }
   }

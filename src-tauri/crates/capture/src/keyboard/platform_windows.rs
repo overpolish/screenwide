@@ -6,13 +6,14 @@ use std::sync::{mpsc, Arc};
 use std::thread::JoinHandle;
 use std::time::{Duration, Instant};
 
+mod caret;
 mod classifier_windows;
 mod focus_probe;
 use self::classifier_windows as classifier;
 
 use screenwide_keyboard_hook::{Phase, Registration};
 
-use super::{EventSink, FocusContext, RawKeyboardEvent};
+use super::{EventSink, FocusContext, RawKeyboardEvent, RawKeyboardEventKind};
 
 const EVENT_QUEUE_CAPACITY: usize = 128;
 const POLL: Duration = Duration::from_millis(25);
@@ -66,14 +67,25 @@ fn run(stop: &AtomicBool, sink: &EventSink, ready: mpsc::Sender<Result<(), Strin
 
   let focus = focus_probe::FocusProbe::start(Arc::clone(&cached_focus));
   let mut tracker = classifier::KeyTracker::default();
-  let mut deliver = |events: Vec<classifier::PendingEvent>, fresh: FocusContext| {
+  let mut deliver = |events: Vec<classifier::PendingEvent>,
+                     fresh: FocusContext,
+                     caret: Option<super::CaretRect>| {
     for event in events {
       let focus = FocusContext::conservative(classifier::decode_focus(event.focus), fresh);
       let Some(classified) = tracker.classify(&event) else {
         continue;
       };
+      let types = focus == FocusContext::Text
+        && matches!(
+          classified.kind,
+          RawKeyboardEventKind::KeyDown {
+            is_printable: true,
+            is_repeat: false,
+          }
+        );
       sink(RawKeyboardEvent {
         at: event.at,
+        caret: caret.filter(|_| types),
         focus,
         kind: classified.kind,
         key_code: classified.key_code,
@@ -82,12 +94,12 @@ fn run(stop: &AtomicBool, sink: &EventSink, ready: mpsc::Sender<Result<(), Strin
     }
   };
   while !stop.load(Ordering::Acquire) {
-    deliver(pending.try_iter().collect(), focus.current());
+    deliver(pending.try_iter().collect(), focus.current(), focus.caret());
     std::thread::sleep(POLL);
   }
   drop(registration);
   // What the hook passed on before the stop still belongs to the recording.
-  deliver(pending.try_iter().collect(), focus.current());
+  deliver(pending.try_iter().collect(), focus.current(), focus.caret());
   LISTENING.store(false, Ordering::Release);
 }
 

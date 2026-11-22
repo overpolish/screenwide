@@ -69,9 +69,30 @@ impl FocusContext {
   }
 }
 
+/// Where the text caret is, in the coordinates the cursor file names: global
+/// points on macOS, global physical pixels on Windows.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub(super) struct CaretRect {
+  pub x: f64,
+  pub y: f64,
+  pub width: f64,
+  pub height: f64,
+}
+
+impl CaretRect {
+  fn moved_from(self, other: Self, by: f64) -> bool {
+    (self.x - other.x).abs() > by
+      || (self.y - other.y).abs() > by
+      || (self.width - other.width).abs() > by
+      || (self.height - other.height).abs() > by
+  }
+}
+
 #[derive(Clone, Debug)]
 pub(super) struct RawKeyboardEvent {
   pub at: Instant,
+  /// Where the caret was as the key came, where the focused control says.
+  pub caret: Option<CaretRect>,
   pub focus: FocusContext,
   pub kind: RawKeyboardEventKind,
   pub key_code: u16,
