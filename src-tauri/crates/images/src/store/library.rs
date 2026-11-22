@@ -8,7 +8,6 @@
 //! size, and the time its file was last written.
 
 use std::path::Path;
-use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use serde::{Deserialize, Serialize};
@@ -19,8 +18,9 @@ use super::{directory, is_name, removed, stored_file, IMAGE_PREFIX, KEPT_EXTENSI
 use screenwide_annotations::image::{ImageArt, ImagePlay};
 use screenwide_credits::Credit;
 
-/// The version of the file kept beside a picture.
-const FORMAT_VERSION: u16 = 1;
+mod kept;
+use kept::write_kept;
+pub(super) use kept::{kept_path, read_kept};
 
 /// A picture in the library.
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize, TS)]
@@ -49,60 +49,10 @@ pub struct Picture {
   pub credit: Option<Credit>,
 }
 
-#[derive(Deserialize, Serialize)]
-struct Kept {
-  version: u16,
-  picture: Picture,
-}
-
-pub(super) fn kept_path(folder: &Path, name: &str) -> std::path::PathBuf {
-  folder.join(format!("{name}.json"))
-}
-
 fn now_ms() -> u64 {
   SystemTime::now()
     .duration_since(UNIX_EPOCH)
     .map_or(0, |since| since.as_millis() as u64)
-}
-
-pub(super) fn read_kept(folder: &Path, name: &str) -> Option<Picture> {
-  let bytes = std::fs::read(kept_path(folder, name)).ok()?;
-  let kept: Kept = serde_json::from_slice(&bytes).ok()?;
-  (kept.version == FORMAT_VERSION && kept.picture.name == name).then_some(kept.picture)
-}
-
-/// Keeps `picture`'s description, in place of one kept already when
-/// `replace` says so, or else only where none is.
-fn write_kept(folder: &Path, picture: &Picture, replace: bool) -> Result<(), String> {
-  let kept = Kept {
-    version: FORMAT_VERSION,
-    picture: picture.clone(),
-  };
-  let bytes = serde_json::to_vec(&kept).map_err(|error| error.to_string())?;
-  let path = kept_path(folder, &picture.name);
-  // Each write has a partial file of its own: listing describes a picture
-  // the moment its file lands, which can be while it is being noted or
-  // renamed, and two writers sharing one would rename it from under each
-  // other.
-  static WRITES: AtomicU64 = AtomicU64::new(0);
-  let write = WRITES.fetch_add(1, Ordering::Relaxed);
-  let partial = folder.join(format!("{}.json.{write}.tmp", picture.name));
-  let written = std::fs::write(&partial, bytes).and_then(|()| {
-    if replace {
-      return std::fs::rename(&partial, &path);
-    }
-    // A link fails where a description is kept already, which stands.
-    let linked = match std::fs::hard_link(&partial, &path) {
-      Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => Ok(()),
-      linked => linked,
-    };
-    let _ = std::fs::remove_file(&partial);
-    linked
-  });
-  written.map_err(|error| {
-    let _ = std::fs::remove_file(&partial);
-    format!("The picture could not be described: {error}")
-  })
 }
 
 /// The store's name for the picture `art` shows, if it is one of the
