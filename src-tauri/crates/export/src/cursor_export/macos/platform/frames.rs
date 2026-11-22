@@ -36,6 +36,7 @@ impl<'a> FrameComposer<'a> {
   ) -> Result<Self, String> {
     let gpu = screenwide_gpu::shared(screenwide_gpu::Workload::Heavy)?;
     let compositor = Compositor::new(&gpu)?;
+    compositor.draw_generators_at_half_resolution();
     let (width, height) = screenwide_output::output_dimensions(request.output)?;
     let canvas = gpu
       .device

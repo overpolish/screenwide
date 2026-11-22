@@ -68,8 +68,7 @@ impl Compositor {
         );
       }
     }
-    let field = super::background_field::FieldConstants::of(&values);
-    values.background_options[3] |= u32::from(field.is_some());
+    let field = self.background_field.plan(&mut values);
     gpu
       .queue
       .write_buffer(&self.constants, 0, bytemuck::bytes_of(&values));

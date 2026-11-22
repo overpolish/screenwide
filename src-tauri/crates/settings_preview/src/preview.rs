@@ -56,6 +56,7 @@ impl Preview {
   ) -> Result<Self, String> {
     let gpu = screenwide_gpu::shared(screenwide_gpu::Workload::Light)?;
     let compositor = screenwide_compositor::compositor::Compositor::new(&gpu)?;
+    compositor.draw_generators_at_half_resolution();
     let renderer = SceneRenderer::new(compositor, scene, pictures, points)?;
     Self::open(window, Stacking::Above, move |surface| {
       Ok(Box::new(SceneDriver::new(renderer, surface)?) as Box<dyn Renderer>)

@@ -77,6 +77,8 @@ impl WorkspaceScene {
     // Drawn as it is edited: a set of kinds new to it is compiled on another
     // thread while the frames go on with a variant that holds it.
     compositor.compile_annotation_kinds_in_background();
+    // Plays recordings, whose generator is drawn again every frame.
+    compositor.draw_generators_at_half_resolution();
     Ok(Self {
       state: Mutex::new(SceneState {
         compositor,

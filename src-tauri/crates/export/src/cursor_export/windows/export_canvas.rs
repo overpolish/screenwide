@@ -111,8 +111,10 @@ impl WindowsExportCanvas {
       wgpu::TextureFormat::Bgra8Unorm,
       "export target",
     )?;
+    let compositor = Compositor::new(&gpu)?;
+    compositor.draw_generators_at_half_resolution();
     Ok(Self {
-      compositor: Compositor::new(&gpu)?,
+      compositor,
       camera,
       out: output_texture(&device, output_size)?,
       source,
