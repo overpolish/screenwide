@@ -91,6 +91,9 @@ export type ToolPanelPatch = Partial<
   autoVolume?: boolean;
   /** Make the auto zooms again, the scenes of your own left as they are. */
   autoZoomScenes?: true;
+  /** Play the beat chosen on the strip as recorded again, undoing its
+   * retime. */
+  beatAsRecorded?: true;
   /** Change the camera's effects, a field at a time: what is behind the
    * person, and colour correction. */
   cameraEffects?: CameraEffectsChange;

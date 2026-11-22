@@ -28,9 +28,11 @@ const meta = {
     id: "beat",
     isShown: true,
     onCut: fn(),
+    onPlayAsRecorded: fn(),
+    speed: 1,
   },
   component: BeatIsland,
-  decorators: [featureStage({ height: 160, width: 520 })],
+  decorators: [featureStage({ height: 300, width: 520 })],
   title: "Features/Editor/Island/Beat",
 } satisfies Meta<typeof BeatIsland>;
 
@@ -38,6 +40,8 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const Click: Story = {};
+
+export const Retimed: Story = { args: { speed: 1.5 } };
 
 export const Type: Story = {
   args: { beat: { kind: "type", label: "Onboarding" } },

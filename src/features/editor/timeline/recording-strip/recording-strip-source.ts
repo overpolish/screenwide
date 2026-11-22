@@ -28,6 +28,19 @@ export const cutAt = (edit: RecordingTimelineEdit, at: number) =>
     ? cutKeyboardTimeline(edit, at)
     : edit;
 
+/** How many times as fast as recorded `edit` plays the recorded moment
+ * `seconds` in, of `recorded`; 1 where no segment plays it. */
+export const rateAt = (
+  edit: RecordingTimelineEdit,
+  seconds: number,
+  recorded: number,
+) =>
+  edit.segments.find(
+    (segment) =>
+      seconds / recorded >= segment.sourceStart &&
+      seconds / recorded < segment.sourceEnd,
+  )?.playbackRate ?? 1;
+
 const isInside = (
   segment: { sourceEnd: number; sourceStart: number },
   start: number,

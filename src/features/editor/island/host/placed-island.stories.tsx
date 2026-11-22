@@ -56,6 +56,8 @@ function Clash({ isShown = true, itemAt, onCancel, onCut }: ClashProps) {
                 beat: { kind: "click", label: "New Project" },
                 id: "beat",
                 onCut,
+                onPlayAsRecorded: () => undefined,
+                speed: 1,
               })
             : null
         }

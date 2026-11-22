@@ -164,6 +164,7 @@ const applyPatch = (values: ToolPanelPatch, on: ToolPanelHandlers) => {
   if (values.captions) on.onCaptionsChange?.(values.captions);
   if (values.captionDefaults)
     on.onCaptionDefaultsChange?.(values.captionDefaults);
+  if (values.beatAsRecorded) on.onBeatAsRecorded?.();
   if (values.cutStripItem) on.onStripItemCut?.();
   if (values.deselectStripItem) on.onStripItemDeselect?.();
   if (values.gapBackground !== undefined)

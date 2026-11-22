@@ -60,7 +60,15 @@ export function stripIslandContent({
         },
       });
     case "beat":
-      return beatIsland({ beat: item.beat, id: item.id, onCut });
+      return beatIsland({
+        beat: item.beat,
+        id: item.id,
+        onCut,
+        onPlayAsRecorded: () => {
+          change({ beatAsRecorded: true });
+        },
+        speed: item.speed,
+      });
     case "gap": {
       const { frame } = backgrounds.snapshot;
       return gapIsland({

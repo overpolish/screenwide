@@ -189,6 +189,7 @@ export function useRecordingStripBand(
       ? (audio.island ??
         stripIslandItem({
           artifactId,
+          beatSpeed: strip.beatSpeed,
           beats: strip.beats,
           lulls: strip.lulls,
           map: strip.time.map,
@@ -217,6 +218,9 @@ export function useRecordingStripBand(
     },
     dressGap: strip.dressGap,
     hearSounds: audio.hearSounds,
+    playBeatAsRecorded: () => {
+      if (island?.kind === "beat") stripProps.onBeatRetime(island.id, 1);
+    },
     playLull: (play) => {
       if (island?.kind === "lull")
         stripProps.onLullPlayChange(island.id, { kind: play });

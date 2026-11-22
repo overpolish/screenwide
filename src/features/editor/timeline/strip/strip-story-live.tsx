@@ -41,6 +41,7 @@ export type LiveStripProps = Pick<
   | "onCaptionPress"
   | "onDeleteShortcuts"
   | "onLullPlayChange"
+  | "onBeatRetime"
   | "onBeatTrim"
   | "onLullTrim"
   | "onMove"
@@ -213,6 +214,7 @@ export function LiveStrip(props: LiveStripProps) {
         log.annotation(id, recordedAt(start), recordedAt(end));
         edit.retimeAnnotation(id, recordedAt(start), recordedAt(end));
       }}
+      onBeatRetime={props.onBeatRetime}
       onBeatTrim={(id, edge, at) => {
         log.beatTrim(id, edge, at);
         edit.trimBeat(id, edge, at);

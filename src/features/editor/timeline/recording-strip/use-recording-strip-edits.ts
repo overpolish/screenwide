@@ -31,6 +31,7 @@ import {
   type RecordingStripLulls,
   squeezedTo,
 } from "./recording-strip-lulls";
+import { atRate, rateAt } from "./recording-strip-source";
 import { type RecordingStripTime } from "./recording-strip-time";
 
 import type { LullPlay } from "../../island/lull/lull-island";
@@ -149,6 +150,12 @@ export function useRecordingStripEdits({
 }) {
   const steps = useEditSteps(edit, onEdit);
   return {
+    /** How many times as fast as recorded the beat part `id` plays, as
+     * the edit's segment under what plays of it says. */
+    beatSpeed: (id: string) => {
+      const span = spanOf("beat", id);
+      return span ? rateAt(edit, keptOf(span, time.cuts).start, recorded) : 1;
+    },
     /** Cuts every stretch in `spans`. */
     cut: (spans: Span[]) => {
       steps.once(
@@ -156,6 +163,20 @@ export function useRecordingStripEdits({
           (current, span) => cutStretch(current, span, recorded),
           edit,
         ),
+      );
+    },
+    /** Plays what plays of the beat part `id` at `speed` times as fast as
+     * recorded. A gap has no footage to play faster or slower. */
+    onBeatRetime: (id: string, speed: number) => {
+      const span = spanOf("beat", id);
+      if (!span || gapSegmentIdOf(baseOf(id)) !== null) return;
+      const kept = keptOf(span, time.cuts);
+      steps.step(
+        atRate(edit, {
+          end: kept.end / recorded,
+          rate: speed,
+          start: kept.start / recorded,
+        }),
       );
     },
     // A part trims its own stretch, so the parts either side of a split

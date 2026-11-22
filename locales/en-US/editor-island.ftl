@@ -368,6 +368,15 @@ editor-island-beat-speech = “{ $line }”
 # Cuts the beat and the time it takes.
 editor-island-beat-cut = Cut the beat
 editor-island-beat-confirm-cut = Confirm cutting
+# Names the list of ways the beat can play, for assistive technology.
+editor-island-beat-plays = How it plays
+editor-island-beat-as-recorded = Play as recorded
+# The beat has a speed of its own, set by dragging its end with Option held. $speed is how many times as fast as recorded, such as 1.5.
+editor-island-beat-retimed-faster = Retimed, { $speed }× faster
+# As above, for a beat slowed down. $speed is less than 1, such as 0.5.
+editor-island-beat-retimed-slower = Retimed, { $speed }× speed
+# The beat's note: the key held while dragging its end retimes it, rather than trimming it. $key is the key, drawn as a keycap: Option on a Mac, Alt on Windows.
+editor-island-beat-hint = Hold { $key } and drag its end to retime.
 
 ## A moment flagged while recording, with the voice note recorded with it
 

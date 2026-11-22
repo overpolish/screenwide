@@ -8,7 +8,7 @@ import { keptOf } from "../strip/strip-beat-trim";
 import { type Span } from "../timeline-scale";
 
 import { type RecordingLull } from "./recording-beats";
-import { atRate } from "./recording-strip-source";
+import { atRate, rateAt } from "./recording-strip-source";
 
 import type { LullPlay } from "../../island/lull/lull-island";
 
@@ -78,17 +78,11 @@ export function recordingStripLulls({
   found: RecordingLull[];
   recorded: number;
 }): RecordingStripLulls {
-  const rateAt = (seconds: number) =>
-    edit.segments.find(
-      (segment) =>
-        seconds / recorded >= segment.sourceStart &&
-        seconds / recorded < segment.sourceEnd,
-    )?.playbackRate ?? 1;
   const read = found.flatMap((lull) => {
     const span = keptOf(lull.span, cuts);
     if (span.end - span.start <= 0) return [];
     const fastest = lull.moving ? 2 : 4;
-    const rate = rateAt(span.start);
+    const rate = rateAt(edit, span.start, recorded);
     const share =
       rate > 1 && rate <= fastest + 1e-6
         ? (1 - 1 / rate) / (1 - 1 / fastest)

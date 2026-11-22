@@ -73,6 +73,7 @@ export function StripBeats({
             lifted={null}
             lulls={leaving.lulls}
             map={row.map}
+            onBeatRetime={nothing}
             onBeatTrim={nothing}
             onGrab={nothing}
             onLullPlayChange={nothing}

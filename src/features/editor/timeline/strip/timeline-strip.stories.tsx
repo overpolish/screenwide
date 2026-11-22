@@ -53,6 +53,7 @@ const meta = {
     moves: [],
     onAnnotationRestack: fn(),
     onAnnotationRetime: fn(),
+    onBeatRetime: fn(),
     onBeatTrim: fn(),
     onCaptionPress: fn(),
     onDeleteShortcuts: fn(),

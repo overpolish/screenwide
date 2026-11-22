@@ -91,7 +91,7 @@ export function useRangeCut({
       },
       onPointerDownCapture: (event: React.PointerEvent<HTMLElement>) => {
         const target = event.target as Element;
-        if (!isActive || target.closest("[data-lull-end]")) return;
+        if (!isActive || target.closest("[data-retime-end]")) return;
         // The band above the scenes scrubs, but for the range tool, which
         // draws from there too.
         if (!isRanging && target.closest("[data-scrub-band]")) return;

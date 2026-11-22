@@ -108,6 +108,7 @@ describe("actions while the editor answers", () => {
     const acting: ToolPanelDraft = {
       seq: 5,
       values: {
+        beatAsRecorded: true,
         cutStripItem: true,
         deleteChosenShortcuts: true,
         lullPlay: "squeeze",

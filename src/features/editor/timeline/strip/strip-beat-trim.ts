@@ -47,15 +47,19 @@ export function beatTrimOf({
   beat,
   captions,
   cuts,
+  isAltHeld,
   map,
   onGapStart,
+  onRetime,
   onTrim,
   width,
 }: {
   beat: StripBeat;
   captions: TimelineCaption[] | null;
   cuts: TimelineCut[];
+  isAltHeld: boolean;
   map: TimeMap;
+  onRetime: StripBeatRowProps["onBeatRetime"];
   onTrim: StripBeatRowProps["onBeatTrim"];
   /** The track's width, in px. */
   width: number;
@@ -63,22 +67,36 @@ export function beatTrimOf({
 }): BeatTrim {
   const starts =
     beat.beat.kind === "speech" ? wordStarts(beat.span, captions) : null;
-  const pxPerSecond = width / Math.max(map.duration, 1e-6);
+  const kept = keptOf(beat.span, cuts);
+  // A retimed beat is drawn as long as it plays, so a recorded second of it
+  // is as much narrower or wider as it plays faster or slower.
+  const plays = map.toPlayed(kept.end, true) - map.toPlayed(kept.start);
+  const rate = plays > 0 ? (kept.end - kept.start) / plays : 1;
+  const pxPerSecond = width / Math.max(map.duration, 1e-6) / rate;
   // A gap grows or shrinks at its start as at its end, so the view follows
   // it by as much, measured from where it was taken hold of so nothing
   // drifts however far it goes back and forth.
   const isGapStart = (edge: "end" | "start") =>
     edge === "start" && beat.beat.kind === "gap";
   return {
-    kept: keptOf(beat.span, cuts),
+    isAltHeld,
+    kept,
     onHold: (edge) => {
       if (isGapStart(edge)) onGapStart?.(null);
     },
+    // A gap has no footage to play faster or slower.
+    onRetime:
+      beat.beat.kind === "gap"
+        ? undefined
+        : (speed) => {
+            onRetime(beat.id, speed);
+          },
     onTrim: (edge, at, from) => {
       if (isGapStart(edge)) onGapStart?.(from - at);
       onTrim(beat.id, edge, at);
     },
     pxPerSecond,
+    rate,
     reach: beat.reach,
     // A word's start in reach catches the end, so a trim can stop clean
     // between words; further off, the end goes where it is dragged.

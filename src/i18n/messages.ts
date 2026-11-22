@@ -302,12 +302,17 @@ export type Messages = {
   "editor-island-audio-volume": null;
   "editor-island-auto-volume": null;
   "editor-island-auto-volume-measuring": null;
+  "editor-island-beat-as-recorded": null;
   "editor-island-beat-camera": null;
   "editor-island-beat-click": { label: string | number };
   "editor-island-beat-click-unnamed": null;
   "editor-island-beat-confirm-cut": null;
   "editor-island-beat-cut": null;
+  "editor-island-beat-hint": { key: string | number };
+  "editor-island-beat-plays": null;
   "editor-island-beat-press": { keys: string | number };
+  "editor-island-beat-retimed-faster": { speed: string | number };
+  "editor-island-beat-retimed-slower": { speed: string | number };
   "editor-island-beat-screen": null;
   "editor-island-beat-sound": null;
   "editor-island-beat-speech": { line: string | number };

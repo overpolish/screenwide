@@ -42,6 +42,8 @@ export type StripIslandControls = {
   /** Hears the songs or the sound effects, or leaves them out, as the
    * Tracks island asks. */
   hearSounds: (kind: AudioClipKind, isHeard: boolean) => void;
+  /** Plays the chosen beat as recorded again. */
+  playBeatAsRecorded: () => void;
   /** Squeezes the chosen lull with the rest, or keeps it as recorded. */
   playLull: (play: "keep" | "squeeze") => void;
   /** Trims the chosen lull to a breath. */
@@ -123,6 +125,9 @@ export function usePublishStripIsland(
         },
         hearSounds: (kind, isHeard) => {
           controlsRef.current.hearSounds(kind, isHeard);
+        },
+        playBeatAsRecorded: () => {
+          controlsRef.current.playBeatAsRecorded();
         },
         playLull: (play) => {
           controlsRef.current.playLull(play);

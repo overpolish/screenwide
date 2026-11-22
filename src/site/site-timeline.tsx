@@ -29,6 +29,7 @@ export function SiteTimeline() {
         moves={[]}
         onAnnotationRestack={ignore}
         onAnnotationRetime={ignore}
+        onBeatRetime={ignore}
         onBeatTrim={ignore}
         onCaptionPress={ignore}
         onDeleteShortcuts={ignore}

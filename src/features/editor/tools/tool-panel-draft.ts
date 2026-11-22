@@ -71,6 +71,7 @@ export function resolveToolPanelSnapshot(
     audioClip: _audioClip,
     autoVolume,
     autoZoomScenes: _autoZoomScenes,
+    beatAsRecorded: _beatAsRecorded,
     cameraEffects,
     cancelModelWork: _cancelModelWork,
     captionDefaults: _captionDefaults,

@@ -70,6 +70,9 @@ export type StripBeatRowProps = {
   lulls: StripLull[];
   /** How the recording plays now, which sets how wide a second is. */
   map: TimeMap;
+  /** Told the beat part `id` retimed, with ⌥ held on its end, to play
+   * `speed` times as fast as recorded. */
+  onBeatRetime: (id: string, speed: number) => void;
   /** Told a beat's end trimmed to, or brought back to, a recorded moment.
    */
   onBeatTrim: (id: string, edge: "end" | "start", at: number) => void;
@@ -109,6 +112,7 @@ export function StripBeatRow({
   lifted,
   lulls,
   map,
+  onBeatRetime,
   onBeatTrim,
   onGapSlide,
   onGapStart,
@@ -213,8 +217,10 @@ export function StripBeatRow({
               beat,
               captions,
               cuts,
+              isAltHeld,
               map,
               onGapStart,
+              onRetime: onBeatRetime,
               onTrim: onBeatTrim,
               width,
             })}

@@ -191,6 +191,7 @@ export function useRecordingStrip(source: RecordingStripSource) {
     lulls: lulls.lulls,
     map: time.map,
     maxSqueeze: lulls.maxSqueeze,
+    onBeatRetime: edits.onBeatRetime,
     onBeatTrim: edits.onBeatTrim,
     onDeleteShortcuts: (ids) => {
       edits.steps.once({
@@ -275,6 +276,8 @@ export function useRecordingStrip(source: RecordingStripSource) {
     onInsertGap: gaps.insert,
   });
   return {
+    /** How many times as fast as recorded the beat part `id` plays. */
+    beatSpeed: edits.beatSpeed,
     beats,
     /** Cuts what is chosen, a beat, a lull, several or a drawn range. */
     cutChosen,

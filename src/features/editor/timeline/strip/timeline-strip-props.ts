@@ -22,6 +22,7 @@ export type TimelineStripProps = Pick<
   StripBeatRowProps,
   | "cuts"
   | "isAltHeld"
+  | "onBeatRetime"
   | "onBeatTrim"
   | "onGapSlide"
   | "onLullPlayChange"

@@ -91,6 +91,8 @@ export type ToolPanelHandlers = {
   onBackgroundChange?: (background: Background) => void;
   onBackgroundPresetRemove?: (id: string) => void;
   onBackgroundPresetSave?: (preset: BackgroundPreset) => void;
+  /** Play the beat chosen on the strip as recorded again. */
+  onBeatAsRecorded?: () => void;
   /** Ask for a picture to put behind the person on camera. */
   onCameraBackgroundChoose?: () => void;
   /** Download the model taking the camera's background away needs. */

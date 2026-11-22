@@ -28,6 +28,7 @@ const MOMENT_PREFIX = "moment-";
 
 export function stripIslandItem({
   artifactId,
+  beatSpeed,
   beats,
   lulls,
   map,
@@ -36,6 +37,8 @@ export function stripIslandItem({
   selection,
 }: {
   artifactId: number;
+  /** How many times as fast as recorded the beat part `id` plays. */
+  beatSpeed: (id: string) => number;
   beats: RecordingBeat[];
   lulls: RecordingStripLulls;
   /** From recorded to played seconds. */
@@ -79,7 +82,12 @@ export function stripIslandItem({
         };
       }
       if (beat.kind !== "moment")
-        return { beat, id: selection.id, kind: "beat" };
+        return {
+          beat,
+          id: selection.id,
+          kind: "beat",
+          speed: beatSpeed(selection.id),
+        };
       const index = Number(found.id.slice(MOMENT_PREFIX.length));
       const note =
         moments.find((moment) => moment.index === index)?.note ?? null;

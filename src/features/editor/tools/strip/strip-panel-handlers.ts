@@ -12,6 +12,7 @@ export const stripPanelHandlers = (
 ): Pick<
   ToolPanelHandlers,
   | "onAudioClipChange"
+  | "onBeatAsRecorded"
   | "onChosenShortcutsDelete"
   | "onGapBackgroundChange"
   | "onLullPlayChange"
@@ -22,6 +23,9 @@ export const stripPanelHandlers = (
 > => ({
   onAudioClipChange: (change) => {
     stripIslandControls(workspace)?.changeAudioClip(change);
+  },
+  onBeatAsRecorded: () => {
+    stripIslandControls(workspace)?.playBeatAsRecorded();
   },
   onChosenShortcutsDelete: () => {
     stripIslandControls(workspace)?.deleteShortcuts();

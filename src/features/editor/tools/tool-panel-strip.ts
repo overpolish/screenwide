@@ -36,7 +36,13 @@ export type ToolPanelStripItem =
       /** How much louder or quieter than its default level, in dB. */
       volumeDb: number;
     }
-  | { beat: BeatWhat; id: string; kind: "beat" }
+  | {
+      beat: BeatWhat;
+      id: string;
+      kind: "beat";
+      /** How many times as fast as recorded it plays. */
+      speed: number;
+    }
   | {
       /** The gap's own background, or null where it shows the
        * recording's. */
