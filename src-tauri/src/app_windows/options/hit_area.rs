@@ -155,9 +155,25 @@ fn update(app: &AppHandle) {
     over_any |= over;
     if area.takes_clicks != Some(over) && set_takes_clicks(&window, over).is_ok() {
       area.takes_clicks = Some(over);
+      // The window starts taking the pointer with it already inside, so
+      // neither its tracking area nor WebKit hears it arrive, and WebKit
+      // only sets a cursor that differs from the last one it set: the one
+      // the window beneath showed, such as the editor's I-beam, would stay
+      // until the page asked for another.
+      #[cfg(target_os = "macos")]
+      if over {
+        objc2_app_kit::NSCursor::arrowCursor().set();
+      }
     }
   }
   OVER.store(over_any, Ordering::Relaxed);
+}
+
+/// Whether the pointer was on a panel's parts at the last look. The window
+/// beneath, such as the editor's, leaves the cursor to the panel meanwhile.
+#[cfg(target_os = "macos")]
+pub(crate) fn pointer_on_parts() -> bool {
+  OVER.load(Ordering::Relaxed)
 }
 
 /// Looks at the pointer for as long as any panel lets clicks through.

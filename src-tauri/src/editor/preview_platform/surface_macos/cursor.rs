@@ -33,7 +33,12 @@ pub(super) fn cursor(kind: CursorKind) -> Retained<NSCursor> {
   }
 }
 
-/// Shows `kind` now.
+/// Shows `kind` now, unless the pointer is on the island's window over the
+/// picture: the view can still hear the pointer there, and would put its
+/// cursor over the island's.
 pub(super) fn set(kind: CursorKind, _mtm: MainThreadMarker) {
+  if crate::app_windows::options::hit_area::pointer_on_parts() {
+    return;
+  }
   cursor(kind).set();
 }
