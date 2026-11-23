@@ -218,13 +218,15 @@ pub struct ScreenshotExportPreview {
 }
 
 /// The open screenshot composed with `screenshot_output`, written as drawn
-/// and as the export writes it in `format`. `None` where a newer one was
-/// asked for before this one was done.
+/// and as the export writes it in `format`, a PNG in full colour with
+/// `full_colour`. `None` where a newer one was asked for before this one was
+/// done.
 #[tauri::command]
 pub async fn preview_screenshot_export(
   app: AppHandle,
   window: tauri::WebviewWindow,
   format: ScreenshotFormat,
+  full_colour: bool,
   screenshot_output: ScreenshotWorkspaceOutputSettings,
 ) -> Result<Option<ScreenshotExportPreview>, String> {
   let kind = kind_of_window(&window)?;
@@ -268,7 +270,7 @@ pub async fn preview_screenshot_export(
     )
     .map_err(|error| error.to_string())?;
     let exported = frame_path(&directory, ExportPreviewSide::Export, format.extension())?;
-    format.write(&composed, &exported)?;
+    format.write(&composed, &exported, full_colour)?;
     if cancelled.load(Ordering::Acquire) {
       return Ok(None);
     }

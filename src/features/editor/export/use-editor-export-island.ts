@@ -120,6 +120,7 @@ export function useEditorExportIsland(
         recordingFormat: props.recordingFormat ?? "mp4",
         resolutionScalePercent: props.resolutionScalePercent ?? 100,
         screenshotFormat: props.screenshotFormat ?? "png",
+        screenshotFullColour: props.screenshotFullColour ?? false,
         subtitles: props.subtitles ?? "none",
         unavailableScreenshotFormats: props.unavailableScreenshotFormats ?? [],
       },
@@ -156,6 +157,8 @@ export function useEditorExportIsland(
         onRecordingFormatChange: props.onRecordingFormatChange ?? noop,
         onResolutionScaleChange: props.onResolutionScaleChange ?? noop,
         onScreenshotFormatChange: props.onScreenshotFormatChange ?? noop,
+        onScreenshotFullColourChange:
+          props.onScreenshotFullColourChange ?? noop,
         onSubtitlesChange: props.onSubtitlesChange ?? noop,
       },
       props.lookQualities ?? [],

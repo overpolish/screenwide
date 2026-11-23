@@ -208,6 +208,15 @@ export function ExportOptions({
                     },
                     title: t("editor-export-mix-audio"),
                   })}
+              {shown.screenshotFullColour === null
+                ? null
+                : switchRow({
+                    isSelected: shown.screenshotFullColour,
+                    onChange: (screenshotFullColour) => {
+                      onPatch({ screenshotFullColour });
+                    },
+                    title: t("editor-export-png-full-colour"),
+                  })}
               {switchRow({
                 isSelected: shown.revealWhenDone,
                 onChange: (revealWhenDone) => {

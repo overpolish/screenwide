@@ -38,7 +38,9 @@ pub use background_image::{
 };
 pub use capture::Capture;
 pub use decoding::read_rgba;
-pub use encoding::{encode_png, is_opaque, rounded_corners, write_jpeg, write_png, write_webp};
+pub use encoding::{
+  encode_png, is_opaque, rounded_corners, write_jpeg, write_lossless_png, write_png, write_webp,
+};
 pub use hex_colour::parse_hex_colour;
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 pub use mesh::validate_mesh;

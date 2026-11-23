@@ -73,6 +73,7 @@ impl ExportInputs {
       resolution_scale_percent,
       mut recording_output,
       screenshot_format: _,
+      screenshot_full_colour: _,
       screenshot_output: _,
       subtitles: _,
       timeline_edit: timeline_model,

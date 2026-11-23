@@ -34,6 +34,7 @@ pub async fn save_export(
     keyboard_effects,
     recording_output,
     screenshot_format,
+    screenshot_full_colour,
     screenshot_output,
     ..
   } = options;
@@ -114,7 +115,7 @@ pub async fn save_export(
             &|candidate| candidate.exists(),
           );
           let composed = compose_screenshot_workspace(items, &screenshot_output)?;
-          screenshot_format.write(&composed, &path)?;
+          screenshot_format.write(&composed, &path, screenshot_full_colour)?;
           Ok(Some(path))
         }
         EditorArtifact::Recording { .. } => export_job::save_recording_artifact(

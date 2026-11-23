@@ -33,12 +33,15 @@ export const previewRecordingExportFrame = ({
   });
 
 /** The open screenshot as drawn and as the export writes it in `format`, a
- * lossy one; null where a newer one replaced it first. */
+ * PNG in full colour with `fullColour`; null where a newer one replaced it
+ * first. */
 export const previewScreenshotExport = (
   format: ScreenshotFormat,
+  fullColour: boolean,
   screenshotOutput: ScreenshotWorkspaceOutputSettings,
 ) =>
   invoke<ScreenshotExportPreview | null>("preview_screenshot_export", {
     format,
+    fullColour,
     screenshotOutput: normalizedScreenshotWorkspaceOutput(screenshotOutput),
   });

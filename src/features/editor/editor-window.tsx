@@ -33,10 +33,10 @@ import {
   defaultCameraOverlay,
   recordingSavePlan,
 } from "./export/recording-export-settings";
-import { screenshotFormatChoice } from "./export/screenshot-format";
 import { useExportMeasures } from "./export/use-export-measures";
 import { useExportProgress } from "./export/use-export-progress";
 import { useRecordingFormat } from "./export/use-recording-format";
+import { useScreenshotExport } from "./export/use-screenshot-export";
 import { openProjectActions } from "./open-project-actions";
 import { EditorPanel } from "./panel/editor-panel";
 import { useNativePressBlur } from "./preview/use-native-press-blur";
@@ -85,7 +85,6 @@ import { currentEditorKind } from "./window-kind";
 
 import type { CameraKey } from "../../bindings/CameraKey";
 import type { ExportSubtitles } from "../../bindings/ExportSubtitles";
-import type { ScreenshotFormat } from "../../bindings/ScreenshotFormat";
 
 const EMPTY_AUDIO_TRACK_VOLUMES: AudioTrackVolume[] = [];
 
@@ -108,8 +107,6 @@ export function EditorWindow() {
   const [fileStem, setFileStem] = useState("");
   const [collapseAudio, setCollapseAudio] = useState(false);
   const [cameraKey, setCameraKey] = useState<CameraKey>("green");
-  const [screenshotFormat, setScreenshotFormat] =
-    useState<ScreenshotFormat>("png");
   const [deleteProjectAfterExport, setDeleteProjectAfterExport] =
     useState(false);
   const [subtitles, setSubtitles] = useState<ExportSubtitles>("none");
@@ -348,16 +345,13 @@ export function EditorWindow() {
     recordingTimelineEdit: exportEdits.timelineEdit,
     resolutionScalePercent,
   };
-  // A canvas too large for the chosen format is saved as a PNG.
-  const screenshotFormats = screenshotFormatChoice(
-    screenshotFormat,
-    screenshotOutput,
-  );
+  const screenshotExport = useScreenshotExport(screenshotOutput);
   const { exportCompare, lookQualities } = useExportMeasures(exportInputs, {
     cameraOutput,
     recordingFormat,
     screenshot: {
-      format: screenshotFormats.selected,
+      format: screenshotExport.format,
+      fullColour: screenshotExport.fullColour,
       output: screenshotOutput,
     },
   });
@@ -622,7 +616,8 @@ export function EditorWindow() {
             deleteProjectAfterExport,
             fileStem,
             ...recordingFormatPayload(),
-            screenshotFormat: screenshotFormats.selected,
+            screenshotFormat: screenshotExport.format,
+            screenshotFullColour: screenshotExport.fullColour,
             screenshotOutput,
             subtitles,
             timelineEdit: exportEdits.timelineEdit,
@@ -636,7 +631,8 @@ export function EditorWindow() {
             })
             .catch(report("save"));
         }}
-        onScreenshotFormatChange={setScreenshotFormat}
+        onScreenshotFormatChange={screenshotExport.setFormat}
+        onScreenshotFullColourChange={screenshotExport.setFullColour}
         onScreenshotOutputChange={(settings, itemId) => {
           const targetItemId = itemId ?? selectedScreenshotItemId;
           setScreenshotOutput((current) =>
@@ -667,12 +663,13 @@ export function EditorWindow() {
         recordingPreviewTracks={recordingPreviewTracks}
         recordingTimelineEdit={recordingTimelineEdit}
         resolutionScalePercent={resolutionScalePercent}
-        screenshotFormat={screenshotFormats.selected}
+        screenshotFormat={screenshotExport.format}
+        screenshotFullColour={screenshotExport.fullColour}
         screenshotOutput={screenshotOutput}
         selectedScreenshotItemId={selectedScreenshotItemId}
         selectedTrack={selectedTrackId}
         subtitles={subtitles}
-        unavailableScreenshotFormats={screenshotFormats.unavailable}
+        unavailableScreenshotFormats={screenshotExport.unavailable}
       />
     </EditorEditGestureContext>
   );

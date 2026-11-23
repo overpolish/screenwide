@@ -122,6 +122,9 @@ export type ToolPanelExport = {
   revealWhenDone: boolean;
   /** A screenshot's picture format; null for a recording. */
   screenshotFormat: ScreenshotFormat | null;
+  /** Whether a PNG keeps every colour rather than a palette of 256; null for
+   * a recording and for a screenshot in another format. */
+  screenshotFullColour: boolean | null;
   /** The subtitle file beside the video, made of the transcript; null while
    * there is no transcript to make it of. */
   subtitles: ExportSubtitles | null;
@@ -152,4 +155,5 @@ export type ToolPanelExportPatch = Partial<
   look?: ExportLook;
   recordingFormat?: RecordingFormat;
   screenshotFormat?: ScreenshotFormat;
+  screenshotFullColour?: boolean;
 };

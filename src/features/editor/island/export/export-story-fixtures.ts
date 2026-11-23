@@ -77,6 +77,7 @@ export const VIDEO: ToolPanelExport = {
   },
   revealWhenDone: true,
   screenshotFormat: null,
+  screenshotFullColour: null,
   subtitles: "srt",
   unavailableScreenshotFormats: [],
 };
@@ -84,7 +85,7 @@ export const VIDEO: ToolPanelExport = {
 export const SCREENSHOT: ToolPanelExport = {
   ...VIDEO,
   cameraOutput: null,
-  compare: null,
+  compare: COMPARE,
   directory: "/Users/sam/Pictures/Screenwide",
   extension: "png",
   fileStem: "Pricing page",
@@ -92,6 +93,7 @@ export const SCREENSHOT: ToolPanelExport = {
   quality: null,
   recordingFormat: null,
   screenshotFormat: "png",
+  screenshotFullColour: false,
   subtitles: null,
 };
 

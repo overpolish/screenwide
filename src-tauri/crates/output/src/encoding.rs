@@ -193,6 +193,18 @@ pub fn encode_truecolor_png(image: &CapturedImage) -> Result<Vec<u8>, String> {
   Ok(png)
 }
 
+/// Writes a still as a PNG to `out` with every colour kept: an opaque still
+/// drops only its alpha, which says nothing; any other keeps every channel.
+pub fn write_lossless_png(image: &CapturedImage, out: impl Write) -> Result<(), String> {
+  if !is_opaque(&image.rgba) {
+    return write_truecolor_png(image, out);
+  }
+  let rgb = rgb_from_rgba(&image.rgba)?;
+  PngEncoder::new_with_quality(out, CompressionType::Default, FilterType::Sub)
+    .write_image(&rgb, image.width, image.height, ExtendedColorType::Rgb8)
+    .map_err(|error| error.to_string())
+}
+
 /// Encodes `frames`, each `width` by `height` RGBA, as an animated PNG that
 /// shows each for `frame_ms` and plays them over and over. A viewer decodes
 /// it a frame at a time, where frames stacked in one picture are decoded

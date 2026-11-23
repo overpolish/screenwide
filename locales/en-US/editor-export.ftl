@@ -43,6 +43,8 @@ editor-export-camera-key = Background colour
 editor-export-camera-key-green = Green
 editor-export-camera-key-blue = Blue
 editor-export-mix-audio = Mix the audio tracks into one
+# With PNG chosen for a screenshot. Off, the PNG is reduced to a palette of 256 colours to keep the file small; on, every colour is kept and the file is larger.
+editor-export-png-full-colour = Keep every colour
 # $platform is windows or macos: the file manager is Explorer or Finder.
 editor-export-reveal-when-done =
     { $platform ->

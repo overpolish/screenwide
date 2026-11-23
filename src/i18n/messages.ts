@@ -244,6 +244,7 @@ export type Messages = {
   "editor-export-look-smaller": null;
   "editor-export-look-smallest": null;
   "editor-export-mix-audio": null;
+  "editor-export-png-full-colour": null;
   "editor-export-progress": null;
   "editor-export-quality": null;
   "editor-export-reveal": { platform: string | number };

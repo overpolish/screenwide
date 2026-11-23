@@ -102,6 +102,26 @@ fn keeps_every_channel_when_the_still_is_not_opaque() {
 }
 
 #[test]
+fn a_lossless_png_keeps_every_colour_of_an_opaque_still() {
+  let image = gradient(320, 200, 255);
+  let mut png = Vec::new();
+  write_lossless_png(&image, &mut png).unwrap();
+  let (color, depth, _, _, _) = png_info(&png);
+  assert_eq!((color, depth), (png::ColorType::Rgb, png::BitDepth::Eight));
+  let decoded = image::load_from_memory(&png).unwrap().to_rgba8();
+  assert_eq!(decoded.into_raw(), image.rgba);
+}
+
+#[test]
+fn a_lossless_png_keeps_the_alpha_of_a_still_that_is_not_opaque() {
+  let image = gradient(64, 64, 128);
+  let mut png = Vec::new();
+  write_lossless_png(&image, &mut png).unwrap();
+  let decoded = image::load_from_memory(&png).unwrap().to_rgba8();
+  assert_eq!(decoded.into_raw(), image.rgba);
+}
+
+#[test]
 fn rounds_only_the_requested_corners_with_antialiasing() {
   let image = palette_image(40, 20, 1, 255);
   let rounded = rounded_corners(&image, 10.0);

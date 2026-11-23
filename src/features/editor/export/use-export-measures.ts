@@ -25,6 +25,7 @@ export function useExportMeasures(
     recordingFormat: RecordingFormat;
     screenshot: {
       format: ScreenshotFormat;
+      fullColour: boolean;
       output: ScreenshotWorkspaceOutputSettings;
     };
   },

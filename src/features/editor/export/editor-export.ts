@@ -46,6 +46,7 @@ export type EditorExportSettings = {
   recordingFormat: RecordingFormat;
   resolutionScalePercent: number;
   screenshotFormat: ScreenshotFormat;
+  screenshotFullColour: boolean;
   subtitles: ExportSubtitles;
   unavailableScreenshotFormats: ScreenshotFormat[];
 };
@@ -210,6 +211,10 @@ export function exportIslandSnapshot({
         : null,
     recordingFormat,
     screenshotFormat: recording ? null : settings.screenshotFormat,
+    screenshotFullColour:
+      !recording && settings.screenshotFormat === "png"
+        ? settings.screenshotFullColour
+        : null,
     subtitles: recording && hasTranscript && !isGif ? settings.subtitles : null,
     unavailableScreenshotFormats: recording
       ? []

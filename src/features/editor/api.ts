@@ -249,6 +249,7 @@ type SaveExportOptions = RecordingProcessingOptions &
     deleteProjectAfterExport: boolean;
     fileStem: string;
     screenshotFormat: ScreenshotFormat;
+    screenshotFullColour: boolean;
     /** The subtitle file written beside a recording's video. */
     subtitles: ExportSubtitles;
   };
@@ -258,6 +259,7 @@ export const saveExport = ({
   deleteProjectAfterExport,
   fileStem,
   screenshotFormat,
+  screenshotFullColour,
   subtitles,
   ...processing
 }: SaveExportOptions) =>
@@ -268,6 +270,7 @@ export const saveExport = ({
       cameraKey,
       deleteProjectAfterExport,
       screenshotFormat,
+      screenshotFullColour,
       subtitles,
     },
   });

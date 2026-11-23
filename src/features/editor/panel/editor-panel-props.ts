@@ -90,6 +90,7 @@ export type EditorPanelProps = {
   onResolutionScaleChange?: (scale: number) => void;
   onSave?: () => void;
   onScreenshotFormatChange?: (format: ScreenshotFormat) => void;
+  onScreenshotFullColourChange?: (fullColour: boolean) => void;
   onScreenshotOutputChange?: ScreenshotOutputChange;
   onSelectedScreenshotItemChange?: (itemId: number | null) => void;
   onSelectedTrackChange?: (trackId: RecordingTrackId | null) => void;
@@ -106,6 +107,8 @@ export type EditorPanelProps = {
   recordingTimelineEdit?: RecordingTimelineEdit | null;
   resolutionScalePercent?: number;
   screenshotFormat?: ScreenshotFormat;
+  /** Whether a PNG keeps every colour rather than a palette of 256. */
+  screenshotFullColour?: boolean;
   screenshotOutput?: ScreenshotWorkspaceOutputSettings;
   selectedScreenshotItemId?: number | null;
   selectedTrack?: RecordingTrackId | null;

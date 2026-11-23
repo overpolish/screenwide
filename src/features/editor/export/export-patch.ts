@@ -27,6 +27,7 @@ export type EditorExportHandlers = {
   onRecordingFormatChange: (format: RecordingFormat) => void;
   onResolutionScaleChange: (scale: number) => void;
   onScreenshotFormatChange: (format: ScreenshotFormat) => void;
+  onScreenshotFullColourChange: (fullColour: boolean) => void;
   onSubtitlesChange: (subtitles: ExportSubtitles) => void;
 };
 
@@ -43,6 +44,8 @@ export function applyExportPatch(
   if (patch.browse) on.onBrowse();
   if (patch.screenshotFormat)
     on.onScreenshotFormatChange(patch.screenshotFormat);
+  if (patch.screenshotFullColour !== undefined)
+    on.onScreenshotFullColourChange(patch.screenshotFullColour);
   const look = patch.look && looks[EXPORT_LOOKS.indexOf(patch.look)];
   if (look) {
     on.onResolutionScaleChange(look.screen.resolutionScalePercent);

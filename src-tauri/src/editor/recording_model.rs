@@ -81,14 +81,21 @@ impl ScreenshotFormat {
   }
 
   /// Writes `image` in this format to a new file at `path`, straight from
-  /// the encoder, so the file is never held whole in memory. A file a
-  /// failure leaves half written is removed.
-  pub fn write(self, image: &CapturedImage, path: &std::path::Path) -> Result<(), String> {
+  /// the encoder, so the file is never held whole in memory. A PNG keeps
+  /// every colour with `full_colour`, and is otherwise reduced to a palette
+  /// to keep it small. A file a failure leaves half written is removed.
+  pub fn write(
+    self,
+    image: &CapturedImage,
+    path: &std::path::Path,
+    full_colour: bool,
+  ) -> Result<(), String> {
     let written = std::fs::File::create(path)
       .map_err(|error| error.to_string())
       .and_then(|file| {
         let mut out = std::io::BufWriter::new(file);
         match self {
+          Self::Png if full_colour => screenwide_output::write_lossless_png(image, &mut out),
           Self::Png => screenwide_output::write_png(image, &mut out),
           Self::Jpeg => screenwide_output::write_jpeg(image, &mut out),
           Self::Webp => screenwide_output::write_webp(image, &mut out),
@@ -176,6 +183,9 @@ pub struct RecordingExportOptions {
   /// The file a screenshot is saved as.
   #[serde(default)]
   pub screenshot_format: ScreenshotFormat,
+  /// Whether a PNG keeps every colour rather than a palette of 256.
+  #[serde(default)]
+  pub screenshot_full_colour: bool,
   #[serde(default)]
   pub subtitles: ExportSubtitles,
   #[serde(default)]

@@ -54,8 +54,9 @@ const shown = (frame: ExportPreviewFrame): ToolPanelComparedFrame => ({
 /**
  * What the Export island compares while it is out: a recording's frame at
  * the playhead as drawn, never encoded, beside the same frame at the chosen
- * look; or a screenshot as drawn beside its JPEG or WebP. A PNG screenshot
- * is written as drawn, so it has nothing to compare. The Original frame
+ * look; or a screenshot as drawn beside its JPEG, its WebP or its PNG reduced
+ * to a palette. A PNG in full colour is written as drawn, so it has nothing
+ * to compare. The Original frame
  * depends on everything the export draws but its look, so choosing another
  * look makes only the exported one again. Null where there is nothing to
  * compare.
@@ -69,6 +70,7 @@ export function useExportCompare(
     isOpen: boolean;
     screenshot: {
       format: ScreenshotFormat;
+      fullColour: boolean;
       output: ScreenshotWorkspaceOutputSettings;
     };
   },
@@ -84,7 +86,8 @@ export function useExportCompare(
       ? artifact
       : null;
   const isLossy =
-    artifact?.kind === "screenshot" && screenshot.format !== "png";
+    artifact?.kind === "screenshot" &&
+    (screenshot.format !== "png" || !screenshot.fullColour);
   // The screenshot's two pictures are made together, so they share a key.
   const originalKey = recording
     ? JSON.stringify([
@@ -99,7 +102,12 @@ export function useExportCompare(
         inputs.recordingTimelineEdit,
       ])
     : isLossy
-      ? JSON.stringify([artifact.id, screenshot.format, screenshot.output])
+      ? JSON.stringify([
+          artifact.id,
+          screenshot.format,
+          screenshot.fullColour,
+          screenshot.output,
+        ])
       : null;
   const exportKey =
     originalKey === null || !recording
@@ -157,6 +165,7 @@ export function useExportCompare(
       if (latest.inputs.artifact?.kind === "screenshot") {
         void previewScreenshotExport(
           latest.screenshot.format,
+          latest.screenshot.fullColour,
           latest.screenshot.output,
         )
           .then((pair) => {

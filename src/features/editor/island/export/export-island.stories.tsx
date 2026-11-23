@@ -103,6 +103,10 @@ const patched = (
         : shown.recordingFormat,
     revealWhenDone: patch.revealWhenDone ?? shown.revealWhenDone,
     screenshotFormat: patch.screenshotFormat ?? shown.screenshotFormat,
+    screenshotFullColour:
+      (patch.screenshotFormat ?? shown.screenshotFormat) === "png"
+        ? (patch.screenshotFullColour ?? shown.screenshotFullColour ?? false)
+        : null,
     subtitles: format
       ? isGif
         ? null
@@ -232,7 +236,16 @@ export const Gif: Story = {
 
 export const AudioOnly: Story = { args: { export: AUDIO } };
 
+// A PNG reduced to a palette is compared with the screenshot as drawn.
 export const ScreenshotPng: Story = { args: { export: SCREENSHOT } };
+
+// A PNG that keeps every colour is written as drawn, so it has nothing to
+// compare.
+export const ScreenshotPngFullColour: Story = {
+  args: {
+    export: { ...SCREENSHOT, compare: null, screenshotFullColour: true },
+  },
+};
 
 // A scrolling capture too tall for JPEG and WebP, which stay in the choice
 // but cannot be picked.
@@ -242,8 +255,7 @@ export const ScreenshotTooLargeForJpegAndWebp: Story = {
   },
 };
 
-// A JPEG is compared with the screenshot as drawn; a PNG is written as
-// drawn, so it has nothing to compare.
+// A JPEG is compared with the screenshot as drawn.
 export const ScreenshotJpeg: Story = {
   args: {
     export: {
@@ -251,6 +263,7 @@ export const ScreenshotJpeg: Story = {
       compare: COMPARE,
       extension: "jpg",
       screenshotFormat: "jpeg",
+      screenshotFullColour: null,
     },
   },
 };
@@ -263,6 +276,7 @@ export const ScreenshotJpegSeeThrough: Story = {
       compare: { ...COMPARE, seeThrough: true },
       extension: "jpg",
       screenshotFormat: "jpeg",
+      screenshotFullColour: null,
     },
   },
 };
