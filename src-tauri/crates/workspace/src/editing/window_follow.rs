@@ -19,8 +19,11 @@ pub(super) struct WindowFollow {
   page_viewport: Option<PreviewSurfaceRect>,
   /// The window's size, in points, the page measured that viewport in.
   page_window: Option<(f64, f64)>,
-  /// The window's size, in points, as the platform last reported it.
-  window: Option<(f64, f64)>,
+  /// The window's content size, in physical pixels, as the platform last
+  /// reported it. Kept in pixels and turned into points when used: Windows
+  /// reports the size as an editor opens, before the first layout has set
+  /// the scale, and points worked out then would be off by the scale.
+  window: Option<(u32, u32)>,
 }
 
 impl WorkspaceEditor {
@@ -34,8 +37,7 @@ impl WorkspaceEditor {
     let Ok(mut state) = self.inner.state.lock() else {
       return;
     };
-    let scale = state.scale.max(0.1);
-    state.window_follow.window = Some((f64::from(size.0) / scale, f64::from(size.1) / scale));
+    state.window_follow.window = Some(size);
     if !reproject(&mut state) {
       return;
     }
@@ -91,10 +93,11 @@ fn reproject(state: &mut SurfaceState) -> bool {
       by
     }
   };
+  let scale = state.scale.max(0.1);
   let (width, height) = match (state.window_follow.window, state.window_follow.page_window) {
-    (Some(now), Some(then)) => (
-      (page.width + grown(now.0, then.0)).max(0.0),
-      (page.height + grown(now.1, then.1)).max(0.0),
+    (Some((now_width, now_height)), Some(then)) => (
+      (page.width + grown(f64::from(now_width) / scale, then.0)).max(0.0),
+      (page.height + grown(f64::from(now_height) / scale, then.1)).max(0.0),
     ),
     _ => (page.width, page.height),
   };
@@ -184,6 +187,7 @@ mod tests {
   #[test]
   fn a_grown_window_grows_the_viewport_and_refits_the_page_pane() {
     let mut state = SurfaceState {
+      scale: 2.0,
       workspace_natural_size: Some((2000, 1000)),
       ..SurfaceState::default()
     };
@@ -200,9 +204,9 @@ mod tests {
       rounded(page_pane)
     );
 
-    // The window is 100 points wider before the page lays out again, and a
-    // fraction of a point taller, which is rounding.
-    state.window_follow.window = Some((1300.0, 800.4));
+    // The window is 100 points wider before the page lays out again, and
+    // half a point taller, which is rounding.
+    state.window_follow.window = Some((2600, 1601));
     assert!(reproject(&mut state));
 
     assert_eq!(rounded(state.viewport), [0.0, 40.0, 1100.0, 600.0]);
@@ -210,5 +214,25 @@ mod tests {
       rounded(page_pane_rect(&state, page_pane)),
       [8.0, 29.0, 1084.0, 542.0]
     );
+  }
+
+  #[test]
+  fn a_size_reported_before_the_scale_is_set_is_read_at_the_scale_laid_out_with() {
+    // Windows reports the window's size as an editor opens, while the scale
+    // is still the default.
+    let mut state = SurfaceState {
+      workspace_natural_size: Some((2000, 1000)),
+      ..SurfaceState::default()
+    };
+    state.window_follow.window = Some((2400, 1600));
+    // The first layout sets the scale, then lays out in that same window.
+    state.scale = 2.0;
+    set_page_viewport(
+      &mut state,
+      rect(0.0, 40.0, 1000.0, 600.0),
+      Some((1200.0, 800.0)),
+    );
+
+    assert_eq!(rounded(state.viewport), [0.0, 40.0, 1000.0, 600.0]);
   }
 }
