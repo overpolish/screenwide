@@ -23,12 +23,15 @@ use screenwide_workspace::editing::TypingInput;
 const BLINK_SECONDS: f64 = 0.5;
 
 impl EditorView {
-  /// Takes the keyboard for a box being typed into.
+  /// Takes the keyboard for a box being typed into. The window is made key
+  /// too: a press in the island's panel takes key status from it while the
+  /// view stays its first responder, so the keys would go to the panel.
   pub(in crate::editor::preview_platform::surface_macos) fn begin_typing(&self) {
     self.ivars().typing.set(true);
     if let Some(window) = self.window() {
       let responder: &NSResponder = self;
       window.makeFirstResponder(Some(responder));
+      window.makeKeyWindow();
     }
     self.restart_blink();
   }

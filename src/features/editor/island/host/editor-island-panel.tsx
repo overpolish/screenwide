@@ -20,6 +20,7 @@ import {
 } from "./editor-island-kind";
 import { useIslandBounds } from "./island-bounds";
 import { PlacedIsland } from "./placed-island";
+import { useIslandPressTyping } from "./use-island-press-typing";
 import { useSnapshotIsland } from "./use-snapshot-island";
 
 // The editor's islands, alone in the panel window laid over the editor's
@@ -43,6 +44,7 @@ export function EditorIslandPanel({
   content: PopupPanelIslandContent;
 }) {
   usePanelShortcuts(content.workspace);
+  useIslandPressTyping(content.workspace);
   const { corner, script, work } = useSnapshotIsland(
     content.island,
     content.workspace,

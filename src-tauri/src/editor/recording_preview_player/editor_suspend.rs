@@ -47,3 +47,21 @@ pub(crate) fn reset_view(state: &RecordingPreviewPlayerState) -> Result<(), Stri
   }
   Ok(())
 }
+
+/// Hands the keyboard back to a box or caption being typed into in the
+/// recording editor.
+pub(crate) fn resume_typing(state: &RecordingPreviewPlayerState) -> Result<(), String> {
+  let manager = state
+    .0
+    .lock()
+    .map_err(|_| "The recording preview player is unavailable".to_owned())?;
+  if let Some(surface) = manager
+    .sources
+    .as_ref()
+    .and_then(|sources| sources.preview_surface.as_ref())
+  {
+    #[cfg(any(target_os = "macos", target_os = "windows"))]
+    surface.resume_annotation_text();
+  }
+  Ok(())
+}

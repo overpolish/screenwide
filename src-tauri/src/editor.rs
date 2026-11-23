@@ -47,6 +47,7 @@ pub(crate) mod text_template_files;
 /// The templates and fonts text is styled with.
 pub(crate) mod text_templates;
 mod timeline_edit;
+pub(crate) mod typing_keyboard;
 use screenwide_imaging::CapturedImage;
 pub(crate) use timeline_edit::edited_duration_ms;
 mod validation;

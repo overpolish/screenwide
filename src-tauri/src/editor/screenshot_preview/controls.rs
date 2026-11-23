@@ -66,3 +66,19 @@ pub(crate) fn reset_view(state: &ScreenshotPreviewState) -> Result<(), String> {
   }
   Ok(())
 }
+
+/// Hands the keyboard back to a box being typed into in the screenshot
+/// editor.
+pub(crate) fn resume_typing(state: &ScreenshotPreviewState) -> Result<(), String> {
+  let surface = state
+    .0
+    .lock()
+    .map_err(|_| "The screenshot preview is unavailable".to_owned())?
+    .surface
+    .clone();
+  if let Some(surface) = surface {
+    #[cfg(any(target_os = "macos", target_os = "windows"))]
+    surface.resume_annotation_text();
+  }
+  Ok(())
+}

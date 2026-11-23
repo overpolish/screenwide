@@ -56,7 +56,7 @@ pub use controls::{
   __tauri_command_name_stop_screenshot_preview, set_screenshot_preview_editor_suspended,
   stop_screenshot_preview,
 };
-pub(crate) use controls::{reset_view, stop_all};
+pub(crate) use controls::{reset_view, resume_typing, stop_all};
 pub use layout::{
   __cmd__layout_screenshot_preview_surface, __tauri_command_name_layout_screenshot_preview_surface,
   layout_screenshot_preview_surface,

@@ -43,6 +43,8 @@ pub(crate) struct Typing {
   /// what a report names it by, and what finds the pane it is drawn in.
   layer: u32,
   index: u32,
+  /// The tool in hand as the box opened: taking up another ends the typing.
+  mode: u32,
   /// The face the box's look sets its type in.
   face: TypeFace,
   /// The box's words as drawn, where its look sets chosen ones apart: what
@@ -106,9 +108,9 @@ pub(super) fn over_box(state: &SurfaceState, point: (f64, f64)) -> bool {
     .is_some_and(|typing| inside(state, typing, point))
 }
 
-/// Whether the typing has nothing left to type into: the tool put down, or
-/// the box gone from the published grips. A caption is typed into whatever
-/// tool is in hand.
+/// Whether the typing has nothing left to type into: the tool it opened
+/// under put down or swapped for another, or the box gone from the
+/// published grips. A caption is typed into whatever tool is in hand.
 pub(super) fn lost_its_box(state: &SurfaceState) -> bool {
   state
     .annotation
@@ -117,7 +119,7 @@ pub(super) fn lost_its_box(state: &SurfaceState) -> bool {
     .is_some_and(|typing| match typing.target {
       Target::Caption(_) => false,
       Target::Box(flat) => {
-        state.annotation.mode == MODE_NONE
+        state.annotation.mode != typing.mode
           || state
             .annotation
             .handles

@@ -46,6 +46,7 @@ impl WorkspaceEditor {
         target: Target::Box(index),
         layer,
         index: item,
+        mode: state.annotation.mode,
         face,
         words,
         edit,
@@ -87,6 +88,7 @@ impl WorkspaceEditor {
         target: Target::Caption(caption),
         layer: CAPTIONS_LAYER_ID,
         index: 0,
+        mode: state.annotation.mode,
         face: screenwide_annotations::text::look::face(look),
         words: Some(TypedWords::caption(text, look, emphasis)),
         edit,
@@ -178,6 +180,19 @@ impl WorkspaceEditor {
       change.1,
       change.2,
     );
+  }
+
+  /// Hands the keyboard back to the box or caption being typed into, after a
+  /// press in a window of its own, such as the island's, took it.
+  pub fn resume_annotation_text(&self) {
+    let typing = self
+      .inner
+      .state
+      .lock()
+      .is_ok_and(|state| state.annotation.typing.is_some());
+    if typing {
+      self.inner.host.begin_typing();
+    }
   }
 
   /// Takes the typing away, as Rust's own end of the session asks.
