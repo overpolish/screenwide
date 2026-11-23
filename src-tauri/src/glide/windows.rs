@@ -46,6 +46,12 @@ static WHEEL_HOOK_ACTIVE: AtomicBool = AtomicBool::new(false);
 
 pub(super) fn start(app: AppHandle) -> Result<(), String> {
   let _ = APP.set(app.clone());
+  cursor::reload_scheme();
+  let previous_hook = std::panic::take_hook();
+  std::panic::set_hook(Box::new(move |info| {
+    cursor::restore_if_hidden();
+    previous_hook(info);
+  }));
   native_settings::trace_state("startup");
   preload_cards(&app);
   titlebar::cache_own_windows(&app);
@@ -58,6 +64,11 @@ pub(super) fn start(app: AppHandle) -> Result<(), String> {
   ready_rx
     .recv()
     .map_err(|_| "Glide input monitoring stopped before it was ready".to_owned())?
+}
+
+/// Gives the user's cursors back if the app exits while a session has them.
+pub(super) fn exit() {
+  cursor::restore_if_hidden();
 }
 
 pub(super) fn apply_settings(settings: &crate::glide::settings::GlideSettings) {

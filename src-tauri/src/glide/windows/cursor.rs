@@ -8,7 +8,11 @@
 //! session. The one process-independent switch Windows offers is the system
 //! cursor scheme itself: every standard cursor is swapped for a blank one while
 //! the session runs, and the user's scheme is reloaded from the registry when
-//! it ends.
+//! it ends. The swap outlives the process, so the scheme is also reloaded when
+//! the app exits or panics during a session, and once at launch for a process
+//! that was killed before it could.
+
+use std::sync::atomic::{AtomicBool, Ordering};
 
 use windows::Win32::UI::WindowsAndMessaging::{
   CreateCursor, GetCursorPos, SetSystemCursor, SystemParametersInfoW, OCR_APPSTARTING, OCR_CROSS,
@@ -34,8 +38,13 @@ const CURSOR_IDS: [SYSTEM_CURSOR_ID; 13] = [
 ];
 const BLANK_SIZE: i32 = 32;
 
+/// Whether the blank cursors are in the system scheme now.
+static HIDDEN: AtomicBool = AtomicBool::new(false);
+
 pub(super) fn hide_cursor() {
   screenwide_capture::cursor::set_cursor_visibility(false, None);
+  // Set before the swap, so a panic partway through it still restores.
+  HIDDEN.store(true, Ordering::SeqCst);
   for id in CURSOR_IDS {
     // `SetSystemCursor` takes ownership of the handle and destroys it when the
     // scheme changes again, so every slot needs its own cursor.
@@ -51,6 +60,22 @@ pub(super) fn show_cursor() {
     .ok()
     .map(|()| (f64::from(point.x), f64::from(point.y)));
   screenwide_capture::cursor::set_cursor_visibility(true, position);
+  HIDDEN.store(false, Ordering::SeqCst);
+  reload_scheme();
+}
+
+/// Puts the user's cursors back if a session still has them blank, for an
+/// exit or panic that ends the process before the session can.
+pub(super) fn restore_if_hidden() {
+  if HIDDEN.swap(false, Ordering::SeqCst) {
+    reload_scheme();
+  }
+}
+
+/// Reloads the user's cursor scheme from the registry, undoing any
+/// `SetSystemCursor`. At launch this puts back cursors a killed session left
+/// blank; nothing records whether one did, since the process that knew is gone.
+pub(super) fn reload_scheme() {
   let restored = unsafe {
     SystemParametersInfoW(
       SPI_SETCURSORS,

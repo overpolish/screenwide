@@ -71,6 +71,13 @@ pub fn initialize(app: &AppHandle) -> Result<(), String> {
   platform::start(app.clone())
 }
 
+/// Undoes what a Glide session changed outside the process, for an exit that
+/// comes while one is live.
+#[cfg(target_os = "windows")]
+pub(crate) fn exit() {
+  platform::exit();
+}
+
 /// Cancels a gesture that was already in flight when a capture overlay took
 /// ownership of the desktop. The input monitors stay installed, but their
 /// platform session entry points reject further gestures while it is active.
