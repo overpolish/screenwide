@@ -14,7 +14,7 @@ use std::sync::Mutex;
 use objc2::rc::Retained;
 use objc2_app_kit::NSColor;
 use objc2_foundation::{NSPoint, NSRect, NSSize};
-use objc2_quartz_core::{CACornerMask, CALayer, CAMetalLayer, CATransaction};
+use objc2_quartz_core::{kCAGravityBottomLeft, CACornerMask, CALayer, CAMetalLayer, CATransaction};
 use screenwide_compositor::PreviewSurfaceCorners;
 
 pub(super) struct Layers {
@@ -43,6 +43,15 @@ fn metal_layer() -> Retained<CAMetalLayer> {
   layer.setOpaque(false);
   layer.setPresentsWithTransaction(false);
   layer.setAllowsNextDrawableTimeout(false);
+  // A layer moved to a new size shows the drawable made for the old one
+  // until the next presents, and the two land on screen apart. Scaled to
+  // fit, a zoomed picture visibly stretched and sprang back on every step
+  // of a window resize; anchored at its corner, as the engine lays frames
+  // out, it stays put and only the edge just uncovered waits a frame. The
+  // gravity is read in the layer's unflipped space, so under the flipped
+  // roots the top is its bottom.
+  // Safety: a constant Core Animation defines.
+  layer.setContentsGravity(unsafe { kCAGravityBottomLeft });
   layer
 }
 
@@ -144,6 +153,20 @@ impl Layers {
 pub(super) fn place(layer: &CALayer, frame: Option<(f64, f64, f64, f64)>) {
   let (x, y, width, height) = frame.unwrap_or((AWAY, AWAY, 2.0, 2.0));
   transaction(|| layer.setFrame(rect(x, y, width.max(1.0), height.max(1.0))));
+}
+
+/// Has `layer`'s next drawable reach the screen with the main thread's
+/// transaction when drawn there, and as soon as it is ready anywhere else.
+/// A window resize lays the picture out again on the main thread, inside
+/// the pass that resizes the window: presented with that pass's
+/// transaction, the picture lands in the frame the window does, where
+/// presented on its own it trailed the window and visibly sprang back. Off
+/// the main thread no transaction would ever carry it.
+pub(super) fn present_with_main_transaction(layer: &CAMetalLayer) {
+  let main = objc2::MainThreadMarker::new().is_some();
+  if layer.presentsWithTransaction() != main {
+    transaction(|| layer.setPresentsWithTransaction(main));
+  }
 }
 
 pub(super) fn rect(x: f64, y: f64, width: f64, height: f64) -> NSRect {

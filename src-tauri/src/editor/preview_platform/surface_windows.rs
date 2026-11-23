@@ -44,7 +44,7 @@ use screenwide_workspace::editing::pixels;
 use screenwide_workspace::editing::*;
 use tauri::WebviewWindow;
 use thread_dispatch::create_editor_on_owning_thread;
-pub(crate) use window_follow::window_resized;
+pub(crate) use window_follow::{window_moved, window_resized};
 use windows::Win32::{
   Foundation::HWND,
   Graphics::{

@@ -23,6 +23,7 @@ use screenwide_workspace::scene::{NativeWorkspacePlacement, WorkspaceScene};
 
 use super::audio_ribbon::AudioRibbon;
 use super::layers::{place, Layers};
+use super::live_resize::LiveResize;
 use super::main_thread::OnMain;
 use super::view::EditorView;
 use super::workspace_view::WorkspaceView;
@@ -57,6 +58,8 @@ pub(super) struct MacHost {
   light: Arc<AtomicBool>,
   /// The callback a picture dropped on the workspace is handed to.
   pub(super) image_drop: Mutex<Option<ImageDropCallback>>,
+  /// Whether the window is live-resized, which the picture's view sets.
+  pub(super) live_resize: Arc<LiveResize>,
 }
 
 /// The macOS side of an engine this shell made.
@@ -76,6 +79,7 @@ impl MacHost {
     webview: tauri::WebviewWindow,
     scale: f64,
     light: bool,
+    live_resize: Arc<LiveResize>,
   ) -> Self {
     Self {
       views,
@@ -86,6 +90,7 @@ impl MacHost {
       active: AtomicBool::new(false),
       light: Arc::new(AtomicBool::new(light)),
       image_drop: Mutex::new(None),
+      live_resize,
     }
   }
 
@@ -120,6 +125,9 @@ impl Host for MacHost {
     magnifier: Option<&NativeMagnifier>,
     backdrop: BackdropStyle,
   ) -> Result<bool, String> {
+    if self.live_resize.defers(&self.views) {
+      return Ok(false);
+    }
     self
       .gpu
       .workspace
@@ -191,7 +199,11 @@ impl Host for MacHost {
   }
 
   fn present_chrome(&self, size: (u32, u32), vertices: &[Vertex], constants: &RenderConstants) {
+    if self.live_resize.defers(&self.views) {
+      return;
+    }
     if let Ok(mut selection) = self.gpu.selection.lock() {
+      super::layers::present_with_main_transaction(&self.gpu.layers.chrome);
       let _ = selection.present(size, vertices, constants);
     }
   }

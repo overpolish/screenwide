@@ -29,7 +29,7 @@ use objc2_foundation::{
 
 use screenwide_workspace::editing::{SurfaceInner, TypingInput};
 
-use support::guard;
+pub(super) use support::guard;
 
 pub(super) struct EditorIvars {
   /// The engine behind the view, once the surface is whole.

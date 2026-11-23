@@ -13,7 +13,7 @@ use screenwide_osc::gpu::magnifier::NativeMagnifier;
 use screenwide_workspace::backdrop::BackdropStyle;
 use screenwide_workspace::scene::{NativeWorkspacePlacement, WorkspaceScene};
 
-use super::layers::place;
+use super::layers::{place, present_with_main_transaction};
 use super::*;
 
 pub(super) struct WorkspaceView {
@@ -114,6 +114,7 @@ impl WorkspaceView {
       );
       drawable.frame = Some(frame);
     }
+    present_with_main_transaction(&self.layer);
     // Nothing can be drawn now; the next change draws the scene again.
     let Frame::Ready(target) = drawable.surface.acquire(&self.gpu)? else {
       return Ok(moved);

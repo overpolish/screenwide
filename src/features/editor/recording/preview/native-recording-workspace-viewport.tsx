@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { RefObject, useEffect, useRef, useState } from "react";
+import { RefObject } from "react";
 
 import { t } from "../../../../i18n/i18n";
 import { CircularProgress } from "../../../../primitives/circular-progress/circular-progress";
@@ -55,43 +55,18 @@ export function NativeRecordingWorkspaceViewport({
   workspaceHeight,
   workspaceWidth,
 }: NativeRecordingWorkspaceViewportProps) {
-  const viewportRef = useRef<HTMLDivElement | null>(null);
-  const [viewportSize, setViewportSize] = useState({ height: 0, width: 0 });
-
-  useEffect(() => {
-    const viewport = viewportRef.current;
-    if (!viewport) return;
-    if (typeof ResizeObserver === "undefined") return;
-    const updateSize = (width: number, height: number) => {
-      setViewportSize((previous) =>
-        previous.width === width && previous.height === height
-          ? previous
-          : { height, width },
-      );
-    };
-    const observer = new ResizeObserver(([entry]) => {
-      updateSize(entry.contentRect.width, entry.contentRect.height);
-    });
-    observer.observe(viewport);
-    return () => {
-      observer.disconnect();
-    };
-  }, []);
-
-  const availableWidth = Math.max(0, viewportSize.width - VIEWPORT_GUTTER * 2);
-  const availableHeight = Math.max(
-    0,
-    viewportSize.height - VIEWPORT_GUTTER * 2,
-  );
-  const scale =
+  // The panes are fitted inside the gutter by CSS against the viewport's own
+  // size, never through React state: the page measures them as the window
+  // is resized, before a re-render could catch up, and markers a render
+  // behind the viewport they are measured in told the native side a fit a
+  // step out of date, which a zoomed picture showed as a jump.
+  const ratio =
     workspaceWidth > 0 && workspaceHeight > 0
-      ? Math.min(
-          availableWidth / workspaceWidth,
-          availableHeight / workspaceHeight,
-        )
+      ? workspaceWidth / workspaceHeight
       : 0;
-  const fittedWidth = workspaceWidth * scale;
-  const fittedHeight = workspaceHeight * scale;
+  const gutters = `${(VIEWPORT_GUTTER * 2).toString()}px`;
+  const percent = (part: number, whole: number) =>
+    `${((part / whole) * 100).toString()}%`;
 
   return (
     <div
@@ -100,39 +75,41 @@ export function NativeRecordingWorkspaceViewport({
       data-audio-ribbon-viewport={audioOnly ? "" : undefined}
       data-recording-preview-viewport
       dir="ltr"
-      ref={viewportRef}
       role="img"
+      style={{ containerType: "size" }}
     >
       <div
         aria-hidden
         className="pointer-events-none absolute inset-0 -z-10 bg-recess"
         data-preview-backdrop
       />
-      <div
-        className="absolute shrink-0"
-        style={{
-          height: `${fittedHeight.toString()}px`,
-          left: `${((viewportSize.width - fittedWidth) / 2).toString()}px`,
-          top: `${((viewportSize.height - fittedHeight) / 2).toString()}px`,
-          width: `${fittedWidth.toString()}px`,
-        }}
-      >
-        {panes.map((pane) => (
-          <canvas
-            aria-label={pane.label}
-            className="pointer-events-none absolute max-w-none opacity-0"
-            key={pane.index}
-            ref={pane.ref}
-            role="img"
-            style={{
-              height: `${(pane.height * scale).toString()}px`,
-              left: `${(pane.x * scale).toString()}px`,
-              top: `${(pane.y * scale).toString()}px`,
-              width: `${(pane.width * scale).toString()}px`,
-            }}
-          />
-        ))}
-      </div>
+      {ratio > 0 ? (
+        <div
+          className="absolute shrink-0 -translate-x-1/2 -translate-y-1/2"
+          style={{
+            aspectRatio: ratio.toString(),
+            left: "50%",
+            top: "50%",
+            width: `max(0px, min(100cqw - ${gutters}, (100cqh - ${gutters}) * ${ratio.toString()}))`,
+          }}
+        >
+          {panes.map((pane) => (
+            <canvas
+              aria-label={pane.label}
+              className="pointer-events-none absolute max-w-none opacity-0"
+              key={pane.index}
+              ref={pane.ref}
+              role="img"
+              style={{
+                height: percent(pane.height, workspaceHeight),
+                left: percent(pane.x, workspaceWidth),
+                top: percent(pane.y, workspaceHeight),
+                width: percent(pane.width, workspaceWidth),
+              }}
+            />
+          ))}
+        </div>
+      ) : null}
       {isBusy ? (
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
           <CircularProgress

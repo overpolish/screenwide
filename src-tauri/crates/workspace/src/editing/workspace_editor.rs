@@ -37,6 +37,20 @@ impl WorkspaceEditor {
   pub fn refresh_cursor(&self) {
     refresh_cursor_for(&self.inner);
   }
+
+  /// Draws the picture and its chrome again as they stand, on the calling
+  /// thread: a platform that held back a draw from another thread, as macOS
+  /// does while a window is live-resized, asks for it here instead.
+  pub fn redraw(&self) {
+    let Ok(mut state) = self.inner.state.lock() else {
+      return;
+    };
+    draw_selection(&self.inner, &state);
+    draw_workspace(&self.inner, &mut state);
+    if self.inner.batch_depth.load(Ordering::Acquire) == 0 {
+      self.inner.host.commit(false);
+    }
+  }
 }
 
 impl Clone for WorkspaceEditor {

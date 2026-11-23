@@ -14,6 +14,7 @@ use objc2_app_kit::{NSAutoresizingMaskOptions, NSView, NSWindowOrderingMode};
 use super::audio_ribbon::AudioRibbon;
 use super::host::{light_appearance, Gpu, MacHost, Views};
 use super::layers::Layers;
+use super::live_resize::LiveResize;
 use super::main_thread::OnMain;
 use super::picture_view::PictureView;
 use super::registry::slot_for;
@@ -56,7 +57,8 @@ fn build(
   let shared = screenwide_gpu::shared(screenwide_gpu::Workload::Heavy)?;
   let layers = Layers::new();
 
-  let below = PictureView::new(mtm, host.bounds());
+  let live_resize = Arc::new(LiveResize::default());
+  let below = PictureView::new(mtm, host.bounds(), Arc::clone(&live_resize));
   // A layer-hosting view: the layer is set before the view wants one.
   below.setLayer(Some(&layers.root));
   below.setWantsLayer(true);
@@ -94,7 +96,15 @@ fn build(
     mtm,
   );
   let light = light_appearance(mtm);
-  let engine = WorkspaceEditor::new(Box::new(MacHost::new(views, gpu, webview, scale, light)));
+  let engine = WorkspaceEditor::new(Box::new(MacHost::new(
+    views,
+    gpu,
+    webview,
+    scale,
+    light,
+    live_resize,
+  )));
   editor.attach(&engine.inner);
+  below.attach(&engine.inner);
   Ok(engine.inner)
 }

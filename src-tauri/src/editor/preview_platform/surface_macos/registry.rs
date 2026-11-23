@@ -23,6 +23,12 @@ pub(super) fn slot_for(key: usize) -> Result<SurfaceSlot, String> {
   Ok(Arc::clone(surfaces.entry(key).or_default()))
 }
 
+/// The surface of the window `key` names, where one has been made.
+pub(super) fn surface_for(key: usize) -> Option<Arc<SurfaceInner>> {
+  let slot = Arc::clone(SURFACES.get()?.lock().ok()?.get(&key)?);
+  slot.get()?.as_ref().ok().cloned()
+}
+
 /// What names `window`'s surface in the registry, read while it is alive.
 pub(crate) fn surface_key(window: &tauri::WebviewWindow) -> Option<usize> {
   window.ns_window().ok().map(|window| window as usize)

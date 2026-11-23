@@ -52,7 +52,9 @@ impl EditorView {
     *self.ivars().engine.borrow_mut() = Arc::downgrade(engine);
   }
 
-  pub(super) fn engine(&self) -> Option<WorkspaceEditor> {
+  pub(in crate::editor::preview_platform::surface_macos) fn engine(
+    &self,
+  ) -> Option<WorkspaceEditor> {
     let inner = self.ivars().engine.borrow().upgrade()?;
     Some(WorkspaceEditor { inner })
   }
@@ -125,7 +127,7 @@ impl EditorView {
 /// An event handler runs under AppKit, which a panic must not unwind into:
 /// the input is dropped and logged instead, as the Windows window procedure
 /// does.
-pub(super) fn guard(work: impl FnOnce()) {
+pub(in crate::editor::preview_platform::surface_macos) fn guard(work: impl FnOnce()) {
   if std::panic::catch_unwind(std::panic::AssertUnwindSafe(work)).is_err() {
     eprintln!("The macOS preview editor dropped an input after a panic");
   }

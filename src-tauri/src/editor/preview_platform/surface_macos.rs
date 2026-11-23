@@ -17,14 +17,17 @@ mod cursor;
 mod host;
 mod image_drop;
 mod layers;
+mod live_resize;
 mod main_thread;
 mod pasteboard;
 mod picture_view;
 mod registry;
 mod view;
+mod window_follow;
 mod workspace_view;
 
 pub(crate) use registry::{forget, surface_key};
+pub(crate) use window_follow::window_moved;
 
 use std::sync::Mutex;
 

@@ -10,6 +10,11 @@
 //! size, so the viewport changes as much as the window does. The panes are
 //! fitted into it as the page fits them. The page's next layout, carried the
 //! same way to the window's size by then, replaces the guess.
+//!
+//! Zoomed in or panned, a window resized leaves the picture where it is on
+//! screen, at the size it is: an edge dragged in crops it on that side and
+//! one dragged out shows more on that side. Fitted, the picture is fitted
+//! into the new viewport.
 
 use super::*;
 
@@ -24,12 +29,22 @@ pub(super) struct WindowFollow {
   /// reports the size as an editor opens, before the first layout has set
   /// the scale, and points worked out then would be off by the scale.
   window: Option<(u32, u32)>,
+  /// Where the window's content area's corner is on screen, in physical
+  /// pixels, as last reported.
+  origin: Option<(i32, i32)>,
+  /// The window's size in points, and its corner, as the viewport now laid
+  /// out was laid out in.
+  shown_window: Option<(f64, f64)>,
+  shown_origin: Option<(i32, i32)>,
 }
 
 impl WorkspaceEditor {
   /// Carries the viewport to the window's new size, `size` physical pixels
-  /// of content, before the page lays it out again.
-  pub fn follow_window(&self, size: (u32, u32)) {
+  /// of content with its corner at `origin` on screen, before the page lays
+  /// it out again. A window moved whole is handed here too, at the size it
+  /// had: the picture moves with it, and the next resize measures from the
+  /// window's new place.
+  pub fn follow_window(&self, size: (u32, u32), origin: Option<(i32, i32)>) {
     // A minimized window reports no size; it lays out afresh when restored.
     if size.0 == 0 || size.1 == 0 {
       return;
@@ -38,6 +53,7 @@ impl WorkspaceEditor {
       return;
     };
     state.window_follow.window = Some(size);
+    set_origin(&mut state, origin);
     if !reproject(&mut state) {
       return;
     }
@@ -49,6 +65,14 @@ impl WorkspaceEditor {
     if self.inner.batch_depth.load(Ordering::Acquire) > 0 {
       self.inner.commit_pending.store(true, Ordering::Release);
     }
+  }
+}
+
+/// Notes where the window's content area's corner is on screen, in physical
+/// pixels, where the platform could say.
+pub(super) fn set_origin(state: &mut SurfaceState, origin: Option<(i32, i32)>) {
+  if origin.is_some() {
+    state.window_follow.origin = origin;
   }
 }
 
@@ -94,10 +118,14 @@ fn reproject(state: &mut SurfaceState) -> bool {
     }
   };
   let scale = state.scale.max(0.1);
-  let (width, height) = match (state.window_follow.window, state.window_follow.page_window) {
-    (Some((now_width, now_height)), Some(then)) => (
-      (page.width + grown(f64::from(now_width) / scale, then.0)).max(0.0),
-      (page.height + grown(f64::from(now_height) / scale, then.1)).max(0.0),
+  let native = state
+    .window_follow
+    .window
+    .map(|(width, height)| (f64::from(width) / scale, f64::from(height) / scale));
+  let (width, height) = match (native, state.window_follow.page_window) {
+    (Some(now), Some(then)) => (
+      (page.width + grown(now.0, then.0)).max(0.0),
+      (page.height + grown(now.1, then.1)).max(0.0),
     ),
     _ => (page.width, page.height),
   };
@@ -106,7 +134,27 @@ fn reproject(state: &mut SurfaceState) -> bool {
     height,
     ..page
   };
+  let window = native.or(state.window_follow.page_window);
+  let resized = match (state.window_follow.shown_window, window) {
+    (Some(then), Some(now)) => grown(now.0, then.0) != 0.0 || grown(now.1, then.1) != 0.0,
+    _ => false,
+  };
   let old = state.viewport;
+  // Where the picture's corner sat on screen before, as seen from the new
+  // viewport's: how far the window's corner and the viewport in it moved.
+  let moved = match (state.window_follow.shown_origin, state.window_follow.origin) {
+    (Some(then), Some(now)) => (
+      f64::from(then.0 - now.0) / scale,
+      f64::from(then.1 - now.1) / scale,
+    ),
+    _ => (0.0, 0.0),
+  };
+  let shift = (moved.0 + old.x - viewport.x, moved.1 + old.y - viewport.y);
+  let kept = (resized && state.frame_resize.is_none() && !is_fitted(state.workspace_transform))
+    .then(|| displayed(state))
+    .flatten();
+  state.window_follow.shown_window = window;
+  state.window_follow.shown_origin = state.window_follow.origin;
   if same_size(old, viewport) && old.x == viewport.x && old.y == viewport.y {
     return false;
   }
@@ -118,7 +166,48 @@ fn reproject(state: &mut SurfaceState) -> bool {
     }
   }
   state.viewport = viewport;
+  if let (Some(shown), Some(laid)) = (kept, laid_out(state)) {
+    if shown.width > 0.0 && laid.width > 0.0 {
+      let shown = PreviewSurfaceRect {
+        x: shown.x + shift.0,
+        y: shown.y + shift.1,
+        ..shown
+      };
+      state.workspace_transform = WorkspaceTransform::placing(viewport, laid, shown);
+    }
+  }
   true
+}
+
+/// Whether the view is as the double-click puts it: fitted, unpanned.
+fn is_fitted(transform: WorkspaceTransform) -> bool {
+  const EPSILON: f64 = 1e-9;
+  (transform.zoom - 1.0).abs() < EPSILON
+    && transform.pan_x.abs() < EPSILON
+    && transform.pan_y.abs() < EPSILON
+}
+
+/// Where the panes are on screen, in the viewport's points.
+pub(super) fn displayed(state: &SurfaceState) -> Option<PreviewSurfaceRect> {
+  let transform = state.workspace_transform;
+  state
+    .panes
+    .iter()
+    .flatten()
+    .filter(|pane| pane.seen)
+    .map(|pane| transform.apply(state.viewport, pane.base_rect))
+    .reduce(union_rect)
+}
+
+/// Where the panes are laid out, before the view's zoom and pan.
+fn laid_out(state: &SurfaceState) -> Option<PreviewSurfaceRect> {
+  state
+    .panes
+    .iter()
+    .flatten()
+    .filter(|pane| pane.seen)
+    .map(|pane| pane.base_rect)
+    .reduce(union_rect)
 }
 
 fn same_size(a: PreviewSurfaceRect, b: PreviewSurfaceRect) -> bool {
@@ -168,71 +257,4 @@ fn refit(rect: PreviewSurfaceRect, from: DisplayRect, to: DisplayRect) -> Previe
 }
 
 #[cfg(test)]
-mod tests {
-  use super::*;
-
-  fn rect(x: f64, y: f64, width: f64, height: f64) -> PreviewSurfaceRect {
-    PreviewSurfaceRect {
-      height,
-      width,
-      x,
-      y,
-    }
-  }
-
-  fn rounded(rect: PreviewSurfaceRect) -> [f64; 4] {
-    [rect.x, rect.y, rect.width, rect.height].map(|value| (value * 1000.0).round() / 1000.0)
-  }
-
-  #[test]
-  fn a_grown_window_grows_the_viewport_and_refits_the_page_pane() {
-    let mut state = SurfaceState {
-      scale: 2.0,
-      workspace_natural_size: Some((2000, 1000)),
-      ..SurfaceState::default()
-    };
-    // The page laid a 1000 by 600 viewport out in a 1200 by 800 window, the
-    // canvas fitted into it inside the gutter.
-    set_page_viewport(
-      &mut state,
-      rect(0.0, 40.0, 1000.0, 600.0),
-      Some((1200.0, 800.0)),
-    );
-    let page_pane = rect(8.0, 54.0, 984.0, 492.0);
-    assert_eq!(
-      rounded(page_pane_rect(&state, page_pane)),
-      rounded(page_pane)
-    );
-
-    // The window is 100 points wider before the page lays out again, and
-    // half a point taller, which is rounding.
-    state.window_follow.window = Some((2600, 1601));
-    assert!(reproject(&mut state));
-
-    assert_eq!(rounded(state.viewport), [0.0, 40.0, 1100.0, 600.0]);
-    assert_eq!(
-      rounded(page_pane_rect(&state, page_pane)),
-      [8.0, 29.0, 1084.0, 542.0]
-    );
-  }
-
-  #[test]
-  fn a_size_reported_before_the_scale_is_set_is_read_at_the_scale_laid_out_with() {
-    // Windows reports the window's size as an editor opens, while the scale
-    // is still the default.
-    let mut state = SurfaceState {
-      workspace_natural_size: Some((2000, 1000)),
-      ..SurfaceState::default()
-    };
-    state.window_follow.window = Some((2400, 1600));
-    // The first layout sets the scale, then lays out in that same window.
-    state.scale = 2.0;
-    set_page_viewport(
-      &mut state,
-      rect(0.0, 40.0, 1000.0, 600.0),
-      Some((1200.0, 800.0)),
-    );
-
-    assert_eq!(rounded(state.viewport), [0.0, 40.0, 1000.0, 600.0]);
-  }
-}
+mod tests;

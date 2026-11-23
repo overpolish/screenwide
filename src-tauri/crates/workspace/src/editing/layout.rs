@@ -179,14 +179,7 @@ impl WorkspaceEditor {
   /// afresh.
   pub fn displayed_workspace(&self) -> Option<PreviewSurfaceRect> {
     let state = self.inner.state.lock().ok()?;
-    let transform = state.workspace_transform;
-    state
-      .panes
-      .iter()
-      .flatten()
-      .filter(|pane| pane.seen)
-      .map(|pane| transform.apply(state.viewport, pane.base_rect))
-      .reduce(union_rect)
+    window_follow::displayed(&state)
   }
 
   /// Remembered transforms belong to one workspace topology. A recording

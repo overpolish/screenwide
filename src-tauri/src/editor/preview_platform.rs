@@ -172,6 +172,11 @@ pub(crate) use surface::{forget, surface_key};
 #[cfg(target_os = "windows")]
 pub(crate) use surface::window_resized;
 
+/// Tells an editor window's surface the window moved, so a resize after it
+/// measures from the window's new place.
+#[cfg(any(target_os = "macos", target_os = "windows"))]
+pub(crate) use surface::window_moved;
+
 #[cfg(not(any(target_os = "macos", target_os = "windows")))]
 pub(crate) fn surface_key(_window: &tauri::WebviewWindow) -> Option<usize> {
   None

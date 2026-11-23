@@ -128,6 +128,12 @@ fn set_up(app: &AppHandle, label: WindowLabel, window: &WebviewWindow) -> tauri:
     if let (WindowEvent::Resized(size), Some(surface)) = (event, surface) {
       crate::editor::preview_platform::window_resized(surface, (size.width, size.height));
     }
+    // The picture's view hears a resize but not a move, and a zoomed
+    // picture resized after a move is kept against where the window went.
+    #[cfg(any(target_os = "macos", target_os = "windows"))]
+    if let (WindowEvent::Moved(_), Some(surface)) = (event, surface) {
+      crate::editor::preview_platform::window_moved(surface);
+    }
     if matches!(event, WindowEvent::Destroyed) {
       crate::tooltip_window::window_closing(&destroyed_app, label.as_str());
       if let Some(surface) = surface {
