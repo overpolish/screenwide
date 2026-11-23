@@ -19,11 +19,12 @@ export type TeleprompterKeys = {
 };
 
 /**
- * The teleprompter's keys. While the script is being written its field
- * takes the keys, but for Command or Control with + and −, which size the
- * text, and Escape, which stops writing. Otherwise Space plays and pauses,
- * the arrow keys move the place, Home goes back to the start, and Escape
- * pauses, then leaves the full display, then closes.
+ * The teleprompter's keys. While text is being written, in the script, its
+ * name or the text size, the field takes the keys, but for Command or
+ * Control with + and −, which size the text, and Escape, which stops
+ * writing. Otherwise Space plays and pauses, the arrow keys move the place,
+ * Home goes back to the start, and Escape pauses, then leaves the full
+ * display, then closes.
  */
 export function useTeleprompterKeys(keys: TeleprompterKeys) {
   const keysRef = useRef(keys);
@@ -32,7 +33,7 @@ export function useTeleprompterKeys(keys: TeleprompterKeys) {
     const onKeyDown = (event: KeyboardEvent) => {
       const current = keysRef.current;
       const isCommand = event.metaKey || event.ctrlKey;
-      const isWriting = event.target instanceof HTMLTextAreaElement;
+      const isWriting = isTextEntry(event.target);
       if (isCommand && (event.key === "=" || event.key === "+")) {
         current.onTextSize(1);
       } else if (isCommand && event.key === "-") {
@@ -65,4 +66,12 @@ export function useTeleprompterKeys(keys: TeleprompterKeys) {
       window.removeEventListener("keydown", onKeyDown);
     };
   }, []);
+}
+
+function isTextEntry(target: EventTarget | null): target is HTMLElement {
+  return (
+    target instanceof HTMLTextAreaElement ||
+    target instanceof HTMLInputElement ||
+    (target instanceof HTMLElement && target.isContentEditable)
+  );
 }
