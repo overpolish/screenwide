@@ -96,20 +96,31 @@ pub fn prepare_text(
   let half = [size[0] as f32 * 0.5, size[1] as f32 * 0.5];
   let centre = add(origin, half);
   let full_font = font.max(0.0);
-  let tip = if head & HEAD_TAIL_PLACED != 0 {
-    tip
-  } else {
-    let [(along_x, reach_x), (along_y, reach_y)] = tip.map(text_pointer_axis);
-    [
+  let held = (head & HEAD_TAIL_PLACED == 0).then(|| tip.map(text_pointer_axis));
+  let tip = match held {
+    None => tip,
+    Some([(along_x, reach_x), (along_y, reach_y)]) => [
       centre[0] + along_x * half[0] + reach_x.copysign(along_x) * full_font,
       centre[1] + along_y * half[1] + reach_y.copysign(along_y) * full_font,
-    ]
+    ],
   };
   // How far the tip is past each edge, measured on the box as it settles.
-  let out = [
-    (tip[0] - centre[0]).abs() - half[0],
-    (tip[1] - centre[1]).abs() - half[1],
-  ];
+  // A tip held against the box is read from its own reach: worked out from
+  // the tip, one tucked onto an edge rounds a hair past it and draws a tail.
+  let out = match held {
+    None => [
+      (tip[0] - centre[0]).abs() - half[0],
+      (tip[1] - centre[1]).abs() - half[1],
+    ],
+    Some(axes) => [0, 1].map(|axis| {
+      let (along, reach) = axes[axis];
+      if reach > 0.0 {
+        reach * full_font
+      } else {
+        (along.abs() - 1.0) * half[axis]
+      }
+    }),
+  };
   let half = scale(half, grown);
   let font = full_font * grown;
   let min = subtract(centre, half);

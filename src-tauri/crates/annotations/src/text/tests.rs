@@ -66,6 +66,25 @@ fn prepared(pointer: BoxPoint, reveal: AnnotationReveal) -> crate::geometry::Arr
 }
 
 #[test]
+fn a_tucked_tail_is_not_drawn_wherever_its_box_sits() {
+  // Boxes at fractional places and sizes, where working the edge out from
+  // the centre rounds a hair past where the box itself ends.
+  for step in 0..400_u16 {
+    let step = f32::from(step);
+    let geometry = prepare_text(
+      [123.456 + step * 7.31, 400.17 + step * 3.77],
+      encoded(&BoxPoint::TUCKED),
+      [87.3 + step * 0.113, 33.6 + step * 0.071],
+      24.0 + step * 0.037,
+      HEAD_TAIL,
+      TailShape::default(),
+      AnnotationReveal::WHOLE,
+    );
+    assert_eq!(geometry.high, 0.0, "step {step}: {geometry:?}");
+  }
+}
+
+#[test]
 fn the_box_grows_with_its_lines_and_its_longest_line() {
   let one = text_block("Save", 20.0);
   let wider = text_block("Save changes", 20.0);
