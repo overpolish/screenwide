@@ -150,7 +150,7 @@ export function TimelineStrip(props: TimelineStripProps) {
           <div style={{ width: width + view.bandWidth }}>
             <div
               className={cn(
-                "relative flex touch-none flex-col pt-8 pb-1",
+                "relative flex touch-none flex-col pt-6 pb-1",
                 range.bladeX !== null && "cursor-col-resize",
               )}
               onClickCapture={range.handlers.onClickCapture}
@@ -262,14 +262,14 @@ export function TimelineStrip(props: TimelineStripProps) {
               {/* Over every lane; carried, its row draws it (`RangeBand`). */}
               {shownRange && reorder.lifted === null ? (
                 <RangeBand
-                  className="top-3.5 bottom-1"
+                  className="top-1.5 bottom-1"
                   scale={shown}
                   span={shownRange}
                 />
               ) : null}
               {guide === null ? null : (
                 <SnapGuide
-                  className="top-8 bottom-0"
+                  className="top-6 bottom-0"
                   style={at(lanes.scale, guide)}
                 />
               )}

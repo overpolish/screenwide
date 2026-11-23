@@ -25,12 +25,12 @@ export function StripScrubBand({
     <>
       <span
         aria-hidden
-        className="absolute inset-x-0 top-0 h-8"
+        className="absolute inset-x-0 top-0 h-6"
         data-scrub-band
       />
       {/* Over the scenes, which its line crosses, but pressed only by its
         knob, centred in the band. */}
-      <span className="pointer-events-none absolute inset-x-0 top-5.5 bottom-0 z-20">
+      <span className="pointer-events-none absolute inset-x-0 top-3.5 bottom-0 z-20">
         <TimelinePlayhead onScrub={onScrub} playhead={playhead} />
       </span>
     </>
