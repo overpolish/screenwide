@@ -44,6 +44,10 @@ pub(super) struct Commit {
   pub(super) scene_shapes: Vec<super::commit::CommitSceneShapes>,
   /// The copies a carry with the duplicate modifier took, and whose each is.
   pub(super) copies: Vec<super::copies::CommitCopy>,
+  /// The annotations the edit took away, such as a text box left with
+  /// nothing to read. `annotations` holds only those shown at the playhead,
+  /// so one missing from it says nothing.
+  pub(super) removed_annotation_ids: Vec<String>,
 }
 
 pub(super) fn track(pane: u32) -> AnnotationTrack {

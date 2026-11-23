@@ -21,6 +21,9 @@ export type RecordingAnnotationEvent = {
   paneIndex: number;
   /** The pins of the pinned annotations among `annotations`. */
   pins: RecordingAnnotationPinCommit[];
+  /** The annotations the edit took away, such as a text box left with
+   * nothing to read; `annotations` holds only those shown at the playhead. */
+  removedAnnotationIds: string[];
   /** The scene places of those an edit inside a scene reached. */
   sceneShapes: RecordingAnnotationSceneShapesCommit[];
   /** Every annotation chosen once the commit lands. */

@@ -160,6 +160,32 @@ it("merges a visible edit without dropping hidden or other-track arrows", () => 
   ).toEqual(merged);
 });
 
+it("drops the clip an edit took away, and only that one", () => {
+  const edit = createRecordingTimelineEdit(1);
+  const clips = [
+    recordingAnnotationClipAt({
+      annotation,
+      sourceDurationMs: 20_000,
+      sourcePositionMs: 4000,
+    }),
+    recordingAnnotationClipAt({
+      annotation: { ...annotation, id: "later" },
+      sourceDurationMs: 20_000,
+      sourcePositionMs: 12000,
+    }),
+  ];
+  const merged = mergeRecordingAnnotationClips({
+    annotations: [],
+    clips,
+    edit,
+    removedAnnotationIds: [annotation.id],
+    sourceDurationMs: 20_000,
+    sourcePositionMs: 4500,
+    trackId: "primary",
+  });
+  expect(merged).toEqual([clips[1]]);
+});
+
 it("times a copy taken with the duplicate modifier as its original, above it", () => {
   const edit = createRecordingTimelineEdit(1);
   const original = recordingAnnotationClipAt({

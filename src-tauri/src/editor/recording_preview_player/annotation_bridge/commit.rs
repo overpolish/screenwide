@@ -111,6 +111,7 @@ impl PreviewPlayerManager {
       pins,
       scene_shapes,
       copies: Vec::new(),
+      removed_annotation_ids: Vec::new(),
     })
   }
 }

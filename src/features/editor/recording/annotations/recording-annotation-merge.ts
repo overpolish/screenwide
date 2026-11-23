@@ -51,7 +51,8 @@ const withPlaces = (
  * together reports its members from both. A copy taken with the duplicate
  * modifier goes just above its original, timed as it is and following no
  * content. Any other fresh annotation joins `trackId`, paced on `frame`, the
- * pane's picture. */
+ * pane's picture. The edit reports only the annotations shown at the
+ * playhead, so a clip goes only when it names it in `removedAnnotationIds`. */
 export const mergeRecordingAnnotationClips = ({
   annotations,
   clips,
@@ -59,6 +60,7 @@ export const mergeRecordingAnnotationClips = ({
   edit,
   frame,
   pins = [],
+  removedAnnotationIds = [],
   sceneShapes = [],
   sourceDurationMs,
   sourcePositionMs,
@@ -74,6 +76,7 @@ export const mergeRecordingAnnotationClips = ({
   copies?: RecordingAnnotationCopyCommit[];
   frame?: AnnotationFrame;
   pins?: RecordingAnnotationPinCommit[];
+  removedAnnotationIds?: string[];
   sceneShapes?: RecordingAnnotationSceneShapesCommit[];
 }) => {
   const byId = new Map(
@@ -91,14 +94,18 @@ export const mergeRecordingAnnotationClips = ({
   const originalOf = new Map(
     copies.map(({ annotationId, originalId }) => [annotationId, originalId]),
   );
-  const next = clips.map((clip) => {
-    if (!byId.has(clip.annotation.id)) return clip;
+  const removed = new Set(removedAnnotationIds);
+  const next = clips.flatMap((clip) => {
+    if (removed.has(clip.annotation.id)) return [];
+    if (!byId.has(clip.annotation.id)) return [clip];
     const pin = pinById.get(clip.annotation.id);
-    return {
-      ...withPlaces(clip, placesById.get(clip.annotation.id)),
-      annotation: byId.get(clip.annotation.id) ?? clip.annotation,
-      ...(pin && clip.pin ? { pin } : {}),
-    };
+    return [
+      {
+        ...withPlaces(clip, placesById.get(clip.annotation.id)),
+        annotation: byId.get(clip.annotation.id) ?? clip.annotation,
+        ...(pin && clip.pin ? { pin } : {}),
+      },
+    ];
   });
   const known = new Set(next.map((clip) => clip.annotation.id));
   for (const annotation of annotations) {

@@ -161,16 +161,24 @@ impl PreviewPlayerManager {
             clips.retain(|clip| clip.annotation.id != id);
           }
         }
-        self.annotation.selected = kept.then_some(id).into_iter().collect();
+        let removed = if kept {
+          self.annotation.selected = vec![id];
+          Vec::new()
+        } else {
+          self.annotation.selected.clear();
+          vec![id]
+        };
         self.publish_annotation_handles();
         let _ = self.restart(PlaybackMode::InteractiveStill);
-        self.commit(
+        let mut commit = self.commit(
           pane,
           position,
           annotations,
           self.annotation.selected.clone(),
           Some(TextEditPhase::End),
-        )
+        )?;
+        commit.removed_annotation_ids = removed;
+        Some(commit)
       }
     }
   }
