@@ -150,17 +150,17 @@ pub(crate) fn show(app: &AppHandle, shot: Shot) {
   });
 }
 
-/// The island gives the copied shot up: it tucks away, unless the recording
-/// or its controls keep it, which take it back where they show, or Quick
-/// Screenshot has it now.
+/// The island gives the copied shot up: it tucks away, unless Quick
+/// Screenshot has it now or something else on the island keeps it
+/// (`quick_island::keeps_island`), which takes it back where it shows.
 fn step_back(app: &AppHandle) {
   if super::quick_island::is_up() || is_up() {
     return;
   }
-  let result = if crate::recording::is_idle(app) && !app_windows::is_recording_ui_visible() {
-    app_windows::island::hide(app)
-  } else {
+  let result = if super::quick_island::keeps_island(app) {
     app_windows::island::hand_over(app, IslandPlacement::Top)
+  } else {
+    app_windows::island::hide(app)
   };
   if let Err(error) = result {
     eprintln!("Could not put the island away after the copied screenshot: {error}");

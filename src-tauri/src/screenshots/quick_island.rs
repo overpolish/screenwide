@@ -108,8 +108,9 @@ pub(crate) fn give_way(app: &AppHandle) {
   app_windows::island_overlay::stand_over(app, None);
 }
 
-/// The session ended. The island tucks away, unless the shot just copied, the
-/// recording or its controls keep it, which take it back where they show.
+/// The session ended. The island tucks away, unless the shot just copied or
+/// something else on the island keeps it (`keeps_island`), which takes it
+/// back where it shows.
 pub(crate) fn withdraw(app: &AppHandle) {
   if !is_up() {
     return;
@@ -125,15 +126,25 @@ pub(crate) fn withdraw(app: &AppHandle) {
     return;
   }
   tell(app, None);
-  let result = if crate::recording::is_idle(app) && !app_windows::is_recording_ui_visible() {
-    app_windows::island::hide(app)
-  } else {
+  let result = if keeps_island(app) {
     app_windows::island::hand_over(app, IslandPlacement::Top)
+  } else {
+    app_windows::island::hide(app)
   };
   if let Err(error) = result {
     eprintln!("Could not put the island away after Quick Screenshot: {error}");
   }
   app_windows::island_overlay::keep_still_out_of_recording(app, false);
+}
+
+/// Whether the island has more to show once the screenshot's part goes: the
+/// recording or its controls, or the Ruler or Annotate, which a screenshot is
+/// taken over and which carry on after it.
+pub(super) fn keeps_island(app: &AppHandle) -> bool {
+  !crate::recording::is_idle(app)
+    || app_windows::is_recording_ui_visible()
+    || crate::ruler::island::is_shown()
+    || crate::annotate::island::annotate_drawing()
 }
 
 #[tauri::command]

@@ -102,6 +102,12 @@ fn shown() -> std::sync::MutexGuard<'static, Option<RulerIslandState>> {
   SHOWN.lock().unwrap_or_else(PoisonError::into_inner)
 }
 
+/// Whether the Ruler's tools are on the island, for an island that gives way
+/// to them as it goes.
+pub(crate) fn is_shown() -> bool {
+  shown().is_some()
+}
+
 /// The Ruler is starting: the island comes out with its tools at once, while
 /// the desktop is frozen and the overlay built, so the start is seen as it
 /// happens. Called with the island kept out of captures, so it is not frozen
