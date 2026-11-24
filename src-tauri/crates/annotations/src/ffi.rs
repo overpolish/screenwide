@@ -234,23 +234,6 @@ pub unsafe extern "C" fn screenwide_freehand_distance(
   freehand_distance([px, py], chain, width)
 }
 
-/// How far a point falls outside a prepared shape's stroke or the box it
-/// outlines: what picks a shape from anywhere inside it.
-///
-/// # Safety
-/// `geometry` must point at one readable [`ArrowGeometry`].
-#[cfg(target_os = "macos")]
-#[no_mangle]
-pub unsafe extern "C" fn screenwide_shape_body_distance(
-  px: f32,
-  py: f32,
-  geometry: *const ArrowGeometry,
-) -> f32 {
-  geometry.as_ref().map_or(f32::INFINITY, |geometry| {
-    super::outline::geometry::shape_body_distance([px, py], geometry)
-  })
-}
-
 /// How far a point falls outside a highlight, from what its grips' record
 /// carries placed in the chrome's display points: the first band's top-left
 /// corner and bottom, the last band's top and bottom-right corner, and the

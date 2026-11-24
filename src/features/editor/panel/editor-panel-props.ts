@@ -28,12 +28,15 @@ import type { ExportSubtitles } from "../../../bindings/ExportSubtitles";
 import type { RecordingFormat } from "../../../bindings/RecordingFormat";
 import type { ScreenshotFormat } from "../../../bindings/ScreenshotFormat";
 import type { ExportLookQuality } from "../export/editor-export";
+import type { FrameFormatsControl } from "../recording/formats/use-recording-formats";
 import type { ToolPanelExportCompare } from "../tools/tool-panel-export";
 
 export type EditorPanelProps = {
   artifact: EditorArtifact | null;
   directory: string | null;
   fileStem: string;
+  /** Whether an export writes every format; null with one format. */
+  allFormats?: boolean | null;
   audioTrackVolumes?: AudioTrackVolume[];
   bakeCamera?: boolean;
   cameraCompression?: number;
@@ -49,6 +52,8 @@ export type EditorPanelProps = {
   enabledVideoTracks?: RecordingVideoTrackId[];
   /** What the Export island compares, or null where there is nothing. */
   exportCompare?: ToolPanelExportCompare | null;
+  /** A recording's formats, as the Frame island shows and changes them. */
+  frameFormats?: FrameFormatsControl | null;
   isCancelingSave?: boolean;
   isPreparingRecordingAudio?: boolean;
   isPreparingRecordingPreview?: boolean;
@@ -57,6 +62,7 @@ export type EditorPanelProps = {
   keyboardEffects?: KeyboardEffectSettings;
   /** What each of the Export island's looks sets. */
   lookQualities?: ExportLookQuality[];
+  onAllFormatsChange?: (isAll: boolean) => void;
   /** Draws the camera into the video, or saves it as a file of its own. */
   onBakeCameraChange?: (bake: boolean) => void;
   onBrowse?: () => void;

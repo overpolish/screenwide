@@ -9,6 +9,7 @@ import {
 
 import { t } from "../../i18n/i18n";
 import { ListBox } from "../../primitives/listbox/listbox";
+import { revealChosen } from "../../primitives/scroll-area/reveal-chosen";
 import { ScrollArea } from "../../primitives/scroll-area/scroll-area";
 
 import { hidePopupPanel } from "./api";
@@ -20,6 +21,7 @@ import {
   usePopupPanelStore,
 } from "./store";
 import { useFittedListWindow } from "./use-fitted-list-window";
+import { useToggleDrag } from "./use-toggle-drag";
 
 type PopupPanelGroup = {
   id: string;
@@ -75,10 +77,20 @@ export function PopupPanelList({
     itemCount: activeItemCount,
     showsAllItems,
   });
+  const toggles = useToggleDrag({
+    items: content.items,
+    onFlip: (item, selectedIds) => {
+      select({ id: activeId, panel, pressedId: item.id, selectedIds });
+    },
+    selectedIds: content.selectedIds,
+  });
 
-  // A menu runs actions rather than holding a pick, so nothing is ever drawn
-  // as selected and the gutter that would carry the checkmark is dropped.
-  const showsSelection = content.mode === "select";
+  // A menu runs actions rather than holding a pick, so nothing is drawn as
+  // selected and the gutter that would carry the checkmark is dropped,
+  // unless it holds toggles, whose ticks show what is on.
+  const showsSelection =
+    content.mode === "select" ||
+    content.items.some((item) => item.togglesInPlace);
 
   if (content.items.length === 0) {
     return (
@@ -96,11 +108,9 @@ export function PopupPanelList({
 
     // A toggle flips its own tick in the list it belongs to and stays open;
     // the listener reads which item was pressed rather than the tick list.
+    // One a drag began on has flipped already (`useToggleDrag`).
     if (item.togglesInPlace) {
-      const selectedIds = content.selectedIds.includes(item.id)
-        ? content.selectedIds.filter((id) => id !== item.id)
-        : [...content.selectedIds, item.id];
-      select({ id: activeId, panel, pressedId: item.id, selectedIds });
+      toggles.flipPressed(item);
       return;
     }
 
@@ -170,38 +180,46 @@ export function PopupPanelList({
     <ScrollArea
       inWindowCorner
       key={activeId}
+      // A list that holds a choice opens on it rather than at its top, the
+      // first one chosen where several sections each hold one.
+      {...(showsSelection ? { onInitialized: revealChosen } : {})}
       // The scrollbar keeps out of the host's rounded corners.
       rootClassName="rounded-panel"
     >
-      <ListBox
-        aria-label={label}
-        autoFocus={focusContents}
-        className="w-full overflow-visible"
-        onSelectionChange={onSelectionChange}
-        ref={listboxRef}
-        selectedKeys={showsSelection ? content.selectedIds : []}
-        selectionBehavior="toggle"
-        selectionMode={content.selectionMode}
-      >
-        {hasSections
-          ? groupItemsBySection(content.items).map((group) => (
-              <AriaListBoxSection
-                className="flex flex-col"
-                id={group.id}
-                key={group.id}
-              >
-                {group.section ? (
-                  <Header>
-                    <span className="block px-inset-sm pt-separate pb-inline text-caption text-fg-secondary">
-                      {group.section}
-                    </span>
-                  </Header>
-                ) : null}
-                {group.items.map(renderItem)}
-              </AriaListBoxSection>
-            ))
-          : content.items.map(renderItem)}
-      </ListBox>
+      {/* A press on a toggle starts a drag that sets the toggles it passes
+          (`useToggleDrag`); every other press goes on to the list. Caught
+          on the way down, as a row's own press handling stops it rising. */}
+      <div onPointerDownCapture={toggles.onPointerDown} role="presentation">
+        <ListBox
+          aria-label={label}
+          autoFocus={focusContents}
+          className="w-full overflow-visible"
+          onSelectionChange={onSelectionChange}
+          ref={listboxRef}
+          selectedKeys={showsSelection ? content.selectedIds : []}
+          selectionBehavior="toggle"
+          selectionMode={content.selectionMode}
+        >
+          {hasSections
+            ? groupItemsBySection(content.items).map((group) => (
+                <AriaListBoxSection
+                  className="flex flex-col"
+                  id={group.id}
+                  key={group.id}
+                >
+                  {group.section ? (
+                    <Header>
+                      <span className="block px-inset-sm pt-separate pb-inline text-caption text-fg-secondary">
+                        {group.section}
+                      </span>
+                    </Header>
+                  ) : null}
+                  {group.items.map(renderItem)}
+                </AriaListBoxSection>
+              ))
+            : content.items.map(renderItem)}
+        </ListBox>
+      </div>
     </ScrollArea>
   );
 }

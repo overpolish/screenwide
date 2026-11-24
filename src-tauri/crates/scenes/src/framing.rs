@@ -129,6 +129,19 @@ impl SceneFraming {
     }
   }
 
+  /// This framing with what it puts in the middle of `frame` at `point`
+  /// instead, for a picture of `aspect`. Still held where the picture covers
+  /// the box when placed.
+  pub fn about(self, frame: Rect, aspect: f64, point: (f64, f64)) -> Self {
+    let width = cover(frame, aspect) * self.zoom.clamp(1.0, MAX_ZOOM);
+    let (x, y) = frame.centre();
+    Self {
+      focus_x: self.focus_x - (point.0 - x) / width,
+      focus_y: self.focus_y - (point.1 - y) * aspect / width,
+      zoom: self.zoom,
+    }
+  }
+
   /// The centre and width of a picture of `aspect` that frames `frame` this
   /// way.
   pub fn place(self, frame: Rect, aspect: f64) -> (f64, f64, f64) {

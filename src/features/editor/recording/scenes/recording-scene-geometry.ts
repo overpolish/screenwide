@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import { tallBubble, tallPair } from "./recording-scene-tall";
 import {
   DEFAULT_BUBBLE_SIZE,
   DEFAULT_CAMERA_SIZE,
@@ -9,12 +10,29 @@ import {
 } from "./recording-scene-variant";
 import { RecordingScenePreset } from "./recording-scenes";
 
+import type { ClearArea } from "../../../../bindings/ClearArea";
+import type { ScreenshotOutputSettings } from "../../screenshot/screenshot-output";
+
 export type SceneRect = {
   height: number;
   width: number;
   x: number;
   y: number;
 };
+
+/** A canvas, with what the platform it is made for covers. */
+export type SceneCanvas = {
+  height: number;
+  width: number;
+  clear?: ClearArea;
+};
+
+/** The canvas of `output`, as the scenes lay their panes out on it. */
+export const sceneCanvas = (output: ScreenshotOutputSettings): SceneCanvas => ({
+  ...(output.clearArea ? { clear: output.clearArea } : {}),
+  height: output.height,
+  width: output.width,
+});
 
 /** The presets that lay the panes out themselves, rather than keeping the
  * recording's own place for the screen. */
@@ -50,16 +68,25 @@ const CAMERA_RATIO = { third: 0.5, "two-thirds": 2 } as const;
  * Picture in picture is the screen at its own aspect with the camera
  * reaching past the corner it sits over by the same share each way. Each
  * pair is scaled to the largest size the margin leaves room for and centred.
- * Camera only fills the canvas, and blank places neither pane.
+ * On a canvas taller than it is wide the pairs are laid out for it instead,
+ * inside `clear`, the part a platform's interface leaves uncovered
+ * (`recording-scene-tall.ts`). Camera only fills the canvas, and blank
+ * places neither pane.
  */
 export function recordingScenePanes(
   preset: LaidOutScenePreset,
   canvas: { height: number; width: number },
   {
     cameraAspect,
+    clear,
     screenAspect,
     variant = {},
-  }: { cameraAspect: number; screenAspect: number; variant?: SceneVariant },
+  }: {
+    cameraAspect: number;
+    screenAspect: number;
+    clear?: ClearArea;
+    variant?: SceneVariant;
+  },
 ): { camera: SceneRect | null; screen: SceneRect | null } {
   if (preset === "blank") return { camera: null, screen: null };
   if (preset === "camera-only")
@@ -73,6 +100,11 @@ export function recordingScenePanes(
   const gap = margin / 2;
   const ratio = CAMERA_RATIO[variant.cameraSize ?? DEFAULT_CAMERA_SIZE];
   const swap = variant.swap ?? false;
+  const isTall = canvas.height > canvas.width;
+  if ((preset === "split-two-thirds" || preset === "stacked") && isTall)
+    return tallPair(canvas, screenAspect, { clear, variant });
+  if (preset === "picture-in-picture" && isTall)
+    return tallBubble(canvas, screenAspect, { clear, variant });
   if (preset === "split-two-thirds") {
     // The screen's width, held by the pair's width and by the taller pane.
     const width = Math.min(

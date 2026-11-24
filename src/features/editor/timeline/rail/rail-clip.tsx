@@ -1,9 +1,11 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import { AnimatePresence, motion } from "motion/react";
 import { type ReactNode } from "react";
 
 import { cn } from "../../../../lib/styling";
+import { useFormatMarkMotion } from "../formats/format-mark-motion";
 import { reach, type Span, type TimelineScale } from "../timeline-scale";
 
 // One block on a rail of the strip over the stretch it holds, as a scene or
@@ -37,8 +39,11 @@ export type RailClipProps = {
 
 export function RailClip({
   glyph,
+  isGhost = false,
+  isMarked = false,
   isSelected,
   label,
+  menuTarget,
   name,
   onGrabBody,
   onGrabEdge,
@@ -53,20 +58,32 @@ export function RailClip({
   /** What it is called, shown where there is room. */
   name: string;
   span: Span;
+  /** Left out of the format in hand: drawn as an outline where it plays in
+   * the others, and not taken hold of; a press on it does nothing, so it
+   * never draws a new block over the time it holds. */
+  isGhost?: boolean;
+  /** Marked as done differently in the format in hand. */
+  isMarked?: boolean;
+  /** What a right press on it offers a menu for, by id. */
+  menuTarget?: string;
 }) {
   const { pad, px, style } = reach(scale, span, width);
+  const { mark } = useFormatMarkMotion();
   return (
     <button
+      aria-disabled={isGhost || undefined}
       aria-label={label}
       aria-pressed={isSelected}
       // The pointer stays the arrow over a block, as over a layer with Select
       // in hand, though its body is dragged (user asked).
       className="group absolute inset-y-0 touch-none outline-none"
+      data-menu-target={menuTarget}
       dir="ltr"
       // A keyboard press; a pointer's is taken at the press, below.
-      onClick={onPress}
+      onClick={isGhost ? undefined : onPress}
       onPointerDown={(event) => {
         event.stopPropagation();
+        if (isGhost) return;
         event.currentTarget.setPointerCapture(event.pointerId);
         onGrabBody(event);
       }}
@@ -78,9 +95,11 @@ export function RailClip({
           "absolute inset-y-0.5 flex items-center gap-1 overflow-hidden rounded-part text-caption whitespace-nowrap transition-colors group-focus-visible:outline-2 group-focus-visible:outline-focus",
           // Padding would hold a narrow block wider than its time.
           px >= GLYPH_PX && "px-1",
-          isSelected
-            ? "bg-primary text-on-primary"
-            : "bg-fill-strong text-fg-secondary group-hover:bg-fg-tertiary group-hover:text-fg",
+          isGhost
+            ? "border border-dashed border-fg-tertiary text-fg-tertiary"
+            : isSelected
+              ? "bg-primary text-on-primary"
+              : "bg-fill-strong text-fg-secondary group-hover:bg-fg-tertiary group-hover:text-fg",
         )}
         style={{ insetInlineEnd: pad, insetInlineStart: pad }}
       >
@@ -91,6 +110,20 @@ export function RailClip({
           </span>
         ) : null}
       </span>
+      <AnimatePresence initial={false}>
+        {isMarked ? (
+          <motion.span
+            aria-hidden
+            className={cn(
+              "absolute top-1 size-1.5 rounded-full",
+              isSelected ? "bg-on-primary" : "bg-primary",
+            )}
+            key="differs"
+            style={{ insetInlineEnd: `calc(${String(pad)}px + 0.25rem)` }}
+            {...mark()}
+          />
+        ) : null}
+      </AnimatePresence>
       {isSelected
         ? (["start", "end"] as const).map((edge) => (
             <span

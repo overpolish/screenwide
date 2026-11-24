@@ -6,6 +6,7 @@ use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
 pub use super::boxes::{SceneBox, SceneBoxes};
+pub use super::format_layout::SceneFormatLayout;
 use super::framing::SceneFraming;
 use super::measure::Measure;
 use super::rotation::SceneRotation;

@@ -13,10 +13,12 @@
 //! looks the same on another computer.
 
 mod cleanup;
+mod formats;
 mod pictures;
 
 use super::*;
 pub(crate) use cleanup::clean_pictures;
+pub use formats::FrameFormats;
 pub(crate) use pictures::{
   adopt_pictures, carry_pictures, folder as pictures_folder, keep_in_app_data, stored_names,
 };
@@ -54,6 +56,11 @@ pub struct ProjectLook {
   pub enabled_stream_indices: Option<Vec<usize>>,
   #[serde(default)]
   pub enabled_video_tracks: Option<Vec<VideoTrack>>,
+  /// The shapes the recording is made in, each its own size, camera and
+  /// scene layouts; none for a recording made in one shape alone.
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  #[ts(optional)]
+  pub formats: Option<FrameFormats>,
 }
 
 /// The look as a manifest keeps it: a recording's [`ProjectLook`] or a

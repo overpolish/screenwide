@@ -4,7 +4,7 @@
 import { ScreenshotOutputSettings } from "../../screenshot/screenshot-output";
 
 import { cameraFramingOf, framingWithin } from "./recording-scene-framing";
-import { SceneRect } from "./recording-scene-geometry";
+import { SceneRect, sceneCanvas } from "./recording-scene-geometry";
 import {
   SceneCamera,
   basePlacement,
@@ -53,7 +53,7 @@ export function selectedPaneFraming({
     targeting({
       base,
       camera,
-      canvas: { height: output.height, width: output.width },
+      canvas: sceneCanvas(output),
     })(clip) ?? base;
   const reachesCamera =
     camera !== null &&

@@ -84,6 +84,9 @@ export type ToolPanelGif = "noRange" | "ready" | "tooLong";
  * there is nothing to choose.
  */
 export type ToolPanelExport = {
+  /** With a recording in several formats, whether every one is written,
+   * one file each, or the one in hand; null with one format. */
+  allFormats: boolean | null;
   /** A recording's camera on its own, with its background taken away: what
    * fills the room. */
   cameraKey: CameraKey | null;
@@ -138,7 +141,11 @@ export type ToolPanelExport = {
 export type ToolPanelExportPatch = Partial<
   Pick<
     ToolPanelExport,
-    "deleteProjectAfterExport" | "fileStem" | "revealWhenDone" | "subtitles"
+    | "allFormats"
+    | "deleteProjectAfterExport"
+    | "fileStem"
+    | "revealWhenDone"
+    | "subtitles"
   >
 > & {
   /** Choose where the file is written. */

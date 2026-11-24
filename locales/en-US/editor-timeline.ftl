@@ -44,18 +44,34 @@ editor-timeline-moment = { $moment } moment
 editor-timeline-gap = Gap
 # $layout names the scene's layout, such as Side by side.
 editor-timeline-scene = Scene, { $layout }
+# A scene laid out or shown differently in the format being edited than in the others. $layout names the scene's layout.
+editor-timeline-scene-differs = Scene, { $layout }, different in this format
+# A scene left out of the format being edited, drawn faintly where it plays in the others. $layout names its layout; $formats lists the formats it shows in, such as TikTok and YouTube Shorts.
+editor-timeline-scene-ghost = Scene, { $layout }, only in { $formats }
 # Shown where dragging along the scene line would draw a scene.
 editor-timeline-scene-new = New scene
 # $tool names the annotation's tool, such as Arrow.
 editor-timeline-annotation = { $tool } annotation
 # A bar for an annotation pinned to the content under it, which follows that content as the recording moves. $tool names the annotation's tool, such as Arrow.
 editor-timeline-annotation-pinned = { $tool } annotation, pinned to content
+# An annotation shown or laid out differently in the format being edited than in the others. $tool names the annotation's tool, such as Arrow.
+editor-timeline-annotation-differs = { $tool } annotation, different in this format
+# An annotation left out of the format being edited, drawn faintly where it shows in the others. $tool names its tool, such as Arrow; $formats lists the formats it shows in.
+editor-timeline-annotation-ghost = { $tool } annotation, only in { $formats }
 # A song on the timeline, under the beats. $title is the song's title, or the name of its file.
 editor-timeline-audio-song = Song, { $title }
+# A song left out of the format being edited, drawn faintly where it plays in the others. $title is its title; $formats lists the formats it plays in.
+editor-timeline-audio-song-ghost = Song, { $title }, only in { $formats }
 # A sound effect on the timeline, under the beats. $title is its title, or the name of its file.
 editor-timeline-audio-effect = Sound effect, { $title }
+# A sound effect left out of the format being edited, drawn faintly where it plays in the others. $title is its title; $formats lists the formats it plays in.
+editor-timeline-audio-effect-ghost = Sound effect, { $title }, only in { $formats }
 # The window on the overview round the part of the recording the strip shows.
 editor-timeline-view = Part in view
+# The lines over the overview, one for each version the recording comes out in: formats that include and lay out the same things share one, named by them.
+editor-timeline-versions = Versions
+# Read after a version's name, where a screen glyph marks that its screen is moved or restyled its own way for the whole recording rather than following the main canvas.
+editor-timeline-version-own-screen = Screen set its own way
 # The handle at the end of the overview, past the time already squeezed, dragged in to play every lull faster.
 editor-timeline-squeeze = Squeeze the lulls
 # Drawn past the strip's end, in the band that accounts for what was taken out of the recording, next to the end of what plays: the time playing faster saves, by the squeeze or a lull retimed. $duration is that time, such as 4.2 sec.

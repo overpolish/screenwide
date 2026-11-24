@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { listen } from "@tauri-apps/api/event";
-import { RefObject, useEffect, useRef } from "react";
+import { Dispatch, RefObject, SetStateAction, useEffect, useRef } from "react";
 
 import { setRecordingPreviewEditorSuspended } from "../api";
 import {
@@ -14,6 +14,7 @@ import {
 import { RecordingOutputSettings } from "../screenshot/screenshot-output";
 import { CameraOverlaySettings } from "../types";
 
+import { createViewportWatch } from "./preview-viewport-watch";
 import {
   audioRibbonViewport,
   createRecordingLayoutQueue,
@@ -106,7 +107,7 @@ export function useRecordingPreviewSurface({
   isEnabled: boolean;
   nativeLayoutHasPanes: boolean;
   nativeLayoutKey: string;
-  onError: (message: string) => void;
+  onError: Dispatch<SetStateAction<string | null>>;
   recordingOutput: RecordingOutputSettings;
   screenCanvasRef: RefObject<HTMLCanvasElement | null>;
   sessionIdRef: RefObject<number>;
@@ -235,14 +236,13 @@ export function useRecordingPreviewSurface({
     // Enabling is ownership, not suspension: a suspended editor stays enabled
     // and keeps its transform, and only its input and chrome go away.
     const nativeEditorActive = nativeEditorOwnsLayout;
+    const allowsMeasure = createViewportWatch(
+      () => selectionGestureActiveRef.current,
+      () => screenCanvasRef.current,
+    );
     const measure = () => {
-      // Pointer-rate recording edits are rendered directly by the retained
-      // native workspace. ResizeObserver still sees React's live semantic
-      // mirror changing the invisible geometry markers; feeding those bounds
-      // back into native during the same gesture makes the two owners fight
-      // and visibly flicker. Reconcile exactly once from the final React state
-      // after end/cancel (scheduled by the gesture listener above).
-      if (selectionGestureActiveRef.current) return;
+      // Mid-gesture, native draws the edit (`preview-viewport-watch.ts`).
+      if (!allowsMeasure()) return;
       if (startedRef.current) {
         const connected = [screenCanvasRef.current, cameraCanvasRef.current]
           .map((canvas, index) => ({ canvas, index }))

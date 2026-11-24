@@ -3,7 +3,7 @@
 
 import { CameraOverlaySettings } from "../../types";
 
-import { SceneRect } from "./recording-scene-geometry";
+import { SceneCanvas, SceneRect } from "./recording-scene-geometry";
 import { MAX_SCENE_ZOOM, SceneFraming } from "./recording-scenes";
 
 /**
@@ -73,6 +73,38 @@ export const followingFace = (
   focusY: face.y + framing.focusY - 0.5,
   zoom: framing.zoom,
 });
+
+/** `framing` with what it puts in the middle of `frame` at `point` instead,
+ * for a picture of `aspect`. The twin of `SceneFraming::about`. */
+export const framingAbout = (
+  framing: SceneFraming,
+  frame: SceneRect,
+  { aspect, point }: { aspect: number; point: { x: number; y: number } },
+): SceneFraming => {
+  const width = cover(frame, aspect) * clamped(framing.zoom, 1, MAX_SCENE_ZOOM);
+  return {
+    focusX: framing.focusX - (point.x - (frame.x + frame.width / 2)) / width,
+    focusY:
+      framing.focusY -
+      ((point.y - (frame.y + frame.height / 2)) * aspect) / width,
+    zoom: framing.zoom,
+  };
+};
+
+/** The middle of the part of `frame` the platform `canvas` is made for
+ * leaves clear, or of `frame` itself where none of it is: where a face
+ * followed in a box reaching under the platform's interface is held. The
+ * twin of `ClearArea::middle_of`. */
+export const clearMiddle = (frame: SceneRect, canvas: SceneCanvas) => {
+  const { bottom = 0, side = 0, top = 0 } = canvas.clear ?? {};
+  const left = Math.max(frame.x, side * canvas.width);
+  const right = Math.min(frame.x + frame.width, canvas.width * (1 - side));
+  const upper = Math.max(frame.y, top * canvas.height);
+  const lower = Math.min(frame.y + frame.height, canvas.height * (1 - bottom));
+  return right <= left || lower <= upper
+    ? { x: frame.x + frame.width / 2, y: frame.y + frame.height / 2 }
+    : { x: (left + right) / 2, y: (upper + lower) / 2 };
+};
 
 /** A length as `bake_geometry` sizes the camera: a whole, even number of
  * pixels, two at least. */

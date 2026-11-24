@@ -206,6 +206,7 @@ export type Messages = {
   "editor-eta-under-minute": null;
   "editor-export": null;
   "editor-export-action": null;
+  "editor-export-all-formats": null;
   "editor-export-camera-key": null;
   "editor-export-camera-key-blue": null;
   "editor-export-camera-key-green": null;
@@ -232,6 +233,10 @@ export type Messages = {
   "editor-export-finalizing": null;
   "editor-export-folder": null;
   "editor-export-format": null;
+  "editor-export-format-file": {
+    format: string | number;
+    stem: string | number;
+  };
   "editor-export-format-jpeg": null;
   "editor-export-format-png": null;
   "editor-export-format-too-large": { formats: string | number };
@@ -262,6 +267,51 @@ export type Messages = {
   "editor-export-title-recording": null;
   "editor-export-title-screenshot": null;
   "editor-export-try-again": null;
+  "editor-frame-format-add": null;
+  "editor-frame-format-custom": { shape: string | number };
+  "editor-frame-format-layout-all": null;
+  "editor-frame-format-main": null;
+  "editor-frame-format-platforms": null;
+  "editor-frame-format-ratio": {
+    height: string | number;
+    width: string | number;
+  };
+  "editor-frame-format-remove-named": { format: string | number };
+  "editor-frame-format-show-in": null;
+  "editor-frame-format-size": {
+    height: string | number;
+    width: string | number;
+  };
+  "editor-frame-formats": null;
+  "editor-frame-phone": null;
+  "editor-frame-phone-current": { phone: string | number };
+  "editor-frame-phone-galaxy-fold-cover": null;
+  "editor-frame-phone-galaxy-s26": null;
+  "editor-frame-phone-iphone-17-pro": null;
+  "editor-frame-phone-iphone-17-pro-max": null;
+  "editor-frame-phone-iphone-se": null;
+  "editor-frame-phone-none": null;
+  "editor-frame-phone-pixel-10": null;
+  "editor-frame-phone-preview": null;
+  "editor-frame-platform-instagram": null;
+  "editor-frame-platform-linkedin": null;
+  "editor-frame-platform-tiktok": null;
+  "editor-frame-platform-x": null;
+  "editor-frame-platform-youtube": null;
+  "editor-frame-size-instagram-portrait": null;
+  "editor-frame-size-instagram-reels": null;
+  "editor-frame-size-instagram-square": null;
+  "editor-frame-size-linkedin-landscape": null;
+  "editor-frame-size-linkedin-portrait": null;
+  "editor-frame-size-linkedin-square": null;
+  "editor-frame-size-linkedin-vertical": null;
+  "editor-frame-size-tiktok": null;
+  "editor-frame-size-x-landscape": null;
+  "editor-frame-size-x-vertical": null;
+  "editor-frame-size-youtube-1080": null;
+  "editor-frame-size-youtube-1440": null;
+  "editor-frame-size-youtube-2160": null;
+  "editor-frame-size-youtube-shorts": null;
   "editor-island-annotation-animate": null;
   "editor-island-annotation-confirm-delete": null;
   "editor-island-annotation-delete": null;
@@ -409,6 +459,13 @@ export type Messages = {
   "editor-island-frame-library-empty": null;
   "editor-island-frame-original-size": null;
   "editor-island-frame-randomise": null;
+  "editor-island-framing": null;
+  "editor-island-framing-applies": { platforms: string | number };
+  "editor-island-framing-applies-heading": null;
+  "editor-island-framing-current": null;
+  "editor-island-framing-follows-heading": null;
+  "editor-island-framing-follows-main": null;
+  "editor-island-framing-main": null;
   "editor-island-gap": null;
   "editor-island-gap-clear-background": null;
   "editor-island-gap-confirm-remove": null;
@@ -541,6 +598,7 @@ export type Messages = {
   "editor-island-reset-crop": null;
   "editor-island-reset-placement": null;
   "editor-island-reset-rotation": null;
+  "editor-island-reset-to-main": null;
   "editor-island-restore-voice": null;
   "editor-island-restore-voice-working": null;
   "editor-island-rotation": null;
@@ -732,6 +790,28 @@ export type Messages = {
   "editor-island-width": null;
   "editor-layer-actions": null;
   "editor-opening": null;
+  "editor-overlay-caption": null;
+  "editor-overlay-dislike": null;
+  "editor-overlay-follow": null;
+  "editor-overlay-following": null;
+  "editor-overlay-for-you": null;
+  "editor-overlay-friends": null;
+  "editor-overlay-handle": null;
+  "editor-overlay-handle-bare": null;
+  "editor-overlay-home": null;
+  "editor-overlay-inbox": null;
+  "editor-overlay-likes": null;
+  "editor-overlay-original-audio": null;
+  "editor-overlay-original-sound": null;
+  "editor-overlay-profile": null;
+  "editor-overlay-reels": null;
+  "editor-overlay-remix": null;
+  "editor-overlay-share": null;
+  "editor-overlay-shorts": null;
+  "editor-overlay-sound": null;
+  "editor-overlay-subscribe": null;
+  "editor-overlay-subscriptions": null;
+  "editor-overlay-you": null;
   "editor-pin-clear-corrections": null;
   "editor-pin-hide": null;
   "editor-pin-pin": null;
@@ -757,9 +837,22 @@ export type Messages = {
   "editor-template-import-failed": { reason: string | number };
   "editor-template-remove-failed": { reason: string | number };
   "editor-timeline-annotation": { tool: string | number };
+  "editor-timeline-annotation-differs": { tool: string | number };
+  "editor-timeline-annotation-ghost": {
+    formats: string | number;
+    tool: string | number;
+  };
   "editor-timeline-annotation-pinned": { tool: string | number };
   "editor-timeline-audio-effect": { title: string | number };
+  "editor-timeline-audio-effect-ghost": {
+    formats: string | number;
+    title: string | number;
+  };
   "editor-timeline-audio-song": { title: string | number };
+  "editor-timeline-audio-song-ghost": {
+    formats: string | number;
+    title: string | number;
+  };
   "editor-timeline-audio-track": { number: string | number };
   "editor-timeline-audio-visualizer": null;
   "editor-timeline-cut": null;
@@ -782,6 +875,11 @@ export type Messages = {
   "editor-timeline-remove-split": null;
   "editor-timeline-restore-cut": { duration: string | number };
   "editor-timeline-scene": { layout: string | number };
+  "editor-timeline-scene-differs": { layout: string | number };
+  "editor-timeline-scene-ghost": {
+    formats: string | number;
+    layout: string | number;
+  };
   "editor-timeline-scene-new": null;
   "editor-timeline-shortcut": { keys: string | number };
   "editor-timeline-squeeze": null;
@@ -789,6 +887,8 @@ export type Messages = {
   "editor-timeline-system-audio": null;
   "editor-timeline-tracks": null;
   "editor-timeline-tracks-name": null;
+  "editor-timeline-version-own-screen": null;
+  "editor-timeline-versions": null;
   "editor-timeline-view": null;
   "editor-tool-crop": null;
   "editor-tool-frame": null;

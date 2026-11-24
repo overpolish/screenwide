@@ -8,7 +8,7 @@ mod resize_helpers;
 mod scenes;
 pub(super) use scenes::{recording_scene, screenshot_scene};
 
-use resize_helpers::{origin_shift, shift_output};
+use resize_helpers::{held_delta, origin_shift, shift_output};
 
 use super::{RecordingOutputSettings, ScreenshotWorkspaceOutputSettings};
 use screenwide_compositor::workspace_editor::{
@@ -119,17 +119,19 @@ pub(crate) fn resize_screenshot_frame(
   normalized_delta: (f64, f64),
 ) -> Result<(WorkspaceScene, ScreenshotWorkspaceOutputSettings), String> {
   let frame = scene.frame(FrameId(0)).ok_or("screenshot frame missing")?;
-  let resized = scene.resized_frame(
-    FrameId(0),
-    edges,
+  let delta = held_delta(
     (
       normalized_delta.0 * frame.rect.width,
       normalized_delta.1 * frame.rect.height,
     ),
-  )?;
+    edges,
+    output.items.iter().map(|item| &item.output),
+  );
+  let resized = scene.resized_frame(FrameId(0), edges, delta)?;
   // Only the canvas changes size, and nothing in it moves on screen. When a
-  // near edge or a centred resize moves the canvas's corner, placement, which
-  // is measured from that corner, is renumbered by the amount it moved.
+  // near edge or a centred resize moves the canvas's corner, placement,
+  // which is measured from that corner, is renumbered by the amount it
+  // moved.
   let shift = origin_shift(frame.rect, resized.new_rect);
   let mut next = output.clone();
   next.canvas.width = resized.output_size.0;
@@ -159,17 +161,24 @@ pub(crate) fn resize_recording_frame(
 > {
   let id = FrameId(frame_id);
   let frame = scene.frame(id).ok_or("recording frame missing")?;
-  let resized = scene.resized_frame(
-    id,
-    edges,
+  let placed = if frame_id == 0 {
+    &output.primary
+  } else {
+    &output.camera
+  };
+  let delta = held_delta(
     (
       normalized_delta.0 * frame.rect.width,
       normalized_delta.1 * frame.rect.height,
     ),
-  )?;
+    edges,
+    [placed],
+  );
+  let resized = scene.resized_frame(id, edges, delta)?;
   // Only the canvas changes size, and nothing in it moves on screen: the
   // track's placement and a baked camera overlay are renumbered by however
-  // far the canvas's corner moved, which a near edge or a centred resize does.
+  // far the canvas's corner moved, which a near edge or a centred resize
+  // does.
   let shift = origin_shift(frame.rect, resized.new_rect);
   let mut next_output = output.clone();
   let mut camera = camera;
@@ -191,57 +200,4 @@ pub(crate) fn resize_recording_frame(
 }
 
 #[cfg(test)]
-mod frame_shift_tests {
-  use super::*;
-
-  #[test]
-  fn a_centred_grow_moves_placement_by_half_the_growth() {
-    let old = WorldRect {
-      x: 100.0,
-      y: 100.0,
-      width: 3600.0,
-      height: 2338.0,
-    };
-    let new = WorldRect {
-      x: 100.0 - (6765.0 - 3600.0) / 2.0,
-      y: 100.0 - (4894.0 - 2338.0) / 2.0,
-      width: 6765.0,
-      height: 4894.0,
-    };
-    let shift = origin_shift(old, new);
-    let mut output = screenwide_output::fixtures::test_output_settings(3600, 2338);
-    output.crop_x = 0.0;
-    output.crop_y = 0.0;
-    output.image_x = 0.0;
-    output.image_y = 0.0;
-    shift_output(&mut output, shift);
-    // The layer stays where it was on screen: half the growth now sits
-    // before it on each axis.
-    assert_eq!(output.crop_x, (6765.0 - 3600.0) / 2.0);
-    assert_eq!(output.crop_y, (4894.0 - 2338.0) / 2.0);
-    assert_eq!(output.image_x, output.crop_x);
-    assert_eq!(output.image_y, output.crop_y);
-  }
-
-  #[test]
-  fn a_far_edge_grow_leaves_placement_alone() {
-    let old = WorldRect {
-      x: 0.0,
-      y: 0.0,
-      width: 100.0,
-      height: 100.0,
-    };
-    let new = WorldRect {
-      x: 0.0,
-      y: 0.0,
-      width: 150.0,
-      height: 100.0,
-    };
-    let mut output = screenwide_output::fixtures::test_output_settings(100, 100);
-    output.crop_x = 10.0;
-    output.image_x = 5.0;
-    shift_output(&mut output, origin_shift(old, new));
-    assert_eq!(output.crop_x, 10.0);
-    assert_eq!(output.image_x, 5.0);
-  }
-}
+mod frame_shift_tests;

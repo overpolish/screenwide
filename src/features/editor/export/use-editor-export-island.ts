@@ -107,6 +107,7 @@ export function useEditorExportIsland(
       recordingOutput: props.recordingOutput ?? null,
       recordingTimelineEdit: props.recordingTimelineEdit ?? null,
       settings: {
+        allFormats: props.allFormats ?? null,
         cameraCompression: props.cameraCompression ?? 0,
         cameraKey: props.cameraKey ?? "green",
         cameraResolutionScalePercent: props.cameraResolutionScalePercent ?? 100,
@@ -139,6 +140,7 @@ export function useEditorExportIsland(
     applyExportPatch(
       patch,
       {
+        onAllFormatsChange: props.onAllFormatsChange ?? noop,
         onBrowse: props.onBrowse ?? noop,
         onCameraCompressionChange: props.onCameraCompressionChange ?? noop,
         onCameraKeyChange: props.onCameraKeyChange ?? noop,

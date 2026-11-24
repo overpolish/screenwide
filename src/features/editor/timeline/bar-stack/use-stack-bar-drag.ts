@@ -82,6 +82,7 @@ const laneY = (clientY: number, bar: Element) =>
 
 export function useStackBarDrag({
   isSelected,
+  keepsOnStrip = false,
   onHold,
   onRetime,
   onSelect,
@@ -100,6 +101,9 @@ export function useStackBarDrag({
   scale: TimelineScale;
   snap: Snap | undefined;
   span: Span;
+  /** Whether the bar, moved whole, stops at the strip's ends at its own
+   * length, as an annotation does, rather than its owner placing it. */
+  keepsOnStrip?: boolean;
 }) {
   const holdRef = useRef<Hold | null>(null);
 
@@ -137,13 +141,17 @@ export function useStackBarDrag({
             ? "time"
             : "lane"
           : null;
-    const { guide, span: next } =
+    const { guide, span: moved } =
       lock === "lane"
         ? { guide: null, span: { end: held.end, start: held.start } }
         : moveTo(held, pointer, {
             head: keys.isSnap ? snap : NO_SNAP,
             tail: keys.isSnap ? snap : NO_SNAP,
           });
+    // Stopped here rather than by its owner after, so however fast the
+    // pointer goes the bar never leaves the strip to glide back.
+    const next =
+      keepsOnStrip && held.part === "body" ? onStrip(moved, scale) : moved;
     onHold?.({
       guide,
       isLifted: held.part === "body" && lock !== "time",
@@ -261,4 +269,15 @@ function moveTo(
     guide: head.isSnapped ? head.seconds : tail.isSnapped ? tail.seconds : null,
     span: { end: start + length, start },
   };
+}
+
+/** `span` moved along, at its own length, to lie between the strip's ends:
+ * where `scale` puts its start and its end. One longer than the strip
+ * starts with it. */
+function onStrip(span: Span, scale: TimelineScale): Span {
+  const first = scale.toSeconds(0);
+  const last = scale.toSeconds(1);
+  const length = span.end - span.start;
+  const start = Math.max(Math.min(span.start, last - length), first);
+  return { end: start + length, start };
 }

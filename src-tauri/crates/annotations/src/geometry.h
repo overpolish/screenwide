@@ -83,11 +83,6 @@ void screenwide_image_prepare(float center_x, float center_y, float right_x,
 float screenwide_annotation_distance(uint32_t kind, float px, float py,
                                      const AnnotationArrowGeometry *geometry);
 
-/// How far a point falls outside a prepared shape's stroke or the box it
-/// outlines: what picks a shape from anywhere inside it.
-float screenwide_shape_body_distance(float px, float py,
-                                     const AnnotationArrowGeometry *geometry);
-
 /// How far a point falls outside a stroke's drawn line, from its fitted chain
 /// of `count` points, each an `x` and a `y` in the caller's pixels.
 float screenwide_freehand_distance(float px, float py, const float *chain, uint32_t count,

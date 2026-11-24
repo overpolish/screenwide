@@ -22,6 +22,80 @@ pub struct OutputPlacement {
   pub source_crop_y: i32,
 }
 
+/// How many canvases a placement may reach past the canvas it is on, the
+/// same eight the percentages it was once stored as allowed.
+const PLACEMENT_REACH: f64 = 8.0;
+
+/// Whether a layer's placement is finite and sits within reach of its
+/// `canvas` (width, height): its crop and image no wider or taller than
+/// eight canvases, nor further off than that. Each axis is held to its own
+/// side, so a canvas narrowed too far fails on width alone.
+fn placement_in_reach(settings: &ScreenshotOutputSettings, canvas: (u32, u32)) -> bool {
+  let width_limit = f64::from(canvas.0) * PLACEMENT_REACH;
+  let height_limit = f64::from(canvas.1) * PLACEMENT_REACH;
+  [
+    settings.crop_height,
+    settings.crop_width,
+    settings.crop_x,
+    settings.crop_y,
+    settings.image_width,
+    settings.image_x,
+    settings.image_y,
+  ]
+  .iter()
+  .all(|value| value.is_finite())
+    && (1.0..=width_limit).contains(&settings.crop_width)
+    && (1.0..=height_limit).contains(&settings.crop_height)
+    && settings.crop_x.abs() <= width_limit
+    && settings.crop_y.abs() <= height_limit
+    && (1.0..=width_limit).contains(&settings.image_width)
+    && settings.image_x.abs() <= width_limit
+    && settings.image_y.abs() <= height_limit
+}
+
+/// How a canvas resize moves its top left corner, per axis: the share of the
+/// change in size the corner takes. 0 where the far edge moves (right,
+/// bottom), 1 where the near one does (left, top), ½ where both move about
+/// the middle. A placement is measured from that corner, so it shifts by as
+/// much.
+#[derive(Clone, Copy, Debug)]
+pub struct CanvasAnchor {
+  pub x: f64,
+  pub y: f64,
+}
+
+/// The narrowest and shortest the canvas `settings` is on can be resized to,
+/// moving its corner as `anchor` says, while its placement stays within
+/// reach (`placement_in_reach`); a resize never moves or scales what the
+/// canvas holds, so past this it leaves the picture many canvases off or
+/// across. In the canvas's own pixels, (width, height).
+pub fn narrowest_in_reach(settings: &ScreenshotOutputSettings, anchor: CanvasAnchor) -> (f64, f64) {
+  // Placed at `place` on a canvas `size` across, a resize to `to` puts it at
+  // `place - share * (size - to)`, which stays within the reach of `to` on
+  // either side from the size this gives on.
+  let from = |place: f64, size: f64, share: f64| {
+    let fixed = place - share * size;
+    (fixed / (PLACEMENT_REACH - share)).max(-fixed / (PLACEMENT_REACH + share))
+  };
+  let width = f64::from(settings.width);
+  let height = f64::from(settings.height);
+  let across = [
+    from(settings.crop_x, width, anchor.x),
+    from(settings.image_x, width, anchor.x),
+    settings.crop_width / PLACEMENT_REACH,
+    settings.image_width / PLACEMENT_REACH,
+  ];
+  let down = [
+    from(settings.crop_y, height, anchor.y),
+    from(settings.image_y, height, anchor.y),
+    settings.crop_height / PLACEMENT_REACH,
+  ];
+  (
+    across.into_iter().fold(0.0, f64::max),
+    down.into_iter().fold(0.0, f64::max),
+  )
+}
+
 /// Resolve a layer's stored pixel placement into whole output pixels.
 ///
 /// Placement arrives in the output's own pixels, so the work here is limited
@@ -33,31 +107,11 @@ pub fn output_placement(
   settings: &ScreenshotOutputSettings,
 ) -> Result<OutputPlacement, String> {
   let (output_width, output_height) = output_dimensions(settings)?;
-  let pixels = [
-    settings.crop_height,
-    settings.crop_width,
-    settings.crop_x,
-    settings.crop_y,
-    settings.image_width,
-    settings.image_x,
-    settings.image_y,
-  ];
   settings.source_crop.validate()?;
   let source_crop = settings.source_crop;
-  // Placement may sit outside the canvas, but never by more than the same
-  // eight canvases the percentages used to allow.
-  let width_limit = f64::from(output_width) * 8.0;
-  let height_limit = f64::from(output_height) * 8.0;
   if source_width == 0
     || source_height == 0
-    || pixels.iter().any(|value| !value.is_finite())
-    || !(1.0..=width_limit).contains(&settings.crop_width)
-    || !(1.0..=height_limit).contains(&settings.crop_height)
-    || settings.crop_x.abs() > width_limit
-    || settings.crop_y.abs() > height_limit
-    || !(1.0..=width_limit).contains(&settings.image_width)
-    || settings.image_x.abs() > width_limit
-    || settings.image_y.abs() > height_limit
+    || !placement_in_reach(settings, (output_width, output_height))
   {
     return Err("The screenshot placement is not valid".to_owned());
   }

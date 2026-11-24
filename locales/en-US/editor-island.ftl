@@ -582,6 +582,22 @@ editor-island-screen-inset-large = Large
 editor-island-screen-recenter = Recenter
 # Puts the screen, a screenshot's layer or the camera back where a new project places it, at the size and in the place it starts at, keeping its crop, inset, corners, shadow and rotation. Over a scene, puts the scene's pane back where the scene's layout puts it.
 editor-island-reset-placement = Reset placement
+# With a platform such as TikTok in hand, puts its screen back where the main canvas lays it out, after it was moved on that platform alone.
+editor-island-reset-to-main = Reset to main
+# Names the menu, at the start of the Screen and Scene islands' row, of which platforms the framing in hand is for.
+editor-island-framing = Framing
+# The framing menu's button named for assistive technology while the platform in hand is framed its own way, or shares its framing with others. $platforms lists them, such as "TikTok and YouTube Shorts".
+editor-island-framing-applies = Applies to { $platforms }
+# Heads the menu's platforms, each ticked where the framing applies to it; also the button's own words, followed by how many platforms share the framing where more than one does.
+editor-island-framing-applies-heading = Applies to
+# The framing menu's button named for assistive technology while the platform in hand is laid out from the main canvas, the one edited freely.
+editor-island-framing-follows-main = Follows main
+# Heads the menu's choices of what the platform in hand is laid out from; also the button's own words then.
+editor-island-framing-follows-heading = Follows
+# The main canvas, as a choice of what a platform is laid out from.
+editor-island-framing-main = Main canvas
+# Beside the platform in hand, or what it follows now, in the framing menu.
+editor-island-framing-current = Current
 # The island for the camera, for the whole recording: its effects, its corners, its shadow and whether it follows the face.
 editor-island-camera = Camera
 # The toggle at the end of the Camera island's row, named for assistive technology: on, the camera is drawn into the video; off, it is saved as a file of its own beside it, the Export island's "Save the camera as its own file".

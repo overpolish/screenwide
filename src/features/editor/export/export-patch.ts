@@ -13,6 +13,7 @@ import type { ToolPanelExportPatch } from "../tools/tool-panel-export";
 
 /** What the editor window does when the Export island asks. */
 export type EditorExportHandlers = {
+  onAllFormatsChange: (isAll: boolean) => void;
   onBrowse: () => void;
   onCameraCompressionChange: (compression: number) => void;
   onCameraKeyChange: (key: CameraKey) => void;
@@ -40,6 +41,8 @@ export function applyExportPatch(
   looks: ExportLookQuality[],
 ) {
   if (patch.fileStem !== undefined) on.onFileStemChange(patch.fileStem);
+  if (typeof patch.allFormats === "boolean")
+    on.onAllFormatsChange(patch.allFormats);
   if (patch.recordingFormat) on.onRecordingFormatChange(patch.recordingFormat);
   if (patch.browse) on.onBrowse();
   if (patch.screenshotFormat)

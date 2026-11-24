@@ -5,7 +5,9 @@
 //! against and the pipelines are built from. It depends on nothing but the
 //! layout crate, as the build script includes it too.
 
-use screenwide_shader_layout::{fragment, Binding, ShaderLayout, FILTERING_SAMPLER, TEXTURE};
+use screenwide_shader_layout::{
+  fragment, Binding, Entry, ShaderLayout, Stages, FILTERING_SAMPLER, TEXTURE,
+};
 
 /// The checkerboard's colours and square size.
 pub(crate) const BACKDROP: ShaderLayout = ShaderLayout {
@@ -17,6 +19,21 @@ pub(crate) const BACKDROP: ShaderLayout = ShaderLayout {
 pub(crate) const LOUPE: ShaderLayout = ShaderLayout {
   groups: &[&[
     fragment(0, Binding::Uniform),
+    fragment(1, TEXTURE),
+    fragment(2, FILTERING_SAMPLER),
+  ]],
+  vertex_buffers: &[],
+};
+
+/// Where the platform overlay sits on the chrome drawable, the overlay drawn
+/// for it and the sampler that reads it.
+pub(crate) const PLATFORM_OVERLAY: ShaderLayout = ShaderLayout {
+  groups: &[&[
+    Entry {
+      binding: 0,
+      stages: Stages::VERTEX_FRAGMENT,
+      kind: Binding::Uniform,
+    },
     fragment(1, TEXTURE),
     fragment(2, FILTERING_SAMPLER),
   ]],

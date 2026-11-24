@@ -5,7 +5,7 @@ import { canvasShare } from "../../layer-measure";
 import { ScreenshotOutputSettings } from "../../screenshot/screenshot-output";
 
 import { cameraFramingOf, framingWithin } from "./recording-scene-framing";
-import { SceneRect } from "./recording-scene-geometry";
+import { SceneRect, sceneCanvas } from "./recording-scene-geometry";
 import {
   SceneCamera,
   basePlacement,
@@ -105,7 +105,7 @@ export function customRecordingSceneClip({
     output.cropHeight <= 0
   )
     return clip;
-  const canvas = { height: output.height, width: output.width };
+  const canvas = sceneCanvas(output);
   const base = basePlacement(output, camera);
   const boxes = sceneBoxes(clip, { base, camera, canvas });
   const cameraBox =

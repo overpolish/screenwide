@@ -6,7 +6,9 @@ import { useLayoutEffect, useRef, useState } from "react";
 
 import { t } from "../../../../i18n/i18n";
 import { cn } from "../../../../lib/styling";
+import { useShownElsewhere } from "../../recording/formats/use-shown-elsewhere";
 import { StackBar, type StackBarPlacement } from "../bar-stack/stack-bar";
+import { baseOf } from "../strip/strip-part";
 import { type Span } from "../timeline-scale";
 
 import type { AudioClipKind } from "../../../../bindings/AudioClipKind";
@@ -34,12 +36,17 @@ export type TimelineAudioClip = Span & {
   lane: number;
   /** Its sound's title, or the name of the file it came from. */
   title: string;
+  /** Left out of the format in hand, drawn faintly where it plays in the
+   * others. */
+  isGhost?: boolean;
 };
 
 export function AudioBar({
   clip,
   ...placement
 }: StackBarPlacement & { clip: TimelineAudioClip }) {
+  const shownElsewhere = useShownElsewhere();
+  const id = baseOf(clip.id);
   return (
     <StackBar
       {...placement}
@@ -59,7 +66,17 @@ export function AudioBar({
         </span>
       )}
       badgeFade={TITLE_FADE_PX}
-      label={t("editor-timeline-audio-effect", { title: clip.title })}
+      isGhost={clip.isGhost}
+      keepsOnStrip
+      label={
+        clip.isGhost
+          ? t("editor-timeline-audio-effect-ghost", {
+              formats: shownElsewhere(id) ?? "",
+              title: clip.title,
+            })
+          : t("editor-timeline-audio-effect", { title: clip.title })
+      }
+      menuTarget={id}
     />
   );
 }

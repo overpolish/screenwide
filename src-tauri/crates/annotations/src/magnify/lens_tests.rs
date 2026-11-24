@@ -60,9 +60,7 @@ fn picked(point: [f64; 2]) -> Option<LensPick> {
     |_| point,
     |index| (index == 1).then(square),
     |_, _| true,
-    |index, at, insides| {
-      !insides && (at[0] - marks[index][0]).hypot(at[1] - marks[index][1]) <= 5.0
-    },
+    |index, at| (at[0] - marks[index][0]).hypot(at[1] - marks[index][1]) <= 5.0,
   )
 }
 
@@ -103,34 +101,8 @@ fn a_lens_shows_only_what_lies_under_it() {
     |_| [180.0, 100.0],
     |index| (index == 1).then(square),
     |_, _| false,
-    |index, at, _| index == 0 && (at[0] - 140.0).hypot(at[1] - 100.0) <= 5.0,
+    |index, at| index == 0 && (at[0] - 140.0).hypot(at[1] - 100.0) <= 5.0,
   )
   .unwrap();
   assert_eq!(pick.index, 1);
-}
-
-#[test]
-fn an_inside_seen_through_a_lens_leaves_the_press_to_the_lens() {
-  // Under the lens, a shape's inside covers everything, and an arrow is drawn
-  // at (140, 100) over its middle: the arrow is taken where it shows, and
-  // anywhere else in the lens the lens is, so it can still be moved.
-  let pick = |point| {
-    pick_through(
-      3,
-      |_| point,
-      |index| (index == 2).then(square),
-      |_, _| true,
-      |index, at: [f64; 2], insides| match index {
-        0 => insides,
-        1 => !insides && (at[0] - 140.0).hypot(at[1] - 100.0) <= 5.0,
-        _ => false,
-      },
-    )
-    .unwrap()
-    .index
-  };
-  assert_eq!(pick([180.0, 100.0]), 1);
-  assert_eq!(pick([60.0, 60.0]), 2);
-  // Off the lens, the inside is taken as ever.
-  assert_eq!(pick([400.0, 400.0]), 0);
 }

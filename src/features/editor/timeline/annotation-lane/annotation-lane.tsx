@@ -1,8 +1,11 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import { useFrameFormats } from "../../recording/formats/frame-formats-context";
+import { useShownElsewhere } from "../../recording/formats/use-shown-elsewhere";
 import { BarStack } from "../bar-stack/bar-stack";
 import { type IncomingBar } from "../bar-stack/use-incoming-bar";
+import { baseOf } from "../strip/strip-part";
 import { type SnapFor } from "../strip/strip-snap";
 import { type Span, type TimelineScale } from "../timeline-scale";
 
@@ -22,6 +25,9 @@ export type TimelineAnnotation = Span & {
   lane: number;
   /** Where its annotation travels between its places in the scenes. */
   glides?: Span[];
+  /** Left out of the format in hand, drawn faintly where it shows in the
+   * others. */
+  isGhost?: boolean;
   /** Its pin, where it follows the content under it. */
   pin?: TimelineAnnotationPin;
 };
@@ -50,6 +56,8 @@ export function AnnotationLane({
   onRetime,
   ...stack
 }: AnnotationLaneProps) {
+  const differs = useFrameFormats()?.snapshot.differs?.ids;
+  const shownElsewhere = useShownElsewhere();
   return (
     <BarStack
       {...stack}
@@ -61,8 +69,15 @@ export function AnnotationLane({
       renderBar={(annotation, placement) => (
         <AnnotationBar
           {...placement}
+          ghostOf={
+            annotation.isGhost
+              ? (shownElsewhere(baseOf(annotation.id)) ?? "")
+              : null
+          }
           glides={annotation.glides}
+          isMarked={differs?.includes(baseOf(annotation.id)) ?? false}
           kind={annotation.kind}
+          menuTarget={baseOf(annotation.id)}
           pin={annotation.pin}
         />
       )}

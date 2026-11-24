@@ -30,6 +30,7 @@ fn identity_settings(
     capture_width_points: 0.0,
     capture_scale: scale,
     capture_corner_radius: 0.0,
+    clear_area: None,
     crop_height: height,
     crop_width: width,
     crop_preview: None,

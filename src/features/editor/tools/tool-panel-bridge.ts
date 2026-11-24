@@ -101,6 +101,7 @@ const applyPatch = (values: ToolPanelPatch, on: ToolPanelHandlers) => {
   if (values.frameRadius !== undefined)
     on.onFrameRadiusChange?.(values.frameRadius);
   if (values.resetFrame) on.onFrameReset?.();
+  if (values.framing) on.onFramingChange?.(values.framing);
   if (values.cropAspect !== undefined)
     on.onCropAspectChange?.(values.cropAspect);
   if (values.resetCrop) on.onCropReset?.();

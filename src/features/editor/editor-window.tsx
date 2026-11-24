@@ -5,7 +5,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import {
   browseExportDirectory,
-  cancelExportJob,
   copyEditorToClipboard,
   saveExport,
   setExportDirectory,
@@ -15,10 +14,8 @@ import {
   minimizeEditorWindow,
   toggleEditorWindowMaximized,
 } from "./editor-actions";
-import {
-  cameraOutputChoice,
-  exportedRecordingEdits,
-} from "./export/camera-output";
+import { cameraOutputChoice } from "./export/camera-output";
+import { cancelActiveExport } from "./export/cancel-active-export";
 import {
   clearExportFailure,
   failExport,
@@ -33,6 +30,7 @@ import {
   defaultCameraOverlay,
   recordingSavePlan,
 } from "./export/recording-export-settings";
+import { saveEach } from "./export/save-each";
 import { useExportMeasures } from "./export/use-export-measures";
 import { useExportProgress } from "./export/use-export-progress";
 import { useRecordingFormat } from "./export/use-recording-format";
@@ -41,8 +39,11 @@ import { openProjectActions } from "./open-project-actions";
 import { EditorPanel } from "./panel/editor-panel";
 import { useNativePressBlur } from "./preview/use-native-press-blur";
 import { usePointerAway } from "./preview/use-pointer-away";
+import { useEditorFormats } from "./recording/formats/use-editor-formats";
 import { openedRecordingOutput } from "./recording/recording-captures";
 import { recordingOutputForEdit } from "./recording/recording-output-edit";
+import { selectedRecordingTrack } from "./recording/selected-track";
+import { withTrackVolume } from "./recording/track-volumes";
 import {
   seededTrackChoices,
   useProjectLook,
@@ -72,7 +73,6 @@ import {
 import { useRecordingTimelineEditState } from "./timeline/editing/use-recording-timeline-edit-state";
 import {
   AudioTrackVolume,
-  recordingAudioTrackId,
   RecordingTrackId,
   RecordingVideoTrackId,
 } from "./types";
@@ -85,6 +85,7 @@ import { currentEditorKind } from "./window-kind";
 
 import type { CameraKey } from "../../bindings/CameraKey";
 import type { ExportSubtitles } from "../../bindings/ExportSubtitles";
+import type { FrameFormats } from "../../bindings/FrameFormats";
 
 const EMPTY_AUDIO_TRACK_VOLUMES: AudioTrackVolume[] = [];
 
@@ -134,6 +135,9 @@ export function EditorWindow() {
     useState<RecordingOutputSettings>(() =>
       defaultRecordingOutput({ primary: { height: 1, width: 1 } }),
     );
+  const [recordingFormats, setRecordingFormats] = useState<FrameFormats | null>(
+    null,
+  );
   const [recordingTimelineEdit, setTimelineEdit, commitTimelineEdit] =
     useRecordingTimelineEditState(artifact);
   const [isSaving, setIsSaving] = useState(false);
@@ -217,18 +221,20 @@ export function EditorWindow() {
     bakeCamera,
     enabledVideoTracks,
   });
-  // Memoized: the edits are handed on to the Export island's compare and the
-  // export, which would otherwise see new ones on every render.
-  const exportEdits = useMemo(
-    () =>
-      exportedRecordingEdits({
-        artifact,
-        cameraOutput,
-        recordingOutput,
-        timelineEdit: recordingTimelineEdit,
-      }),
-    [artifact, cameraOutput, recordingOutput, recordingTimelineEdit],
-  );
+  const formats = useEditorFormats({
+    artifact,
+    cameraOutput,
+    cameraOverlay,
+    commit: commitTimelineEdit,
+    edit: recordingTimelineEdit,
+    formats: recordingFormats,
+    isRecording: artifact?.kind === "recording",
+    onCameraOverlayChange: setCameraOverlay,
+    onFormatsChange: setRecordingFormats,
+    onRecordingOutputChange: setRecordingOutput,
+    recordingOutput,
+  });
+  const { exportEdits } = formats;
   const effectiveCollapseAudio =
     collapseAudio && (enabledStreamIndices?.length ?? 0) > 1;
   const currentAudioTrackVolumes =
@@ -236,26 +242,7 @@ export function EditorWindow() {
     audioTrackVolumes?.artifactId === artifact.id
       ? audioTrackVolumes.values
       : EMPTY_AUDIO_TRACK_VOLUMES;
-  const selectedTrackId: RecordingTrackId | null =
-    artifact?.kind === "recording"
-      ? selectedTrack?.artifactId === artifact.id &&
-        (selectedTrack.trackId === null ||
-          selectedTrack.trackId === "primary" ||
-          selectedTrack.trackId === "camera" ||
-          artifact.audioTracks.some(
-            (track) =>
-              recordingAudioTrackId(track.streamIndex) ===
-              selectedTrack.trackId,
-          ))
-        ? selectedTrack.trackId
-        : artifact.primaryKind !== "audio"
-          ? "primary"
-          : artifact.camera
-            ? "camera"
-            : artifact.audioTracks[0]
-              ? recordingAudioTrackId(artifact.audioTracks[0].streamIndex)
-              : null
-      : null;
+  const selectedTrackId = selectedRecordingTrack(artifact, selectedTrack);
   const editState = useMemo<EditorEditState>(
     () => ({
       audioTrackVolumes,
@@ -267,6 +254,7 @@ export function EditorWindow() {
       compression,
       cursorEffects,
       keyboardEffects,
+      recordingFormats,
       recordingOutput,
       recordingTimelineEdit,
       resolutionScalePercent,
@@ -284,6 +272,7 @@ export function EditorWindow() {
       compression,
       cursorEffects,
       keyboardEffects,
+      recordingFormats,
       recordingOutput,
       recordingTimelineEdit,
       resolutionScalePercent,
@@ -305,6 +294,7 @@ export function EditorWindow() {
       setKeyboardEffects(next.keyboardEffects);
       setTimelineEdit(next.recordingTimelineEdit);
       setResolutionScalePercent(next.resolutionScalePercent);
+      setRecordingFormats(next.recordingFormats);
       setRecordingOutput(recordingOutputForEdit(next.recordingOutput));
       setScreenshotOutput(next.screenshotOutput);
       setTrackSelection(next.trackSelection);
@@ -402,6 +392,7 @@ export function EditorWindow() {
     setCameraResolutionScalePercent(seeded.cameraResolutionScalePercent);
     setResolutionScalePercent(seeded.resolutionScalePercent);
     setRecordingOutput(seededRecordingOutput);
+    setRecordingFormats(look?.formats ?? null);
     setScreenshotOutput(
       artifact?.kind === "screenshot" && artifact.projectWorkspace
         ? reopenedScreenshotWorkspace(artifact, artifact.projectWorkspace)
@@ -438,6 +429,7 @@ export function EditorWindow() {
     bakeCamera,
     cameraOverlay,
     cursorEffects,
+    formats: recordingFormats ?? undefined,
     keyboardEffects,
     recordingId:
       artifact?.kind === "recording" && seededArtifactId === artifact.id
@@ -483,6 +475,7 @@ export function EditorWindow() {
     <EditorEditGestureContext value={editGesture}>
       <EditorPanel
         {...openProject}
+        allFormats={formats.savesAll}
         artifact={artifact}
         audioTrackVolumes={currentAudioTrackVolumes}
         bakeCamera={effectiveBakeCamera}
@@ -500,6 +493,7 @@ export function EditorWindow() {
         enabledVideoTracks={enabledVideoTracks}
         exportCompare={exportCompare}
         fileStem={fileStem}
+        frameFormats={formats.control}
         isCancelingSave={isCancelingSave}
         isPreparingRecordingAudio={isPreparingRecordingPreview}
         isPreparingRecordingPreview={isPreparingRecordingPreview}
@@ -507,6 +501,7 @@ export function EditorWindow() {
         isSaving={isSaving}
         keyboardEffects={keyboardEffects}
         lookQualities={lookQualities}
+        onAllFormatsChange={formats.setSavesAll}
         onBakeCameraChange={setBakeCamera}
         onBrowse={() => {
           browseExportDirectory()
@@ -522,7 +517,7 @@ export function EditorWindow() {
           clearExportFailure();
         }}
         onCameraKeyChange={setCameraKey}
-        onCameraOverlayChange={setCameraOverlay}
+        onCameraOverlayChange={formats.editCamera}
         onCameraResolutionScaleChange={(scale) => {
           setCameraResolutionScalePercent(scale);
           if (scale < 100 && cameraCompression === 0) {
@@ -532,18 +527,7 @@ export function EditorWindow() {
         }}
         onCancel={closeEditorWindow}
         onCancelSave={() => {
-          setIsCancelingSave(true);
-          cancelExportJob()
-            .then((accepted) => {
-              if (!accepted) setIsCancelingSave(false);
-            })
-            .catch((cause: unknown) => {
-              console.error("Could not cancel the active export", cause);
-              failExport(
-                cause instanceof Error ? cause.message : String(cause),
-              );
-              setIsCancelingSave(false);
-            });
+          cancelActiveExport(setIsCancelingSave);
         }}
         onCanvasResize={setScreenshotOutput}
         onCollapseAudioChange={setCollapseAudio}
@@ -574,13 +558,10 @@ export function EditorWindow() {
         onMinimize={minimizeEditorWindow}
         onRecordingFormatChange={chooseRecordingFormat}
         onRecordingOutputChange={(trackId, settings) => {
-          setRecordingOutput((current) => ({
-            ...current,
-            [trackId]: { ...settings, backgroundRadiusPercent: 0 },
-          }));
+          formats.editOutput(trackId, settings);
           clearExportFailure();
         }}
-        onRecordingTimelineEditChange={commitTimelineEdit}
+        onRecordingTimelineEditChange={formats.timeline.commit}
         onResolutionScaleChange={(scale) => {
           setResolutionScalePercent(scale);
           if (scale < originalResolutionScale && compression === 0) {
@@ -589,38 +570,31 @@ export function EditorWindow() {
           clearExportFailure();
         }}
         onSave={() => {
-          const plan = recordingSavePlan({
-            artifact,
-            audioTrackVolumes: currentAudioTrackVolumes,
-            bakeCamera: effectiveBakeCamera,
-            camera: cameraExport,
-            cameraOverlay,
-            collapseAudio,
-            compression,
-            cursorEffects,
-            enabledStreamIndices,
-            includeCamera,
-            includePrimaryVideo,
-            keyboardEffects,
-            originalResolutionScale,
-            recordingOutput: exportEdits.recordingOutput,
-            resolutionScalePercent,
-          });
           setIsSaving(true);
           setIsCancelingSave(false);
-          saveProgress.begin(plan.showsMeasuredProgress);
           clearExportFailure();
-          saveExport({
-            ...plan.options,
-            cameraKey,
-            deleteProjectAfterExport,
-            fileStem,
-            ...recordingFormatPayload(),
-            screenshotFormat: screenshotExport.format,
-            screenshotFullColour: screenshotExport.fullColour,
-            screenshotOutput,
-            subtitles,
-            timelineEdit: exportEdits.timelineEdit,
+          saveEach(formats.saveJobs(fileStem), (job, isLast) => {
+            const plan = recordingSavePlan({
+              ...exportInputs,
+              cameraOverlay: job.cameraOverlay,
+              collapseAudio,
+              originalResolutionScale,
+              recordingOutput: job.recordingOutput,
+            });
+            saveProgress.begin(plan.showsMeasuredProgress);
+            return saveExport({
+              ...plan.options,
+              cameraKey,
+              // The project goes only once every format is made.
+              deleteProjectAfterExport: deleteProjectAfterExport && isLast,
+              fileStem: job.fileStem,
+              ...recordingFormatPayload(),
+              screenshotFormat: screenshotExport.format,
+              screenshotFullColour: screenshotExport.fullColour,
+              screenshotOutput,
+              subtitles,
+              timelineEdit: job.timelineEdit,
+            });
           })
             .then((file) => {
               saveProgress.complete();
@@ -649,19 +623,18 @@ export function EditorWindow() {
         onToggleMaximize={toggleEditorWindowMaximized}
         onTrackVolumeChange={(streamIndex, decibels) => {
           if (artifactId === undefined) return;
-          const next = currentAudioTrackVolumes.filter(
-            (volume) => volume.streamIndex !== streamIndex,
+          const values = withTrackVolume(
+            currentAudioTrackVolumes,
+            streamIndex,
+            decibels,
           );
-          if (decibels !== 0) {
-            next.push({ decibels: Math.round(decibels), streamIndex });
-          }
-          setAudioTrackVolumes({ artifactId, values: next });
+          setAudioTrackVolumes({ artifactId, values });
         }}
         recordingFormat={recordingFormat}
         recordingOutput={recordingOutput}
         recordingPreviewError={recordingPreviewError}
         recordingPreviewTracks={recordingPreviewTracks}
-        recordingTimelineEdit={recordingTimelineEdit}
+        recordingTimelineEdit={formats.timeline.edit}
         resolutionScalePercent={resolutionScalePercent}
         screenshotFormat={screenshotExport.format}
         screenshotFullColour={screenshotExport.fullColour}

@@ -4,8 +4,12 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  clearMiddle,
   drawnCameraFrame,
+  followingFace,
+  framingAbout,
   framingFromWindow,
+  placedPicture,
   reframeWindow,
 } from "./recording-scene-framing";
 
@@ -74,5 +78,41 @@ describe("drawnCameraFrame", () => {
       ASPECT,
     );
     expect(frame).toEqual({ height: 200, width: 300, x: 160, y: 165 });
+  });
+});
+
+describe("a followed face on a platform", () => {
+  const canvas = {
+    clear: { bottom: 0.25, side: 0.05, top: 0.07 },
+    height: 1920,
+    width: 1080,
+  };
+  const face = { x: 0.5, y: 0.5 };
+  /** Where the face lands on the canvas in `frame`, followed at `zoom`. */
+  const faceOnCanvas = (frame: typeof BOX, zoom: number) => {
+    const framing = framingAbout(
+      followingFace({ focusX: 0.5, focusY: 0.5, zoom }, face),
+      frame,
+      { aspect: ASPECT, point: clearMiddle(frame, canvas) },
+    );
+    const picture = placedPicture(framing, frame, ASPECT);
+    return {
+      x: picture.x + (face.x - 0.5) * picture.width,
+      y: picture.y + ((face.y - 0.5) * picture.width) / ASPECT,
+    };
+  };
+
+  it("sits in the middle of the clear part of a box under the interface", () => {
+    const whole = { height: 1920, width: 1080, x: 0, y: 0 };
+    const landed = faceOnCanvas(whole, 2);
+    expect(landed.x).toBeCloseTo(540);
+    expect(landed.y).toBeCloseTo(((0.07 + 0.75) / 2) * 1920);
+  });
+
+  it("sits in the middle of a box clear of the interface", () => {
+    const box = { height: 300, width: 400, x: 300, y: 600 };
+    const landed = faceOnCanvas(box, 2);
+    expect(landed.x).toBeCloseTo(500);
+    expect(landed.y).toBeCloseTo(750);
   });
 });

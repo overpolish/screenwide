@@ -27,6 +27,9 @@ import {
   backgroundFromOutput,
 } from "./background-adapters";
 
+import type { FrameFormatsControl } from "../../recording/formats/use-recording-formats";
+import type { FramingPatch } from "../tool-panel-patch";
+
 /**
  * The one canvas the frame panel acts on: what to show for it, and the two
  * editor paths that change it.
@@ -50,6 +53,8 @@ export type EditorFrameTarget = {
   reset: () => void;
   /** The canvas as the panel shows it. */
   snapshot: ToolPanelFrame;
+  /** Asks of how the platform in hand is framed; absent without formats. */
+  framing?: (patch: FramingPatch) => void;
 };
 
 type FrameTargetInputs = {
@@ -65,6 +70,8 @@ type FrameTargetInputs = {
   screenshotOutput: ScreenshotWorkspaceOutputSettings | null | undefined;
   selectedScreenshotItemId: number | null;
   selectedTrack: string | null;
+  /** A recording's formats: only the main canvas offers a size to set. */
+  frameFormats?: FrameFormatsControl | null;
   onCameraOverlayChange?: (settings: CameraOverlaySettings) => void;
   onCanvasResize?: (settings: ScreenshotWorkspaceOutputSettings) => void;
   onRecordingOutputChange?: (
@@ -196,9 +203,16 @@ export const editorFrameTarget = (
 ): EditorFrameTarget | null => {
   const { artifact } = inputs;
   if (!artifact) return null;
-  return artifact.kind === "recording"
-    ? recordingFrameTarget(inputs, artifact)
-    : screenshotFrameTarget(inputs, artifact);
+  if (artifact.kind !== "recording")
+    return screenshotFrameTarget(inputs, artifact);
+  const framed = recordingFrameTarget(inputs, artifact);
+  const formats = inputs.frameFormats;
+  if (!framed || !formats) return framed;
+  return {
+    ...framed,
+    framing: formats.onPatch,
+    snapshot: { ...framed.snapshot, formats: formats.snapshot },
+  };
 };
 
 /**
@@ -215,6 +229,7 @@ export const framePanelHandlers = (
   | "onFrameRadiusChange"
   | "onFrameReset"
   | "onFrameSizeChange"
+  | "onFramingChange"
 > => ({
   onBackgroundChange: (background) => {
     target?.applyBackground(background);
@@ -231,5 +246,8 @@ export const framePanelHandlers = (
       height: size.height ?? target.snapshot.height,
       width: size.width ?? target.snapshot.width,
     });
+  },
+  onFramingChange: (patch) => {
+    target?.framing?.(patch);
   },
 });

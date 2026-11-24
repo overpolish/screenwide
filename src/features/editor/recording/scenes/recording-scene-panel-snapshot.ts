@@ -7,6 +7,7 @@ import { ScreenshotOutputSettings } from "../../screenshot/screenshot-output";
 import { CameraOverlaySettings } from "../../types";
 
 import { drawnCameraFrame } from "./recording-scene-framing";
+import { SceneRect, sceneCanvas } from "./recording-scene-geometry";
 import { ScenePane } from "./recording-scene-order";
 import {
   ScenePaneFraming,
@@ -14,7 +15,11 @@ import {
 } from "./recording-scene-pane-framing";
 import { isScenePaneAtLayout } from "./recording-scene-pane-reset";
 import { scenePaneIsShown } from "./recording-scene-pane-shown";
-import { SceneCamera } from "./recording-scene-placement";
+import {
+  SceneCamera,
+  basePlacement,
+  sceneBoxes,
+} from "./recording-scene-placement";
 import { RecordingSceneClip } from "./recording-scenes";
 
 import type {
@@ -180,3 +185,22 @@ export function toolPanelSceneOf({
     variant: current ? (current.variant ?? {}) : null,
   };
 }
+
+/** The shorter side of each pane's frame in `clip`, in output pixels: what a
+ * change of its corners between units is eased through. */
+export const scenePaneShortest = (
+  clip: RecordingSceneClip,
+  {
+    camera,
+    output,
+  }: { camera: SceneCamera | null; output: ScreenshotOutputSettings },
+) => {
+  const base = basePlacement(output, camera);
+  const canvas = sceneCanvas(output);
+  const boxes = sceneBoxes(clip, { base, camera, canvas });
+  const shortest = (rect: SceneRect) => Math.min(rect.width, rect.height);
+  return {
+    camera: shortest(boxes.camera ?? base.frame),
+    screen: shortest(boxes.screen),
+  };
+};

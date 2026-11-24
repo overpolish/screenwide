@@ -169,32 +169,27 @@ pub struct LensPick {
 
 /// The topmost annotation a press takes hold of, seeing through lenses.
 /// `point_on(index)` is the press as it lands on that annotation's own
-/// picture. Going down from the top, an annotation `hits` at the press is
-/// taken; a lens covering it is not taken at once: the press is read
-/// through it and the search carries on below it, among what is drawn
-/// there, and only where nothing drawn is hit is the lens itself taken, to
-/// be moved. A shape's inside seen through a lens never
-/// takes the press from the lens, or a lens over a large shape could not be
-/// moved. Off every lens, `hits` is asked first of what is drawn (`false`)
-/// and then of insides (`true`), as with no lens at all. `lens` says which
-/// annotations are lenses, and `under(lens, index)` whether the annotation
-/// at `index` lies under that lens, on its picture.
+/// picture. Going down from the top, an annotation `hits` at the press,
+/// where it is drawn, is taken; a lens covering it is not taken at once:
+/// the press is read through it and the search carries on below it, among
+/// what is drawn there, and only where nothing drawn is hit is the lens
+/// itself taken, to be moved. `lens` says which annotations are lenses, and
+/// `under(lens, index)` whether the annotation at `index` lies under that
+/// lens, on its picture.
 pub fn pick_through(
   count: usize,
   point_on: impl Fn(usize) -> [f64; 2],
   lens: impl Fn(usize) -> Option<Lens>,
   under: impl Fn(usize, usize) -> bool,
-  hits: impl Fn(usize, [f64; 2], bool) -> bool,
+  hits: impl Fn(usize, [f64; 2]) -> bool,
 ) -> Option<LensPick> {
-  let search = Search {
+  Search {
     point_on: &point_on,
     lens: &lens,
     under: &under,
     hits: &hits,
-  };
-  search
-    .pass(count, None, false)
-    .or_else(|| search.pass(count, None, true))
+  }
+  .pass(count, None)
 }
 
 /// Inside a lens: which one, the press as it lands on its picture, and the
@@ -218,12 +213,11 @@ where
   P: Fn(usize) -> [f64; 2],
   L: Fn(usize) -> Option<Lens>,
   U: Fn(usize, usize) -> bool,
-  H: Fn(usize, [f64; 2], bool) -> bool,
+  H: Fn(usize, [f64; 2]) -> bool,
 {
   /// What is taken among the annotations under `below`, or inside a lens
-  /// only among those under it, read through it: what is drawn, or with
-  /// `insides`, what is grabbed by its inside.
-  fn pass(&self, below: usize, within: Option<Within>, insides: bool) -> Option<LensPick> {
+  /// only among those under it, read through it.
+  fn pass(&self, below: usize, within: Option<Within>) -> Option<LensPick> {
     for index in (0..below).rev() {
       if within.is_some_and(|over| !(self.under)(over.lens, index)) {
         continue;
@@ -233,20 +227,16 @@ where
       });
       let at = view.beneath(point);
       if let Some(found) = (self.lens)(index).filter(|found| found.covers(at)) {
-        // The drawn pass took the lens already wherever it covers the press.
-        if insides {
-          return None;
-        }
         let deeper = Within {
           lens: index,
           point,
           view: view.through(&found),
         };
         return self
-          .pass(index, Some(deeper), false)
+          .pass(index, Some(deeper))
           .or(Some(LensPick { index, view }));
       }
-      if (self.hits)(index, at, insides) {
+      if (self.hits)(index, at) {
         return Some(LensPick { index, view });
       }
     }

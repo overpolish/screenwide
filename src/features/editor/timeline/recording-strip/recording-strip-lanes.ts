@@ -67,6 +67,9 @@ export type RecordingStripLaneSource = {
       onClear: () => void;
       onSelect: (id: string, toggle: boolean) => void;
     };
+    /** The scenes the format in hand leaves out, as they play in the
+     * others, which their plain slots here are drawn as. */
+    ghosts?: readonly RecordingSceneClip[];
   };
   /** Brings the playhead to a moment, in recorded seconds. */
   seek: (seconds: number) => void;
@@ -121,13 +124,14 @@ export function recordingStripLanes(source: RecordingStripLaneSource) {
     }),
   );
   const timelineScenes: TimelineScene[] = scenes.clips.map((clip) => {
+    const shown = scenes.ghosts?.find(({ id }) => id === clip.id) ?? clip;
     const preset: ScenePreset =
-      clip.preset === "full" ? "screen-only" : clip.preset;
+      shown.preset === "full" ? "screen-only" : shown.preset;
     return {
       ...playedOf(clip),
-      drawing: scenes.drawingOf(clip),
+      drawing: scenes.drawingOf(shown),
       id: clip.id,
-      name: clip.boxes ? sceneCustomLabel() : presetName(preset),
+      name: shown.boxes ? sceneCustomLabel() : presetName(preset),
     };
   });
   const sortedScenes = (clips: RecordingSceneClip[]) =>
@@ -156,9 +160,24 @@ export function recordingStripLanes(source: RecordingStripLaneSource) {
       });
     },
     onAnnotationRetime: (id, start, end) => {
+      // Moved whole past either end of the timeline, it stops there at its
+      // own length, as a sound effect does. An end dragged stays on the
+      // strip already, as the pointer is measured against it; one already
+      // past the end, as a cut can leave it, is not pulled back by a move
+      // of its start.
+      const was = annotations.clips.find(
+        (clip) => clip.annotation.id === baseOf(id),
+      );
+      const wasInside = was !== undefined && was.endMs / 1000 <= map.duration;
+      const shift =
+        start < 0
+          ? -start
+          : end > map.duration && wasInside
+            ? map.duration - end
+            : 0;
       const next = annotations.clips.map((clip) =>
-        clip.annotation.id === baseOf(id)
-          ? { ...clip, ...timedMs({ end, start }) }
+        clip === was
+          ? { ...clip, ...timedMs({ end: end + shift, start: start + shift }) }
           : clip,
       );
       steps.step(() => {

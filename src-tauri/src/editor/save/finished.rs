@@ -2,10 +2,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 //! The Export island's finish: the file an export wrote, revealed, copied
-//! or dragged out to another app, and the island put away. Each acts on the
-//! file Rust kept from the export (`EditorWorkspaceSlot::exported`), never a
-//! path the webview names.
+//! or dragged out to another app, written again under another name for a
+//! format that comes out the same, and the island put away. Each acts on
+//! the file Rust kept from the export (`EditorWorkspaceSlot::exported`),
+//! never a path the webview names.
 
+use super::export_command::ExportedFile;
 use super::*;
 
 #[cfg(target_os = "windows")]
@@ -75,6 +77,44 @@ pub fn copy_export_file(app: AppHandle, workspace: EditorKind) -> Result<(), Str
   return macos::copy(&path);
   #[cfg(not(target_os = "macos"))]
   return Err(format!("Copying {} is not available here", path.display()));
+}
+
+/// The file the last export wrote, written again beside it as `file_stem`,
+/// with its credits: a format that would come out the same as the one just
+/// made, as TikTok and Shorts do with nothing set apart, is not made twice.
+/// The finished island then shows the copy.
+#[tauri::command]
+pub fn save_export_again_as(
+  app: AppHandle,
+  window: tauri::WebviewWindow,
+  file_stem: String,
+) -> Result<ExportedFile, String> {
+  let kind = kind_of_window(&window)?;
+  let source = exported(&app, kind)?;
+  let stem =
+    sanitize_file_stem(&file_stem).ok_or_else(|| "That file name cannot be used".to_owned())?;
+  let directory = source
+    .parent()
+    .ok_or_else(|| "The exported file has no folder".to_owned())?;
+  let extension = source
+    .extension()
+    .and_then(|extension| extension.to_str())
+    .unwrap_or_default();
+  let path = unique_path(directory, &stem, extension, &|candidate| candidate.exists());
+  std::fs::copy(&source, &path).map_err(|error| error.to_string())?;
+  let credits = super::export_credits::copy_beside(&source, &path);
+  *app
+    .state::<EditorState>()
+    .slot(kind)
+    .exported
+    .lock()
+    .unwrap_or_else(|poisoned| poisoned.into_inner()) = Some(path.clone());
+  let bytes = std::fs::metadata(&path).map_or(0, |metadata| metadata.len());
+  Ok(ExportedFile {
+    bytes,
+    credits: credits.map(|credits| credits.to_string_lossy().into_owned()),
+    path: path.to_string_lossy().into_owned(),
+  })
 }
 
 /// Starts dragging the exported file out of the calling window, from the

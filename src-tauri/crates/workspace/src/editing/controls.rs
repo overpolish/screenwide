@@ -47,6 +47,28 @@ impl WorkspaceEditor {
     }
   }
 
+  /// Lays an app's interface, the phone it is previewed on, or both over the
+  /// first pane's canvas, chosen for a canvas `canvas` pixels; an empty
+  /// request takes them away.
+  pub fn set_platform_overlay(
+    &self,
+    request: screenwide_platform_overlays::OverlayRequest,
+    canvas: (u32, u32),
+  ) {
+    if let Ok(mut state) = self.inner.state.lock() {
+      if (state.platform_overlay, state.platform_overlay_canvas) == (request, canvas) {
+        return;
+      }
+      state.platform_overlay = request;
+      state.platform_overlay_canvas = canvas;
+      draw_selection(&self.inner, &state);
+      // A present off the main thread opens a transaction nothing there
+      // commits; flushed, the change shows now rather than with the next
+      // press or scrub.
+      self.inner.host.commit(false);
+    }
+  }
+
   pub fn set_selection_callback(&self, callback: SelectionCallback) {
     if let Ok(mut callbacks) = self.inner.callbacks.lock() {
       callbacks.selection = Some(callback);

@@ -162,4 +162,21 @@ describe("useTweenedOutput", () => {
     expect(view.handed[view.handed.length - 1]).toBe(20);
     view.unmount();
   });
+
+  it("keeps moving when the same look arrives again, built afresh", () => {
+    const view = mount({ inset: 0 }, true);
+    askPictureTween("screenshot");
+    view.render({ inset: 100 });
+    advance(16);
+    // The editor's state settling a moment later hands the same look again.
+    view.render({ inset: 100 });
+    for (let step = 0; step < 30; step += 1) advance(16);
+    // The old look first, then only looks between, until the new one.
+    const after = view.handed.slice(1);
+    const between = after.slice(1, -1);
+    expect(between.length).toBeGreaterThan(1);
+    expect(between.every((inset) => inset > 0 && inset < 100)).toBe(true);
+    expect(after[after.length - 1]).toBe(100);
+    view.unmount();
+  });
 });

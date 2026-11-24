@@ -32,6 +32,7 @@ import {
   recordingVideoSelectionOverlay,
   recordingVideoSelectionTargets,
 } from "./recording-selection-overlay";
+import { useDrawnSelectionComposition } from "./use-drawn-selection-composition";
 import { useRecordingCropTurn } from "./use-recording-crop-turn";
 import { useRecordingSelectionGesture } from "./use-recording-selection-gesture";
 import { useRecordingSelectionNudge } from "./use-recording-selection-nudge";
@@ -136,29 +137,28 @@ export function useRecordingPreviewSelection(
   // the recording's own panes, so neither the selected pane nor the targets
   // tell the native overlay a scene fixes them.
   const framesPanes = isFramed && !(scene.isCustom && canvasTool === "select");
+  const followedCameraOverlay = useFollowedOverlay(
+    cameraOverlay,
+    previewSourceDimensions.camera,
+    previewPositionMs,
+  );
+  const drawn = useDrawnSelectionComposition({
+    arrangement: sceneArrangement,
+    followedCameraOverlay,
+    output: effectiveRecordingOutput,
+  });
+  const selectionCameraOverlay = drawn.cameraOverlay;
+  const selectionOutput = drawn.recordingOutput;
+  // The outline turns with the screen as drawn, through a turn it moves to.
   const turn = useRecordingCropTurn({
     activeVideoTrack,
     arrangement: sceneArrangement,
     bakesCamera: canPreviewBakedCamera,
     canvasTool,
     isFramed,
-    screenRotation: effectiveRecordingOutput.primary.rotation,
+    screenRotation: selectionOutput.primary.rotation,
   });
   const { chromeTool, chromeTrack } = turn;
-  const followedCameraOverlay = useFollowedOverlay(
-    cameraOverlay,
-    previewSourceDimensions.camera,
-    previewPositionMs,
-  );
-  const selectionCameraOverlay =
-    sceneArrangement?.cameraOverlay ?? followedCameraOverlay;
-  const selectionOutput = useMemo(
-    () =>
-      sceneArrangement
-        ? { ...effectiveRecordingOutput, primary: sceneArrangement.output }
-        : effectiveRecordingOutput,
-    [effectiveRecordingOutput, sceneArrangement],
-  );
   const videoSelectionOverlay = useMemo(
     () =>
       recordingVideoSelectionOverlay({

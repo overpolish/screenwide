@@ -106,14 +106,12 @@ describe("moving a clip on the strip", () => {
     ]);
   });
 
-  it("moves a sound effect past the end, keeping its length", () => {
-    // Eleven seconds laid 4 s from the end runs past it, and can still go
-    // later, until only the least of it is left inside.
-    const effect = clip("hit", [76_000, 87_000], { kind: "effect" });
+  it("stops a sound effect at the timeline's end, keeping its length", () => {
+    const effect = clip("hit", [66_000, 77_000], { kind: "effect" });
     const later = movedClip([], effect, { deltaMs: 2_000, timelineMs: 80_000 });
     const last = movedClip([], effect, { deltaMs: 9_000, timelineMs: 80_000 });
-    expect([later.startMs, later.endMs]).toEqual([78_000, 89_000]);
-    expect([last.startMs, last.endMs]).toEqual([79_900, 90_900]);
+    expect([later.startMs, later.endMs]).toEqual([68_000, 79_000]);
+    expect([last.startMs, last.endMs]).toEqual([69_000, 80_000]);
   });
 
   it("lets a sound effect pass over songs", () => {

@@ -12,6 +12,8 @@ import {
   annotationArrangementPicked,
 } from "../../annotations/annotation-arrange-items";
 import { annotationMenuTargets } from "../../annotations/annotation-selection";
+import { formatSyncMenu, pickedFormatSync } from "../formats/format-item-menu";
+import { useFrameFormats } from "../formats/frame-formats-context";
 
 import {
   arrangedRecordingAnnotations,
@@ -102,11 +104,13 @@ export function useAnnotationClipMenu({
   pinning: AnnotationClipPinning | undefined;
   selectedIds: ReadonlySet<string>;
 }) {
+  const formats = useFrameFormats();
   const openMenu = usePopupMenu({
     idPrefix,
     label: t("editor-annotation-actions"),
     mode: "menu",
     onSelect: (itemId, annotationId) => {
+      if (pickedFormatSync(formats, itemId, annotationId)) return;
       const arrangement = annotationArrangementPicked(itemId);
       if (arrangement) {
         const targets = annotationMenuTargets(annotationId, selectedIds);
@@ -143,6 +147,7 @@ export function useAnnotationClipMenu({
             ]
           : [{ id: "pin", label: t("editor-pin-pin") }]
         : [];
+    const formatMenu = formatSyncMenu(formats, id);
     const items = [
       ...annotationArrangeItems(
         recordingAnnotationArrangements(
@@ -157,8 +162,14 @@ export function useAnnotationClipMenu({
         ...item,
         section: t("editor-pin-tracking-section"),
       })),
+      ...formatMenu.items,
     ];
     if (items.length === 0) return;
-    return openMenu({ anchor, context: id, items });
+    return openMenu({
+      anchor,
+      context: id,
+      items,
+      selectedIds: formatMenu.selectedIds,
+    });
   };
 }

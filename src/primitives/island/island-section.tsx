@@ -127,11 +127,15 @@ export function IslandSection({
             height: isOpen ? held.height : 0,
             opacity: isOpen ? 1 : 0,
           }}
-          // Clips what it holds, which is revealed as it grows. Clipped
-          // rather than hidden, so it is no scroll box: a control focused
-          // while the box is still short, such as one pressed as the island
-          // comes out, cannot scroll what it holds up out of place.
-          className="relative overflow-clip"
+          // Clips what it holds, which is revealed as it grows. Clipped by a
+          // clip path rather than overflow, so it is no scroll box: a control
+          // focused while the box is still short, such as one pressed as the
+          // island comes out, cannot scroll what it holds up out of place.
+          // The path reaches a ring's width above the box, as a section
+          // joined to its row starts flush with it and would otherwise cut
+          // the focus ring or halo of a control on its first line; that
+          // room is the row's black, so nothing else shows there.
+          className="relative [clip-path:inset(calc(var(--spacing-inline)*-1)_0_0_0)]"
           initial={false}
           onAnimationComplete={onOpened}
           style={{ height: values.height, opacity: values.opacity }}

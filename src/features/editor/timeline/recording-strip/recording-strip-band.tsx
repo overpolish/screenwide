@@ -7,10 +7,12 @@ import {
   pointerAnchor,
 } from "../../../popup-panel/use-popup-menu";
 import { ChromeSetBack } from "../../panel/chrome-set-back";
+import { useFormatItemMenu } from "../../recording/formats/format-item-menu";
 import {
   EditorTransport,
   type EditorTransportProps,
 } from "../editor-transport";
+import { FormatBar } from "../formats/format-bar";
 import { TimelineStrip } from "../strip/timeline-strip";
 import { type TimelineStripProps } from "../strip/timeline-strip-props";
 
@@ -37,6 +39,7 @@ export function RecordingStripBand({
   /** Opens the strip's menu under the point pressed. */
   onMenu?: (anchor: PopupMenuAnchor) => void;
 }) {
+  const openFormatItemMenu = useFormatItemMenu();
   return (
     <section
       aria-label={t("editor-timeline-label")}
@@ -57,21 +60,26 @@ export function RecordingStripBand({
         <div
           className="contents"
           data-gif-range
-          // A right press anywhere on the strip offers to add the frame
-          // under the playhead to a script (`use-editor-cue.ts`).
-          onContextMenu={
-            onMenu &&
-            ((event) => {
-              event.preventDefault();
-              onMenu(pointerAnchor(event.clientX, event.clientY));
-            })
-          }
+          // A right press on a scene, annotation, song or sound effect, or
+          // the captions offers what brings the formats in step for it
+          // (`format-sync.ts`); anywhere else on the strip it offers to add
+          // the frame under the playhead to a script (`use-editor-cue.ts`).
+          onContextMenu={(event) => {
+            event.preventDefault();
+            const anchor = pointerAnchor(event.clientX, event.clientY);
+            const item = (event.target as Element).closest<HTMLElement>(
+              "[data-menu-target]",
+            )?.dataset.menuTarget;
+            if (item && openFormatItemMenu(anchor, item)) return;
+            onMenu?.(anchor);
+          }}
         >
           <TimelineStrip {...strip} isLocked={isLocked} />
         </div>
       </ChromeSetBack>
-      <div className="ps-inset">
+      <div className="flex items-center justify-between gap-group px-inset">
         <EditorTransport {...transport} isLocked={isLocked} />
+        <FormatBar isLocked={isLocked} />
       </div>
     </section>
   );

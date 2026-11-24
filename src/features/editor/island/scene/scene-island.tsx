@@ -6,6 +6,7 @@ import { Alert } from "../../../../primitives/alert/alert";
 import { IslandRowTitle } from "../../../../primitives/island/row-title/island-row-title";
 import { Text } from "../../../../primitives/text/text";
 import { SceneLayoutGlyph } from "../../glyphs/scene-layout-glyph";
+import { FramingMenu } from "../framing-menu";
 
 import { SceneActions, type SceneToolGroup } from "./scene-actions";
 import { SceneAutoZoomGroup } from "./scene-auto-zoom-group";
@@ -13,6 +14,8 @@ import { layoutDrawing, type SceneFramingProps } from "./scene-framing";
 import { SceneLayoutGroup } from "./scene-layout-group";
 import { ScenePaneToggles } from "./scene-pane-toggles";
 
+import type { ToolPanelFormats } from "../../tools/tool-panel-frame";
+import type { FramingPatch } from "../../tools/tool-panel-patch";
 import type { EditorIslandContent } from "../editor-island";
 
 // The Scene mode: how the picture is framed. With a scene in hand it frames
@@ -47,6 +50,12 @@ export type SceneIslandProps = SceneFramingProps & {
   /** The scene in hand, or none, to frame the recording itself; `isPaused`
    * where the scene needs the camera, which is left out of the video. */
   scene: { id: string; isPaused: boolean } | null;
+  /** A recording's formats, and their asks of the platform in hand's
+   * framing, which a scene laid out here is part of. */
+  framing?: {
+    formats: ToolPanelFormats;
+    onPatch: (patch: FramingPatch) => void;
+  };
 };
 
 export function sceneIsland(props: SceneIslandProps): EditorIslandContent {
@@ -63,6 +72,12 @@ export function sceneIsland(props: SceneIslandProps): EditorIslandContent {
   return {
     actions: (
       <>
+        {props.framing && scene ? (
+          <FramingMenu
+            formats={props.framing.formats}
+            onPatch={props.framing.onPatch}
+          />
+        ) : null}
         {props.panesShown ? <ScenePaneToggles {...props} /> : null}
         <SceneActions
           groups={groups}

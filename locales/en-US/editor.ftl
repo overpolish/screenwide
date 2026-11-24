@@ -96,3 +96,80 @@ editor-eta-minutes = { $count } min
 editor-template-import-failed = Template could not be imported: { $reason }
 editor-template-export-failed = Template could not be exported: { $reason }
 editor-template-remove-failed = Template could not be removed: { $reason }
+
+## A short-video app's interface laid over the picture while editing, never exported. Sample words a post in that app shows; the app names its own tabs.
+
+editor-overlay-caption = What your viewers read under the video #tutorial
+editor-overlay-dislike = Dislike
+editor-overlay-follow = Follow
+editor-overlay-following = Following
+editor-overlay-for-you = For You
+editor-overlay-friends = Friends
+editor-overlay-handle = @yourname
+editor-overlay-handle-bare = yourname
+editor-overlay-home = Home
+editor-overlay-inbox = Inbox
+editor-overlay-likes = 18K
+editor-overlay-original-audio = yourname · Original audio
+editor-overlay-original-sound = Original sound
+editor-overlay-profile = Profile
+editor-overlay-reels = Reels
+editor-overlay-remix = Remix
+editor-overlay-share = Share
+editor-overlay-shorts = Shorts
+editor-overlay-sound = original sound - yourname
+editor-overlay-subscribe = Subscribe
+editor-overlay-subscriptions = Subscriptions
+editor-overlay-you = You
+
+## The canvas sizes the Frame island offers, by platform and use, and the shapes a recording is made in.
+
+editor-frame-size-youtube-1080 = YouTube 1080p
+editor-frame-size-youtube-1440 = YouTube 1440p
+editor-frame-size-youtube-2160 = YouTube 4K
+editor-frame-size-youtube-shorts = YouTube Shorts
+editor-frame-size-tiktok = TikTok
+editor-frame-size-instagram-reels = Instagram Reels
+editor-frame-size-instagram-portrait = Instagram portrait
+editor-frame-size-instagram-square = Instagram square
+editor-frame-size-linkedin-landscape = LinkedIn landscape
+editor-frame-size-linkedin-square = LinkedIn square
+editor-frame-size-linkedin-portrait = LinkedIn portrait
+editor-frame-size-linkedin-vertical = LinkedIn vertical
+editor-frame-size-x-landscape = X landscape
+editor-frame-size-x-vertical = X vertical
+editor-frame-formats = Formats
+# The format bar's button for the main canvas, the one worked in and sized freely, which every platform follows. Its visible label is its size.
+editor-frame-format-main = Main canvas
+# The group of segments in the format bar for the platforms added, such as YouTube and TikTok.
+editor-frame-format-platforms = Platforms
+editor-frame-format-add = Add a platform
+# A format named by its size, in pixels.
+editor-frame-format-size = { $width } × { $height }
+# A shape named by its proportions, width to height, such as 16:9 or 9:16.
+editor-frame-format-ratio = { $width }:{ $height }
+editor-frame-platform-youtube = YouTube
+editor-frame-platform-tiktok = TikTok
+editor-frame-platform-instagram = Instagram
+editor-frame-platform-linkedin = LinkedIn
+editor-frame-platform-x = X
+# Removes one of the recording's formats, named.
+editor-frame-format-remove-named = Remove { $format }
+editor-frame-phone = Phone
+editor-frame-phone-none = No phone
+# Opens the choice of phone a tall format is previewed on. $phone names the one chosen, or that there is none.
+editor-frame-phone-current = Phone: { $phone }
+# Turns the phone and the app's interface over the picture on and off. They are only ever shown while editing.
+editor-frame-phone-preview = Phone preview
+editor-frame-phone-iphone-17-pro = iPhone 17 Pro
+editor-frame-phone-iphone-17-pro-max = iPhone 17 Pro Max
+editor-frame-phone-iphone-se = iPhone SE
+editor-frame-phone-pixel-10 = Pixel 10
+editor-frame-phone-galaxy-s26 = Galaxy S26
+editor-frame-phone-galaxy-fold-cover = Galaxy Z Fold cover
+# A toggle in the right-click menu of a scene, annotation or the captions: while on, it is laid out its own way where it is being edited, and changes to it there stay there. $shape names where: for a scene the platforms sharing its framing, such as "TikTok and YouTube Shorts"; for an annotation or the captions the proportion, such as 9:16.
+editor-frame-format-custom = Custom for { $shape }
+# In the right-click menu of something custom in the shape being edited: makes its layout there the one every shape uses.
+editor-frame-format-layout-all = Use this layout in all shapes
+# Heads the right-click menu's list of formats, each ticked where the item shows; pressing one shows it there or leaves it out.
+editor-frame-format-show-in = Show in

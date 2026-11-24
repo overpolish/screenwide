@@ -7,7 +7,7 @@ import { CameraOverlaySettings } from "../../types";
 
 import { towardPlacement } from "./recording-scene-blend";
 import { cameraFramingOf, framingWithin } from "./recording-scene-framing";
-import { SceneRect } from "./recording-scene-geometry";
+import { SceneRect, sceneCanvas } from "./recording-scene-geometry";
 import {
   SceneCamera,
   basePlacement,
@@ -160,7 +160,7 @@ export function arrangedRecordingScene({
   const targetOf = targeting({
     base,
     camera: sceneCamera,
-    canvas: { height: output.height, width: output.width },
+    canvas: sceneCanvas(output),
   });
   const target = targetOf(clip);
   if (!target) return null;

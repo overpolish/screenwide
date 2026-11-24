@@ -168,12 +168,11 @@ use item_layer::{drawn_pictures, point_on_item_layer};
 /// The topmost arrow whose drawn shape `point` lands on. There is no
 /// tolerance around it: the arrow is picked, and haloed, exactly where it is
 /// painted, which is what keeps the halo off the space beside an annotation.
-/// A shape grabbed by its inside is `redact_chrome::grabs_inside`'s
-/// call, and what is drawn wins over an inside, whatever the stacking: a
-/// press on an annotation seen through a shape in front picks that
-/// annotation, and only a press on nothing drawn falls to the inside it
-/// lands in. An annotation a picture in front hides at the press is not
-/// seen there, so it is not picked: the press falls to the picture in front.
+/// A shape is picked by its line alone, as a stroke is, whichever tool is
+/// in hand and whether or not it is chosen: the space inside it is the
+/// picture's, to draw on or to press through to what is under it. An
+/// annotation a picture in front hides at the press is not seen there, so
+/// it is not picked: the press falls to the picture in front.
 ///
 /// Every tool that picks (`picks_annotations`) picks every kind: a press on
 /// an annotation takes hold of it whatever is in hand, and only a press on
@@ -191,7 +190,6 @@ pub(in crate::editing) fn shaft_at_point(state: &SurfaceState, point: (f64, f64)
 /// stroke drawn under it at the press, such as an underline, is picked
 /// before it.
 pub(super) fn pick_at_point(state: &SurfaceState, point: (f64, f64)) -> Option<(usize, LensView)> {
-  let chrome = super::redact_chrome::grabs_inside;
   let pictures = drawn_pictures(state, point);
   let seen = |layer: i32| {
     u32::try_from(layer).map_or(true, |layer| {
@@ -217,16 +215,14 @@ pub(super) fn pick_at_point(state: &SurfaceState, point: (f64, f64)) -> Option<(
           .flatten()
       },
       |lens, index| super::magnify_chrome::under(state, lens, index),
-      |index, [x, y], insides| {
+      |index, [x, y]| {
         let item = &handles[index];
-        if (insides && !chrome(state, index, item)) || (past_type && type_only(index)) {
+        if past_type && type_only(index) {
           return false;
         }
         let drawn = layer_image_rect(state, item.layer_id).is_some_and(|image| {
           let distance = if item.shape_kind() == AnnotationKind::Draw {
             draw_distance(state, image, item, (x, y))
-          } else if insides {
-            super::redact_chrome::shape_body_distance(image, item, (x, y))
           } else {
             arrow_distance(image, item, (x, y))
           };

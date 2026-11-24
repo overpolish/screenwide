@@ -22,6 +22,7 @@ import { Background, BackgroundPreset } from "./frame/background/background";
 import { TranscriptRequest } from "./tool-panel-transcript";
 
 import type { ToolPanelExportPatch } from "./tool-panel-export";
+import type { FramingPatch } from "./tool-panel-patch";
 import type { Measure } from "../../../bindings/Measure";
 import type { ModelWork } from "../../../bindings/ModelWork";
 import type { TextStyle } from "../../../bindings/TextStyle";
@@ -129,6 +130,8 @@ export type ToolPanelHandlers = {
   onFrameReset?: () => void;
   /** Size the output canvas to what a field asked for. */
   onFrameSizeChange?: (size: { height?: number; width?: number }) => void;
+  /** Do what the Screen or Scene island asks of the platform's framing. */
+  onFramingChange?: (patch: FramingPatch) => void;
   /** Give the gap chosen on the strip this background, or the recording's
    * again for null. */
   onGapBackgroundChange?: (background: Background | null) => void;

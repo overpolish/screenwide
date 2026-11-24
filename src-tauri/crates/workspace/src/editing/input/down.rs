@@ -87,7 +87,12 @@ pub(super) fn down(inner: &std::sync::Arc<SurfaceInner>, scale: f64, x: f64, y: 
           let transform = state.workspace_transform;
           state.workspace_transforms.insert(size, transform);
         }
-        let start = frame_resize_start(&state);
+        let mut start = frame_resize_start(&state);
+        start.reach = Some(super::frame_resize::reach_floors(
+          &state,
+          selection.pane_index as usize,
+          gesture.pane_start,
+        ));
         state.frame_resize = Some(start);
       }
       state.gesture = Some(ActiveGesture::Selection(gesture));

@@ -1,8 +1,10 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import type { ToolPanelExportPatch } from "./tool-panel-export";
 import type { CameraOutput } from "../export/camera-output";
 import type { EditorExportSnapshot } from "../export/editor-export";
+import type { FrameFormatsControl } from "../recording/formats/use-recording-formats";
 import type {
   RecordingOutputSettings,
   ScreenshotOutputSettings,
@@ -18,7 +20,6 @@ import type {
   KeyboardEffectSettings,
   RecordingVideoTrackId,
 } from "../types";
-import type { ToolPanelExportPatch } from "./tool-panel-export";
 import type { TrackInclusion } from "./tracks/editor-tracks";
 
 /** What the editor hands `useEditorToolPanels`: the settings it owns, and
@@ -46,6 +47,9 @@ export type EditorToolPanelInputs = {
   selectedTrack: string | null;
   trackInclusion: TrackInclusion;
   workspace: EditorKind;
+  /** A recording's formats, which the format bar and the strip show; the
+   * Frame island sizes only the main canvas. */
+  frameFormats?: FrameFormatsControl | null;
   onCameraOverlayChange?: (settings: CameraOverlaySettings) => void;
   onCanvasResize?: (settings: ScreenshotWorkspaceOutputSettings) => void;
   onCursorEffectsChange?: (settings: CursorEffectSettings) => void;

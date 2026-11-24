@@ -22,7 +22,9 @@ mod layout;
 mod lifecycle;
 mod magnifier;
 mod object_picking;
+mod overlay_fade;
 mod overlay_hit;
+mod overlay_raster;
 mod pane;
 pub mod pixels;
 mod platform_input;
@@ -43,7 +45,7 @@ mod workspace_editor;
 mod workspace_layout;
 
 pub use batch::PresentBatch;
-pub use chrome::ChromeRenderer;
+pub use chrome::{ChromeFrame, ChromeOverlay, ChromeRenderer};
 pub use host::Host;
 pub use pane::Pane;
 pub use platform_input::*;

@@ -24,6 +24,7 @@ pub(crate) mod model_work;
 mod naming;
 /// Songs, sound effects and pictures found on Openverse, for the Library.
 pub(crate) mod openverse;
+pub(crate) mod platform_overlay;
 mod pointer;
 mod preferences;
 pub(crate) mod preview;

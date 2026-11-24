@@ -10,7 +10,9 @@
 
 mod boxes;
 mod camera_overlay;
+mod clear_area;
 pub mod face;
+mod format_layout;
 pub mod framing;
 mod gaps;
 pub mod geometry;
@@ -19,10 +21,12 @@ pub mod model;
 pub mod motion;
 pub mod placement;
 pub mod rotation;
+mod tall;
 pub mod template;
 pub mod variant;
 
 pub use camera_overlay::CameraOverlaySettings;
+pub use clear_area::ClearArea;
 pub use face::{FacePath, FaceSighting};
 pub use framing::SceneFraming;
 pub use gaps::{with_gaps, GapScene};

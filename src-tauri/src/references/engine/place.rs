@@ -5,6 +5,7 @@
 //! and its chrome (`references::drawing` says what they hold).
 
 use screenwide_osc::geometry::{Point, Rect};
+use screenwide_workspace::editing::ChromeFrame;
 use tauri::Emitter;
 
 use super::super::commands::ReferenceLayout;
@@ -125,16 +126,18 @@ pub(super) fn draw(native: &mut Native) {
   let constants = constants(native.host.light_appearance(), scale, native.see_through);
   let handles = native.stage.hovered || native.stage.resizing();
   native.drawn = Some((view, picture, scale));
+  let picture_vertices = picture_vertices(view, picture);
+  let chrome_vertices = chrome_vertices(view, picture, scale, handles);
+  let drawn_frame = |vertices| ChromeFrame {
+    size: pixels,
+    vertices,
+    constants: &constants,
+    overlays: &[],
+  };
   let drawn = native
     .picture
-    .present(pixels, &picture_vertices(view, picture), &constants)
-    .and_then(|()| {
-      native.chrome.present(
-        pixels,
-        &chrome_vertices(view, picture, scale, handles),
-        &constants,
-      )
-    });
+    .present(drawn_frame(&picture_vertices))
+    .and_then(|()| native.chrome.present(drawn_frame(&chrome_vertices)));
   if let Err(error) = drawn {
     eprintln!("Could not draw a reference: {error}");
   }

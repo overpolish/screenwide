@@ -8,9 +8,8 @@ use windows::Win32::UI::Input::KeyboardAndMouse::{GetKeyState, VK_CONTROL, VK_ME
 
 use screenwide_compositor::{PreviewSurfaceCorners, PreviewSurfaceRect};
 use screenwide_osc::gpu::magnifier::NativeMagnifier;
-use screenwide_osc::gpu::vertices::{RenderConstants, Vertex};
 use screenwide_workspace::backdrop::BackdropStyle;
-use screenwide_workspace::editing::{CursorKind, Host, Modifiers, SurfaceInner};
+use screenwide_workspace::editing::{ChromeFrame, CursorKind, Host, Modifiers, SurfaceInner};
 use screenwide_workspace::scene::{NativeWorkspacePlacement, WorkspaceScene};
 
 use super::{editor, Gpu, ImageDropCallback};
@@ -97,9 +96,9 @@ impl Host for WindowsHost {
     self.gpu.backdrop.hide();
   }
 
-  fn present_chrome(&self, size: (u32, u32), vertices: &[Vertex], constants: &RenderConstants) {
-    if let Ok(mut overlay) = self.gpu.selection.lock() {
-      let _ = overlay.renderer.present(size, vertices, constants);
+  fn present_chrome(&self, chrome: ChromeFrame<'_>) {
+    if let Ok(mut selection) = self.gpu.selection.lock() {
+      let _ = selection.renderer.present(chrome);
     }
   }
 

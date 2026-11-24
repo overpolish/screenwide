@@ -14,12 +14,15 @@ import {
   annotationArrangementPicked,
 } from "../../annotations/annotation-arrange-items";
 import { Arrangement } from "../../annotations/annotation-order";
+import { baseOf } from "../../timeline/strip/strip-part";
 import { RecordingCameraPlacement } from "../annotations/recording-annotation-layers";
 import { RecordingAnnotationClip } from "../annotations/recording-annotations";
 import {
   AnnotationClipPinning,
   useAnnotationClipMenu,
 } from "../annotations/use-annotation-clip-menu";
+import { formatSyncMenu, pickedFormatSync } from "../formats/format-item-menu";
+import { useFrameFormats } from "../formats/frame-formats-context";
 import {
   ScenePane,
   scenePaneArrangements,
@@ -71,11 +74,20 @@ export function useRecordingCanvasContextMenu(
   });
   const sceneRef = useRef(scene);
   sceneRef.current = scene;
+  const formats = useFrameFormats();
+  const formatsRef = useRef(formats);
+  formatsRef.current = formats;
   const openPaneMenu = usePopupMenu({
     idPrefix: "scene-pane:",
     label: t("editor-layer-actions"),
     mode: "menu",
     onSelect: (itemId, pane) => {
+      const sceneId = sceneRef.current.clip?.id;
+      if (
+        sceneId &&
+        pickedFormatSync(formatsRef.current, itemId, baseOf(sceneId))
+      )
+        return;
       const move = annotationArrangementPicked(itemId);
       if (move && (pane === "camera" || pane === "screen"))
         sceneRef.current.arrange(pane, move);
@@ -99,11 +111,18 @@ export function useRecordingCanvasContextMenu(
     }
     const pane = paneOfLayer(paneIndex);
     if (!pane || !scene.clip) return;
-    const items = annotationArrangeItems(
-      scenePaneArrangements(scene.clip, pane),
-    );
+    const formatMenu = formatSyncMenu(formats, baseOf(scene.clip.id));
+    const items = [
+      ...annotationArrangeItems(scenePaneArrangements(scene.clip, pane)),
+      ...formatMenu.items,
+    ];
     if (items.length === 0) return;
-    void openPaneMenu({ anchor: pointerAnchor(x, y), context: pane, items });
+    void openPaneMenu({
+      anchor: pointerAnchor(x, y),
+      context: pane,
+      items,
+      selectedIds: formatMenu.selectedIds,
+    });
   };
   useEffect(() => {
     // The subscription lands after a hop. A cleanup that runs before it

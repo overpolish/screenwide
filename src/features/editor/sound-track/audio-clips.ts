@@ -107,13 +107,12 @@ function songRoom(clips: RecordingAudioClip[], clip: RecordingAudioClip) {
   };
 }
 
-/** `clip` moved by `deltaMs`, as long as it was. A song stays inside the
- * timeline and never lands on another: where it would, it sits in the
- * nearest room beside the songs it lands on, so pushed into a neighbour it
- * stops against it, and pushed past its middle it jumps to its far side,
- * which is how songs are put in another order. A sound effect goes as late
- * as leaves the least of it inside the timeline, its tail past the end
- * unheard. */
+/** `clip` moved by `deltaMs`, as long as it was, inside the timeline; one
+ * longer than the timeline stays where it is, to be trimmed. A song never
+ * lands on another: where it would, it sits in the nearest room beside the
+ * songs it lands on, so pushed into a neighbour it stops against it, and
+ * pushed past its middle it jumps to its far side, which is how songs are
+ * put in another order. A sound effect passes over anything. */
 export function movedClip(
   clips: RecordingAudioClip[],
   clip: RecordingAudioClip,
@@ -121,7 +120,7 @@ export function movedClip(
 ): RecordingAudioClip {
   const lengthMs = clip.endMs - clip.startMs;
   const isSong = clip.kind === "music";
-  const latest = isSong ? timelineMs - lengthMs : timelineMs - LEAST_CLIP_MS;
+  const latest = timelineMs - lengthMs;
   if (latest < 0) return clip;
   const at = (startMs: number) => ({
     ...clip,

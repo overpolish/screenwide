@@ -72,6 +72,7 @@ fn look(background: Option<&Path>) -> ProjectLook {
     audio_track_volumes: None,
     enabled_stream_indices: Some(vec![1]),
     enabled_video_tracks: Some(vec![VideoTrack::Primary]),
+    formats: None,
   }
 }
 

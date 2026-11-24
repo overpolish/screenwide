@@ -52,6 +52,7 @@ pub(crate) fn invoke_handler() -> impl Fn(tauri::ipc::Invoke) -> bool + Send + S
     editor::recording_preview_player::commands::set_recording_preview_composition,
     editor::recording_preview_player::scenes_command::set_recording_preview_scenes,
     editor::recording_preview_player::scene_reframe::set_recording_preview_scene_reframe,
+    editor::platform_overlay::set_editor_platform_overlay,
     #[cfg(any(target_os = "macos", target_os = "windows"))]
     editor::recording_preview_player::annotation_bridge::set_recording_preview_annotations,
     editor::recording_preview_player::annotation_bridge::caption_menu::edit_recording_caption,
@@ -72,6 +73,7 @@ pub(crate) fn invoke_handler() -> impl Fn(tauri::ipc::Invoke) -> bool + Send + S
     editor::screenshot_project::workspace::set_screenshot_project_workspace,
     editor::screenshot_project::workspace::save_screenshot_project_still,
     editor::save::save_export,
+    editor::save::save_export_again_as,
     editor::preview_view::reset_editor_view,
     editor::typing_keyboard::resume_annotation_typing,
     editor::screenshot_preview::layout_screenshot_preview_surface,

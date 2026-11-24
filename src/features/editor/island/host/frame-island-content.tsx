@@ -73,6 +73,7 @@ export function frameIslandContent({
     onSizeChange: (frameSize) => {
       change({ frameSize });
     },
+    ...(frame.formats ? { formats: frame.formats } : {}),
     width: frame.width,
     ...(capture === "screenshot"
       ? {

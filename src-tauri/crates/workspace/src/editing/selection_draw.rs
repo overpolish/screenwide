@@ -211,5 +211,66 @@ pub(super) fn draw_selection(inner: &SurfaceInner, state: &SurfaceState) {
     chrome_fade::add_rings(&mut vertices, &mut constants, size, scale, rings);
   }
   chrome_fade::keep_drawing(inner, &mut fade);
-  inner.host.present_chrome(size, &vertices, &constants);
+  let overlays = platform_overlays(inner, state, scale);
+  inner.host.present_chrome(chrome::ChromeFrame {
+    size,
+    vertices: &vertices,
+    constants: &constants,
+    overlays: &overlays,
+  });
+}
+
+/// The platform overlay over the first pane's canvas, where the workspace
+/// draws it, in the chrome's pixels as the crop's shade is placed: one, or
+/// two while one fades into the other (`overlay_fade`). Taken away at once
+/// while the canvas on screen is not the shape the overlay was chosen for:
+/// switching formats, the overlay arrives before the canvas changes shape.
+fn platform_overlays(
+  inner: &SurfaceInner,
+  state: &SurfaceState,
+  scale: f64,
+) -> Vec<chrome::ChromeOverlay> {
+  use super::overlay_fade::{overlays_now, Wanted};
+  let Some(pane) = state.panes.first().and_then(Option::as_ref) else {
+    overlays_now(inner, Wanted::Elsewhere);
+    return Vec::new();
+  };
+  let [x, y, width, height] = if state.frame_resize.is_none() && pane.seen {
+    super::workspace_draw::drawn_canvas(pane, state.viewport, scale)
+  } else {
+    let image = state.workspace_transform.apply(
+      state.viewport,
+      pane_canvas_rect(pane, state.frame_resize.is_some()),
+    );
+    [
+      image.x * scale,
+      image.y * scale,
+      image.width * scale,
+      image.height * scale,
+    ]
+  };
+  let (canvas_width, canvas_height) = state.platform_overlay_canvas;
+  let is_drawable = canvas_width > 0 && canvas_height > 0 && width > 0.0 && height > 0.0;
+  let is_shaped = is_drawable && {
+    let shape = f64::from(canvas_width) / f64::from(canvas_height);
+    ((width / height) / shape - 1.0).abs() <= 0.015
+  };
+  let request = state.platform_overlay;
+  let wanted = if !is_shaped {
+    Wanted::Elsewhere
+  } else if request.is_empty() {
+    Wanted::Off
+  } else {
+    super::overlay_raster::picture_for(inner, request, (width, height))
+      .map_or(Wanted::Pending, Wanted::Ready)
+  };
+  let rect = [x as f32, y as f32, width as f32, height as f32];
+  overlays_now(inner, wanted)
+    .into_iter()
+    .map(|(picture, opacity)| chrome::ChromeOverlay {
+      picture,
+      rect,
+      opacity,
+    })
+    .collect()
 }

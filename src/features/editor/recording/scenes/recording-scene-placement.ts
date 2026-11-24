@@ -14,11 +14,17 @@ import { CameraOverlaySettings } from "../../types";
 import {
   type Face,
   cameraFramingOf,
+  clearMiddle,
   drawnCameraFrame,
   followingFace,
+  framingAbout,
   placedPicture,
 } from "./recording-scene-framing";
-import { SceneRect, recordingScenePanes } from "./recording-scene-geometry";
+import {
+  SceneCanvas,
+  SceneRect,
+  recordingScenePanes,
+} from "./recording-scene-geometry";
 import {
   RecordingSceneClip,
   SceneBox,
@@ -63,7 +69,7 @@ export type SceneCamera = {
   face?: Face | null;
 };
 
-type Canvas = { height: number; width: number };
+type Canvas = SceneCanvas;
 
 /** The zoom the recording's own crop gives the camera. */
 const ownZoom = (camera: SceneCamera) =>
@@ -165,6 +171,7 @@ export const sceneBoxes = (
   // scene crops it to, else its picture's.
   const panes = recordingScenePanes(clip.preset, canvas, {
     cameraAspect: shapes.camera ?? camera?.aspect ?? 16 / 9,
+    ...(canvas.clear ? { clear: canvas.clear } : {}),
     screenAspect: shapes.screen ?? base.screen.width / base.screen.height,
     variant: clip.variant,
   });
@@ -172,25 +179,6 @@ export const sceneBoxes = (
     camera: panes.camera,
     screen: panes.screen ?? base.screen,
     shown: { camera: panes.camera !== null, screen: panes.screen !== null },
-  };
-};
-
-/** The shorter side of each pane's frame in `clip`, in output pixels: what a
- * change of its corners between units is eased through. */
-export const scenePaneShortest = (
-  clip: RecordingSceneClip,
-  {
-    camera,
-    output,
-  }: { camera: SceneCamera | null; output: ScreenshotOutputSettings },
-) => {
-  const base = basePlacement(output, camera);
-  const canvas = { height: output.height, width: output.width };
-  const boxes = sceneBoxes(clip, { base, camera, canvas });
-  const shortest = (rect: SceneRect) => Math.min(rect.width, rect.height);
-  return {
-    camera: shortest(boxes.camera ?? base.frame),
-    screen: shortest(boxes.screen),
   };
 };
 
@@ -239,14 +227,20 @@ export const targeting =
       y: picture.y - pictureHeight / 2 + (base.image.y - crop.y) * scale,
     };
     // A camera following the face is framed about it: its framing's focus
-    // says where the face sits in the box.
+    // says where the face sits in the box, about the middle of the part of
+    // the box the platform's interface leaves clear.
     const recordingFollows = camera?.overlay.followFace === true;
     const follows = clip.followFace ?? recordingFollows;
     const face = follows ? camera?.face : null;
     const placed = (framing: SceneFraming) =>
       camera
         ? placedPicture(
-            face ? followingFace(framing, face) : framing,
+            face
+              ? framingAbout(followingFace(framing, face), frame, {
+                  aspect: camera.aspect,
+                  point: clearMiddle(frame, canvas),
+                })
+              : framing,
             frame,
             camera.aspect,
           )

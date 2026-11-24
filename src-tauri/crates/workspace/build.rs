@@ -21,6 +21,7 @@ fn main() {
         "../osc/src/gpu/shaders/lens.wgsl",
       ],
     ),
+    ("platform_overlay", &["src/shaders/platform_overlay.wgsl"]),
   ]);
   let drawing = |name, source, layout| Precompiled {
     name,
@@ -40,6 +41,11 @@ fn main() {
         "LOUPE",
         assembled("workspace_magnifier"),
         &shader_layouts::LOUPE,
+      ),
+      drawing(
+        "PLATFORM_OVERLAY",
+        assembled("platform_overlay"),
+        &shader_layouts::PLATFORM_OVERLAY,
       ),
     ],
   );

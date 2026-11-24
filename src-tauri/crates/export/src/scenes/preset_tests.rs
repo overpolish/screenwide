@@ -7,15 +7,21 @@ use screenwide_output::ScreenshotOutputSettings;
 use screenwide_scenes::geometry::{preset_panes, PresetPanes, Rect};
 use screenwide_scenes::model::{RecordingScenePreset, SceneShapes};
 use screenwide_scenes::variant::{SceneBubbleSize, SceneCameraSize, SceneCorner, SceneVariant};
-use screenwide_scenes::CameraOverlaySettings;
 use screenwide_scenes::RecordingSceneClip;
+use screenwide_scenes::{CameraOverlaySettings, ClearArea};
 
 const CANVAS: (f64, f64) = (1_600.0, 900.0);
 
 /// The panes on a 1600 by 900 canvas for a 2:1 screen and a 16:9 camera.
 fn panes(preset: RecordingScenePreset, variant: SceneVariant) -> (Rect, Rect) {
-  let PresetPanes { screen, camera } =
-    preset_panes(preset, CANVAS, (2.0, 16.0 / 9.0), variant).unwrap();
+  let PresetPanes { screen, camera } = preset_panes(
+    preset,
+    CANVAS,
+    (2.0, 16.0 / 9.0),
+    variant,
+    ClearArea::default(),
+  )
+  .unwrap();
   (screen.unwrap(), camera.unwrap())
 }
 
@@ -197,6 +203,7 @@ fn a_preset_lays_a_cropped_screen_out_at_the_crop_shape() {
     CANVAS,
     (1.0, 16.0 / 9.0),
     SceneVariant::default(),
+    ClearArea::default(),
   )
   .unwrap();
   assert_rect(
@@ -232,4 +239,66 @@ fn a_full_scene_fits_a_cropped_camera_inside_its_own_place() {
     },
     (1_310.0, 705.0, 180.0, 90.0),
   );
+}
+
+/// TikTok's clear area: its header, its caption and buttons, and its rail.
+const TIKTOK: ClearArea = ClearArea {
+  top: 0.07,
+  bottom: 0.25,
+  side: 0.05,
+};
+
+#[test]
+fn side_by_side_on_a_tall_canvas_shows_the_screen_whole_over_a_camera_filling_the_rest() {
+  let PresetPanes { screen, camera } = preset_panes(
+    RecordingScenePreset::SplitTwoThirds,
+    (1_080.0, 1_920.0),
+    (16.0 / 9.0, 16.0 / 9.0),
+    SceneVariant::default(),
+    ClearArea::default(),
+  )
+  .unwrap();
+  // A margin of an eighteenth of the width, half of it between the panes;
+  // the screen at its own shape across the width, the camera the rest.
+  assert_rect(screen.unwrap(), (60.0, 60.0, 960.0, 540.0));
+  assert_rect(camera.unwrap(), (60.0, 630.0, 960.0, 1_230.0));
+}
+
+#[test]
+fn a_large_camera_runs_under_the_bottom_bar_but_the_screen_stays_clear() {
+  let PresetPanes { screen, camera } = preset_panes(
+    RecordingScenePreset::Stacked,
+    (1_080.0, 1_920.0),
+    (1.6, 16.0 / 9.0),
+    SceneVariant {
+      camera_size: Some(SceneCameraSize::TwoThirds),
+      ..SceneVariant::default()
+    },
+    TIKTOK,
+  )
+  .unwrap();
+  let (screen, camera) = (screen.unwrap(), camera.unwrap());
+  assert!((screen.width / screen.height - 1.6).abs() < 1e-9);
+  assert!((screen.y - 0.07 * 1_920.0).abs() < 1e-9);
+  assert!(screen.y + screen.height <= 0.75 * 1_920.0);
+  assert!((camera.height - screen.height * 2.0).abs() < 1e-9);
+  assert!((camera.y + camera.height - 1_860.0).abs() < 1e-9);
+}
+
+#[test]
+fn a_tall_picture_in_picture_hangs_the_camera_below_the_screen_inside_the_clear_area() {
+  let PresetPanes { screen, camera } = preset_panes(
+    RecordingScenePreset::PictureInPicture,
+    (1_080.0, 1_920.0),
+    (1.6, 16.0 / 9.0),
+    SceneVariant::default(),
+    TIKTOK,
+  )
+  .unwrap();
+  let (screen, camera) = (screen.unwrap(), camera.unwrap());
+  assert!((screen.width / screen.height - 1.6).abs() < 1e-9);
+  assert!(camera.y > screen.y && camera.y < screen.y + screen.height);
+  assert!(camera.y + camera.height > screen.y + screen.height);
+  assert!(camera.x + camera.width <= screen.x + screen.width);
+  assert!(screen.y >= 0.07 * 1_920.0 && camera.y + camera.height <= 0.75 * 1_920.0);
 }

@@ -11,6 +11,7 @@ import {
   type RecordingStripLaneSource,
 } from "./recording-strip-lanes";
 
+import type { RecordingAnnotationClip } from "../../../../bindings/RecordingAnnotationClip";
 import type { RecordingSceneClip } from "../../../../bindings/RecordingSceneClip";
 
 const RECORDED = 10;
@@ -21,10 +22,12 @@ function lanesAt(
   atSeconds: number,
   clips: RecordingSceneClip[] = [],
   {
+    annotationClips = [],
     canPlaceCamera = true,
     gaps = [],
     map = recordedTime(RECORDED),
   }: {
+    annotationClips?: RecordingAnnotationClip[];
     canPlaceCamera?: boolean;
     gaps?: { endMs: number; startMs: number }[];
     map?: TimeMap;
@@ -35,11 +38,14 @@ function lanesAt(
   const seeks: number[] = [];
   const changed: RecordingSceneClip[][] = [];
   const chosen: string[] = [];
+  const annotationsChanged: RecordingAnnotationClip[][] = [];
   const source: RecordingStripLaneSource = {
     annotations: {
       clearSelection: () => undefined,
-      clips: [],
-      onClipsChange: () => undefined,
+      clips: annotationClips,
+      onClipsChange: (next) => {
+        annotationsChanged.push(next);
+      },
       onSelect: () => undefined,
       selectedIds: new Set(),
     },
@@ -76,6 +82,7 @@ function lanesAt(
     },
   };
   return {
+    annotationsChanged,
     changed,
     chosen,
     lanes: recordingStripLanes(source).lanes,
@@ -175,5 +182,27 @@ describe("a scene played across a jump", () => {
     const { changed, lanes } = across();
     lanes.onSceneRetime("across", 3, 5.5);
     expect(changed).toMatchObject([[{ endMs: 5500, startMs: 3000 }]]);
+  });
+});
+
+describe("an annotation moved whole on the strip", () => {
+  const arrow = {
+    annotation: { id: "arrow", shape: { kind: "arrow" } },
+    endMs: 3_000,
+    startMs: 1_000,
+  } as unknown as RecordingAnnotationClip;
+  const movedTo = (start: number, end: number) => {
+    const lanes = lanesAt(0, [], { annotationClips: [arrow] });
+    lanes.lanes.onAnnotationRetime("arrow", start, end);
+    const [clip] = lanes.annotationsChanged[0] ?? [];
+    return [clip.startMs, clip.endMs];
+  };
+
+  it("stops at the timeline's start at its own length", () => {
+    expect(movedTo(-1, 1)).toEqual([0, 2_000]);
+  });
+
+  it("stops at the timeline's end at its own length", () => {
+    expect(movedTo(9, 11)).toEqual([8_000, 10_000]);
   });
 });

@@ -51,6 +51,7 @@ export const COMPARE_LOADING: ToolPanelExportCompare = {
 };
 
 export const VIDEO: ToolPanelExport = {
+  allFormats: null,
   cameraKey: null,
   cameraOutput: "combined",
   canExport: true,

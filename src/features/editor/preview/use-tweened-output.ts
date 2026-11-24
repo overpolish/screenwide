@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { useReducedMotion } from "motion/react";
-import { useLayoutEffect, useRef, useState } from "react";
+import { useLayoutEffect, useMemo, useRef, useState } from "react";
 
 import { motionDurations } from "../../../lib/motion";
 import { canvasShortest } from "../layer-measure";
@@ -81,10 +81,17 @@ export const recordingBetween = (
  * default output) would otherwise set state from every render and never
  * settle. */
 export function useTweenedOutput<T>(
-  target: T,
+  given: T,
   { part, workspace }: { part: PicturePart; workspace: EditorKind },
   between: (from: NonNullable<T>, to: NonNullable<T>, share: number) => T,
 ) {
+  // The target by value: a render that builds the same settings afresh
+  // (the editor's state settling after a change, such as a format's canvas
+  // and camera set together) is no new change, and would otherwise end the
+  // tween it started on its first frame.
+  const key = JSON.stringify(given);
+  // eslint-disable-next-line @eslint-react/exhaustive-deps -- by value: `key` is `given`
+  const target = useMemo(() => given, [key]);
   // Boxed, so a tween's value is never mistaken for "no tween".
   const [tweened, setTweened] = useState<{ value: T } | null>(null);
   // What was last drawn, and the target the effect last moved towards.

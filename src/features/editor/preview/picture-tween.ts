@@ -13,8 +13,9 @@ import { EditorKind } from "../types";
 // ones in between, so an export draws the new ones.
 
 /** A part of a workspace's picture handed to the preview on its own: the
- * picture's settings, or a recording's scenes. */
-export type PicturePart = "picture" | "scenes";
+ * picture's settings, a recording's scenes, or the selection's outline and
+ * handles drawn over the picture, which move with it. */
+export type PicturePart = "chrome" | "picture" | "scenes";
 
 /** When each workspace last asked for its next change to be moved to, in
  * ms since the page loaded, and the parts that have taken the ask; a change
@@ -55,6 +56,7 @@ export const TWEENED_PATCH_KEYS = [
   "cropAspect",
   "frameRadius",
   "frameSize",
+  "framing",
   "recenterSelection",
   "resetCrop",
   "resetFrame",

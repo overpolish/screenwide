@@ -194,13 +194,17 @@ pub(crate) fn install(
               }
             };
           }
-          let output_width = if pane == 0 {
-            settings.recording_output.primary.width
+          // Points become canvas pixels at the picture's own scale: how wide
+          // it is placed on the canvas over how wide it is drawn, as the
+          // screenshot editor measures it. The canvas's width only matches
+          // while the picture spans it, and on a canvas wider than the
+          // picture it grew the halo by as much.
+          let image_width = if pane == 0 {
+            settings.recording_output.primary.image_width
           } else {
-            settings.recording_output.camera.width
+            settings.recording_output.camera.image_width
           };
-          let width = crate::editor::screenshot_preview::hover_width_points(progress)
-            * f64::from(output_width)
+          let width = crate::editor::screenshot_preview::hover_width_points(progress) * image_width
             / image_points;
           Some((pane, local, width as f32))
         });

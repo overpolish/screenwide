@@ -12,6 +12,7 @@ import type {
   Background,
   BackgroundPreset,
 } from "../../tools/frame/background/background";
+import type { ToolPanelFormats } from "../../tools/tool-panel-frame";
 import type { EditorIslandContent } from "../editor-island";
 
 // The finished picture: how big it is, how round its corners are and what
@@ -43,6 +44,9 @@ export type FrameIslandProps = {
   savedPresets: BackgroundPreset[];
   /** In output pixels. */
   width: number;
+  /** A recording's formats: only the main canvas offers a size to set;
+   * left out for a screenshot. */
+  formats?: ToolPanelFormats;
   /** Rounds the corners, by a percent of the picture's shorter side. */
   onRadiusChange?: (radius: number) => void;
   /** Percent of the picture's shorter side. A screenshot's corners can be

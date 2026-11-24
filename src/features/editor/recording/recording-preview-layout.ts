@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { invoke } from "@tauri-apps/api/core";
+import { Dispatch, SetStateAction } from "react";
 
 import { pageWindowSize } from "../preview/page-window-size";
 import { normalizedCameraOverlay } from "../preview/preview-settings-normalization";
@@ -114,13 +115,17 @@ export function createRecordingLayoutQueue({
 }: {
   measure: { readonly current: () => void };
   nextRequestId: () => number;
-  onError: (message: string) => void;
+  /** The trouble shown under the picture: a failed layout's, cleared once
+   * a later one lands while it is still the one shown, so the picture that
+   * is fine again does not keep it and trouble reported since stays. */
+  onError: Dispatch<SetStateAction<string | null>>;
 }) {
   const remeasure = () => {
     measure.current();
   };
   window.addEventListener("resize", remeasure);
   let disposed = false;
+  let failed: string | null = null;
   let inFlight = false;
   let last = "";
   let pending: {
@@ -145,8 +150,16 @@ export function createRecordingLayoutQueue({
     pending = null;
     inFlight = true;
     void layoutRecordingPreviewSurface({ ...layout, keepView, windowSize })
+      .then(() => {
+        if (disposed || failed === null) return;
+        const cleared = failed;
+        onError((shown) => (shown === cleared ? null : shown));
+        failed = null;
+      })
       .catch((cause: unknown) => {
-        if (!disposed) onError(String(cause));
+        if (disposed) return;
+        failed = String(cause);
+        onError(failed);
       })
       .finally(() => {
         inFlight = false;

@@ -30,6 +30,13 @@ import type { AnnotationPinAction } from "../island/annotation/annotation-pin";
 import type { AudioClipChange } from "../island/audio-clip/audio-clip-island";
 import type { CropAspect } from "../island/crop-aspect-choice";
 import type { SoundAddition } from "../island/library/library-panel";
+import type { FrameFormatPatch } from "../recording/formats/use-recording-formats";
+
+/** What the Screen and Scene islands ask of how a platform is framed. */
+export type FramingPatch = Extract<
+  FrameFormatPatch,
+  { kind: "follow" | "main-placement" | "share" }
+>;
 
 /** The settings a panel may ask the editor to change. */
 export type ToolPanelPatch = Partial<
@@ -143,6 +150,10 @@ export type ToolPanelPatch = Partial<
   frameRadius?: number;
   /** Size the output canvas, leaving what is in it where it sits. */
   frameSize?: { height?: number; width?: number };
+  /** Share the shape in hand's framing with another platform, take one
+   * out of it, take up another's, or lay its screen out from the main
+   * canvas again (`format-sharing.ts`). */
+  framing?: FramingPatch;
   /** Give the gap chosen on the strip this background, or the recording's
    * again for null. */
   gapBackground?: Background | null;

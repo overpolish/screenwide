@@ -21,6 +21,8 @@ pub struct ChromeRenderer {
   constants: wgpu::Buffer,
   vertex_buffer: wgpu::Buffer,
   vertex_capacity: usize,
+  /// Made the first time an overlay is drawn.
+  overlay: Option<super::platform_overlay::OverlayPainter>,
 }
 
 impl ChromeRenderer {
@@ -102,6 +104,7 @@ impl ChromeRenderer {
       constants,
       vertex_buffer: vertex_buffer(shared, vertex_capacity),
       vertex_capacity,
+      overlay: None,
     }
   }
 
@@ -110,16 +113,24 @@ impl ChromeRenderer {
     self.surface.resize(&self.shared, (2, 2));
   }
 
-  pub fn present(
-    &mut self,
-    size: (u32, u32),
-    vertices: &[Vertex],
-    constants: &RenderConstants,
-  ) -> Result<(), String> {
+  pub fn present(&mut self, chrome: super::ChromeFrame<'_>) -> Result<(), String> {
+    let super::ChromeFrame {
+      size,
+      vertices,
+      constants,
+      overlays,
+    } = chrome;
     let gpu = Arc::clone(&self.shared);
     self.surface.fit(&gpu, size, Headroom::WINDOW);
     let Frame::Ready(frame) = self.surface.acquire(&gpu)? else {
       return Ok(());
+    };
+    let overlay_ready = !overlays.is_empty() && {
+      self
+        .overlay
+        .get_or_insert_with(|| super::platform_overlay::OverlayPainter::new(&gpu))
+        .prepare(&gpu, overlays, size);
+      true
     };
     if !vertices.is_empty() {
       if vertices.len() > self.vertex_capacity {
@@ -153,6 +164,17 @@ impl ChromeRenderer {
         })],
         ..Default::default()
       });
+      if let Some(painter) = self.overlay.as_ref().filter(|_| overlay_ready) {
+        pass.set_viewport(
+          0.0,
+          0.0,
+          size.0.max(1) as f32,
+          size.1.max(1) as f32,
+          0.0,
+          1.0,
+        );
+        painter.draw(&mut pass);
+      }
       if !vertices.is_empty() {
         pass.set_viewport(
           0.0,

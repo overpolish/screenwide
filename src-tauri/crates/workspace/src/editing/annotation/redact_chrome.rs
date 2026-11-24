@@ -8,7 +8,7 @@
 //! it: `image_chrome`.
 
 use super::*;
-use screenwide_annotations::gesture::{BOX_HANDLES, MODE_SELECT};
+use screenwide_annotations::gesture::BOX_HANDLES;
 use screenwide_annotations::magnify::lens::LensView;
 use screenwide_annotations::outline::geometry::{prepare_shape, shape_distance};
 use screenwide_annotations::redact::geometry::{prepare_redact, redact_distance};
@@ -146,34 +146,6 @@ pub(super) fn shape_stroke_distance(
     [point.0 as f32, point.1 as f32],
     &shape_geometry(image, item),
   )
-}
-
-/// How far `point` is from a shape's stroke or the box it outlines, in
-/// display points: what picks a shape from anywhere inside it.
-pub(super) fn shape_body_distance(
-  image: PreviewSurfaceRect,
-  item: &NativeAnnotationHandles,
-  point: (f64, f64),
-) -> f32 {
-  screenwide_annotations::outline::geometry::shape_body_distance(
-    [point.0 as f32, point.1 as f32],
-    &shape_geometry(image, item),
-  )
-}
-
-/// Whether the annotation at `index` is picked by its inside as well as its
-/// line: a shape once it is chosen, or while the select tool is in hand. It
-/// can be carried from anywhere in it, while any other tool still draws
-/// inside one not in hand. A stroke is picked by its line alone, however
-/// large the box round it: its box is only chrome. The twin of the rule in
-/// `annotation_shaft_at_point`.
-pub(super) fn grabs_inside(
-  state: &SurfaceState,
-  index: usize,
-  item: &NativeAnnotationHandles,
-) -> bool {
-  item.shape_kind() == AnnotationKind::Shape
-    && (state.annotation.mode == MODE_SELECT || state.annotation.selected == index as i32)
 }
 
 /// The resize cursor a box's grip shows: its sides say which way.

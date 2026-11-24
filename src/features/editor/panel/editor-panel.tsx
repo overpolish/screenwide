@@ -13,6 +13,7 @@ import {
   defaultCameraOverlay,
 } from "../export/recording-export-settings";
 import { useEditorExportIsland } from "../export/use-editor-export-island";
+import { FrameFormatsContext } from "../recording/formats/frame-formats-context";
 import { EditorTitleModeBar } from "../title-bar/editor-mode-bar";
 import { EditorTitleBar } from "../title-bar/editor-title-bar";
 import { useEditorToolPanels } from "../tools/use-editor-tool-panels";
@@ -102,6 +103,7 @@ export function EditorPanel(props: EditorPanelProps) {
     cursorEffects,
     enabledVideoTracks,
     exportIsland: exportIsland.island,
+    frameFormats: props.frameFormats,
     isLocked: isExportOpen,
     keyboardEffects,
     onCameraOverlayChange,
@@ -129,93 +131,95 @@ export function EditorPanel(props: EditorPanelProps) {
     setHasTranscript(hasTranscript);
   }, [hasTranscript, setHasTranscript]);
   return (
-    <WindowShell
-      className="relative"
-      header={
-        <EditorTitleBar
-          artifact={artifact}
-          canExport={canOpenExport}
-          exportProgress={exportIsland.saveProgress}
-          isExportOpen={exportIsland.isOpen}
-          isSaving={isSaving}
-          modes={
-            <ChromeSetBack isSetBack={isExportOpen}>
-              <EditorTitleModeBar isDisabled={isExportOpen} />
-            </ChromeSetBack>
-          }
-          onClose={onCancel}
-          onCopy={onCopy}
-          onDelete={onDeleteProject}
-          onExport={exportIsland.toggle}
-          onKeepScreenshot={onKeepScreenshot}
-          onMinimize={onMinimize}
-          onRename={onRenameProject}
-          onToggleMaximize={onToggleMaximize}
-        />
-      }
-    >
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0 -z-10"
-        data-preview-backdrop
-        data-preview-window-backdrop
-      />
-      {/* The island window covers this (`island-window-place.ts`). */}
-      <div className="flex min-h-0 grow flex-col" data-editor-content>
-        {artifact?.kind === "recording" ? (
-          <RecordingSection
+    <FrameFormatsContext value={props.frameFormats ?? null}>
+      <WindowShell
+        className="relative"
+        header={
+          <EditorTitleBar
             artifact={artifact}
-            audioTrackVolumes={audioTrackVolumes}
-            bakeCamera={bakeCamera}
-            cameraOverlay={cameraOverlay}
-            cameraResolutionScalePercent={cameraResolutionScalePercent}
-            cursorEffects={cursorEffects}
-            enabledStreamIndices={enabledStreamIndices}
-            enabledVideoTracks={enabledVideoTracks}
-            hasCursorData={artifact.hasCursorData}
-            hasKeyboardData={artifact.hasKeyboardData}
-            isExportOpen={isExportOpen}
-            isPreparingRecordingAudio={isPreparingRecordingAudio}
-            isPreparingRecordingPreview={isPreparingRecordingPreview}
-            key={artifact.id}
-            keyboardEffects={keyboardEffects}
-            onCameraOverlayChange={onCameraOverlayChange}
-            onEnabledTracksChange={onEnabledTracksChange}
-            onEnabledVideoTracksChange={onEnabledVideoTracksChange}
-            onRecordingOutputChange={onRecordingOutputChange}
-            onRecordingTimelineEditChange={onRecordingTimelineEditChange}
-            onSelectedTrackChange={onSelectedTrackChange}
-            recordingOutput={recordingOutput}
-            recordingPreviewError={recordingPreviewError}
-            recordingPreviewLayout={recordingPreviewLayout}
-            recordingPreviewTracks={recordingPreviewTracks}
-            recordingTimelineEdit={recordingTimelineEdit}
-            resolutionScalePercent={resolutionScalePercent}
-            selectedTrack={selectedTrack}
+            canExport={canOpenExport}
+            exportProgress={exportIsland.saveProgress}
+            isExportOpen={exportIsland.isOpen}
+            isSaving={isSaving}
+            modes={
+              <ChromeSetBack isSetBack={isExportOpen}>
+                <EditorTitleModeBar isDisabled={isExportOpen} />
+              </ChromeSetBack>
+            }
+            onClose={onCancel}
+            onCopy={onCopy}
+            onDelete={onDeleteProject}
+            onExport={exportIsland.toggle}
+            onKeepScreenshot={onKeepScreenshot}
+            onMinimize={onMinimize}
+            onRename={onRenameProject}
+            onToggleMaximize={onToggleMaximize}
           />
-        ) : artifact ? (
-          <section className="flex min-h-0 grow flex-col">
-            <ScreenshotSection
+        }
+      >
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 -z-10"
+          data-preview-backdrop
+          data-preview-window-backdrop
+        />
+        {/* The island window covers this (`island-window-place.ts`). */}
+        <div className="flex min-h-0 grow flex-col" data-editor-content>
+          {artifact?.kind === "recording" ? (
+            <RecordingSection
               artifact={artifact}
+              audioTrackVolumes={audioTrackVolumes}
+              bakeCamera={bakeCamera}
+              cameraOverlay={cameraOverlay}
+              cameraResolutionScalePercent={cameraResolutionScalePercent}
+              cursorEffects={cursorEffects}
+              enabledStreamIndices={enabledStreamIndices}
+              enabledVideoTracks={enabledVideoTracks}
+              hasCursorData={artifact.hasCursorData}
+              hasKeyboardData={artifact.hasKeyboardData}
               isExportOpen={isExportOpen}
-              onCanvasResize={onCanvasResize}
-              onOutputChange={onScreenshotOutputChange}
-              onSelectedItemChange={onSelectedScreenshotItemChange}
-              screenshotOutput={screenshotOutput}
-              selectedItemId={selectedScreenshotItemId}
+              isPreparingRecordingAudio={isPreparingRecordingAudio}
+              isPreparingRecordingPreview={isPreparingRecordingPreview}
+              key={artifact.id}
+              keyboardEffects={keyboardEffects}
+              onCameraOverlayChange={onCameraOverlayChange}
+              onEnabledTracksChange={onEnabledTracksChange}
+              onEnabledVideoTracksChange={onEnabledVideoTracksChange}
+              onRecordingOutputChange={onRecordingOutputChange}
+              onRecordingTimelineEditChange={onRecordingTimelineEditChange}
+              onSelectedTrackChange={onSelectedTrackChange}
+              recordingOutput={recordingOutput}
+              recordingPreviewError={recordingPreviewError}
+              recordingPreviewLayout={recordingPreviewLayout}
+              recordingPreviewTracks={recordingPreviewTracks}
+              recordingTimelineEdit={recordingTimelineEdit}
+              resolutionScalePercent={resolutionScalePercent}
+              selectedTrack={selectedTrack}
             />
-          </section>
-        ) : (
-          // The window is only shown once Rust holds a capture for it, so
-          // no capture here means its snapshot has not arrived yet.
-          <div className="flex min-h-0 grow items-center justify-center">
-            <CircularProgress
-              aria-label={t("editor-opening")}
-              isIndeterminate
-            />
-          </div>
-        )}
-      </div>
-    </WindowShell>
+          ) : artifact ? (
+            <section className="flex min-h-0 grow flex-col">
+              <ScreenshotSection
+                artifact={artifact}
+                isExportOpen={isExportOpen}
+                onCanvasResize={onCanvasResize}
+                onOutputChange={onScreenshotOutputChange}
+                onSelectedItemChange={onSelectedScreenshotItemChange}
+                screenshotOutput={screenshotOutput}
+                selectedItemId={selectedScreenshotItemId}
+              />
+            </section>
+          ) : (
+            // The window is only shown once Rust holds a capture for it, so
+            // no capture here means its snapshot has not arrived yet.
+            <div className="flex min-h-0 grow items-center justify-center">
+              <CircularProgress
+                aria-label={t("editor-opening")}
+                isIndeterminate
+              />
+            </div>
+          )}
+        </div>
+      </WindowShell>
+    </FrameFormatsContext>
   );
 }

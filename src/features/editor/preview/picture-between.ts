@@ -23,6 +23,14 @@ export const between = (from: number, to: number, share: number) =>
 
 const UPRIGHT: SceneRotation = { x: 0, y: 0, z: 0 };
 
+/** An angle in degrees part of the way from `from` to `to`, the shorter way
+ * round: a turn set past a whole one (330 for -30) would otherwise spin
+ * nearly all the way round, flipping the picture on the way. */
+const angleBetween = (from: number, to: number, share: number) => {
+  const turn = ((((to - from) % 360) + 540) % 360) - 180;
+  return from + turn * share;
+};
+
 /** A turn between `from` and `to`, upright standing in for a side that has
  * none, so a turn grows out of upright and settles back into it. */
 export const rotationBetween = (
@@ -33,9 +41,9 @@ export const rotationBetween = (
   if (!from && !to) return to;
   const [start, end] = [from ?? UPRIGHT, to ?? UPRIGHT];
   return {
-    x: between(start.x, end.x, share),
-    y: between(start.y, end.y, share),
-    z: between(start.z, end.z, share),
+    x: angleBetween(start.x, end.x, share),
+    y: angleBetween(start.y, end.y, share),
+    z: angleBetween(start.z, end.z, share),
   };
 };
 

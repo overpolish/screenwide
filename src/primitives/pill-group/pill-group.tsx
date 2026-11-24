@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import { ReactNode, useId } from "react";
+import { ReactNode, useEffect, useId, useRef } from "react";
 import {
   Selection,
   ToggleButton,
@@ -46,17 +46,17 @@ const selectedId = (selection: Selection) => {
 // A segmented control: a track on the fill, a control's height so it lines
 // up with buttons and fields, with the chosen segment filled in the primary
 // colour on a knob that slides between segments, so what is chosen can be
-// read at a glance across a panel of them. The track insets its segments by
-// 2px, a value only a segmented track needs, so a segment's corner is the
-// track's less that inset and the two run parallel.
+// read at a glance across a panel of them. Segments sit flush on the track,
+// sharing its corners, so the chosen one reads as a raised button laid on
+// it rather than one nested inside.
 const trackClassName =
-  "flex h-control-height items-stretch gap-0.5 rounded-control bg-fill p-0.5";
+  "flex h-control-height items-stretch rounded-control bg-fill";
 
 // Unselected segments are a step back and come up under the pointer; the
 // chosen one takes the on-primary colour over its knob. The text colour
-// follows the knob's arrival.
+// follows the knob's travel (`travelsWithKnob`).
 const segmentClassName = [
-  "group relative flex cursor-default items-center justify-center rounded-[calc(var(--radius-control)-0.125rem)] text-label text-fg-secondary outline-none transition-colors select-none",
+  "group relative flex cursor-default items-center justify-center rounded-control text-label text-fg-secondary outline-none transition-colors select-none",
   "data-[hovered]:not-data-[selected]:text-fg data-[selected]:text-on-primary",
   "data-[disabled]:opacity-40",
   "[&_svg]:size-icon [&_svg]:shrink-0 [&_svg]:transform-gpu",
@@ -125,6 +125,23 @@ export function PillGroup({
     duration: prefersReducedMotion ? 0 : motionDurations.travel,
     ease: motionEasings.out,
   };
+  // The segments a choice just moved between change their text's colour
+  // over the knob's travel, so the words darken as the knob arrives under
+  // them and lighten as it leaves; at the shorter state timing they turned
+  // before the knob got there. Ease-in-out, not the knob's ease-out: the
+  // knob's layout animation starts a frame after the colour does, and
+  // measured, its position follows this curve. Hover keeps the state
+  // timing. A transition already running keeps its timing when the next
+  // render puts the state timing back.
+  const chosenRef = useRef(selection.selected);
+  const chosenBefore = chosenRef.current;
+  useEffect(() => {
+    chosenRef.current = selection.selected;
+  });
+  const travelsWithKnob = (id: string) =>
+    !isMultiple &&
+    !prefersReducedMotion &&
+    (id === chosenBefore) !== (id === selection.selected);
   // One knob slides from segment to segment; with several on, each keeps
   // its own where it is, growing in as its segment turns on and shrinking
   // away as it turns off, or only fading where motion is reduced.
@@ -222,7 +239,14 @@ export function PillGroup({
                   ["keyboard", "virtual"].includes(event.pointerType),
                 );
               }}
-              style={{ transitionDuration }}
+              style={
+                travelsWithKnob(item.id)
+                  ? {
+                      transitionDuration: motionDurationCss("travel"),
+                      transitionTimingFunction: "ease-in-out",
+                    }
+                  : { transitionDuration }
+              }
             >
               {({ isHovered, isSelected }) =>
                 isIsland ? (

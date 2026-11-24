@@ -28,6 +28,7 @@ import { type StripSelection } from "../strip/strip-selection";
 import { type TimelineStripProps } from "../strip/timeline-strip-props";
 
 import { audioClipWriter } from "./audio-clip-writer";
+import { withAudioGhosts } from "./recording-strip-ghosts";
 import { type RecordingStripSteps } from "./use-recording-strip-edits";
 import { useSoundAdding } from "./use-sound-adding";
 
@@ -42,6 +43,7 @@ import type { ToolPanelStripItem } from "../../tools/tool-panel-strip";
 
 export function useRecordingStripAudio({
   edit,
+  ghosts = [],
   playhead,
   select,
   selection,
@@ -55,10 +57,13 @@ export function useRecordingStripAudio({
   steps: RecordingStripSteps;
   /** How long the edited video plays, in ms. */
   timelineMs: number;
+  /** The songs and sound effects the format in hand leaves out, drawn
+   * faintly where they play in the others. */
+  ghosts?: readonly RecordingAudioClip[];
 }) {
   const clips = edit.audioClips ?? [];
   const library = useSoundLibrary();
-  const sounds = useClipSounds(clips.map((clip) => clip.sound));
+  const sounds = useClipSounds([...clips, ...ghosts].map((clip) => clip.sound));
   const latestRef = useRef({ edit, steps });
   latestRef.current = { edit, steps };
   const writer = audioClipWriter(latestRef);
@@ -153,7 +158,12 @@ export function useRecordingStripAudio({
         ghosts: carried.ghosts.map((ghost) => laneClip(ghost, ghost.title)),
         kind: carried.kind,
       },
-      clips: audioClips,
+      clips: withAudioGhosts(
+        audioClips,
+        ghosts.map((clip) =>
+          laneClip(clip, sounds.get(clip.sound)?.title ?? ""),
+        ),
+      ),
       onRestack: (laneOf) => {
         const lanes = new Map<string, number>();
         for (const { id } of audioClips)
@@ -170,8 +180,7 @@ export function useRecordingStripAudio({
       onRetime: (id, { end, start }, part) => {
         // A drag tells every move, and they are one step of history
         // together. Pulled, a clip left past a shorter timeline is kept to
-        // it; a sound effect moved whole keeps its length, its tail past the
-        // end unheard.
+        // it; moved whole, a clip stays inside the timeline at its length.
         writer.update(
           baseOf(id),
           (clip, others) => {

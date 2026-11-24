@@ -44,6 +44,12 @@ pub struct SurfaceState {
   pub scale: f64,
   pub selection: Option<PreviewSelection>,
   pub selection_snapping_enabled: bool,
+  /// The short-video app's interface and the phone laid over the first
+  /// pane's canvas, never exported, with the canvas size it was chosen for:
+  /// drawn only while the canvas on screen has that shape, so a switch of
+  /// format never shows it over the canvas being left.
+  pub platform_overlay: screenwide_platform_overlays::OverlayRequest,
+  pub platform_overlay_canvas: (u32, u32),
   pub(super) selection_snap_guide_x: Option<snapping::SnapGuide>,
   pub(super) selection_snap_guide_y: Option<snapping::SnapGuide>,
   /// Whether a press picks layers the way the select tool does. Off while a
@@ -89,6 +95,8 @@ impl Default for SurfaceState {
       scale: 1.0,
       selection: None,
       selection_snapping_enabled: false,
+      platform_overlay: Default::default(),
+      platform_overlay_canvas: (0, 0),
       selection_snap_guide_x: None,
       selection_snap_guide_y: None,
       selection_hit_testing: false,
@@ -139,6 +147,12 @@ pub struct FrameResizeStart {
   pub natural_size: Option<(u32, u32)>,
   pub pane_rects: Vec<(usize, PreviewSurfaceRect)>,
   pub transform: WorkspaceTransform,
+  /// For a Frame resize, the narrowest and shortest the dragged canvas can
+  /// be drawn while what it holds stays within reach of it, in display
+  /// points, for each way its corner can move: with the far edge, about the
+  /// middle, with the near edge (`screenwide_output::narrowest_in_reach`).
+  /// The canvas is never stored smaller, so it is never drawn smaller.
+  pub reach: Option<[(f64, f64); 3]>,
 }
 
 /// What an Alt-drag auto-fit derives every sample from. The layer targets are
@@ -210,6 +224,12 @@ pub struct SurfaceInner {
   /// How the selection chrome is changing from one thing to another. Locked
   /// only with `state` held, after it.
   pub(crate) chrome_fade: Mutex<chrome_fade::ChromeFade>,
+  /// The platform overlay drawn to pixels on a thread. Locked after `state`
+  /// where both are held.
+  pub(crate) overlay_raster: Mutex<super::overlay_raster::OverlayRaster>,
+  /// How the platform overlay is fading in, out or across. Locked after
+  /// `state` and `chrome_fade` where they are held.
+  pub(crate) overlay_fade: Mutex<super::overlay_fade::OverlayFade>,
   /// The surface itself, for a change-over to redraw it from a thread.
   pub(crate) this: std::sync::Weak<SurfaceInner>,
 }
@@ -223,6 +243,8 @@ impl SurfaceInner {
       callbacks: Mutex::default(),
       state: Mutex::new(state),
       host,
+      overlay_raster: Mutex::default(),
+      overlay_fade: Mutex::default(),
       chrome_fade: Mutex::default(),
       this: this.clone(),
     })

@@ -16,7 +16,6 @@ use objc2_quartz_core::CATransaction;
 
 use screenwide_compositor::{PreviewSurfaceCorners, PreviewSurfaceRect};
 use screenwide_osc::gpu::magnifier::NativeMagnifier;
-use screenwide_osc::gpu::vertices::{RenderConstants, Vertex};
 use screenwide_workspace::backdrop::BackdropStyle;
 use screenwide_workspace::editing::{ChromeRenderer, CursorKind, Host, Modifiers, SurfaceInner};
 use screenwide_workspace::scene::{NativeWorkspacePlacement, WorkspaceScene};
@@ -198,13 +197,13 @@ impl Host for MacHost {
     place(&self.gpu.layers.backdrop, None);
   }
 
-  fn present_chrome(&self, size: (u32, u32), vertices: &[Vertex], constants: &RenderConstants) {
+  fn present_chrome(&self, chrome: screenwide_workspace::editing::ChromeFrame<'_>) {
     if self.live_resize.defers(&self.views) {
       return;
     }
     if let Ok(mut selection) = self.gpu.selection.lock() {
       super::layers::present_with_main_transaction(&self.gpu.layers.chrome);
-      let _ = selection.present(size, vertices, constants);
+      let _ = selection.present(chrome);
     }
   }
 

@@ -24,6 +24,7 @@ import { RecordingSceneClip, SceneBox } from "./recording-scenes";
 type Look = { camera: SceneCamera | null; output: ScreenshotOutputSettings };
 
 const canvasOf = (output: ScreenshotOutputSettings) => ({
+  ...(output.clearArea ? { clear: output.clearArea } : {}),
   height: Math.max(1, output.height),
   width: Math.max(1, output.width),
 });

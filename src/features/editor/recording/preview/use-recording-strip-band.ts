@@ -4,6 +4,7 @@
 import { RefObject, useEffect } from "react";
 
 import { composedVideoTracks } from "../../export/camera-output";
+import { withAnnotationGhosts } from "../../timeline/recording-strip/recording-strip-ghosts";
 import { withAnnotationGlides } from "../../timeline/recording-strip/recording-strip-glides";
 import { recordingStripLanes } from "../../timeline/recording-strip/recording-strip-lanes";
 import { withAnnotationPins } from "../../timeline/recording-strip/recording-strip-pins";
@@ -22,6 +23,7 @@ import { baseOf } from "../../timeline/strip/strip-part";
 import { type StripSelection } from "../../timeline/strip/strip-selection";
 import { type TimelineStripProps } from "../../timeline/strip/timeline-strip-props";
 import { type EditorMode } from "../../toolbar/editor-modes";
+import { useFrameFormats } from "../formats/frame-formats-context";
 
 import {
   CAPTIONS_LAYER_ID,
@@ -112,6 +114,9 @@ export function useRecordingStripBand(
     seek: timelineBlade.seek,
     thumbnails: transport.timelineThumbnails.primary,
   });
+  // What the format in hand leaves out, drawn faintly where it plays in the
+  // other formats.
+  const ghosts = useFrameFormats()?.snapshot.differs?.hidden;
   const lanes = recordingStripLanes({
     annotations,
     changeCanvasTool,
@@ -124,7 +129,7 @@ export function useRecordingStripBand(
       openMode("scene");
     },
     playhead,
-    scenes,
+    scenes: ghosts ? { ...scenes, ghosts: ghosts.scenes } : scenes,
     seek: strip.seekTo,
     steps: strip.steps,
   });
@@ -140,6 +145,7 @@ export function useRecordingStripBand(
   const stripSelection: StripSelection | null = laneChoice ?? strip.selection;
   const audio = useRecordingStripAudio({
     edit,
+    ...(ghosts ? { ghosts: ghosts.audio } : {}),
     playhead,
     select: strip.select,
     selection: strip.selection,
@@ -158,18 +164,21 @@ export function useRecordingStripBand(
     ...audio.strip,
     ...strip.strip({
       ...lanes.lanes,
-      annotations: withAnnotationGlides(
-        withAnnotationPins(
-          lanes.lanes.annotations,
-          { clips: annotations.clips, statuses: annotations.pinStatus },
-          strip.time.map.toPlayed,
+      annotations: withAnnotationGhosts(
+        withAnnotationGlides(
+          withAnnotationPins(
+            lanes.lanes.annotations,
+            { clips: annotations.clips, statuses: annotations.pinStatus },
+            strip.time.map.toPlayed,
+          ),
+          {
+            clips: annotations.clips,
+            pictures: props.previewSourceDimensions,
+            scenes: scenes.clips,
+            videoMs: timelineBlade.timelineDurationMs,
+          },
         ),
-        {
-          clips: annotations.clips,
-          pictures: props.previewSourceDimensions,
-          scenes: scenes.clips,
-          videoMs: timelineBlade.timelineDurationMs,
-        },
+        ghosts?.annotations ?? [],
       ),
     }),
     onSelect: (next) => {

@@ -24,6 +24,8 @@ import {
   RecordingVideoTrackId,
 } from "./types";
 
+import type { FrameFormats } from "../../bindings/FrameFormats";
+
 const HISTORY_LIMIT = 100;
 const GROUP_DELAY_MS = 300;
 
@@ -70,6 +72,7 @@ export type EditorEditState = {
   compression: number;
   cursorEffects: CursorEffectSettings;
   keyboardEffects: KeyboardEffectSettings;
+  recordingFormats: FrameFormats | null;
   recordingOutput: RecordingOutputSettings;
   recordingTimelineEdit: RecordingTimelineEdit | null;
   resolutionScalePercent: number;

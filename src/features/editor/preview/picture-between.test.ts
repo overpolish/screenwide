@@ -72,6 +72,21 @@ describe("outputBetween", () => {
     expect(outputBetween(plain, plain, 0.5).rotation).toBeUndefined();
   });
 
+  it("turns the shorter way round", () => {
+    const turned = { ...plain, rotation: { x: 330, y: 30, z: -350 } };
+    const upright = { ...plain, rotation: { x: 0, y: 0, z: 0 } };
+    expect(outputBetween(upright, turned, 0.5).rotation).toEqual({
+      x: -15,
+      y: 15,
+      z: 5,
+    });
+    expect(outputBetween(turned, upright, 0.5).rotation).toEqual({
+      x: 345,
+      y: 15,
+      z: -355,
+    });
+  });
+
   it("keeps the canvas in whole pixels", () => {
     const larger = { ...plain, height: 601, width: 801 };
     const between = outputBetween(plain, larger, 0.3);

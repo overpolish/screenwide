@@ -9,7 +9,7 @@ use screenwide_scenes::framing::{drawn_frame, SceneFraming};
 use screenwide_scenes::geometry::{preset_panes, PresetPanes, Rect};
 use screenwide_scenes::model::{RecordingSceneClip, RecordingScenePreset};
 use screenwide_scenes::placement::Placement;
-use screenwide_scenes::{CameraOverlaySettings, Measure};
+use screenwide_scenes::{CameraOverlaySettings, ClearArea, Measure};
 
 /// What a frame is arranged from: the composition outside every scene, the
 /// canvas, the camera picture's aspect where a camera is drawn into it, and
@@ -19,6 +19,9 @@ pub(super) struct Base {
   /// where the recording's camera does.
   pub(super) placement: Placement,
   pub(super) canvas: (f64, f64),
+  /// What the platform the canvas is made for covers, which the presets lay
+  /// the panes out clear of.
+  clear: ClearArea,
   pub(super) camera_aspect: Option<f64>,
   pub(super) face: Option<(f64, f64)>,
   /// Whether the recording's camera follows the face, which a scene that
@@ -84,6 +87,7 @@ impl Base {
         inset: 0.0,
       },
       canvas: (f64::from(output.width), f64::from(output.height)),
+      clear: output.clear_area.unwrap_or_default(),
       camera_aspect: camera.map(|(_, aspect)| aspect),
       face,
       follows,
@@ -115,6 +119,7 @@ impl Base {
         shapes.camera.or(self.camera_aspect).unwrap_or(16.0 / 9.0),
       ),
       clip.variant.unwrap_or_default(),
+      self.clear,
     )
   }
 
@@ -177,19 +182,26 @@ impl Base {
       base.image.2 * scale,
     );
     let follows = self.follows(clip);
-    let followed = |framing: SceneFraming| match self.face.filter(|_| follows) {
-      Some(face) => framing.following(face),
-      None => framing,
+    // A face followed in a box reaching under the platform's interface is
+    // held in the middle of the part of the box left clear.
+    let followed = |framing: SceneFraming, aspect: f64| {
+      match self.face.filter(|_| follows) {
+        Some(face) => {
+          framing
+            .following(face)
+            .about(frame, aspect, self.clear.middle_of(frame, self.canvas))
+        }
+        None => framing,
+      }
+      .place(frame, aspect)
     };
     let camera = match (self.camera_aspect, clip.camera) {
-      (Some(aspect), Some(framing)) => followed(framing).place(frame, aspect),
-      (Some(aspect), None) if clip.needs_camera() => {
-        followed(SceneFraming::WHOLE).place(frame, aspect)
-      }
+      (Some(aspect), Some(framing)) => followed(framing, aspect),
+      (Some(aspect), None) if clip.needs_camera() => followed(SceneFraming::WHOLE, aspect),
       // A full scene keeps the recording's own crop, followed or still as
       // the scene says.
       (Some(aspect), None) => match (follows, self.follows) {
-        (true, false) => followed(SceneFraming::centred(self.own_zoom)).place(frame, aspect),
+        (true, false) => followed(SceneFraming::centred(self.own_zoom), aspect),
         (false, true) => self.own_camera,
         _ => base.camera,
       },

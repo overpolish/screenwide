@@ -22,6 +22,9 @@ export type PopupPanelItem = {
    */
   icon?: PopupPanelIcon;
   iconPath?: string | null;
+  /** A toggle that, with the others in its section that say so, keeps at
+   * least one of them on: the last one on cannot be turned off. */
+  keepsOneOn?: boolean;
   /** Heads the run of consecutive items that name the same section. Items
    * without one sit in an unheaded group. */
   section?: string;
@@ -30,7 +33,8 @@ export type PopupPanelItem = {
    * Settings stores (`Shift+]`), so each platform names its own modifiers. */
   shortcut?: string;
   /** A toggle in a single-selection list: a press flips its tick and leaves
-   * the panel open, so several can be set in one visit. */
+   * the panel open, so several can be set in one visit, or a drag from one
+   * sets every toggle it passes as the first was set. */
   togglesInPlace?: boolean;
 };
 

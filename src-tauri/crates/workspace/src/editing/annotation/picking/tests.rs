@@ -263,6 +263,28 @@ fn a_stroke_is_picked_on_its_line_and_never_by_its_box() {
 }
 
 #[test]
+fn a_shape_is_picked_on_its_line_and_never_by_its_inside() {
+  // A box outlined from (20, 10) to (180, 90), 8 display points wide, chosen
+  // with the select tool in hand: the press inside it is the picture's.
+  let mut state = layered(1, Some(1));
+  state.annotation.handles = vec![NativeAnnotationHandles {
+    kind: AnnotationKind::Shape.raw(),
+    layer_id: 1,
+    start_x: 0.1,
+    start_y: 0.1,
+    end_x: 0.9,
+    end_y: 0.9,
+    ..arrow()
+  }];
+  state.annotation.mode = MODE_SELECT;
+  state.annotation.selected = 0;
+  let on_line = crate::editing::turn::selected_layer_point(&state, (20.0, 50.0));
+  let inside = crate::editing::turn::selected_layer_point(&state, (100.0, 50.0));
+  assert_eq!(shaft_at_point(&state, on_line), Some(0));
+  assert_eq!(shaft_at_point(&state, inside), None);
+}
+
+#[test]
 fn a_line_under_text_with_no_box_is_picked_where_it_runs() {
   // The arrow along y = 50 under a text whose type runs from (30, 36) to
   // (190, 66): a press on the line takes the line, and a press on the type

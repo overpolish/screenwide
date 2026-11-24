@@ -17,9 +17,10 @@ import { CameraOverlaySettings } from "../../types";
 
 import {
   sceneCameraRadius,
+  scenePaneShortest,
   sceneScreenRadius,
 } from "./recording-scene-panel-snapshot";
-import { SceneCamera, scenePaneShortest } from "./recording-scene-placement";
+import { SceneCamera } from "./recording-scene-placement";
 import { RecordingSceneClip } from "./recording-scenes";
 import { sceneClipsBetween } from "./scene-clips-between";
 

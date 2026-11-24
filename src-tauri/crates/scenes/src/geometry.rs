@@ -6,7 +6,9 @@
 //! which draws the Scene panel's buttons and places the paused preview's
 //! selection by the same rules.
 
+use super::clear_area::ClearArea;
 use super::model::RecordingScenePreset;
+use super::tall;
 use super::variant::{SceneBubbleSize, SceneCameraSize, SceneCorner, SceneVariant};
 
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
@@ -75,12 +77,15 @@ fn camera_ratio(size: SceneCameraSize) -> f64 {
 /// Picture in picture is the screen at its own aspect with the camera
 /// reaching past the corner it sits over by the same share each way. Each
 /// pair is scaled to the largest size the margin leaves room for and centred.
-/// Camera only fills the canvas, and blank places neither pane.
+/// On a canvas taller than it is wide the pairs are laid out for it instead,
+/// inside `clear`, the part a platform's interface leaves uncovered
+/// (`tall.rs`). Camera only fills the canvas, and blank places neither pane.
 pub fn preset_panes(
   preset: RecordingScenePreset,
   canvas: (f64, f64),
   (screen_aspect, camera_aspect): (f64, f64),
   variant: SceneVariant,
+  clear: ClearArea,
 ) -> Option<PresetPanes> {
   let (canvas_width, canvas_height) = canvas;
   let margin = canvas_width.min(canvas_height) / 9.0;
@@ -88,7 +93,14 @@ pub fn preset_panes(
   let room_height = canvas_height - margin * 2.0;
   let gap = margin / 2.0;
   let ratio = camera_ratio(variant.camera_size.unwrap_or_default());
+  let is_tall = canvas_height > canvas_width;
   let (screen, camera) = match preset {
+    RecordingScenePreset::SplitTwoThirds | RecordingScenePreset::Stacked if is_tall => {
+      tall::pair(canvas, screen_aspect, variant, clear)
+    }
+    RecordingScenePreset::PictureInPicture if is_tall => {
+      tall::bubble(canvas, screen_aspect, variant, clear)
+    }
     RecordingScenePreset::Full | RecordingScenePreset::ScreenOnly => return None,
     RecordingScenePreset::Blank => {
       return Some(PresetPanes {

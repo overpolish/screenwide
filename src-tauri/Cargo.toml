@@ -62,6 +62,7 @@ screenwide-osc = { path = "crates/osc" }
 screenwide-output = { path = "crates/output" }
 screenwide-paste = { path = "crates/paste" }
 screenwide-placement = { path = "crates/placement" }
+screenwide-platform-overlays = { path = "crates/platform_overlays" }
 screenwide-project = { path = "crates/project" }
 screenwide-qr = { path = "crates/qr" }
 screenwide-records = { path = "crates/records" }
@@ -113,6 +114,9 @@ png = "0.18.1"
 pollster = "1.0.1"
 quantette = "0.6.0"
 rayon = "1.12.0"
+# Draws the editor's platform overlays (TikTok, Shorts, Reels) from SVG the
+# app writes itself, text included. Apache-2.0 OR MIT.
+resvg = { version = "0.48.1", default-features = false, features = ["text", "system-fonts"] }
 realfft = "3.5.0"
 regex = "1.13"
 serde = { version = "1", features = ["derive"] }
@@ -230,6 +234,7 @@ screenwide-openverse.workspace = true
 screenwide-osc.workspace = true
 screenwide-workspace.workspace = true
 screenwide-output.workspace = true
+screenwide-platform-overlays.workspace = true
 screenwide-paste.workspace = true
 screenwide-project.workspace = true
 screenwide-qr.workspace = true

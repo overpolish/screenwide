@@ -79,6 +79,7 @@ export function useProjectLook({
   bakeCamera,
   cameraOverlay,
   cursorEffects,
+  formats,
   keyboardEffects,
   recordingId,
   recordingOutput,
@@ -107,6 +108,7 @@ export function useProjectLook({
       cursorEffects,
       enabledStreamIndices: own(trackSelection)?.streamIndices ?? null,
       enabledVideoTracks: own(videoTrackSelection)?.tracks ?? null,
+      ...(formats ? { formats } : {}),
       keyboardEffects,
       recordingOutput,
     };
@@ -115,6 +117,7 @@ export function useProjectLook({
     bakeCamera,
     cameraOverlay,
     cursorEffects,
+    formats,
     keyboardEffects,
     recordingId,
     recordingOutput,

@@ -19,6 +19,16 @@ export const BAR_PX = 20;
 /** A bar in the stack: what it spans, and its lane. */
 export type StackedBar = Span & { id: string; lane: number };
 
+/** `bars` in the order the stack draws them, by id, whatever order they
+ * come in. Each is placed by its lane and span, and a bar moved among its
+ * siblings has its effects run again in development, which restarts its
+ * handles' and badge's animations, as a format switch reordering own bars
+ * and ghosts did. */
+export const drawOrder = <T extends StackedBar>(bars: readonly T[]) =>
+  [...bars].sort((one, other) =>
+    one.id < other.id ? -1 : one.id > other.id ? 1 : 0,
+  );
+
 /** Where a moved bar goes: into a lane, or into a new lane opened at
  * `lane`, in front of that lane and behind the one above it. */
 export type LaneSlot = { isNew: boolean; lane: number };

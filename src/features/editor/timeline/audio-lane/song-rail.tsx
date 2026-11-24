@@ -5,6 +5,7 @@ import { Music, Repeat } from "lucide-react";
 import { useRef } from "react";
 
 import { t } from "../../../../i18n/i18n";
+import { useShownElsewhere } from "../../recording/formats/use-shown-elsewhere";
 import { type BarPart } from "../bar-stack/use-stack-bar-drag";
 import { RAIL_DRAG_PX, RailClip } from "../rail/rail-clip";
 import { baseOf } from "../strip/strip-part";
@@ -68,6 +69,7 @@ export function SongRail({
   width,
 }: SongRailProps) {
   const ref = useRef<HTMLDivElement>(null);
+  const shownElsewhere = useShownElsewhere();
   const dragRef = useRef<Drag | null>(null);
   /** Whether a pointer pressed a song, so the click that follows its
    * release does not choose it again. */
@@ -155,44 +157,57 @@ export function SongRail({
       onPointerUp={end}
       ref={ref}
     >
-      {songs.map((song) => (
-        <RailClip
-          glyph={
-            <>
-              <Music aria-hidden className="size-icon-sm shrink-0" />
-              {song.isLooped ? (
-                <Repeat aria-hidden className="size-icon-sm shrink-0" />
-              ) : null}
-            </>
-          }
-          isSelected={baseOf(song.id) === selected}
-          key={song.id}
-          label={t("editor-timeline-audio-song", { title: song.title })}
-          name={song.title}
-          onGrabBody={(event) => {
-            pressedRef.current = true;
-            dragRef.current = {
-              grab: secondsAt(event),
-              grabX: event.clientX,
-              id: song.id,
-              isDragging: false,
-              kind: "move",
-              moving: song,
-            };
-            onSelect(baseOf(song.id));
-          }}
-          onGrabEdge={(_, edge) => {
-            dragRef.current = { edge, id: song.id, kind: "edge" };
-          }}
-          onPress={() => {
-            // A pointer chose it as it was pressed; this is a keyboard's.
-            if (!pressedRef.current) onSelect(baseOf(song.id));
-          }}
-          scale={scale}
-          span={song}
-          width={width}
-        />
-      ))}
+      {/* Ghosts first, so a song of the format's own that shares their
+          time is drawn over them. */}
+      {[...songs]
+        .sort((one, other) => (other.isGhost ? 1 : 0) - (one.isGhost ? 1 : 0))
+        .map((song) => (
+          <RailClip
+            glyph={
+              <>
+                <Music aria-hidden className="size-icon-sm shrink-0" />
+                {song.isLooped ? (
+                  <Repeat aria-hidden className="size-icon-sm shrink-0" />
+                ) : null}
+              </>
+            }
+            isGhost={song.isGhost}
+            isSelected={baseOf(song.id) === selected}
+            key={song.id}
+            label={
+              song.isGhost
+                ? t("editor-timeline-audio-song-ghost", {
+                    formats: shownElsewhere(baseOf(song.id)) ?? "",
+                    title: song.title,
+                  })
+                : t("editor-timeline-audio-song", { title: song.title })
+            }
+            menuTarget={baseOf(song.id)}
+            name={song.title}
+            onGrabBody={(event) => {
+              pressedRef.current = true;
+              dragRef.current = {
+                grab: secondsAt(event),
+                grabX: event.clientX,
+                id: song.id,
+                isDragging: false,
+                kind: "move",
+                moving: song,
+              };
+              onSelect(baseOf(song.id));
+            }}
+            onGrabEdge={(_, edge) => {
+              dragRef.current = { edge, id: song.id, kind: "edge" };
+            }}
+            onPress={() => {
+              // A pointer chose it as it was pressed; this is a keyboard's.
+              if (!pressedRef.current) onSelect(baseOf(song.id));
+            }}
+            scale={scale}
+            span={song}
+            width={width}
+          />
+        ))}
     </div>
   );
 }

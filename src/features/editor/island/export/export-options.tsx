@@ -217,6 +217,15 @@ export function ExportOptions({
                     },
                     title: t("editor-export-png-full-colour"),
                   })}
+              {shown.allFormats === null
+                ? null
+                : switchRow({
+                    isSelected: shown.allFormats,
+                    onChange: (allFormats) => {
+                      onPatch({ allFormats });
+                    },
+                    title: t("editor-export-all-formats"),
+                  })}
               {switchRow({
                 isSelected: shown.revealWhenDone,
                 onChange: (revealWhenDone) => {

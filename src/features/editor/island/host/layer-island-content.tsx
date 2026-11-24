@@ -41,8 +41,19 @@ export function screenIslandContent({
   const rotation = sceneRotation ?? selection.rotation;
   // A scene's inset is a share of its box's shorter side, offered as the
   // same looks as the recording's, which are shares of the screen's.
+  const formats = snapshot.frame?.formats;
   return screenIsland({
     capture,
+    ...(formats
+      ? {
+          framing: {
+            formats,
+            onPatch: (framing) => {
+              change({ framing });
+            },
+          },
+        }
+      : {}),
     hasShadow: selection.dropShadow,
     inset: scenePane ? scenePane.inset : selection.inset,
     isAtDefaultPlacement: scenePane

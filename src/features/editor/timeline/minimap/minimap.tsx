@@ -8,12 +8,11 @@ import { cn } from "../../../../lib/styling";
 import { type Playhead } from "../scrub-playhead";
 import { type TakenOut, takenTotal } from "../strip/taken-out";
 import { SQUEEZED_HATCH } from "../strip/taken-out-band";
-import {
-  type Span,
-  type TimeMap,
-  timelineScale,
-  type View,
-} from "../timeline-scale";
+import { timelineScale, type View } from "../timeline-scale";
+
+import { type MinimapBeats, MinimapTicks } from "./minimap-ticks";
+
+const share = (part: number) => `${String(part * 100)}%`;
 
 // The whole recording under the strip: each beat a tick, the playhead, and
 // a window round the part the strip shows. Drag the window to move along,
@@ -32,17 +31,6 @@ type Drag = {
   view: View;
   width: number;
   x: number;
-};
-
-const share = (part: number) => `${String(part * 100)}%`;
-
-type MinimapBeats = {
-  /** The beats, drawn as ticks; a moment's in its kind's colour,
-   * `#rrggbb`, so the moments worth keeping stand out of the whole. */
-  beats: (Span & { color?: string })[];
-  /** How the recording plays now, which places the ticks and sets how much
-   * of the recording's length the overview spans. */
-  map: TimeMap;
 };
 
 type MinimapControls = {
@@ -80,28 +68,6 @@ export function Minimap(props: MinimapProps) {
     <PictureMinimap {...props} />
   ) : (
     <ControlledMinimap {...props} />
-  );
-}
-
-/** The line along the overview and a tick for each beat on it. */
-function MinimapTicks({ beats, map }: MinimapBeats) {
-  const scale = timelineScale(map);
-  return (
-    <>
-      <span className="absolute inset-x-0 top-1/2 h-px -translate-y-1/2 bg-fill-strong" />
-      {beats.map((beat) => (
-        <span
-          aria-hidden
-          className="absolute inset-y-0.5 min-w-px rounded-full bg-fg-tertiary"
-          key={beat.start}
-          style={{
-            backgroundColor: beat.color,
-            insetInlineStart: share(scale.toX(beat.start)),
-            width: share(scale.toX(beat.end, true) - scale.toX(beat.start)),
-          }}
-        />
-      ))}
-    </>
   );
 }
 

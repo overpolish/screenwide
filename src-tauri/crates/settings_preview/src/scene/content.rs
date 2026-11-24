@@ -58,6 +58,7 @@ pub(super) fn canvas_settings(
     capture_width_points: points.0,
     capture_scale: source_width / points.0.max(1.0),
     capture_corner_radius: 0.0,
+    clear_area: None,
     crop_height: height,
     crop_preview: None,
     crop_width: width,

@@ -14,6 +14,7 @@ import { ListBoxItem } from "../../primitives/listbox-item/listbox-item";
 import { PopupPanelItemGlyph } from "./popup-panel-item-glyph";
 import { PopupPanelItem, PopupPanelListContent } from "./store";
 import { POPUP_LABEL_ATTRIBUTE } from "./use-fitted-list-window";
+import { TOGGLE_ATTRIBUTE } from "./use-toggle-drag";
 
 /** The typeface an item's label is set in, where it shows one. */
 export const itemFontStyle = (
@@ -64,6 +65,7 @@ export const renderPopupPanelItem = (
     className="group"
     id={item.id}
     key={item.id}
+    {...(item.togglesInPlace ? { [TOGGLE_ATTRIBUTE]: item.id } : {})}
     onPress={() => {
       if (content.selectionMode === "single") onPress(item);
     }}

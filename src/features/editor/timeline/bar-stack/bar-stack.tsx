@@ -13,7 +13,7 @@ import { type Span, type TimelineScale } from "../timeline-scale";
 
 import { type StackBarPlacement } from "./stack-bar";
 import { carryScrollSpeed, type Held, heldLanes, holdStep } from "./stack-hold";
-import { BAR_PX, packLanes, type StackedBar } from "./stack-lanes";
+import { BAR_PX, drawOrder, packLanes, type StackedBar } from "./stack-lanes";
 import { type IncomingBar, useIncomingBar } from "./use-incoming-bar";
 import { type BarPart } from "./use-stack-bar-drag";
 
@@ -216,7 +216,7 @@ export function BarStack<T extends StackedBar>({
           className="pointer-events-auto relative"
           style={{ height: contentHeight }}
         >
-          {bars.map((bar) => {
+          {drawOrder(bars).map((bar) => {
             const liftedTop = bar.id === held?.id ? held.liftedTop : null;
             return (
               <Fragment key={bar.id}>

@@ -268,18 +268,5 @@ pub fn shape_distance(point: [f32; 2], geometry: &ArrowGeometry) -> f32 {
   nearest - geometry.width * 0.5
 }
 
-/// How far `point` falls outside the shape's stroke or the box it outlines:
-/// what grabs a shape anywhere inside it, where the editor lets a press
-/// there carry it rather than draw under it.
-#[cfg(any(target_os = "macos", target_os = "windows"))]
-pub fn shape_body_distance(point: [f32; 2], geometry: &ArrowGeometry) -> f32 {
-  shape_distance(point, geometry).min(crate::text::geometry::rounded_box_distance(
-    point,
-    geometry.a,
-    geometry.b,
-    geometry.rounding,
-  ))
-}
-
 #[cfg(test)]
 mod tests;

@@ -10,7 +10,6 @@
 use std::any::Any;
 
 use screenwide_osc::gpu::magnifier::NativeMagnifier;
-use screenwide_osc::gpu::vertices::{RenderConstants, Vertex};
 
 use super::{CursorKind, Modifiers};
 use crate::backdrop::BackdropStyle;
@@ -62,9 +61,8 @@ pub trait Host: Any + Send + Sync {
   /// hidden.
   fn release(&self);
 
-  /// Draws the selection chrome over a viewport `size` physical pixels: one
-  /// draw of the shared OSC shader, every vertex sharing `constants`.
-  fn present_chrome(&self, size: (u32, u32), vertices: &[Vertex], constants: &RenderConstants);
+  /// Draws the selection chrome.
+  fn present_chrome(&self, chrome: super::chrome::ChromeFrame<'_>);
 
   /// Publishes a change to what is on screen that a draw does not publish by
   /// itself: a drawable moved or hidden. `wait` holds the caller until it

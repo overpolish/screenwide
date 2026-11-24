@@ -103,6 +103,7 @@ pub(super) fn frame_resize_start(state: &SurfaceState) -> FrameResizeStart {
       })
       .collect(),
     transform: state.workspace_transform,
+    reach: None,
   }
 }
 

@@ -33,6 +33,8 @@ import type {
 
 /** The export's settings as the editor window holds them. */
 export type EditorExportSettings = {
+  /** Null while the recording has one format. */
+  allFormats: boolean | null;
   cameraCompression: number;
   cameraKey: CameraKey;
   cameraResolutionScalePercent: number;
@@ -158,6 +160,8 @@ export function exportIslandSnapshot({
   const shownCameraOutput = kind === "video" ? cameraOutput : null;
   const name = exported?.path.split(/[\\/]/).pop() ?? "";
   return {
+    // A sound alone has no picture to make in another shape.
+    allFormats: kind === "video" ? settings.allFormats : null,
     // A GIF holds the camera only in the picture, never as a file of its own.
     cameraKey:
       !isGif &&

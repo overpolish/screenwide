@@ -100,3 +100,7 @@ editor-export-reveal =
 editor-export-copy = Copy the file
 # Names the written file, which is dragged out into another app. $name is the file's name.
 editor-export-drag-file = Drag { $name } to another app
+# A switch in the Export island: writes one file for each of the recording's formats, such as one for YouTube and one for TikTok, rather than the format being edited alone.
+editor-export-all-formats = Export every format
+# The name of the file written for one of several formats: the name chosen for the export, then the format's name, such as TikTok.
+editor-export-format-file = { $stem } { $format }

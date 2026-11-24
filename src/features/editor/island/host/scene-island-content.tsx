@@ -63,8 +63,19 @@ export function sceneIslandContent({
       ? scene.boxes.camera !== null && !scene.boxes.cameraHidden
       : scene.preset !== null && sceneNeedsCamera({ preset: scene.preset })) &&
     !offer.isCombined;
+  const formats = snapshot.frame?.formats;
   return sceneIsland({
     autoZoom: hasCursorData ? { hasAutoZooms: scene.hasAutoZooms } : null,
+    ...(formats
+      ? {
+          framing: {
+            formats,
+            onPatch: (framing) => {
+              change({ framing });
+            },
+          },
+        }
+      : {}),
     camera: paneOf(scene.panes.camera),
     canPlaceCamera: offer.canPlaceCamera,
     group,

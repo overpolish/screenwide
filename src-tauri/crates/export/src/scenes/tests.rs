@@ -9,8 +9,8 @@ use screenwide_scenes::geometry::preset_panes;
 use screenwide_scenes::model::RecordingScenePreset;
 use screenwide_scenes::validate_clips;
 use screenwide_scenes::variant::SceneVariant;
-use screenwide_scenes::CameraOverlaySettings;
 use screenwide_scenes::RecordingSceneClip;
+use screenwide_scenes::{CameraOverlaySettings, ClearArea};
 use screenwide_timeline::TimelineRange;
 
 fn clip(id: &str, start_ms: u64, end_ms: u64, preset: RecordingScenePreset) -> RecordingSceneClip {
@@ -118,12 +118,13 @@ fn presets_use_the_webview_names() {
 
 #[test]
 fn picture_in_picture_leaves_matching_space_on_opposite_sides() {
-  for canvas in [(1_920.0, 1_080.0), (1_080.0, 1_080.0), (1_080.0, 1_920.0)] {
+  for canvas in [(1_920.0, 1_080.0), (1_080.0, 1_080.0)] {
     let panes = preset_panes(
       RecordingScenePreset::PictureInPicture,
       canvas,
       (16.0 / 10.0, 16.0 / 9.0),
       SceneVariant::default(),
+      ClearArea::default(),
     )
     .unwrap();
     let (screen, camera) = (panes.screen.unwrap(), panes.camera.unwrap());
@@ -149,6 +150,7 @@ fn a_settled_scene_moves_the_screen_without_changing_what_it_shows() {
     (1_600.0, 900.0),
     (2.0, 16.0 / 9.0),
     SceneVariant::default(),
+    ClearArea::default(),
   )
   .unwrap();
   let (screen, camera) = (panes.screen.unwrap(), panes.camera.unwrap());

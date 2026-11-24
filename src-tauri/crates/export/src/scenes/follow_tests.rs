@@ -188,3 +188,34 @@ fn a_full_scene_keeps_the_recordings_crop_followed_or_still_as_it_says() {
   assert!(close(shown(&followed).focus_x, 0.42));
   assert!(close(shown(&followed).zoom, shown(&overlay(false)).zoom));
 }
+
+#[test]
+fn a_face_filling_a_tall_canvas_sits_clear_of_the_platforms_interface() {
+  let mut output = test_output_settings(1_080, 1_920);
+  output.clear_area = Some(screenwide_scenes::ClearArea {
+    top: 0.07,
+    bottom: 0.25,
+    side: 0.05,
+  });
+  let mut overlay = overlay(false);
+  let camera_only = clip(
+    RecordingScenePreset::CameraOnly,
+    Some(SceneFraming::centred(2.0)),
+    Some(true),
+  );
+  arrange_following(
+    &[camera_only],
+    &[],
+    (5_000, 0.0),
+    &mut output,
+    Some((&mut overlay, CAMERA)),
+    Some((0.5, 0.5)),
+  );
+  // The face in the middle of the picture lands in the middle of the part
+  // the header and the caption leave clear, not of the whole canvas.
+  assert!(close(overlay.camera_x, 540.0), "{overlay:?}");
+  assert!(
+    close(overlay.camera_y, (0.07 + 0.75) / 2.0 * 1_920.0),
+    "{overlay:?}"
+  );
+}

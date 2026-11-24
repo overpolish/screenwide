@@ -2,6 +2,7 @@
 import type { AudioTrackVolume } from "./AudioTrackVolume";
 import type { CameraOverlaySettings } from "./CameraOverlaySettings";
 import type { CursorEffectSettings } from "./CursorEffectSettings";
+import type { FrameFormats } from "./FrameFormats";
 import type { KeyboardEffectSettings } from "./KeyboardEffectSettings";
 import type { RecordingOutputSettings } from "./RecordingOutputSettings";
 import type { VideoTrack } from "./VideoTrack";
@@ -14,4 +15,9 @@ export type RecordingProjectLook = { bakeCamera: boolean, cameraOverlay: CameraO
  * None for each where the recording's own default stands: every track
  * on, at full volume.
  */
-audioTrackVolumes: Array<AudioTrackVolume> | null, enabledStreamIndices: Array<number> | null, enabledVideoTracks: Array<VideoTrack> | null, };
+audioTrackVolumes: Array<AudioTrackVolume> | null, enabledStreamIndices: Array<number> | null, enabledVideoTracks: Array<VideoTrack> | null, 
+/**
+ * The shapes the recording is made in, each its own size, camera and
+ * scene layouts; none for a recording made in one shape alone.
+ */
+formats?: FrameFormats, };

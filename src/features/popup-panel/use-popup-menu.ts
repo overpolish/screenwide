@@ -114,17 +114,25 @@ export function usePopupMenu({
     handledEventRef.current = lastSelection.eventId;
     const state = usePopupPanelStore.getState();
     const active = activePopupPanel(state, SHARED_POPUP_PANEL);
-    if (active?.id === lastSelection.id) {
+    const pressed =
+      lastSelection.pressedId ??
+      (lastSelection.selectedIds.length > 0
+        ? lastSelection.selectedIds[0]
+        : undefined);
+    // A toggle flips its tick and leaves the menu open, so several can be
+    // set in one visit; anything else is an action, and the menu goes.
+    const isToggle =
+      active?.content.kind === "list" &&
+      active.content.items.some(
+        (item) => item.id === pressed && item.togglesInPlace,
+      );
+    if (active?.id === lastSelection.id && !isToggle) {
       state.close(SHARED_POPUP_PANEL);
       void hidePopupPanel(active.focusContents, SHARED_POPUP_PANEL);
     }
-    // A toggle reports the whole tick list; these menus hold one choice, so
-    // an empty list is a dismissal rather than a pick.
-    if (lastSelection.selectedIds.length > 0)
-      selectRef.current(
-        lastSelection.selectedIds[0],
-        lastSelection.id.slice(idPrefix.length),
-      );
+    // An empty pick with nothing pressed is a dismissal.
+    if (pressed !== undefined)
+      selectRef.current(pressed, lastSelection.id.slice(idPrefix.length));
   }, [idPrefix, lastSelection]);
 
   return async ({

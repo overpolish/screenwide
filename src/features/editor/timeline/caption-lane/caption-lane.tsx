@@ -3,13 +3,15 @@
 
 import { use } from "react";
 
+import { CAPTIONS_ID } from "../../recording/formats/format-scope";
 import { isNear, StripNearContext } from "../strip/strip-near";
 import { type TimelineScale } from "../timeline-scale";
 
 import { CaptionLine, type TimelineCaption } from "./caption-line";
 
 // Where a voice speaks: a thin lane under the beats, its lines the
-// captions. Pressing a line opens the captions on it.
+// captions. Pressing a line opens the captions on it; a right press offers
+// what brings the formats in step for the caption track as a whole.
 
 export type CaptionLaneProps = {
   /** Whether the captions are hidden from the picture. */
@@ -24,7 +26,7 @@ export type CaptionLaneProps = {
 export function CaptionLane({ lines, onPress, ...props }: CaptionLaneProps) {
   const near = use(StripNearContext);
   return (
-    <div className="relative h-4" dir="ltr">
+    <div className="relative h-4" data-menu-target={CAPTIONS_ID} dir="ltr">
       {lines
         .filter((line) => isNear(near, props.scale, line))
         .map((line) => (

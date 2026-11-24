@@ -3,6 +3,7 @@
 
 import {
   animate,
+  AnimatePresence,
   motion,
   useMotionValue,
   useReducedMotion,
@@ -41,6 +42,10 @@ const BADGE_CUT_FADE_PX = 6;
  * where the pointer has it for the bar to glide there. */
 const JUMP_PX = 8;
 
+/** How much of a ghost shows: a bar the format in hand leaves out. */
+const GHOST_OPACITY = 0.4;
+const HANDLE_AWAY = { opacity: 0, scale: 0 };
+
 /** Where the line is drawn: `mask` leaves the badge clear, `pad` is how far
  * the bar's box reaches past its span at each end, `px` its drawn width. */
 export type StackBarLook = { mask: string; pad: number; px: number };
@@ -77,8 +82,16 @@ export type StackBarProps = StackBarPlacement & {
   label: string;
   /** How far, in px, the line fades out before the badge; 0 cuts it. */
   badgeFade?: number;
+  /** Left out of the format in hand and shown in others: drawn faintly
+   * where it plays there, and not taken hold of, so a press on it scrubs
+   * as one on the strip does. */
+  isGhost?: boolean;
+  /** Moved whole, stops at the strip's ends at its own length. */
+  keepsOnStrip?: boolean;
   /** Draws the line, in place of the plain one (`StackBarLine`). */
   line?: (look: StackBarLook) => ReactNode;
+  /** What a right press on it offers a menu for, by id. */
+  menuTarget?: string;
 };
 
 /** The plain line: a hairline at rest, thicker under the pointer, and
@@ -110,10 +123,13 @@ export function StackBarLine({
 export function StackBar({
   badge,
   badgeFade = 0,
+  isGhost = false,
   isLifted,
   isSelected,
+  keepsOnStrip = false,
   label,
   line,
+  menuTarget,
   onHold,
   onRetime,
   onSelect,
@@ -137,6 +153,7 @@ export function StackBar({
   const partRef = useRef<BarPart>("body");
   const { drag, grab, release } = useStackBarDrag({
     isSelected,
+    keepsOnStrip,
     onHold: (hold) => {
       pointerRef.current =
         hold && partRef.current === "body" ? hold.span : null;
@@ -180,6 +197,12 @@ export function StackBar({
     px,
   };
   const handleReach = px / 2;
+  // How the bar's look and handles change: becoming a ghost, chosen or let
+  // go. At once where motion is reduced.
+  const change = {
+    duration: reducedMotion ? 0 : motionDurations.travel,
+    ease: motionEasings.out,
+  };
   const take = (event: React.PointerEvent<HTMLElement>, part: BarPart) => {
     // Held by the bar, the press never reaches the strip under it.
     event.stopPropagation();
@@ -188,30 +211,43 @@ export function StackBar({
   };
   return (
     <motion.div
-      animate={{ top }}
+      // Left out of the format in hand, it fades back to a ghost rather
+      // than cutting to one, as a format switch can make it.
+      animate={{ opacity: isGhost ? GHOST_OPACITY : 1, top }}
+      aria-disabled={isGhost || undefined}
       aria-label={label}
       aria-pressed={isSelected}
       className={cn(
-        "group absolute cursor-grab touch-none active:cursor-grabbing",
+        "group absolute touch-none",
+        !isGhost && "cursor-grab active:cursor-grabbing",
         isLifted && "z-10 cursor-grabbing",
       )}
+      data-menu-target={menuTarget}
       dir="ltr"
       initial={false}
-      onPointerDown={(event) => {
-        take(event, "body");
-      }}
-      // A held end's moves and its release bubble up to here.
-      onPointerMove={(event) => {
-        drag(event);
-      }}
-      onPointerUp={release}
+      {...(isGhost
+        ? {
+            // A right press stays on the ghost for its menu, rather than
+            // reaching the strip, whose scrub would take the pointer.
+            onPointerDown: (event: React.PointerEvent<HTMLElement>) => {
+              if (event.button !== 0) event.stopPropagation();
+            },
+          }
+        : {
+            onPointerDown: (event: React.PointerEvent<HTMLElement>) => {
+              take(event, "body");
+            },
+            // A held end's moves and its release bubble up to here.
+            onPointerMove: (event: React.PointerEvent<HTMLElement>) => {
+              drag(event);
+            },
+            onPointerUp: release,
+          })}
       ref={ref}
       role="button"
       style={{ ...style, height: BAR_PX, x: shift }}
       transition={
-        isLifted || reducedMotion
-          ? { duration: 0 }
-          : { duration: motionDurations.travel, ease: motionEasings.out }
+        isLifted || reducedMotion ? { duration: 0, opacity: change } : change
       }
     >
       {line ? line(look) : <StackBarLine isSelected={isSelected} look={look} />}
@@ -231,23 +267,33 @@ export function StackBar({
           {badge(px)}
         </span>
       </span>
-      {isSelected
-        ? (["start", "end"] as const).map((part) => (
-            <span
-              aria-hidden
-              className="absolute top-1/2 flex size-6 -translate-1/2 cursor-ew-resize items-center justify-center"
-              key={part}
-              onPointerDown={(event) => {
-                take(event, part);
-              }}
-              style={{
-                insetInlineStart: `calc(50% ${part === "start" ? "-" : "+"} ${String(handleReach)}px)`,
-              }}
-            >
-              <span className="size-3 rounded-full bg-primary ring-2 ring-recess" />
-            </span>
-          ))
-        : null}
+      {/* The handles grow in as the bar is chosen and shrink away as it is
+          let go, or turns ghost on a format switch. */}
+      <AnimatePresence initial={false}>
+        {isSelected
+          ? (["start", "end"] as const).map((part) => (
+              <motion.span
+                animate={{ opacity: 1, scale: 1 }}
+                aria-hidden
+                className="absolute top-1/2 flex size-6 cursor-ew-resize items-center justify-center"
+                exit={HANDLE_AWAY}
+                initial={HANDLE_AWAY}
+                key={part}
+                onPointerDown={(event) => {
+                  take(event, part);
+                }}
+                style={{
+                  insetInlineStart: `calc(50% ${part === "start" ? "-" : "+"} ${String(handleReach)}px)`,
+                  x: "-50%",
+                  y: "-50%",
+                }}
+                transition={change}
+              >
+                <span className="size-3 rounded-full bg-primary ring-2 ring-recess" />
+              </motion.span>
+            ))
+          : null}
+      </AnimatePresence>
     </motion.div>
   );
 }

@@ -55,7 +55,7 @@ pub use output::compose_screenshot;
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 pub use output::output_dimensions;
 pub use output::{BackgroundTurn, CanvasBackground, CropPreviewRect, ScreenshotOutputSettings};
-pub use placement::{output_placement, OutputPlacement};
+pub use placement::{narrowest_in_reach, output_placement, CanvasAnchor, OutputPlacement};
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 pub use recenter::{colour_f32, foreground_bounds_f32, optional_colour_f32};
 use screenwide_imaging::CapturedImage;
