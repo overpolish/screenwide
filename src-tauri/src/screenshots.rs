@@ -96,10 +96,12 @@ pub(crate) async fn capture(
   include_ruler: bool,
 ) -> Result<CapturedImage, String> {
   // Read as the shutter fires, the same way a recording reads it as it starts.
-  // A preserved ruler is intentionally part of this shot. The screenshot
-  // region and recording controls have already faded out before the shutter.
-  let include_own_windows =
-    include_ruler || crate::settings::current(app).record_screenwide_windows;
+  // A preserved ruler is intentionally part of this shot, and so is the menu
+  // frozen in front of the desktop (`menu_freeze`). The screenshot region and
+  // recording controls have already faded out before the shutter.
+  let include_own_windows = include_ruler
+    || crate::menu_freeze::is_up()
+    || crate::settings::current(app).record_screenwide_windows;
   // Quick Screenshot's island would be taken with them. It stays on screen,
   // kept out of the shot, as it turns into the shot copied where it is.
   let keeps_island_out = include_own_windows && quick_island::is_up();

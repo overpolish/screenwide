@@ -23,6 +23,9 @@ use core_graphics::event::{
 
 use super::{OnKey, SystemKey};
 
+/// A key going down and the modifiers held; `true` takes it.
+type OnPress = Box<dyn Fn(u16, Modifiers) -> bool + Send>;
+
 pub(super) const SUPPORTED: bool = true;
 
 const START_TIMEOUT: Duration = Duration::from_secs(2);
@@ -55,6 +58,14 @@ impl Modifiers {
       shift: flags.contains(CGEventFlags::CGEventFlagShift),
     }
   }
+
+  /// Bit 0 Command, 1 Control, 2 Option, 3 Shift.
+  fn bits(self) -> u32 {
+    u32::from(self.command)
+      | u32::from(self.control) << 1
+      | u32::from(self.option) << 2
+      | u32::from(self.shift) << 3
+  }
 }
 
 /// The system's key `key` is part of under `held`, if any. Only the exact
@@ -73,7 +84,7 @@ fn matched(key: i64, held: Modifiers) -> Option<SystemKey> {
 }
 
 struct TapState {
-  on_key: OnKey,
+  on_press: OnPress,
   /// Keys whose press was taken, so their repeats and release are too.
   taken: RefCell<HashSet<i64>>,
   /// The tap itself, for turning it back on when the system turns it off.
@@ -110,10 +121,10 @@ impl TapState {
     if taken.contains(&key) {
       return CallbackResult::Drop;
     }
-    let Some(system_key) = matched(key, Modifiers::of(event.get_flags())) else {
+    let Ok(code) = u16::try_from(key) else {
       return CallbackResult::Keep;
     };
-    if !(self.on_key)(system_key) {
+    if !(self.on_press)(code, Modifiers::of(event.get_flags())) {
       return CallbackResult::Keep;
     }
     taken.insert(key);
@@ -122,9 +133,9 @@ impl TapState {
 }
 
 /// The tap's thread: creates the tap and runs its run loop until stopped.
-fn run(on_key: OnKey, stopping: &AtomicBool, ready: &mpsc::Sender<Result<CFRunLoop, String>>) {
+fn run(on_press: OnPress, stopping: &AtomicBool, ready: &mpsc::Sender<Result<CFRunLoop, String>>) {
   let state = TapState {
-    on_key,
+    on_press,
     taken: RefCell::new(HashSet::new()),
     port: Cell::new(std::ptr::null_mut()),
   };
@@ -141,14 +152,13 @@ fn run(on_key: OnKey, stopping: &AtomicBool, ready: &mpsc::Sender<Result<CFRunLo
   };
   let Ok(tap) = tap else {
     let _ = ready.send(Err(
-      "Could not take the system's screenshot keys; Accessibility access is required".to_owned(),
+      "Could not take keys from the keyboard; Accessibility access is required".to_owned(),
     ));
     return;
   };
   let Ok(source) = tap.mach_port().create_runloop_source(0) else {
     let _ = ready.send(Err(
-      "Could not take the system's screenshot keys: the event tap has no run loop source"
-        .to_owned(),
+      "Could not take keys from the keyboard: the event tap has no run loop source".to_owned(),
     ));
     return;
   };
@@ -173,14 +183,28 @@ pub(super) struct Hook {
 }
 
 impl Hook {
+  /// Takes the system's screenshot keys that `on_key` takes.
   pub(super) fn start(on_key: OnKey) -> Result<Self, String> {
+    Self::spawn(Box::new(move |key, held| {
+      matched(i64::from(key), held).is_some_and(&on_key)
+    }))
+  }
+
+  /// Takes the keys `on_press` takes, told the modifiers as bits.
+  pub(super) fn start_taking(
+    on_press: Box<dyn Fn(u16, u32) -> bool + Send>,
+  ) -> Result<Self, String> {
+    Self::spawn(Box::new(move |key, held| on_press(key, held.bits())))
+  }
+
+  fn spawn(on_press: OnPress) -> Result<Self, String> {
     let stopping = Arc::new(AtomicBool::new(false));
     let (ready, is_ready) = mpsc::channel();
     let worker_stopping = Arc::clone(&stopping);
     let worker = std::thread::Builder::new()
-      .name("screenwide-system-keys".to_owned())
-      .spawn(move || run(on_key, &worker_stopping, &ready))
-      .map_err(|error| format!("Could not take the system's screenshot keys: {error}"))?;
+      .name("screenwide-key-tap".to_owned())
+      .spawn(move || run(on_press, &worker_stopping, &ready))
+      .map_err(|error| format!("Could not take keys from the keyboard: {error}"))?;
     let mut hook = Self {
       stopping,
       run_loop: None,
@@ -197,7 +221,7 @@ impl Hook {
       }
       Err(_) => {
         hook.stop();
-        Err("Taking the system's screenshot keys did not start in time".to_owned())
+        Err("Taking keys from the keyboard did not start in time".to_owned())
       }
     }
   }

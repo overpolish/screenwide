@@ -7,9 +7,10 @@
 //! when the session is cancelled. Its close button ends the session as Escape
 //! does.
 //!
-//! A still leaves Screenwide's windows out unless the Ruler is in it or the
-//! user records Screenwide's windows; then the island is kept out of the shot
-//! while it stays on screen (`screenshots::capture`).
+//! A still leaves Screenwide's windows out unless the Ruler or a frozen menu
+//! (`menu_freeze`) is in it or the user records Screenwide's windows; then
+//! the island is kept out of the shot while it stays on screen
+//! (`screenshots::capture`).
 
 use std::sync::{Mutex, PoisonError};
 

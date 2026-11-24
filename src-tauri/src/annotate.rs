@@ -132,6 +132,7 @@ fn take_down(app: &AppHandle) {
   screenshot_mode::forget_resume();
   live_clips::clear();
   abandon(app);
+  crate::menu_freeze::release(app, crate::menu_freeze::Owner::Annotate);
   crate::tray::refresh(app);
 }
 
@@ -139,6 +140,7 @@ fn take_down(app: &AppHandle) {
 /// their clips open in a running recording, because they really are still
 /// visible.
 pub fn dismiss(app: &AppHandle) {
+  crate::menu_freeze::release(app, crate::menu_freeze::Owner::Annotate);
   if settings::keep_annotations_between_sessions() && live_clips::has_annotations() {
     stop_drawing(app);
   } else {

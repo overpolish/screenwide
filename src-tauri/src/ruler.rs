@@ -50,6 +50,7 @@ pub fn dismiss(app: &AppHandle) {
   let had_capture = app.state::<RulerState>().cancel();
   if had_windows || had_capture {
     capture_overlays::emit_lifecycle(app, false);
+    crate::menu_freeze::release(app, crate::menu_freeze::Owner::Ruler);
   }
   crate::app_windows::sync_recording_ui_escape(app, false);
 }

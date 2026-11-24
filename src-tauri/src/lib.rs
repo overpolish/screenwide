@@ -30,6 +30,7 @@ mod invoke_handler;
 mod keep_awake;
 mod launch_at_login;
 mod licensing;
+mod menu_freeze;
 mod microsoft_store;
 mod moments;
 mod monitor_topology;

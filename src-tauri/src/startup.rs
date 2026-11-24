@@ -43,6 +43,8 @@ pub(crate) fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Erro
   crate::transcription::models::remove_retired(app.handle());
   #[cfg(desktop)]
   crate::tray::initialize(app)?;
+  // A capture shortcut pressed with a menu open freezes the screen with it.
+  crate::menu_freeze::initialize(app.handle());
   crate::settings::initialize(app.handle());
   #[cfg(target_os = "windows")]
   crate::hidden_apps_windows::restore_left_hidden(app.handle());

@@ -34,6 +34,8 @@ pub use registration::{
   __cmd__begin_shortcut_capture, __cmd__end_shortcut_capture,
   __tauri_command_name_begin_shortcut_capture, __tauri_command_name_end_shortcut_capture,
 };
+#[cfg(target_os = "macos")]
+pub(crate) mod menu_keys;
 pub use registration::{begin_shortcut_capture, end_shortcut_capture, initialize};
 
 mod defaults;
@@ -166,6 +168,12 @@ pub fn resume_shortcut_action(app: AppHandle, action: ShortcutAction) {
 /// asking for it, such as clicking the tray icon.
 pub(crate) fn run(app: &AppHandle, action: ShortcutAction) {
   run_action(app, action);
+}
+
+/// Carries `action` on once the menu that was open has been frozen into a
+/// picture and closed (`menu_freeze`).
+pub(crate) fn run_over_frozen_menu(app: &AppHandle, action: ShortcutAction) {
+  action_routing::carry_out(app, action);
 }
 
 pub fn shortcut_for(app: &AppHandle, action: ShortcutAction) -> Option<String> {

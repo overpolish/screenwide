@@ -173,6 +173,15 @@ pub(super) fn run_action(app: &AppHandle, action: ShortcutAction) {
     // built, rather than after.
     screenwide_gpu::open_soon(screenwide_gpu::Workload::Light);
   }
+  // A menu of ours open is frozen into the picture the tool works over;
+  // the action resumes in `carry_out` once it has been.
+  if crate::menu_freeze::intercept(app, action) {
+    return;
+  }
+  carry_out(app, action);
+}
+
+pub(super) fn carry_out(app: &AppHandle, action: ShortcutAction) {
   if requires_frontend_turn(action) {
     // These operations create, show, or hide window graphs. Keep that work
     // outside the native global-shortcut event cycle by handing it to the

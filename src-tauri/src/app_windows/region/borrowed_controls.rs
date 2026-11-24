@@ -60,6 +60,7 @@ pub fn set_screenshot_region_session(
   if !active && session_was_active {
     crate::annotate::set_screenshot_mode(&app, false);
     crate::screenshots::quick_island::withdraw(&app);
+    crate::menu_freeze::release(&app, crate::menu_freeze::Owner::Screenshot);
   }
   // A still's area drawn during a recording is kept out of it, and the
   // overlay goes back on the preference once the session is over.

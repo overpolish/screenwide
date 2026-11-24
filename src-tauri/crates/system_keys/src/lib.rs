@@ -62,4 +62,25 @@ impl SystemKeys {
   }
 }
 
+/// Takes any key the caller chooses, until dropped, by the same event tap
+/// the system's keys go through: ahead of every hot key, including the ones
+/// Screenwide registers, which the window server holds back while one of the
+/// app's own menus is open.
+#[cfg(target_os = "macos")]
+pub struct KeyTap {
+  _hook: platform::Hook,
+}
+
+#[cfg(target_os = "macos")]
+impl KeyTap {
+  /// Starts taking keys. `on_press` is given each key going down, as its
+  /// macOS virtual key code and the modifiers held (bit 0 Command, 1
+  /// Control, 2 Option, 3 Shift), on a thread that holds up every keystroke
+  /// in the system until it returns: `true` takes the key, its repeats and
+  /// its release, `false` leaves it to the system.
+  pub fn start(on_press: impl Fn(u16, u32) -> bool + Send + 'static) -> Result<Self, String> {
+    platform::Hook::start_taking(Box::new(on_press)).map(|hook| Self { _hook: hook })
+  }
+}
+
 type OnKey = Box<dyn Fn(SystemKey) -> bool + Send>;
