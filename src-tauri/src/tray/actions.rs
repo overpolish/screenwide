@@ -55,7 +55,7 @@ pub(super) fn handle(app: &AppHandle, id: &str) {
       crate::text_recognition::start_detached(app);
     }
     RULER_OVERLAY_MENU_ID => {
-      crate::ruler::start_detached(app);
+      crate::ruler::toggle_detached(app);
     }
     SETTINGS_MENU_ID => crate::settings::show(app),
     STOP_MENU_ID => report("stop", crate::recording::stop(app)),

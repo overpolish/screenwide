@@ -186,7 +186,14 @@ pub fn cancel_ruler(app: AppHandle) {
   dismiss(&app);
 }
 
-pub fn start_detached(app: &AppHandle) {
+/// The shortcut's and the tray item's way in: the same press that opens the
+/// Ruler closes it again, rather than freezing the desktop afresh and losing
+/// what was measured.
+pub fn toggle_detached(app: &AppHandle) {
+  if is_active(app) {
+    dismiss(app);
+    return;
+  }
   let app = app.clone();
   tauri::async_runtime::spawn(async move {
     if let Err(error) = start(&app).await {

@@ -226,7 +226,7 @@ pub(super) fn run_action(app: &AppHandle, action: ShortcutAction) {
       screenwide_capture::RecordingStatus::Stopping => {}
     },
     ShortcutAction::RulerOverlay => {
-      crate::ruler::start_detached(app);
+      crate::ruler::toggle_detached(app);
     }
     ShortcutAction::AnnotateOverlay => {
       crate::annotate::toggle_detached(app);
