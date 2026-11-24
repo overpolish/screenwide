@@ -65,11 +65,14 @@ pub(super) fn refresh_screens(mtm: MainThreadMarker) {
   }
 }
 
+/// Whether a pointer location is on `frame`. A pointer on a display's top row
+/// is at its top edge and one on its bottom row a point above its origin, so
+/// the bottom edge is excluded and the top edge kept.
 fn contains(frame: NSRect, point: NSPoint) -> bool {
   point.x >= frame.origin.x
     && point.x < frame.origin.x + frame.size.width
-    && point.y >= frame.origin.y
-    && point.y < frame.origin.y + frame.size.height
+    && point.y > frame.origin.y
+    && point.y <= frame.origin.y + frame.size.height
 }
 
 /// The scale of the display under `point`, in AppKit's global points.

@@ -38,10 +38,12 @@ fn overlay_under(event: &NSEvent) -> Option<(WindowId, (f64, f64))> {
     }
     let local = overlay.view.convertPoint_fromView(location, None);
     let bounds = overlay.view.bounds();
-    let inside = local.x >= 0.0
-      && local.y >= 0.0
-      && local.x < bounds.size.width
-      && local.y < bounds.size.height;
+    // Measured from the top: an unflipped view's top row is at y = height
+    // and its bottom row at y = 1, so its own `0 <= y < height` drops the
+    // top row of the screen.
+    let top = from_top(&overlay.view, local);
+    let inside =
+      local.x >= 0.0 && top >= 0.0 && local.x < bounds.size.width && top < bounds.size.height;
     if inside {
       found = Some((id, client(&overlay.view, local)));
     }
@@ -50,18 +52,22 @@ fn overlay_under(event: &NSEvent) -> Option<(WindowId, (f64, f64))> {
   found
 }
 
+/// A point's distance from the top of `view`, in its points.
+fn from_top(view: &objc2_app_kit::NSView, local: NSPoint) -> f64 {
+  if view.isFlipped() {
+    local.y
+  } else {
+    view.bounds().size.height - local.y
+  }
+}
+
 /// A point in `view`'s points as the engine's client pixels, from the top
 /// left.
 fn client(view: &objc2_app_kit::NSView, local: NSPoint) -> (f64, f64) {
   let scale = view
     .window()
     .map_or(1.0, |window| window.backingScaleFactor());
-  let top = if view.isFlipped() {
-    local.y
-  } else {
-    view.bounds().size.height - local.y
-  };
-  (local.x * scale, top * scale)
+  (local.x * scale, from_top(view, local) * scale)
 }
 
 /// Where `event` happened in `window`'s client pixels, for a held press that
