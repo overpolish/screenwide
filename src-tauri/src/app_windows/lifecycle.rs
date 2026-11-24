@@ -75,6 +75,8 @@ pub fn present(app: &AppHandle, window: &WebviewWindow) -> tauri::Result<()> {
   #[cfg(target_os = "macos")]
   app.set_dock_visibility(true)?;
   show(window, true)?;
+  #[cfg(target_os = "macos")]
+  super::desktop_space::leave_full_screen_space(window)?;
   recover_window_position(app, window)
 }
 

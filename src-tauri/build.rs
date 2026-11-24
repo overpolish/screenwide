@@ -23,6 +23,7 @@ fn main() {
     println!("cargo:rerun-if-changed=src/osc/cursor_macos/cursor_session_macos.m");
     println!("cargo:rerun-if-changed=src/app_windows/color_panel_macos.m");
     println!("cargo:rerun-if-changed=src/app_windows/dismissal_macos.m");
+    println!("cargo:rerun-if-changed=src/app_windows/desktop_space_macos.m");
     // Headers the osc crate owns, included by the sources below.
     println!("cargo:rerun-if-changed=crates/osc/src/gpu/macos");
     println!("cargo:rerun-if-changed=src/annotate/macos/native_overlay_macos.m");
@@ -46,6 +47,7 @@ fn main() {
       .file("src/osc/cursor_macos/cursor_session_macos.m")
       .file("src/app_windows/color_panel_macos.m")
       .file("src/app_windows/dismissal_macos.m")
+      .file("src/app_windows/desktop_space_macos.m")
       .flag("-fobjc-arc")
       .compile("screenwide_gpu_compositor");
     // Objective-C categories do not define a class symbol, so the linker will

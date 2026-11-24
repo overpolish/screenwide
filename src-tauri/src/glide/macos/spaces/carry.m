@@ -8,6 +8,10 @@
 // window. Sending it away with the membership API first breaks that drag.
 static const int64_t eventTag = 0x5357474c494445;
 
+// `src/app_windows/desktop_space_macos.m`: macOS moves only a process's own
+// windows between Spaces this way.
+bool screenwide_move_own_window_to_space(uint32_t windowID, uint64_t space);
+
 static void mouseEvent(CGEventSourceRef source, CGEventType type, CGPoint point) {
   CGEventRef event = CGEventCreateMouseEvent(source, type, point, kCGMouseButtonLeft);
   CGEventSetFlags(event, 0);
@@ -72,13 +76,27 @@ int sw_glide_space_carry(void *raw, const char *identifier, uint64_t destination
     SWGlideSpaceTarget *target = (__bridge SWGlideSpaceTarget *)raw;
     NSString *display = [NSString stringWithUTF8String:identifier];
     CGPoint anchor = CGPointMake(x, y);
-    if (CGEventSourceButtonState(kCGEventSourceStateHIDSystemState, kCGMouseButtonLeft) ||
-        !sw_glide_space_valid_grip(target, anchor)) return 1;
     NSDictionary *initial = displayGroup(display);
     NSInteger from = indexOf(initial, spaceID(initial[@"Current Space"]));
     NSInteger to = indexOf(initial, destination);
     if (!initial || from == NSNotFound || to == NSNotFound || from == to ||
         sw_glide_space_animating(display)) return 1;
+    // The app whose full-screen Space this is may take the Space keys for
+    // itself (Parsec sends them to the machine it shows), so the carry below
+    // never leaves it. One of our own windows moves directly and is brought
+    // forward, which takes the user along. Another app's cannot leave.
+    if ([initial[@"Current Space"][@"type"] intValue] != 0) {
+      NSWindow *own = target.own;
+      if (!own) return 1;
+      if (!screenwide_move_own_window_to_space(target.windowID, destination)) return 2;
+      dispatch_async(dispatch_get_main_queue(), ^{
+        [NSApp activate];
+        [own makeKeyAndOrderFront:nil];
+      });
+      return 0;
+    }
+    if (CGEventSourceButtonState(kCGEventSourceStateHIDSystemState, kCGMouseButtonLeft) ||
+        !sw_glide_space_valid_grip(target, anchor)) return 1;
     CGEventSourceRef source = CGEventSourceCreate(kCGEventSourceStateHIDSystemState);
     if (!source) return 1;
     bool held = false;

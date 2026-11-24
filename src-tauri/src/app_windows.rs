@@ -68,6 +68,8 @@ pub use capture_affinity::sync_capture_affinity;
 pub(crate) use capture_affinity::{mark_capturing, Capture};
 pub(crate) mod color_panel;
 pub(crate) mod commands;
+#[cfg(target_os = "macos")]
+mod desktop_space;
 mod dismissal;
 #[cfg(target_os = "macos")]
 mod dock_visibility;

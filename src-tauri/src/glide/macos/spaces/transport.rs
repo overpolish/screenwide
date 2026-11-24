@@ -1,7 +1,9 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: Elastic-2.0
 
-use super::{adapter::MacDesktopAdapter, lifecycle, presentation, Session, SESSION};
+use super::{
+  super::tween::WindowTarget, adapter::MacDesktopAdapter, lifecycle, presentation, Session, SESSION,
+};
 use crate::glide::core::{
   desktop_selection,
   desktops::{self, DesktopAdapter},
@@ -22,6 +24,7 @@ pub(super) fn inspect(app: &AppHandle, id: u64) {
   let Some((target, anchor, cancelled)) = context else {
     return;
   };
+  let foreign = matches!(target, WindowTarget::Ax(_));
   let worker_app = app.clone();
   let result = std::thread::Builder::new()
     .name("glide-space-layout".into())
@@ -30,8 +33,12 @@ pub(super) fn inspect(app: &AppHandle, id: u64) {
         MacDesktopAdapter::new(&target, anchor, cancelled).and_then(|adapter| adapter.snapshot());
       match result {
         // A window on every Space, as the island is, cannot be carried
-        // to another one, so it is offered no Spaces to pick from.
-        Ok(snapshot) if snapshot.membership.len() != 1 => {
+        // to another one, so it is offered no Spaces to pick from. Nor is
+        // another app's window on a full-screen Space: macOS lets only a
+        // process's own windows be moved off one.
+        Ok(snapshot)
+          if snapshot.membership.len() != 1 || (foreign && snapshot.on_full_screen_space()) =>
+        {
           if SESSION
             .lock()
             .is_ok_and(|state| state.as_ref().is_some_and(|session| session.id == id))
