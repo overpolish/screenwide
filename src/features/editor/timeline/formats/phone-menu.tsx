@@ -52,6 +52,8 @@ export function PhoneMenu({
         phone: id === NONE ? null : { phone: id as Phone },
       });
     },
+    // Beside the format bar at the window's foot, with the room above it.
+    opensAbove: true,
     width: MENU_WIDTH,
   });
   const phoneLabel = formats.phone

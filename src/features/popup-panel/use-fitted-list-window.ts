@@ -49,22 +49,32 @@ const rowShortfall = (listbox: HTMLElement) =>
  * opened where a row would otherwise be cut short, up to the width ceiling.
  * The opener only knows how wide it asked for, not how wide the words, the
  * keys beside them, or a translation turn out. A window that grows keeps its
- * start edge, and stays on its monitor.
+ * start edge, and stays on its monitor; one hung above its trigger keeps its
+ * bottom edge too. `measure`, where given, says how tall the list wants to
+ * be, for a list that lays itself out in parts of its own.
  */
 export function useFittedListWindow(
   listboxRef: RefObject<HTMLElement | null>,
   {
     content,
     itemCount,
+    measure,
+    opensAbove = false,
     showsAllItems,
-  }: { content: unknown; itemCount: number; showsAllItems: boolean },
+  }: {
+    content: unknown;
+    itemCount: number;
+    showsAllItems: boolean;
+    measure?: () => number;
+    opensAbove?: boolean;
+  },
 ) {
   useLayoutEffect(() => {
     if (!listboxRef.current) return;
 
     const window = getCurrentWindow();
     const listbox = listboxRef.current;
-    const scrollContent = listbox.parentElement;
+    const scrollContent = measure ? null : listbox.parentElement;
     let cancelled = false;
 
     const resize = async () => {
@@ -76,9 +86,11 @@ export function useFittedListWindow(
       const height =
         itemCount === 0
           ? emptyPopupPanelHeight
-          : showsAllItems
-            ? contentHeight
-            : Math.min(contentHeight, popupPanelMaxHeight);
+          : measure
+            ? measure()
+            : showsAllItems
+              ? contentHeight
+              : Math.min(contentHeight, popupPanelMaxHeight);
       const shortfall = rowShortfall(listbox);
       const width =
         shortfall > 0
@@ -90,11 +102,12 @@ export function useFittedListWindow(
               ),
             )
           : currentSize.width;
-      if (width > currentSize.width) {
+      const keepsBottom = opensAbove && height !== currentSize.height;
+      if (width > currentSize.width || keepsBottom) {
         const grows = width - currentSize.width;
         const position = (await window.outerPosition()).toLogical(scaleFactor);
         let x =
-          document.documentElement.dir === "rtl"
+          document.documentElement.dir === "rtl" && grows > 0
             ? position.x - grows
             : position.x;
         const monitor = await currentMonitor();
@@ -104,7 +117,10 @@ export function useFittedListWindow(
           const extent = area.size.toLogical(monitor.scaleFactor).width;
           x = Math.max(start, Math.min(x, start + extent - width));
         }
-        await window.setPosition(new LogicalPosition(x, position.y));
+        const y = keepsBottom
+          ? position.y + currentSize.height - height
+          : position.y;
+        await window.setPosition(new LogicalPosition(x, y));
       }
       await window.setSize(new LogicalSize(width, height));
     };
@@ -115,10 +131,15 @@ export function useFittedListWindow(
       void resize();
     });
     observer.observe(scrollContent ?? listbox);
+    // A list in parts grows inside a box that keeps its size; each part is
+    // watched for its own rows.
+    if (measure)
+      for (const part of listbox.querySelectorAll('[role="listbox"]'))
+        observer.observe(part);
 
     return () => {
       cancelled = true;
       observer.disconnect();
     };
-  }, [content, itemCount, listboxRef, showsAllItems]);
+  }, [content, itemCount, listboxRef, measure, opensAbove, showsAllItems]);
 }

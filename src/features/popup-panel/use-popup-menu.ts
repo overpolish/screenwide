@@ -41,7 +41,7 @@ export const boundsAnchor = (bounds: DOMRect): PopupMenuAnchor => ({
   y: bounds.top,
 });
 
-/** The gap between the anchor and the menu under it, in logical px. */
+/** The gap between the anchor and the menu beside it, in logical px. */
 const ANCHOR_GAP = 4;
 
 type PopupMenuOptions = {
@@ -55,6 +55,9 @@ type PopupMenuOptions = {
   /** `context` is whatever `open` was given, carried back through the id. */
   onSelect: (itemId: string, context: string) => void;
   width: number;
+  /** Hangs above the anchor rather than under it: a trigger at the foot of
+   * a window, with the room above it. */
+  opensAbove?: boolean;
   /** Opens at the full height of its items instead of scrolling past the
    * list ceiling. */
   showsAllItems?: boolean;
@@ -65,6 +68,9 @@ type PopupMenuRequest = {
   items: PopupPanelItem[];
   /** What the menu was opened on, handed back to `onSelect`. */
   context?: string;
+  /** The section, last in `items`, that scrolls on its own under the rest
+   * (`PopupPanelListContent.scrollingSection`). */
+  scrollingSection?: string;
   selectedIds?: string[];
 };
 
@@ -90,6 +96,7 @@ export function usePopupMenu({
   label,
   mode,
   onSelect,
+  opensAbove = false,
   showsAllItems = false,
   width,
 }: PopupMenuOptions) {
@@ -139,6 +146,7 @@ export function usePopupMenu({
     anchor,
     context = "",
     items,
+    scrollingSection,
     selectedIds = [],
   }: PopupMenuRequest) => {
     // Nothing applies here, so there is no menu to show rather than an empty
@@ -159,6 +167,14 @@ export function usePopupMenu({
       await hidePopupPanel(current.focusContents, SHARED_POPUP_PANEL);
       return;
     }
+    // A section only scrolls on its own under something that stays put.
+    const scrolling = items.filter(
+      (item) => item.section === scrollingSection,
+    ).length;
+    const scrolls =
+      scrollingSection !== undefined &&
+      scrolling > 0 &&
+      scrolling < items.length;
     open(SHARED_POPUP_PANEL, {
       content: {
         items,
@@ -167,29 +183,31 @@ export function usePopupMenu({
         selectedIds,
         selectionMode: "single",
         showsAllItems,
+        ...(scrolls ? { scrollingSection } : {}),
+        ...(opensAbove ? { opensAbove } : {}),
       },
       focusContents: false,
       id,
       label,
     });
+    // Opened at the height its rows and section headings take, so a headed
+    // menu does not grow once it has measured itself.
+    const height = initialPopupPanelHeight(
+      items.length,
+      new Set(items.flatMap((item) => item.section ?? [])).size,
+      { scrollingCount: scrolls ? scrolling : 0, showsAllItems },
+    );
     await showPopupPanel({
       anchor,
       focusContents: false,
       offset: new LogicalPosition(
         panelStartX(anchor, width),
-        anchor.y + anchor.height + ANCHOR_GAP,
+        opensAbove
+          ? anchor.y - ANCHOR_GAP - height
+          : anchor.y + anchor.height + ANCHOR_GAP,
       ),
       parentWindowLabel: getCurrentWindow().label,
-      // Opened at the height its rows and section headings take, so a
-      // headed menu does not grow once it has measured itself.
-      size: new LogicalSize(
-        width,
-        initialPopupPanelHeight(
-          items.length,
-          new Set(items.flatMap((item) => item.section ?? [])).size,
-          showsAllItems,
-        ),
-      ),
+      size: new LogicalSize(width, height),
       triggerId: id,
     });
   };

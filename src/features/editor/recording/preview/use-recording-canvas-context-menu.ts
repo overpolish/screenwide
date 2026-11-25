@@ -121,6 +121,9 @@ export function useRecordingCanvasContextMenu(
       anchor: pointerAnchor(x, y),
       context: pane,
       items,
+      ...(formatMenu.scrollingSection === undefined
+        ? {}
+        : { scrollingSection: formatMenu.scrollingSection }),
       selectedIds: formatMenu.selectedIds,
     });
   };

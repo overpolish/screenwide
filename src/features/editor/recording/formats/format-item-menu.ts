@@ -29,17 +29,23 @@ const SHOW = `${PREFIX}show:`;
 const MENU_WIDTH = 260;
 
 /** The menu items setting `id` apart by format, with those ticked; none
- * with one format. */
+ * with one format. Show in, a tick for every format, scrolls on its own
+ * under the commands (`scrollingSection`). */
 export const formatSyncMenu = (
   control: FrameFormatsControl | null,
   id: string,
-): { items: PopupPanelItem[]; selectedIds: string[] } => {
+): {
+  items: PopupPanelItem[];
+  selectedIds: string[];
+  scrollingSection?: string;
+} => {
   const snapshot = control?.snapshot;
   const sync = snapshot?.syncOf?.(id);
   if (!snapshot || !sync) return { items: [], selectedIds: [] };
   const named = listedFormats(snapshot);
   const inHand = named.find((each) => each.id === snapshot.formatId);
   const section = t("editor-frame-formats");
+  const showIn = t("editor-frame-format-show-in");
   const shown = sync.formats.filter((format) => format.isShown);
   // A scene is laid out per framing, shared by the platforms sharing it;
   // an annotation per proportion.
@@ -79,12 +85,13 @@ export const formatSyncMenu = (
       // Leaving it out of every format would be deleting it.
       keepsOneOn: true,
       label: named.find((each) => each.id === format.id)?.name ?? format.id,
-      section: t("editor-frame-format-show-in"),
+      section: showIn,
       togglesInPlace: true,
     })),
   ];
   return {
     items,
+    scrollingSection: showIn,
     selectedIds: [
       ...(sync.custom ? [CUSTOM] : []),
       ...shown.map((format) => `${SHOW}${format.id}`),
@@ -131,7 +138,6 @@ export function useFormatItemMenu() {
     onSelect: (itemId, id) => {
       pickedFormatSync(formatsRef.current, itemId, id);
     },
-    showsAllItems: true,
     width: MENU_WIDTH,
   });
   return (anchor: PopupMenuAnchor, id: string) => {

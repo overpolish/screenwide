@@ -78,6 +78,8 @@ export function FormatBar({ isLocked = false }: { isLocked?: boolean }) {
     onSelect: (preset) => {
       control?.onPatch({ kind: "add", preset });
     },
+    // The bar sits at the window's foot, with the room above it.
+    opensAbove: true,
     width: MENU_WIDTH,
   });
   const openActions = usePopupMenu({

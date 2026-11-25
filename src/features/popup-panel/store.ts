@@ -48,6 +48,13 @@ export type PopupPanelListContent = {
   selectedIds: string[];
   selectionMode: "multiple" | "single";
   exclusiveId?: string;
+  /** Hung above its trigger, so the window keeps its bottom edge as it fits
+   * itself to its rows. */
+  opensAbove?: boolean;
+  /** The section, last in the list, whose items scroll on their own while
+   * the actions above them always show whole: a long list of ticks under a
+   * menu's commands. */
+  scrollingSection?: string;
   /** A long list found by typing: the search field's name, which heads the
    * list and takes the keys while it is open. */
   searchLabel?: string;

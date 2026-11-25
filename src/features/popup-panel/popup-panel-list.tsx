@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { useRef } from "react";
+import { useCallback, useRef } from "react";
 import {
   Header,
   ListBoxSection as AriaListBoxSection,
@@ -13,6 +13,7 @@ import { revealChosen } from "../../primitives/scroll-area/reveal-chosen";
 import { ScrollArea } from "../../primitives/scroll-area/scroll-area";
 
 import { hidePopupPanel } from "./api";
+import { scrollingSectionHeight } from "./layout";
 import { renderPopupPanelItem } from "./popup-panel-list-item";
 import { PopupPanelSearchList } from "./popup-panel-search-list";
 import {
@@ -68,13 +69,30 @@ export function PopupPanelList({
   const close = usePopupPanelStore((state) => state.close);
   const select = usePopupPanelStore((state) => state.select);
   const listboxRef = useRef<HTMLDivElement>(null);
+  const fixedRef = useRef<HTMLDivElement>(null);
+  const headerRef = useRef<HTMLDivElement>(null);
+  const scrollingRef = useRef<HTMLDivElement>(null);
   const selectingRef = useRef(false);
   const activeItemCount = content.items.length;
   const showsAllItems = content.showsAllItems === true;
+  const scrollingSection = content.scrollingSection;
+  // The commands above a scrolling section show whole; the section takes
+  // what room the list ceiling leaves it (`scrollingSectionHeight`).
+  const measureSplit = useCallback(() => {
+    const fixed =
+      (fixedRef.current?.offsetHeight ?? 0) +
+      (headerRef.current?.offsetHeight ?? 0);
+    return (
+      fixed +
+      scrollingSectionHeight(fixed, scrollingRef.current?.offsetHeight ?? 0)
+    );
+  }, []);
 
   useFittedListWindow(listboxRef, {
     content: activeId,
     itemCount: activeItemCount,
+    ...(scrollingSection === undefined ? {} : { measure: measureSplit }),
+    opensAbove: content.opensAbove === true,
     showsAllItems,
   });
   const toggles = useToggleDrag({
@@ -175,6 +193,76 @@ export function PopupPanelList({
     );
 
   const hasSections = content.items.some((item) => item.section !== undefined);
+  const renderGroups = (items: PopupPanelItem[]) =>
+    groupItemsBySection(items).map((group) => (
+      <AriaListBoxSection
+        className="flex flex-col"
+        id={group.id}
+        key={group.id}
+      >
+        {group.section ? (
+          <Header>
+            <span className="block px-inset-sm pt-separate pb-inline text-caption text-fg-secondary">
+              {group.section}
+            </span>
+          </Header>
+        ) : null}
+        {group.items.map(renderItem)}
+      </AriaListBoxSection>
+    ));
+  const listProps = {
+    onSelectionChange,
+    selectedKeys: showsSelection ? content.selectedIds : [],
+    selectionBehavior: "toggle" as const,
+    selectionMode: content.selectionMode,
+  };
+
+  if (scrollingSection !== undefined) {
+    const fixedItems = content.items.filter(
+      (item) => item.section !== scrollingSection,
+    );
+    const scrollingItems = content.items.filter(
+      (item) => item.section === scrollingSection,
+    );
+    // Two lists, the commands and the ticks that scroll under them, so the
+    // commands never scroll out of view. A toggle drag runs across both.
+    return (
+      <div
+        className="flex h-full flex-col"
+        // Each menu opens with its ticks scrolled to the top, not where the
+        // last menu's were left.
+        key={activeId}
+        onPointerDownCapture={toggles.onPointerDown}
+        ref={listboxRef}
+        role="presentation"
+      >
+        <ListBox
+          aria-label={label}
+          autoFocus={focusContents}
+          className="w-full shrink-0 overflow-visible pb-0"
+          ref={fixedRef}
+          {...listProps}
+        >
+          {renderGroups(fixedItems)}
+        </ListBox>
+        <div aria-hidden className="shrink-0 px-inset-sm" ref={headerRef}>
+          <span className="block px-inset-sm pt-separate pb-inline text-caption text-fg-secondary">
+            {scrollingSection}
+          </span>
+        </div>
+        <ScrollArea inWindowCorner rootClassName="min-h-0 flex-1">
+          <ListBox
+            aria-label={scrollingSection}
+            className="w-full overflow-visible pt-0"
+            ref={scrollingRef}
+            {...listProps}
+          >
+            {scrollingItems.map(renderItem)}
+          </ListBox>
+        </ScrollArea>
+      </div>
+    );
+  }
 
   return (
     <ScrollArea
@@ -194,29 +282,11 @@ export function PopupPanelList({
           aria-label={label}
           autoFocus={focusContents}
           className="w-full overflow-visible"
-          onSelectionChange={onSelectionChange}
           ref={listboxRef}
-          selectedKeys={showsSelection ? content.selectedIds : []}
-          selectionBehavior="toggle"
-          selectionMode={content.selectionMode}
+          {...listProps}
         >
           {hasSections
-            ? groupItemsBySection(content.items).map((group) => (
-                <AriaListBoxSection
-                  className="flex flex-col"
-                  id={group.id}
-                  key={group.id}
-                >
-                  {group.section ? (
-                    <Header>
-                      <span className="block px-inset-sm pt-separate pb-inline text-caption text-fg-secondary">
-                        {group.section}
-                      </span>
-                    </Header>
-                  ) : null}
-                  {group.items.map(renderItem)}
-                </AriaListBoxSection>
-              ))
+            ? renderGroups(content.items)
             : content.items.map(renderItem)}
         </ListBox>
       </div>

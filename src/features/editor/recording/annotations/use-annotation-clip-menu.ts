@@ -169,6 +169,9 @@ export function useAnnotationClipMenu({
       anchor,
       context: id,
       items,
+      ...(formatMenu.scrollingSection === undefined
+        ? {}
+        : { scrollingSection: formatMenu.scrollingSection }),
       selectedIds: formatMenu.selectedIds,
     });
   };
