@@ -5,6 +5,7 @@ import { useRef, useState } from "react";
 
 import { useAnnotationDefaults } from "../annotations/annotation-defaults";
 import { isTurned } from "../layer-rotation";
+import { useLeftOut } from "../screenshot/formats/use-left-out";
 import {
   croppingScreenshotWorkspace,
   isCropOperation,
@@ -18,7 +19,6 @@ import {
   screenshotWorkspaceItemOutput,
   screenshotOutputDimensions,
 } from "../screenshot/screenshot-output";
-import { screenshotAnnotationOutput } from "../screenshot/screenshot-preview-events";
 import {
   screenshotItemSelection,
   screenshotSelectionTargets,
@@ -98,6 +98,7 @@ export function PreviewViewport({
     useState<ScreenshotWorkspaceOutputSettings | null>(null);
   const workspaceOutput =
     (isResizingCanvas ? canvasResizeDraft : null) ?? screenshotOutput;
+  const leftOut = useLeftOut(workspaceOutput);
   const orderedItems = workspaceOutput
     ? workspaceOutput.items
         .map((itemOutput) => items.find((item) => item.id === itemOutput.id))
@@ -116,10 +117,7 @@ export function PreviewViewport({
     selectedItemId !== null && workspaceOutput
       ? screenshotWorkspaceItemOutput(workspaceOutput, selectedItemId)
       : undefined;
-  const selectedItem =
-    selectedItemId === null
-      ? undefined
-      : items.find((item) => item.id === selectedItemId);
+  const selectedItem = items.find((item) => item.id === selectedItemId);
   // The crop tool works on the whole upright picture, which opens out round
   // its crop and closes once put down, the crop's chrome fading with it.
   const cropTurn = useCropTurn(
@@ -128,8 +126,8 @@ export function PreviewViewport({
   );
   const isCropShown = cropTurn.isFlat;
   const previewOutput =
-    workspaceOutput &&
-    croppingScreenshotWorkspace(workspaceOutput, selectedItem, cropTurn);
+    leftOut.drawn &&
+    croppingScreenshotWorkspace(leftOut.drawn, selectedItem, cropTurn);
   const frameGesture = (event: ScreenshotSelectionGestureEvent) => {
     if (event.operation !== "frameResize") return false;
     if (event.phase === "begin") {
@@ -321,7 +319,7 @@ export function PreviewViewport({
   const annotationChange = (event: ScreenshotAnnotationChangeEvent) => {
     if (event.textEdit === "begin") editGesture.beginGesture();
     onSelectedAnnotationsChange?.(event.selectedAnnotationIds);
-    const changed = screenshotAnnotationOutput(workspaceOutput, event);
+    const changed = leftOut.changed(event);
     if (changed) onOutputChange?.(changed.output, changed.itemId);
     if (event.textEdit === "end") requestAnimationFrame(editGesture.endGesture);
   };
@@ -350,7 +348,7 @@ export function PreviewViewport({
         : null;
   const selectionTargets =
     (isSelecting || isEditing || isDrawingArrows) && workspaceOutput
-      ? screenshotSelectionTargets(items, workspaceOutput, {
+      ? screenshotSelectionTargets(leftOut.pressable(items), workspaceOutput, {
           ...output,
           cropMode: isCropShown,
         })
@@ -360,7 +358,7 @@ export function PreviewViewport({
     annotationTool,
     artifactId,
     canvasRef: nativeFrameRef,
-    interactionOutput: workspaceOutput,
+    interactionOutput: leftOut.drawn,
     isEditorSuspended: isExportOpen,
     isEnabled: workspaceOutput !== undefined,
     onAnnotationChange: annotationChange,

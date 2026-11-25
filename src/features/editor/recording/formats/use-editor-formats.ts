@@ -8,9 +8,9 @@ import {
   exportedRecordingEdits,
 } from "../../export/camera-output";
 
-import { isScreenChange, withLookCarried } from "./format-look-carry";
+import { withLookCarried } from "./format-look-carry";
 import { formatSaveJobs } from "./format-save-jobs";
-import { withPlacedHere } from "./format-sharing";
+import { withOwnHere } from "./format-sharing";
 import { formatsOfShape, openedFormats } from "./recording-formats";
 import { useFormatEdit } from "./use-format-edit";
 import {
@@ -84,15 +84,14 @@ export function useEditorFormats(
   const scope = control?.snapshot.scope ?? "all";
   /** A change made to the screen or the camera of the shape in hand,
    * carried to the other shapes from the main one (`withLookCarried`); on
-   * a platform, any change to its screen sets the screen its own way there. */
+   * a platform, any change to its screen or its background sets that its
+   * own way there. */
   const editLook = (change: Partial<FormatDocument>) => {
     const { formats, look: before } = latestRef.current;
     const after = { ...before, ...change };
     const carried =
       scope === "shape"
-        ? formats && isScreenChange({ after, before })
-          ? withPlacedHere(formats)
-          : null
+        ? formats && withOwnHere(formats, { after, before })
         : withLookCarried(formats, { after, before }, scope);
     latestRef.current = { formats: carried ?? formats, look: after };
     if (change.recordingOutput)

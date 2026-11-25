@@ -4,7 +4,10 @@
 import { invoke } from "@tauri-apps/api/core";
 
 import { recordingProcessingPayload } from "../api";
-import { normalizedScreenshotOutput } from "../screenshot/screenshot-output";
+import {
+  normalizedScreenshotOutput,
+  normalizedScreenshotWorkspaceOutput,
+} from "../screenshot/screenshot-output";
 
 import type { RecordingFormatPayload } from "./recording-format";
 import type { CameraKey } from "../../../bindings/CameraKey";
@@ -12,6 +15,7 @@ import type { ExportedFile } from "../../../bindings/ExportedFile";
 import type { ExportSubtitles } from "../../../bindings/ExportSubtitles";
 import type { ScreenshotFormat } from "../../../bindings/ScreenshotFormat";
 import type { RecordingProcessingOptions } from "../api";
+import type { ScreenshotSaveJob } from "../screenshot/formats/screenshot-save-jobs";
 import type { RecordingOutputSettings } from "../screenshot/screenshot-output";
 import type { RecordingTimelineEdit } from "../timeline/editing/recording-timeline-edit";
 import type { CameraOverlaySettings } from "../types";
@@ -56,7 +60,7 @@ const exportPayload = ({
   subtitles,
 });
 
-export const saveExport = ({ fileStem, ...options }: SaveExportOptions) =>
+const saveExport = ({ fileStem, ...options }: SaveExportOptions) =>
   invoke<ExportedFile | null>("save_export", {
     fileStem,
     options: exportPayload(options),
@@ -86,18 +90,40 @@ const saveFormatExports = (
     options: exportPayload(options),
   });
 
+/** Every format of a screenshot in one export: `options` as they share
+ * them, and `jobs` each format's workspace and name, in the order their
+ * files are written. The file the finished island shows, the last, or
+ * null where cancelled. */
+const saveScreenshotFormats = (
+  { fileStem: _fileStem, ...options }: SaveExportOptions,
+  jobs: readonly ScreenshotSaveJob[],
+) =>
+  invoke<ExportedFile | null>("save_screenshot_formats", {
+    formats: jobs.map((job) => ({
+      fileStem: job.fileStem,
+      isCopy: job.isCopy ?? false,
+      screenshotOutput: normalizedScreenshotWorkspaceOutput(job.workspace),
+    })),
+    options: exportPayload(options),
+  });
+
 /** `jobs` saved under the export's name `fileStem`, each with the options
  * `options` gives it: one alone, or every format in one export that draws
  * them all from one decode of the recording, a job that is a copy of the one
- * before written as a copy of its file. The file the finished island shows,
- * or null where cancelled. */
+ * before written as a copy of its file. A screenshot made in several
+ * formats writes `screenshots` instead, every format's file. The file the
+ * finished island shows, or null where cancelled. */
 export function saveFormats<Job extends FormatExport>(
-  fileStem: string,
+  {
+    fileStem,
+    screenshots,
+  }: { fileStem: string; screenshots: readonly ScreenshotSaveJob[] | null },
   jobs: readonly Job[],
   options: (job: Job) => SaveExportOptions,
 ): Promise<ExportedFile | null> {
   if (jobs.length === 0) return Promise.resolve(null);
   const first = jobs[0];
+  if (screenshots) return saveScreenshotFormats(options(first), screenshots);
   if (jobs.length === 1) return saveExport(options(first));
   return saveFormatExports({ ...options(first), fileStem }, jobs);
 }

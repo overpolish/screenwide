@@ -113,3 +113,32 @@ describe("a change to the screen on the main canvas", () => {
     ).toBeNull();
   });
 });
+
+describe("a background changed on the main canvas", () => {
+  const red: FormatDocument = {
+    ...vertical,
+    recordingOutput: {
+      ...vertical.recordingOutput,
+      primary: {
+        ...vertical.recordingOutput.primary,
+        backgroundColor: "#ff0000",
+      },
+    },
+  };
+
+  it("reaches a platform unless its background is its own", () => {
+    const own: FrameFormats = {
+      ...formats,
+      list: formats.list.map((format) =>
+        format.id === "square" ? { ...format, ownBackground: true } : format,
+      ),
+    };
+    const carried = withLookCarried(
+      own,
+      { after: red, before: vertical },
+      "all",
+    );
+    expect(primaryOf(carried, "wide")?.backgroundColor).toBe("#ff0000");
+    expect(primaryOf(carried, "square")?.backgroundColor).not.toBe("#ff0000");
+  });
+});

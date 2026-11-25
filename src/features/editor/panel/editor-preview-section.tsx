@@ -16,6 +16,8 @@ import {
   useTweenedOutput,
 } from "../preview/use-tweened-output";
 import { useRecenterInsetControls } from "../recenter-inset-channel";
+import { isMainInHand } from "../recording/formats/format-name";
+import { useFrameFormats } from "../recording/formats/frame-formats-context";
 import { screenshotLayersInHand } from "../screenshot/screenshot-blank";
 import { screenshotChoices } from "../screenshot/screenshot-choices";
 import {
@@ -32,8 +34,8 @@ import { useScreenshotEditingKeys } from "../screenshot/use-screenshot-editing-k
 import { useScreenshotLayerActions } from "../screenshot/use-screenshot-layer-actions";
 import { useScreenshotLibrary } from "../screenshot/use-screenshot-library";
 import { useScreenshotRecenter } from "../screenshot/use-screenshot-recenter";
+import { useScreenshotShortcuts } from "../screenshot/use-screenshot-shortcuts";
 import { useScreenshotTool } from "../screenshot/use-screenshot-tool";
-import { useEditorWindowShortcuts } from "../shortcuts/use-editor-window-shortcuts";
 import { usePublishEditorModes } from "../title-bar/editor-title-modes";
 import { NO_CAPTURE_PARTS } from "../toolbar/editor-modes";
 import { EditorToolColumn } from "../toolbar/editor-tool-column";
@@ -176,15 +178,13 @@ export function ScreenshotSection({
     targetItemId: newestItemId,
     workspace: screenshotOutput,
   });
-  // The crop tool is the one tool you are "in": Enter accepts what is framed
-  // and puts it down, the crop itself committed as each handle was released.
+  // Cropping is the one tool you are "in", the picture showing the crop.
   const isCropping = tool === "crop";
   // Every one of these hit-tests the annotations on the layer; only a pen
   // makes a new one, and only it takes every press over the picture.
   const annotationTool = isAnnotationTool(pictureTool)
     ? pictureTool
     : undefined;
-  const hasSelectedAnnotation = annotations.hasSelection;
   const choices = screenshotChoices({
     clearAnnotations: annotations.clearSelection,
     newestItemId,
@@ -193,7 +193,7 @@ export function ScreenshotSection({
     setTool,
     tool,
   });
-  const { backToSelect, chooseMode, selectTool, toggle } = choices;
+  const { backToSelect, chooseMode } = choices;
   useScreenshotCropAsks(choices, screenshotOutput?.items ?? []);
   const library = useScreenshotLibrary({ backToSelect, island });
   usePublishEditorModes({
@@ -207,41 +207,18 @@ export function ScreenshotSection({
   // The Screenshot island's padding controls reach this workspace's analysis
   // through here, alongside the refresh a crop drag ends with.
   useRecenterInsetControls("screenshot", recenter);
-  useEditorWindowShortcuts({
-    ...editing.keys,
-    // A chosen annotation moves through its layer's stacking; with none in
-    // hand the layer itself moves.
-    onArrange: (move) => {
-      if (!annotations.arrangeSelected(move)) layerActions.moveLayer(move);
-    },
-    onConfirm: isCropping ? selectTool : undefined,
-    // Backspace and Delete take away the annotation the hand is pointing at
-    // first, and only the layer when there is no annotation under them.
-    onDelete: () => {
-      if (!annotations.deleteTargeted()) layerActions.deleteLayer();
-    },
-    // Escape puts the crop away with its layer chosen, and anything else
-    // back to Select with nothing chosen.
-    onDeselect:
-      tool !== "select" || hasSelectedAnnotation || isScreenOpen
-        ? choices.deselect
-        : undefined,
-    // ⌘D lets go of everything chosen, the layer as well, with Select in
-    // hand, where no annotation is chosen to duplicate.
-    onDeselectAll: backToSelect,
-    onResizeCanvas: () => {
-      toggle("canvas");
-    },
-    onSelectTool: selectTool,
-    onToggleCrop: () => {
-      if (hasPicture) toggle("crop");
-    },
-    onToggleScreenPanel: () => {
-      if (hasPicture) chooseMode(isScreenOpen ? null : "screen");
-    },
-    onTool: toggle,
-    ownsEscape: tool !== "select" || hasSelectedAnnotation || isScreenOpen,
+  useScreenshotShortcuts({
+    annotations,
+    choices,
+    editing,
+    hasPicture,
+    isScreenOpen,
+    layerActions,
+    tool,
   });
+  // A platform's canvas is its template's size; only the main canvas's
+  // edges are dragged to resize it.
+  const isCanvasSized = isMainInHand(useFrameFormats()?.snapshot);
   useIncomingImages("screenshot", placeScreenshotImage, {
     // The image placed is chosen, and its pen taken up with it.
     onPlaced: () => {
@@ -271,7 +248,7 @@ export function ScreenshotSection({
           cropKeepsShape={keepsShape(cropAspect)}
           isEditing={isCropping}
           isExportOpen={isExportOpen}
-          isResizingCanvas={tool === "canvas"}
+          isResizingCanvas={tool === "canvas" && isCanvasSized}
           isSelectHeld={hold.isHeld}
           isSelecting={pictureTool === "select"}
           items={artifact.items}

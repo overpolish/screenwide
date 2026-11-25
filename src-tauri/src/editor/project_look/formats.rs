@@ -75,6 +75,12 @@ pub struct FrameFormat {
   #[serde(default, skip_serializing_if = "std::ops::Not::not")]
   #[ts(optional, as = "Option<bool>")]
   pub placed: bool,
+  /// Whether the background is set in this shape its own way, changed while
+  /// the shape was in hand: the main canvas's changes to it no longer reach
+  /// the shape, until it is reset to follow the main canvas again.
+  #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+  #[ts(optional, as = "Option<bool>")]
+  pub own_background: bool,
   /// Kept while another shape is in hand; the one in hand's lives in the
   /// project look.
   #[serde(default, skip_serializing_if = "Option::is_none")]

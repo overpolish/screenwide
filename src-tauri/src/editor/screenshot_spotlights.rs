@@ -152,7 +152,12 @@ mod tests {
     output.image_y = 10.0;
     output.image_width = image_width;
     output.annotations = annotations;
-    ScreenshotWorkspaceItemOutput { id, output }
+    ScreenshotWorkspaceItemOutput {
+      id,
+      output,
+      hidden: false,
+      size_scale: None,
+    }
   }
 
   fn workspace(items: Vec<ScreenshotWorkspaceItemOutput>) -> ScreenshotWorkspaceOutputSettings {

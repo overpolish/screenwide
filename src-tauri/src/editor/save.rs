@@ -5,9 +5,11 @@ mod export_command;
 mod export_credits;
 mod finished;
 mod format_pass;
+mod screenshot_formats;
 pub use export_command::save_export;
 pub use finished::{copy_export_file, drag_export_file, put_away_export, reveal_export_file};
 pub use format_pass::save_format_exports;
+pub use screenshot_formats::save_screenshot_formats;
 
 use super::*;
 
@@ -29,4 +31,7 @@ pub use format_pass::{__cmd__save_format_exports, __tauri_command_name_save_form
 pub(super) use recording_file::{
   delivered_extension, save_primary_recording, save_recording_copy, save_selected_recording_copy,
   scale_percent, PrimaryRecordingSaveRequest,
+};
+pub use screenshot_formats::{
+  __cmd__save_screenshot_formats, __tauri_command_name_save_screenshot_formats,
 };

@@ -1,12 +1,12 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { invoke } from "@tauri-apps/api/core";
 import { useEffect } from "react";
 
 import { clearExportFailure } from "../../export/export-island-store";
 import { frameSizePreset } from "../../tools/frame/frame-sizes";
 
+import { withMainBackground } from "./format-look-carry";
 import {
   isFramedOwnWay,
   removedPlatform,
@@ -25,6 +25,7 @@ import {
   withPhone,
   withPreview,
 } from "./recording-formats";
+import { appOf, usePlatformOverlay } from "./use-platform-overlay";
 
 import type { FormatDocument } from "./format-document";
 import type { EditScope } from "./format-scope";
@@ -34,10 +35,6 @@ import type { PhoneView } from "../../../../bindings/PhoneView";
 import type { RecordingOutputSettings } from "../../screenshot/screenshot-output";
 import type { ToolPanelFormats } from "../../tools/tool-panel-frame";
 import type { CameraOverlaySettings } from "../../types";
-
-/** The app whose interface a format made from `preset` is previewed under. */
-const appOf = (preset: string | null | undefined) =>
-  frameSizePreset(preset)?.overlay ?? null;
 
 /** What the format bar asks of the recording's formats. */
 export type FrameFormatPatch =
@@ -61,6 +58,9 @@ export type FrameFormatPatch =
   | { kind: "follow"; shape: string }
   /** The shape in hand's screen laid out from the main canvas again. */
   | { kind: "main-placement" }
+  /** The shape in hand's background put back to the main canvas's, which
+   * it follows again. */
+  | { kind: "main-background" }
   /** The main canvas made for the template `preset`, or for none
    * (`main-made-for.ts`). */
   | { kind: "made-for"; preset: string | null };
@@ -115,21 +115,13 @@ export function useRecordingFormats({
   const overlay = isPreviewed ? appOf(preset) : null;
   const phone = overlay && isTall ? (formats?.phone ?? null) : null;
   const phoneId = phone?.phone ?? null;
-  useEffect(() => {
-    // The canvas goes with it: the native side draws the overlay only once
-    // the canvas on screen has this shape, which a format switch reaches a
-    // moment after this does.
-    invoke("set_editor_platform_overlay", {
-      canvas: { height, width },
-      phone: phoneId ? { phone: phoneId } : null,
-      platform: overlay,
-    }).catch((cause: unknown) => {
-      console.error(
-        "Could not lay the platform overlay over the picture",
-        cause,
-      );
-    });
-  }, [height, overlay, phoneId, width]);
+  usePlatformOverlay({
+    height,
+    isEnabled: isRecording,
+    overlay,
+    phone: phoneId,
+    width,
+  });
   const document: FormatDocument = { cameraOverlay, recordingOutput };
   // A size typed in, or the frame dragged, leaves the template the main
   // canvas was made for: it is made for none, and keeps clear of nothing.
@@ -208,6 +200,9 @@ export function useRecordingFormats({
         case "main-placement":
           if (formats) apply(withMainPlacement(formats, document));
           return;
+        case "main-background":
+          if (formats) apply(withMainBackground(formats, document));
+          return;
         case "made-for":
           apply(withMainMadeFor(formats, document, patch.preset));
           return;
@@ -234,6 +229,7 @@ export function useRecordingFormats({
           })),
           height: size.height,
           id: each.id,
+          ownBackground: each.ownBackground === true,
           ownWay: isFramedOwnWay(each, formats?.edits),
           placed: each.placed === true,
           width: size.width,

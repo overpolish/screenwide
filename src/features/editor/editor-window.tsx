@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import {
   browseExportDirectory,
@@ -49,20 +49,12 @@ import {
 } from "./recording/use-project-look";
 import { useRecordingEditorPreview } from "./recording/use-recording-editor-preview";
 import { sourceScalePercent } from "./resolution";
-import { newestScreenshotLayer } from "./screenshot/screenshot-blank";
 import {
   defaultRecordingOutput,
-  defaultScreenshotOutput,
   RecordingOutputSettings,
-  ScreenshotWorkspaceOutputSettings,
   withScreenshotWorkspaceItemOutput,
 } from "./screenshot/screenshot-output";
-import {
-  reopenedScreenshotWorkspace,
-  seedScreenshotWorkspace,
-} from "./screenshot/screenshot-seed";
-import { useScreenshotLayers } from "./screenshot/use-screenshot-layers";
-import { useScreenshotProject } from "./screenshot/use-screenshot-project";
+import { useScreenshotWorkspace } from "./screenshot/use-screenshot-workspace";
 import {
   selectArtifact,
   selectDirectory,
@@ -122,14 +114,30 @@ export function EditorWindow() {
   const [cameraResolutionScalePercent, setCameraResolutionScalePercent] =
     useState(100);
   const [resolutionScalePercent, setResolutionScalePercent] = useState(100);
-  const [screenshotOutput, setScreenshotOutput] =
-    useState<ScreenshotWorkspaceOutputSettings>(() => ({
-      ...defaultScreenshotOutput(1, 1),
-      items: [],
-    }));
-  const [selectedScreenshotItemId, setSelectedScreenshotItemId] = useState<
-    number | null
-  >(null);
+  // The history starts over when the seeded settings for an artifact land,
+  // not when the artifact arrives: the seeding is a separate commit, and a
+  // reset keyed on arrival could lift before it, leaving the placeholder
+  // canvas as the first thing undo goes back to.
+  const [seededArtifactId, setSeededArtifactId] = useState<number | undefined>(
+    undefined,
+  );
+  const screenshot = useScreenshotWorkspace({
+    artifact,
+    persisted: {
+      backgroundRadius: persistedScreenshotBackgroundRadius,
+      persisted: persistedScreenshotOutput,
+      radius: persistedScreenshotRadius,
+    },
+    seededArtifactId,
+  });
+  const {
+    formats: screenshotFormats,
+    selectedItemId: selectedScreenshotItemId,
+    setFormats: setScreenshotFormats,
+    setSelectedItemId: setSelectedScreenshotItemId,
+    setWorkspace: setScreenshotOutput,
+    workspace: screenshotOutput,
+  } = screenshot;
   const [recordingOutput, setRecordingOutput] =
     useState<RecordingOutputSettings>(() =>
       defaultRecordingOutput({ primary: { height: 1, width: 1 } }),
@@ -160,7 +168,6 @@ export function EditorWindow() {
     artifactId: number;
     values: AudioTrackVolume[];
   } | null>(null);
-  const seenScreenshotItemIdsRef = useRef<Set<number>>(new Set());
   const openProject = openProjectActions();
 
   // Keyed on the capture rather than the object, so a replacement always
@@ -257,6 +264,7 @@ export function EditorWindow() {
       recordingOutput,
       recordingTimelineEdit,
       resolutionScalePercent,
+      screenshotFormats,
       screenshotOutput,
       trackSelection,
       videoTrackSelection,
@@ -275,6 +283,7 @@ export function EditorWindow() {
       recordingOutput,
       recordingTimelineEdit,
       resolutionScalePercent,
+      screenshotFormats,
       screenshotOutput,
       trackSelection,
       videoTrackSelection,
@@ -296,18 +305,12 @@ export function EditorWindow() {
       setRecordingFormats(next.recordingFormats);
       setRecordingOutput(recordingOutputForEdit(next.recordingOutput));
       setScreenshotOutput(next.screenshotOutput);
+      setScreenshotFormats(next.screenshotFormats);
       setTrackSelection(next.trackSelection);
       setVideoTrackSelection(next.videoTrackSelection);
       clearExportFailure();
     },
-    [setTimelineEdit],
-  );
-  // The history starts over when the seeded settings for an artifact land,
-  // not when the artifact arrives: the seeding is a separate commit, and a
-  // reset keyed on arrival could lift before it, leaving the placeholder
-  // canvas as the first thing undo goes back to.
-  const [seededArtifactId, setSeededArtifactId] = useState<number | undefined>(
-    undefined,
+    [setScreenshotFormats, setScreenshotOutput, setTimelineEdit],
   );
   const editGesture = useEditorEditHistory({
     apply: applyEditState,
@@ -341,7 +344,7 @@ export function EditorWindow() {
     screenshot: {
       format: screenshotExport.format,
       fullColour: screenshotExport.fullColour,
-      output: screenshotOutput,
+      output: screenshot.published,
     },
   });
 
@@ -392,30 +395,6 @@ export function EditorWindow() {
     setResolutionScalePercent(seeded.resolutionScalePercent);
     setRecordingOutput(seededRecordingOutput);
     setRecordingFormats(look?.formats ?? null);
-    setScreenshotOutput(
-      artifact?.kind === "screenshot" && artifact.projectWorkspace
-        ? reopenedScreenshotWorkspace(artifact, artifact.projectWorkspace)
-        : seedScreenshotWorkspace({
-            artifact,
-            backgroundRadius: persistedScreenshotBackgroundRadius,
-            persisted: persistedScreenshotOutput,
-            radius: persistedScreenshotRadius,
-          }),
-    );
-    setSelectedScreenshotItemId(
-      artifact?.kind === "screenshot"
-        ? (newestScreenshotLayer(
-            artifact.items.filter(
-              (item) => !artifact.deletedItemIds.includes(item.id),
-            ),
-          )?.id ?? null)
-        : null,
-    );
-    seenScreenshotItemIdsRef.current = new Set(
-      artifact?.kind === "screenshot"
-        ? artifact.items.map((item) => item.id)
-        : [],
-    );
     setSeededArtifactId(artifactId);
     /* eslint-enable @eslint-react/set-state-in-effect */
     // A cancelled or failed save restores the same artifact through a fresh
@@ -438,23 +417,6 @@ export function EditorWindow() {
     trackSelection,
     videoTrackSelection,
   });
-  useScreenshotProject(
-    artifact?.kind === "screenshot" && seededArtifactId === artifact.id
-      ? artifact.id
-      : undefined,
-    screenshotOutput,
-  );
-
-  useScreenshotLayers({
-    onSelectedItemChange: setSelectedScreenshotItemId,
-    screenshot:
-      artifact?.kind === "screenshot" && seededArtifactId === artifact.id
-        ? artifact
-        : null,
-    seenRef: seenScreenshotItemIdsRef,
-    setWorkspace: setScreenshotOutput,
-    workspace: screenshotOutput,
-  });
 
   // Keep the workspace name aligned with the latest capture suggestion.
   useEffect(() => {
@@ -474,7 +436,7 @@ export function EditorWindow() {
     <EditorEditGestureContext value={editGesture}>
       <EditorPanel
         {...openProject}
-        allFormats={formats.savesAll}
+        allFormats={screenshot.allFormats ?? formats.savesAll}
         artifact={artifact}
         audioTrackVolumes={currentAudioTrackVolumes}
         bakeCamera={effectiveBakeCamera}
@@ -492,7 +454,7 @@ export function EditorWindow() {
         enabledVideoTracks={enabledVideoTracks}
         exportCompare={exportCompare}
         fileStem={fileStem}
-        frameFormats={formats.control}
+        frameFormats={formats.control ?? screenshot.formatsControl}
         isCancelingSave={isCancelingSave}
         isPreparingRecordingAudio={isPreparingRecordingPreview}
         isPreparingRecordingPreview={isPreparingRecordingPreview}
@@ -500,7 +462,7 @@ export function EditorWindow() {
         isSaving={isSaving}
         keyboardEffects={keyboardEffects}
         lookQualities={lookQualities}
-        onAllFormatsChange={formats.setSavesAll}
+        onAllFormatsChange={screenshot.setSavesAll ?? formats.setSavesAll}
         onBakeCameraChange={setBakeCamera}
         onBrowse={() => {
           browseExportDirectory()
@@ -538,7 +500,7 @@ export function EditorWindow() {
         }}
         onCopy={() => {
           copyEditorToClipboard(
-            screenshotOutput,
+            screenshot.published,
             deleteProjectAfterExport,
           ).catch(report("copy"));
         }}
@@ -584,7 +546,7 @@ export function EditorWindow() {
           saveProgress.begin(
             jobs.some(({ plan }) => plan.showsMeasuredProgress),
           );
-          saveFormats(fileStem, jobs, (job) => ({
+          saveFormats(screenshot.saveTarget(fileStem), jobs, (job) => ({
             ...job.plan.options,
             cameraKey,
             deleteProjectAfterExport,

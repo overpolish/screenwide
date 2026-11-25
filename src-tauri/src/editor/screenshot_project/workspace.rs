@@ -9,6 +9,7 @@
 
 use serde_json::{json, Value};
 
+use super::formats::{with_layer_keys, with_looks};
 use super::*;
 
 /// The open screenshot's project and its layers' ids, back to front, if it is
@@ -31,8 +32,30 @@ pub(super) fn open_project(
   }
 }
 
-/// The window's workspace as the project keeps it.
-fn stored(mut workspace: Value, ids: &[u64]) -> Value {
+/// The window's workspace as the project keeps it, and the formats with
+/// the workspaces their shapes keep aside, and the layers they show in
+/// only some formats, kept the same way.
+fn stored(workspace: Value, formats: Option<Value>, ids: &[u64]) -> Value {
+  let mut saved = stored_workspace(workspace, ids);
+  if let Some(formats) = formats {
+    let formats = with_layer_keys(formats, |key| {
+      let id = key.parse::<u64>().ok()?;
+      Some(ids.iter().position(|each| *each == id)?.to_string())
+    });
+    saved["formats"] = with_looks(formats, |look| Some(stored_workspace(look, ids)));
+  }
+  saved
+}
+
+/// Formats as the project keeps them (`stored`), as the window takes them.
+fn restored_formats(formats: Value, ids: &[u64]) -> Value {
+  let formats = with_layer_keys(formats, |key| {
+    Some(ids.get(key.parse::<usize>().ok()?)?.to_string())
+  });
+  with_looks(formats, |look| restored(look, ids))
+}
+
+fn stored_workspace(mut workspace: Value, ids: &[u64]) -> Value {
   let items = workspace
     .as_object_mut()
     .and_then(|canvas| canvas.remove("items"))
@@ -72,16 +95,35 @@ fn restored(saved: Value, ids: &[u64]) -> Option<Value> {
   Some(canvas)
 }
 
-/// The workspace saved in the screenshot project `project`, for a window
-/// whose layers are `ids`, and which of `ids` it no longer holds: layers
-/// deleted in the editor, which reopening must not bring back as though they
-/// had been taken since it was saved.
-pub(crate) fn restored_workspace(project: &Path, ids: &[u64]) -> (Option<Value>, Vec<u64>) {
+/// What a screenshot project keeps for a window whose layers are `ids`.
+pub(crate) struct RestoredWorkspace {
+  pub(crate) workspace: Option<Value>,
+  /// The shapes the screenshot is made in, if it is made for platforms.
+  pub(crate) formats: Option<Value>,
+  /// The layers of `ids` it no longer holds: deleted in the editor, which
+  /// reopening must not bring back as though they had been taken since it
+  /// was saved.
+  pub(crate) deleted: Vec<u64>,
+}
+
+/// The workspace and formats saved in the screenshot project `project`,
+/// for a window whose layers are `ids`.
+pub(crate) fn restored_workspace(project: &Path, ids: &[u64]) -> RestoredWorkspace {
   let Some(saved) = super::super::project_look::saved_look(project) else {
-    return (None, Vec::new());
+    return RestoredWorkspace {
+      workspace: None,
+      formats: None,
+      deleted: Vec::new(),
+    };
   };
-  let gone = deleted(&saved, ids);
-  (restored(saved, ids), gone)
+  RestoredWorkspace {
+    deleted: deleted(&saved, ids),
+    formats: saved
+      .get("formats")
+      .cloned()
+      .map(|formats| restored_formats(formats, ids)),
+    workspace: restored(saved, ids),
+  }
 }
 
 /// The layers of `ids` whose place in `saved` is empty. A layer added since
@@ -108,6 +150,7 @@ pub async fn set_screenshot_project_workspace(
   edited: bool,
   revision: u64,
   workspace: Value,
+  formats: Option<Value>,
 ) -> Result<(), String> {
   let (project, ids) = open_project(&app, artifact_id)?;
   if edited {
@@ -116,7 +159,8 @@ pub async fn set_screenshot_project_workspace(
   // Off the async runtime: a background picture is copied in the first time
   // it is saved.
   tauri::async_runtime::spawn_blocking(move || {
-    super::super::project_look::save_look(&project, revision, stored(workspace, &ids))
+    let look = stored(workspace, formats, &ids);
+    super::super::project_look::save_look(&project, revision, look)
   })
   .await
   .map_err(|error| error.to_string())?
@@ -169,7 +213,7 @@ mod tests {
       ],
     });
 
-    let kept = stored(window, &[7, 9]);
+    let kept = stored(window, None, &[7, 9]);
     assert_eq!(kept["layers"][0]["radiusPercent"], 1);
     assert_eq!(kept["layers"][1]["radiusPercent"], 2);
     assert_eq!(kept["canvas"]["backgroundColor"], "#fff");
@@ -188,6 +232,40 @@ mod tests {
   }
 
   #[test]
+  fn a_format_keeps_its_layers_by_their_place_too() {
+    let window = json!({ "items": [{ "id": 7, "output": { "radiusPercent": 1 } }] });
+    let formats = json!({
+      "active": "tiktok-shape",
+      "list": [
+        { "id": "main", "look": { "items": [{ "id": 7, "output": { "radiusPercent": 4 } }] } },
+        { "id": "tiktok-shape", "platforms": ["tiktok"] },
+      ],
+      "showIn": { "layers": { "7": { "formats": ["tiktok"] } } },
+    });
+
+    let kept = stored(window, Some(formats), &[7]);
+    assert_eq!(
+      kept["formats"]["list"][0]["look"]["layers"][0]["radiusPercent"],
+      4
+    );
+    assert_eq!(
+      kept["formats"]["showIn"]["layers"],
+      json!({ "0": { "formats": ["tiktok"] } })
+    );
+
+    let reopened = restored_formats(kept["formats"].clone(), &[31]);
+    assert_eq!(
+      reopened["list"][0]["look"]["items"],
+      json!([{ "id": 31, "output": { "radiusPercent": 4 } }])
+    );
+    assert!(reopened["list"][1].get("look").is_none());
+    assert_eq!(
+      reopened["showIn"]["layers"],
+      json!({ "31": { "formats": ["tiktok"] } })
+    );
+  }
+
+  #[test]
   fn a_deleted_layer_is_told_apart_from_one_taken_since() {
     // Three layers, the middle one deleted before the save.
     let window = json!({
@@ -196,7 +274,7 @@ mod tests {
         { "id": 9, "output": { "radiusPercent": 3 } },
       ],
     });
-    let kept = stored(window, &[7, 8, 9]);
+    let kept = stored(window, None, &[7, 8, 9]);
 
     // Reopened with a fourth taken since: only the deleted one is named.
     assert_eq!(deleted(&kept, &[21, 22, 23, 24]), vec![22]);

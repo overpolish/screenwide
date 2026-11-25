@@ -18,6 +18,7 @@ mod pictures;
 
 use super::*;
 pub(crate) use cleanup::clean_pictures;
+pub(crate) use formats::FormatScope;
 pub use formats::FrameFormats;
 pub(crate) use pictures::{
   adopt_pictures, carry_pictures, folder as pictures_folder, keep_in_app_data, stored_names,

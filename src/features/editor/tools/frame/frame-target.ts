@@ -70,7 +70,8 @@ type FrameTargetInputs = {
   screenshotOutput: ScreenshotWorkspaceOutputSettings | null | undefined;
   selectedScreenshotItemId: number | null;
   selectedTrack: string | null;
-  /** A recording's formats: only the main canvas offers a size to set. */
+  /** The formats a recording or screenshot is made in: only the main
+   * canvas offers a size to set. */
   frameFormats?: FrameFormatsControl | null;
   onCameraOverlayChange?: (settings: CameraOverlaySettings) => void;
   onCanvasResize?: (settings: ScreenshotWorkspaceOutputSettings) => void;
@@ -203,9 +204,10 @@ export const editorFrameTarget = (
 ): EditorFrameTarget | null => {
   const { artifact } = inputs;
   if (!artifact) return null;
-  if (artifact.kind !== "recording")
-    return screenshotFrameTarget(inputs, artifact);
-  const framed = recordingFrameTarget(inputs, artifact);
+  const framed =
+    artifact.kind === "recording"
+      ? recordingFrameTarget(inputs, artifact)
+      : screenshotFrameTarget(inputs, artifact);
   const formats = inputs.frameFormats;
   if (!framed || !formats) return framed;
   return {

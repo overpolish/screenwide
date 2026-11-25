@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { laidCamera, laidPlacement } from "./format-document";
+import { activeFormat, isMainCanvas, mainDocument } from "./recording-formats";
 
 import type { FormatDocument } from "./format-document";
 import type { EditScope } from "./format-scope";
@@ -15,9 +16,11 @@ import type { FrameFormats } from "../../../../bindings/FrameFormats";
 // resize or a reshaped canvas on the main one shows on every platform. A
 // platform whose screen was set its own way (moved, resized, turned,
 // cropped or restyled with it in hand) keeps all of the screen's own
-// settings; only the background still reaches it. The camera's own canvas,
-// when it is saved apart, is its own, and its places only carry to one of
-// the same size.
+// settings; only the background still reaches it. A platform whose
+// background was changed with it in hand keeps that background, until it is
+// reset to follow the main canvas's (`ownBackground`). The camera's own
+// canvas, when it is saved apart, is its own, and its places only carry to
+// one of the same size.
 
 /** Output pixels, meaningful on a canvas of one size alone. */
 const PLACED_OUTPUT: Record<string, true> = {
@@ -41,7 +44,7 @@ const PLACED_CAMERA: Record<string, true> = {
 /** The screen's own settings: where it is and how it is shown, as against
  * the canvas's background around it. A platform set its own way keeps
  * these. */
-const SCREEN: Record<string, true> = {
+export const SCREEN: Record<string, true> = {
   ...PLACED_OUTPUT,
   dropShadow: true,
   inset: true,
@@ -52,7 +55,7 @@ const SCREEN: Record<string, true> = {
 };
 /** The canvas itself, what only the preview draws, and the part of the
  * canvas each platform leaves clear, which is its own. */
-const NEVER: Record<string, true> = {
+export const NEVER: Record<string, true> = {
   clearArea: true,
   cropPreview: true,
   dropShadowStrength: true,
@@ -60,7 +63,22 @@ const NEVER: Record<string, true> = {
   width: true,
 };
 
-const isIn = (table: Record<string, true>, key: string) =>
+/** What the canvas sits on, and its corners: a platform set its own way
+ * there keeps these, until it is reset to follow the main canvas. */
+export const BACKGROUND: Record<string, true> = {
+  backgroundColor: true,
+  backgroundImagePath: true,
+  backgroundRadiusPercent: true,
+  backgroundType: true,
+  meshColors: true,
+  meshGenerator: true,
+  meshLockedColors: true,
+  meshPoints: true,
+  meshSeed: true,
+  meshWarpPercent: true,
+};
+
+export const isIn = (table: Record<string, true>, key: string) =>
   Object.prototype.hasOwnProperty.call(table, key);
 
 const same = (left: unknown, right: unknown) =>
@@ -68,7 +86,7 @@ const same = (left: unknown, right: unknown) =>
 
 /** What changed from `before` to `after`, outside `skipped`, written over
  * a target. */
-const carriedOnto =
+export const carriedOnto =
   <T extends object>(
     { after, before }: { after: T; before: T },
     skipped: (key: string) => boolean,
@@ -87,7 +105,7 @@ const carriedOnto =
   };
 
 /** Whether anything `table` names changed from `before` to `after`. */
-const movedIn = <T extends object>(
+export const movedIn = <T extends object>(
   table: Record<string, true>,
   { after, before }: { after: T; before: T },
 ) =>
@@ -100,7 +118,7 @@ const movedIn = <T extends object>(
   );
 
 /** The keys of `table` taken from `from`, written over `target`. */
-const placedFrom = <T extends object>(
+export const placedFrom = <T extends object>(
   table: Record<string, true>,
   from: T,
   target: T,
@@ -129,6 +147,46 @@ export const isScreenChange = ({
     after: after.cameraOverlay,
     before: before.cameraOverlay,
   });
+
+/** Whether what the canvas sits on, or its corners, changed from `before`
+ * to `after`. */
+export const isBackgroundChange = ({
+  after,
+  before,
+}: {
+  after: FormatDocument;
+  before: FormatDocument;
+}) =>
+  movedIn(BACKGROUND, {
+    after: after.recordingOutput.primary,
+    before: before.recordingOutput.primary,
+  });
+
+/** The shape in hand's background put back to the main canvas's, which it
+ * follows again; null on the main canvas. `document` is the shape in
+ * hand's. */
+export function withMainBackground(
+  formats: FrameFormats,
+  document: FormatDocument,
+): { document: FormatDocument; formats: FrameFormats } | null {
+  if (isMainCanvas(formats)) return null;
+  const main = mainDocument(formats, document).recordingOutput.primary;
+  const active = activeFormat(formats);
+  const { ownBackground: _own, ...following } = active;
+  return {
+    document: {
+      ...document,
+      recordingOutput: {
+        ...document.recordingOutput,
+        primary: placedFrom(BACKGROUND, main, document.recordingOutput.primary),
+      },
+    },
+    formats: {
+      ...formats,
+      list: formats.list.map((shape) => (shape === active ? following : shape)),
+    },
+  };
+}
 
 /** `look` with the screen and the camera set as `laid` sets them, and the
  * clear area `laid`'s; the rest of it, such as the background, its own. */
@@ -190,12 +248,13 @@ export function withLookCarried(
     const sameSize =
       size.width === canvas.width && size.height === canvas.height;
     // A platform whose screen is set its own way keeps all of the screen's
-    // own settings; only the background still comes from the main canvas.
+    // own settings, and one whose background is its own keeps that.
     const follows = format.placed !== true;
     const skipped = (key: string) =>
       isIn(NEVER, key) ||
       isIn(PLACED_OUTPUT, key) ||
-      (!follows && isIn(SCREEN, key));
+      (!follows && isIn(SCREEN, key)) ||
+      (format.ownBackground === true && isIn(BACKGROUND, key));
     const camera = carriedOnto(
       { after: after.cameraOverlay, before: before.cameraOverlay },
       (key) => isIn(PLACED_CAMERA, key),

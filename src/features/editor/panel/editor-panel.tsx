@@ -14,6 +14,7 @@ import {
 } from "../export/recording-export-settings";
 import { useEditorExportIsland } from "../export/use-editor-export-island";
 import { FrameFormatsContext } from "../recording/formats/frame-formats-context";
+import { FormatBar } from "../timeline/formats/format-bar";
 import { EditorTitleModeBar } from "../title-bar/editor-mode-bar";
 import { EditorTitleBar } from "../title-bar/editor-title-bar";
 import { useEditorToolPanels } from "../tools/use-editor-tool-panels";
@@ -207,6 +208,14 @@ export function EditorPanel(props: EditorPanelProps) {
                 screenshotOutput={screenshotOutput}
                 selectedItemId={selectedScreenshotItemId}
               />
+              {/* The formats the screenshot is made in, as under a
+                  recording's timeline, with nothing to play. */}
+              <ChromeSetBack
+                className="flex shrink-0 justify-end px-inset pb-inset"
+                isSetBack={isExportOpen}
+              >
+                <FormatBar isLocked={isExportOpen} />
+              </ChromeSetBack>
             </section>
           ) : (
             // The window is only shown once Rust holds a capture for it, so

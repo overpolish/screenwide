@@ -15,7 +15,6 @@ import {
   pointerAnchor,
   usePopupMenu,
 } from "../../../popup-panel/use-popup-menu";
-import { ShapeGlyph } from "../../glyphs/shape-glyph";
 import { formatName } from "../../recording/formats/format-name";
 import { useFrameFormats } from "../../recording/formats/frame-formats-context";
 import {
@@ -24,6 +23,7 @@ import {
   frameSizePresetPlatform,
 } from "../../tools/frame/frame-sizes";
 
+import { FormatChipGlyph } from "./format-chip-glyph";
 import { PhoneMenu } from "./phone-menu";
 
 /** Brings the format in hand into view where the formats scroll, leaving
@@ -101,12 +101,21 @@ export function FormatBar({ isLocked = false }: { isLocked?: boolean }) {
   const mainSize = main ?? snapshot;
   const mainId = main?.id ?? ONLY_FORMAT;
   const platforms = platformShapes.flatMap((shape) =>
-    shape.formats.map((format) => ({
-      icon: <ShapeGlyph size={shape} />,
-      id: format.id,
-      label: formatName({ ...shape, preset: format.preset }),
-    })),
+    shape.formats.map((format) => {
+      const label = formatName({ ...shape, preset: format.preset });
+      return {
+        icon: <FormatChipGlyph isLeavingOut={format.leavesOut} size={shape} />,
+        id: format.id,
+        label,
+        ...(format.leavesOut
+          ? {
+              ariaLabel: t("editor-frame-format-leaves-out", { format: label }),
+            }
+          : {}),
+      };
+    }),
   );
+  const isMainLeavingOut = main?.formats[0]?.leavesOut === true;
   const isMainInHand = !main || snapshot.activeId === main.id;
   // The template the main canvas is made for, which names it, and which is
   // not added again as a platform of its own.
@@ -115,7 +124,9 @@ export function FormatBar({ isLocked = false }: { isLocked?: boolean }) {
     ...platforms.map((format) => format.id),
     ...(mainPreset ? [mainPreset] : []),
   ]);
-  const addable = FRAME_SIZE_PRESETS.filter((preset) => !made.has(preset.id));
+  const addable = (snapshot.templates ?? FRAME_SIZE_PRESETS).filter(
+    (preset) => !made.has(preset.id),
+  );
   return (
     <div
       className="flex min-w-0 items-center gap-inline"
@@ -129,8 +140,17 @@ export function FormatBar({ isLocked = false }: { isLocked?: boolean }) {
         isDisabled={isLocked}
         items={[
           {
-            ariaLabel: t("editor-frame-format-main"),
-            icon: <ShapeGlyph size={mainSize} />,
+            ariaLabel: isMainLeavingOut
+              ? t("editor-frame-format-leaves-out", {
+                  format: t("editor-frame-format-main"),
+                })
+              : t("editor-frame-format-main"),
+            icon: (
+              <FormatChipGlyph
+                isLeavingOut={isMainLeavingOut}
+                size={mainSize}
+              />
+            ),
             id: mainId,
             label: formatName({ ...mainSize, preset: mainPreset }),
           },

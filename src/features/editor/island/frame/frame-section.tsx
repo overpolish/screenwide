@@ -31,8 +31,9 @@ import type { FrameIslandProps } from "./frame-island";
  * that what it sits on is the scene's while the playhead is in one; then
  * the foot: for a recording's main canvas, the template it is made for at
  * the start (`FrameFormatLine`), and at the end the actions, clearing that
- * scene's own background and putting the main canvas back to the source's
- * size. The island is as wide as its lines need, and never narrower than a
+ * scene's own background, putting the main canvas back to the source's
+ * size, and on a platform putting its background back to follow the main
+ * canvas's. The island is as wide as its lines need, and never narrower than a
  * mesh's colours (`FRAME_ISLAND_WIDTH`). The colours' line comes into place
  * under the tiles for a mesh or a colour of your own, and goes for a solid
  * tile or a picture, the lines after it gliding to make room
@@ -43,6 +44,12 @@ import type { FrameIslandProps } from "./frame-island";
 export function FrameSection(props: FrameIslandProps) {
   const isSized = isMainInHand(props.formats);
   const onMadeForChange = isSized ? props.onMadeForChange : undefined;
+  // A platform's background follows the main canvas's until it is changed
+  // there; then it can be put back to follow it again.
+  const onMainBackground = isSized ? undefined : props.onMainBackground;
+  const inHand = props.formats?.list.find(
+    (shape) => shape.id === props.formats?.activeId,
+  );
   const madeFor = props.formats?.preset ?? null;
   const [isFormatsOpen, setIsFormatsOpen] = useState(false);
   const background = useBackgroundParts({
@@ -111,7 +118,7 @@ export function FrameSection(props: FrameIslandProps) {
             <SceneOnlyNote layer="frame" />
           </div>
         ) : null}
-        {props.scene || isSized ? (
+        {props.scene || isSized || onMainBackground ? (
           <div
             className={cn(
               "flex flex-wrap items-center gap-separate",
@@ -146,6 +153,14 @@ export function FrameSection(props: FrameIslandProps) {
               {isSized ? (
                 <Button onPress={props.onOriginalSize}>
                   {t("editor-island-frame-original-size")}
+                </Button>
+              ) : null}
+              {onMainBackground ? (
+                <Button
+                  isDisabled={inHand?.ownBackground !== true}
+                  onPress={onMainBackground}
+                >
+                  {t("editor-island-reset-to-main")}
                 </Button>
               ) : null}
             </div>

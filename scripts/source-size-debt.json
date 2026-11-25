@@ -1,6 +1,6 @@
 {
-  "src/features/editor/preview/preview-viewport.tsx": 408,
-  "src/features/editor/editor-window.tsx": 650,
+  "src/features/editor/preview/preview-viewport.tsx": 406,
+  "src/features/editor/editor-window.tsx": 612,
   "src/features/editor/timeline/editing/recording-timeline-edit.test.ts": 363,
   "src/features/editor/timeline/editing/recording-timeline-edit.ts": 333,
   "src/features/editor/screenshot/screenshot-output.ts": 417,

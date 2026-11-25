@@ -64,6 +64,19 @@ impl ScreenshotItem {
 pub struct ScreenshotWorkspaceItemOutput {
   pub id: u64,
   pub output: ScreenshotOutputSettings,
+  /// Left out of the format in hand: the layer keeps its place in the stack,
+  /// so every layer keeps its index, but draws nothing. Only the window's
+  /// preview sends it; the project never keeps it.
+  #[serde(default)]
+  #[ts(as = "Option<bool>", optional)]
+  pub hidden: bool,
+  /// How much larger than on the main canvas the format drawn lays this
+  /// layer out, which what its annotations draw (strokes, text, counters)
+  /// scales by too, so a platform shows the main canvas made smaller or
+  /// larger. Only the preview and an export of a platform send it.
+  #[serde(default)]
+  #[ts(optional)]
+  pub size_scale: Option<f64>,
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, TS)]
@@ -133,6 +146,14 @@ impl ScreenshotWorkspaceOutputSettings {
     output.mesh_warp_percent = self.canvas.mesh_warp_percent;
     output.stamp_capture(capture);
     output.width = self.canvas.width;
+    let item = self.items.iter().find(|item| item.id == id);
+    if let Some(scale) = item.and_then(|item| item.size_scale) {
+      output.capture_scale = output.size_scale() * scale;
+    }
+    if item.is_some_and(|item| item.hidden) {
+      output.scene_opacity = Some([0.0; 3]);
+      output.drop_shadow = false;
+    }
     output
   }
 }

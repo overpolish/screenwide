@@ -13,6 +13,7 @@
 //! only by its island's Save (`save_screenshot`).
 
 pub(crate) mod blank;
+pub(crate) mod formats;
 pub(crate) mod temporary;
 pub(crate) mod workspace;
 

@@ -161,7 +161,7 @@ export function exportIslandSnapshot({
   const name = exported?.path.split(/[\\/]/).pop() ?? "";
   return {
     // A sound alone has no picture to make in another shape.
-    allFormats: kind === "video" ? settings.allFormats : null,
+    allFormats: kind === "audio" ? null : settings.allFormats,
     // A GIF holds the camera only in the picture, never as a file of its own.
     cameraKey:
       !isGif &&

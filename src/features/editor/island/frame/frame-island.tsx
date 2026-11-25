@@ -44,12 +44,15 @@ export type FrameIslandProps = {
   savedPresets: BackgroundPreset[];
   /** In output pixels. */
   width: number;
-  /** A recording's formats: only the main canvas offers a size to set;
-   * left out for a screenshot. */
+  /** A recording's or screenshot's formats: only the main canvas offers a
+   * size to set. */
   formats?: ToolPanelFormats;
   /** Makes a recording's main canvas for a platform's template, or for
    * none; left out for a screenshot. */
   onMadeForChange?: (preset: string | null) => void;
+  /** Puts a platform's background back to the main canvas's, which it
+   * follows again; left out where there are no platforms. */
+  onMainBackground?: () => void;
   /** Rounds the corners, by a percent of the picture's shorter side. */
   onRadiusChange?: (radius: number) => void;
   /** Percent of the picture's shorter side. A screenshot's corners can be

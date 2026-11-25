@@ -74,6 +74,7 @@ pub(crate) fn invoke_handler() -> impl Fn(tauri::ipc::Invoke) -> bool + Send + S
     editor::screenshot_project::workspace::save_screenshot_project_still,
     editor::save::save_export,
     editor::save::save_format_exports,
+    editor::save::save_screenshot_formats,
     editor::preview_view::reset_editor_view,
     editor::typing_keyboard::resume_annotation_typing,
     editor::screenshot_preview::layout_screenshot_preview_surface,

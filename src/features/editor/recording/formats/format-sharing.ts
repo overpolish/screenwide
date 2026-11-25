@@ -2,7 +2,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { laidDocument } from "./format-document";
-import { placedAs } from "./format-look-carry";
+import {
+  isBackgroundChange,
+  isScreenChange,
+  placedAs,
+} from "./format-look-carry";
 import { withoutLayouts } from "./format-write-parts";
 import { platformClearArea } from "./platform-clear-area";
 import {
@@ -41,7 +45,11 @@ export const isFramedOwnWay = (
     (scene) => scene.layouts?.[shape.id] !== undefined,
   );
 
-const shapeHolding = (formats: FrameFormats, platform: string) =>
+/** The platform shape holding `platform`. */
+export const shapeHolding = <Shape extends Pick<FrameFormat, "platforms">>(
+  formats: { list: Shape[] },
+  platform: string,
+) =>
   formats.list
     .slice(1)
     .find((shape) => shape.platforms?.includes(platform) === true);
@@ -142,17 +150,14 @@ export function withPlatformShared(
 }
 
 /** `shape` with `platform` gone from it, `left` the platforms it keeps. */
-const leftBy = (
-  shape: FrameFormat,
+export const leftBy = <Shape extends Pick<FrameFormat, "platform">>(
+  shape: Shape,
   platform: string,
   left: string[],
-): FrameFormat => {
-  const { platform: inHand, ...rest } = shape;
-  return {
-    ...rest,
-    ...(inHand && inHand !== platform ? { platform: inHand } : {}),
-    platforms: left,
-  };
+): Shape => {
+  // The platform in hand stays, unless it is the one gone.
+  const inHand = shape.platform === platform ? undefined : shape.platform;
+  return { ...shape, platform: inHand, platforms: left };
 };
 
 /**
@@ -228,15 +233,29 @@ export function withMainPlacement(
   return changed;
 }
 
-/** `formats` with the shape in hand's screen set its own way; null
- * where it is the main canvas, or already is. */
-export function withPlacedHere(formats: FrameFormats): FrameFormats | null {
+/** `formats` with the shape in hand's screen, or its background, set its
+ * own way where the change `before` to `after` changed it; null where it
+ * is the main canvas, or nothing new is its own. */
+export function withOwnHere(
+  formats: FrameFormats,
+  change: { after: FormatDocument; before: FormatDocument },
+): FrameFormats | null {
   const active = activeFormat(formats);
-  if (isMainCanvas(formats) || active.placed) return null;
+  if (isMainCanvas(formats)) return null;
+  const placed = active.placed !== true && isScreenChange(change);
+  const ownBackground =
+    active.ownBackground !== true && isBackgroundChange(change);
+  if (!placed && !ownBackground) return null;
   return {
     ...formats,
     list: formats.list.map((shape) =>
-      shape === active ? { ...shape, placed: true } : shape,
+      shape === active
+        ? {
+            ...shape,
+            ...(placed ? { placed: true } : {}),
+            ...(ownBackground ? { ownBackground: true } : {}),
+          }
+        : shape,
     ),
   };
 }

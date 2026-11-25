@@ -1,12 +1,14 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import type { FrameSizePreset } from "./frame/frame-sizes";
 import type { PhoneView } from "../../../bindings/PhoneView";
 import type { PlatformOverlay } from "../../../bindings/PlatformOverlay";
 import type { FormatDifferences } from "../recording/formats/format-differences";
 import type { EditScope } from "../recording/formats/format-scope";
 import type { FormatSync } from "../recording/formats/format-sync";
 import type { FormatVersion } from "../recording/formats/format-versions";
+import type { LeftOut } from "../screenshot/formats/screenshot-show-in";
 
 /** What the frame panel shows about the output canvas. */
 export type ToolPanelFrame = {
@@ -32,10 +34,14 @@ export type ToolPanelFormats = {
   height: number;
   list: {
     /** Its formats, in the order they were added; a shape made for no
-     * platform has one, its own. */
-    formats: { id: string; preset: string | null }[];
+     * platform has one, its own. `leavesOut` marks a screenshot's format
+     * that leaves out a layer or an annotation the others show. */
+    formats: { id: string; preset: string | null; leavesOut?: boolean }[];
     height: number;
     id: string;
+    /** Whether its background is its own, changed while it was in hand,
+     * rather than the main canvas's. */
+    ownBackground: boolean;
     /** Whether it is framed its own way rather than following the main
      * canvas: its screen placed there, or a scene laid out for it. */
     ownWay: boolean;
@@ -60,9 +66,18 @@ export type ToolPanelFormats = {
   /** What the format in hand does differently from the others, and what
    * it leaves out, for the strip's badges and ghosts. */
   differs?: FormatDifferences;
+  /** What a screenshot's format in hand leaves out, which its picture
+   * keeps but does not draw. */
+  leftOut?: LeftOut;
+  /** How much larger than on the main canvas a screenshot's format in hand
+   * draws what its annotations draw (`sizeScaleOf`); one where unset. */
+  sizeScale?: number;
   /** What a scene, annotation, song or sound effect, or the caption track
    * offers in its menu to set it apart by format, by id. */
   syncOf?: (id: string) => FormatSync | null;
+  /** The templates a platform is added from: a screenshot's pictures;
+   * a recording's video sizes where unset. */
+  templates?: readonly FrameSizePreset[];
   /** The versions the recording comes out in, for the lines over the
    * strip's overview; none while every format comes out the same. */
   versions?: readonly FormatVersion[];

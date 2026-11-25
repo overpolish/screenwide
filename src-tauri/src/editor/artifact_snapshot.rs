@@ -49,6 +49,13 @@ pub enum EditorArtifactSnapshot {
     /// place of the remembered look.
     #[ts(as = "Option<crate::editor::ScreenshotWorkspaceOutputSettings>", optional = nullable)]
     project_workspace: Option<serde_json::Value>,
+    /// The shapes the screenshot is made in, as saved in the project; none
+    /// for a screenshot made in one shape alone.
+    #[ts(
+      as = "Option<crate::editor::screenshot_project::formats::ScreenshotFormats>",
+      optional = nullable
+    )]
+    project_formats: Option<serde_json::Value>,
     suggested_file_stem: String,
     extension: String,
     width: u32,
@@ -101,12 +108,12 @@ pub(super) fn snapshot(app: &AppHandle, kind: EditorKind) -> EditorSnapshot {
         project,
         suggested_file_stem,
       } => {
-        let (project_workspace, deleted) = super::screenshot_project::restored_workspace(
+        let restored = super::screenshot_project::restored_workspace(
           project,
           &items.iter().map(|item| item.id).collect::<Vec<_>>(),
         );
         EditorArtifactSnapshot::Screenshot {
-          deleted_item_ids: deleted,
+          deleted_item_ids: restored.deleted,
           id: *id,
           items: items
             .iter()
@@ -120,7 +127,8 @@ pub(super) fn snapshot(app: &AppHandle, kind: EditorKind) -> EditorSnapshot {
             })
             .collect(),
           is_temporary: super::screenshot_project::temporary::is_temporary(app, project),
-          project_workspace,
+          project_workspace: restored.workspace,
+          project_formats: restored.formats,
           suggested_file_stem: suggested_file_stem.clone(),
           extension: SCREENSHOT_EXTENSION.to_owned(),
           width: items.first().map_or(0, |item| item.image.width),

@@ -138,6 +138,21 @@ editor-frame-size-linkedin-portrait = LinkedIn portrait
 editor-frame-size-linkedin-vertical = LinkedIn vertical
 editor-frame-size-x-landscape = X landscape
 editor-frame-size-x-vertical = X vertical
+editor-frame-size-youtube-thumbnail = YouTube thumbnail
+editor-frame-size-youtube-thumbnail-4k = YouTube thumbnail 4K
+# A photo post on TikTok, one picture or a slideshow, shown full screen.
+editor-frame-size-tiktok-photo = TikTok photo
+# Instagram's tallest portrait photo, 3:4, as against its 4:5 portrait.
+editor-frame-size-instagram-tall-portrait = Instagram portrait 3:4
+editor-frame-size-instagram-story = Instagram story
+# A wide picture in a LinkedIn post, 1.91:1.
+editor-frame-size-linkedin-image-landscape = LinkedIn landscape
+editor-frame-size-x-image-landscape = X landscape
+editor-frame-size-x-image-portrait = X portrait
+editor-frame-size-facebook-post = Facebook post
+editor-frame-size-pinterest-pin = Pinterest pin
+# The picture a web page shows when its link is shared, on any network or chat app.
+editor-frame-size-link-preview = Link preview
 editor-frame-formats = Formats
 # Names the Frame island's list of the platform templates the main canvas can be made for, which size it and keep it clear of that app's interface.
 editor-frame-made-for = Format
@@ -159,8 +174,14 @@ editor-frame-platform-tiktok = TikTok
 editor-frame-platform-instagram = Instagram
 editor-frame-platform-linkedin = LinkedIn
 editor-frame-platform-x = X
+editor-frame-platform-facebook = Facebook
+editor-frame-platform-pinterest = Pinterest
+# Heads templates for the web at large rather than one platform, such as a link preview.
+editor-frame-platform-web = Web
 # Removes one of the recording's formats, named.
 editor-frame-format-remove-named = Remove { $format }
+# The format bar's name for a screenshot's format that leaves out a layer or an annotation the other formats show, which a dot on its glyph marks. $format names the format.
+editor-frame-format-leaves-out = { $format }, leaves something out
 editor-frame-phone = Phone
 editor-frame-phone-none = No phone
 # Opens the choice of phone a tall format is previewed on. $phone names the one chosen, or that there is none.

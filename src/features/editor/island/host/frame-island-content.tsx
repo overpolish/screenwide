@@ -76,6 +76,14 @@ export function frameIslandContent({
     ...(frame.formats
       ? {
           formats: frame.formats,
+          onMainBackground: () => {
+            change({ framing: { kind: "main-background" } });
+          },
+        }
+      : {}),
+    // Only a recording's main canvas is made for a platform's template.
+    ...(frame.formats && capture === "recording"
+      ? {
           onMadeForChange: (preset: string | null) => {
             change({ framing: { kind: "made-for", preset } });
           },

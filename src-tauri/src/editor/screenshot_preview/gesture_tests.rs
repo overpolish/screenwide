@@ -24,6 +24,8 @@ fn moving_an_item_keeps_canvas_presentation_fields() {
     items: vec![ScreenshotWorkspaceItemOutput {
       id: 1,
       output: item,
+      hidden: false,
+      size_scale: None,
     }],
   };
   let mut manager = PreviewManager {
@@ -92,6 +94,8 @@ fn a_gesture_straight_after_typing_keeps_what_was_typed() {
       items: vec![ScreenshotWorkspaceItemOutput {
         id: 1,
         output: item,
+        hidden: false,
+        size_scale: None,
       }],
     }),
     ..Default::default()

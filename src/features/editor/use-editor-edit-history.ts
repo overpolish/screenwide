@@ -25,6 +25,7 @@ import {
 } from "./types";
 
 import type { FrameFormats } from "../../bindings/FrameFormats";
+import type { ScreenshotFormats } from "../../bindings/ScreenshotFormats";
 
 const HISTORY_LIMIT = 100;
 const GROUP_DELAY_MS = 300;
@@ -76,6 +77,7 @@ export type EditorEditState = {
   recordingOutput: RecordingOutputSettings;
   recordingTimelineEdit: RecordingTimelineEdit | null;
   resolutionScalePercent: number;
+  screenshotFormats: ScreenshotFormats | null;
   screenshotOutput: ScreenshotWorkspaceOutputSettings;
   trackSelection: { artifactId: number; streamIndices: number[] } | null;
   videoTrackSelection: {

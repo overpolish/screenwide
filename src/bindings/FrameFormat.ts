@@ -30,6 +30,12 @@ madeFor?: string,
  */
 placed?: boolean, 
 /**
+ * Whether the background is set in this shape its own way, changed while
+ * the shape was in hand: the main canvas's changes to it no longer reach
+ * the shape, until it is reset to follow the main canvas again.
+ */
+ownBackground?: boolean, 
+/**
  * Kept while another shape is in hand; the one in hand's lives in the
  * project look.
  */

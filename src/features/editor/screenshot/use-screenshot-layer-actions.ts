@@ -22,7 +22,13 @@ import {
   Arrangement,
   availableArrangements,
 } from "../annotations/annotation-order";
+import {
+  formatSyncMenu,
+  pickedFormatSync,
+} from "../recording/formats/format-item-menu";
+import { useFrameFormats } from "../recording/formats/frame-formats-context";
 
+import { layerSyncId } from "./formats/screenshot-show-in";
 import {
   deleteScreenshotLayer,
   moveScreenshotLayer,
@@ -83,6 +89,7 @@ export function useScreenshotLayerActions({
   // Where the menu opened, for the script picker a cue may open there.
   const anchorRef = useRef<PopupMenuAnchor | null>(null);
   const cueItem = addCueMenuItem();
+  const formats = useFrameFormats();
   const openMenu = usePopupMenu({
     idPrefix: "screenshot-layer:",
     label: t("editor-layer-actions"),
@@ -95,6 +102,7 @@ export function useScreenshotLayerActions({
       }
       const id = Number(layerId);
       if (!Number.isInteger(id)) return;
+      if (pickedFormatSync(formats, itemId, layerSyncId(id))) return;
       if (itemId === DELETE_ITEM) {
         deleteLayer(id);
         return;
@@ -113,6 +121,11 @@ export function useScreenshotLayerActions({
     const layer = items[paneIndex];
     const anchor = pointerAnchor(x, y);
     anchorRef.current = anchor;
+    // A blank canvas's own layer holds what is drawn on it, which each
+    // annotation's own menu sets apart instead.
+    const formatMenu: ReturnType<typeof formatSyncMenu> = isBlank(layer.id)
+      ? { items: [], selectedIds: [] }
+      : formatSyncMenu(formats, layerSyncId(layer.id));
     void openMenu({
       anchor,
       context: String(layer.id),
@@ -130,7 +143,12 @@ export function useScreenshotLayerActions({
                 shortcut: "Backspace",
               },
             ]),
+        ...formatMenu.items,
       ],
+      selectedIds: formatMenu.selectedIds,
+      ...(formatMenu.scrollingSection === undefined
+        ? {}
+        : { scrollingSection: formatMenu.scrollingSection }),
     });
   };
   useEffect(() => {

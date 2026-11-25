@@ -9,7 +9,7 @@ import { defaultRecordingOutput } from "../../screenshot/screenshot-output";
 import {
   removedPlatform,
   withMainPlacement,
-  withPlacedHere,
+  withOwnHere,
   withPlatformShared,
   withShapeFollowed,
 } from "./format-sharing";
@@ -47,7 +47,9 @@ const tiktokPlaced = () => {
       primary: { ...inHand.document.recordingOutput.primary, cropX: 10 },
     },
   };
-  const formats = withPlacedHere(inHand.formats) ?? inHand.formats;
+  const formats =
+    withOwnHere(inHand.formats, { after: moved, before: inHand.document }) ??
+    inHand.formats;
   return { document: moved, formats };
 };
 

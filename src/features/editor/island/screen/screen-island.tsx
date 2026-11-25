@@ -8,6 +8,7 @@ import { Button } from "../../../../primitives/button/button";
 import { IslandParts } from "../../../../primitives/island/island-parts";
 import { IslandRowTitle } from "../../../../primitives/island/row-title/island-row-title";
 import { ShadowToggle } from "../../../annotations/options/shadow-toggle";
+import { isMainInHand } from "../../recording/formats/format-name";
 import {
   AnnotationChoiceRow,
   AnnotationRows,
@@ -92,9 +93,7 @@ export function screenIsland(props: ScreenIslandProps): EditorIslandContent {
     (shape) => shape.id === framing.formats.activeId,
   );
   const isOnPlatform =
-    framing !== undefined &&
-    !props.isInScene &&
-    framing.formats.list[0]?.id !== framing.formats.activeId;
+    framing !== undefined && !props.isInScene && !isMainInHand(framing.formats);
   return {
     actions: (
       <>

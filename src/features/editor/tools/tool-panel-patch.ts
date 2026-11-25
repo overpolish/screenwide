@@ -33,10 +33,14 @@ import type { SoundAddition } from "../island/library/library-panel";
 import type { FrameFormatPatch } from "../recording/formats/use-recording-formats";
 
 /** What the Screen and Scene islands ask of how a platform is framed, and
- * the Frame island of which template the main canvas is made for. */
+ * the Frame island of which template the main canvas is made for and of a
+ * platform's own background. */
 export type FramingPatch = Extract<
   FrameFormatPatch,
-  { kind: "follow" | "made-for" | "main-placement" | "share" }
+  {
+    kind:
+      "follow" | "made-for" | "main-background" | "main-placement" | "share";
+  }
 >;
 
 /** The settings a panel may ask the editor to change. */

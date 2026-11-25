@@ -23,9 +23,14 @@ export type FormatSaveJob = FormatDocument & {
   isCopy?: boolean;
 };
 
-// A file name keeps no invisible direction marks: Fluent isolates each
-// placeable in them, and they would stay in the name on disk.
-const withoutIsolates = (text: string) => text.replace(/[\u2068\u2069]/gu, "");
+/** The name `stem`'s file in the format named `format` is written under.
+ * It keeps no invisible direction marks: Fluent isolates each placeable in
+ * them, and they would stay in the name on disk. */
+export const formatFileStem = (format: string, stem: string) =>
+  t("editor-export-format-file", { format, stem }).replace(
+    /[\u2068\u2069]/gu,
+    "",
+  );
 
 /**
  * What an export writes: every format, shape by shape in the order the bar
@@ -85,9 +90,7 @@ export function formatSaveJobs({
         ...(isResized
           ? laidDocument(own, size, own.recordingOutput.primary.clearArea)
           : own),
-        fileStem: withoutIsolates(
-          t("editor-export-format-file", { format: name, stem: fileStem }),
-        ),
+        fileStem: formatFileStem(name, fileStem),
         isCopy: group.length > 0,
         timelineEdit,
       });

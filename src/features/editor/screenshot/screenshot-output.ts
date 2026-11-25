@@ -31,7 +31,7 @@ export const normalizedScreenshotWorkspaceOutput = (
 ): ScreenshotWorkspaceOutputSettings => ({
   ...normalizedScreenshotOutput(settings),
   items: settings.items.map((item) => ({
-    id: item.id,
+    ...item,
     output: normalizedScreenshotOutput(item.output),
   })),
 });
