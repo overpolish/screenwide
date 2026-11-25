@@ -15,7 +15,7 @@ use std::sync::{Mutex, PoisonError};
 use std::time::Duration;
 
 use screenwide_imaging::CapturedImage;
-use tauri::{AppHandle, PhysicalPosition, PhysicalSize};
+use tauri::{AppHandle, PhysicalPosition};
 
 use crate::shortcuts::ShortcutAction;
 
@@ -56,7 +56,11 @@ pub(crate) enum Owner {
 struct Picture {
   image: CapturedImage,
   position: PhysicalPosition<i32>,
-  size: PhysicalSize<u32>,
+  // Only the macOS window is sized in points from these; Windows draws the
+  // picture at its own pixel size.
+  #[cfg(target_os = "macos")]
+  size: tauri::PhysicalSize<u32>,
+  #[cfg(target_os = "macos")]
   scale: f64,
 }
 
@@ -149,12 +153,14 @@ async fn freeze(app: &AppHandle) -> Result<Vec<Picture>, String> {
   monitors
     .into_iter()
     .zip(stills)
-    .map(|((_, scale, monitor), still)| {
+    .map(|((_, _scale, monitor), still)| {
       still.map(|image| Picture {
         image,
         position: *monitor.position(),
+        #[cfg(target_os = "macos")]
         size: *monitor.size(),
-        scale,
+        #[cfg(target_os = "macos")]
+        scale: _scale,
       })
     })
     .collect()

@@ -80,7 +80,7 @@ unsafe extern "system" fn on_menu(
   if event == EVENT_SYSTEM_MENUPOPUPSTART {
     OPEN_POPUPS.fetch_add(1, Ordering::AcqRel);
   } else if event == EVENT_SYSTEM_MENUPOPUPEND {
-    let _ = OPEN_POPUPS.fetch_update(Ordering::AcqRel, Ordering::Acquire, |open| {
+    let _ = OPEN_POPUPS.try_update(Ordering::AcqRel, Ordering::Acquire, |open| {
       Some((open - 1).max(0))
     });
   }
@@ -187,10 +187,12 @@ fn paint(window: HWND, picture: &Picture, width: i32, height: i32) -> Result<(),
       let pixels =
         unsafe { std::slice::from_raw_parts_mut(bits.cast::<u8>(), picture.image.rgba.len()) };
       for (target, source) in pixels
-        .chunks_exact_mut(4)
-        .zip(picture.image.rgba.chunks_exact(4))
+        .as_chunks_mut::<4>()
+        .0
+        .iter_mut()
+        .zip(picture.image.rgba.as_chunks::<4>().0)
       {
-        target.copy_from_slice(&[source[2], source[1], source[0], 255]);
+        *target = [source[2], source[1], source[0], 255];
       }
       let previous = unsafe { SelectObject(memory, bitmap.into()) };
       let blend = BLENDFUNCTION {
