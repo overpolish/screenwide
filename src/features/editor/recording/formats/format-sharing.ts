@@ -133,12 +133,10 @@ export function withPlatformShared(
     document: relaid(mainDocument(formats, document), inHand, left),
     formats: {
       ...formats,
-      list: [
-        ...formats.list.map((shape) =>
-          shape.id === active.id ? leftBy(shape, platform, left) : shape,
-        ),
-        own,
-      ],
+      // Next to the shape it leaves, so the format bar keeps its order.
+      list: formats.list.flatMap((shape) =>
+        shape.id === active.id ? [leftBy(shape, platform, left), own] : [shape],
+      ),
     },
   };
 }
@@ -193,7 +191,10 @@ export function withShapeFollowed(
 }
 
 /** The shape in hand's screen and camera set as the main canvas sets them
- * again, no longer its own. Null on the main canvas. */
+ * again, no longer its own. A framing shared only for its screen has
+ * nothing left to share then: each platform it held follows the main
+ * canvas on its own again, laid out for its own app. Null on the main
+ * canvas. */
 export function withMainPlacement(
   formats: FrameFormats,
   document: FormatDocument,
@@ -201,7 +202,7 @@ export function withMainPlacement(
   const active = activeFormat(formats);
   if (isMainCanvas(formats)) return null;
   const { placed: _placed, ...following } = active;
-  return {
+  let changed: Changed = {
     document: relaid(
       mainDocument(formats, document),
       { look: document, placed: false },
@@ -212,6 +213,19 @@ export function withMainPlacement(
       list: formats.list.map((shape) => (shape === active ? following : shape)),
     },
   };
+  // A scene laid out for the shape still frames it its own way, and keeps
+  // the platforms sharing it.
+  if (isFramedOwnWay(following, formats.edits)) return changed;
+  const inHand = formatInHand(following);
+  for (const platform of following.platforms ?? []) {
+    if (platform === inHand) continue;
+    changed =
+      withPlatformShared(changed.formats, changed.document, {
+        isShared: false,
+        platform,
+      }) ?? changed;
+  }
+  return changed;
 }
 
 /** `formats` with the shape in hand's screen set its own way; null

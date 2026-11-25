@@ -111,6 +111,22 @@ describe("format sharing", () => {
     expect(reset?.document.recordingOutput.primary.cropX).not.toBe(10);
   });
 
+  it("ends a share made only for the screen when it is reset to main", () => {
+    const { document, formats } = tiktokPlaced();
+    const shared = withPlatformShared(formats, document, {
+      isShared: true,
+      platform: "youtube-shorts",
+    });
+    const reset = shared
+      ? withMainPlacement(shared.formats, shared.document)
+      : null;
+    expect(
+      reset?.formats.list.slice(1).map((shape) => shape.platforms),
+    ).toEqual([["tiktok"], ["youtube-shorts"]]);
+    // Each is laid out for its own app again, not for both.
+    expect(reset?.document.recordingOutput.primary.clearArea?.top).toBe(0.07);
+  });
+
   it("keeps a shared shape when one of its platforms is removed", () => {
     const { document, formats } = tiktokPlaced();
     const shared = withPlatformShared(formats, document, {
