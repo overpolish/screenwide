@@ -129,11 +129,15 @@ impl WorkspaceEditor {
   ) {
     if let Ok(mut state) = self.inner.state.lock() {
       state.workspace_allows_upscale = allow_upscale;
-      // Kept only for the same panes in a viewport that changed around them:
-      // a resize gesture owns the geometry, and a new canvas takes its own
-      // remembered transform.
+      // Kept only for the same panes in a viewport that changed around them,
+      // and only once the view was zoomed or panned by hand: a view still
+      // at its fit refits the smaller viewport, so the strip growing under
+      // it cannot cover the picture. A resize gesture owns the geometry,
+      // and a new canvas takes its own remembered transform.
+      let fitted = state.workspace_transform == WorkspaceTransform::default();
       let keep = keep.filter(|_| {
-        state.frame_resize.is_none()
+        !fitted
+          && state.frame_resize.is_none()
           && !state.frame_resize_committed
           && state.workspace_natural_size == Some(natural_size)
       });

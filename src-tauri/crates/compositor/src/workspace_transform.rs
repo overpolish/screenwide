@@ -5,7 +5,7 @@
 
 use crate::PreviewSurfaceRect;
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq)]
 #[repr(C)]
 #[cfg_attr(not(target_os = "windows"), allow(dead_code))]
 pub struct WorkspaceTransform {
