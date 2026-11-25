@@ -31,6 +31,7 @@ import {
 } from "./recording-preview-session-start";
 import { useRecordingPlaybackStatus } from "./use-recording-playback-status";
 import { useRecordingPreviewRanges } from "./use-recording-preview-ranges";
+import { useRecordingPreviewSeek } from "./use-recording-preview-seek";
 import { useRecordingPreviewSettings } from "./use-recording-preview-settings";
 import {
   type RecordingPreviewSelection,
@@ -183,6 +184,26 @@ export function useRecordingPreviewPlayer({
     sessionIdRef,
     startedRef,
   });
+  const { dropHeldSeek, seek, sendHeldSeek } = useRecordingPreviewSeek({
+    isEnabled,
+    refs: {
+      isPlayingRef,
+      lastSentSeekRef,
+      pendingResumeRequestRef,
+      pendingScrubFrameRef,
+      pendingScrubPositionRef,
+      positionRef,
+      resumeAfterSeekRef,
+      scrubFinishedRef,
+      seekRequestRef,
+      sessionIdRef,
+      settleRequestRef,
+      startedRef,
+      wantsPlaybackRef,
+    },
+    setError,
+    updatePlaying,
+  });
   useEffect(() => {
     if (!isEnabled) return;
     let disposed = false;
@@ -192,6 +213,7 @@ export function useRecordingPreviewPlayer({
     sessionIdRef.current = sessionId;
     seekRequestRef.current = 0;
     lastSentSeekRef.current = null;
+    dropHeldSeek();
     beginPreparing();
     const eventChannel = new Channel<RecordingPreviewPlayerEvent>();
     eventChannel.onmessage = (event) => {
@@ -302,6 +324,7 @@ export function useRecordingPreviewPlayer({
         setDurationMs(info.durationMs);
         startedRef.current = true;
         setActiveSessionId(sessionId);
+        sendHeldSeek();
         pushRecordingPreviewSessionState({
           // Read live: the suspension can be lifted while the restart is still
           // in flight, and the captured value would leave native suspended.
@@ -399,71 +422,6 @@ export function useRecordingPreviewPlayer({
     );
   }, [isEnabled, updatePlaying]);
   const pause = useCallback(() => void pauseSettled(), [pauseSettled]);
-  const seek: SeekHandler = (positionMs, phase, annotationClips) => {
-    if (!isEnabled) return;
-    const normalized = Math.max(0, Math.round(positionMs));
-    if (phase === "start") {
-      resumeAfterSeekRef.current = isPlayingRef.current;
-      wantsPlaybackRef.current = false;
-      scrubFinishedRef.current = false;
-    }
-    positionRef.current = normalized;
-    // Keep the playing controls visible during a seek that will resume.
-    // The backend still pauses and resumes, without flashing paused chrome.
-    if (!resumeAfterSeekRef.current) updatePlaying(false);
-    const send: SeekHandler = (nextPosition, nextPhase, nextClips) => {
-      // The end decodes the exact frame and settles the scrub, so only
-      // movement samples at the same playhead position are redundant.
-      if (
-        nextPosition === lastSentSeekRef.current &&
-        nextPhase === "move" &&
-        !nextClips
-      )
-        return;
-      lastSentSeekRef.current = nextPosition;
-      const requestId = ++seekRequestRef.current;
-      if (nextPhase === "end") {
-        settleRequestRef.current = requestId;
-        if (resumeAfterSeekRef.current)
-          pendingResumeRequestRef.current = requestId;
-      }
-      void seekRecordingPreview({
-        annotationClips: nextClips,
-        positionMs: nextPosition,
-        requestId,
-        rough: nextPhase !== "end",
-        sessionId: sessionIdRef.current,
-      }).catch((cause: unknown) => {
-        if (settleRequestRef.current === requestId) {
-          settleRequestRef.current = null;
-          scrubFinishedRef.current = true;
-        }
-        setError(String(cause));
-      });
-    };
-    // Send the newest pointer position per display tick to avoid a seek backlog.
-    if (phase === "move") {
-      pendingScrubPositionRef.current = [normalized, "move", annotationClips];
-      if (pendingScrubFrameRef.current === null) {
-        pendingScrubFrameRef.current = requestAnimationFrame(() => {
-          pendingScrubFrameRef.current = null;
-          const pending = pendingScrubPositionRef.current;
-          pendingScrubPositionRef.current = null;
-          if (pending !== null) send(...pending);
-        });
-      }
-    } else {
-      if (pendingScrubFrameRef.current !== null) {
-        cancelAnimationFrame(pendingScrubFrameRef.current);
-        pendingScrubFrameRef.current = null;
-      }
-      pendingScrubPositionRef.current = null;
-      send(normalized, phase, annotationClips);
-    }
-    if (phase === "end") {
-      scrubFinishedRef.current = false;
-    }
-  };
   const getPositionMs = useCallback(() => positionRef.current, []);
   return {
     durationMs,
