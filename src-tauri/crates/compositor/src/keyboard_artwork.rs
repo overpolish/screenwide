@@ -29,12 +29,14 @@ pub(crate) struct KeyboardConstants {
   pub(crate) dimensions: [u32; 4],
   pub(crate) animation: [f32; 4],
   pub(crate) position: [f32; 4],
+  /// What the canvas's platform covers: top, bottom and side shares.
+  pub(crate) clear: [f32; 4],
   pub(crate) key_geometry: [[u32; 4]; MAX_KEYS],
   pub(crate) key_motion: [[f32; 4]; MAX_KEYS],
   pub(crate) key_masks: [[u32; 4]; MAX_KEYS],
 }
 
-const _: () = assert!(size_of::<KeyboardConstants>() == 432);
+const _: () = assert!(size_of::<KeyboardConstants>() == 448);
 
 impl Default for KeyboardConstants {
   fn default() -> Self {
@@ -42,6 +44,7 @@ impl Default for KeyboardConstants {
       dimensions: [0; 4],
       animation: [0.0; 4],
       position: [0.0; 4],
+      clear: [0.0; 4],
       key_geometry: [[0; 4]; MAX_KEYS],
       key_motion: [[0.0; 4]; MAX_KEYS],
       key_masks: [[0; 4]; MAX_KEYS],

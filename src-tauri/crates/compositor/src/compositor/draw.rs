@@ -68,6 +68,13 @@ impl Compositor {
     layer: LayerDraw,
   ) -> Result<wgpu::TextureView, String> {
     let placement = geometry.placement;
+    // The shortcuts keep clear of what the canvas's platform covers.
+    let composition = ComposedFrame {
+      keyboard: composition
+        .keyboard
+        .map(|keyboard| keyboard.kept_clear_of(settings.clear_area)),
+      ..composition
+    };
     let (width, height) = (geometry.size.0 as f32, geometry.size.1 as f32);
     if !settings.radius.is_valid(50.0)
       || !settings.background_radius_percent.is_finite()

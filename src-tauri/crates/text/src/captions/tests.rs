@@ -6,10 +6,7 @@ use crate::{TextAccent, TextArrangement, TextLines, TextMotion};
 
 /// Ten pixels a character, whatever the size, in a picture whose lines take
 /// 80 characters.
-const FRAME: CaptionFrame = CaptionFrame {
-  width: 1_000,
-  height: 1_000,
-};
+const FRAME: CaptionFrame = CaptionFrame::new(1_000, 1_000);
 const DURATION_MS: f64 = 100_000.0;
 
 fn measure(text: &str, _face: TextFace, _size: f64) -> f64 {

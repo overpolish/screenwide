@@ -202,7 +202,7 @@ impl CaptionPreviewer {
     let mut style = style.normalized();
     style.size_percent =
       (style.size_percent * PREVIEW_SCALE).min(screenwide_text::MAX_SIZE_PERCENT);
-    let frame = CaptionFrame { width, height };
+    let frame = CaptionFrame::new(width, height);
     let faces = CaptionFaces::of(&style);
     let mut measure = caption_measure(&faces);
     let mut captions = sample_captions(words, &style, frame, &mut measure);
@@ -254,7 +254,7 @@ impl CaptionPreviewer {
         };
         let mut prepared =
           prepared_arrows(&[], (width, height), &settings, Some(&image), None, None)?;
-        prepared.draw_above(caption_overlay(&track, moment, (width, height)));
+        prepared.draw_above(caption_overlay(&track, moment, frame));
         compositor.draw_with_camera(
           &view,
           &source,

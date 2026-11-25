@@ -5,11 +5,12 @@
 //! every scene, which a scene arrives from and leaves for.
 
 use screenwide_output::ScreenshotOutputSettings;
+use screenwide_placement::ClearArea;
 use screenwide_scenes::framing::{drawn_frame, SceneFraming};
 use screenwide_scenes::geometry::{preset_panes, PresetPanes, Rect};
 use screenwide_scenes::model::{RecordingSceneClip, RecordingScenePreset};
 use screenwide_scenes::placement::Placement;
-use screenwide_scenes::{CameraOverlaySettings, ClearArea, Measure};
+use screenwide_scenes::{clear_middle, CameraOverlaySettings, Measure};
 
 /// What a frame is arranged from: the composition outside every scene, the
 /// canvas, the camera picture's aspect where a camera is drawn into it, and
@@ -189,7 +190,7 @@ impl Base {
         Some(face) => {
           framing
             .following(face)
-            .about(frame, aspect, self.clear.middle_of(frame, self.canvas))
+            .about(frame, aspect, clear_middle(self.clear, frame, self.canvas))
         }
         None => framing,
       }

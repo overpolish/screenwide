@@ -12,7 +12,7 @@ import type { PlatformOverlay } from "../../../../bindings/PlatformOverlay";
 // the screen stays centred. Measured against the apps in 2026
 // (https://slovo.video/tiktok-reels-shorts-safe-zones/); feed and landscape
 // platforms draw nothing over the picture. The twin of `ClearArea` in
-// `src-tauri/crates/scenes/src/clear_area.rs`.
+// `src-tauri/crates/placement/src/clear_area.rs`.
 const COVERED: Record<PlatformOverlay, ClearArea> = {
   "instagram-reels": { bottom: 0.21, side: 0.05, top: 0.13 },
   tiktok: { bottom: 0.25, side: 0.05, top: 0.07 },

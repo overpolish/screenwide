@@ -4,13 +4,14 @@
 use super::*;
 use screenwide_output::fixtures::test_output_settings;
 use screenwide_output::ScreenshotOutputSettings;
+use screenwide_placement::ClearArea;
 use screenwide_scenes::framing::SceneFraming;
 use screenwide_scenes::geometry::preset_panes;
 use screenwide_scenes::model::RecordingScenePreset;
 use screenwide_scenes::validate_clips;
 use screenwide_scenes::variant::SceneVariant;
+use screenwide_scenes::CameraOverlaySettings;
 use screenwide_scenes::RecordingSceneClip;
-use screenwide_scenes::{CameraOverlaySettings, ClearArea};
 use screenwide_timeline::TimelineRange;
 
 fn clip(id: &str, start_ms: u64, end_ms: u64, preset: RecordingScenePreset) -> RecordingSceneClip {

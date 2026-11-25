@@ -102,8 +102,9 @@ fn caption_word_at(
   let settings = pane.settings.as_ref()?;
   let (track, moment) = pane.captions.as_ref()?;
   let canvas = (settings.width, settings.height);
+  let frame = screenwide_compositor::annotation_gpu::caption_frame(settings, canvas);
   let bounds =
-    screenwide_compositor::annotation_gpu::caption_visible_bounds(track, *moment, canvas)?;
+    screenwide_compositor::annotation_gpu::caption_visible_bounds(track, *moment, frame)?;
   let shown = overlay_hit::frame(inner, state, target)?;
   if shown.width <= 0.0 || shown.height <= 0.0 {
     return None;
@@ -112,10 +113,6 @@ fn caption_word_at(
   let down = bounds[1] + (point.1 - shown.y) / shown.height * bounds[3];
   let faces = screenwide_compositor::annotation_gpu::CaptionFaces::of(&track.recording.style);
   let mut measure = screenwide_compositor::annotation_gpu::caption_measure(&faces);
-  let frame = screenwide_text::captions::CaptionFrame {
-    width: settings.width,
-    height: settings.height,
-  };
   let word = track.word_at(
     frame,
     *moment,

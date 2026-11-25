@@ -7,9 +7,8 @@
 
 use super::WorkspaceScene;
 use screenwide_compositor::annotation_gpu::{
-  caption_editing_block, caption_measure, caption_visible_bounds, CaptionFaces,
+  caption_editing_block, caption_frame, caption_measure, caption_visible_bounds, CaptionFaces,
 };
-use screenwide_text::captions::CaptionFrame;
 
 impl WorkspaceScene {
   pub fn keyboard_bounds(&self, pane: u32) -> Option<[f64; 4]> {
@@ -24,7 +23,10 @@ impl WorkspaceScene {
     })?;
     state
       .compositor
-      .keyboard_visible_bounds(layer.keyboard.as_ref()?, layer.geometry.size)
+      .keyboard_visible_bounds(
+        &layer.keyboard?.kept_clear_of(layer.settings.clear_area),
+        layer.geometry.size,
+      )
       .ok()
       .flatten()
   }
@@ -37,7 +39,11 @@ impl WorkspaceScene {
       .filter(|layer| layer.pane_index == pane)
       .find_map(|layer| {
         let (track, moment) = layer.captions.as_ref()?;
-        caption_visible_bounds(track, *moment, layer.geometry.size)
+        caption_visible_bounds(
+          track,
+          *moment,
+          caption_frame(&layer.settings, layer.geometry.size),
+        )
       })
   }
 
@@ -54,7 +60,7 @@ impl WorkspaceScene {
       .filter(|layer| layer.pane_index == pane)
       .find_map(|layer| {
         let (track, _) = layer.captions.as_ref()?;
-        caption_editing_block(track, layer.geometry.size)
+        caption_editing_block(track, caption_frame(&layer.settings, layer.geometry.size))
       })
   }
 
@@ -70,7 +76,7 @@ impl WorkspaceScene {
       .find_map(|layer| {
         let (track, moment) = layer.captions.as_ref()?;
         let (width, height) = layer.geometry.size;
-        let frame = CaptionFrame { width, height };
+        let frame = caption_frame(&layer.settings, (width, height));
         let faces = CaptionFaces::of(&track.recording.style);
         let point = [at[0] * f64::from(width), at[1] * f64::from(height)];
         let mut measure = caption_measure(&faces);

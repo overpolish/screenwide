@@ -6,7 +6,7 @@
 //! decided here for every platform. The platform decodes the frames into
 //! textures, hands them over, and encodes the canvas this draws.
 
-use screenwide_compositor::annotation_gpu::{caption_overlay, prepared_arrows};
+use screenwide_compositor::annotation_gpu::{caption_frame, caption_overlay, prepared_arrows};
 use screenwide_compositor::compositor::cursor_placement::placed_cursor;
 use screenwide_compositor::compositor::{
   BakeGeometry, CameraComposition, ComposedFrame, Compositor, SourceTexture,
@@ -173,7 +173,7 @@ impl<'a> FrameDraw<'a> {
           at_ms: output_us as f64 / 1_000.0,
           exposure_ms: f64::from(frame_ms),
         },
-        (self.output.width, self.output.height),
+        caption_frame(self.output, (self.output.width, self.output.height)),
       ));
     }
     let cursor_shown = self

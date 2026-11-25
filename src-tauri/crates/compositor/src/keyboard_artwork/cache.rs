@@ -106,6 +106,7 @@ fn update_uniforms(
     overlay.align_x,
     overlay.align_y,
   ];
+  values.clear = [overlay.clear[0], overlay.clear[1], overlay.clear[2], 0.0];
   for (index, (_, state)) in prepared.iter().enumerate() {
     values.key_geometry[index][2] = state.visible;
     values.key_geometry[index][3] = state.slot;

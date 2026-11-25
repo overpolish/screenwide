@@ -74,10 +74,7 @@ fn pieces(style: TextStyle) -> (Vec<CaptionPiece>, CaptionFaces) {
   let pieces = caption_pieces(
     &[caption(accented)],
     &recording,
-    CaptionFrame {
-      width: OUTPUT.0,
-      height: OUTPUT.1,
-    },
+    CaptionFrame::new(OUTPUT.0, OUTPUT.1),
     CaptionMoment::still(700.0),
     &mut caption_measure(&faces),
   );

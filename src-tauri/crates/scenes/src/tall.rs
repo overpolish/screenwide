@@ -8,9 +8,9 @@
 //! The camera is the pane that gives way. The twins of `tallPair` and
 //! `tallBubble` in `src/features/editor/recording/scenes/recording-scene-tall.ts`.
 
-use super::clear_area::ClearArea;
 use super::geometry::Rect;
 use super::variant::{SceneBubbleSize, SceneCameraSize, SceneCorner, SceneVariant};
+use screenwide_placement::ClearArea;
 
 /// The camera's length in a pair over the screen's, at the least.
 fn camera_ratio(size: SceneCameraSize) -> f64 {

@@ -7,7 +7,7 @@ use super::loupe::NativeMagnifier;
 use super::{SceneState, WorkspaceScene};
 use crate::backdrop::BackdropStyle;
 use crate::CAPTIONS_LAYER_ID;
-use screenwide_compositor::annotation_gpu::caption_overlay_typed;
+use screenwide_compositor::annotation_gpu::{caption_frame, caption_overlay_typed};
 use screenwide_compositor::compositor::{ComposedFrame, LayerDraw, LayerPlacement};
 
 /// Where one layer's canvas is drawn in the workspace drawable, in its
@@ -181,7 +181,8 @@ fn compose(
         .typing
         .filter(|(typed, _, _)| *typed == CAPTIONS_LAYER_ID)
         .map(|(_, _, marks)| marks);
-      prepared.draw_above(caption_overlay_typed(track, *moment, geometry.size, marks));
+      let frame = caption_frame(&layer.settings, geometry.size);
+      prepared.draw_above(caption_overlay_typed(track, *moment, frame, marks));
     }
     // The canvas is drawn into its placement, which is rarely its own size:
     // zoomed out, one drawn pixel covers several canvas pixels, and an edge

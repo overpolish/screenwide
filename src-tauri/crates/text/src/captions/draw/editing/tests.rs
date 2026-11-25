@@ -10,10 +10,7 @@ fn measure(text: &str, _: TextFace, size: f64) -> f64 {
   text.chars().count() as f64 * size * 0.5
 }
 
-const FRAME: CaptionFrame = CaptionFrame {
-  width: 1920,
-  height: 1080,
-};
+const FRAME: CaptionFrame = CaptionFrame::new(1920, 1080);
 
 fn word(said: &str, at: f64, emphasis: bool) -> CaptionWord {
   CaptionWord {

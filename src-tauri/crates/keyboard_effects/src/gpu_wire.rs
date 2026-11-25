@@ -60,6 +60,10 @@ pub struct KeyboardOverlay {
   /// keys line up within the room the recording's widest shortcut takes.
   pub align_x: f32,
   pub align_y: f32,
+  /// What the platform the canvas is made for covers, top, bottom and side
+  /// as shares of the canvas, which the strip keeps clear of
+  /// (`kept_clear_of`).
+  pub clear: [f32; 3],
   pub keys: [KeyboardKey; MAX_KEYS],
 }
 
@@ -77,6 +81,7 @@ impl Default for KeyboardOverlay {
       center_y: -1.0,
       align_x: 0.5,
       align_y: 1.0,
+      clear: [0.0; 3],
       keys: [KeyboardKey::default(); MAX_KEYS],
     }
   }
@@ -96,6 +101,15 @@ impl KeyboardOverlay {
     for key in &mut self.keys {
       key.alpha *= shown;
     }
+    self
+  }
+
+  /// The overlay on a canvas `clear` says a platform covers part of,
+  /// placed clear of it.
+  #[must_use]
+  pub fn kept_clear_of(mut self, clear: Option<screenwide_placement::ClearArea>) -> Self {
+    let clear = clear.unwrap_or_default();
+    self.clear = [clear.top as f32, clear.bottom as f32, clear.side as f32];
     self
   }
 }

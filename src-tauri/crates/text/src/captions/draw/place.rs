@@ -86,12 +86,20 @@ struct Line {
   size: f64,
 }
 
+/// How far a caption keeps from each edge of `frame`, left, top, right and
+/// bottom: its margin, or past what the platform the picture is made for
+/// covers where that reaches further.
+fn margins(frame: CaptionFrame) -> [f64; 4] {
+  let size = (f64::from(frame.width), f64::from(frame.height));
+  frame.clear.margins(size, size.1 * EDGE_SHARE)
+}
+
 /// The room a caption has in `frame`: the picture within its margins.
 pub(super) fn room(frame: CaptionFrame) -> [f64; 2] {
-  let edge = f64::from(frame.height) * EDGE_SHARE;
+  let [left, top, right, bottom] = margins(frame);
   [
-    f64::from(frame.width) - 2.0 * edge,
-    f64::from(frame.height) - 2.0 * edge,
+    f64::from(frame.width) - left - right,
+    f64::from(frame.height) - top - bottom,
   ]
 }
 
@@ -178,11 +186,11 @@ pub(super) fn place_lines<'w, L: IntoIterator<Item = &'w CaptionWord>>(
   let (left, top, across) = match ground {
     Ground::Frame(frame) => {
       let [across, down] = style.position.shares();
-      let edge = f64::from(frame.height) * EDGE_SHARE;
+      let [left, top, ..] = margins(frame);
       let room = room(frame);
       (
-        edge + (room[0] - block[0]) * across,
-        edge + (room[1] - block[1]) * down,
+        left + (room[0] - block[0]) * across,
+        top + (room[1] - block[1]) * down,
         across,
       )
     }

@@ -37,8 +37,8 @@ pub use arrows::{
 };
 pub use caption_bounds::{caption_editing_block, caption_visible_bounds};
 pub use captions::{
-  caption_arrows, caption_face, caption_measure, caption_overlay, caption_overlay_typed,
-  CaptionFaces,
+  caption_arrows, caption_face, caption_frame, caption_measure, caption_overlay,
+  caption_overlay_typed, CaptionFaces,
 };
 /// A counter's number and a text box's lines are type, so they are
 /// rasterised rather than drawn by the shader.

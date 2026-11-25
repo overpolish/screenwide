@@ -21,6 +21,7 @@ mod words;
 use std::collections::HashSet;
 
 use screenwide_lexicon::{find_fillers, find_profanity, ProfanityLexicon, Unit};
+use screenwide_placement::ClearArea;
 use screenwide_timeline::{output_duration_us, TimelineRange};
 use serde::Serialize;
 use ts_rs::TS;
@@ -102,11 +103,24 @@ pub struct CaptionSource<'a> {
   pub source_duration_ms: f64,
 }
 
-/// The size of the picture captions are set in, in pixels.
+/// The picture captions are set in: its size in pixels, and what the
+/// platform it is made for covers, which the captions keep clear of.
 #[derive(Clone, Copy, Debug)]
 pub struct CaptionFrame {
   pub width: u32,
   pub height: u32,
+  pub clear: ClearArea,
+}
+
+impl CaptionFrame {
+  /// A picture `width` by `height` made for no platform.
+  pub const fn new(width: u32, height: u32) -> Self {
+    Self {
+      width,
+      height,
+      clear: ClearArea::NONE,
+    }
+  }
 }
 
 /// Caption type at 100%, as a share of the picture's shorter side: the same

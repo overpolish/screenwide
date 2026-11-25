@@ -5,10 +5,7 @@ use super::*;
 use crate::captions::CaptionWord;
 use crate::TextTemplateId;
 
-const FRAME: CaptionFrame = CaptionFrame {
-  width: 1_000,
-  height: 1_000,
-};
+const FRAME: CaptionFrame = CaptionFrame::new(1_000, 1_000);
 
 fn measure(text: &str, _face: TextFace, size: f64) -> f64 {
   text.chars().count() as f64 * size / 5.0

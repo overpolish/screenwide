@@ -21,8 +21,9 @@ annotations: Array<Annotation>, backgroundColor: string,
 backgroundImagePath: string | null, backgroundType: string, backgroundRadiusPercent: number, 
 /**
  * What the platform this canvas is made for covers with its own
- * interface, which a scene lays the screen and the camera out clear of.
- * Absent for a canvas made for no such platform.
+ * interface, which a scene lays the screen and the camera out clear of,
+ * and the captions and shortcuts are placed clear of. Absent for a
+ * canvas made for no such platform.
  */
 clearArea?: ClearArea, 
 /**

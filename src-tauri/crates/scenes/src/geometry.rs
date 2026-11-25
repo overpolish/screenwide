@@ -6,10 +6,10 @@
 //! which draws the Scene panel's buttons and places the paused preview's
 //! selection by the same rules.
 
-use super::clear_area::ClearArea;
 use super::model::RecordingScenePreset;
 use super::tall;
 use super::variant::{SceneBubbleSize, SceneCameraSize, SceneCorner, SceneVariant};
+use screenwide_placement::ClearArea;
 
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct Rect {

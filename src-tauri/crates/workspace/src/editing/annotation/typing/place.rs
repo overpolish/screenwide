@@ -84,7 +84,13 @@ fn caption_place(
   let pane = state.panes.get(caption.pane_index as usize)?.as_ref()?;
   let settings = pane.settings.as_ref()?;
   let (track, _) = pane.captions.as_ref()?;
-  let (block, size, align) = caption_editing_block(track, (settings.width, settings.height))?;
+  let (block, size, align) = caption_editing_block(
+    track,
+    screenwide_compositor::annotation_gpu::caption_frame(
+      settings,
+      (settings.width, settings.height),
+    ),
+  )?;
   caption.layer_id = CAPTIONS_LAYER_ID;
   [caption.x, caption.y, caption.width, caption.height] = block;
   let rect = display_selection(state, caption)?;

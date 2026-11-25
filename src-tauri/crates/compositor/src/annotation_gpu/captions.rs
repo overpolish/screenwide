@@ -225,16 +225,28 @@ pub fn caption_arrows(pieces: &[CaptionPiece], faces: &CaptionFaces) -> Prepared
   prepared
 }
 
-/// What `track` draws at `moment` into the edited video on a canvas
-/// `canvas` in size, ready to draw over a frame's own annotations, with the
-/// next caption's words asked for unseen so their type is ready when it
-/// comes on.
+/// The picture captions are set in on a canvas `size` large drawn with
+/// `settings`, kept clear of what the platform it is made for covers.
+pub fn caption_frame(
+  settings: &screenwide_output::ScreenshotOutputSettings,
+  size: (u32, u32),
+) -> CaptionFrame {
+  CaptionFrame {
+    clear: settings.clear_area.unwrap_or_default(),
+    ..CaptionFrame::new(size.0, size.1)
+  }
+}
+
+/// What `track` draws at `moment` into the edited video on the picture
+/// `frame`, ready to draw over a frame's own annotations, with the next
+/// caption's words asked for unseen so their type is ready when it comes
+/// on.
 pub fn caption_overlay(
   track: &CaptionTrack,
   moment: CaptionMoment,
-  canvas: (u32, u32),
+  frame: CaptionFrame,
 ) -> PreparedArrows {
-  caption_overlay_typed(track, moment, canvas, None)
+  caption_overlay_typed(track, moment, frame, None)
 }
 
 /// [`caption_overlay`] with the caption being typed into drawn with the
@@ -243,13 +255,9 @@ pub fn caption_overlay(
 pub fn caption_overlay_typed(
   track: &CaptionTrack,
   moment: CaptionMoment,
-  canvas: (u32, u32),
+  frame: CaptionFrame,
   marks: Option<TypingMarks>,
 ) -> PreparedArrows {
-  let frame = CaptionFrame {
-    width: canvas.0,
-    height: canvas.1,
-  };
   let faces = CaptionFaces::of(&track.recording.style);
   let mut measure = caption_measure(&faces);
   let mut pieces = track.pieces_at(frame, moment, &mut measure);

@@ -192,7 +192,7 @@ fn a_full_scene_keeps_the_recordings_crop_followed_or_still_as_it_says() {
 #[test]
 fn a_face_filling_a_tall_canvas_sits_clear_of_the_platforms_interface() {
   let mut output = test_output_settings(1_080, 1_920);
-  output.clear_area = Some(screenwide_scenes::ClearArea {
+  output.clear_area = Some(screenwide_placement::ClearArea {
     top: 0.07,
     bottom: 0.25,
     side: 0.05,

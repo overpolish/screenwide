@@ -26,7 +26,7 @@ pub mod template;
 pub mod variant;
 
 pub use camera_overlay::CameraOverlaySettings;
-pub use clear_area::ClearArea;
+pub use clear_area::clear_middle;
 pub use face::{FacePath, FaceSighting};
 pub use framing::SceneFraming;
 pub use gaps::{with_gaps, GapScene};

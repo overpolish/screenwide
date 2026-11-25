@@ -17,6 +17,7 @@ doctest = false
 
 [dependencies]
 screenwide-background.workspace = true
+screenwide-placement.workspace = true
 serde.workspace = true
 ts-rs.workspace = true
 

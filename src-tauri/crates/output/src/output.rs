@@ -58,11 +58,12 @@ pub struct ScreenshotOutputSettings {
   #[serde(skip)]
   pub capture_corner_radius: f64,
   /// What the platform this canvas is made for covers with its own
-  /// interface, which a scene lays the screen and the camera out clear of.
-  /// Absent for a canvas made for no such platform.
+  /// interface, which a scene lays the screen and the camera out clear of,
+  /// and the captions and shortcuts are placed clear of. Absent for a
+  /// canvas made for no such platform.
   #[serde(default, skip_serializing_if = "Option::is_none")]
   #[ts(optional)]
-  pub clear_area: Option<screenwide_scenes::ClearArea>,
+  pub clear_area: Option<screenwide_placement::ClearArea>,
   /// The visible rectangle, in output pixels. Zero width or height marks a
   /// settings blob written before placement moved into pixels.
   #[serde(default)]

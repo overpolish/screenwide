@@ -5993,6 +5993,7 @@ dependencies = [
  "screenwide-imaging",
  "screenwide-keyboard-effects",
  "screenwide-output",
+ "screenwide-placement",
  "screenwide-records",
  "screenwide-scenes",
  "screenwide-shader-layout",
@@ -6178,6 +6179,7 @@ dependencies = [
  "screenwide-background",
  "screenwide-gpu",
  "screenwide-imaging",
+ "screenwide-placement",
  "screenwide-scenes",
  "screenwide-shader-layout",
  "screenwide-wgsl",
@@ -6254,6 +6256,7 @@ name = "screenwide-scenes"
 version = "26.11.0"
 dependencies = [
  "screenwide-background",
+ "screenwide-placement",
  "serde",
  "serde_json",
  "ts-rs",

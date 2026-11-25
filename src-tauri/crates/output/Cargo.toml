@@ -29,6 +29,7 @@ screenwide-annotations.workspace = true
 screenwide-background.workspace = true
 screenwide-gpu.workspace = true
 screenwide-imaging.workspace = true
+screenwide-placement.workspace = true
 screenwide-scenes.workspace = true
 screenwide-shader-layout.workspace = true
 serde.workspace = true

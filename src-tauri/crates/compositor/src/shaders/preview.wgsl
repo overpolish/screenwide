@@ -266,6 +266,9 @@ struct Keyboard {
   // Normalized centre x/y a live move holds the strip at, negative where it
   // sits by alignment; alignment across and down, 0 to 1 between the margins.
   position: vec4<f32>,
+  // What the platform the canvas is made for covers, which the strip keeps
+  // clear of: top, bottom and side, as shares of the canvas.
+  clear: vec4<f32>,
   key_geometry: array<vec4<u32>, 8>, // artwork x, artwork width, visible, slot
   key_motion: array<vec4<f32>, 8>, // alpha, scale, progress, layout progress
   key_masks: array<vec4<u32>, 8>, // layout from mask, layout to mask
@@ -1011,7 +1014,7 @@ fn keyboard_effective_scale(canvas_dimensions: vec2<f32>) -> f32 {
     return requested;
   }
   let design_height = 20.0;
-  let edge_margin = 0.055;
+  let edge_margin = max(0.055, keyboard.clear.z);
   let animation_extent = 1.12;
   let available_width = canvas_dimensions.x * (1.0 - edge_margin * 2.0);
   let width_at_unit_scale = canvas_dimensions.y * (60.0 / 1080.0) * animation.z / design_height;
@@ -1039,11 +1042,14 @@ fn keyboard_texel(source_in: vec2<f32>) -> vec4<f32> {
 // the strip lines up within it the same way.
 fn keyboard_row_origin(canvas_dimensions: vec2<f32>, width: f32, height: f32) -> vec2<f32> {
   let margin = canvas_dimensions.y * 0.055;
+  let side = max(margin, keyboard.clear.z * canvas_dimensions.x);
+  let top = max(margin, keyboard.clear.x * canvas_dimensions.y);
+  let bottom = max(margin, keyboard.clear.y * canvas_dimensions.y);
   let align = keyboard.position.zw;
   let room = select(width, height * keyboard.animation.z / 20.0, keyboard.animation.z > 0.0);
   var center = vec2<f32>(
-      mix(margin + room * 0.5, canvas_dimensions.x - margin - room * 0.5, align.x),
-      mix(margin + height * 0.5, canvas_dimensions.y - margin - height * 0.5, align.y));
+      mix(side + room * 0.5, canvas_dimensions.x - side - room * 0.5, align.x),
+      mix(top + height * 0.5, canvas_dimensions.y - bottom - height * 0.5, align.y));
   if (keyboard.position.x >= 0.0) {
     center.x = keyboard.position.x * canvas_dimensions.x;
   }

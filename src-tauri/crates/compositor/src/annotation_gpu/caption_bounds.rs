@@ -12,22 +12,19 @@ use screenwide_text::captions::{
 /// A line's height in ems; the twin of `LINE_HEIGHT` in the captions' layout.
 const LINE_HEIGHT: f64 = 1.25;
 
-/// The block the caption showing at `moment` takes on a `canvas`-sized
-/// picture, as x, y, width and height shares of it; None while no caption
-/// shows. A press is aimed at the words, so each piece counts as the box its
-/// type or backdrop takes at its current size, leaving out turns and shadows.
+/// The block the caption showing at `moment` takes on the picture `frame`,
+/// as x, y, width and height shares of it; None while no caption shows. A
+/// press is aimed at the words, so each piece counts as the box its type or
+/// backdrop takes at its current size, leaving out turns and shadows.
 pub fn caption_visible_bounds(
   track: &CaptionTrack,
   moment: CaptionMoment,
-  canvas: (u32, u32),
+  frame: CaptionFrame,
 ) -> Option<[f64; 4]> {
+  let canvas = (frame.width, frame.height);
   if canvas.0 == 0 || canvas.1 == 0 {
     return None;
   }
-  let frame = CaptionFrame {
-    width: canvas.0,
-    height: canvas.1,
-  };
   let faces = CaptionFaces::of(&track.recording.style);
   let mut measure = caption_measure(&faces);
   let pieces = track.pieces_at(frame, moment, &mut measure);
@@ -66,22 +63,19 @@ pub fn caption_visible_bounds(
   })
 }
 
-/// Where the caption being typed into sets its words on a `canvas`-sized
-/// picture, for the typing to place the caret and read presses by: its
+/// Where the caption being typed into sets its words on the picture
+/// `frame`, for the typing to place the caret and read presses by: its
 /// block as x, y, width and height shares of the picture, its type size as
 /// a share of the block's height, and how its lines line up, a share of the
 /// block's width from the left.
 pub fn caption_editing_block(
   track: &CaptionTrack,
-  canvas: (u32, u32),
+  frame: CaptionFrame,
 ) -> Option<([f64; 4], f64, f64)> {
+  let canvas = (frame.width, frame.height);
   if canvas.0 == 0 || canvas.1 == 0 || !track.recording.enabled {
     return None;
   }
-  let frame = CaptionFrame {
-    width: canvas.0,
-    height: canvas.1,
-  };
   let faces = CaptionFaces::of(&track.recording.style);
   let layout = track.editing_layout(frame, &mut caption_measure(&faces))?;
   let style = editing_style(&track.recording.style);
@@ -136,9 +130,9 @@ mod tests {
 
   #[test]
   fn the_block_sits_where_the_caption_is_placed() {
-    let canvas = (1_920, 1_080);
+    let frame = CaptionFrame::new(1_920, 1_080);
     let at = |position| {
-      caption_visible_bounds(&track(position), CaptionMoment::still(900.0), canvas).unwrap()
+      caption_visible_bounds(&track(position), CaptionMoment::still(900.0), frame).unwrap()
     };
     let [x, y, width, height] = at(Placement::Bottom);
     assert!((x + width / 2.0 - 0.5).abs() < 0.01, "centred across");
@@ -148,11 +142,33 @@ mod tests {
   }
 
   #[test]
+  fn a_caption_keeps_clear_of_what_the_platform_covers() {
+    let tiktok = CaptionFrame {
+      clear: screenwide_placement::ClearArea {
+        top: 0.07,
+        bottom: 0.25,
+        side: 0.05,
+      },
+      ..CaptionFrame::new(1_080, 1_920)
+    };
+    let at = |position| {
+      caption_visible_bounds(&track(position), CaptionMoment::still(900.0), tiktok).unwrap()
+    };
+    // The words' block ends where TikTok's caption and buttons begin, a
+    // quarter up; the box behind them pads a little past it. On a canvas no
+    // platform covers, the same caption sits about a tenth from the foot.
+    let [_, y, _, height] = at(Placement::Bottom);
+    assert!(y + height < 0.77, "above TikTok's caption and buttons");
+    let [_, y, ..] = at(Placement::Top);
+    assert!(y > 0.06, "under TikTok's header");
+  }
+
+  #[test]
   fn nothing_shows_between_captions() {
     let bounds = caption_visible_bounds(
       &track(Placement::Bottom),
       CaptionMoment::still(5_000.0),
-      (1_920, 1_080),
+      CaptionFrame::new(1_920, 1_080),
     );
     assert_eq!(bounds, None);
   }

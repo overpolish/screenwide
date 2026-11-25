@@ -26,10 +26,7 @@ use super::{EditorArtifact, EditorState};
 
 /// The canvas an audio recording's captions are set in, which has no
 /// picture of its own: a full HD one, as most players show it.
-const AUDIO_FRAME: CaptionFrame = CaptionFrame {
-  width: 1_920,
-  height: 1_080,
-};
+const AUDIO_FRAME: CaptionFrame = CaptionFrame::new(1_920, 1_080);
 
 /// The canvas captions are set in for an output `width` by `height`: its
 /// own, unless it is the stand-in an audio recording has for a picture.
@@ -37,7 +34,7 @@ pub(in crate::editor) fn frame_for(width: u32, height: u32) -> CaptionFrame {
   if width < 16 || height < 16 {
     AUDIO_FRAME
   } else {
-    CaptionFrame { width, height }
+    CaptionFrame::new(width, height)
   }
 }
 

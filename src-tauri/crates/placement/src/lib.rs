@@ -11,6 +11,9 @@
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
+mod clear_area;
+pub use clear_area::ClearArea;
+
 /// One of nine places on the picture: along the top, through the middle or
 /// along the bottom, at the left, the centre or the right. The picture's own
 /// sides, whatever the language's direction.

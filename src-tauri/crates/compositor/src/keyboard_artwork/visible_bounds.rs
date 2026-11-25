@@ -61,7 +61,7 @@ pub(super) fn calculate(values: &KeyboardConstants, canvas: (u32, u32)) -> Optio
     values.animation[0]
   };
   let effective = if values.animation[2] > 0.0 {
-    let available = canvas.0 as f32 * (1.0 - 0.055 * 2.0);
+    let available = canvas.0 as f32 * (1.0 - 0.055_f32.max(values.clear[2]) * 2.0);
     let unit_width = canvas.1 as f32 * (60.0 / 1080.0) * values.animation[2] / 20.0;
     requested.min(available / (unit_width * 1.12).max(0.0001))
   } else {
@@ -71,6 +71,9 @@ pub(super) fn calculate(values: &KeyboardConstants, canvas: (u32, u32)) -> Optio
   let row_width = row_height * values.dimensions[0] as f32 / values.dimensions[1] as f32;
   // `keyboard_row_origin` in `preview.wgsl`.
   let margin = canvas.1 as f32 * 0.055;
+  let side = margin.max(values.clear[2] * canvas.0 as f32);
+  let top = margin.max(values.clear[0] * canvas.1 as f32);
+  let bottom = margin.max(values.clear[1] * canvas.1 as f32);
   let [align_x, align_y] = [values.position[2], values.position[3]];
   let room = if values.animation[2] > 0.0 {
     row_height * values.animation[2] / 20.0
@@ -80,12 +83,12 @@ pub(super) fn calculate(values: &KeyboardConstants, canvas: (u32, u32)) -> Optio
   let center_x = if values.position[0] >= 0.0 {
     values.position[0] * canvas.0 as f32
   } else {
-    margin + room * 0.5 + (canvas.0 as f32 - 2.0 * margin - room) * align_x
+    side + room * 0.5 + (canvas.0 as f32 - 2.0 * side - room) * align_x
   };
   let center_y = if values.position[1] >= 0.0 {
     values.position[1] * canvas.1 as f32
   } else {
-    margin + row_height * 0.5 + (canvas.1 as f32 - 2.0 * margin - row_height) * align_y
+    top + row_height * 0.5 + (canvas.1 as f32 - top - bottom - row_height) * align_y
   };
   let row_left = center_x - room * 0.5 + (room - row_width) * align_x;
   let mut bounds = [

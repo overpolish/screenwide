@@ -4,11 +4,12 @@
 use super::*;
 use screenwide_output::fixtures::test_output_settings;
 use screenwide_output::ScreenshotOutputSettings;
+use screenwide_placement::ClearArea;
 use screenwide_scenes::geometry::{preset_panes, PresetPanes, Rect};
 use screenwide_scenes::model::{RecordingScenePreset, SceneShapes};
 use screenwide_scenes::variant::{SceneBubbleSize, SceneCameraSize, SceneCorner, SceneVariant};
+use screenwide_scenes::CameraOverlaySettings;
 use screenwide_scenes::RecordingSceneClip;
-use screenwide_scenes::{CameraOverlaySettings, ClearArea};
 
 const CANVAS: (f64, f64) = (1_600.0, 900.0);
 
