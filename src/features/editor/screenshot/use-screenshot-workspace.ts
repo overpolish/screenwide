@@ -3,7 +3,10 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 
-import { formatsOfShape } from "../recording/formats/recording-formats";
+import {
+  formatsOfShape,
+  mainDocument,
+} from "../recording/formats/recording-formats";
 
 import { withSizeScale } from "./formats/screenshot-format-resolve";
 import { screenshotSaveJobs } from "./formats/screenshot-save-jobs";
@@ -117,6 +120,12 @@ export function useScreenshotWorkspace({
       ),
     [leftOut, sizeScale, workspace],
   );
+  // The main canvas, which a platform's own size, clear area and background
+  // never reach: what the next screenshot takes its look from.
+  const template = useMemo(
+    () => (formats ? mainDocument(formats, workspace) : workspace),
+    [formats, workspace],
+  );
   const [savesAll, setSavesAll] = useState(true);
   const isMadeForMore = (formats?.list.flatMap(formatsOfShape).length ?? 0) > 1;
   return {
@@ -147,6 +156,9 @@ export function useScreenshotWorkspace({
     setSavesAll: artifact?.kind === "screenshot" ? setSavesAll : undefined,
     setSelectedItemId,
     setWorkspace,
+    /** The main canvas, remembered as the next screenshot's look once this
+     * one is copied or exported, whichever format is in hand. */
+    template,
     workspace,
   };
 }

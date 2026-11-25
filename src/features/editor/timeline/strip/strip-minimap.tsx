@@ -55,7 +55,12 @@ export function StripMinimap({
   // and close under it rather than being drawn anew.
   return (
     <div className="flex flex-col">
-      <Minimap {...props} view={view} />
+      {/* The view window's frame reaches 4 px below the minimap's track
+          (`-inset-y-1`); room for it here keeps the gap under the strip as
+          wide to the eye as the one under the transport. */}
+      <div className="pb-1">
+        <Minimap {...props} view={view} />
+      </div>
       <MinimapVersions
         map={props.map}
         onSwitch={(id) => {

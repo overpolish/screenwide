@@ -54,8 +54,14 @@ editor-export-reveal-when-done =
 # The project is moved to the app's Recently Deleted once the export is written.
 editor-export-delete-after = Move to Recently Deleted after exporting
 editor-export-action = Export
-# $reason is the system's own explanation, in English.
+# $reason says what went wrong: one of the sentences below, or else the system's own explanation, in English.
 editor-export-failed = The export failed. { $reason }
+# Why an export failed: the chosen folder cannot be written to.
+editor-export-failed-denied = Screenwide can't write to that folder. Choose another folder.
+# Why an export failed: a file stands where the chosen folder should be.
+editor-export-failed-not-folder = A file has the folder's name. Choose another folder.
+# Why an export failed: the disk it was writing to is full.
+editor-export-failed-full = The disk is full.
 editor-export-try-again = Try again
 # The picture as drawn beside it as the export writes it, compared across a divider.
 editor-export-compare-original = Original

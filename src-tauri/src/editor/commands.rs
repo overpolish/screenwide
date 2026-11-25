@@ -66,11 +66,14 @@ pub fn cancel_export_job(app: AppHandle, window: tauri::WebviewWindow) -> bool {
 
 /// Copies the screenshot as the window shows it and closes the editor, moving
 /// its project to the Trash after when `delete_project_after_export` says so.
+/// `template` is the main canvas, remembered as the next screenshot's look:
+/// `screenshot_output` is the format in hand, which may be a platform's.
 #[tauri::command]
 pub fn copy_editor_to_clipboard(
   app: AppHandle,
   window: tauri::WebviewWindow,
   screenshot_output: ScreenshotWorkspaceOutputSettings,
+  template: ScreenshotWorkspaceOutputSettings,
   delete_project_after_export: bool,
 ) -> Result<(), String> {
   let kind = kind_of_window(&window)?;
@@ -101,7 +104,7 @@ pub fn copy_editor_to_clipboard(
     .clipboard()
     .write_image(&Image::new(&composed.rgba, composed.width, composed.height))
     .map_err(|error| error.to_string())?;
-  if let Err(error) = remember_screenshot_output(&app, screenshot_output.canvas) {
+  if let Err(error) = remember_screenshot_output(&app, template.canvas) {
     eprintln!("Could not remember screenshot export settings: {error}");
   }
   if let Err(error) =

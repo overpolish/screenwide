@@ -63,7 +63,7 @@ pub use project_open::is_project_file;
 pub use project_open::{
   choose_project, open_kind, open_project, open_project_detached, project_argument,
 };
-pub use screenshot_project::temporary::close_screenshot_editor;
+pub use screenshot_project::temporary::close_screenshot_window;
 pub use screenshot_project::{present_screenshot, save_screenshot};
 pub(crate) mod project_look;
 mod project_name;

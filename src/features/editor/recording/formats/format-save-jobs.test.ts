@@ -6,7 +6,7 @@ import { describe, expect, it } from "vitest";
 import { defaultCameraOverlay } from "../../export/recording-export-settings";
 import { defaultRecordingOutput } from "../../screenshot/screenshot-output";
 
-import { formatSaveJobs } from "./format-save-jobs";
+import { formatFileStem, formatSaveJobs } from "./format-save-jobs";
 
 import type { FormatDocument } from "./format-document";
 import type { FrameFormats } from "../../../../bindings/FrameFormats";
@@ -58,5 +58,11 @@ describe("the files an export writes", () => {
       [1_920, 1_080, false],
       [1_920, 1_080, true],
     ]);
+  });
+
+  it("names a proportion's file 3x4, leaving the chosen name as it is", () => {
+    expect(formatFileStem("Instagram portrait 3:4", "Demo 10:30")).toBe(
+      "Demo 10:30 Instagram portrait 3x4",
+    );
   });
 });

@@ -11,15 +11,24 @@ import {
   ScreenshotWorkspaceOutputSettings,
 } from "./screenshot/screenshot-output";
 
-/** Copies the screenshot and closes the editor; its project goes to the Trash
- * after when `deleteProjectAfterExport` says so. */
+/** Copies the screenshot, the format in hand as it is `published`, and
+ * closes the editor; its project goes to the Trash after when
+ * `deleteProjectAfterExport` says so. `template`, the main canvas, is
+ * remembered as the next screenshot's look. */
 export const copyEditorToClipboard = async (
-  screenshotOutput: ScreenshotWorkspaceOutputSettings,
+  {
+    published,
+    template,
+  }: {
+    published: ScreenshotWorkspaceOutputSettings;
+    template: ScreenshotWorkspaceOutputSettings;
+  },
   deleteProjectAfterExport: boolean,
 ) => {
   await invoke<null>("copy_editor_to_clipboard", {
     deleteProjectAfterExport,
-    screenshotOutput: normalizedScreenshotWorkspaceOutput(screenshotOutput),
+    screenshotOutput: normalizedScreenshotWorkspaceOutput(published),
+    template: normalizedScreenshotWorkspaceOutput(template),
   });
 };
 

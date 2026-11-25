@@ -81,9 +81,10 @@ export function MinimapVersions({
           role="group"
           transition={transition}
         >
-          {/* Apart from the minimap by more than its view window reaches
-              below it, so the window's frame never crosses the first line. */}
-          <div className="flex flex-col pt-1.5">
+          {/* The minimap's own room already holds its view window's frame
+              (`strip-minimap.tsx`); this keeps the lines a little further
+              off it. */}
+          <div className="flex flex-col pt-0.5">
             <AnimatePresence initial={false}>
               {versions.map((version) => (
                 <motion.div

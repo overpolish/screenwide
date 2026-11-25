@@ -16,7 +16,10 @@ import type { ExportSubtitles } from "../../../bindings/ExportSubtitles";
 import type { ScreenshotFormat } from "../../../bindings/ScreenshotFormat";
 import type { RecordingProcessingOptions } from "../api";
 import type { ScreenshotSaveJob } from "../screenshot/formats/screenshot-save-jobs";
-import type { RecordingOutputSettings } from "../screenshot/screenshot-output";
+import type {
+  RecordingOutputSettings,
+  ScreenshotWorkspaceOutputSettings,
+} from "../screenshot/screenshot-output";
 import type { RecordingTimelineEdit } from "../timeline/editing/recording-timeline-edit";
 import type { CameraOverlaySettings } from "../types";
 
@@ -32,6 +35,9 @@ export type SaveExportOptions = RecordingProcessingOptions &
     screenshotFullColour: boolean;
     /** The subtitle file written beside a recording's video. */
     subtitles: ExportSubtitles;
+    /** A screenshot's main canvas, remembered as the next screenshot's look
+     * in place of the format in hand's. */
+    screenshotTemplate?: ScreenshotWorkspaceOutputSettings;
   };
 
 /** What one format does differently in an export of every format. */
@@ -49,6 +55,7 @@ const exportPayload = ({
   deleteProjectAfterExport,
   screenshotFormat,
   screenshotFullColour,
+  screenshotTemplate,
   subtitles,
   ...processing
 }: Omit<SaveExportOptions, "fileStem">) => ({
@@ -57,6 +64,9 @@ const exportPayload = ({
   deleteProjectAfterExport,
   screenshotFormat,
   screenshotFullColour,
+  screenshotTemplate: screenshotTemplate
+    ? normalizedScreenshotWorkspaceOutput(screenshotTemplate)
+    : null,
   subtitles,
 });
 

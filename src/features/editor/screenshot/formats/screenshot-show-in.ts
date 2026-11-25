@@ -4,6 +4,7 @@
 import {
   type FormatContext,
   isShownIn,
+  withFormatAdded,
   withHere,
   withoutHere,
 } from "../../recording/formats/format-scope";
@@ -127,6 +128,35 @@ export const withScreenshotShownToggled = (
         scope === undefined ? rest : [...rest, [key, scope]],
       ),
     },
+  };
+};
+
+/** `formats`, before the format `added` is made, as they show it: whatever
+ * is shown in only some formats shows in it too, being left out only of
+ * those it was taken out of. A scope naming only formats since taken away
+ * already shows everywhere (`liveScope`), so it is dropped. */
+export const withShownInAdded = (
+  formats: ScreenshotFormats,
+  added: string,
+): ScreenshotFormats => {
+  if (!formats.showIn) return formats;
+  const extended = (table: Table) => {
+    const scopes = formats.showIn?.[table];
+    if (!scopes) return {};
+    return {
+      [table]: Object.fromEntries(
+        Object.entries(scopes).flatMap(([key, scope]) => {
+          const live = liveScope(scope, formats);
+          return live === undefined
+            ? []
+            : [[key, withFormatAdded(live, added)]];
+        }),
+      ),
+    };
+  };
+  return {
+    ...formats,
+    showIn: { ...extended("layers"), ...extended("annotations") },
   };
 };
 

@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 
 import { formatDifferences } from "./format-differences";
 import { resolvedTimelineEdit } from "./format-resolve";
+import { withEditsFormatAdded } from "./format-scope";
 import { formatSync, withCustomToggled, withShownToggled } from "./format-sync";
 import { writtenTimelineEdit } from "./format-write";
 
@@ -182,5 +183,17 @@ describe("bringing formats in step", () => {
       resolve(written.edits, id, written.edit).sceneClips?.[0]?.preset;
     expect(preset("youtube")).toBe("full");
     expect(preset("tiktok")).toBe("stacked");
+  });
+
+  it("shows what is left out of one platform in a platform added later", () => {
+    const left: FormatEdits = {
+      audio: { song: { showIn: { formats: ["youtube", "shorts"] } } },
+      captions: { showIn: { formats: ["youtube"] } },
+    };
+    const added = withEditsFormatAdded({ edits: left }, "reels")?.edits;
+    expect(added?.audio?.song.showIn).toEqual({
+      formats: ["youtube", "shorts", "reels"],
+    });
+    expect(added?.captions?.showIn).toEqual({ formats: ["youtube", "reels"] });
   });
 });

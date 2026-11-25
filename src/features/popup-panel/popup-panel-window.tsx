@@ -17,6 +17,7 @@ import {
   SHARED_POPUP_PANEL,
   usePopupPanelStore,
 } from "./store";
+import { usePanelKeys } from "./use-panel-keys";
 
 import type { PopupPanelIslandContent } from "../editor/island/host/editor-island-kind";
 
@@ -91,6 +92,7 @@ function PanelContents({
   content: Exclude<PopupPanelContent, PopupPanelIslandContent>;
   panel: string;
 }) {
+  usePanelKeys(panel);
   if (content.kind === "cuePicker")
     return <CuePicker at={content.at} panel={panel} script={content.script} />;
   if (content.kind === "scriptPicker")

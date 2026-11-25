@@ -75,6 +75,7 @@ impl ExportInputs {
       screenshot_format: _,
       screenshot_full_colour: _,
       screenshot_output: _,
+      screenshot_template: _,
       subtitles: _,
       timeline_edit: timeline_model,
       captions: _,

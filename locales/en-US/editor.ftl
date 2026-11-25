@@ -14,14 +14,6 @@ editor-confirm-delete = Confirm deleting
 # The screenshot editor's title bar command while the screenshot is not yet a project: keeps it in Projects.
 editor-save-screenshot = Save
 
-## Asked on closing a screenshot that is not in Projects and holds work not copied or exported
-
-editor-unsaved-screenshot-title = Save this screenshot?
-editor-unsaved-screenshot-message = It is not in Projects yet, so closing it without saving deletes it.
-editor-unsaved-screenshot-save = Save
-editor-unsaved-screenshot-discard = Don’t Save
-editor-unsaved-screenshot-cancel = Cancel
-
 ## The tool column
 
 editor-toolbar-more-tools = More tools

@@ -211,7 +211,7 @@ export function EditorPanel(props: EditorPanelProps) {
               {/* The formats the screenshot is made in, as under a
                   recording's timeline, with nothing to play. */}
               <ChromeSetBack
-                className="flex shrink-0 justify-end px-inset pb-inset"
+                className="flex shrink-0 justify-end p-inset"
                 isSetBack={isExportOpen}
               >
                 <FormatBar isLocked={isExportOpen} />

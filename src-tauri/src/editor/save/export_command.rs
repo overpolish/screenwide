@@ -89,6 +89,7 @@ pub(super) async fn run_export(
     keyboard_effects,
     recording_output,
     screenshot_output,
+    screenshot_template,
     ..
   } = options;
   if compression > 4 || camera_compression > 4 {
@@ -111,8 +112,8 @@ pub(super) async fn run_export(
   let artifact_id = match &artifact {
     EditorArtifact::Screenshot { id, .. } | EditorArtifact::Recording { id, .. } => *id,
   };
-  let screenshot_preference =
-    matches!(&artifact, EditorArtifact::Screenshot { .. }).then(|| screenshot_output.clone());
+  let screenshot_preference = matches!(&artifact, EditorArtifact::Screenshot { .. })
+    .then(|| screenshot_template.unwrap_or_else(|| screenshot_output.clone()));
   let recording_preference =
     matches!(&artifact, EditorArtifact::Recording { .. }).then(|| CompletedRecordingExport {
       choices: RecordingExportChoices::offered_by(&artifact, &job_options),
@@ -155,7 +156,7 @@ pub(super) async fn run_export(
     // app is out of sight, where it would otherwise be napped.
     let _activity = crate::user_work::UserActivity::begin_keeping_awake("Exporting");
     let result = std::fs::create_dir_all(&writing)
-      .map_err(|error| error.to_string())
+      .map_err(|error| super::write_failure(&error))
       .and_then(|()| {
         work(
           &artifact,

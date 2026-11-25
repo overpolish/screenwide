@@ -75,8 +75,7 @@ fn write_formats(
     let path = unique_path(writing, &stem, extension, &|candidate| candidate.exists());
     match written.last().filter(|_| format.is_copy) {
       Some(before) => {
-        std::fs::copy(before, &path)
-          .map_err(|error| format!("Could not copy the export: {error}"))?;
+        std::fs::copy(before, &path).map_err(|error| super::write_failure(&error))?;
       }
       None => {
         let composed = compose_screenshot_workspace(items, &format.screenshot_output)?;

@@ -499,10 +499,9 @@ export function EditorWindow() {
           clearExportFailure();
         }}
         onCopy={() => {
-          copyEditorToClipboard(
-            screenshot.published,
-            deleteProjectAfterExport,
-          ).catch(report("copy"));
+          copyEditorToClipboard(screenshot, deleteProjectAfterExport).catch(
+            report("copy"),
+          );
         }}
         onCursorEffectsChange={setCursorEffects}
         onDeleteProjectAfterExportChange={setDeleteProjectAfterExport}
@@ -555,6 +554,7 @@ export function EditorWindow() {
             screenshotFormat: screenshotExport.format,
             screenshotFullColour: screenshotExport.fullColour,
             screenshotOutput,
+            screenshotTemplate: screenshot.template,
             subtitles,
             timelineEdit: job.timelineEdit,
           }))

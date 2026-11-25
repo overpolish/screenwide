@@ -34,7 +34,7 @@ import {
   workspaceMapping,
 } from "./screenshot-format-layout";
 import { canvasOf, shownWorkspace } from "./screenshot-format-resolve";
-import { laidApart } from "./screenshot-show-in";
+import { laidApart, withShownInAdded } from "./screenshot-show-in";
 
 import type { ScreenshotFormats } from "../../../../bindings/ScreenshotFormats";
 import type { ScreenshotShape } from "../../../../bindings/ScreenshotShape";
@@ -192,7 +192,8 @@ export const switchedScreenshotFormat = (
 };
 
 /** The platform `preset` added and put in hand, the main canvas laid out
- * on its template's canvas, with its proportion's own annotations. */
+ * on its template's canvas, with its proportion's own annotations, and
+ * showing what is left out only of other formats. */
 export const addedScreenshotFormat = (
   formats: ScreenshotFormats | null,
   inHand: InHand,
@@ -201,7 +202,8 @@ export const addedScreenshotFormat = (
   const template = frameSizePreset(preset);
   if (!template) return null;
   const canvas = { clear: platformClearArea([preset]), size: template };
-  const settled = formats && settledFormats(formats, inHand);
+  const settled =
+    formats && withShownInAdded(settledFormats(formats, inHand), preset);
   const shape = { id: preset, platforms: [preset] };
   return withShapeAdded(settled, inHand.workspace, {
     lay: (main) =>

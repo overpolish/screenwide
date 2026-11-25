@@ -23,14 +23,18 @@ export type FormatSaveJob = FormatDocument & {
   isCopy?: boolean;
 };
 
+const ISOLATES = /[\u2068\u2069]/gu;
+
 /** The name `stem`'s file in the format named `format` is written under.
  * It keeps no invisible direction marks: Fluent isolates each placeable in
- * them, and they would stay in the name on disk. */
+ * them, and they would stay in the name on disk. A proportion in the
+ * format's name, as in "Instagram portrait 3:4", is written 3x4: a colon
+ * cannot be in a file name, and taken out it would read as 34. */
 export const formatFileStem = (format: string, stem: string) =>
-  t("editor-export-format-file", { format, stem }).replace(
-    /[\u2068\u2069]/gu,
-    "",
-  );
+  t("editor-export-format-file", {
+    format: format.replace(ISOLATES, "").replace(/(\d):(\d)/gu, "$1x$2"),
+    stem,
+  }).replace(ISOLATES, "");
 
 /**
  * What an export writes: every format, shape by shape in the order the bar

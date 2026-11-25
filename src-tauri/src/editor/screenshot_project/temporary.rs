@@ -6,17 +6,14 @@
 //!
 //! Its project is made in the app's cache rather than the projects folder
 //! and left out of the library, so the editor works on it as on any other,
-//! and Save moves it into the projects folder. Let go of unsaved, it is
-//! deleted: copied, closed, deleted or exported with the project. Work kept
-//! nowhere else is not deleted with it: closing the window asks first, and
-//! a project opened in its place keeps it in Projects. A start sweeps away
-//! any left by an app that stopped first.
+//! and Save moves it into the projects folder. Closed, copied, deleted or
+//! exported with the project, it is deleted, however it was marked up: a
+//! screenshot reaches Projects only when it is saved. The one exception is
+//! a project opened in its place while it holds work kept nowhere else,
+//! which keeps it in Projects rather than lose that work unasked. A start
+//! sweeps away any left by an app that stopped first.
 
 use super::*;
-
-mod closing;
-
-pub use closing::close_screenshot_editor;
 
 const FOLDER: &str = "temporary-screenshots";
 
@@ -70,6 +67,13 @@ pub(crate) fn let_go(app: &AppHandle, project: &Path) -> bool {
     return true;
   }
   discard(app, project)
+}
+
+/// Closes the screenshot editor as its window asks: a temporary screenshot
+/// goes with it, marked up or not, as only Save keeps one.
+pub fn close_screenshot_window(app: &AppHandle) {
+  set_unsaved(app, false);
+  super::super::close(app, EditorKind::Screenshot);
 }
 
 pub(crate) fn sweep(app: &AppHandle) {

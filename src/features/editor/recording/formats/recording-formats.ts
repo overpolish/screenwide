@@ -16,6 +16,7 @@
 // one is chosen.
 
 import { type FormatDocument, laidDocument } from "./format-document";
+import { withEditsFormatAdded } from "./format-scope";
 import { withoutLayouts } from "./format-write-parts";
 import { platformClearArea } from "./platform-clear-area";
 
@@ -141,14 +142,15 @@ export const switchedFormat = <Look, Formats extends FormatListOf<Look>>(
  * (`laidDocument`), as every later change to the main one is
  * (`withLookCarried`). Platforms share a shape only when asked to
  * (`format-sharing.ts`). The main canvas, the first shape, takes no
- * platform: it is the one canvas sized freely.
+ * platform: it is the one canvas sized freely. What the edit leaves out
+ * of only some formats shows in the new one (`withEditsFormatAdded`).
  */
 export const addedFormat = (
   formats: FrameFormats | null,
   document: FormatDocument,
   { preset, size }: { preset: string; size: Size },
 ): { document: FormatDocument; formats: FrameFormats } =>
-  withShapeAdded(formats, document, {
+  withShapeAdded(withEditsFormatAdded(formats, preset), document, {
     lay: (main) => laidDocument(main, size, platformClearArea([preset])),
     preset,
   });

@@ -10,6 +10,7 @@ import {
   screenshotFormatSync,
   withLeftOutKept,
   withScreenshotShownToggled,
+  withShownInAdded,
 } from "./screenshot-show-in";
 
 import type { ScreenshotFormats } from "../../../../bindings/ScreenshotFormats";
@@ -36,6 +37,24 @@ describe("a screenshot's show in", () => {
     ).toEqual([true, false, true]);
     expect([...leftOutInHand(left).layers]).toEqual([7]);
     expect(leftOutInHand({ ...left, active: "main" }).layers.size).toBe(0);
+  });
+
+  it("shows a layer left out of one platform in a platform added later", () => {
+    const left = withScreenshotShownToggled(formats("tall"), {
+      format: "tiktok",
+      syncId: layerSyncId(7),
+    });
+    const added = withShownInAdded(left, "pinterest-pin");
+    const withPin = {
+      ...added,
+      list: [...added.list, { id: "pin", platforms: ["pinterest-pin"] }],
+    };
+    expect(
+      screenshotFormatSync(withPin, {
+        key: null,
+        syncId: layerSyncId(7),
+      })?.formats.map((format) => format.isShown),
+    ).toEqual([true, false, true, true]);
   });
 
   it("keeps an annotation shown in the one format it shows in", () => {

@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import type { FormatEdits } from "../../../../bindings/FormatEdits";
 import type { FormatScope } from "../../../../bindings/FormatScope";
 
 /** The id the caption track goes by among the items a format can leave
@@ -119,3 +120,45 @@ export const withHere = (
   context: FormatContext,
 ): FormatScope | undefined =>
   scopeOf([...new Set([...shownFormats(scope, context), ...joining])], context);
+
+/** `scope` once the format `added` has been made: a scope naming the
+ * formats something shows in names it too, as it was set apart only from
+ * those taken out of it then. */
+export const withFormatAdded = (
+  scope: FormatScope | undefined,
+  added: string,
+): FormatScope | undefined =>
+  scope === undefined || scope === "all" || scope.formats.includes(added)
+    ? scope
+    : { formats: [...scope.formats, added] };
+
+/** `formats` once the format `added` has been made: every scene,
+ * annotation, song, sound effect and the captions their edits show in only
+ * some formats show in it too (`withFormatAdded`). */
+export const withEditsFormatAdded = <Formats extends { edits?: FormatEdits }>(
+  formats: Formats | null,
+  added: string,
+): Formats | null => {
+  if (!formats?.edits) return formats;
+  const reshown = <T extends { showIn?: FormatScope }>(entry: T): T => {
+    const showIn = withFormatAdded(entry.showIn, added);
+    return showIn === entry.showIn ? entry : { ...entry, showIn };
+  };
+  const table = <T extends { showIn?: FormatScope }>(
+    entries: Record<string, T>,
+  ): Record<string, T> =>
+    Object.fromEntries(
+      Object.entries(entries).map(([id, entry]) => [id, reshown(entry)]),
+    );
+  const { annotations, audio, captions, scenes } = formats.edits;
+  return {
+    ...formats,
+    edits: {
+      ...formats.edits,
+      ...(scenes ? { scenes: table(scenes) } : {}),
+      ...(annotations ? { annotations: table(annotations) } : {}),
+      ...(audio ? { audio: table(audio) } : {}),
+      ...(captions ? { captions: reshown(captions) } : {}),
+    },
+  };
+};

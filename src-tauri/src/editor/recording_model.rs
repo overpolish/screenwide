@@ -91,7 +91,7 @@ impl ScreenshotFormat {
     full_colour: bool,
   ) -> Result<(), String> {
     let written = std::fs::File::create(path)
-      .map_err(|error| error.to_string())
+      .map_err(|error| crate::editor::save::write_failure(&error))
       .and_then(|file| {
         let mut out = std::io::BufWriter::new(file);
         match self {
@@ -100,7 +100,7 @@ impl ScreenshotFormat {
           Self::Jpeg => screenwide_output::write_jpeg(image, &mut out),
           Self::Webp => screenwide_output::write_webp(image, &mut out),
         }?;
-        std::io::Write::flush(&mut out).map_err(|error| error.to_string())
+        std::io::Write::flush(&mut out).map_err(|error| crate::editor::save::write_failure(&error))
       });
     if written.is_err() {
       let _ = std::fs::remove_file(path);
@@ -180,6 +180,11 @@ pub struct RecordingExportOptions {
   pub resolution_scale_percent: u16,
   pub recording_output: RecordingOutputSettings,
   pub screenshot_output: ScreenshotWorkspaceOutputSettings,
+  /// The main canvas of a screenshot made in several formats, remembered as
+  /// the look of the next screenshot in place of `screenshot_output`, which
+  /// is the format in hand and may be a platform's.
+  #[serde(default)]
+  pub screenshot_template: Option<ScreenshotWorkspaceOutputSettings>,
   /// The file a screenshot is saved as.
   #[serde(default)]
   pub screenshot_format: ScreenshotFormat,

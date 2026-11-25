@@ -229,6 +229,9 @@ export type Messages = {
   "editor-export-done": null;
   "editor-export-drag-file": { name: string | number };
   "editor-export-failed": { reason: string | number };
+  "editor-export-failed-denied": null;
+  "editor-export-failed-full": null;
+  "editor-export-failed-not-folder": null;
   "editor-export-file-name": null;
   "editor-export-finalizing": null;
   "editor-export-folder": null;
@@ -918,11 +921,6 @@ export type Messages = {
   "editor-toolbar-more-tools": null;
   "editor-toolbar-tools": null;
   "editor-toolbar-transcript": null;
-  "editor-unsaved-screenshot-cancel": null;
-  "editor-unsaved-screenshot-discard": null;
-  "editor-unsaved-screenshot-message": null;
-  "editor-unsaved-screenshot-save": null;
-  "editor-unsaved-screenshot-title": null;
   "format-size": { size: string | number; unit: string | number };
   "format-size-unknown": null;
   "glide-destination": { region: string | number };
