@@ -62,6 +62,13 @@ pub struct FrameFormat {
   #[serde(default, skip_serializing_if = "Option::is_none")]
   #[ts(optional)]
   pub platform: Option<String>,
+  /// The size template the main canvas is made for, chosen in the Frame
+  /// island: it has that template's size, and keeps clear of its app's
+  /// interface. None for a size typed in, and on every other shape, which
+  /// names its platforms instead.
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  #[ts(optional)]
+  pub made_for: Option<String>,
   /// Whether the screen is set in this shape its own way, moved, resized,
   /// turned, cropped or restyled while the shape was in hand, rather than
   /// following the main canvas's.

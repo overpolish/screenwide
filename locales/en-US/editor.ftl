@@ -139,7 +139,13 @@ editor-frame-size-linkedin-vertical = LinkedIn vertical
 editor-frame-size-x-landscape = X landscape
 editor-frame-size-x-vertical = X vertical
 editor-frame-formats = Formats
-# The format bar's button for the main canvas, the one worked in and sized freely, which every platform follows. Its visible label is its size.
+# Names the Frame island's list of the platform templates the main canvas can be made for, which size it and keep it clear of that app's interface.
+editor-frame-made-for = Format
+# The Frame island's line that opens that list, named for assistive technology. $format is what the main canvas is made for, such as TikTok, or Custom.
+editor-frame-made-for-current = Format: { $format }
+# The Frame island's choice for a main canvas of a size of its own, made for no platform.
+editor-frame-made-for-custom = Custom
+# The format bar's button for the main canvas, the one worked in and sized freely, which every platform follows. Its visible label is its size, or the platform it is made for.
 editor-frame-format-main = Main canvas
 # The group of segments in the format bar for the platforms added, such as YouTube and TikTok.
 editor-frame-format-platforms = Platforms

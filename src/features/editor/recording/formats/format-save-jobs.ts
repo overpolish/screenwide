@@ -6,6 +6,7 @@ import { t } from "../../../../i18n/i18n";
 import { laidDocument } from "./format-document";
 import { exportSizeOf, formatName } from "./format-name";
 import { formatContext, resolvedTimelineEdit } from "./format-resolve";
+import { madeForOf } from "./main-made-for";
 import { formatsOfShape } from "./recording-formats";
 
 import type { FormatDocument } from "./format-document";
@@ -73,11 +74,13 @@ export function formatSaveJobs({
       const sameness = `${shape.id}:${String(size.width)}x${String(size.height)}:${JSON.stringify(timelineEdit)}`;
       const group = groups.get(sameness) ?? [];
       // A shape made for no platform is named by its size in a file name:
-      // its proportions' colon is not allowed in one.
+      // its proportions' colon is not allowed in one. The main canvas made
+      // for a platform's template is named by it.
+      const named = preset ?? madeForOf(formats, where.canvas);
       const name =
-        preset === null
+        named === null
           ? t("editor-frame-format-size", where.canvas)
-          : formatName({ ...where.canvas, preset });
+          : formatName({ ...where.canvas, preset: named });
       group.push({
         ...(isResized
           ? laidDocument(own, size, own.recordingOutput.primary.clearArea)

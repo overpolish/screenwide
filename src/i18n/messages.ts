@@ -283,6 +283,9 @@ export type Messages = {
     width: string | number;
   };
   "editor-frame-formats": null;
+  "editor-frame-made-for": null;
+  "editor-frame-made-for-current": { format: string | number };
+  "editor-frame-made-for-custom": null;
   "editor-frame-phone": null;
   "editor-frame-phone-current": { phone: string | number };
   "editor-frame-phone-galaxy-fold-cover": null;

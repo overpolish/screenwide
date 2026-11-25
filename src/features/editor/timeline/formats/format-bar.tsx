@@ -1,12 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import {
-  Plus,
-  RectangleHorizontal,
-  RectangleVertical,
-  Square,
-} from "lucide-react";
+import { Plus } from "lucide-react";
 import { useLayoutEffect, useRef, useState } from "react";
 
 import { t } from "../../../../i18n/i18n";
@@ -20,6 +15,7 @@ import {
   pointerAnchor,
   usePopupMenu,
 } from "../../../popup-panel/use-popup-menu";
+import { ShapeGlyph } from "../../glyphs/shape-glyph";
 import { formatName } from "../../recording/formats/format-name";
 import { useFrameFormats } from "../../recording/formats/frame-formats-context";
 import {
@@ -47,15 +43,6 @@ const MENU_WIDTH = 260;
 const REMOVE = "remove";
 /** The main canvas before a platform is added, when it has no id yet. */
 const ONLY_FORMAT = "only";
-
-type Size = { height: number; width: number };
-
-/** Whether a canvas is wide, tall or square, drawn as its shape. */
-function ShapeGlyph({ size }: { size: Size }) {
-  if (size.width > size.height) return <RectangleHorizontal aria-hidden />;
-  if (size.height > size.width) return <RectangleVertical aria-hidden />;
-  return <Square aria-hidden />;
-}
 
 /**
  * The recording's formats, at the end of the timeline's transport row:
@@ -121,7 +108,13 @@ export function FormatBar({ isLocked = false }: { isLocked?: boolean }) {
     })),
   );
   const isMainInHand = !main || snapshot.activeId === main.id;
-  const made = new Set(platforms.map((format) => format.id));
+  // The template the main canvas is made for, which names it, and which is
+  // not added again as a platform of its own.
+  const mainPreset = main?.formats[0]?.preset ?? null;
+  const made = new Set([
+    ...platforms.map((format) => format.id),
+    ...(mainPreset ? [mainPreset] : []),
+  ]);
   const addable = FRAME_SIZE_PRESETS.filter((preset) => !made.has(preset.id));
   return (
     <div
@@ -139,7 +132,7 @@ export function FormatBar({ isLocked = false }: { isLocked?: boolean }) {
             ariaLabel: t("editor-frame-format-main"),
             icon: <ShapeGlyph size={mainSize} />,
             id: mainId,
-            label: formatName({ ...mainSize, preset: null }),
+            label: formatName({ ...mainSize, preset: mainPreset }),
           },
         ]}
         onSelectionChange={(id) => {

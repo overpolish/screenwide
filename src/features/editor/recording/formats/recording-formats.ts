@@ -206,11 +206,13 @@ const single = (
 };
 
 /** `formats` while it holds anything a recording made in one shape needs
- * to keep: a second shape, a platform, the phone or the preview. */
-const keptFormats = (formats: FrameFormats): FrameFormats | null => {
+ * to keep: a second shape, a platform, a template the main canvas is made
+ * for, the phone or the preview. */
+export const keptFormats = (formats: FrameFormats): FrameFormats | null => {
   const [only] = formats.list;
   return formats.list.length === 1 &&
     !only.platforms?.length &&
+    !only.madeFor &&
     !formats.phone &&
     !formats.preview
     ? null
@@ -219,7 +221,7 @@ const keptFormats = (formats: FrameFormats): FrameFormats | null => {
 
 /** `formats`, or the formats of a recording made in one shape, previewed on
  * the common phone until another is chosen. */
-const formatsOrNew = (formats: FrameFormats | null): FrameFormats => {
+export const formatsOrNew = (formats: FrameFormats | null): FrameFormats => {
   if (formats) return formats;
   const active = `${newShapeId()}-0`;
   return { active, list: [{ id: active }], phone: DEFAULT_PHONE };

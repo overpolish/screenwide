@@ -47,6 +47,9 @@ export type FrameIslandProps = {
   /** A recording's formats: only the main canvas offers a size to set;
    * left out for a screenshot. */
   formats?: ToolPanelFormats;
+  /** Makes a recording's main canvas for a platform's template, or for
+   * none; left out for a screenshot. */
+  onMadeForChange?: (preset: string | null) => void;
   /** Rounds the corners, by a percent of the picture's shorter side. */
   onRadiusChange?: (radius: number) => void;
   /** Percent of the picture's shorter side. A screenshot's corners can be

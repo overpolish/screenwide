@@ -6,16 +6,20 @@ import { motion } from "motion/react";
 import { type ReactNode } from "react";
 import { useLocale } from "react-aria";
 
+import { cn } from "../../../../../lib/styling";
 import { useIslandAsideAtStart } from "../../../../../primitives/island/island-context";
 import { useGlyphMotion } from "../../../../annotations/options/glyph-motion";
 import { IslandLineButton } from "../../island-line-button";
 
 /** A picker folded to one line across the section: what is chosen, and a
  * chevron that turns to point at the column of choices as it opens beside
- * the section. Pressing it opens them or folds them away again. */
+ * the section. Pressing it opens them or folds them away again. `isCompact`
+ * keeps it as wide as what it shows, for a line that shares its row with
+ * an action. */
 export function TextPickerLine({
   children,
   controls,
+  isCompact = false,
   isOpen,
   label,
   onPress,
@@ -28,6 +32,7 @@ export function TextPickerLine({
   /** The line's accessible name: the picker and what it has chosen. */
   label: string;
   onPress: () => void;
+  isCompact?: boolean;
 }) {
   const motionOf = useGlyphMotion();
   // The chevron turns from pointing down to pointing at the column, on
@@ -40,7 +45,7 @@ export function TextPickerLine({
       aria-controls={isOpen ? controls : undefined}
       aria-expanded={isOpen}
       aria-label={label}
-      className="justify-between"
+      className={cn("justify-between", isCompact && "w-auto")}
       isChosen={isOpen}
       onPress={onPress}
     >

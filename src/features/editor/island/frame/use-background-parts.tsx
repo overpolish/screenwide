@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { useId, useState } from "react";
+import { type ReactNode, useId, useState } from "react";
 
 import {
   type Background,
@@ -29,6 +29,14 @@ export type BackgroundPartsProps = Pick<
   /** Width over height of the picture the background sits under, which the
    * library's pictures are shown at. */
   aspect: number;
+  /** Another set of choices the column holds instead of the library's
+   * pictures while it is open, as the Frame island's formats; opening the
+   * library puts it away (`onLibraryOpen`). */
+  aside?: {
+    content: ReactNode;
+    contentKey: string;
+    onLibraryOpen: () => void;
+  };
 };
 
 /**
@@ -79,6 +87,10 @@ export function useBackgroundParts(props: BackgroundPartsProps) {
     },
   };
   return {
+    /** Puts the library's pictures away, for another set of choices. */
+    closeLibrary: () => {
+      setIsLibraryOpen(false);
+    },
     colors: choice.showEditor ? (
       <div key="colors">
         <FrameBackgroundEditor
@@ -90,7 +102,8 @@ export function useBackgroundParts(props: BackgroundPartsProps) {
     column: (
       <IslandPickerColumn
         content={
-          isLibraryOpen ? (
+          props.aside?.content ??
+          (isLibraryOpen ? (
             <FrameLibraryPictures
               aspect={props.aspect}
               onChoose={(picture) => {
@@ -100,12 +113,13 @@ export function useBackgroundParts(props: BackgroundPartsProps) {
                 props.background.kind === "image" ? props.background.path : null
               }
             />
-          ) : null
+          ) : null)
         }
-        contentKey="library"
+        contentKey={props.aside?.content ? props.aside.contentKey : "library"}
         id={columnId}
       />
     ),
+    columnId,
     // Their box reaches the small inset past them on every side, as the
     // colour grid's does, so a chosen tile's outline at the edge stays inside
     // it and is not cut off while the part moves (`IslandParts`).
@@ -120,6 +134,7 @@ export function useBackgroundParts(props: BackgroundPartsProps) {
             controls: columnId,
             isOpen: isLibraryOpen,
             onToggle: () => {
+              if (!isLibraryOpen) props.aside?.onLibraryOpen();
               setIsLibraryOpen((open) => !open);
             },
           }}

@@ -73,7 +73,14 @@ export function frameIslandContent({
     onSizeChange: (frameSize) => {
       change({ frameSize });
     },
-    ...(frame.formats ? { formats: frame.formats } : {}),
+    ...(frame.formats
+      ? {
+          formats: frame.formats,
+          onMadeForChange: (preset: string | null) => {
+            change({ framing: { kind: "made-for", preset } });
+          },
+        }
+      : {}),
     width: frame.width,
     ...(capture === "screenshot"
       ? {

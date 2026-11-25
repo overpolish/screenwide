@@ -1,6 +1,8 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import { useState } from "react";
+
 import { t } from "../../../../i18n/i18n";
 import { cn } from "../../../../lib/styling";
 import { Button } from "../../../../primitives/button/button";
@@ -16,6 +18,7 @@ import { IslandPickerRow } from "../island-picker-column";
 import { PICTURE_CORNERS } from "../picture-corners";
 import { SceneOnlyNote } from "../scene-only-note";
 
+import { FrameFormatChoices, FrameFormatLine } from "./frame-format-picker";
 import { FRAME_ISLAND_WIDTH } from "./frame-width";
 import { useBackgroundParts } from "./use-background-parts";
 
@@ -26,20 +29,42 @@ import type { FrameIslandProps } from "./frame-island";
  * screenshot its corners on a row named as Radius, what it sits on, and its
  * colours while there are any to set; for a recording with scenes, a note
  * that what it sits on is the scene's while the playhead is in one; then
- * the actions: clearing that scene's own background, and putting the main
- * canvas back to the source's size. The island is as wide as its lines
- * need, and never narrower than a mesh's colours (`FRAME_ISLAND_WIDTH`).
- * The colours' line comes into place under the tiles for a mesh or a colour
- * of your own, and goes for a solid tile or a picture, the lines after it
- * gliding to make room (`IslandParts`). The Library tile opens the
- * library's pictures in a column beside the section
- * (`useBackgroundParts`), as the text island's templates open. */
+ * the foot: for a recording's main canvas, the template it is made for at
+ * the start (`FrameFormatLine`), and at the end the actions, clearing that
+ * scene's own background and putting the main canvas back to the source's
+ * size. The island is as wide as its lines need, and never narrower than a
+ * mesh's colours (`FRAME_ISLAND_WIDTH`). The colours' line comes into place
+ * under the tiles for a mesh or a colour of your own, and goes for a solid
+ * tile or a picture, the lines after it gliding to make room
+ * (`IslandParts`). The Library tile opens the library's pictures in a
+ * column beside the section (`useBackgroundParts`), as the text island's
+ * templates open; the template line opens the templates in the same
+ * column, one set at a time. */
 export function FrameSection(props: FrameIslandProps) {
+  const isSized = isMainInHand(props.formats);
+  const onMadeForChange = isSized ? props.onMadeForChange : undefined;
+  const madeFor = props.formats?.preset ?? null;
+  const [isFormatsOpen, setIsFormatsOpen] = useState(false);
   const background = useBackgroundParts({
     ...props,
+    aside: {
+      content:
+        isFormatsOpen && onMadeForChange ? (
+          <FrameFormatChoices
+            madeFor={madeFor}
+            onChoose={(preset) => {
+              setIsFormatsOpen(false);
+              onMadeForChange(preset);
+            }}
+          />
+        ) : null,
+      contentKey: "formats",
+      onLibraryOpen: () => {
+        setIsFormatsOpen(false);
+      },
+    },
     aspect: props.width / Math.max(props.height, 1),
   });
-  const isSized = isMainInHand(props.formats);
   return (
     // The controls keep to the end, and the column opens at the start, where
     // the black reveals it as it grows (`IslandPickerRow`).
@@ -87,23 +112,43 @@ export function FrameSection(props: FrameIslandProps) {
           </div>
         ) : null}
         {props.scene || isSized ? (
-          <div className="flex justify-end gap-separate" key="actions">
-            {props.scene ? (
-              <Button
-                className={cn(!props.scene.isInScene && "invisible")}
-                isDisabled={
-                  !props.scene.isInScene || !props.scene.hasOwnBackground
-                }
-                onPress={props.scene.onClearSceneBackground}
-              >
-                {t("editor-island-frame-clear-scene-background")}
-              </Button>
+          <div
+            className={cn(
+              "flex flex-wrap items-center gap-separate",
+              onMadeForChange ? "justify-between" : "justify-end",
+            )}
+            key="actions"
+          >
+            {onMadeForChange ? (
+              <FrameFormatLine
+                controls={background.columnId}
+                isOpen={isFormatsOpen}
+                madeFor={madeFor}
+                onPress={() => {
+                  if (!isFormatsOpen) background.closeLibrary();
+                  setIsFormatsOpen(!isFormatsOpen);
+                }}
+                size={props}
+              />
             ) : null}
-            {isSized ? (
-              <Button onPress={props.onOriginalSize}>
-                {t("editor-island-frame-original-size")}
-              </Button>
-            ) : null}
+            <div className="flex gap-separate">
+              {props.scene ? (
+                <Button
+                  className={cn(!props.scene.isInScene && "invisible")}
+                  isDisabled={
+                    !props.scene.isInScene || !props.scene.hasOwnBackground
+                  }
+                  onPress={props.scene.onClearSceneBackground}
+                >
+                  {t("editor-island-frame-clear-scene-background")}
+                </Button>
+              ) : null}
+              {isSized ? (
+                <Button onPress={props.onOriginalSize}>
+                  {t("editor-island-frame-original-size")}
+                </Button>
+              ) : null}
+            </div>
           </div>
         ) : null}
       </IslandParts>

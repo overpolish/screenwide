@@ -54,6 +54,7 @@ const meta = {
     height: 1080,
     isShown: true,
     onBackgroundChange: fn(),
+    onMadeForChange: fn(),
     onOriginalSize: fn(),
     // A story cannot open a native picker, so it answers with the picture
     // it ships with.
@@ -133,8 +134,32 @@ export const Custom: Story = {
   args: { background: { color: "#7A4FD1", kind: "solid" } },
 };
 
-// A screenshot's frame, the one place a picture's corners are rounded.
-export const Screenshot: Story = { args: { radius: 4 } };
+// A screenshot's frame, the one place a picture's corners are rounded. It
+// is made for no platform, so it offers no format.
+export const Screenshot: Story = {
+  args: { onMadeForChange: undefined, radius: 4 },
+};
+
+// A recording's main canvas made for TikTok: its size and the template at
+// the island's foot, which opens the templates beside the section.
+export const MadeForPlatform: Story = {
+  args: {
+    formats: {
+      activeId: null,
+      formatId: null,
+      height: 1920,
+      list: [],
+      overlay: "tiktok",
+      phone: null,
+      preset: "tiktok",
+      preview: false,
+      scope: "all",
+      width: 1080,
+    },
+    height: 1920,
+    width: 1080,
+  },
+};
 
 // The playhead in a scene with a background of its own, which the tiles
 // then set; the size stays the recording's.

@@ -14,6 +14,7 @@ import {
   withPlatformShared,
   withShapeFollowed,
 } from "./format-sharing";
+import { madeForOf, withMainMadeFor } from "./main-made-for";
 import {
   activeFormat,
   addedFormat,
@@ -59,7 +60,10 @@ export type FrameFormatPatch =
   /** The shape in hand made to share the framing of the shape `shape`. */
   | { kind: "follow"; shape: string }
   /** The shape in hand's screen laid out from the main canvas again. */
-  | { kind: "main-placement" };
+  | { kind: "main-placement" }
+  /** The main canvas made for the template `preset`, or for none
+   * (`main-made-for.ts`). */
+  | { kind: "made-for"; preset: string | null };
 
 export type FrameFormatsControl = {
   onPatch: (patch: FrameFormatPatch) => void;
@@ -94,9 +98,14 @@ export function useRecordingFormats({
 }): FrameFormatsControl | null {
   const shape = formats ? activeFormat(formats) : undefined;
   const inHandId = shape ? formatInHand(shape) : null;
-  // A shape made for no platform is named by its id, not a template.
-  const preset = inHandId && inHandId !== shape?.id ? inHandId : null;
   const { height, width } = recordingOutput.primary;
+  const isMain = isMainCanvas(formats);
+  const madeFor = isMain ? madeForOf(formats, { height, width }) : null;
+  // A shape made for no platform is named by its id, not a template; the
+  // main canvas by the template it is made for, where it is.
+  const preset =
+    inHandId && inHandId !== shape?.id ? inHandId : (madeFor ?? null);
+  const isStale = isMain && !madeFor && !!formats?.list[0]?.madeFor;
   const isTall = height > width;
   // The phone and the app are only laid over the picture while the preview
   // is on, and only for a platform watched in a phone app (Shorts, TikTok,
@@ -121,11 +130,20 @@ export function useRecordingFormats({
       );
     });
   }, [height, overlay, phoneId, width]);
+  const document: FormatDocument = { cameraOverlay, recordingOutput };
+  // A size typed in, or the frame dragged, leaves the template the main
+  // canvas was made for: it is made for none, and keeps clear of nothing.
+  useEffect(() => {
+    if (!isStale || !isRecording) return;
+    const next = withMainMadeFor(formats, document, null);
+    if (!next) return;
+    onRecordingOutputChange(next.document.recordingOutput);
+    onFormatsChange(next.formats);
+  });
   if (!isRecording) return null;
   // Edits on the main canvas are what every platform follows; a
   // platform's own stay its shape's.
-  const scope: EditScope = isMainCanvas(formats) ? "all" : "shape";
-  const document: FormatDocument = { cameraOverlay, recordingOutput };
+  const scope: EditScope = isMain ? "all" : "shape";
   const apply = (
     next: { document: FormatDocument; formats: FrameFormats | null } | null,
   ) => {
@@ -144,12 +162,24 @@ export function useRecordingFormats({
         case "add": {
           const template = frameSizePreset(patch.preset);
           if (!template) return;
-          // One format of each platform: asked for again, it is put in hand.
-          const made = formats?.list.some((each) =>
-            formatsOfShape(each).includes(template.id),
+          // One format of each platform: asked for again, it is put in hand,
+          // the main canvas where that is made for it.
+          const made = formats?.list.some(
+            (each, index) =>
+              formatsOfShape(each).includes(template.id) ||
+              (index === 0 && each.madeFor === template.id),
           );
           if (made) {
-            if (formats) apply(switchedFormat(formats, document, template.id));
+            if (formats)
+              apply(
+                switchedFormat(
+                  formats,
+                  document,
+                  formats.list[0]?.madeFor === template.id
+                    ? formats.list[0].id
+                    : template.id,
+                ),
+              );
             return;
           }
           apply(
@@ -178,6 +208,9 @@ export function useRecordingFormats({
         case "main-placement":
           if (formats) apply(withMainPlacement(formats, document));
           return;
+        case "made-for":
+          apply(withMainMadeFor(formats, document, patch.preset));
+          return;
         case "sync":
           // Handled with the timeline, which knows the format in hand.
           return;
@@ -187,15 +220,17 @@ export function useRecordingFormats({
       activeId: formats?.active ?? null,
       formatId: inHandId,
       height,
-      list: (formats?.list ?? []).map((each) => {
+      list: (formats?.list ?? []).map((each, index) => {
         const size =
           each.id === formats?.active
             ? { height, width }
             : (each.look?.recordingOutput.primary ?? { height, width });
+        // The main canvas is named for the template it is made for.
+        const own = index === 0 ? madeForOf(formats, size) : null;
         return {
           formats: formatsOfShape(each).map((id) => ({
             id,
-            preset: id === each.id ? null : id,
+            preset: id === each.id ? own : id,
           })),
           height: size.height,
           id: each.id,

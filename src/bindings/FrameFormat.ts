@@ -17,6 +17,13 @@ platforms?: Array<string>,
  */
 platform?: string, 
 /**
+ * The size template the main canvas is made for, chosen in the Frame
+ * island: it has that template's size, and keeps clear of its app's
+ * interface. None for a size typed in, and on every other shape, which
+ * names its platforms instead.
+ */
+madeFor?: string, 
+/**
  * Whether the screen is set in this shape its own way, moved, resized,
  * turned, cropped or restyled while the shape was in hand, rather than
  * following the main canvas's.
