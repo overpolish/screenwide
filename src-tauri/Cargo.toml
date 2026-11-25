@@ -375,6 +375,16 @@ opt-level = 3
 [profile.dev.package.screenwide-text]
 opt-level = 3
 
+# An image's picture is resized on the CPU into its atlas cell each time it
+# is shown at another doubling of its size. The resize is the `image`
+# crate's, but generic, so it is compiled in this crate: unoptimized, a 360
+# px picture drawn at 512 px took 93 ms in a dev build instead of 1.5, and a
+# 1440 px upscaled one drawn at 1024 px 650 ms instead of 10, stalling the
+# editor while an image was resized. Optimized in dev builds for that;
+# release builds are unaffected.
+[profile.dev.package.screenwide-images]
+opt-level = 3
+
 # A pinned annotation is followed through every frame at full size: the
 # export crate reduces each decoded frame to its brightness and the
 # annotations crate matches the pinned region in it. Unoptimized, a pin over

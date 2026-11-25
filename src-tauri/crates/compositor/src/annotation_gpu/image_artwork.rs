@@ -7,9 +7,13 @@
 //! Each picture is drawn at about the size it is shown at: its longer side
 //! rounded up to a power of two of drawn pixels, so a drag that resizes it
 //! draws it afresh only at each doubling, and the shader's filtered read
-//! takes in the one or two atlas pixels a drawn pixel spans. An image that
-//! casts a shadow has a second cell: its silhouette, blurred, drawn small
-//! whatever its size. Where each sits is laid out by the shared
+//! takes in the one or two atlas pixels a drawn pixel spans. A still is
+//! never drawn larger than its own picture: past that the shader's filtered
+//! read stretches it as well as the CPU would, and drawing a picture larger
+//! on the CPU stalled the frame (a 1440 px upscaled picture drawn at 2048 px
+//! took 40 ms in a release build). An image that casts a shadow has a
+//! second cell: its silhouette, blurred, drawn small whatever its size.
+//! Where each sits is laid out by the shared
 //! [`atlas`](screenwide_annotations::counter::atlas) module, as the type
 //! atlas's cells are, keyed by asset, size and which of the two it is.
 //!
@@ -68,6 +72,13 @@ fn raster_side(long: f32, pixel_scale: f32) -> u32 {
   (drawn as u32)
     .next_power_of_two()
     .clamp(MIN_RASTER, MAX_RASTER)
+}
+
+/// The longer side a still whose own picture is `own` pixels long is drawn
+/// at, where `side` is what its size on screen asks for: never past its own
+/// picture, which the shader stretches from there.
+fn still_side(side: u32, own: u32) -> u32 {
+  side.min(own.max(MIN_RASTER))
 }
 
 /// The cell a picture of `size` canvas pixels takes with its longer side
@@ -170,7 +181,11 @@ pub(crate) fn place_images(
             ),
             StoredImage::Animation(_) => side,
           },
-          _ => side,
+          Some(picked) => match &picked.picture {
+            StoredImage::Still(still) => still_side(side, still.width().max(still.height())),
+            StoredImage::Animation(_) => side,
+          },
+          None => side,
         } as f32,
         style: slot << 1 | u32::from(entry.shadow),
       }
@@ -268,23 +283,4 @@ pub(crate) fn place_images(
 }
 
 #[cfg(test)]
-mod tests {
-  use super::*;
-
-  #[test]
-  fn a_picture_is_drawn_at_the_doubling_above_its_drawn_size() {
-    assert_eq!(raster_side(100.0, 1.0), 128);
-    // A Retina display at the canvas's own size draws it twice as large.
-    assert_eq!(raster_side(100.0, 0.5), 256);
-    assert_eq!(raster_side(2.0, 1.0), MIN_RASTER);
-    assert_eq!(raster_side(100_000.0, 1.0), MAX_RASTER);
-    assert_eq!(raster_side(0.0, 1.0), 0);
-  }
-
-  #[test]
-  fn a_cell_keeps_the_pictures_proportions_inside_its_margin() {
-    assert_eq!(cell_of([200.0, 100.0], 128), Some((130, 66)));
-    assert_eq!(cell_of([50.0, 100.0], 64), Some((34, 66)));
-    assert_eq!(cell_of([0.0, 100.0], 64), None);
-  }
-}
+mod tests;
