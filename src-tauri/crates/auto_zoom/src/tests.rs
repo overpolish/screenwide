@@ -536,6 +536,17 @@ fn a_long_line_of_typing_is_followed_along_its_caret() {
 }
 
 #[test]
+fn fast_typing_across_the_line_is_planned_without_failing() {
+  // The caret crosses most of the screen in a second and a half, so each run
+  // of it begins sooner after the last than a run lets the caret go early.
+  // Planning it once panicked, so the project would not open.
+  let cursor = [vec![header()], click(10_000, (100.0, 500.0)).to_vec()].concat();
+  let keyboard = typed_along(10_400, 11_900, (110.0, 500.0), (900.0, 500.0));
+  let signals = Signals::read(&cursor, &keyboard, VisibleArea::WHOLE);
+  assert_playable(&clips(&signals, DURATION_MS));
+}
+
+#[test]
 fn typing_that_wraps_to_the_next_line_comes_back_to_its_start() {
   let cursor = [vec![header()], click(10_000, (100.0, 300.0)).to_vec()].concat();
   let keyboard = [

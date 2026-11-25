@@ -61,7 +61,9 @@ pub(super) fn follow_caret(
     .zip(ends)
     .map(|(&(start_ms, area), next)| {
       let from = keys.partition_point(|&key| key < start_ms);
-      let to = keys.partition_point(|&key| key < next);
+      // The next run may begin sooner after this one than the caret is let
+      // go early, which ends this one before it starts: it then has no keys.
+      let to = keys.partition_point(|&key| key < next).max(from);
       Beat {
         start_ms,
         end_ms: keys[from..to]
