@@ -271,7 +271,10 @@ export function ExportOptions({
                 {t("editor-export-try-again")}
               </Button>
             }
-            className="min-h-island-control"
+            // A failure carries FFmpeg's own words, which can run long: it
+            // wraps within the width the island's controls set rather than
+            // widening the island past the window.
+            className="min-h-island-control w-0 min-w-full break-words"
             color="error"
             key="failure"
             role="alert"
