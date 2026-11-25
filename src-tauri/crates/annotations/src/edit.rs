@@ -48,10 +48,6 @@ pub struct AnnotationEdit {
   /// A stroke fresh from the pen: its rest at the end, and what it was taken
   /// for. Such a stroke is never left chosen.
   stroke: Option<StrokeHold>,
-  /// Whether the annotation is let go once the gesture ends: a fresh stroke,
-  /// and a fresh image, so the panel goes on offering the next one's
-  /// picture rather than the placed one's.
-  lets_go: bool,
 }
 
 impl AnnotationEdit {
@@ -101,11 +97,6 @@ impl AnnotationEdit {
       stroke: (target == AnnotationGestureTarget::New
         && annotation.shape.kind() == AnnotationKind::Draw)
         .then(|| StrokeHold::new(point, Instant::now())),
-      lets_go: target == AnnotationGestureTarget::New
-        && matches!(
-          annotation.shape.kind(),
-          AnnotationKind::Draw | AnnotationKind::Image
-        ),
     })
   }
 
@@ -115,11 +106,10 @@ impl AnnotationEdit {
 
   /// The annotation this gesture leaves chosen. A stroke fresh from the pen is
   /// let go, so the next press draws another rather than picking it up and no
-  /// box stands over the drawing, and so is an image just placed, so the
-  /// next one's picture can be chosen; every other annotation stays in hand
-  /// for its panel to dress.
+  /// box stands over the drawing; every other annotation, a picture just
+  /// placed among them, stays in hand for its island to dress.
   pub fn chosen_id(&self) -> Option<&str> {
-    (!self.lets_go).then_some(self.id.as_str())
+    self.stroke.is_none().then_some(self.id.as_str())
   }
 
   /// Whether this gesture is drawing a fresh stroke, which a clock outside

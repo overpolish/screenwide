@@ -494,6 +494,7 @@ export type Messages = {
   "editor-island-height": null;
   "editor-island-highlight": null;
   "editor-island-image": null;
+  "editor-island-image-add-pictures": null;
   "editor-island-image-flip": null;
   "editor-island-image-replace": null;
   "editor-island-keep-aspect-ratio": null;

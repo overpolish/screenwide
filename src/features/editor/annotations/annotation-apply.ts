@@ -6,7 +6,6 @@
  * or with none chosen, remembered as the dress the next one is drawn in.
  */
 
-import { requestImagePlacement } from "../images/image-requests";
 import { SceneRotation } from "../layer-rotation";
 import { EditorKind } from "../types";
 
@@ -19,7 +18,6 @@ import {
 import {
   rememberAnnotationAngle,
   rememberAnnotationAnimated,
-  rememberAnnotationImage,
   rememberAnnotationStyle,
   rememberAnnotationTextLook,
   rememberAnnotationZoom,
@@ -106,18 +104,10 @@ export const applyAnnotationRotation = (
   chosenAnnotation(workspace)?.applyRotation(rotation);
 };
 
-/** Give the chosen image the picture `art`. With none chosen, an image
- * showing it is placed in the middle of the layer in hand, and the next
- * image shows it too. */
+/** Give the chosen image the picture `art`. A no-op with none chosen: a
+ * fresh image is placed with its picture, from the island's library. */
 export const applyAnnotationImage = (workspace: EditorKind, art: ImageArt) => {
-  const published = chosenAnnotation(workspace);
-  if (published) {
-    published.applyImage(art);
-    return;
-  }
-  if (annotationDraft(workspace) === undefined) return;
-  rememberAnnotationImage(art);
-  requestImagePlacement(workspace, art);
+  chosenAnnotation(workspace)?.applyImage(art);
 };
 
 /** Change how the chosen moving image plays. A no-op with none chosen: a

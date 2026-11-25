@@ -12,6 +12,7 @@ import { drawingIsland } from "../annotation/drawing/drawing-island";
 import { focusIsland } from "../annotation/focus/focus-island";
 import { highlightIsland } from "../annotation/highlight/highlight-island";
 import { imageIsland } from "../annotation/image/image-island";
+import { imagePickIsland } from "../annotation/image/image-pick-island";
 import { magnifierIsland } from "../annotation/magnifier/magnifier-island";
 import { redactionIsland } from "../annotation/redaction/redaction-island";
 import { shapeIsland } from "../annotation/shape/shape-island";
@@ -152,6 +153,17 @@ export function annotationIslandContent({
         },
       });
     case "image":
+      if (isDraft)
+        return imagePickIsland({
+          canAnimate,
+          isAnimated,
+          onAnimatedChange: (next) => {
+            onStyleChange({ isAnimated: next });
+          },
+          onPlace: (libraryImage) => {
+            change({ libraryImage });
+          },
+        });
       return imageIsland({
         ...shared,
         isMoving: Boolean(annotation.image?.play),

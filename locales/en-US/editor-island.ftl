@@ -511,6 +511,8 @@ editor-island-image = Image
 editor-island-image-replace = Replace
 # Mirrors the image across its upright axis.
 editor-island-image-flip = Flip
+# The card leading the image island's pictures: opens a file picker and adds the chosen pictures to the library, placing none.
+editor-island-image-add-pictures = Add pictures
 # A lens that shows the part of the picture under it larger.
 editor-island-magnifier = Magnifier
 # A box that hides what is under it, by erasing, filling, pixelating or blurring it.

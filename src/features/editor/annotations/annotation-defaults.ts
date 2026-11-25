@@ -9,7 +9,7 @@ import {
   SOFT_SPOTLIGHT_EDGE,
 } from "../../annotations/widths";
 
-import { AnnotationStyle, ImageArt } from "./annotations";
+import { AnnotationStyle } from "./annotations";
 
 import type { TextStyle } from "../../../bindings/TextStyle";
 import type { AnnotationKind } from "../../annotations/types";
@@ -76,11 +76,6 @@ let lastAnimated: boolean | null = null;
  */
 let lastAngle: number | null = null;
 /**
- * And the picture the last image was given, so the next one is placed
- * showing it. The annotation's own property too.
- */
-let lastImage: ImageArt | null = null;
-/**
  * And the look the last text was dressed in, colours and all, so the next
  * one is drawn in it. The text's own property too.
  */
@@ -140,18 +135,6 @@ export const rememberAnnotationStyle = (
 export const rememberAnnotationAngle = (angle: number) => {
   if (lastAngle === angle || !Number.isFinite(angle)) return;
   lastAngle = angle;
-  for (const listener of listeners) listener();
-};
-
-/** Remember the picture the last image was given. */
-export const rememberAnnotationImage = (art: ImageArt) => {
-  if (
-    lastImage?.asset === art.asset &&
-    lastImage.aspect === art.aspect &&
-    lastImage.pixels === art.pixels
-  )
-    return;
-  lastImage = { ...art };
   for (const listener of listeners) listener();
 };
 
@@ -261,11 +244,6 @@ export const useAnnotationAnimatedDefault = () =>
  * and the tool's own default - east - stands. */
 export const useAnnotationAngleDefault = () =>
   useSyncExternalStore(subscribe, () => lastAngle);
-
-/** The picture a fresh image shows, or null while none has been chosen and
- * the tool's own default stands. */
-export const useAnnotationImageDefault = () =>
-  useSyncExternalStore(subscribe, () => lastImage);
 
 /** The look a fresh text is dressed in, or null while none has been chosen
  * and the Label look in the tool's colour stands. */

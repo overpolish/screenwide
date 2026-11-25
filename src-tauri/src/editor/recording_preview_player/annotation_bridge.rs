@@ -75,7 +75,6 @@ pub async fn set_recording_preview_annotations(
   defaults: Option<AnnotationStyle>,
   animated: Option<bool>,
   counter_angle: Option<f64>,
-  image: Option<screenwide_annotations::image::ImageArt>,
   text_look: Option<screenwide_text::TextStyle>,
   zoom: Option<f64>,
 ) -> Result<(), String> {
@@ -121,9 +120,11 @@ pub async fn set_recording_preview_annotations(
   manager.annotation.selected = selected_ids;
   manager.annotation.defaults = defaults;
   manager.annotation.animated = animated;
+  // An image's picture is never sent: an image is placed from the island's
+  // library or a paste or drop (`place_image`), never by a press.
   manager.annotation.fresh = screenwide_annotations::edit::FreshAnnotation {
     angle: counter_angle,
-    image,
+    image: None,
     look: text_look,
     zoom,
   };

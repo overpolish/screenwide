@@ -23,9 +23,6 @@ pub async fn layout_screenshot_preview_surface(
   // Where the next fresh counter's tail points, in radians clockwise from
   // east: whatever the last counter was turned to. Absent until one has been.
   annotation_counter_angle: Option<f64>,
-  // The picture the next fresh image shows: whatever the last image was
-  // given. Absent until one has been.
-  annotation_image: Option<screenwide_annotations::image::ImageArt>,
   // The look the next fresh text box is dressed in: whatever the last text
   // was dressed in. Absent until one has been.
   annotation_text_look: Option<screenwide_text::TextStyle>,
@@ -69,7 +66,6 @@ pub async fn layout_screenshot_preview_surface(
   let _ = (
     &annotation_defaults,
     &annotation_counter_angle,
-    &annotation_image,
     &annotation_text_look,
     &annotation_zoom,
     &annotation_tool,
@@ -138,9 +134,11 @@ pub async fn layout_screenshot_preview_surface(
     let (annotation_layout, hover_cleared) = super::annotation::apply_annotation_layout(
       &mut manager,
       annotation_defaults,
+      // An image is placed from the island's library or a paste or drop
+      // (`place_image`), never by a press, so no picture rides along.
       screenwide_annotations::edit::FreshAnnotation {
         angle: annotation_counter_angle,
-        image: annotation_image,
+        image: None,
         look: annotation_text_look,
         zoom: annotation_zoom,
       },

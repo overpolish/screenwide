@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { ImagePlayChange } from "./annotation-channel";
-import { rememberAnnotationImage } from "./annotation-defaults";
 import {
   freshSeed,
   stretchedShape,
@@ -22,15 +21,13 @@ export const imageEdits = (
   reshape: (shape: AnnotationShape | null) => void,
 ) => {
   // An image given another picture keeps its place, size and turn, and
-  // takes the new picture's proportions and, where it moves, how it plays;
-  // the next image shows it too.
+  // takes the new picture's proportions and, where it moves, how it plays.
   const image = selected?.shape.kind === "image" ? selected.shape : null;
   const art: ImageArt | null = image
     ? { aspect: image.aspect, asset: image.asset, play: image.play }
     : null;
   const applyImage = (next: ImageArt) => {
     if (!selected || selected.shape.kind !== "image") return;
-    rememberAnnotationImage(next);
     const shape = selected.shape;
     if (shape.asset === next.asset && shape.aspect === next.aspect) return;
     // A placed image keeps its size: only the picture and its proportions

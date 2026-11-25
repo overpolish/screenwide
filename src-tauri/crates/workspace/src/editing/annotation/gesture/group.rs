@@ -178,11 +178,10 @@ pub(super) fn clicked(state: &mut SurfaceState, drag: Drag, point: (f64, f64)) -
   }
 }
 
-/// A press on no annotation under the image tool places nothing while
-/// something is in hand: it lets the choice go, so the next image's picture
-/// can be chosen rather than replace the chosen one's, and reaches nothing
-/// else; the next press places. The sample to report, or `None` when the
-/// press is left to place an image. The twin of `annotation_image_lets_go`.
+/// A press on no annotation under the image tool lets go of what is in
+/// hand, so the image island offers the library's pictures again, and
+/// reaches nothing else. The sample to report, or `None` with nothing in
+/// hand. The twin of `annotation_image_lets_go`.
 pub(super) fn image_lets_go(state: &mut SurfaceState, point: (f64, f64)) -> Option<Option<Sample>> {
   if state.annotation.selected < 0 && !has_group(state) {
     return None;

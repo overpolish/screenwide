@@ -5,7 +5,6 @@ import { RefObject, useEffect, useRef } from "react";
 
 import {
   useAnnotationAngleDefault,
-  useAnnotationImageDefault,
   useAnnotationTextLookDefault,
   useAnnotationZoomDefault,
 } from "../annotations/annotation-defaults";
@@ -76,8 +75,8 @@ export function useScreenshotPreviewSurface({
   isEnabled: boolean;
   /** The dress the next fresh arrow is drawn in, when the editor has settled
    * on one. It rides along with the layout so the native tool can draw a new
-   * arrow in it without a round trip of its own, as do where a fresh
-   * counter's tail points and the picture a fresh image shows. */
+   * arrow in it without a round trip of its own, as does where a fresh
+   * counter's tail points. */
   annotationDefaults?: AnnotationStyle | null;
   /** The annotation tool in hand, when one is. */
   annotationTool?: import("../annotations/annotation-defaults").AnnotationTool;
@@ -138,9 +137,6 @@ export function useScreenshotPreviewSurface({
   const annotationCounterAngle = useAnnotationAngleDefault();
   const annotationAngleRef = useRef(annotationCounterAngle);
   annotationAngleRef.current = annotationCounterAngle;
-  const annotationImage = useAnnotationImageDefault();
-  const annotationImageRef = useRef(annotationImage);
-  annotationImageRef.current = annotationImage;
   const annotationTextLook = useAnnotationTextLookDefault();
   const annotationTextLookRef = useRef(annotationTextLook);
   annotationTextLookRef.current = annotationTextLook;
@@ -247,7 +243,6 @@ export function useScreenshotPreviewSurface({
           const layout = {
             annotationCounterAngle: annotationAngleRef.current,
             annotationDefaults: annotationDefaultsRef.current,
-            annotationImage: annotationImageRef.current,
             annotationTextLook: annotationTextLookRef.current,
             annotationTool: annotationToolRef.current,
             annotationZoom: annotationZoomRef.current,
@@ -295,7 +290,6 @@ export function useScreenshotPreviewSurface({
     measureRef.current();
   }, [
     annotationCounterAngle,
-    annotationImage,
     annotationTextLook,
     annotationDefaults,
     annotationTool,

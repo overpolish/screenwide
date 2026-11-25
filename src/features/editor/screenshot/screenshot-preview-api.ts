@@ -3,7 +3,7 @@
 
 import { invoke } from "@tauri-apps/api/core";
 
-import { AnnotationStyle, ImageArt } from "../annotations/annotations";
+import { AnnotationStyle } from "../annotations/annotations";
 import { type PreviewSelectionLayout } from "../api";
 import { type ViewportCorners } from "../preview/preview-backdrop";
 
@@ -25,7 +25,6 @@ export const startScreenshotPreview = (artifactId: number, sessionId: number) =>
 export const layoutScreenshotPreviewSurface = ({
   annotationCounterAngle,
   annotationDefaults,
-  annotationImage,
   annotationTextLook,
   annotationTool,
   annotationZoom,
@@ -59,8 +58,6 @@ export const layoutScreenshotPreviewSurface = ({
    * annotation edit settled on. Absent until it has settled on anything, and
    * the native tool falls back to the accent at its own stroke. */
   annotationDefaults?: AnnotationStyle | null;
-  /** The picture a fresh image shows: whatever the last image was given. */
-  annotationImage?: ImageArt | null;
   /** The look a fresh text is dressed in: whatever the last text was. */
   annotationTextLook?: TextStyle | null;
   /** The annotation tool in hand. "select" hit-tests the annotations already on
@@ -81,7 +78,6 @@ export const layoutScreenshotPreviewSurface = ({
     ...layout,
     annotationCounterAngle: annotationCounterAngle ?? null,
     annotationDefaults: annotationDefaults ?? null,
-    annotationImage: annotationImage ?? null,
     annotationTextLook: annotationTextLook ?? null,
     annotationTool: annotationTool ?? null,
     annotationZoom: annotationZoom ?? null,

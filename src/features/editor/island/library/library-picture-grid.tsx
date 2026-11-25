@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { SearchX, Trash2 } from "lucide-react";
+import { Plus, SearchX, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { useDateFormatter, useFilter } from "react-aria";
 import { Button } from "react-aria-components";
@@ -11,6 +11,7 @@ import { t } from "../../../../i18n/i18n";
 import { cn, elementFocusVisible, focusStyles } from "../../../../lib/styling";
 import { Alert } from "../../../../primitives/alert/alert";
 import {
+  addLibraryPictures,
   dragLibraryPicture,
   type Picture,
   pictureSrc,
@@ -27,24 +28,34 @@ import type { ImageArt } from "../../annotations/annotations";
 // The library's pictures, every one given to an image, as tiles of the
 // pictures themselves, four to a row, each named under it: by the name it
 // was given, else the file it came from, else when it arrived; found by
-// that name, and renamed by clicking it (or F2 on the tile). Pressed,
-// one is placed as a new image in the middle of the layer in hand; dragged
+// that name, and renamed by clicking it (or F2 on the tile). Pressed, one
+// is placed as a new image in the middle of the layer in hand; dragged
 // out, drawn as itself, it lands where it is let go, on the picture or the
 // timeline, as a file from the Finder does, where the system lets a drag
 // start. Each tile's bin, out of the way until the tile is pointed at or
 // reached, takes it out of the library, asking twice; projects that show it
-// keep their own copy.
+// keep their own copy. On the image island the grid leads with a card that
+// adds pictures, so there is always something to press, and the tiles are
+// the pictures alone: names, and renaming, are the Library's.
 
 export function LibraryPictureGrid({
   alsoShown,
+  hasAddCard = false,
+  hasNames = true,
   onAdd,
-  query,
+  query = "",
 }: {
-  /** Pictures shown whatever the search, by name. */
-  alsoShown: ReadonlySet<string>;
   onAdd: (art: ImageArt) => void;
+  /** Pictures shown whatever the search, by name. */
+  alsoShown?: ReadonlySet<string>;
+  /** Leads with a card adding pictures to the library, which stands in for
+   * the empty library's note. */
+  hasAddCard?: boolean;
+  /** Names each tile under it, where it can be renamed. Without, the tiles
+   * are the pictures alone, named for assistive technology only. */
+  hasNames?: boolean;
   /** The words searched for in the names of the files pictures came from. */
-  query: string;
+  query?: string;
 }) {
   const library = usePictureLibrary();
   const { contains } = useFilter({ sensitivity: "base" });
@@ -58,11 +69,12 @@ export function LibraryPictureGrid({
     picture,
   }));
   const shown = named.filter(
-    ({ name, picture }) => alsoShown.has(picture.name) || contains(name, query),
+    ({ name, picture }) =>
+      alsoShown?.has(picture.name) === true || contains(name, query),
   );
   // Standing in for the grid, the note keeps the room a row would, rather
-  // than sitting tight under the search.
-  if (shown.length === 0)
+  // than sitting tight under the search. The add card stands in instead.
+  if (shown.length === 0 && !hasAddCard)
     return library.length === 0 ? (
       <Alert className="py-inset">
         {t("editor-island-library-empty-images")}
@@ -77,8 +89,10 @@ export function LibraryPictureGrid({
       aria-label={t("editor-island-library-images")}
       className="grid grid-cols-4 gap-1"
     >
+      {hasAddCard ? <AddPicturesCard hasName={hasNames} /> : null}
       {shown.map(({ name, picture }) => (
         <PictureTile
+          hasName={hasNames}
           key={picture.name}
           name={name}
           onAdd={onAdd}
@@ -89,11 +103,50 @@ export function LibraryPictureGrid({
   );
 }
 
+// Opens the file picker and adds what is chosen to the library, where it
+// arrives as the first tile after this card; it places nothing.
+function AddPicturesCard({ hasName }: { hasName: boolean }) {
+  const label = t("editor-island-image-add-pictures");
+  return (
+    <li className="flex min-w-0 flex-col">
+      {/* Drawn as a tile is, its dashed blank inset as a picture is. */}
+      <Button
+        aria-label={label}
+        className={cn(
+          "relative block aspect-square w-full cursor-default rounded-control text-fg-secondary transition-colors data-[hovered]:bg-fill data-[hovered]:text-fg",
+          focusStyles,
+          elementFocusVisible,
+        )}
+        onPress={() => {
+          addLibraryPictures().catch((cause: unknown) => {
+            console.error("Could not add to the library", cause);
+          });
+        }}
+      >
+        <span className="absolute inset-1 flex items-center justify-center rounded-part border border-dashed border-fg-tertiary">
+          <Plus aria-hidden className="size-icon-lg" />
+        </span>
+      </Button>
+      {hasName ? (
+        <span
+          aria-hidden
+          className="truncate px-1 text-center text-caption text-fg-secondary"
+        >
+          {label}
+        </span>
+      ) : null}
+    </li>
+  );
+}
+
 function PictureTile({
+  hasName,
   name,
   onAdd,
   picture,
 }: {
+  /** Whether its name shows under it, where it can be renamed. */
+  hasName: boolean;
   /** What the tile is called, under it and for assistive technology. */
   name: string;
   onAdd: (art: ImageArt) => void;
@@ -117,7 +170,7 @@ function PictureTile({
           elementFocusVisible,
         )}
         onKeyDown={(event) => {
-          if (event.key === "F2") setIsEditing(true);
+          if (event.key === "F2" && hasName) setIsEditing(true);
           else event.continuePropagation();
         }}
         onPress={() => {
@@ -137,7 +190,7 @@ function PictureTile({
           />
         </span>
       </Button>
-      {isEditing ? (
+      {!hasName ? null : isEditing ? (
         <LibraryNameField
           className="px-1 text-center text-caption text-fg"
           label={t("editor-island-library-name")}

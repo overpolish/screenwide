@@ -68,8 +68,8 @@ fn a_press_drops_the_chosen_picture_and_the_drag_carries_it() {
       clock_ms: None,
     }
   );
-  // Placed, it is let go, so the next image's picture can be chosen.
-  assert_eq!(edit.chosen_id(), None);
+  // Placed, it stays in hand, so its island dresses it at once.
+  assert_eq!(edit.chosen_id(), Some(annotations[0].id.as_str()));
 }
 
 #[test]
