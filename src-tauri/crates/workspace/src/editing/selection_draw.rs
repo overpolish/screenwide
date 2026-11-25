@@ -164,7 +164,7 @@ pub(super) fn draw_selection(inner: &SurfaceInner, state: &SurfaceState) {
   });
   let objects = object_picking::chrome(state);
   // A turned layer's frame and annotation chrome are drawn through its turn,
-  // and the select tool's rings over it, which fade and glide on their own.
+  // and the select tool's rings under them, which fade and glide on their own.
   let mut turned = turn::chrome(state, scale);
   let rings = turned.rings.take().filter(|_| objects.is_none());
   let (size, vertices, mut constants) = chrome::chrome(

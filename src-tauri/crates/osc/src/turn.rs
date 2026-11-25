@@ -23,8 +23,12 @@ const MIN_RING_RADIUS: f64 = 24.0;
 /// middle, so a small layer keeps room round them to be pressed and moved.
 const RING_SHARE: f64 = 0.3;
 
-/// How far from a ring a press still takes hold of it, in display points.
-const HIT_REACH: f64 = 8.0;
+/// How far from a ring's middle a press still takes hold of it, in display
+/// points: the ring as drawn, 2.5 points either side (`RING_CORE` and
+/// `RING_OUTLINE` in the workspace's turn chrome), and a point and a half
+/// past it. Any wider and a press meant for the layer or image just inside
+/// or outside the ring took the ring instead.
+const HIT_REACH: f64 = 4.0;
 
 /// How finely a press is measured against a ring: its polyline's segments.
 const HIT_SAMPLES: usize = 192;

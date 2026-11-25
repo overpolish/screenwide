@@ -101,9 +101,13 @@ pub(in super::super) fn gizmo(state: &SurfaceState) -> Option<ImageGizmo> {
   })
 }
 
-/// The ring of the chosen image's gizmo under `point`.
+/// The ring of the chosen image's gizmo under `point`, unless a grip of a
+/// box drawn over the rings is there.
 pub(in super::super) fn ring_hit(state: &SurfaceState, point: (f64, f64)) -> Option<RingHit> {
   let gizmo = gizmo(state)?;
+  if super::super::turn::grip_over_rings(state, point) {
+    return None;
+  }
   ring_at(
     gizmo.seen,
     gizmo.radius,
@@ -174,8 +178,7 @@ pub(in super::super) fn down(inner: &SurfaceInner, point: (f64, f64)) -> bool {
     let Some(gizmo) = gizmo(&state) else {
       return false;
     };
-    let offset = (point.0 - gizmo.centre.0, point.1 - gizmo.centre.1);
-    let Some(hit) = ring_at(gizmo.seen, gizmo.radius, offset) else {
+    let Some(hit) = ring_hit(&state, point) else {
       return false;
     };
     let held = ImageTurnDrag {

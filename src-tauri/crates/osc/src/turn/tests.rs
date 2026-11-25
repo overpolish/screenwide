@@ -36,6 +36,20 @@ fn the_rings_keep_to_a_share_of_a_small_layer() {
 }
 
 #[test]
+fn a_ring_is_taken_hold_of_only_close_to_where_it_is_drawn() {
+  // On the Z ring's diagonal, clear of the edge-on X and Y rings: just off
+  // the drawn band either side takes it, six points off does not.
+  let along = |radius: f64| {
+    let reach = radius * std::f64::consts::FRAC_1_SQRT_2;
+    ring_at(turn(0.0, 0.0, 0.0), RADIUS, (reach, -reach)).map(|hit| hit.axis)
+  };
+  assert_eq!(along(RADIUS + 3.5), Some(2));
+  assert_eq!(along(RADIUS - 3.5), Some(2));
+  assert_eq!(along(RADIUS + 6.0), None);
+  assert_eq!(along(RADIUS - 6.0), None);
+}
+
+#[test]
 fn only_the_near_half_of_a_ring_is_taken_hold_of() {
   // Tipped 60 degrees about X, the Z ring's top half comes toward the viewer
   // and its bottom half goes away.

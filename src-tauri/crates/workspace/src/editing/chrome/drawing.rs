@@ -23,7 +23,7 @@ pub(crate) fn chrome(
   // every other chrome.
   objects: Option<&crate::editing::object_picking::ObjectChrome>,
   // A turned layer's frame, and the turn its annotation chrome is carried
-  // through. Its rings are laid over the chrome as they fade
+  // through. Its rings are laid under the chrome as they fade
   // (`chrome_fade::add_rings`).
   turned: &crate::editing::turn::TurnChrome,
   scale: f64,

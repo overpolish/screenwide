@@ -29,6 +29,13 @@ pub(super) use chrome::{
 mod resize;
 pub(super) use resize::{turned_resize, turned_start, TurnedStart};
 
+/// The boxes' grips the rings give way to.
+mod grips;
+pub(super) use grips::grip_over_rings;
+
+#[cfg(test)]
+mod tests;
+
 /// A ring held: the drag, the selection as the press found it, where the
 /// press landed, and the resize edges whose cursor runs the way it turns
 /// there.
@@ -207,7 +214,7 @@ fn ring_frame(state: &SurfaceState) -> Option<((f64, f64), f64)> {
 
 /// The ring under `point`, and the rings' radius.
 fn ring_hit(state: &SurfaceState, point: (f64, f64)) -> Option<(RingHit, f64)> {
-  if !rings_shown(state) {
+  if !rings_shown(state) || grip_over_rings(state, point) {
     return None;
   }
   let ((x, y), radius) = ring_frame(state)?;

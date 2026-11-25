@@ -110,7 +110,10 @@ fn glided(from: turn::Rings, to: turn::Rings, t: f32) -> turn::Rings {
   rings
 }
 
-/// Lays `rings` over `vertices`, a chrome `size` device pixels at `scale`.
+/// Lays `rings` under `vertices`, a chrome `size` device pixels at `scale`.
+/// The chrome is drawn in its vertices' order, so the rings go first: the
+/// boxes and their grips are drawn over them, as the grips also win a press
+/// where the two meet (`turn::grip_over_rings`).
 pub(in crate::editing) fn add_rings(
   vertices: &mut Vec<Vertex>,
   constants: &mut RenderConstants,
@@ -125,10 +128,12 @@ pub(in crate::editing) fn add_rings(
   };
   let [x, y, width, height] = rings.quad.map(|value| f64::from(value) / scale);
   constants.turn_rings = rings.rows;
+  let mut quad = Vec::with_capacity(6);
   osc_gpu::add_quad(
-    vertices,
+    &mut quad,
     view,
     Rect::from_xywh(x, y, width, height),
     turn::RING_KIND,
   );
+  vertices.splice(0..0, quad);
 }

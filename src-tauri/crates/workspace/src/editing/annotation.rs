@@ -223,7 +223,7 @@ use picking::{
   display_on_item_layer, handle_at_point, image_frame, item_image_frame, layer_selection,
   press_pick, selected_item,
 };
-pub(super) use picking::{drawing_pictures, shaft_at_point, take_drawing_layer};
+pub(super) use picking::{drawing_pictures, grip_at_display, shaft_at_point, take_drawing_layer};
 pub(super) use picking_chrome::{cursor_for, owns_chrome, selected_grips};
 
 /// A redaction's box and grips.

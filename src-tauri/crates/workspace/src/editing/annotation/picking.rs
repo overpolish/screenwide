@@ -129,6 +129,15 @@ pub(super) fn handle_at_point(state: &SurfaceState, point: (f64, f64)) -> Option
   grip_pick(state, point).map(|(handle, _)| handle)
 }
 
+/// Whether the chosen annotation's grip is under the display `point`.
+pub(in super::super) fn grip_at_display(state: &SurfaceState, point: (f64, f64)) -> bool {
+  handle_at_point(
+    state,
+    super::super::turn::selected_layer_point(state, point),
+  )
+  .is_some()
+}
+
 /// The chosen annotation's grip under `point`, where it shows: through the
 /// lenses over it, which a drag of it is read back through.
 pub(super) fn grip_pick(state: &SurfaceState, point: (f64, f64)) -> Option<(u32, LensView)> {
