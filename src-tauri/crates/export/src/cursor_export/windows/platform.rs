@@ -118,23 +118,40 @@ fn mux_args(request: &CursorExportRequest<'_>, video: &Path, temporary: &Path) -
   args
 }
 
-pub(in super::super) fn export(
-  request: CursorExportRequest<'_>,
+/// Exports `requests` from one decode, the first's progress and cancel
+/// standing for all: each format's video is drawn and encoded in the same
+/// pass, then muxed beside its audio. A format that fails or is cancelled
+/// takes every file written back, so an export leaves every format or none.
+pub(in super::super) fn export_formats(
+  requests: Vec<CursorExportRequest<'_>>,
 ) -> Result<ExportRunResult, String> {
-  let output = export_output::scaled(&request);
-  let mut request = CursorExportRequest {
-    output: &output,
-    on_progress: &mut *request.on_progress,
-    ..request
-  };
-  let video = gpu_video_path();
+  let outputs = requests
+    .iter()
+    .map(export_output::scaled)
+    .collect::<Vec<_>>();
+  let mut beside = requests
+    .into_iter()
+    .zip(&outputs)
+    .map(|(request, output)| CursorExportRequest {
+      output,
+      on_progress: request.on_progress,
+      ..request
+    })
+    .collect::<Vec<_>>();
+  if beside.is_empty() {
+    return Err("There is no format to export".to_owned());
+  }
+  let mut request = beside.remove(0);
+  let videos = (0..=beside.len())
+    .map(|_| gpu_video_path())
+    .collect::<Vec<_>>();
   let result = (|| {
-    let (rendered, _) = render_video(&mut request, &video, None)?;
+    let (rendered, _) = render_video(&mut request, &beside, &videos, None)?;
     if !matches!(rendered, ExportRunResult::Completed) {
       return Ok(rendered);
     }
     let temporary = media_preview::remux_temp_path(request.destination);
-    let args = mux_args(&request, &video, &temporary);
+    let args = mux_args(&request, &videos[0], &temporary);
     let duration_ms = request
       .timeline
       .map_or(request.duration_ms, |timeline| timeline.duration_ms());
@@ -145,14 +162,50 @@ pub(in super::super) fn export(
           + processed_ms.saturating_mul(100 - GPU_PROGRESS_PERCENT) / 100,
       );
     };
-    media_preview::run_export(
+    let mut result = media_preview::run_export(
       args,
       &temporary,
       request.destination,
       request.cancelled,
       &mut final_progress,
-    )
+    )?;
+    let mut written = vec![request.destination.to_path_buf()];
+    for (format, video) in beside.iter().zip(&videos[1..]) {
+      if !matches!(result, ExportRunResult::Completed) {
+        break;
+      }
+      let temporary = media_preview::remux_temp_path(format.destination);
+      let muxed = media_preview::run_export(
+        mux_args(format, video, &temporary),
+        &temporary,
+        format.destination,
+        request.cancelled,
+        &mut |_| {},
+      );
+      match muxed {
+        Ok(muxed) => result = muxed,
+        Err(error) => {
+          for path in &written {
+            let _ = std::fs::remove_file(path);
+          }
+          let name = format
+            .destination
+            .file_name()
+            .map_or_else(String::new, |name| name.to_string_lossy().into_owned());
+          return Err(format!("{name}: {error}"));
+        }
+      }
+      written.push(format.destination.to_path_buf());
+    }
+    if !matches!(result, ExportRunResult::Completed) {
+      for path in &written {
+        let _ = std::fs::remove_file(path);
+      }
+    }
+    Ok(result)
   })();
-  let _ = std::fs::remove_file(&video);
+  for video in &videos {
+    let _ = std::fs::remove_file(video);
+  }
   result
 }

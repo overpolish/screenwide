@@ -4,20 +4,17 @@
 use super::*;
 use crate::editor::captions;
 
-/// Exports the recording as [`save_recording_media`] does, with its captions
-/// drawn into the picture and the subtitle file the export asks for beside
-/// the video, where it has a transcript to make one from. Both are made
-/// before the video; the file is written once the video is, and a video
-/// whose subtitles cannot be written is taken back, as any half-finished
-/// export is.
-pub(in crate::editor::save) fn save_recording_artifact(
+/// The subtitle file written beside a video: its kind and contents.
+pub(in crate::editor::save) type Subtitles = (screenwide_text::captions::SubtitleFile, String);
+
+/// `options` with the captions drawn into the picture, and the subtitle file
+/// the export asks for beside the video, where the recording has a
+/// transcript to make them from.
+pub(in crate::editor::save) fn captioned(
   artifact: &EditorArtifact,
-  writing: &Path,
-  stem: &str,
   progress_app: &AppHandle,
-  job_cancellation: &AtomicBool,
   mut options: RecordingExportOptions,
-) -> Result<Option<PathBuf>, String> {
+) -> (RecordingExportOptions, Option<Subtitles>) {
   let mut subtitles = None;
   let is_gif = options.recording_format == crate::editor::recording_model::RecordingFormat::Gif;
   if let EditorArtifact::Recording {
@@ -42,7 +39,39 @@ pub(in crate::editor::save) fn save_recording_artifact(
       options.captions = captions::track_for(recording, &edit, frame);
     }
   }
-  if is_gif {
+  (options, subtitles)
+}
+
+/// Writes `subtitles` beside `video`, taking the video back where they
+/// cannot be written, as any half-finished export is.
+pub(in crate::editor::save) fn write_subtitles(
+  video: &Path,
+  subtitles: Option<Subtitles>,
+) -> Result<(), String> {
+  let Some(subtitles) = subtitles else {
+    return Ok(());
+  };
+  captions::write_subtitles(video, subtitles)
+    .map(|_| ())
+    .inspect_err(|_| {
+      let _ = std::fs::remove_file(video);
+    })
+}
+
+/// Exports the recording as [`save_recording_media`] does, with its captions
+/// drawn into the picture and the subtitle file the export asks for beside
+/// the video. Both are made before the video; the file is written once the
+/// video is.
+pub(in crate::editor::save) fn save_recording_artifact(
+  artifact: &EditorArtifact,
+  writing: &Path,
+  stem: &str,
+  progress_app: &AppHandle,
+  job_cancellation: &AtomicBool,
+  options: RecordingExportOptions,
+) -> Result<Option<PathBuf>, String> {
+  let (options, subtitles) = captioned(artifact, progress_app, options);
+  if options.recording_format == crate::editor::recording_model::RecordingFormat::Gif {
     return super::gif::save_gif(
       artifact,
       writing,
@@ -60,11 +89,8 @@ pub(in crate::editor::save) fn save_recording_artifact(
     job_cancellation,
     options,
   )?;
-  if let (Some(video), Some(subtitles)) = (saved.as_ref(), subtitles) {
-    if let Err(error) = captions::write_subtitles(video, subtitles) {
-      let _ = std::fs::remove_file(video);
-      return Err(error);
-    }
+  if let Some(video) = saved.as_ref() {
+    write_subtitles(video, subtitles)?;
   }
   Ok(saved)
 }

@@ -25,12 +25,14 @@ pub(in super::super::super) fn preview_frame(
     output_us,
   )?;
   let video = gpu_video_path();
-  let result = render_video(&mut request, &video, Some(&stretch)).and_then(|(rendered, frames)| {
-    if rendered == ExportRunResult::Completed {
-      media_preview::write_last_frame(&video, None, frames, png)?;
-    }
-    Ok(rendered)
-  });
-  let _ = std::fs::remove_file(&video);
+  let videos = [video];
+  let result =
+    render_video(&mut request, &[], &videos, Some(&stretch)).and_then(|(rendered, frames)| {
+      if rendered == ExportRunResult::Completed {
+        media_preview::write_last_frame(&videos[0], None, frames, png)?;
+      }
+      Ok(rendered)
+    });
+  let _ = std::fs::remove_file(&videos[0]);
   result
 }

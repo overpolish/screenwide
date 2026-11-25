@@ -73,20 +73,6 @@ pub(super) fn write_beside(project: &Path, exported: &Path) -> Option<PathBuf> {
   }
 }
 
-/// The credits beside `exported`, if it has any, copied beside `copy`, a
-/// copy of it written under another name; where the copy's are.
-pub(super) fn copy_beside(exported: &Path, copy: &Path) -> Option<PathBuf> {
-  let from = credits_path(exported).filter(|path| path.exists())?;
-  let to = credits_path(copy)?;
-  match std::fs::copy(&from, &to) {
-    Ok(_) => Some(to),
-    Err(error) => {
-      eprintln!("Could not copy the credits beside the export: {error}");
-      None
-    }
-  }
-}
-
 #[cfg(test)]
 mod tests {
   use super::*;

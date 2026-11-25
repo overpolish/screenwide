@@ -3,7 +3,9 @@
 
 use super::*;
 
-pub(super) fn export(_request: CursorExportRequest<'_>) -> Result<ExportRunResult, String> {
+pub(super) fn export_formats(
+  _requests: Vec<CursorExportRequest<'_>>,
+) -> Result<ExportRunResult, String> {
   Err("Cursor baking is not available on this platform yet".to_owned())
 }
 

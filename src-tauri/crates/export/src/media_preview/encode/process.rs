@@ -136,6 +136,12 @@ impl StreamedExport {
     self.stdin.as_ref().map(AsRawFd::as_raw_fd)
   }
 
+  /// The encoder's input, for a thread of its own to write each frame to.
+  /// The video ends once it is dropped.
+  pub(crate) fn take_input(&mut self) -> Option<std::process::ChildStdin> {
+    self.stdin.take()
+  }
+
   /// Ends the video, lets FFmpeg finish the file, and puts it at
   /// `destination`.
   pub(crate) fn finish(

@@ -28,12 +28,6 @@ import {
   KeyboardEffectSettings,
 } from "./types";
 
-import type { RecordingFormatPayload } from "./export/recording-format";
-import type { CameraKey } from "../../bindings/CameraKey";
-import type { ExportedFile } from "../../bindings/ExportedFile";
-import type { ExportSubtitles } from "../../bindings/ExportSubtitles";
-import type { ScreenshotFormat } from "../../bindings/ScreenshotFormat";
-
 export type PreviewSelectionLayout = {
   paneIndex: number;
   radiusPercent: number;
@@ -240,41 +234,6 @@ export const recordingProcessingPayload = (
     options.screenshotOutput,
   ),
 });
-// The format, with a GIF's stretch, travels in `processing`.
-type SaveExportOptions = RecordingProcessingOptions &
-  RecordingFormatPayload & {
-    /** What fills a separate camera file where its background is taken away. */
-    cameraKey: CameraKey;
-    /** Moves the recording's project to the Trash once the export is saved. */
-    deleteProjectAfterExport: boolean;
-    fileStem: string;
-    screenshotFormat: ScreenshotFormat;
-    screenshotFullColour: boolean;
-    /** The subtitle file written beside a recording's video. */
-    subtitles: ExportSubtitles;
-  };
-
-export const saveExport = ({
-  cameraKey,
-  deleteProjectAfterExport,
-  fileStem,
-  screenshotFormat,
-  screenshotFullColour,
-  subtitles,
-  ...processing
-}: SaveExportOptions) =>
-  invoke<ExportedFile | null>("save_export", {
-    fileStem,
-    options: {
-      ...recordingProcessingPayload(processing),
-      cameraKey,
-      deleteProjectAfterExport,
-      screenshotFormat,
-      screenshotFullColour,
-      subtitles,
-    },
-  });
-
 export {
   browseBackgroundImage,
   browseExportDirectory,

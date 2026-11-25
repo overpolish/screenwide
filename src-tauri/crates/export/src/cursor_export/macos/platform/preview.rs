@@ -51,17 +51,18 @@ pub(in super::super::super) fn preview_frame(
   let cancelled = request.cancelled;
   let rendered = render_gpu_video(
     &mut request,
+    &[],
     (&stretch.ranges, Some(stretch.source_span_ms())),
     &fallback,
     x264,
   );
   let _ = std::fs::remove_file(&fallback);
   let written = match rendered? {
-    (ExportRunResult::Completed, Some(stream)) => stream.read_back(cancelled)?,
-    (ExportRunResult::Completed, None) => {
+    (ExportRunResult::Completed, Some(stream), _) => stream.read_back(cancelled)?,
+    (ExportRunResult::Completed, None, _) => {
       return Err("The preview needs FFmpeg, which could not be started".to_owned());
     }
-    (ExportRunResult::Cancelled, _) => None,
+    (ExportRunResult::Cancelled, _, _) => None,
   };
   let Some(written) = written else {
     return Ok(ExportRunResult::Cancelled);

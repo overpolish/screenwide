@@ -29,10 +29,23 @@ use super::super::frame_draw::FrameDraw;
 use screenwide_compositor::compositor::{self, Compositor};
 use screenwide_gpu::{BridgedTexture, D3d11Bridge};
 
-/// The export's own compositor and the textures it reads and draws, made
-/// once and reused for every frame.
-pub(crate) struct WindowsExportCanvas {
+/// What one format is drawn by and into: its own compositor, the texture it
+/// draws, and the copy the encoder takes.
+struct FormatTarget {
   compositor: Compositor,
+  /// What each frame is drawn into, which the export's device copies out of.
+  target: BridgedTexture,
+  /// The drawn frame, copied out for the encoder. One serves every frame:
+  /// the encoder copies it into a picture of its own on this device before
+  /// taking the next, and the device runs its copies in order.
+  out: ID3D11Texture2D,
+}
+
+/// The export's compositors and the textures they read and draw, made once
+/// and reused for every frame. Each decoded frame is carried over once and
+/// drawn into every format from there.
+pub(crate) struct WindowsExportCanvas {
+  gpu: std::sync::Arc<screenwide_gpu::Gpu>,
   /// The baked camera's frame, and its Direct3D 11 side.
   camera: Option<(compositor::SourceTexture, ID3D11Texture2D)>,
   /// The screen's frame, and its Direct3D 11 side.
@@ -40,12 +53,8 @@ pub(crate) struct WindowsExportCanvas {
   /// The device Media Foundation decodes and encodes on.
   device: ID3D11Device,
   bridge: D3d11Bridge,
-  /// What each frame is drawn into, which the export's device copies out of.
-  target: BridgedTexture,
-  /// The drawn frame, copied out for the encoder. One serves every frame:
-  /// the encoder copies it into a picture of its own on this device before
-  /// taking the next, and the device runs its copies in order.
-  out: ID3D11Texture2D,
+  /// Each format's, in the order the frame's draws are given.
+  formats: Vec<FormatTarget>,
 }
 
 fn output_texture(device: &ID3D11Device, size: (u32, u32)) -> Result<ID3D11Texture2D, String> {
@@ -93,10 +102,11 @@ fn bridged_source(
 }
 
 impl WindowsExportCanvas {
+  /// A canvas drawing a format of each of `output_sizes` from every frame.
   pub(crate) fn new(
     source_size: (u32, u32),
     camera_size: Option<(u32, u32)>,
-    output_size: (u32, u32),
+    output_sizes: &[(u32, u32)],
   ) -> Result<Self, String> {
     let gpu = screenwide_gpu::shared(screenwide_gpu::Workload::Heavy)?;
     let device = screenwide_gpu::video_device_on_gpu_adapter(&gpu)?;
@@ -105,22 +115,30 @@ impl WindowsExportCanvas {
     let camera = camera_size
       .map(|size| bridged_source(&bridge, &gpu, size, "export camera"))
       .transpose()?;
-    let target = bridge.shared_texture(
-      &gpu,
-      output_size,
-      wgpu::TextureFormat::Bgra8Unorm,
-      "export target",
-    )?;
-    let compositor = Compositor::new(&gpu)?;
-    compositor.draw_generators_at_half_resolution();
+    let formats = output_sizes
+      .iter()
+      .map(|&size| {
+        let compositor = Compositor::new(&gpu)?;
+        compositor.draw_generators_at_half_resolution();
+        Ok(FormatTarget {
+          compositor,
+          target: bridge.shared_texture(
+            &gpu,
+            size,
+            wgpu::TextureFormat::Bgra8Unorm,
+            "export target",
+          )?,
+          out: output_texture(&device, size)?,
+        })
+      })
+      .collect::<Result<Vec<_>, String>>()?;
     Ok(Self {
-      compositor,
+      gpu,
       camera,
-      out: output_texture(&device, output_size)?,
       source,
       device,
       bridge,
-      target,
+      formats,
     })
   }
 
@@ -131,7 +149,7 @@ impl WindowsExportCanvas {
 
   /// The GPU the export draws on.
   pub(crate) fn gpu(&self) -> &std::sync::Arc<screenwide_gpu::Gpu> {
-    self.compositor.gpu()
+    &self.gpu
   }
 
   /// Copies a decoded frame into the texture the compositor reads it from.
@@ -159,15 +177,18 @@ impl WindowsExportCanvas {
   }
 
   /// The decoded `screen` frame, and `camera`'s where the camera is baked
-  /// in, drawn by `draw` at `moment` (its source time and the output time it
-  /// covers) into the texture the encoder reads.
+  /// in, drawn by each of `draws` at `moment` (its source time and the
+  /// output time it covers) into its format's texture the encoder reads.
   pub(crate) fn compose(
     &self,
-    draw: &mut FrameDraw<'_>,
+    draws: &mut [FrameDraw<'_>],
     screen: (&ID3D11Texture2D, u32),
     camera: Option<(&ID3D11Texture2D, u32)>,
     moment: (u64, f32),
-  ) -> Result<ID3D11Texture2D, String> {
+  ) -> Result<Vec<ID3D11Texture2D>, String> {
+    if draws.len() != self.formats.len() {
+      return Err("The export frame has the wrong number of formats to draw".to_owned());
+    }
     // Both frames are copied in on the export's device, and wgpu waits for
     // the copies before anything below reads them.
     self.take(&self.source.1, screen.0, screen.1)?;
@@ -177,27 +198,31 @@ impl WindowsExportCanvas {
     }
     let gpu = self.gpu();
     self.bridge.d3d11_to_gpu(gpu)?;
-    draw.draw(
-      &self.compositor,
-      &self.target.view,
-      &self.source.0,
-      camera.map(|((camera, _), _)| camera),
-      moment,
-    )?;
-    // The export's device waits for the frame drawn above before copying it
-    // out. The next frame's drawing waits for this copy too: it is recorded
-    // before the next frame's own copies, which wgpu waits for.
-    let destination: ID3D11Resource = self.out.cast().map_err(|error| error.to_string())?;
-    let drawn: ID3D11Resource = self
-      .target
-      .d3d11
-      .cast()
-      .map_err(|error| error.to_string())?;
-    self.bridge.gpu_to_d3d11(gpu)?;
-    unsafe {
-      self.bridge.context.CopyResource(&destination, &drawn);
-      self.bridge.context.Flush();
+    for (format, draw) in self.formats.iter().zip(draws.iter_mut()) {
+      draw.draw(
+        &format.compositor,
+        &format.target.view,
+        &self.source.0,
+        camera.map(|((camera, _), _)| camera),
+        moment,
+      )?;
     }
-    Ok(self.out.clone())
+    // The export's device waits for the frames drawn above before copying
+    // them out. The next frame's drawing waits for these copies too: they are
+    // recorded before the next frame's own copies, which wgpu waits for.
+    self.bridge.gpu_to_d3d11(gpu)?;
+    let mut drawn = Vec::with_capacity(self.formats.len());
+    for format in &self.formats {
+      let destination: ID3D11Resource = format.out.cast().map_err(|error| error.to_string())?;
+      let target: ID3D11Resource = format
+        .target
+        .d3d11
+        .cast()
+        .map_err(|error| error.to_string())?;
+      unsafe { self.bridge.context.CopyResource(&destination, &target) };
+      drawn.push(format.out.clone());
+    }
+    unsafe { self.bridge.context.Flush() };
+    Ok(drawn)
   }
 }

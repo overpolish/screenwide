@@ -6,7 +6,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   browseExportDirectory,
   copyEditorToClipboard,
-  saveExport,
   setExportDirectory,
 } from "./api";
 import {
@@ -30,7 +29,7 @@ import {
   defaultCameraOverlay,
   recordingSavePlan,
 } from "./export/recording-export-settings";
-import { saveEach } from "./export/save-each";
+import { saveFormats } from "./export/save-formats";
 import { useExportMeasures } from "./export/use-export-measures";
 import { useExportProgress } from "./export/use-export-progress";
 import { useRecordingFormat } from "./export/use-recording-format";
@@ -573,29 +572,30 @@ export function EditorWindow() {
           setIsSaving(true);
           setIsCancelingSave(false);
           clearExportFailure();
-          saveEach(formats.saveJobs(fileStem), (job, isLast) => {
-            const plan = recordingSavePlan({
+          const jobs = formats.saveJobs(fileStem).map((job) => ({
+            ...job,
+            plan: recordingSavePlan({
               ...exportInputs,
-              cameraOverlay: job.cameraOverlay,
+              ...job,
               collapseAudio,
               originalResolutionScale,
-              recordingOutput: job.recordingOutput,
-            });
-            saveProgress.begin(plan.showsMeasuredProgress);
-            return saveExport({
-              ...plan.options,
-              cameraKey,
-              // The project goes only once every format is made.
-              deleteProjectAfterExport: deleteProjectAfterExport && isLast,
-              fileStem: job.fileStem,
-              ...recordingFormatPayload(),
-              screenshotFormat: screenshotExport.format,
-              screenshotFullColour: screenshotExport.fullColour,
-              screenshotOutput,
-              subtitles,
-              timelineEdit: job.timelineEdit,
-            });
-          })
+            }),
+          }));
+          saveProgress.begin(
+            jobs.some(({ plan }) => plan.showsMeasuredProgress),
+          );
+          saveFormats(fileStem, jobs, (job) => ({
+            ...job.plan.options,
+            cameraKey,
+            deleteProjectAfterExport,
+            fileStem: job.fileStem,
+            ...recordingFormatPayload(),
+            screenshotFormat: screenshotExport.format,
+            screenshotFullColour: screenshotExport.fullColour,
+            screenshotOutput,
+            subtitles,
+            timelineEdit: job.timelineEdit,
+          }))
             .then((file) => {
               saveProgress.complete();
               setIsCancelingSave(false);

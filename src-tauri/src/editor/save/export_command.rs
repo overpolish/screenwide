@@ -17,12 +17,67 @@ pub struct ExportedFile {
   pub path: String,
 }
 
+/// What an export job does once its artifact is in hand: writes into the
+/// folder given and answers every file written, the one the finished island
+/// shows last, or none where it was cancelled.
+pub(super) type Work = Box<
+  dyn FnOnce(
+      &EditorArtifact,
+      &Path,
+      &AppHandle,
+      &AtomicBool,
+      RecordingExportOptions,
+    ) -> Result<Option<Vec<PathBuf>>, String>
+    + Send,
+>;
+
 #[tauri::command]
 pub async fn save_export(
   app: AppHandle,
   window: tauri::WebviewWindow,
   file_stem: String,
   options: RecordingExportOptions,
+) -> Result<Option<ExportedFile>, String> {
+  let stem =
+    sanitize_file_stem(&file_stem).ok_or_else(|| "That file name cannot be used".to_owned())?;
+  let work: Work =
+    Box::new(
+      move |artifact, writing, progress_app, cancelled, options| match artifact {
+        EditorArtifact::Screenshot { items, .. } => {
+          let path = unique_path(
+            writing,
+            &stem,
+            options.screenshot_format.extension(),
+            &|candidate| candidate.exists(),
+          );
+          let composed = compose_screenshot_workspace(items, &options.screenshot_output)?;
+          options
+            .screenshot_format
+            .write(&composed, &path, options.screenshot_full_colour)?;
+          Ok(Some(vec![path]))
+        }
+        EditorArtifact::Recording { .. } => export_job::save_recording_artifact(
+          artifact,
+          writing,
+          &stem,
+          progress_app,
+          cancelled,
+          options,
+        )
+        .map(|saved| saved.map(|path| vec![path])),
+      },
+    );
+  run_export(app, window, options, work).await
+}
+
+/// Takes the window's artifact out while `work` exports it, off the async
+/// runtime, then puts it back, remembers what the export chose, and answers
+/// the file the finished island shows.
+pub(super) async fn run_export(
+  app: AppHandle,
+  window: tauri::WebviewWindow,
+  options: RecordingExportOptions,
+  work: Work,
 ) -> Result<Option<ExportedFile>, String> {
   let kind = kind_of_window(&window)?;
   let job_options = options.clone();
@@ -33,16 +88,12 @@ pub async fn save_export(
     cursor_effects,
     keyboard_effects,
     recording_output,
-    screenshot_format,
-    screenshot_full_colour,
     screenshot_output,
     ..
   } = options;
   if compression > 4 || camera_compression > 4 {
     return Err("Compression must be between 0 and 4".to_owned());
   }
-  let stem =
-    sanitize_file_stem(&file_stem).ok_or_else(|| "That file name cannot be used".to_owned())?;
   let directory =
     current_directory(&app, kind).ok_or_else(|| "There is nowhere to save this".to_owned())?;
   // Out of the slot while it exports, so a recording opened meanwhile takes
@@ -103,32 +154,17 @@ pub async fn save_export(
     // An export runs for minutes, often while its window is covered or the
     // app is out of sight, where it would otherwise be napped.
     let _activity = crate::user_work::UserActivity::begin_keeping_awake("Exporting");
-    let result = (|| -> Result<Option<PathBuf>, String> {
-      std::fs::create_dir_all(&writing).map_err(|error| error.to_string())?;
-
-      match &artifact {
-        EditorArtifact::Screenshot { items, .. } => {
-          let path = unique_path(
-            &writing,
-            &stem,
-            screenshot_format.extension(),
-            &|candidate| candidate.exists(),
-          );
-          let composed = compose_screenshot_workspace(items, &screenshot_output)?;
-          screenshot_format.write(&composed, &path, screenshot_full_colour)?;
-          Ok(Some(path))
-        }
-        EditorArtifact::Recording { .. } => export_job::save_recording_artifact(
+    let result = std::fs::create_dir_all(&writing)
+      .map_err(|error| error.to_string())
+      .and_then(|()| {
+        work(
           &artifact,
           &writing,
-          &stem,
           &progress_app,
           &job_cancellation,
           job_options,
-        ),
-      }
-    })();
-
+        )
+      });
     (result, artifact)
   })
   .await
@@ -136,16 +172,17 @@ pub async fn save_export(
 
   lifecycle::clear_active_export(&app, kind, artifact_id);
 
-  let path = match result {
-    Ok(Some(path)) => path,
+  let written = match result {
+    Ok(Some(written)) if !written.is_empty() => written,
     unfinished => {
       put_back(&app, kind, artifact);
       emit_snapshot(&app, kind);
       return unfinished.map(|_| None);
     }
   };
+  let path = written[written.len() - 1].clone();
 
-  // The file is written by now; a folder gone since only loses the
+  // The files are written by now; a folder gone since only loses the
   // remembered destination.
   if let Err(error) = store_export_directory(&app, kind, directory) {
     eprintln!("Could not remember the export folder: {error}");
@@ -156,10 +193,14 @@ pub async fn save_export(
     recording_preference,
     screenshot_preference.map(|output| output.canvas),
   );
-  // Where it uses CC BY works found on Openverse, their credits go beside it.
-  let credits = artifact
-    .project()
-    .and_then(|project| super::export_credits::write_beside(project, &path));
+  // Where it uses CC BY works found on Openverse, their credits go beside
+  // each file; the island names the last one's.
+  let mut credits = None;
+  for file in &written {
+    credits = artifact
+      .project()
+      .and_then(|project| super::export_credits::write_beside(project, file));
+  }
   // The finished Export island reveals, copies and drags out this file
   // until it is put away (`put_away_export`).
   *app

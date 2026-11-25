@@ -82,7 +82,8 @@ pub(super) fn save_camera_copy(
   artifact_id: u64,
   progress_app: &AppHandle,
   cancelled: &AtomicBool,
-  progress_start: f64,
+  // Where on the progress bar the copy starts, and how much of it it takes.
+  (progress_start, progress_share): (f64, f64),
   compression: u8,
   resolution_scale_percent: u16,
   output: &ScreenshotOutputSettings,
@@ -105,7 +106,7 @@ pub(super) fn save_camera_copy(
       processed_ms,
       progress_duration_ms,
       progress_start,
-      99.0 - progress_start,
+      progress_share,
     );
   };
 

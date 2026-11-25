@@ -76,22 +76,34 @@ impl Reader {
   }
 }
 
-/// Draws and encodes `request`'s edited video into `path`, or only
-/// `stretch` of it, on the shared output clock. Answers how the run ended
-/// and how many frames it wrote.
-pub(super) fn render_video(
-  request: &mut CursorExportRequest<'_>,
-  path: &Path,
+/// Draws and encodes `request`'s edited video into the first of `paths`,
+/// and each of `beside` into the path after it from the same decoded
+/// frames, or only `stretch` of it, on the shared output clock. Answers how
+/// the run ended and how many frames it wrote.
+pub(super) fn render_video<'r>(
+  request: &mut CursorExportRequest<'r>,
+  beside: &[CursorExportRequest<'r>],
+  paths: &[PathBuf],
   stretch: Option<&media_preview::PreviewStretch>,
 ) -> Result<(ExportRunResult, u64), String> {
   screenwide_output::validate_output_settings(request.width, request.height, request.output)?;
-  let output_size = screenwide_output::output_dimensions(request.output)?;
+  for format in beside {
+    screenwide_output::validate_output_settings(format.width, format.height, format.output)?;
+  }
+  let formats = std::iter::once(&*request).chain(beside).collect::<Vec<_>>();
+  if paths.len() != formats.len() {
+    return Err("The export has the wrong number of files to write".to_owned());
+  }
+  let output_sizes = formats
+    .iter()
+    .map(|format| screenwide_output::output_dimensions(format.output))
+    .collect::<Result<Vec<_>, _>>()?;
   let canvas = WindowsExportCanvas::new(
     (request.width, request.height),
     request
       .camera
       .map(|(_, options)| (options.camera_width, options.camera_height)),
-    output_size,
+    &output_sizes,
   )?;
   let device = canvas.device();
   let mut screen = Reader::open(request.screen, device)?;
@@ -99,20 +111,32 @@ pub(super) fn render_video(
     .camera
     .map(|(path, _)| Reader::open(path, device))
     .transpose()?;
-  let mut draw = FrameDraw::new(
-    request,
-    canvas.gpu(),
-    stretch.map(media_preview::PreviewStretch::source_span_ms),
-  )?;
+  let mut draws = formats
+    .iter()
+    .map(|format| {
+      FrameDraw::new(
+        format,
+        canvas.gpu(),
+        stretch.map(media_preview::PreviewStretch::source_span_ms),
+      )
+    })
+    .collect::<Result<Vec<_>, _>>()?;
   let fps = frame_clock::frame_rate(
     media_preview::recording_info(request.screen).and_then(|info| info.frames_per_second),
   );
-  let mut sink = video_file(
-    path,
-    device,
-    (output_size, fps),
-    super::super::super::video_bitrate(output_size.0, output_size.1, request.video.compression),
-  )?;
+  let mut sinks = formats
+    .iter()
+    .zip(&output_sizes)
+    .zip(paths)
+    .map(|((format, &size), path)| {
+      video_file(
+        path,
+        device,
+        (size, fps),
+        super::super::super::video_bitrate(size.0, size.1, format.video.compression),
+      )
+    })
+    .collect::<Result<Vec<_>, _>>()?;
   let ranges = match stretch {
     Some(stretch) => stretch.ranges.clone(),
     None => request
@@ -130,8 +154,10 @@ pub(super) fn render_video(
       break;
     }
     if request.cancelled.load(Ordering::Acquire) {
-      drop(sink);
-      let _ = std::fs::remove_file(path);
+      drop(sinks);
+      for path in paths {
+        let _ = std::fs::remove_file(path);
+      }
       return Ok((ExportRunResult::Cancelled, frames));
     }
     let Some(source_us) = frame_clock::source_us(output_us, &ranges) else {
@@ -155,17 +181,19 @@ pub(super) fn render_video(
     let Some(picture) = screen.frame() else {
       break;
     };
-    let texture = canvas.compose(
-      &mut draw,
+    let textures = canvas.compose(
+      &mut draws,
       picture,
       camera.as_ref().and_then(Reader::frame),
       (source_us, frame_ms),
     )?;
-    sink.write(
-      &texture,
-      i64::try_from(output_us.saturating_mul(10)).unwrap_or(i64::MAX),
-      i64::try_from(frame_us * 10).unwrap_or(i64::MAX),
-    )?;
+    for (sink, texture) in sinks.iter_mut().zip(&textures) {
+      sink.write(
+        texture,
+        i64::try_from(output_us.saturating_mul(10)).unwrap_or(i64::MAX),
+        i64::try_from(frame_us * 10).unwrap_or(i64::MAX),
+      )?;
+    }
     frames += 1;
     let last = output_us + frame_us >= duration_us;
     if progress_pace.due(std::time::Instant::now(), last) {
@@ -177,6 +205,8 @@ pub(super) fn render_video(
       );
     }
   }
-  sink.finish()?;
+  for sink in &mut sinks {
+    sink.finish()?;
+  }
   Ok((ExportRunResult::Completed, frames))
 }

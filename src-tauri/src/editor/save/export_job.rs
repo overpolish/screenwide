@@ -2,13 +2,13 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use super::*;
-use crate::editor::export_picture::{ExportPicture, Screen};
-use screenwide_export::track_selection;
 
 mod gif;
+mod prepared;
 mod publish;
 mod subtitled;
-pub(super) use subtitled::save_recording_artifact;
+pub(super) use prepared::{prepare, Prepared, Route};
+pub(super) use subtitled::{captioned, save_recording_artifact, write_subtitles, Subtitles};
 
 /// Exports the recording's media: its video, camera and audio as `options`
 /// ask; [`save_recording_artifact`] adds its subtitles.
@@ -20,226 +20,133 @@ fn save_recording_media(
   job_cancellation: &AtomicBool,
   options: RecordingExportOptions,
 ) -> Result<Option<PathBuf>, String> {
-  let RecordingExportOptions {
-    audio_track_volumes,
-    bake_camera,
-    camera_compression,
-    camera_overlay,
-    camera_key,
-    camera_resolution_scale_percent,
-    captions,
-    collapse_audio,
-    compression,
-    cursor_effects,
-    keyboard_effects,
-    enabled_stream_indices,
-    include_camera,
-    include_primary_video,
-    resolution_scale_percent,
-    recording_format,
-    mut recording_output,
-    timeline_edit: sent,
-    ..
-  } = options;
+  let prepared = prepare(artifact, progress_app, options)?;
   let EditorArtifact::Recording {
-    audio_tracks,
     camera,
-    cursor,
-    keyboard,
-    duration_ms,
-    height,
     id,
     path: working,
-    primary_kind,
-    project,
-    source_scale_percent,
-    width,
     ..
   } = artifact
   else {
-    unreachable!("recording export helper received a non-recording artifact");
+    unreachable!("only a recording is prepared");
   };
-  recording_output.stamp_captures(artifact.captures());
-  validate_primary_resolution_scale(
-    resolution_scale_percent,
-    *source_scale_percent,
-    *primary_kind,
-  )?;
-  validate_camera_resolution_scale(camera_resolution_scale_percent)?;
-  // The overlay places a baked-in camera on the screen canvas, which an audio
-  // recording has only as a 1 by 1 stand-in, so it is checked only when used.
-  if bake_camera {
-    validate_camera_overlay(
-      camera_overlay,
-      (
-        recording_output.primary.width,
-        recording_output.primary.height,
-      ),
-    )?;
-  }
-  // A microphone with its noise taken out or its voice cleaned up is
-  // exported from the file made of it, leveled by Auto volume, and the
-  // system audio making way for it, as the preview plays them.
-  let project_folder = project.parent().unwrap_or(Path::new("."));
-  crate::editor::speech::ready_for_export(
-    progress_app,
-    project_folder,
-    audio_tracks,
-    &enabled_stream_indices,
-    (working, *duration_ms),
-  )?;
-  // The edit and plan the export follows, its songs' singing separated first.
-  let (edit, timeline) =
-    timeline_edit::for_export(progress_app, sent.as_ref(), project, (*id, *duration_ms))?;
-  let selection = crate::editor::speech::as_heard(
-    track_selection::TrackSelection::with_volumes(
-      audio_tracks,
-      &enabled_stream_indices,
-      &audio_track_volumes,
-    )?,
-    project_folder,
-    &enabled_stream_indices,
-  );
-  let layout = if collapse_audio {
-    track_selection::AudioLayout::Mixdown
-  } else {
-    track_selection::AudioLayout::SeparateTracks
-  };
-  // A scene can show the cursor where the recording hides it, so it is drawn
-  // wherever any part of the video shows it.
-  let baked_cursor = cursor
-    .as_ref()
-    .filter(|_| {
-      screenwide_annotations::timing::cursor_shown_anywhere(
-        timeline.as_ref().map_or(&[][..], |plan| &plan.scene_clips),
-        cursor_effects.bake,
-      )
-    })
-    .map(|cursor| cursor.path.as_path());
-  let baked_keyboard = keyboard
-    .as_ref()
-    .filter(|_| keyboard_effects.bake)
-    .map(|keyboard| keyboard.path.as_path());
-  let primary_output = &recording_output.primary;
-  let camera_output = &recording_output.camera;
-  let export_duration_ms = timeline.as_ref().map_or(
-    *duration_ms,
-    screenwide_timeline_edit::TimelinePlan::duration_ms,
-  );
-  let camera_effects = crate::editor::camera_effects::CameraRecording::of(artifact)
-    .and_then(|camera| crate::editor::camera_effects::live::load(&camera, edit.as_ref()));
-  let camera_is_primary = *primary_kind == PrimaryRecordingKind::Camera;
-  if !include_primary_video && !include_camera && enabled_stream_indices.is_empty() {
-    return Err("Select at least one track to export".to_owned());
-  }
-  if *primary_kind == PrimaryRecordingKind::Audio
-    && (include_primary_video || include_camera || bake_camera)
-  {
-    return Err("This audio recording has no video track to export".to_owned());
-  }
-  // The sound alone: asked for as M4A or WAV, or all that is left with no
-  // picture in the export.
-  if recording_format.is_sound_only()
-    || *primary_kind == PrimaryRecordingKind::Audio
-    || (!include_primary_video && !include_camera)
-  {
-    return audio_save::save_audio(audio_save::AudioSaveRequest {
+  let options = &prepared.options;
+  let duration_ms = prepared.duration_ms(artifact);
+  match prepared.route {
+    Route::Sound => audio_save::save_audio(audio_save::AudioSaveRequest {
       app: progress_app,
       cancelled: job_cancellation,
       directory: writing,
-      duration_ms: export_duration_ms,
-      file: recording_format.sound_file(),
+      duration_ms,
+      file: options.recording_format.sound_file(),
       id: *id,
-      layout,
-      selected_any: !enabled_stream_indices.is_empty(),
-      selection: &selection,
+      layout: prepared.layout,
+      selected_any: !options.enabled_stream_indices.is_empty(),
+      selection: &prepared.selection,
       stem,
-      timeline: timeline.as_ref(),
+      timeline: prepared.timeline.as_ref(),
       working,
-    });
-  }
-  if !include_primary_video {
-    let camera = camera
-      .as_ref()
-      .ok_or_else(|| "There is no camera track to export".to_owned())?;
-    return camera_save::save_camera_as_primary(
+    }),
+    Route::CameraAlone => camera_save::save_camera_as_primary(
       working,
-      camera,
+      camera
+        .as_ref()
+        .ok_or_else(|| "There is no camera track to export".to_owned())?,
       writing,
       stem,
-      &selection,
-      layout,
+      &prepared.selection,
+      prepared.layout,
       *id,
       progress_app,
       job_cancellation,
-      camera_compression,
-      camera_resolution_scale_percent,
-      camera_output,
-      timeline.as_ref(),
-      camera_effects,
-    );
-  }
-
-  let screen = |camera_effects| Screen {
-    camera_effects,
-    captions: captions.as_ref(),
-    cursor: baked_cursor.map(|cursor| (cursor, cursor_effects)),
-    keyboard: baked_keyboard.map(|keyboard| (keyboard, keyboard_effects)),
-    duration_ms: *duration_ms,
-    layout,
-    output: primary_output,
-    screen: working,
-    selection: &selection,
-    size: (*width, *height),
-    timeline: timeline.as_ref(),
-    video: screenwide_export::media_preview::VideoExportOptions {
-      compression,
-      resolution_scale_percent,
-      source_scale_percent: *source_scale_percent,
-    },
-  };
-  if bake_camera {
-    if !include_camera {
-      return Err("Select the camera track before baking it in".to_owned());
+      options.camera_compression,
+      options.camera_resolution_scale_percent,
+      &options.recording_output.camera,
+      prepared.timeline.as_ref(),
+      prepared.camera_effects.clone(),
+    ),
+    Route::Baked => camera_save::save_baked_recording(
+      prepared
+        .drawn(artifact)
+        .ok_or_else(|| "There is no camera recording to bake in".to_owned())?,
+      duration_ms,
+      writing,
+      stem,
+      *id,
+      progress_app,
+      job_cancellation,
+    ),
+    Route::Screen => {
+      let share = screen_progress_share(&prepared, artifact);
+      let saved = save_primary_recording(PrimaryRecordingSaveRequest {
+        app: progress_app,
+        artifact_id: *id,
+        audio_tracks: match artifact {
+          EditorArtifact::Recording { audio_tracks, .. } => audio_tracks,
+          EditorArtifact::Screenshot { .. } => &[],
+        },
+        cancelled: job_cancellation,
+        directory: writing,
+        picture: prepared.screen_alone(artifact),
+        progress_share: share,
+        stem,
+      })?;
+      let Some(saved) = saved else {
+        return Ok(None);
+      };
+      finish_screen(
+        &prepared,
+        artifact,
+        saved,
+        writing,
+        progress_app,
+        job_cancellation,
+        (Some(stem), (share, 99.0 - share)),
+      )
     }
-    let camera = camera
-      .as_ref()
-      .ok_or_else(|| "There is no camera recording to bake in".to_owned())?;
-    return camera_save::save_baked_recording(
-      ExportPicture::baked(
-        screen(camera_effects),
-        camera,
-        camera_overlay,
-        camera_output.drop_shadow,
-      ),
-      export_duration_ms,
-      writing,
-      stem,
-      *id,
-      progress_app,
-      job_cancellation,
-    );
   }
+}
 
-  let screen_progress_share = if include_camera && camera.is_some() {
+/// How much of the progress bar the drawn video takes: half where the
+/// camera follows as a file of its own, which a baked camera never does.
+pub(super) fn screen_progress_share(prepared: &Prepared, artifact: &EditorArtifact) -> f64 {
+  let keeps_camera = matches!(prepared.route, Route::Screen)
+    && matches!(
+      artifact,
+      EditorArtifact::Recording {
+        camera: Some(_),
+        ..
+      }
+    )
+    && prepared.options.include_camera;
+  if keeps_camera {
     50.0
   } else {
     99.0
+  }
+}
+
+/// Finishes a screen's export whose video is written at `saved`: the camera
+/// as a file of its own beside it, where it is kept, named after
+/// `camera_stem` and reporting from `start` over `share` of the progress
+/// bar, and both confirmed. With no `camera_stem` the camera is another
+/// file's to write, as it is for every format but the first of an export
+/// of every format.
+pub(super) fn finish_screen(
+  prepared: &Prepared,
+  artifact: &EditorArtifact,
+  saved: PathBuf,
+  writing: &Path,
+  progress_app: &AppHandle,
+  job_cancellation: &AtomicBool,
+  (camera_stem, (start, share)): (Option<&str>, (f64, f64)),
+) -> Result<Option<PathBuf>, String> {
+  let EditorArtifact::Recording { camera, id, .. } = artifact else {
+    unreachable!("only a recording is prepared");
   };
-  let saved = save_primary_recording(PrimaryRecordingSaveRequest {
-    app: progress_app,
-    artifact_id: *id,
-    audio_tracks,
-    cancelled: job_cancellation,
-    directory: writing,
-    picture: screen(camera_effects.clone().filter(|_| camera_is_primary)),
-    progress_share: screen_progress_share,
-    stem,
-  })?;
-  let Some(saved) = saved else {
-    return Ok(None);
-  };
-  let next_phase = if include_camera && camera.is_some() {
+  let options = &prepared.options;
+  let camera_stem = camera_stem.filter(|_| options.include_camera);
+  let next_phase = if camera_stem.is_some() {
     "camera"
   } else {
     "finalizing"
@@ -249,30 +156,29 @@ fn save_recording_media(
     ExportProgress {
       artifact_id: *id,
       phase: next_phase,
-      progress_percent: screen_progress_share,
+      progress_percent: start,
     },
   );
-
   let mut saved_camera = None;
-  if include_camera {
+  if let Some(camera_stem) = camera_stem {
     let camera = camera
       .as_ref()
       .ok_or_else(|| "There is no camera track to export".to_owned())?;
     let camera_path = camera_save::save_camera_copy(
       camera,
       writing,
-      stem,
+      camera_stem,
       *id,
       progress_app,
       job_cancellation,
-      screen_progress_share,
-      camera_compression,
-      camera_resolution_scale_percent,
+      (start, share),
+      options.camera_compression,
+      options.camera_resolution_scale_percent,
       // Saved as a file of its own, the camera's canvas is a screen colour,
       // which is what shows where its background is taken away.
-      &camera_key.keyed(camera_output),
-      timeline.as_ref(),
-      camera_effects,
+      &options.camera_key.keyed(&options.recording_output.camera),
+      prepared.timeline.as_ref(),
+      prepared.camera_effects.clone(),
     )
     .inspect_err(|_| {
       let _ = std::fs::remove_file(&saved);
@@ -288,7 +194,7 @@ fn save_recording_media(
     ExportProgress {
       artifact_id: *id,
       phase: "finalizing",
-      progress_percent: 99.0,
+      progress_percent: start + share,
     },
   );
   publish::finish(&saved, saved_camera)?;

@@ -21,6 +21,8 @@ use screenwide_output::ScreenshotOutputSettings;
 pub(super) mod camera_effects;
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 mod export_output;
+#[cfg(all(test, any(target_os = "macos", target_os = "windows")))]
+mod format_benchmark_tests;
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 mod frame_annotations;
 #[cfg(any(target_os = "macos", target_os = "windows"))]
@@ -104,8 +106,65 @@ fn video_bitrate(width: u32, height: u32, compression: u8) -> u64 {
 }
 
 pub fn export(request: CursorExportRequest<'_>) -> Result<ExportRunResult, String> {
-  check_request(&request)?;
-  platform::export(request)
+  export_formats(vec![request])
+}
+
+/// The most formats [`export_formats`] should be asked to draw at once.
+/// Windows encodes each on a hardware encoder session of its own, and
+/// NVIDIA's consumer drivers have allowed as few as three at a time; x264
+/// has no such limit.
+#[cfg(target_os = "windows")]
+pub const FORMATS_PER_PASS: usize = 3;
+#[cfg(not(target_os = "windows"))]
+pub const FORMATS_PER_PASS: usize = usize::MAX;
+
+/// Several formats of one recording, each a file of its own, drawn from one
+/// decode of it: every request reads the same screen and camera at the same
+/// moments, and differs in what it draws, where, and what it is written
+/// with. The first request's progress and cancel stand for all. Either every
+/// file is written or none is.
+pub fn export_formats(requests: Vec<CursorExportRequest<'_>>) -> Result<ExportRunResult, String> {
+  for request in &requests {
+    check_request(request)?;
+  }
+  check_one_recording(&requests)?;
+  platform::export_formats(requests)
+}
+
+/// What `request` reads of the recording and when.
+type Reading<'r> = (
+  &'r Path,
+  (u32, u32),
+  u64,
+  Option<&'r Path>,
+  Option<&'r [screenwide_timeline::TimelineRange]>,
+);
+
+fn reading<'r>(request: &CursorExportRequest<'r>) -> Reading<'r> {
+  (
+    request.screen,
+    (request.width, request.height),
+    request.duration_ms,
+    request.camera.map(|(path, _)| path),
+    request
+      .timeline
+      .map(screenwide_timeline_edit::TimelinePlan::ranges),
+  )
+}
+
+/// Whether `requests` read one recording the same way, which a single decode
+/// of it can serve.
+fn check_one_recording(requests: &[CursorExportRequest<'_>]) -> Result<(), String> {
+  let Some((first, rest)) = requests.split_first() else {
+    return Err("There is no format to export".to_owned());
+  };
+  if rest
+    .iter()
+    .any(|request| reading(request) != reading(first))
+  {
+    return Err("The formats do not read the recording the same way".to_owned());
+  }
+  Ok(())
 }
 
 /// The frame at `output_us` of `request`'s edited video, written to `png` as
@@ -174,78 +233,4 @@ pub fn needs_composition(
 }
 
 #[cfg(test)]
-mod tests {
-  use super::*;
-  use screenwide_output::{MeshGradientPoint, NormalizedSourceRect};
-
-  fn output_settings(width: u32, height: u32) -> ScreenshotOutputSettings {
-    ScreenshotOutputSettings {
-      annotations: Vec::new(),
-      background_color: "#000000".to_owned(),
-      background_image_path: None,
-      background_type: "color".to_owned(),
-      background_radius_percent: 0.0,
-      capture_width_points: 0.0,
-      capture_scale: 0.0,
-      capture_corner_radius: 0.0,
-      clear_area: None,
-      crop_height: f64::from(height),
-      crop_width: f64::from(width),
-      crop_preview: None,
-      crop_x: 0.0,
-      crop_y: 0.0,
-      drop_shadow: false,
-      drop_shadow_strength: None,
-      height,
-      image_width: f64::from(width),
-      image_x: 0.0,
-      image_y: 0.0,
-      inset: None,
-      legacy_mode: None,
-      scene_motion: None,
-      scene_opacity: None,
-      scene_camera_front: None,
-      scene_window: None,
-      background_turn: None,
-      camera_shadow_strength: None,
-      rotation: None,
-      mesh_colors: Vec::new(),
-      mesh_generator: String::new(),
-      mesh_locked_colors: Vec::new(),
-      mesh_points: Vec::<MeshGradientPoint>::new(),
-      mesh_seed: 0,
-      mesh_warp_percent: 0.0,
-      radius: screenwide_scenes::Measure::default(),
-      recenter_inset_color: None,
-      source_crop: NormalizedSourceRect {
-        height: 1.0,
-        width: 1.0,
-        x: 0.0,
-        y: 0.0,
-      },
-      width,
-    }
-  }
-
-  #[test]
-  fn recenter_inset_routes_video_through_composition() {
-    let mut settings = output_settings(1_920, 1_080);
-    assert!(!needs_composition(&settings, 1_920, 1_080));
-
-    settings.recenter_inset_color = Some("#445566".to_owned());
-    assert!(needs_composition(&settings, 1_920, 1_080));
-  }
-
-  #[test]
-  fn source_crop_routes_video_through_composition() {
-    let mut settings = output_settings(1_920, 1_080);
-    settings.source_crop = NormalizedSourceRect {
-      height: 0.8,
-      width: 0.75,
-      x: 0.1,
-      y: 0.1,
-    };
-
-    assert!(needs_composition(&settings, 1_920, 1_080));
-  }
-}
+mod composition_tests;

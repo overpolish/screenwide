@@ -13,7 +13,10 @@ use crate::media_preview::{
 };
 use crate::track_selection::{AudioLayout, TrackSelection};
 
-fn field<T: serde::de::DeserializeOwned>(project: &serde_json::Value, pointer: &str) -> T {
+pub(super) fn field<T: serde::de::DeserializeOwned>(
+  project: &serde_json::Value,
+  pointer: &str,
+) -> T {
   let value = project
     .pointer(pointer)
     .unwrap_or_else(|| panic!("the project has no {pointer}"));

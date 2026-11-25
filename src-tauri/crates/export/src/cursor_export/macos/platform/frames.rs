@@ -2,7 +2,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 //! The macOS side of an exported frame: AVFoundation's decoded planes in,
-//! the shared [`FrameDraw`] over them, and the canvas back out as planes.
+//! the shared [`FrameDraw`] over them, and each format's canvas back out as
+//! planes. Every format is drawn from the one screen frame, converted from
+//! its planes once.
 
 use std::collections::VecDeque;
 
@@ -15,27 +17,21 @@ use screenwide_compositor::compositor::{Compositor, SourceTexture, FORMAT};
 use screenwide_gpu::macos::{bgra_buffer_texture, buffer_plane_texture};
 use screenwide_gpu::Gpu;
 
-pub(super) struct FrameComposer<'a> {
-  gpu: std::sync::Arc<Gpu>,
+/// One format's drawing: its own compositor, what it draws over the screen,
+/// and the canvas it draws on.
+struct FormatDraw<'a> {
   compositor: Compositor,
-  planes: VideoPlanes,
   draw: FrameDraw<'a>,
-  /// The screen frame as the canvas samples it, made from its planes.
-  source: Option<SourceTexture>,
   canvas: wgpu::TextureView,
-  /// Frames submitted and not yet waited for, oldest first, by token.
-  submitted: VecDeque<(u64, wgpu::SubmissionIndex)>,
-  next_token: u64,
 }
 
-impl<'a> FrameComposer<'a> {
-  /// `annotations_within_ms` is the stretch a preview draws; see `ExportAnnotations`.
-  pub(super) fn new<'r: 'a>(
+impl<'a> FormatDraw<'a> {
+  fn new<'r: 'a>(
     request: &CursorExportRequest<'r>,
+    gpu: &std::sync::Arc<Gpu>,
     annotations_within_ms: Option<[u64; 2]>,
   ) -> Result<Self, String> {
-    let gpu = screenwide_gpu::shared(screenwide_gpu::Workload::Heavy)?;
-    let compositor = Compositor::new(&gpu)?;
+    let compositor = Compositor::new(gpu)?;
     compositor.draw_generators_at_half_resolution();
     let (width, height) = screenwide_output::output_dimensions(request.output)?;
     let canvas = gpu
@@ -56,27 +52,79 @@ impl<'a> FrameComposer<'a> {
       })
       .create_view(&Default::default());
     Ok(Self {
-      planes: VideoPlanes::new(&gpu),
-      draw: FrameDraw::new(request, &gpu, annotations_within_ms)?,
-      gpu,
+      draw: FrameDraw::new(request, gpu, annotations_within_ms)?,
       compositor,
-      source: None,
       canvas,
+    })
+  }
+}
+
+pub(super) struct FrameComposer<'a> {
+  gpu: std::sync::Arc<Gpu>,
+  planes: VideoPlanes,
+  /// Every format drawn, the loop's own first where it draws one.
+  formats: Vec<FormatDraw<'a>>,
+  /// Whether the first format is drawn into the loop's own buffer, rather
+  /// than every format into buffers of their own.
+  draws_loop_buffer: bool,
+  /// The screen frame as the canvas samples it, made from its planes.
+  source: Option<SourceTexture>,
+  /// Frames submitted and not yet waited for, oldest first, by token.
+  submitted: VecDeque<(u64, wgpu::SubmissionIndex)>,
+  next_token: u64,
+}
+
+impl<'a> FrameComposer<'a> {
+  /// Draws `requests` from one decoded frame: the first into the loop's own
+  /// buffer where `draws_loop_buffer`, the rest into buffers of their own.
+  /// `annotations_within_ms` is the stretch a preview draws; see
+  /// `ExportAnnotations`.
+  pub(super) fn new<'r: 'a>(
+    requests: &[&CursorExportRequest<'r>],
+    draws_loop_buffer: bool,
+    annotations_within_ms: Option<[u64; 2]>,
+  ) -> Result<Self, String> {
+    let gpu = screenwide_gpu::shared(screenwide_gpu::Workload::Heavy)?;
+    let formats = requests
+      .iter()
+      .map(|request| FormatDraw::new(request, &gpu, annotations_within_ms))
+      .collect::<Result<Vec<_>, _>>()?;
+    Ok(Self {
+      planes: VideoPlanes::new(&gpu),
+      gpu,
+      formats,
+      draws_loop_buffer,
+      source: None,
       submitted: VecDeque::new(),
       next_token: 0,
     })
   }
 
-  /// Draws `frame` into its destination and submits it, answering the token
-  /// `wait` takes once the destination is to be read.
-  pub(super) fn compose(&mut self, frame: &ExportFrame) -> Result<u64, String> {
+  /// Draws `frame` into its destination where the loop's own format is
+  /// drawn there, and the other formats into `beside` in their order, and
+  /// submits them, answering the token `wait` takes once the destinations
+  /// are to be read.
+  pub(super) fn compose(
+    &mut self,
+    frame: &ExportFrame,
+    beside: &[&cv::PixelBuf],
+  ) -> Result<u64, String> {
     // A handle of its own, so `self` can be borrowed mutably while drawing.
     let gpu = std::sync::Arc::clone(&self.gpu);
     let gpu = &*gpu;
     let screen = unsafe { pixel_buffer(frame.screen) }
       .ok_or_else(|| "The export frame has no picture".to_owned())?;
-    let destination = unsafe { pixel_buffer(frame.destination) }
-      .ok_or_else(|| "The export frame has nowhere to be drawn".to_owned())?;
+    let destination = if self.draws_loop_buffer {
+      Some(
+        unsafe { pixel_buffer(frame.destination) }
+          .ok_or_else(|| "The export frame has nowhere to be drawn".to_owned())?,
+      )
+    } else {
+      None
+    };
+    if destination.iter().count() + beside.len() != self.formats.len() {
+      return Err("The export frame has the wrong number of formats to draw".to_owned());
+    }
     let view = |texture: wgpu::Texture| texture.create_view(&Default::default());
     let luma = buffer_plane_texture(gpu, screen, 0, wgpu::TextureFormat::R8Unorm, "screen luma")?;
     let size = (luma.width(), luma.height());
@@ -100,29 +148,37 @@ impl<'a> FrameComposer<'a> {
     let camera = unsafe { pixel_buffer(frame.camera) }
       .map(|pixels| camera_source(gpu, pixels))
       .transpose()?;
-    self.draw.draw(
-      &self.compositor,
-      &self.canvas,
-      &source,
-      camera.as_ref(),
-      (frame.source_us, frame.frame_ms),
-    )?;
-    let luma = buffer_plane_texture(gpu, destination, 0, wgpu::TextureFormat::R8Unorm, "luma")?;
-    let chroma =
-      buffer_plane_texture(gpu, destination, 1, wgpu::TextureFormat::Rg8Unorm, "chroma")?;
-    let mut encoder = gpu
-      .device
-      .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-        label: Some("Screenwide export frame out"),
-      });
-    self
-      .planes
-      .encode(gpu, &mut encoder, &self.canvas, &view(luma), &view(chroma));
+    let destinations = destination.into_iter().chain(beside.iter().copied());
+    let mut submission = None;
+    for (format, destination) in self.formats.iter_mut().zip(destinations) {
+      format.draw.draw(
+        &format.compositor,
+        &format.canvas,
+        &source,
+        camera.as_ref(),
+        (frame.source_us, frame.frame_ms),
+      )?;
+      let luma = buffer_plane_texture(gpu, destination, 0, wgpu::TextureFormat::R8Unorm, "luma")?;
+      let chroma =
+        buffer_plane_texture(gpu, destination, 1, wgpu::TextureFormat::Rg8Unorm, "chroma")?;
+      let mut encoder = gpu
+        .device
+        .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+          label: Some("Screenwide export frame out"),
+        });
+      self.planes.encode(
+        gpu,
+        &mut encoder,
+        &format.canvas,
+        &view(luma),
+        &view(chroma),
+      );
+      submission = Some(gpu.queue.submit([encoder.finish()]));
+    }
+    let submission = submission.ok_or_else(|| "The export has no format to draw".to_owned())?;
     let token = self.next_token;
     self.next_token += 1;
-    self
-      .submitted
-      .push_back((token, gpu.queue.submit([encoder.finish()])));
+    self.submitted.push_back((token, submission));
     Ok(token)
   }
 
