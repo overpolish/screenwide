@@ -51,6 +51,14 @@ impl PreviewScenes {
       .unwrap_or_else(|poisoned| poisoned.into_inner());
     screenwide_annotations::timing::FrameTime::on(&ranges, source_ms).timeline_ms
   }
+
+  /// Whether the recording has a scene to move, its own or a gap's.
+  pub(super) fn move_any(&self) -> bool {
+    self
+      .clips
+      .read()
+      .is_ok_and(|clips| !clips.drawn().is_empty())
+  }
 }
 
 /// Arranges `composition` as `clips` have it `source_ms` into the recording,

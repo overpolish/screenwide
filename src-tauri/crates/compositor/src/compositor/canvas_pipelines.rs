@@ -46,9 +46,11 @@
 //! they are drawn as above, with every path kept, which on Apple's GPUs
 //! costs 15 to 50 ms a frame against 1 to 4, so a pen taken up has the
 //! variant its first stroke will need compiled at once
-//! (`Compositor::prepare_annotation_kind`), and the variant keeping every
-//! path is never compiled for a set of its own there: no frame would draw
-//! with it once the slim one is ready.
+//! (`Compositor::prepare_annotation_kind`), a recording with scenes has each
+//! set's moving twin compiled as the set is first drawn
+//! (`Compositor::set_scenes_move`), and the variant keeping every path is
+//! never compiled for a set of its own there: no frame would draw with it
+//! once the slim one is ready.
 
 /// Whether every annotated draw takes the variant with every kind; see the
 /// module's notes.
@@ -64,10 +66,12 @@ use super::canvas_variants::{covers, every_kind, KindMask};
 use screenwide_gpu::{Gpu, Shader};
 
 mod variant_choice;
+#[cfg(all(test, any(target_os = "macos", target_os = "windows")))]
+mod variant_choice_tests;
 pub use variant_choice::EveryAnnotationKind;
 
 /// What a canvas pipeline draws into.
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq, Eq)]
 pub(super) enum Target {
   /// A whole canvas, written over.
   Canvas = 0,
@@ -89,6 +93,8 @@ pub(super) struct CanvasPipelines {
   /// What each placed layer was last drawn with, by its slot and target:
   /// the sets a pen taken up adds its kind to (`variant_choice.rs`).
   drawn: Mutex<HashMap<(usize, usize), Drawn>>,
+  /// Whether a set new to `drawn` has its moving twin made ready too.
+  scenes_move: AtomicBool,
   /// Whether the variants the build compiled are used, rather than compiled
   /// here from WGSL like any other.
   precompiled: bool,
@@ -157,6 +163,7 @@ impl CanvasPipelines {
       variants: Mutex::default(),
       in_background: AtomicBool::new(false),
       drawn: Mutex::default(),
+      scenes_move: AtomicBool::new(false),
       precompiled,
     }
   }

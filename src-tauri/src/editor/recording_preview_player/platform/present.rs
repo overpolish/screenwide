@@ -53,6 +53,7 @@ pub(in crate::editor::recording_preview_player) fn present<F: PaneFrame>(
   let Some(surface) = sources.preview_surface.as_ref() else {
     return false;
   };
+  surface.set_scenes_move(sources.scenes.move_any());
   let Some(mut settings) = sources
     .composition_settings
     .as_ref()

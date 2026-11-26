@@ -119,6 +119,15 @@ impl WorkspaceScene {
     }
   }
 
+  /// Says whether the frames drawn from now on may move a scene, so what
+  /// moving them takes is made ready in the background beforehand
+  /// (`Compositor::set_scenes_move`).
+  pub fn set_scenes_move(&self, moves: bool) {
+    if let Ok(state) = self.read() {
+      state.compositor.set_scenes_move(moves);
+    }
+  }
+
   /// Draws the caret and selection `typing` holds into its box from now on,
   /// or none with `None`. Answers whether that changes what is drawn.
   pub fn set_typing(&self, typing: Option<(u32, usize, TypingMarks)>) -> bool {

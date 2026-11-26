@@ -99,9 +99,7 @@ impl Compositor {
     let canvas = &self.canvas;
     let bit = kind_bit(kind);
     let brought = canvas_features::of_kind(kind);
-    // A spotlight's blur and a lens's ground are drawn by the variant's
-    // third pipeline.
-    let draws_delta = matches!(kind, AnnotationKind::Spotlight | AnnotationKind::Magnify);
+    let draws_delta = bit & delta_kinds() != 0;
     let drawn = canvas
       .drawn
       .lock()
@@ -117,12 +115,39 @@ impl Compositor {
       }
     }
   }
+
+  /// Says whether the frames drawn from now on may move a scene, as a
+  /// recording's do once it has scenes. While they may, each set a placed
+  /// layer is drawn with has its moving twin, the same set with the scene's
+  /// motion path kept, compiled in the background as the set is first drawn,
+  /// usually while the playhead rests, well before a playback moves the
+  /// scene. A frame holding a lens or a focus has no stand-in
+  /// (`playback_kinds`), so its first moving frame would otherwise be drawn
+  /// with every path kept until its own compiled: measured at 15 to 90 ms a
+  /// frame for over a second, with a lens on the first zoom of a playback.
+  /// A twin ready already, or one a ready stand-in covers, is left as it is;
+  /// so is everything where frames keep every path, as on Windows.
+  pub fn set_scenes_move(&self, moves: bool) {
+    let canvas = &self.canvas;
+    if canvas.scenes_move.swap(moves, Ordering::Relaxed) || !moves {
+      return;
+    }
+    let drawn = canvas
+      .drawn
+      .lock()
+      .map(|drawn| drawn.values().copied().collect::<Vec<_>>())
+      .unwrap_or_default();
+    for (target, kinds, features) in drawn {
+      canvas.prepare_moving(target, kinds, features);
+    }
+  }
 }
 
 impl super::CanvasPipelines {
   /// Notes what the placed layer in `slot` was drawn into `target` with,
-  /// for [`Compositor::prepare_annotation_kind`]: only where frames are
-  /// drawn slim and a preview compiles in the background.
+  /// for [`Compositor::prepare_annotation_kind`], and has a set new to it
+  /// ready for a moving scene ([`Compositor::set_scenes_move`]): only where
+  /// frames are drawn slim and a preview compiles in the background.
   pub(in super::super) fn remember(
     &self,
     slot: usize,
@@ -133,10 +158,38 @@ impl super::CanvasPipelines {
     if features == ALL_FEATURES || !self.in_background.load(Ordering::Relaxed) {
       return;
     }
-    if let Ok(mut drawn) = self.drawn.lock() {
-      drawn.insert((slot, target as usize), (target, kinds, features));
+    let set = (target, kinds, features);
+    let Ok(mut drawn) = self.drawn.lock() else {
+      return;
+    };
+    let is_new = drawn.insert((slot, target as usize), set) != Some(set);
+    drop(drawn);
+    if is_new && self.scenes_move.load(Ordering::Relaxed) {
+      self.prepare_moving(target, kinds, features);
     }
   }
+
+  /// Starts compiling the set's moving twin unless it, or a stand-in that
+  /// covers it, is ready: for `target`, and for the third pipeline where
+  /// the set draws with it (`delta_kinds`).
+  fn prepare_moving(&self, target: Target, kinds: KindMask, features: FeatureMask) {
+    let moving = features | canvas_features::SCENE_MOTION;
+    let variant = self.variant(kinds, moving);
+    let delta = (kinds & delta_kinds() != 0).then_some(Target::Delta);
+    for target in std::iter::once(target).chain(delta) {
+      if variant.pipelines[target as usize].get().is_none()
+        && self.ready_slim_cover(target, kinds, moving).is_none()
+      {
+        self.compile_in_background(&variant, target);
+      }
+    }
+  }
+}
+
+/// The kinds a set also draws with the variant's third pipeline: a
+/// spotlight's blur and a lens's ground.
+fn delta_kinds() -> KindMask {
+  kind_bit(AnnotationKind::Spotlight) | kind_bit(AnnotationKind::Magnify)
 }
 
 /// The kinds the annotated playback variant holds: every kind but a lens

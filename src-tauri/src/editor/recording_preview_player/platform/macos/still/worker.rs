@@ -136,6 +136,9 @@ pub(super) fn show(
   let Some(surface) = sources.preview_surface.as_ref() else {
     return;
   };
+  // A set this still draws for the first time has what a moving scene will
+  // draw it with compiled before playback reaches one.
+  surface.set_scenes_move(sources.scenes.move_any());
   let presented = if let Some(composition) = composition {
     let screen_factor = pane_factor(&target_sizes, 0, composition.recording_output.primary.width);
     let mut screen_output = scaled_output(&composition.recording_output.primary, screen_factor);

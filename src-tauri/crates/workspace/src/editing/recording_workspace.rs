@@ -123,6 +123,12 @@ impl WorkspaceEditor {
     !state.workspace.panes.is_empty()
   }
 
+  /// Says whether the recording's frames may move a scene, which has what
+  /// moving them takes made ready while the playhead rests.
+  pub fn set_scenes_move(&self, moves: bool) {
+    self.inner.host.scene().set_scenes_move(moves);
+  }
+
   /// Moves the hover halo on the retained recording scene and redraws it.
   /// The halo is the one piece of annotation state the pointer changes
   /// without the document changing, so it is set on the scene rather than
