@@ -4,18 +4,18 @@
 //! Where a voice speaks alone, no other voice over it: what its fingerprint
 //! is taken from, and the clip of it the notes keep so whoever took them can
 //! hear who a speaker is and name them, after which the clip is deleted. A
-//! voice never alone for a second is clipped where it speaks longest, over
-//! another or not, so every speaker in the notes can be heard.
+//! voice never alone for a second is clipped from its turns, over another or
+//! not, so every speaker in the notes can be heard.
 
 use screenwide_transcriber::{SpeakerTurn, VoiceClip};
+
+use super::clip_window::{evened, liveliest, CLIP_MS};
 
 /// Samples per millisecond.
 pub const RATE: u64 = 16;
 /// The least stretch worth hearing a voice from, in milliseconds.
 const SHORTEST_MS: u64 = 1_000;
-/// How long a voice's clip is at most, in milliseconds.
-const CLIP_MS: u64 = 5_000;
-/// How far into a stretch its clip starts when there is room, in
+/// How far into a stretch its clip may start when there is room, in
 /// milliseconds, past where the speaker model may still hear the voice
 /// before.
 const CLIP_LEAD_MS: u64 = 250;
@@ -41,8 +41,9 @@ pub fn stretches(turns: &[SpeakerTurn], speaker: u32) -> Vec<(u64, u64)> {
   alone
 }
 
-/// A clip of each voice in `turns` in `audio`: from its longest stretch
-/// alone, or from its longest turn where it is never alone for a second.
+/// A clip of each voice in `turns` in `audio`: the few seconds with the
+/// most speech where it speaks alone, or in its turns where it is never
+/// alone for a second, brought to one level.
 pub fn clips(audio: &[i16], turns: &[SpeakerTurn]) -> Vec<VoiceClip> {
   let mut speakers: Vec<u32> = turns.iter().map(|turn| turn.speaker).collect();
   speakers.sort_unstable();
@@ -50,35 +51,39 @@ pub fn clips(audio: &[i16], turns: &[SpeakerTurn]) -> Vec<VoiceClip> {
   speakers
     .into_iter()
     .filter_map(|speaker| {
-      let (start, end) = stretches(turns, speaker)
-        .first()
-        .copied()
-        .or_else(|| longest_turn(turns, speaker))?;
-      let start = if end - start >= CLIP_MS + CLIP_LEAD_MS {
-        start + CLIP_LEAD_MS
-      } else {
-        start
-      };
-      let end = end.min(start + CLIP_MS);
+      let mut spans = stretches(turns, speaker);
+      if spans.is_empty() {
+        spans = own_turns(turns, speaker);
+      }
+      for (start, end) in &mut spans {
+        if *end - *start >= CLIP_MS + CLIP_LEAD_MS {
+          *start += CLIP_LEAD_MS;
+        }
+      }
+      let (start, end) = liveliest(audio, &spans)?;
       let from = (start * RATE) as usize;
       let to = ((end * RATE) as usize).min(audio.len());
       let mut samples = audio.get(from..to)?.to_vec();
       if samples.is_empty() {
         return None;
       }
+      evened(&mut samples);
       faded(&mut samples);
       Some(VoiceClip { speaker, samples })
     })
     .collect()
 }
 
-/// `speaker`'s longest turn in `turns`, whoever else speaks over it.
-fn longest_turn(turns: &[SpeakerTurn], speaker: u32) -> Option<(u64, u64)> {
-  turns
+/// `speaker`'s turns in `turns`, the longest first, whoever else speaks over
+/// them.
+fn own_turns(turns: &[SpeakerTurn], speaker: u32) -> Vec<(u64, u64)> {
+  let mut own: Vec<(u64, u64)> = turns
     .iter()
     .filter(|turn| turn.speaker == speaker && turn.end_ms > turn.start_ms)
     .map(|turn| (turn.start_ms, turn.end_ms))
-    .max_by_key(|(start, end)| end - start)
+    .collect();
+  own.sort_by_key(|(start, end)| std::cmp::Reverse(end - start));
+  own
 }
 
 fn faded(samples: &mut [i16]) {
@@ -159,7 +164,8 @@ mod tests {
       ]
     );
     assert_eq!(clips[0].samples[0], 0);
-    assert_eq!(clips[0].samples[FADE], 1_000);
+    // A steady 1,000 is quiet, raised as far as a clip is.
+    assert_eq!(clips[0].samples[FADE], 8_000);
   }
 
   #[test]

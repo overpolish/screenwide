@@ -11,6 +11,7 @@
 
 mod alone;
 mod bleed;
+mod clip_window;
 mod speakers;
 mod track;
 mod voices;
