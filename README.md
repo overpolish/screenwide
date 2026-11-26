@@ -36,6 +36,12 @@ Magnify a detail, put one part in focus, spotlight or redact it, and add arrows,
 	</tr>
 </table>
 
+## Formats
+
+Make one recording for every platform. Add TikTok, YouTube Shorts, Instagram or any other format beside the main canvas, and each one lays out the screen, camera, scenes, annotations and captions for its shape, clear of the buttons and captions the app draws over it. Preview a tall format on a phone with the app's interface over the picture, then export every format in one go. Screenshots work the same way.
+
+<img alt="TikTok and YouTube Shorts added beside a recording's main canvas, each previewed on a phone with the app's buttons over the picture" src="./.github/assets/formats.gif" />
+
 ## Sound
 
 Put songs and sound effects on their own track. Find free music and effects in the Library, by mood, tempo and vocals, and drop them on the timeline. Songs that meet are beat-matched and blended, and everything sits under the voice.

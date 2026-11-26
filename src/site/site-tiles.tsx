@@ -57,12 +57,13 @@ function Tile({ body, checkout, clip, label, title }: TileProps) {
   );
 }
 
-/** What is free and what is paid, in the grid's last place. On a wide
- * page the tools fill whole rows of three, so it takes a row of its own,
- * its two halves side by side. */
+/** What is free and what is paid, in the grid's last place. Ten tools fill
+ * whole rows of two, and leave one in the last row of three, so it takes
+ * two places: a row of its own, or the rest of the last row, its two halves
+ * side by side. */
 function Pricing() {
   return (
-    <div className="flex flex-col justify-center gap-group rounded-panel bg-fill p-8 lg:col-span-3 lg:grid lg:grid-cols-2">
+    <div className="flex flex-col justify-center gap-group rounded-panel bg-fill p-8 md:col-span-2 md:grid md:grid-cols-2 md:content-center">
       <div>
         <h2 className="text-tile-title text-fg">{t("site-free-title")}</h2>
         <p className="mt-1 text-tile text-fg-secondary">
@@ -86,6 +87,12 @@ function Pricing() {
 export function SiteTiles() {
   return (
     <section className="grid gap-x-8 gap-y-12 md:grid-cols-2 lg:grid-cols-3">
+      <Tile
+        body={t("site-formats-body")}
+        clip="formats"
+        label={t("site-formats-recording")}
+        title={t("site-formats-title")}
+      />
       <Tile
         body={t("site-sound-body")}
         clip="sound"

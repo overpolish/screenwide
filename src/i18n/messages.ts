@@ -1737,6 +1737,9 @@ export type Messages = {
   "site-footer-privacy": null;
   "site-footer-releases": null;
   "site-footer-requirements": null;
+  "site-formats-body": null;
+  "site-formats-recording": null;
+  "site-formats-title": null;
   "site-free-body": null;
   "site-free-title": null;
   "site-glide-body": null;

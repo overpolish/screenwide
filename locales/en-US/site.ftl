@@ -28,6 +28,10 @@ site-notes-title = Meeting notes
 site-notes-body = Notes of your calls with each speaker told apart, made on your computer.
 # Names the recording of meeting notes at work, for assistive technology.
 site-notes-recording = Notes taken during a call, then opened with each speaker's lines told apart
+site-formats-title = Formats
+site-formats-body = One recording for every platform, laid out clear of each app's buttons and previewed on a phone.
+# Names the recording of formats at work, for assistive technology.
+site-formats-recording = TikTok and YouTube Shorts added beside a recording's main canvas, each previewed on a phone with the app's buttons over the picture
 site-sound-title = Sound
 site-sound-body = Songs and sound effects from the Library, beat-matched and levelled under your voice.
 # Names the recording of the sound track at work, for assistive technology.
