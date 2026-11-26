@@ -4,6 +4,7 @@
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { type ReactNode, useState } from "react";
 
+import { useMicrophoneMute } from "../../microphone/use-microphone";
 import {
   openPermissionSettings,
   openPermissionsWindow,
@@ -111,6 +112,7 @@ export function RecordingIslandControls({
   const isOpenAndIdle = isRecordingUiVisible && status === "idle";
   const displays = useIslandSources(isOpenAndIdle);
   const monitor = useRecordingMonitor(hasConfidenceChecks && status !== "idle");
+  const microphoneMute = useMicrophoneMute();
   const elapsedMs = useElapsedTime(snapshot);
   const moment = usePlacedMoment();
   const writtenBytes = useRecordingWrittenBytes(
@@ -211,6 +213,7 @@ export function RecordingIslandControls({
       hasConfidenceChecks={hasConfidenceChecks}
       isScreenLocked={readiness.isScreenLocked}
       isShown={island.isShown}
+      microphoneMute={microphoneMute}
       mode={islandModeOf(recordingMode, sources.isNotes)}
       moment={moment}
       notch={island.notch}

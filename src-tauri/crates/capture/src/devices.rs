@@ -7,13 +7,15 @@ use cpal::traits::{DeviceTrait, HostTrait};
 use cpal::{Device, SampleFormat, StreamConfig};
 use nokhwa::utils::CameraInfo;
 
+use crate::microphone_choice::SYSTEM_DEFAULT_MICROPHONE;
+
 /// The microphone `device_id` names, or the default one, with the format it
-/// records in.
+/// records in. [`SYSTEM_DEFAULT_MICROPHONE`] names the default too.
 pub fn resolve_microphone(
   device_id: Option<&str>,
 ) -> Result<(Device, StreamConfig, SampleFormat), String> {
   let host = cpal::default_host();
-  let device = match device_id {
+  let device = match device_id.filter(|id| *id != SYSTEM_DEFAULT_MICROPHONE) {
     Some(device_id) => host
       .input_devices()
       .map_err(|error| error.to_string())?

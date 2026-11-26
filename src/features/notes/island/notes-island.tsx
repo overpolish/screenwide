@@ -15,6 +15,7 @@ import { IslandParts } from "../../../primitives/island/island-parts";
 import { type IslandProps } from "../../../primitives/island/island-props";
 import { IslandRow } from "../../../primitives/island/island-row";
 import { IslandRowTitle } from "../../../primitives/island/row-title/island-row-title";
+import { MicrophoneMuteToggle } from "../../microphone/microphone-mute-toggle";
 import { clock } from "../../recording-controls/island/island-names";
 
 import { notesSection } from "./notes-section";
@@ -23,8 +24,9 @@ import type { NotesIslandAction } from "../../../bindings/NotesIslandAction";
 import type { NotesIslandState } from "../../../bindings/NotesIslandState";
 
 // Meeting notes on the island, at the top of the screen. While they are
-// taken the island keeps out of the way: the notebook glyph alone, and under
-// the pointer or focus how long they have run, Discard and Done beside it.
+// taken the island keeps out of the way: the notebook glyph and the
+// microphone, filling with its level and pressed to mute it, and under the
+// pointer or focus how long they have run, Discard and Done beside them.
 // Stopped, a spinner alone says the speakers are being told apart; saved,
 // the row offers to show the notes. A problem says why under the row, with
 // Settings where it is put right.
@@ -33,6 +35,9 @@ import type { NotesIslandState } from "../../../bindings/NotesIslandState";
 export type NotesParts = {
   onAction: (action: NotesIslandAction) => void;
   state: NotesIslandState;
+  /** The microphone the notes hear: its level, and whether it is muted,
+   * which its toggle changes. None where it cannot be shown. */
+  microphone?: NotesMicrophone;
   // The clock's own when not given, as stories fix it.
   /** The time now, in ms since the Unix epoch. */
   now?: number;
@@ -43,6 +48,14 @@ export type NotesIslandProps = Pick<
   "isShown" | "notch" | "onHidden" | "onShapeChange"
 > &
   NotesParts;
+
+/** The microphone as the notes island shows it. */
+export type NotesMicrophone = {
+  isMuted: boolean;
+  /** The microphone's level, 0 to 1. */
+  level: number;
+  onMutedChange: (muted: boolean) => void;
+};
 
 /** The time now, a second at a time, while `ticks`. */
 function useNow(ticks: boolean) {
@@ -75,6 +88,7 @@ function Close({ onPress }: { onPress: () => void }) {
  * reshapes into it from the controls as it does into a recording. */
 export function NotesRow({
   isHovered,
+  microphone,
   now: fixedNow,
   onAction,
   state,
@@ -124,6 +138,15 @@ export function NotesRow({
                   <NotebookPen aria-hidden className="size-icon" />
                 </span>
               )}
+              {state.phase === "taking" && microphone ? (
+                <span className="flex" key="microphone">
+                  <MicrophoneMuteToggle
+                    isMuted={microphone.isMuted}
+                    level={microphone.level}
+                    onMutedChange={microphone.onMutedChange}
+                  />
+                </span>
+              ) : null}
               {showsControls ? (
                 <span className="flex items-center gap-1" key="controls">
                   <span

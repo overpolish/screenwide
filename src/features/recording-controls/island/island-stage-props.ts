@@ -78,6 +78,8 @@ export type IslandStageProps = Pick<
     isCameraFlipped?: boolean;
     /** The camera started but not yet sending its picture. */
     isCameraLoading?: boolean;
+    /** The microphone muted when the story opens; its toggle changes it. */
+    isMicrophoneMuted?: boolean;
     microphone?: Partial<IslandInput>;
     /** Microphone level, 0 to 1. */
     microphoneLevel?: number;
@@ -85,6 +87,7 @@ export type IslandStageProps = Pick<
     microphoneProblem?: "missing";
     /** A moment placed by its shortcut; a voice note runs on while recording. */
     moment?: IslandMoment;
+    onMicrophoneMutedChange?: (muted: boolean) => void;
     // Turned on, it starts for a moment before it is on.
     /** The replay buffer, off when absent; null where it cannot run. */
     replay?: IslandReplay | null;

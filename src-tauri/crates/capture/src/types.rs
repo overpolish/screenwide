@@ -82,6 +82,12 @@ pub struct StartRecordingOptions {
   pub system_audio_process_ids: Vec<u32>,
   #[serde(default)]
   pub microphone_id: Option<String>,
+  /// Whether the system's default microphone stands in for the one chosen
+  /// when that is not connected. A recording started by its shortcut does,
+  /// with no island open to say the microphone is missing; one started from
+  /// the island does not, and the island says so.
+  #[serde(default)]
+  pub microphone_falls_back: bool,
   #[serde(default)]
   pub camera_id: Option<String>,
   #[serde(default)]

@@ -157,7 +157,7 @@ pub(super) fn not_started(app: &AppHandle, file: PathBuf, root: PathBuf) {
   island::show_for_a_moment(
     app,
     NotesIslandState::Problem {
-      problem: NotesProblem::Failed,
+      problem: NotesProblem::NotStarted,
     },
   );
   let app = app.clone();

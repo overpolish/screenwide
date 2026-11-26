@@ -10,7 +10,10 @@ import {
   systemAudioLabel,
   useRecordingInputStore,
 } from "../../recording-inputs/store";
-import { type RecordingFps } from "../../recording-inputs/types";
+import {
+  type RecordingFps,
+  SYSTEM_DEFAULT_MICROPHONE_ID,
+} from "../../recording-inputs/types";
 import { useAudioPreview } from "../../recording-inputs/use-audio-preview";
 import { useCameraPreview } from "../../recording-inputs/use-camera-preview";
 import { useRecordingSourceStore } from "../../recording-sources/store";
@@ -141,7 +144,12 @@ export function useIslandInputs({
     warning: warnings.camera,
   };
   const microphone: IslandInput = {
-    devices: microphones.map(({ id, label }) => ({ id, label })),
+    // The system's default leads, as the choice that follows the system.
+    devices: microphones.map(({ id, label }) => ({
+      id,
+      isPinned: id === SYSTEM_DEFAULT_MICROPHONE_ID,
+      label,
+    })),
     isLocked: isMicrophoneLocked,
     isOn: store.inputs.microphone,
     level: decibelLevel(

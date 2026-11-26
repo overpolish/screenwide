@@ -8,3 +8,5 @@
 recording-inputs-all-audio = All audio
 # Read out while the camera's preview picture is on its way.
 recording-inputs-camera-starting = Starting camera
+# The first choice in the microphone list: whichever microphone macOS or Windows has as its default, followed as it changes. $microphone names the default now.
+recording-inputs-system-default-microphone = System default ({ $microphone })

@@ -28,7 +28,9 @@ notes-island-open-settings = Open Settings
 
 notes-island-no-model = Download the Meeting notes models in Settings to take notes.
 notes-island-no-microphone = Screenwide needs access to the microphone to take notes.
+notes-island-no-microphone-connected = No microphone is connected. Connect one to take notes.
 notes-island-no-system-audio = Screenwide needs Screen Recording access to hear the call.
+notes-island-not-started = The notes could not start. Try again.
 notes-island-failed = Notes stopped. What was written so far is saved.
 
 ## The notes in the projects window

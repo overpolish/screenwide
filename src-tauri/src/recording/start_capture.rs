@@ -17,6 +17,7 @@ pub(super) fn abandon_start(app: &AppHandle, error: &str) {
 pub fn start(app: &AppHandle, options: StartRecordingOptions) -> Result<(), String> {
   crate::capture_overlays::dismiss_all(app);
   validate_options(&options)?;
+  let options = crate::microphone::for_recording(app, options);
   crate::editor::reserve_recording_workspace(app)?;
   // A second start while `Starting` is rejected here, not merely by a
   // disabled button.

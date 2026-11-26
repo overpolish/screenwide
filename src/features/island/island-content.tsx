@@ -85,7 +85,11 @@ export function IslandContent({ island }: { island: IslandHost }) {
     setHasNotes(false);
   const shownNotes =
     hasNotes && notes.state
-      ? { onAction: notes.onAction, state: notes.state }
+      ? {
+          microphone: notes.microphone,
+          onAction: notes.onAction,
+          state: notes.state,
+        }
       : null;
   const swap = useIslandSwap(
     scrolling.isUp

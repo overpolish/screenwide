@@ -996,6 +996,7 @@ export type Messages = {
   "macos-audio-capture-usage": null;
   "macos-camera-usage": null;
   "macos-microphone-usage": null;
+  "microphone-mute": null;
   "notes-island": null;
   "notes-island-close": null;
   "notes-island-confirm-discard": null;
@@ -1006,8 +1007,10 @@ export type Messages = {
   "notes-island-finishing": null;
   "notes-island-loading-model": null;
   "notes-island-no-microphone": null;
+  "notes-island-no-microphone-connected": null;
   "notes-island-no-model": null;
   "notes-island-no-system-audio": null;
+  "notes-island-not-started": null;
   "notes-island-open": null;
   "notes-island-open-settings": null;
   "notes-island-saved": null;
@@ -1268,6 +1271,7 @@ export type Messages = {
   "recording-controls-take-screenshot": null;
   "recording-inputs-all-audio": null;
   "recording-inputs-camera-starting": null;
+  "recording-inputs-system-default-microphone": { microphone: string | number };
   "reference-close": null;
   "reference-close-confirm": null;
   "reference-copied": null;
@@ -1593,6 +1597,8 @@ export type Messages = {
   "settings-shortcut-editor-undo": null;
   "settings-shortcut-keep-awake": null;
   "settings-shortcut-keep-awake-description": null;
+  "settings-shortcut-mute-microphone": null;
+  "settings-shortcut-mute-microphone-description": null;
   "settings-shortcut-pause-resume": null;
   "settings-shortcut-place-moment": { moment: string | number };
   "settings-shortcut-reference-screenshot": null;

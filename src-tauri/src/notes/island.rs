@@ -50,10 +50,14 @@ pub enum NotesProblem {
   NoModel,
   /// Screenwide may not use the microphone.
   NoMicrophone,
+  /// No microphone is connected, the chosen one or any to fall back to.
+  NoMicrophoneConnected,
   /// Screenwide may not hear the computer's audio (macOS's Screen
   /// Recording).
   NoSystemAudio,
-  /// Something else went wrong; the details are in the log.
+  /// The notes could not start; the details are in the log.
+  NotStarted,
+  /// Something else went wrong part-way; the details are in the log.
   Failed,
 }
 

@@ -7,6 +7,7 @@ mod tests;
 pub(crate) mod camera_mode;
 pub(crate) use camera_mode::require_camera_mode;
 use screenwide_capture::devices::camera_id;
+use screenwide_capture::microphone_choice::SYSTEM_DEFAULT_MICROPHONE;
 mod mode_preferences;
 #[cfg(any(test, target_os = "macos"))]
 use mode_preferences::choose_fps;
@@ -86,6 +87,19 @@ fn enumerate_microphones() -> Result<Vec<InputDeviceDetails>, String> {
     .collect::<Vec<_>>();
   result.sort_by_cached_key(|device| (!device.is_default, device.label.to_lowercase()));
   result.dedup_by(|left, right| left.id == right.id);
+  // First, the choice that follows the system's default, named after the
+  // microphone that is the default now.
+  if let Some(current) = result.iter().find(|device| device.is_default) {
+    let system_default = InputDeviceDetails {
+      id: SYSTEM_DEFAULT_MICROPHONE.to_owned(),
+      label: screenwide_i18n::t!(
+        "recording-inputs-system-default-microphone",
+        microphone = current.label.clone()
+      ),
+      is_default: false,
+    };
+    result.insert(0, system_default);
+  }
   Ok(result)
 }
 

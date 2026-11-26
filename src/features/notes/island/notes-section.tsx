@@ -16,8 +16,12 @@ const problemMessage = (problem: NotesProblem) => {
       return t("notes-island-no-model");
     case "noMicrophone":
       return t("notes-island-no-microphone");
+    case "noMicrophoneConnected":
+      return t("notes-island-no-microphone-connected");
     case "noSystemAudio":
       return t("notes-island-no-system-audio");
+    case "notStarted":
+      return t("notes-island-not-started");
     case "failed":
       return t("notes-island-failed");
   }

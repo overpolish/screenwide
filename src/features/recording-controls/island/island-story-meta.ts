@@ -61,6 +61,7 @@ export const islandMeta = {
     onDisplayChange: fn(),
     onHidden: fn(),
     onInputChange: fn(),
+    onMicrophoneMutedChange: fn(),
     onModeChange: fn(),
     onOpenPermissions: fn(),
     onPanelChange: fn(),

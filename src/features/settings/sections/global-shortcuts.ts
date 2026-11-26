@@ -23,6 +23,11 @@ export const recordingShortcuts = (): GlobalShortcut[] => [
     label: t("settings-shortcut-pause-resume"),
   },
   {
+    action: "toggleMicrophoneMute",
+    description: t("settings-shortcut-mute-microphone-description"),
+    label: t("settings-shortcut-mute-microphone"),
+  },
+  {
     action: "saveReplay",
     description: t("settings-shortcut-save-replay-description"),
     label: t("settings-shortcut-save-replay"),

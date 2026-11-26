@@ -34,11 +34,15 @@ pub(crate) fn listening_setup(app: &AppHandle) -> Result<Setup, DictationProblem
 }
 
 /// The setup for a dictation on `microphone`, and its cleanup model if it
-/// has one, or why there can be none.
+/// has one, or why there can be none. The microphone is the one chosen, or
+/// the system's default while it is not connected.
 pub(super) fn setup(
   app: &AppHandle,
   microphone: Option<String>,
 ) -> Result<(Setup, Spoken, Option<CleanupModel>), DictationProblem> {
+  let microphone = microphone.map(|chosen| {
+    screenwide_capture::microphone_choice::available_microphone(&chosen).unwrap_or(chosen)
+  });
   let language = language::resolved(&language::current());
   let (model, writes) = models::dictation();
   let mut paths = models::is_downloaded(app, model)

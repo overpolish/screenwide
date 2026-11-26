@@ -25,6 +25,11 @@ const meta = {
   },
   args: {
     isShown: true,
+    microphone: {
+      isMuted: false,
+      level: 0.45,
+      onMutedChange: fn(),
+    },
     now: NOW,
     onAction: fn(),
     state: { loading: false, phase: "taking", startedMs: STARTED_MS },
@@ -64,6 +69,16 @@ type Story = StoryObj<typeof meta>;
 
 export const Taking: Story = {};
 
+export const MicrophoneMuted: Story = {
+  args: {
+    microphone: {
+      isMuted: true,
+      level: 0,
+      onMutedChange: fn(),
+    },
+  },
+};
+
 export const LoadingModel: Story = {
   args: { state: { loading: true, phase: "taking", startedMs: STARTED_MS } },
 };
@@ -85,6 +100,14 @@ export const NoModel: Story = {
 
 export const NoMicrophone: Story = {
   args: { state: { phase: "problem", problem: "noMicrophone" } },
+};
+
+export const NoMicrophoneConnected: Story = {
+  args: { state: { phase: "problem", problem: "noMicrophoneConnected" } },
+};
+
+export const NotStarted: Story = {
+  args: { state: { phase: "problem", problem: "notStarted" } },
 };
 
 export const Failed: Story = {

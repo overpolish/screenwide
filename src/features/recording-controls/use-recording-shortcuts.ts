@@ -51,7 +51,7 @@ export function useRecordingShortcuts() {
         return;
       }
       if (payload !== "startStopRecording") return;
-      startRecordingOptions()
+      startRecordingOptions({ fromShortcut: true })
         .then(startRecording)
         .catch((error: unknown) => {
           console.error("Could not start the recording", error);

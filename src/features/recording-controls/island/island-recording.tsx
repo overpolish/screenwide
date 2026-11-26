@@ -11,6 +11,7 @@ import { CircularProgress } from "../../../primitives/circular-progress/circular
 import { IslandParts } from "../../../primitives/island/island-parts";
 import { IslandRow } from "../../../primitives/island/island-row";
 import { formatBytes } from "../../editor/duration";
+import { MicrophoneMuteToggle } from "../../microphone/microphone-mute-toggle";
 
 import { LevelFill } from "./island-glyphs";
 import { BreathingDot, LiveControls } from "./island-live";
@@ -234,9 +235,22 @@ export function RecordingRow({
         <span className="flex items-center gap-1 ps-2">
           <BreathingDot isPaused={isPaused} />
           {hasNotch && size ? <span className="ms-1 flex">{size}</span> : null}
+          {/* The microphone takes its mute whether or not the checks are on:
+              muting must not depend on a setting about what is shown. */}
+          {props.microphone.isOn && props.microphoneMute ? (
+            <MicrophoneMuteToggle
+              isMuted={props.microphoneMute.isMuted}
+              level={
+                props.hasConfidenceChecks && !isPaused
+                  ? (props.microphone.level ?? 0)
+                  : 0
+              }
+              onMutedChange={props.microphoneMute.onMutedChange}
+            />
+          ) : null}
           {props.hasConfidenceChecks ? (
             <>
-              {props.microphone.isOn ? (
+              {props.microphone.isOn && !props.microphoneMute ? (
                 <ConfidenceMeter
                   kind="microphone"
                   level={isPaused ? 0 : props.microphone.level}

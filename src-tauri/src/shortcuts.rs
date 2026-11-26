@@ -50,38 +50,13 @@ pub use system_keys::{
   __cmd__set_replace_system_keys, __tauri_command_name_set_replace_system_keys,
 };
 pub(crate) use system_keys::{system_shortcuts, SystemShortcut};
+mod native_callback;
+pub(crate) use native_callback::{during_native_callback, in_native_callback};
 
 const SHORTCUTS_FILE: &str = "shortcuts.json";
 const SHORTCUT_ACTION_EVENT: &str = "global-shortcut://action";
 const SCREENSHOT_SHORTCUT_REQUESTED_EVENT: &str = "screenshot-region://shortcut-requested";
 static CAPTURING: AtomicBool = AtomicBool::new(false);
-
-thread_local! {
-  static IN_NATIVE_CALLBACK: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
-}
-
-/// Runs the body of a native global-shortcut callback.
-///
-/// The plugin holds its shortcut registry locked for as long as a callback
-/// runs, and that mutex is not reentrant: registering or releasing any
-/// shortcut from inside one deadlocks the app. Anything a callback reaches
-/// that needs the registry asks [`in_native_callback`] and waits for a later
-/// turn instead.
-pub(crate) fn during_native_callback<T>(work: impl FnOnce() -> T) -> T {
-  struct Guard;
-  impl Drop for Guard {
-    fn drop(&mut self) {
-      IN_NATIVE_CALLBACK.set(false);
-    }
-  }
-  IN_NATIVE_CALLBACK.set(true);
-  let _guard = Guard;
-  work()
-}
-
-pub(crate) fn in_native_callback() -> bool {
-  IN_NATIVE_CALLBACK.get()
-}
 
 #[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, PartialEq, Serialize, TS)]
 #[serde(rename_all = "camelCase")]
@@ -106,6 +81,9 @@ pub enum ShortcutAction {
   Dictate,
   /// Starts notes of a call; pressed while they are taken, stops them.
   TakeNotes,
+  /// Mutes the microphone of a recording or of notes; pressed again,
+  /// unmutes it.
+  ToggleMicrophoneMute,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize, TS)]

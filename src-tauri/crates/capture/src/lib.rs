@@ -29,6 +29,8 @@ pub mod listening;
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 mod lost_audio;
 pub mod microphone;
+pub mod microphone_choice;
+pub mod microphone_mute;
 pub mod monitor;
 pub mod note_gate;
 #[cfg(target_os = "macos")]

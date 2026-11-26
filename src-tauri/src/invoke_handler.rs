@@ -212,6 +212,8 @@ pub(crate) fn invoke_handler() -> impl Fn(tauri::ipc::Invoke) -> bool + Send + S
     dictation::island::dictation_island_state,
     dictation::island::dictation_island_action,
     dictation::set_dictation_microphone,
+    microphone::microphone_muted,
+    microphone::set_microphone_muted,
     notes::start_notes,
     notes::stop_notes,
     notes::island::notes_island_state,

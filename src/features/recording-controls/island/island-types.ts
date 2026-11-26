@@ -130,6 +130,12 @@ export type RecordingIslandProps = {
   isScreenLocked?: boolean;
   /** Whether it is out; hidden, it is tucked into the notch, or gone. */
   isShown?: boolean;
+  /** The recorded microphone's mute, while recording: on, its glyph is
+   * crossed out and it records silence. */
+  microphoneMute?: {
+    isMuted: boolean;
+    onMutedChange: (muted: boolean) => void;
+  };
   /** A moment just placed or still being held, shown in the time's place. */
   moment?: IslandMoment | null;
   /** The notch of the screen the island is on, measured; none where the

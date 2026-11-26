@@ -5,7 +5,14 @@ import type { Region } from "./Region";
 /**
  * Options assembled by the recording controls from the source and input stores.
  */
-export type StartRecordingOptions = { mode: RecordingMode, monitorId: number | null, windowId: number | null, region: Region | null, showCursor: boolean, captureKeyboardShortcuts: boolean, systemAudio: boolean, systemAudioApplicationIds: Array<string>, systemAudioProcessIds: Array<number>, microphoneId: string | null, cameraId: string | null, cameraWidth: number | null, cameraHeight: number | null, cameraFps: number | null, cameraFlipped: boolean, 
+export type StartRecordingOptions = { mode: RecordingMode, monitorId: number | null, windowId: number | null, region: Region | null, showCursor: boolean, captureKeyboardShortcuts: boolean, systemAudio: boolean, systemAudioApplicationIds: Array<string>, systemAudioProcessIds: Array<number>, microphoneId: string | null, 
+/**
+ * Whether the system's default microphone stands in for the one chosen
+ * when that is not connected. A recording started by its shortcut does,
+ * with no island open to say the microphone is missing; one started from
+ * the island does not, and the island says so.
+ */
+microphoneFallsBack: boolean, cameraId: string | null, cameraWidth: number | null, cameraHeight: number | null, cameraFps: number | null, cameraFlipped: boolean, 
 /**
  * Anti-flicker for 50 Hz mains (PAL): the camera runs at a PAL cadence on
  * macOS and has its power line frequency control set on Windows.

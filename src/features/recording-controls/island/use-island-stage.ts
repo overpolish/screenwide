@@ -59,6 +59,9 @@ export function useIslandStage(props: IslandStageProps): RecordingIslandProps {
       : 0,
   );
   const { changeReplay, replay } = useStageReplay(props.replay);
+  const [isMicrophoneMuted, setIsMicrophoneMuted] = useState(
+    props.isMicrophoneMuted ?? false,
+  );
 
   const [inputs, setInputs] = useState<Record<IslandInputKind, IslandInput>>(
     () => ({
@@ -149,6 +152,13 @@ export function useIslandStage(props: IslandStageProps): RecordingIslandProps {
       ...inputs.microphone,
       level: level("microphone", props.microphoneLevel),
       warning: microphoneWarning,
+    },
+    microphoneMute: {
+      isMuted: isMicrophoneMuted,
+      onMutedChange: (muted) => {
+        props.onMicrophoneMutedChange?.(muted);
+        setIsMicrophoneMuted(muted);
+      },
     },
     mode,
     moment,

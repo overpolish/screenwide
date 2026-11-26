@@ -253,7 +253,8 @@ fn start_microphone(
   };
   let callback_monitor = Arc::clone(&monitor);
   let stream = source.start(
-    Arc::new(move |buffer| {
+    Arc::new(move |mut buffer: microphone::Buffer| {
+      crate::microphone_mute::heard(&mut buffer.samples);
       callback_monitor.send_microphone(&buffer.samples);
       write(buffer);
     }),

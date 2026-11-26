@@ -7,6 +7,12 @@ export type InputDevice = {
   isDefault?: boolean;
 };
 
+/** The microphone choice that follows the system: whichever microphone
+ * macOS or Windows has as its default when a session opens. Rust lists it
+ * first and opens it by this id (`SYSTEM_DEFAULT_MICROPHONE` in
+ * `crates/capture/src/microphone_choice.rs`). */
+export const SYSTEM_DEFAULT_MICROPHONE_ID = "default";
+
 /** One exact native capture mode advertised by a physical camera. */
 export type CameraResolution = InputDevice & {
   fps: number;

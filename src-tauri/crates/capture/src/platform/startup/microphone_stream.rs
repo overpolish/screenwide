@@ -34,7 +34,8 @@ pub(super) fn start(
     write
   };
   let sample_monitor = Arc::clone(monitor);
-  let on_buffer = Arc::new(move |buffer: MicrophoneBuffer| {
+  let on_buffer = Arc::new(move |mut buffer: MicrophoneBuffer| {
+    crate::microphone_mute::heard(&mut buffer.samples);
     sample_monitor.send_microphone(&buffer.samples);
     write(buffer);
   });

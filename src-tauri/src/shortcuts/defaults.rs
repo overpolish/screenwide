@@ -61,6 +61,12 @@ impl Default for ShortcutSettings {
           action: ShortcutAction::TakeNotes,
           shortcut: Some("CommandOrControl+Shift+Digit1".to_owned()),
         },
+        // Left unset: calls own the keys their apps mute with, and a global
+        // shortcut on one would take it from them.
+        ShortcutBinding {
+          action: ShortcutAction::ToggleMicrophoneMute,
+          shortcut: None,
+        },
       ],
       replace_system_keys: true,
       system_keys_announced: false,

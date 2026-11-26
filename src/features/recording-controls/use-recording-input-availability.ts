@@ -14,6 +14,7 @@ import {
   CameraDevice,
   CameraResolution,
   InputDevice,
+  SYSTEM_DEFAULT_MICROPHONE_ID,
   SystemAudioSource,
 } from "../recording-inputs/types";
 
@@ -24,7 +25,8 @@ const selectedDeviceIsDetected = (
   detected: InputDevice[],
 ) =>
   detected.some((device) => device.id === selected.id) ||
-  (selected.id === "default" && detected.some((device) => device.isDefault));
+  (selected.id === SYSTEM_DEFAULT_MICROPHONE_ID &&
+    detected.some((device) => device.isDefault));
 
 type DetectionResult<T> = {
   key: string;

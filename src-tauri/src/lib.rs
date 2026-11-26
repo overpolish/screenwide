@@ -31,6 +31,7 @@ mod keep_awake;
 mod launch_at_login;
 mod licensing;
 mod menu_freeze;
+mod microphone;
 mod microsoft_store;
 mod moments;
 mod monitor_topology;

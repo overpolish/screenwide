@@ -25,6 +25,7 @@ pub(super) const fn action_window(action: ShortcutAction) -> Option<WindowLabel>
     | ShortcutAction::RulerOverlay
     | ShortcutAction::SaveReplay
     | ShortcutAction::ToggleKeepAwake
+    | ShortcutAction::ToggleMicrophoneMute
     | ShortcutAction::Dictate => None,
   }
 }
@@ -195,6 +196,11 @@ pub(super) fn carry_out(app: &AppHandle, action: ShortcutAction) {
     crate::dictation::pressed(app);
     return;
   }
+  // Muting changes what the microphone hears, nothing on screen.
+  if action == ShortcutAction::ToggleMicrophoneMute {
+    crate::microphone::toggle_muted(app);
+    return;
+  }
   // Notes listen to a call and draw nothing, so nothing on screen goes
   // either. They start from the island's choice of microphone and system
   // audio, which only its page holds.
@@ -247,6 +253,8 @@ pub(super) fn carry_out(app: &AppHandle, action: ShortcutAction) {
       let _ = crate::recording::replay::save(app);
     }
     ShortcutAction::ToggleKeepAwake => crate::keep_awake::toggle(app),
-    ShortcutAction::Dictate | ShortcutAction::TakeNotes => unreachable!("handled above"),
+    ShortcutAction::Dictate | ShortcutAction::TakeNotes | ShortcutAction::ToggleMicrophoneMute => {
+      unreachable!("handled above")
+    }
   }
 }

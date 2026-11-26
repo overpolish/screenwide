@@ -297,6 +297,7 @@ fn screen_options() -> StartRecordingOptions {
     system_audio_application_ids: Vec::new(),
     system_audio_process_ids: Vec::new(),
     microphone_id: None,
+    microphone_falls_back: false,
     camera_id: None,
     camera_width: None,
     camera_height: None,

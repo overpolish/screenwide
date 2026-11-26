@@ -22,8 +22,9 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use chrono::Local;
 use screenwide_capture::listening::Listening;
+use screenwide_capture::microphone_choice::{available_microphone, SYSTEM_DEFAULT_MICROPHONE};
 use screenwide_capture::monitor::RecordingMonitor;
-use screenwide_capture::SystemAudioSelection;
+use screenwide_capture::{RecordingStatus, SystemAudioSelection};
 use screenwide_notes::{Failure, NotesModels, Session, Setup};
 use screenwide_project::{Manifest, NotesManifest};
 use screenwide_speech::catalogue;
@@ -107,7 +108,7 @@ fn start(app: &AppHandle, options: StartNotesOptions) -> Result<(), NotesProblem
   }
   let failed = |error: String| {
     eprintln!("Could not take notes: {error}");
-    NotesProblem::Failed
+    NotesProblem::NotStarted
   };
   if !models::can_take_notes(app) {
     return Err(NotesProblem::NoModel);
@@ -117,6 +118,25 @@ fn start(app: &AppHandle, options: StartNotesOptions) -> Result<(), NotesProblem
     return Err(failed("The notes models are not as catalogued".to_owned()));
   };
   let vad = models::vad_model(app).map_err(failed)?;
+  // Notes always hear the microphone, as a call has two sides: the one
+  // chosen, or the system's default while it is not connected.
+  let chosen = options
+    .microphone_id
+    .unwrap_or_else(|| SYSTEM_DEFAULT_MICROPHONE.to_owned());
+  let microphone_id = available_microphone(&chosen).map_err(|error| {
+    eprintln!("Could not find a microphone for notes: {error}");
+    NotesProblem::NoMicrophoneConnected
+  })?;
+  crate::microphone::session_started(app);
+  // The island reads the microphone's level from the recording's monitor.
+  // A recording running keeps it, and the notes hear on one of their own.
+  let monitor = if crate::recording::snapshot(app).status == RecordingStatus::Idle {
+    let monitor = crate::recording::confidence_monitor(app);
+    monitor.configure(true, true, false);
+    monitor
+  } else {
+    Arc::new(RecordingMonitor::default())
+  };
   let started_at = Local::now().naive_local();
   let title = started_at.format("Notes %Y-%m-%d at %H.%M.%S").to_string();
   let project = crate::projects_folder::create(app, &title).map_err(failed)?;
@@ -138,13 +158,13 @@ fn start(app: &AppHandle, options: StartNotesOptions) -> Result<(), NotesProblem
     language: language::resolved(&language::current()),
     words: words::current(),
     listening: Listening {
-      microphone_id: options.microphone_id,
+      microphone_id: Some(microphone_id),
       system_audio: SystemAudioSelection {
         application_ids: options.system_audio_application_ids,
         enabled: true,
         process_ids: options.system_audio_process_ids,
       },
-      monitor: Arc::new(RecordingMonitor::default()),
+      monitor,
       on_failure: Arc::new(move |error: String| {
         eprintln!("Listening for notes failed: {error}");
         stop(&reporter);

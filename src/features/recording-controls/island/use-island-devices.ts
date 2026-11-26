@@ -19,6 +19,7 @@ import {
   cameraRequestFps,
   InputDevice,
   type RecordingFps,
+  SYSTEM_DEFAULT_MICROPHONE_ID,
   SystemAudioSource,
 } from "../../recording-inputs/types";
 
@@ -143,10 +144,19 @@ export function useIslandDevices({
         setMicrophones(next);
         const state = useRecordingInputStore.getState();
         const selected = state.selectedMicrophone;
+        // With nothing chosen, the island follows the system's default
+        // rather than keeping the microphone that is the default now. Its
+        // name follows the default too, so it is taken again as it changes.
         const microphone = selected
           ? findSavedDevice(selected, next)
-          : firstDefault(next);
-        if (microphone && microphone.id !== selected?.id)
+          : (next.find(
+              (device) => device.id === SYSTEM_DEFAULT_MICROPHONE_ID,
+            ) ?? firstDefault(next));
+        if (
+          microphone &&
+          (microphone.id !== selected?.id ||
+            microphone.label !== selected.label)
+        )
           state.setSelectedMicrophone(microphone);
       },
       isMicrophoneOpen,

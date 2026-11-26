@@ -3,4 +3,4 @@
 /**
  * Why notes could not be taken.
  */
-export type NotesProblem = "noModel" | "noMicrophone" | "noSystemAudio" | "failed";
+export type NotesProblem = "noModel" | "noMicrophone" | "noMicrophoneConnected" | "noSystemAudio" | "notStarted" | "failed";
