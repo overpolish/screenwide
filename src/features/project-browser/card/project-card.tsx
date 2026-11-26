@@ -72,13 +72,21 @@ function useRecordedAt() {
     minute: "2-digit",
     weekday: "long",
   });
+  const time = useDateFormatter({ hour: "numeric", minute: "2-digit" });
   const day = useDateFormatter({ day: "numeric", month: "short" });
   const date = useDateFormatter({ dateStyle: "medium" });
   return (createdMs: number) => {
-    const formatter = { date, day, weekday }[
-      recordedStyle(createdMs, new Date())
-    ];
-    return formatter.format(new Date(createdMs));
+    const recorded = new Date(createdMs);
+    const style = recordedStyle(createdMs, new Date());
+    if (style === "today")
+      return t("project-browser-recorded-today", {
+        time: time.format(recorded),
+      });
+    if (style === "yesterday")
+      return t("project-browser-recorded-yesterday", {
+        time: time.format(recorded),
+      });
+    return { date, day, weekday }[style].format(recorded);
   };
 }
 

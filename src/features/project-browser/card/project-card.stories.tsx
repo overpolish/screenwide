@@ -95,11 +95,13 @@ export const Kinds: Story = {
   ),
 };
 
-// Today, this week, this year and a past year: one of each date style.
+// Today, yesterday, this week, this year and a past year: one of each date
+// style.
 const recordedAt = () => {
   const now = new Date();
   return [
     daysAgo(0, 9),
+    daysAgo(1, 14),
     daysAgo(4, 16),
     new Date(now.getFullYear(), 0, 1, 11).getTime(),
     daysAgo(400, 9),
@@ -107,9 +109,9 @@ const recordedAt = () => {
 };
 
 export const RecordedDates: Story = {
-  parameters: { controls: { disable: true }, stage: { width: 1024 } },
+  parameters: { controls: { disable: true }, stage: { width: 1280 } },
   render: (args) => (
-    <div className="grid grid-cols-4 gap-x-separate">
+    <div className="grid grid-cols-5 gap-x-separate">
       {recordedAt().map((createdMs) => (
         <ProjectCard
           key={createdMs}

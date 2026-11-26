@@ -37,13 +37,15 @@ const midnight = (now: Date, daysAgo: number) =>
   ).getTime();
 
 /** How a card says when its project was recorded, as short as still tells
- * it apart: the weekday and time within the last six days, whose weekdays
- * are all different; the day and month for the rest of this year; the full
- * date before that. */
+ * it apart: today or yesterday and the time; the weekday and time for the
+ * rest of the last six days, whose weekdays are all different; the day and
+ * month for the rest of this year; the full date before that. */
 export function recordedStyle(
   recordedMs: number,
   now: Date,
-): "date" | "day" | "weekday" {
+): "date" | "day" | "today" | "weekday" | "yesterday" {
+  if (recordedMs >= midnight(now, 0)) return "today";
+  if (recordedMs >= midnight(now, 1)) return "yesterday";
   if (recordedMs >= midnight(now, 6)) return "weekday";
   return new Date(recordedMs).getFullYear() === now.getFullYear()
     ? "day"

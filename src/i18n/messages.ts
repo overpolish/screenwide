@@ -1168,6 +1168,8 @@ export type Messages = {
   "project-browser-project-name": null;
   "project-browser-recent": null;
   "project-browser-recently-deleted": null;
+  "project-browser-recorded-today": { time: string | number };
+  "project-browser-recorded-yesterday": { time: string | number };
   "project-browser-remove-from-recent": null;
   "project-browser-remove-location": null;
   "project-browser-restore": null;

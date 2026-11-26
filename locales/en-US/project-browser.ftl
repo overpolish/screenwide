@@ -167,6 +167,9 @@ project-browser-group-today = Today
 project-browser-group-yesterday = Yesterday
 project-browser-group-previous-week = Previous 7 Days
 project-browser-group-unknown = Unknown Date
+# When a project card's recording was made, today or yesterday. $time is the time of day, as "14:32" or "2:32 PM".
+project-browser-recorded-today = Today at { $time }
+project-browser-recorded-yesterday = Yesterday at { $time }
 # How long a project in Recently Deleted has before it goes to the Trash.
 project-browser-days-left =
     { $days ->

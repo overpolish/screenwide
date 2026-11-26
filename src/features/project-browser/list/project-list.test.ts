@@ -119,8 +119,14 @@ describe("groupByDate", () => {
 });
 
 describe("recordedStyle", () => {
-  it("names the weekday within the last six days, whose weekdays differ", () => {
-    expect(recordedStyle(at(2026, 9, 8, 9), now)).toBe("weekday");
+  it("says today and yesterday by the calendar day, not 24 hours", () => {
+    expect(recordedStyle(at(2026, 9, 8, 0, 0), now)).toBe("today");
+    expect(recordedStyle(at(2026, 9, 7, 23, 59), now)).toBe("yesterday");
+    expect(recordedStyle(at(2026, 9, 7, 0, 0), now)).toBe("yesterday");
+  });
+
+  it("names the weekday for the rest of the last six days, whose weekdays differ", () => {
+    expect(recordedStyle(at(2026, 9, 6, 23, 59), now)).toBe("weekday");
     expect(recordedStyle(at(2026, 9, 2, 0, 0), now)).toBe("weekday");
     expect(recordedStyle(at(2026, 9, 1, 23, 59), now)).toBe("day");
   });
