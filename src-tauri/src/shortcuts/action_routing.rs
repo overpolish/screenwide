@@ -25,6 +25,7 @@ pub(super) const fn action_window(action: ShortcutAction) -> Option<WindowLabel>
     | ShortcutAction::RulerOverlay
     | ShortcutAction::SaveReplay
     | ShortcutAction::ToggleKeepAwake
+    | ShortcutAction::ToggleKeepScreenOn
     | ShortcutAction::ToggleMicrophoneMute
     | ShortcutAction::Dictate => None,
   }
@@ -114,8 +115,10 @@ pub(super) const fn preserved_capture_overlays(
     ],
     ShortcutAction::RulerOverlay => &[crate::capture_overlays::CaptureOverlay::Ruler],
     // Saving looks back at what was on screen; whatever is up stays up. Keep
-    // Awake has nothing to do with what is on screen.
-    ShortcutAction::SaveReplay | ShortcutAction::ToggleKeepAwake => &[
+    // Awake and Keep Screen On have nothing to do with what is on screen.
+    ShortcutAction::SaveReplay
+    | ShortcutAction::ToggleKeepAwake
+    | ShortcutAction::ToggleKeepScreenOn => &[
       crate::capture_overlays::CaptureOverlay::Annotate,
       crate::capture_overlays::CaptureOverlay::Ruler,
       crate::capture_overlays::CaptureOverlay::TextRecognition,
@@ -253,6 +256,7 @@ pub(super) fn carry_out(app: &AppHandle, action: ShortcutAction) {
       let _ = crate::recording::replay::save(app);
     }
     ShortcutAction::ToggleKeepAwake => crate::keep_awake::toggle(app),
+    ShortcutAction::ToggleKeepScreenOn => crate::keep_awake::toggle_screen_on(app),
     ShortcutAction::Dictate | ShortcutAction::TakeNotes | ShortcutAction::ToggleMicrophoneMute => {
       unreachable!("handled above")
     }

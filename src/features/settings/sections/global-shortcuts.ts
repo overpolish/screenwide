@@ -53,6 +53,11 @@ export const keepAwakeShortcuts = (): GlobalShortcut[] => [
     description: t("settings-shortcut-keep-awake-description"),
     label: t("settings-shortcut-keep-awake"),
   },
+  {
+    action: "toggleKeepScreenOn",
+    description: t("settings-shortcut-keep-screen-on-description"),
+    label: t("settings-shortcut-keep-screen-on"),
+  },
 ];
 
 export const dictationShortcuts = (): GlobalShortcut[] => [

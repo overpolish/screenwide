@@ -10,7 +10,7 @@ settings-add-moment = Add Moment
 settings-shortcuts-feature-off = Turn on { $feature } to use these shortcuts.
 settings-recording = Recording
 settings-screenshots = Screenshots
-# The Shortcuts pane's group for Keep Awake, the tray's switch that keeps the computer awake and its user shown as active.
+# The Shortcuts pane's group for Keep Awake, the tray's switch that stops the computer sleeping when idle.
 settings-keep-awake = Keep Awake
 # The Shortcuts pane's group for dictation, which types what is said into any app.
 settings-dictation = Dictation
@@ -269,7 +269,9 @@ settings-shortcut-screenshot-description = Copies an area, ready to paste, save 
 settings-shortcut-reference-screenshot = Keep a reference
 settings-shortcut-reference-screenshot-description = Choose an area to keep on screen at its true size.
 settings-shortcut-keep-awake = Turn Keep Awake on or off
-settings-shortcut-keep-awake-description = Keeps the computer awake and shows you as active.
+settings-shortcut-keep-awake-description = Keeps the computer awake. The display still turns off.
+settings-shortcut-keep-screen-on = Keep the screen on
+settings-shortcut-keep-screen-on-description = Keeps the computer awake and the display on while unlocked.
 settings-shortcut-dictate = Dictate
 settings-shortcut-dictate-description = Hold to talk, or tap to start and stop.
 settings-shortcut-take-notes = Take notes

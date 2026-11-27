@@ -54,6 +54,10 @@ impl Default for ShortcutSettings {
           shortcut: None,
         },
         ShortcutBinding {
+          action: ShortcutAction::ToggleKeepScreenOn,
+          shortcut: None,
+        },
+        ShortcutBinding {
           action: ShortcutAction::Dictate,
           shortcut: Some("CommandOrControl+Shift+Space".to_owned()),
         },

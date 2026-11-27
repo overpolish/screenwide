@@ -1599,6 +1599,8 @@ export type Messages = {
   "settings-shortcut-editor-undo": null;
   "settings-shortcut-keep-awake": null;
   "settings-shortcut-keep-awake-description": null;
+  "settings-shortcut-keep-screen-on": null;
+  "settings-shortcut-keep-screen-on-description": null;
   "settings-shortcut-mute-microphone": null;
   "settings-shortcut-mute-microphone-description": null;
   "settings-shortcut-pause-resume": null;
@@ -1890,6 +1892,8 @@ export type Messages = {
   "tray-discard-recording": null;
   "tray-keep-awake-off": null;
   "tray-keep-awake-on": null;
+  "tray-keep-screen-on-off": null;
+  "tray-keep-screen-on-on": null;
   "tray-new-blank-canvas": null;
   "tray-open": null;
   "tray-open-clipboard-screenshot": null;

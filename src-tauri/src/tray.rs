@@ -170,6 +170,7 @@ fn build_menu(app: &AppHandle, status: RecordingStatus) -> tauri::Result<Menu<Wr
     .item(&annotate)
     .item(&clear_annotations)
     .item(&keep_awake::item(app)?)
+    .item(&keep_awake::screen_on_item(app)?)
     .icon(
       SETTINGS_MENU_ID,
       t!("tray-settings"),

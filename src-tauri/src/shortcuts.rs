@@ -77,6 +77,7 @@ pub enum ShortcutAction {
   AnnotateClear,
   RulerOverlay,
   ToggleKeepAwake,
+  ToggleKeepScreenOn,
   /// Held, dictates until let go; tapped, until tapped again.
   Dictate,
   /// Starts notes of a call; pressed while they are taken, stops them.

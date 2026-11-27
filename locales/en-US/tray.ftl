@@ -24,9 +24,12 @@ tray-recognize-text = Recognize Text/QR
 tray-ruler = Ruler Overlay
 tray-annotate = Annotate
 tray-clear-annotations = Clear Annotations
-# Keep Awake keeps the computer awake, and its user shown as active in chat apps, while they are away from it.
+# Keep Awake stops the computer sleeping when idle, so work left running carries on; the display still turns off.
 tray-keep-awake-on = Turn On Keep Awake
 tray-keep-awake-off = Turn Off Keep Awake
+# Keep Screen On keeps the display on as well as the computer awake, until the screen is locked.
+tray-keep-screen-on-on = Turn On Keep Screen On
+tray-keep-screen-on-off = Turn Off Keep Screen On
 tray-settings = Settings
 tray-quit = Quit Screenwide
 

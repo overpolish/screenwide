@@ -180,7 +180,9 @@ fn icon_for(item: &MenuItemKind<Wry>) -> Option<&'static [u8]> {
     super::icons::CANCEL
   } else if id == super::keep_awake::ON_MENU_ID {
     super::icons::KEEP_AWAKE
-  } else if id == super::keep_awake::OFF_MENU_ID {
+  } else if id == super::keep_awake::SCREEN_ON_MENU_ID {
+    super::icons::KEEP_SCREEN_ON
+  } else if id == super::keep_awake::OFF_MENU_ID || id == super::keep_awake::SCREEN_OFF_MENU_ID {
     super::icons::STOP
   } else {
     return None;

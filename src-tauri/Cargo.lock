@@ -5893,7 +5893,6 @@ dependencies = [
  "screenwide-cursor-effects",
  "screenwide-gpu",
  "screenwide-h264",
- "screenwide-keep-awake",
  "screenwide-keyboard-hook",
  "screenwide-osc",
  "screenwide-project",
@@ -6071,8 +6070,10 @@ dependencies = [
 name = "screenwide-keep-awake"
 version = "26.11.0"
 dependencies = [
+ "block2",
  "core-foundation 0.10.1",
- "core-graphics 0.25.0",
+ "objc2",
+ "objc2-foundation",
  "windows 0.62.2",
 ]
 
