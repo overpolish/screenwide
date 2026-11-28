@@ -25,9 +25,9 @@ const report = (what: string) => (error: unknown) => {
 };
 
 /**
- * A shot just copied as the island shows it: `isUp` while it is held, and
- * the shot as last sent, kept after it goes so the island tucks away showing
- * it; `null` until a shot has first been copied. The time is counted down
+ * A shot just copied as the island shows it: the shot as last sent, kept
+ * after it goes so the island tucks away showing it; `null` until a shot
+ * has first been copied. The time is counted down
  * here, held while the pointer is over the island.
  */
 export function useCopiedScreenshotIsland() {
@@ -84,7 +84,6 @@ export function useCopiedScreenshotIsland() {
 
   const shown = shot ?? last;
   return {
-    isUp: shot !== null,
     onDismiss: dismiss,
     onEdit: () => {
       if (id === undefined) return;

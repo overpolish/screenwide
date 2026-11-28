@@ -176,15 +176,13 @@ pub fn initialize_topology_management(app: &AppHandle) {
 // rather than by name, so a window added later is excluded the day it is added
 // and there is no list left to forget to update. See `capture_kit::our_windows`.
 
-static RECORDING_CONTROLS_VISIBLE: AtomicBool = AtomicBool::new(false);
 static REGION_SELECTOR_INTERACTIVE: AtomicBool = AtomicBool::new(false);
-/// Puts the recording controls away: Escape no longer dismisses them, and the
-/// island stops showing them. The island itself stays for what it shows
-/// next, such as the recording they started; `hide_recording_ui` takes it
-/// away too.
+/// Puts the recording controls away: Escape no longer dismisses them, and
+/// they let go of the island, which stays for whatever else holds it, such
+/// as the recording they started.
 pub fn close_recording_controls(app: &AppHandle) -> tauri::Result<()> {
   escape::sync(app, false, false, crate::ruler::is_active(app));
-  // Cleared first, so later overlay ordering cannot raise them again.
-  RECORDING_CONTROLS_VISIBLE.store(false, Ordering::Relaxed);
+  // Let go first, so later overlay ordering cannot raise them again.
+  island::release(app, island::IslandClaim::Controls);
   app.emit_to(WindowLabel::Island.as_str(), "recording-ui://hidden", ())
 }

@@ -28,8 +28,6 @@ pub use visibility::focus_region_selector;
 pub use visibility::{__cmd__focus_region_selector, __tauri_command_name_focus_region_selector};
 
 #[cfg(test)]
-use borrowed_controls::recording_controls_may_restore;
-#[cfg(test)]
 use borrowed_controls::screenshot_region_may_restore;
 
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -39,7 +37,7 @@ use std::time::Duration;
 use tauri::{AppHandle, Manager, PhysicalPosition, PhysicalSize};
 
 use super::{
-  escape, platform, region_gesture, WindowLabel, RECORDING_CONTROLS_VISIBLE,
+  escape, is_recording_ui_visible, platform, region_gesture, WindowLabel,
   REGION_SELECTOR_INTERACTIVE,
 };
 
@@ -78,7 +76,7 @@ pub(crate) fn screenshot_region_scene_owner(
   region_scene_owner(
     SCREENSHOT_REGION_SESSION.load(Ordering::Acquire),
     SCREENSHOT_REGION_RESTORING.load(Ordering::Acquire),
-    RECORDING_CONTROLS_VISIBLE.load(Ordering::Acquire),
+    is_recording_ui_visible(),
     crate::recording::is_idle(app),
   )
 }
@@ -128,7 +126,7 @@ pub fn show_region_selector(
 ) -> tauri::Result<()> {
   if !region_selector_may_show(
     crate::recording::is_idle(&app),
-    RECORDING_CONTROLS_VISIBLE.load(Ordering::Relaxed),
+    is_recording_ui_visible(),
     SCREENSHOT_REGION_SESSION.load(Ordering::Relaxed),
   ) {
     return Ok(());
@@ -220,7 +218,7 @@ fn raise_recording_controls(app: &AppHandle) -> tauri::Result<()> {
   #[cfg(target_os = "windows")]
   crate::screenshots::quick_island::stand_over_overlay(app);
   if !recording_controls_may_raise(
-    RECORDING_CONTROLS_VISIBLE.load(Ordering::Relaxed),
+    is_recording_ui_visible(),
     region_gesture::is_active(),
     RECORDING_CONTROLS_BORROWED.load(Ordering::Relaxed),
   ) {

@@ -74,12 +74,13 @@ fn set_passthrough(app: &AppHandle, passthrough: bool) {
 }
 
 fn update(app: &AppHandle) {
-  let passthrough = HIDING.load(Ordering::Relaxed) || !pointer_on_island();
+  let on = !HIDING.load(Ordering::Relaxed) && pointer_on_island();
+  island::tell_pointer(app, on);
   let Ok(window) = window(app) else {
     return;
   };
-  if !platform::island_input_holds(&window, passthrough).unwrap_or(true) {
-    set_passthrough(app, passthrough);
+  if !platform::island_input_holds(&window, !on).unwrap_or(true) {
+    set_passthrough(app, !on);
   }
 }
 
@@ -215,5 +216,6 @@ pub(super) fn refresh_hit_area(app: &AppHandle) {
 
 pub(super) fn hide(app: &AppHandle) -> tauri::Result<()> {
   WATCHING.store(0, Ordering::Relaxed);
+  island::tell_pointer(app, false);
   platform::hide_without_activation(&window(app)?)
 }

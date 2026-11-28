@@ -11,5 +11,3 @@ export const presentUpdateIsland = () =>
 /** Tucks the island away after an update was put off or skipped. */
 export const withdrawUpdateIsland = () =>
   invoke<null>("withdraw_update_island");
-
-export const updateIslandShown = () => invoke<boolean>("update_island_shown");

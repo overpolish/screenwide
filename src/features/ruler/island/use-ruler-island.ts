@@ -24,10 +24,9 @@ const report = (action: string) => (cause: unknown) => {
 };
 
 /**
- * The Ruler as the island shows it, with what its tools do: `isUp` while
- * the Ruler is up, and `parts` from the last state it sent, kept after it
- * goes so the island tucks away as it was rather than emptied. `parts` is
- * `null` until the Ruler has first been up.
+ * The Ruler as the island shows it, with what its tools do: `parts` from
+ * the last state it sent, kept after it goes so the island tucks away as it
+ * was rather than emptied; `null` until the Ruler has first been up.
  *
  * The island keeps no state of its own: what it shows is the session, sent
  * whenever it changes, so a held key or a press on the island shows the same
@@ -35,7 +34,6 @@ const report = (action: string) => (cause: unknown) => {
  * back to it once released, so its keys keep working.
  */
 export function useRulerIsland(): {
-  isUp: boolean;
   parts: RulerIslandParts | null;
 } {
   const [state, setState] = useState<RulerIslandState | null>(null);
@@ -98,9 +96,8 @@ export function useRulerIsland(): {
   }, [isUp]);
 
   const shown = state ?? last;
-  if (!shown) return { isUp, parts: null };
+  if (!shown) return { parts: null };
   return {
-    isUp,
     parts: {
       onAction: (action) => {
         runRulerAction(action).catch(report(`run the Ruler's ${action}`));

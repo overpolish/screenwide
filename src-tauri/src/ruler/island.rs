@@ -11,21 +11,21 @@
 //! Ruler result is checked against what the island was last told
 //! (`ruler://island`), and only a change is sent.
 
-use std::sync::{Mutex, PoisonError};
-
 use screenwide_imaging::analysis::Tolerance;
 use screenwide_osc::protocol::InputPhase;
 use serde::{Deserialize, Serialize};
-use tauri::{AppHandle, Emitter, Manager};
+use tauri::{AppHandle, Manager};
 use ts_rs::TS;
 
 use super::RulerState;
-use crate::app_windows::{self, WindowLabel};
+use crate::app_windows;
+use crate::app_windows::island::{self, IslandClaim, IslandSlot};
 
 pub(crate) mod commands;
 pub(super) use app_windows::island_overlay::keep_out_of_captures;
 
-const EVENT: &str = "ruler://island";
+/// What the island was last told; none while the Ruler is not on it.
+static ISLAND: IslandSlot<RulerIslandState> = IslandSlot::new(IslandClaim::Ruler, "ruler://island");
 
 /// What a click on the desktop does: measure, the default, or one of the
 /// gestures a held key otherwise picks.
@@ -95,38 +95,20 @@ impl RulerIslandAction {
   }
 }
 
-/// What the island was last told; none while the Ruler is not on it.
-static SHOWN: Mutex<Option<RulerIslandState>> = Mutex::new(None);
-
-fn shown() -> std::sync::MutexGuard<'static, Option<RulerIslandState>> {
-  SHOWN.lock().unwrap_or_else(PoisonError::into_inner)
-}
-
-/// Whether the Ruler's tools are on the island, for an island that gives way
-/// to them as it goes.
-pub(crate) fn is_shown() -> bool {
-  shown().is_some()
-}
-
 /// The Ruler is starting: the island comes out with its tools at once, while
 /// the desktop is frozen and the overlay built, so the start is seen as it
 /// happens. Called with the island kept out of captures, so it is not frozen
 /// into the desktop.
 pub(super) fn come_out(app: &AppHandle) {
-  let Some(state) = app.state::<RulerState>().island_state() else {
-    return;
-  };
-  *shown() = Some(state);
-  let _ = app.emit_to(WindowLabel::Island.as_str(), EVENT, Some(state));
-  if let Err(error) = app_windows::island::show(app) {
-    eprintln!("Could not show the island for the Ruler: {error}");
+  if let Some(state) = app.state::<RulerState>().island_state() {
+    ISLAND.tell(app, state);
   }
 }
 
 /// The overlay is presented: the island stands above it. On Windows, where
 /// there are no window levels, that is by being owned by it.
 pub(super) fn stand_over_overlay(app: &AppHandle) {
-  if shown().is_none() {
+  if !ISLAND.is_up() {
     return;
   }
   let overlay = super::ruler_windows(app).into_iter().next();
@@ -135,55 +117,33 @@ pub(super) fn stand_over_overlay(app: &AppHandle) {
 }
 
 /// The Ruler went. The island drops its tools and its place above the
-/// overlay, and goes unless the recording or its controls keep it.
+/// overlay, and goes back to whatever else holds it, or tucks away.
 pub(super) fn withdraw(app: &AppHandle) {
-  if shown().take().is_none() {
+  if !ISLAND.is_up() {
     return;
   }
-  let _ = app.emit_to(
-    WindowLabel::Island.as_str(),
-    EVENT,
-    None::<RulerIslandState>,
-  );
   // Released before the Ruler's window closes.
   app_windows::island_overlay::stand_over(app, None);
-  if crate::recording::is_idle(app) && !app_windows::is_recording_ui_visible() {
-    if let Err(error) = app_windows::island::hide(app) {
-      eprintln!("Could not hide the island after the Ruler: {error}");
-    }
-  }
+  ISLAND.withdraw(app);
 }
 
 /// A screenshot is taken through the Ruler: the island steps out of the
 /// picture at once, and back when it is done.
 pub(super) fn set_screenshot_mode(app: &AppHandle, active: bool) {
-  if shown().is_none() {
+  if !ISLAND.is_up() {
     return;
   }
-  let result = if active {
-    app_windows::island::hide_at_once(app)
+  if active {
+    island::stand_aside(app, true);
   } else {
-    app_windows::island::show(app)
-  };
-  if let Err(error) = result {
-    eprintln!("Could not move the island for a Ruler screenshot: {error}");
+    island::come_back(app);
   }
 }
 
 /// Tells the island what the session now is, if that changed. Called with
-/// every Ruler result, so it reads the session and compares before it sends.
+/// every Ruler result.
 pub(crate) fn sync(app: &AppHandle) {
-  let mut shown = shown();
-  let Some(current) = *shown else {
-    return;
-  };
-  let Some(next) = app.state::<RulerState>().island_state() else {
-    return;
-  };
-  if next == current {
-    return;
+  if let Some(next) = app.state::<RulerState>().island_state() {
+    ISLAND.update(app, next);
   }
-  *shown = Some(next);
-  drop(shown);
-  let _ = app.emit_to(WindowLabel::Island.as_str(), EVENT, Some(next));
 }

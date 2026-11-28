@@ -8,10 +8,11 @@
 //! the island changes shape inside it, and clicks pass through it everywhere
 //! but on the island, which reports where it is (`set_island_hit_area`).
 //!
-//! It is one window whatever the island shows, as there is one notch: the
-//! features it shows decide what that is, and this module only brings it out
-//! and puts it away. Hiding is the island's to finish: it is asked to tuck
-//! itself away (`island://hide`), and the window goes once it has.
+//! It is one window whatever it shows, as there is one notch. What it shows
+//! holds it by a claim (`claims`), and the window follows the claims: this
+//! module only brings it out and puts it away as they say. Hiding is the
+//! island's to finish: it is asked to tuck itself away (`island://hide`),
+//! and the window goes once it has.
 
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{Mutex, PoisonError};
@@ -23,12 +24,17 @@ use tauri::{AppHandle, Emitter, Manager, WebviewWindow};
 use super::island_placement::{self, IslandBoxAnchor, IslandPlacement, IslandShown};
 use super::WindowLabel;
 
+mod claims;
+pub use claims::{__cmd__island_claims, __tauri_command_name_island_claims, island_claims};
+pub(crate) use claims::{claim, come_back, holds, is_unclaimed, release, stand_aside, IslandClaim};
+mod slot;
+pub(crate) use slot::IslandSlot;
 mod hit_area;
 pub(crate) use hit_area::IslandRect;
 pub use hit_area::{
   __cmd__set_island_hit_area, __tauri_command_name_set_island_hit_area, set_island_hit_area,
 };
-pub(super) use hit_area::{is_on_island, rects};
+pub(super) use hit_area::{is_on_island, rects, tell_pointer};
 mod level;
 #[cfg(target_os = "macos")]
 pub(super) use level::is_above_overlays;
@@ -92,6 +98,8 @@ pub struct IslandNotch {
 #[serde(rename_all = "camelCase")]
 pub struct IslandPresence {
   pub is_shown: bool,
+  /// Whether the pointer is on the island (`island://pointer`).
+  pub is_pointer_on: bool,
   pub notch: Option<IslandNotch>,
   pub anchor: Option<IslandBoxAnchor>,
 }
@@ -127,7 +135,7 @@ pub fn is_shown() -> bool {
 /// tucking away, it comes back out where it was. Out somewhere else, it
 /// comes out afresh where it now belongs (`moving`), as it would from the
 /// notch, rather than sliding across or waiting out a tuck where it was.
-pub fn show(app: &AppHandle) -> tauri::Result<()> {
+fn show(app: &AppHandle) -> tauri::Result<()> {
   if RESHOW.load(Ordering::Relaxed) {
     // Handing over: it comes out where it belongs once it has tucked away.
     return Ok(());
@@ -149,7 +157,7 @@ pub fn show(app: &AppHandle) -> tauri::Result<()> {
 }
 
 /// Changes where the island hangs, moving it there if it is out.
-pub(crate) fn place(app: &AppHandle, placement: IslandPlacement) -> tauri::Result<()> {
+fn place(app: &AppHandle, placement: IslandPlacement) -> tauri::Result<()> {
   if !island_placement::set(placement) || !is_shown() {
     return Ok(());
   }
@@ -161,7 +169,7 @@ pub(crate) fn place(app: &AppHandle, placement: IslandPlacement) -> tauri::Resul
 /// and comes out again there once its window has gone, so the page changes
 /// what it shows while nothing of it is on screen. Already there, the page
 /// changes it in place.
-pub(crate) fn hand_over(app: &AppHandle, placement: IslandPlacement) -> tauri::Result<()> {
+fn hand_over(app: &AppHandle, placement: IslandPlacement) -> tauri::Result<()> {
   island_placement::set(placement);
   if !is_shown() || !island_placement::is_misplaced() {
     return Ok(());
@@ -180,7 +188,7 @@ fn put_out(app: &AppHandle) -> tauri::Result<()> {
 /// Asks the island to tuck itself away, and hides its window once it says
 /// it has (`finish_hiding_island`), or after `HIDE_FALLBACK` if it never
 /// does. Tucking away, it lets every click through.
-pub fn hide(app: &AppHandle) -> tauri::Result<()> {
+fn hide(app: &AppHandle) -> tauri::Result<()> {
   RESHOW.store(false, Ordering::Relaxed);
   moving::cancel();
   if !is_shown() {
@@ -205,7 +213,7 @@ pub fn hide(app: &AppHandle) -> tauri::Result<()> {
 
 /// Puts the island away at once, for what must not find it on screen: a
 /// capture that follows straight after.
-pub fn hide_at_once(app: &AppHandle) -> tauri::Result<()> {
+fn hide_at_once(app: &AppHandle) -> tauri::Result<()> {
   if !SHOWN.load(Ordering::Relaxed) {
     return Ok(());
   }
@@ -281,6 +289,7 @@ pub fn island_presence() -> IslandPresence {
   let shown = shown_as();
   IslandPresence {
     is_shown: is_shown(),
+    is_pointer_on: hit_area::pointer_on(),
     notch: shown.notch,
     anchor: shown.anchor,
   }

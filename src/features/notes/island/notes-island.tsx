@@ -3,7 +3,7 @@
 
 import { NotebookPen, X } from "lucide-react";
 import { useEffect, useState } from "react";
-import { useFocusWithin } from "react-aria";
+import { useFocusRing } from "react-aria";
 
 import { ConfirmActionButton } from "../../../composites/confirm-action-button/confirm-action-button";
 import { t } from "../../../i18n/i18n";
@@ -95,20 +95,21 @@ export function NotesRow({
 }: NotesParts & { isHovered: boolean }) {
   const ticking = useNow(state.phase === "taking" && fixedNow === undefined);
   const now = fixedNow ?? ticking;
-  const [hasFocus, setHasFocus] = useState(false);
-  const { focusWithinProps } = useFocusWithin({
-    onFocusWithinChange: setHasFocus,
-  });
+  // Only keyboard focus holds the controls out: a button pressed with the
+  // pointer keeps focus on some platforms (WebView2), which would otherwise
+  // hold them out after the pointer leaves.
+  const { focusProps, isFocusVisible } = useFocusRing({ within: true });
 
   if (state.phase === "taking" || state.phase === "finishing") {
     const elapsed = clock(
       state.phase === "taking" ? Math.max(0, now - state.startedMs) / 1_000 : 0,
     );
-    const showsControls = state.phase === "taking" && (isHovered || hasFocus);
+    const showsControls =
+      state.phase === "taking" && (isHovered || isFocusVisible);
     return (
       <IslandRow
         end={
-          <span className="contents" {...focusWithinProps}>
+          <span className="contents" {...focusProps}>
             <IslandParts
               className="flex items-center gap-separate"
               direction="row"

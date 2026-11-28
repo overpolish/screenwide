@@ -21,7 +21,9 @@ pub fn hide_recording_ui(app: AppHandle) -> tauri::Result<()> {
 
   crate::recording_sources::window_pick::cancel(&app);
   close_recording_controls(&app)?;
-  super::island::hide(&app)?;
+  // A recording that just finished lets go too, as the Editor taking it
+  // calls this.
+  island::release(&app, island::IslandClaim::Recording);
   region::hide_region_selector(app.clone())?;
 
   Ok(())
@@ -33,10 +35,10 @@ pub fn show_recording_ui(app: &AppHandle) -> tauri::Result<()> {
     return Ok(());
   }
 
-  RECORDING_CONTROLS_VISIBLE.store(true, Ordering::Relaxed);
-  // The controls take the island from an update it may be offering.
-  crate::updates::give_way(app);
-  super::island::show(app)?;
+  // The controls take the island back from the recording that finished,
+  // and from an update it may be offering.
+  island::claim(app, island::IslandClaim::Controls);
+  island::release(app, island::IslandClaim::Recording);
   escape::sync(
     app,
     true,
@@ -54,7 +56,7 @@ pub fn open_recording_ui(app: AppHandle) -> tauri::Result<()> {
 }
 
 pub fn is_recording_ui_visible() -> bool {
-  RECORDING_CONTROLS_VISIBLE.load(Ordering::Relaxed)
+  island::holds(island::IslandClaim::Controls)
 }
 
 #[tauri::command]
@@ -81,7 +83,7 @@ pub fn toggle_recording_ui(app: AppHandle) -> tauri::Result<()> {
 pub(crate) fn sync_recording_ui_escape(app: &AppHandle, ruler_active: bool) {
   escape::sync(
     app,
-    RECORDING_CONTROLS_VISIBLE.load(Ordering::Relaxed),
+    is_recording_ui_visible(),
     region::SCREENSHOT_REGION_SESSION.load(Ordering::Relaxed),
     ruler_active,
   );

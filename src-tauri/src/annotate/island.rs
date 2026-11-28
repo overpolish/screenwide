@@ -12,6 +12,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 
 use tauri::{AppHandle, Emitter};
 
+use crate::app_windows::island::{self, IslandClaim};
 use crate::app_windows::{self, WindowLabel};
 
 /// The island is told when this changes (`annotate://drawing`), and asks for
@@ -30,9 +31,7 @@ pub(super) fn present(app: &AppHandle) {
   }
   #[cfg(target_os = "windows")]
   own_by_anchor(app, true);
-  if let Err(error) = app_windows::island::show(app) {
-    eprintln!("Could not show the island for Annotate: {error}");
-  }
+  island::claim(app, IslandClaim::Annotate);
   // The pointer is an arrow over the island: the crosshair belongs to the
   // canvas, and the guard that keeps it there exempts this window.
   #[cfg(target_os = "macos")]
@@ -42,7 +41,7 @@ pub(super) fn present(app: &AppHandle) {
 }
 
 /// The overlay stopped drawing. The island drops the tools and its place
-/// above the hosts, and goes unless the recording or its controls keep it.
+/// above the hosts, and goes back to whatever else holds it, or tucks away.
 #[cfg_attr(not(any(target_os = "macos", target_os = "windows")), allow(dead_code))]
 pub(super) fn withdraw(app: &AppHandle) {
   if !DRAWING.swap(false, Ordering::AcqRel) {
@@ -58,11 +57,7 @@ pub(super) fn withdraw(app: &AppHandle) {
   if let Err(error) = app_windows::island::set_above_overlays(app, false) {
     eprintln!("Could not return the island to its level: {error}");
   }
-  if crate::recording::is_idle(app) && !app_windows::is_recording_ui_visible() {
-    if let Err(error) = app_windows::island::hide(app) {
-      eprintln!("Could not hide the island after Annotate: {error}");
-    }
-  }
+  island::release(app, IslandClaim::Annotate);
 }
 
 /// Windows has no window levels, and a press on a host raises it over every

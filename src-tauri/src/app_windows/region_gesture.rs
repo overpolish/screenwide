@@ -5,7 +5,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 
 use tauri::{AppHandle, Manager};
 
-use super::{island, WindowLabel, RECORDING_CONTROLS_VISIBLE};
+use super::{island, WindowLabel};
 
 static ACTIVE: AtomicBool = AtomicBool::new(false);
 
@@ -28,23 +28,15 @@ pub fn begin_region_selector_gesture(app: AppHandle) -> tauri::Result<()> {
     }
     // Tucked away while the region is dragged out, and taking no clicks as
     // it goes, so a drag across the top of the screen is the region's.
-    island::hide(&app)?;
+    island::stand_aside(&app, false);
     Ok(())
   })();
 
   if result.is_err() {
     ACTIVE.store(false, Ordering::Relaxed);
-    let _ = restore_recording_controls(&app);
+    island::come_back(&app);
   }
   result
-}
-
-fn restore_recording_controls(app: &AppHandle) -> tauri::Result<()> {
-  if !RECORDING_CONTROLS_VISIBLE.load(Ordering::Relaxed) || !crate::recording::is_idle(app) {
-    return Ok(());
-  }
-
-  island::show(app)
 }
 
 #[tauri::command]
@@ -52,5 +44,6 @@ pub fn finish_region_selector_gesture(app: AppHandle) -> tauri::Result<()> {
   if !ACTIVE.swap(false, Ordering::Relaxed) {
     return Ok(());
   }
-  restore_recording_controls(&app)
+  island::come_back(&app);
+  Ok(())
 }

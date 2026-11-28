@@ -15,6 +15,7 @@ import { useTauriEvent } from "../../lib/use-tauri-event";
 import { ISLAND } from "../../primitives/island/island-geometry";
 import { IslandHolder } from "../../primitives/island/island-holder";
 import { useIslandPlace } from "../../primitives/island/island-place";
+import { IslandPointerContext } from "../../primitives/island/island-pointer";
 
 import type { IslandNotch } from "../../primitives/island/island-geometry";
 import type { IslandPart } from "../../primitives/island/island-outline-sync";
@@ -24,7 +25,8 @@ import type { IslandPart } from "../../primitives/island/island-outline-sync";
 // screen it is on, or where to hang by a box), asks it to tuck away
 // (`island://hide`), after which the window goes, or moves it
 // (`island://move`). Clicks pass through the window everywhere but where
-// the island reports its parts to be.
+// the island reports its parts to be, and the window says when the pointer
+// comes onto them or leaves (`island://pointer`).
 
 /** What the island's window hands what the island shows. */
 export type IslandHost = {
@@ -71,6 +73,10 @@ export function IslandWindow({
     notch: null,
   });
   const [showing, setShowing] = useState(0);
+  // Off until the window says otherwise (`island_presence`, then
+  // `island://pointer`).
+  const [isPointerOn, setIsPointerOn] = useState(false);
+  const isPointerToldRef = useRef(false);
 
   // What the window is told outranks what it asked before being told.
   const isToldRef = useRef(false);
@@ -123,9 +129,13 @@ export function IslandWindow({
 
   useEffect(() => {
     let disposed = false;
-    void invoke<Presence>("island_presence").then((current) => {
-      if (!disposed && !isToldRef.current) setPresence(current);
-    });
+    void invoke<Presence & { isPointerOn: boolean }>("island_presence").then(
+      ({ isPointerOn: pointer, ...current }) => {
+        if (disposed) return;
+        if (!isToldRef.current) setPresence(current);
+        if (!isPointerToldRef.current) setIsPointerOn(pointer);
+      },
+    );
     return () => {
       disposed = true;
       cancelAnimationFrame(frameRef.current);
@@ -172,6 +182,10 @@ export function IslandWindow({
       setReadyToMove(request);
     }, motionDurations.travel * 1000);
   });
+  useTauriEvent("island://pointer", (payload) => {
+    isPointerToldRef.current = true;
+    setIsPointerOn(payload as boolean);
+  });
   useEffect(() => {
     if (readyToMove === null) return;
     // Two frames: the first is drawn with nothing showing, and the second
@@ -199,13 +213,15 @@ export function IslandWindow({
         place={islandPlace}
         style={{ top }}
       >
-        {children({
-          isShown: presence.isShown,
-          notch: presence.notch,
-          onHidden: finishHiding,
-          onShapeChange: reportShape,
-          showing,
-        })}
+        <IslandPointerContext value={isPointerOn}>
+          {children({
+            isShown: presence.isShown,
+            notch: presence.notch,
+            onHidden: finishHiding,
+            onShapeChange: reportShape,
+            showing,
+          })}
+        </IslandPointerContext>
       </IslandHolder>
     </div>
   );

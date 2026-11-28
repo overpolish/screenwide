@@ -15,13 +15,12 @@ import type { NotesIslandAction } from "../../../bindings/NotesIslandAction";
 import type { NotesIslandState } from "../../../bindings/NotesIslandState";
 
 /**
- * Notes as the island shows them: `isUp` while they are on the island, and
- * `state` as last sent, kept after it goes so the island tucks away as it
- * was; `null` until it has first been up. `microphone` is the microphone
+ * Notes as the island shows them: `state` as last sent, kept after they go
+ * so the island tucks away as it was; `null` until they have first been
+ * up. `microphone` is the microphone
  * the notes hear, its level read while they are taken.
  */
 export function useNotesIsland(): {
-  isUp: boolean;
   microphone: NotesMicrophone;
   onAction: (action: NotesIslandAction) => void;
   state: NotesIslandState | null;
@@ -54,7 +53,6 @@ export function useNotesIsland(): {
   const mute = useMicrophoneMute();
 
   return {
-    isUp: state !== null,
     microphone: {
       ...mute,
       level: mute.isMuted ? 0 : decibelLevel(monitor.microphoneDecibels),

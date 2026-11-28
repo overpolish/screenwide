@@ -21,15 +21,14 @@ const report = (action: string) => (cause: unknown) => {
 };
 
 /**
- * Text Recognition as the island shows it: `isUp` while it is on the island,
- * and `state` as last sent, kept after it goes so the island tucks away as it
- * was rather than emptied; `null` until it has first been up.
+ * Text Recognition as the island shows it: `state` as last sent, kept after
+ * it goes so the island tucks away as it was rather than emptied; `null`
+ * until it has first been up.
  *
  * The island keeps no state of its own: what it shows is the session, sent
  * whenever it changes.
  */
 export function useTextRecognitionIsland(): {
-  isUp: boolean;
   onAction: (action: TextRecognitionIslandAction) => void;
   onCopyQrCode: (content: string) => Promise<unknown>;
   onOpenQrCode: (url: string) => Promise<unknown>;
@@ -63,7 +62,6 @@ export function useTextRecognitionIsland(): {
   });
 
   return {
-    isUp: state !== null,
     onAction: (action) => {
       runTextRecognitionIslandAction(action).catch(
         report(`run Text Recognition's ${action}`),

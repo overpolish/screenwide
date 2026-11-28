@@ -9,7 +9,7 @@ pub fn set_screenshot_region_session(
   active: bool,
   restore_region: Option<bool>,
 ) -> tauri::Result<bool> {
-  let controls_visible = RECORDING_CONTROLS_VISIBLE.load(Ordering::Relaxed);
+  let controls_visible = super::super::is_recording_ui_visible();
   let session_was_active = SCREENSHOT_REGION_SESSION.load(Ordering::Acquire);
   let mut restoring_region = false;
   if active && !session_was_active {
@@ -107,11 +107,11 @@ pub fn set_screenshot_region_session(
 /// Temporarily removes the recording-control window graph while Quick
 /// Screenshot borrows the shared region overlay.
 ///
-/// This deliberately leaves `RECORDING_CONTROLS_VISIBLE` unchanged: borrowing
-/// is presentation state, not a request to close the recording UI. Returning
-/// the controls therefore brings the island back only when they are still logically
-/// visible and the app is idle. The region-selector window is not touched
-/// because it is the driver for the screenshot session.
+/// This deliberately keeps the controls' claim on the island: borrowing is
+/// presentation state, not a request to close the recording UI. The island
+/// only stands aside, and comes back for whatever holds it once the overlay
+/// is returned. The region-selector window is not touched because it is the
+/// driver for the screenshot session.
 #[tauri::command]
 pub fn set_recording_controls_borrowed(app: AppHandle, borrowed: bool) -> tauri::Result<()> {
   RECORDING_CONTROLS_BORROWED.store(borrowed, Ordering::Release);
@@ -129,25 +129,13 @@ pub fn set_recording_controls_borrowed(app: AppHandle, borrowed: bool) -> tauri:
     // At once: the capture that follows must not find it on screen. The
     // session's own island is kept out of the shot, so it stays.
     if !crate::screenshots::quick_island::is_up() {
-      super::super::island::hide_at_once(&app)?;
+      super::super::island::stand_aside(&app, true);
     }
     return Ok(());
   }
 
-  if recording_controls_may_restore(
-    RECORDING_CONTROLS_VISIBLE.load(Ordering::Relaxed),
-    crate::recording::is_idle(&app),
-  ) {
-    super::super::island::show(&app)?;
-  }
+  super::super::island::come_back(&app);
   Ok(())
-}
-
-pub(super) const fn recording_controls_may_restore(
-  controls_visible: bool,
-  recording_idle: bool,
-) -> bool {
-  controls_visible && recording_idle
 }
 
 /// The overlay goes back to the recording region it was borrowed from where

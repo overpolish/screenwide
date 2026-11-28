@@ -48,6 +48,7 @@ static OVER: AtomicBool = AtomicBool::new(false);
 /// pointer is on it, whether it is tucking away, and the monitors watching
 /// the pointer.
 struct Watch {
+  app: AppHandle,
   frame: NSRect,
   is_hiding: bool,
   is_over: bool,
@@ -123,7 +124,8 @@ fn is_over(watch: &Watch) -> bool {
 }
 
 /// Lets clicks reach the island while the pointer is on it, and pass through
-/// while it is not, its shadow included. Only a change is sent to the window.
+/// while it is not, its shadow included, and tells the island. Only a change
+/// is sent to the window.
 fn update() {
   WATCH.with(|watch| {
     if let Some(watch) = watch.borrow_mut().as_mut() {
@@ -132,6 +134,7 @@ fn update() {
         watch.is_over = over;
         watch.panel.set_ignores_mouse_events(!over);
       }
+      island::tell_pointer(&watch.app, over);
       OVER.store(over, Ordering::Relaxed);
     }
   });
@@ -231,6 +234,7 @@ pub(super) fn show(app: &AppHandle) -> tauri::Result<()> {
         .map(|old| old.monitors)
         .unwrap_or_else(monitors);
       *watch = Some(Watch {
+        app: app.clone(),
         frame,
         is_hiding: false,
         is_over: false,
@@ -279,6 +283,7 @@ pub(super) fn hide(app: &AppHandle) -> tauri::Result<()> {
     .ok_or(tauri::Error::WindowNotFound)?;
   WATCHING.store(0, Ordering::Relaxed);
   OVER.store(false, Ordering::Relaxed);
+  island::tell_pointer(app, false);
   app.run_on_main_thread(|| {
     if let Some(watch) = WATCH.with(|watch| watch.borrow_mut().take()) {
       for monitor in watch.monitors {

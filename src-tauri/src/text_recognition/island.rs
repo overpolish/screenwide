@@ -10,19 +10,18 @@
 //! The island shows the session rather than keeping its own state: each
 //! change is sent (`text-recognition://island`), and only a change.
 
-use std::sync::{Mutex, PoisonError};
+use std::sync::PoisonError;
 
 use serde::{Deserialize, Serialize};
-use tauri::{AppHandle, Emitter, Manager};
+use tauri::{AppHandle, Manager};
 use ts_rs::TS;
 
 use screenwide_osc::{desktop::DesktopBinding, geometry::Rect};
 
 use super::{RecognizedQrCode, TextRecognitionState};
+use crate::app_windows;
+use crate::app_windows::island::{IslandClaim, IslandSlot};
 use crate::app_windows::island_placement::{IslandPlacement, LocalRect};
-use crate::app_windows::{self, WindowLabel};
-
-const EVENT: &str = "text-recognition://island";
 
 /// What the island shows of a Text Recognition session.
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, TS)]
@@ -66,45 +65,19 @@ pub enum TextRecognitionIslandAction {
 }
 
 /// What the island was last told; none while Text Recognition is not on it.
-static SHOWN: Mutex<Option<TextRecognitionIslandState>> = Mutex::new(None);
-
-fn shown() -> std::sync::MutexGuard<'static, Option<TextRecognitionIslandState>> {
-  SHOWN.lock().unwrap_or_else(PoisonError::into_inner)
-}
-
-fn tell(app: &AppHandle, state: Option<TextRecognitionIslandState>) {
-  let mut shown = shown();
-  if *shown == state {
-    return;
-  }
-  shown.clone_from(&state);
-  drop(shown);
-  let _ = app.emit_to(WindowLabel::Island.as_str(), EVENT, state);
-}
-
-fn place(app: &AppHandle, placement: IslandPlacement) {
-  if let Err(error) = app_windows::island::place(app, placement) {
-    eprintln!("Could not place the island for Text Recognition: {error}");
-  }
-}
+static ISLAND: IslandSlot<TextRecognitionIslandState> =
+  IslandSlot::new(IslandClaim::TextRecognition, "text-recognition://island");
 
 /// Text Recognition is starting: the island comes out at the top at once, so
 /// the start shows while the desktop freezes. Called with the island kept
 /// out of captures.
 pub(super) fn come_out(app: &AppHandle) {
-  tell(
-    app,
-    Some(TextRecognitionIslandState::Choosing { failed: false }),
-  );
-  place(app, IslandPlacement::Top);
-  if let Err(error) = app_windows::island::show(app) {
-    eprintln!("Could not show the island for Text Recognition: {error}");
-  }
+  ISLAND.tell(app, TextRecognitionIslandState::Choosing { failed: false });
 }
 
 /// The overlay is presented: the island stands above it.
 pub(super) fn stand_over(app: &AppHandle, overlay: &tauri::WebviewWindow) {
-  if shown().is_none() {
+  if !ISLAND.is_up() {
     return;
   }
   app_windows::island_overlay::stand_over(app, Some(overlay));
@@ -113,16 +86,13 @@ pub(super) fn stand_over(app: &AppHandle, overlay: &tauri::WebviewWindow) {
 /// An area was drawn, in the anchor display's points: the island hangs by it
 /// while it is read, on the display that holds most of it.
 pub(super) fn reading(app: &AppHandle, binding: &DesktopBinding, region: Rect) {
-  tell(
-    app,
-    Some(TextRecognitionIslandState::Reading {
-      loading: model_loading(),
-    }),
-  );
-  let Some((display, rect)) = local_box(binding, region) else {
-    return;
+  let state = TextRecognitionIslandState::Reading {
+    loading: model_loading(),
   };
-  place(app, IslandPlacement::ByBox { display, rect });
+  match local_box(binding, region) {
+    Some((display, rect)) => ISLAND.tell_at(app, state, IslandPlacement::ByBox { display, rect }),
+    None => ISLAND.update(app, state),
+  }
 }
 
 /// Whether the models that read text are still loading, which a read then
@@ -138,15 +108,8 @@ fn model_loading() -> bool {
 
 /// The models that read text have loaded: a read waiting for them goes on.
 pub(super) fn model_loaded(app: &AppHandle) {
-  let waiting = matches!(
-    *shown(),
-    Some(TextRecognitionIslandState::Reading { loading: true })
-  );
-  if waiting {
-    tell(
-      app,
-      Some(TextRecognitionIslandState::Reading { loading: false }),
-    );
+  if ISLAND.current() == Some(TextRecognitionIslandState::Reading { loading: true }) {
+    ISLAND.update(app, TextRecognitionIslandState::Reading { loading: false });
   }
 }
 
@@ -179,33 +142,30 @@ fn local_box(binding: &DesktopBinding, region: Rect) -> Option<(u32, LocalRect)>
 
 /// Reading finished, or the selection in what it found changed.
 pub(super) fn sync_ready(app: &AppHandle) {
-  if shown().is_none() {
-    return;
-  }
   if let Some(state) = app.state::<TextRecognitionState>().island_state() {
-    tell(app, Some(state));
+    ISLAND.update(app, state);
   }
 }
 
 /// A QR code was pressed: the island says what it holds, in place of what
 /// was found.
 pub(super) fn show_qr_code(app: &AppHandle, code: RecognizedQrCode) {
-  if shown().is_none() {
-    return;
-  }
-  tell(
+  ISLAND.update(
     app,
-    Some(TextRecognitionIslandState::Qr {
+    TextRecognitionIslandState::Qr {
       content: code.content,
       decode_error: code.decode_error,
-    }),
+    },
   );
 }
 
 /// A press on the overlay away from the QR codes, or Back on the island,
 /// puts a QR code's contents away and shows what was found again.
 pub(super) fn close_qr_code(app: &AppHandle) {
-  if matches!(*shown(), Some(TextRecognitionIslandState::Qr { .. })) {
+  if matches!(
+    ISLAND.current(),
+    Some(TextRecognitionIslandState::Qr { .. })
+  ) {
     sync_ready(app);
   }
 }
@@ -213,33 +173,25 @@ pub(super) fn close_qr_code(app: &AppHandle) {
 /// The overlay takes a new area, after reading one failed or to read
 /// another, and the island goes back to the top of the screen to say so.
 pub(super) fn choosing(app: &AppHandle, failed: bool) {
-  if shown().is_none() {
+  if !ISLAND.is_up() {
     return;
   }
-  tell(app, Some(TextRecognitionIslandState::Choosing { failed }));
-  place(app, IslandPlacement::Top);
+  ISLAND.tell_at(
+    app,
+    TextRecognitionIslandState::Choosing { failed },
+    IslandPlacement::Top,
+  );
 }
 
-/// Text Recognition went. The island drops it and goes, tucking away where
-/// it is, unless the recording or its controls keep it; then it hands over
-/// to them, coming out again at the top with what they show. It stops
-/// standing over the overlay first, as on Windows a window takes those it
-/// owns with it when it closes.
+/// Text Recognition went. The island drops it and goes back to whatever
+/// else holds it, or tucks away. It stops standing over the overlay first,
+/// as on Windows a window takes those it owns with it when it closes.
 pub(super) fn withdraw(app: &AppHandle) {
-  if shown().is_none() {
+  if !ISLAND.is_up() {
     return;
   }
-  tell(app, None);
   app_windows::island_overlay::stand_over(app, None);
-  let result = if crate::recording::is_idle(app) && !app_windows::is_recording_ui_visible() {
-    app_windows::island::hide(app)
-      .and_then(|()| app_windows::island::place(app, IslandPlacement::Top))
-  } else {
-    app_windows::island::hand_over(app, IslandPlacement::Top)
-  };
-  if let Err(error) = result {
-    eprintln!("Could not put the island away after Text Recognition: {error}");
-  }
+  ISLAND.withdraw(app);
 }
 
 impl TextRecognitionState {
@@ -258,7 +210,7 @@ impl TextRecognitionState {
 
 #[tauri::command]
 pub fn text_recognition_island_state() -> Option<TextRecognitionIslandState> {
-  shown().clone()
+  ISLAND.current()
 }
 
 #[tauri::command]

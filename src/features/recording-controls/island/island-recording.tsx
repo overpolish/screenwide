@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import { Mic, MicOff } from "lucide-react";
-import { type CSSProperties, type ReactNode, useState } from "react";
-import { useFocusWithin, useMeter } from "react-aria";
+import { type CSSProperties, type ReactNode } from "react";
+import { useFocusRing, useMeter } from "react-aria";
 
 import { t } from "../../../i18n/i18n";
 import { cn } from "../../../lib/styling";
@@ -167,16 +167,15 @@ export function RecordingRow({
     props.writtenBytes === undefined ? null : (
       <RecordedSize bytes={props.writtenBytes} />
     );
-  // Focus on the time or the controls holds them out, as the pointer does.
-  const [hasFocus, setHasFocus] = useState(false);
-  const { focusWithinProps } = useFocusWithin({
-    onFocusWithinChange: setHasFocus,
-  });
-  const isShowingControls = showsControls || hasFocus;
+  // Keyboard focus on the time or the controls holds them out, as the
+  // pointer does. Not a pointer's press, which keeps focus on some platforms
+  // (WebView2) and would hold them out after the pointer leaves.
+  const { focusProps, isFocusVisible } = useFocusRing({ within: true });
+  const isShowingControls = showsControls || isFocusVisible;
   return (
     <IslandRow
       end={
-        <span className="contents" {...focusWithinProps}>
+        <span className="contents" {...focusProps}>
           {/* The size, the time or a moment in its place, and the controls
               while the pointer or focus is on the row, each a part of its
               own that comes, goes and gives way as the island's parts do. */}

@@ -18,12 +18,13 @@ pub(super) fn prepare_windows(
   let to_message = |error: tauri::Error| error.to_string();
 
   crate::recording_sources::window_pick::cancel(app);
-  app_windows::close_recording_controls(app).map_err(to_message)?;
   // The island shows the recording from here, out already if the controls
   // started it, brought out if a shortcut did. Its Starting state keeps the
   // controls from being used until the first encoded frames prove that every
-  // configured video stream is ready.
-  app_windows::island::show(app).map_err(to_message)?;
+  // configured video stream is ready. Claimed before the controls let go, so
+  // the island never tucks away in between.
+  app_windows::island::claim(app, app_windows::island::IslandClaim::Recording);
+  app_windows::close_recording_controls(app).map_err(to_message)?;
   // A recording is one of our own captures for its whole length. The windows
   // whose exclusion depends on that follow it from here, which gives the
   // compositor the countdown to present the excluded state.
@@ -52,9 +53,10 @@ pub(super) fn prepare_windows(
   Ok(())
 }
 
-/// Puts the recording's windows back. The island is left out: whether it goes
-/// depends on where the recording ends up (the Editor tucks it away as it
-/// opens; `show_recording_ui` brings the controls back).
+/// Puts the recording's windows back. The island keeps the recording's
+/// claim: whether it goes depends on where the recording ends up (the Editor
+/// taking it calls `hide_recording_ui`; `show_recording_ui` brings the
+/// controls back).
 pub(super) fn restore_windows(app: &AppHandle) {
   if app_windows::is_region_selector_visible(app) {
     // Interactivity is deliberately not touched here. The overlay is about to

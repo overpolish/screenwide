@@ -10,14 +10,12 @@ import { cancelQuickScreenshot, getQuickScreenshotIslandState } from "../api";
 import type { QuickScreenshotDestination } from "../../../bindings/QuickScreenshotDestination";
 
 /**
- * A Quick Screenshot session as the island shows it: `isUp` while the
- * overlay is up, and `destination` as last sent, kept after the session
- * ends so the island tucks away saying what it said; `null` until a session
- * has first run.
+ * A Quick Screenshot session as the island shows it: `destination` as last
+ * sent, kept after the session ends so the island tucks away saying what it
+ * said; `null` until a session has first run.
  */
 export function useQuickScreenshotIsland(): {
   destination: QuickScreenshotDestination | null;
-  isUp: boolean;
   onClose: () => void;
 } {
   const [destination, setDestination] =
@@ -45,7 +43,6 @@ export function useQuickScreenshotIsland(): {
 
   return {
     destination: destination ?? last,
-    isUp: destination !== null,
     onClose: () => {
       cancelQuickScreenshot().catch((cause: unknown) => {
         console.error("Could not cancel the screenshot", cause);

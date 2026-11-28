@@ -9,7 +9,7 @@ use screenwide_osc::protocol::InputPhase;
 use tauri::{AppHandle, Manager};
 
 use super::super::{ruler_windows, RulerState};
-use super::{shown, RulerIslandAction, RulerIslandState, RulerTolerance, RulerTool};
+use super::{RulerIslandAction, RulerIslandState, RulerTolerance, RulerTool, ISLAND};
 use crate::app_windows::{self, screenshot_region::region_osc as native_region};
 
 /// Sends `phases` to the Ruler's overlay in order, as its keys would, on the
@@ -30,7 +30,7 @@ fn dispatch(app: &AppHandle, phases: Vec<InputPhase>) {
 
 #[tauri::command]
 pub fn ruler_island_state() -> Option<RulerIslandState> {
-  *shown()
+  ISLAND.current()
 }
 
 /// Puts the tool in hand down and picks up `tool`. A gesture can only start
@@ -87,7 +87,7 @@ pub fn ruler_island_action(app: AppHandle, action: RulerIslandAction) {
 /// overlay, where the Ruler's keys work.
 #[tauri::command]
 pub fn return_ruler_keyboard(app: AppHandle) {
-  if shown().is_none() {
+  if !ISLAND.is_up() {
     return;
   }
   let Some(window) = ruler_windows(&app).into_iter().next() else {

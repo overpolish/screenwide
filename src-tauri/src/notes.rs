@@ -214,11 +214,9 @@ fn start(app: &AppHandle, options: StartNotesOptions) -> Result<(), NotesProblem
     started_ms,
   });
   screenwide_project::library::remember(app, &project.file);
-  // The controls are put away as a recording's start puts them away: the
-  // island shows the notes from here, and Escape no longer takes it.
-  if let Err(error) = crate::app_windows::close_recording_controls(app) {
-    eprintln!("Could not put the recording controls away for notes: {error}");
-  }
+  // The island shows the notes from here, claimed before the controls let
+  // go, as a recording's start does, so it never tucks away in between.
+  // Escape no longer takes it.
   island::tell(
     app,
     NotesIslandState::Taking {
@@ -226,6 +224,9 @@ fn start(app: &AppHandle, options: StartNotesOptions) -> Result<(), NotesProblem
       loading: true,
     },
   );
+  if let Err(error) = crate::app_windows::close_recording_controls(app) {
+    eprintln!("Could not put the recording controls away for notes: {error}");
+  }
   let _ = told.send(());
   Ok(())
 }

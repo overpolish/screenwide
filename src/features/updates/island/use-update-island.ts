@@ -1,15 +1,9 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { isTauri } from "@tauri-apps/api/core";
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import { useTauriEvent } from "../../../lib/use-tauri-event";
-import {
-  presentUpdateIsland,
-  updateIslandShown,
-  withdrawUpdateIsland,
-} from "../api";
+import { presentUpdateIsland, withdrawUpdateIsland } from "../api";
 import { useUpdateBridge } from "../update-bridge";
 import { updateDebug } from "../update-debug";
 import {
@@ -41,11 +35,10 @@ const report = (action: string) => (cause: unknown) => {
  * the island comes out for it when nothing is recorded or exported and it is
  * out for nothing else, asking again until it is free. Nothing downloads
  * until Install; the Store package's Install opens the Microsoft Store and
- * puts the island away. `isUp` while the island offers it; whatever takes
- * the island or puts it away ends the offer.
+ * puts the island away. Whatever takes the island or puts it away ends the
+ * offer.
  */
 export function useUpdateIsland(): {
-  isUp: boolean;
   props: Omit<
     UpdateIslandProps,
     "isShown" | "notch" | "onHidden" | "onShapeChange"
@@ -54,7 +47,6 @@ export function useUpdateIsland(): {
   const [checkOnLaunch] = useState(startupUpdateCheckDue);
   const reminderTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const offeredVersionRef = useRef<string | null>(null);
-  const [isUp, setIsUp] = useState(false);
   const [isNotesOpen, setIsNotesOpen] = useState(false);
   // A version found while the island was busy, to offer once it is free.
   const [waiting, setWaiting] = useState<string | null>(null);
@@ -70,29 +62,11 @@ export function useUpdateIsland(): {
   const offerKey =
     updateVersion ?? (installsFromStore ? UNNAMED_STORE_UPDATE : null);
 
-  const present = useCallback(async () => {
-    const shown = await presentUpdateIsland();
-    if (shown) setIsUp(true);
-    return shown;
-  }, []);
+  const present = presentUpdateIsland;
 
   useUpdateBridge(update, () => {
     setIsNotesOpen(true);
     present().catch(report("show the update on the island"));
-  });
-
-  useEffect(() => {
-    if (!isTauri()) return;
-    void updateIslandShown().then((shown) => {
-      if (shown) setIsUp(true);
-    });
-  }, []);
-  useTauriEvent("updates://island", (payload) => {
-    setIsUp(payload as boolean);
-  });
-  // The island going away ends the offer; it tucks away showing it.
-  useTauriEvent("island://hide", () => {
-    setIsUp(false);
   });
 
   const scheduleUpdateCheck = useCallback(
@@ -168,7 +142,6 @@ export function useUpdateIsland(): {
   };
 
   return {
-    isUp,
     props: {
       currentVersion: update.currentVersion,
       downloadProgress: update.downloadProgress,

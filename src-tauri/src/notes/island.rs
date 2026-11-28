@@ -7,17 +7,15 @@
 //! dictation, the island shows what it is sent (`notes://island`); a
 //! dictation meanwhile shows over it and hands back.
 
-use std::sync::{Mutex, PoisonError};
 use std::time::Duration;
 
 use serde::{Deserialize, Serialize};
-use tauri::{AppHandle, Emitter};
+use tauri::AppHandle;
 use ts_rs::TS;
 
-use crate::app_windows::island_placement::IslandPlacement;
-use crate::app_windows::{self, WindowLabel};
+use crate::app_windows::island::{IslandClaim, IslandSlot};
 
-const EVENT: &str = "notes://island";
+static ISLAND: IslandSlot<NotesIslandState> = IslandSlot::new(IslandClaim::Notes, "notes://island");
 
 /// What the island shows of notes being taken.
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, TS)]
@@ -76,69 +74,27 @@ pub enum NotesIslandAction {
   Close,
 }
 
-static SHOWN: Mutex<Option<NotesIslandState>> = Mutex::new(None);
-
 /// How long a saved note or a problem stays on the island.
 const NOTICE_SHOWN: Duration = Duration::from_secs(5);
 
 pub(super) fn tell(app: &AppHandle, state: NotesIslandState) {
-  let mut shown = SHOWN.lock().unwrap_or_else(PoisonError::into_inner);
-  let first = shown.is_none();
-  if shown.as_ref() == Some(&state) {
-    return;
-  }
-  *shown = Some(state.clone());
-  drop(shown);
-  let _ = app.emit_to(WindowLabel::Island.as_str(), EVENT, Some(state));
-  if first {
-    if let Err(error) = app_windows::island::place(app, IslandPlacement::Top)
-      .and_then(|()| app_windows::island::show(app))
-    {
-      eprintln!("Could not show the island for notes: {error}");
-    }
-  }
+  ISLAND.tell(app, state);
 }
 
-/// Notes are done with the island: it goes, unless a recording, its
-/// controls or a dictation keep it.
+/// Notes are done with the island: it goes back to whatever else holds it,
+/// or tucks away.
 pub(super) fn withdraw(app: &AppHandle) {
-  if SHOWN
-    .lock()
-    .unwrap_or_else(PoisonError::into_inner)
-    .take()
-    .is_none()
-  {
-    return;
-  }
-  let keeps = !crate::recording::is_idle(app)
-    || app_windows::is_recording_ui_visible()
-    || crate::dictation::island::dictation_island_state().is_some();
-  let result = if keeps {
-    app_windows::island::hand_over(app, IslandPlacement::Top)
-  } else {
-    app_windows::island::hide(app)
-  };
-  if let Err(error) = result {
-    eprintln!("Could not put the island away after notes: {error}");
-  }
-  // Told after the island is asked to tuck away, so the page keeps the
-  // notes on it as it goes rather than showing the controls in their place.
-  let _ = app.emit_to(
-    WindowLabel::Island.as_str(),
-    EVENT,
-    None::<NotesIslandState>,
-  );
+  ISLAND.withdraw(app);
 }
 
 /// The notes' models have loaded: the island stops saying they are loading.
 pub(super) fn loaded(app: &AppHandle) {
-  let shown = SHOWN.lock().unwrap_or_else(PoisonError::into_inner).clone();
   if let Some(NotesIslandState::Taking {
     started_ms,
     loading: true,
-  }) = shown
+  }) = ISLAND.current()
   {
-    tell(
+    ISLAND.update(
       app,
       NotesIslandState::Taking {
         started_ms,
@@ -150,33 +106,12 @@ pub(super) fn loaded(app: &AppHandle) {
 
 /// Shows `state` for a moment, unless something else is shown first.
 pub(super) fn show_for_a_moment(app: &AppHandle, state: NotesIslandState) {
-  tell(app, state.clone());
-  let app = app.clone();
-  std::thread::spawn(move || {
-    std::thread::sleep(NOTICE_SHOWN);
-    if SHOWN
-      .lock()
-      .unwrap_or_else(PoisonError::into_inner)
-      .as_ref()
-      == Some(&state)
-    {
-      withdraw(&app);
-    }
-  });
-}
-
-/// Whether the island shows notes, which keeps it out when a dictation
-/// hands back.
-pub(crate) fn is_shown() -> bool {
-  SHOWN
-    .lock()
-    .unwrap_or_else(PoisonError::into_inner)
-    .is_some()
+  ISLAND.tell_for(app, state, NOTICE_SHOWN);
 }
 
 #[tauri::command]
 pub fn notes_island_state() -> Option<NotesIslandState> {
-  SHOWN.lock().unwrap_or_else(PoisonError::into_inner).clone()
+  ISLAND.current()
 }
 
 #[tauri::command]

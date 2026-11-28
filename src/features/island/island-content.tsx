@@ -1,8 +1,6 @@
 // SPDX-FileCopyrightText: 2026 overpolish
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import { useState } from "react";
-
 import { AnnotateIsland } from "../annotate/island/annotate-island";
 import { useAnnotateRows } from "../annotate/island/annotate-rows";
 import { useAnnotateDrawing } from "../annotate/island/use-annotate-drawing";
@@ -13,7 +11,6 @@ import { useNotesIsland } from "../notes/island/use-notes-island";
 import { RecordingIslandControls } from "../recording-controls/island/recording-island-controls";
 import { selectStatus, useRecordingStore } from "../recording-controls/store";
 import { ReferenceDropIsland } from "../reference/drop/reference-drop-island";
-import { useReferenceDropIsland } from "../reference/drop/use-reference-drop-island";
 import { RulerIsland } from "../ruler/island/ruler-island";
 import { useRulerIsland } from "../ruler/island/use-ruler-island";
 import { QuickScreenshotIsland } from "../screenshots/island/quick-screenshot-island";
@@ -26,28 +23,20 @@ import { useTextRecognitionIsland } from "../text-recognition/island/use-text-re
 import { UpdateIsland } from "../updates/island/update-island";
 import { useUpdateIsland } from "../updates/island/use-update-island";
 
+import { ISLAND_KINDS } from "./island-kinds";
 import { SystemKeysNote } from "./system-keys-note";
+import { useIslandClaim } from "./use-island-claim";
 import { useIslandSwap } from "./use-island-swap";
 import { useSystemKeysAnnouncement } from "./use-system-keys-announcement";
 
 import type { IslandHost } from "./island-window";
 
-/** What the island shows: a scrolling capture while one runs, as it takes
- * the screen over; a dictation while one listens or types, as it is up for
- * a moment over whatever else is; the hint while a picture is dragged with
- * Option held, as letting go keeps it as a reference; Quick Screenshot's
- * while its overlay waits for an area, over the Ruler, which steps back for
- * it; a screenshot just copied, for a few seconds, before the tool it was
- * taken over comes back; Text Recognition's or the Ruler's tools while
- * either is up, even during a recording, as neither can be used without
- * them; notes while they are taken, saved or fail, as the call goes on under
- * the other tools, on the recording's island, which reshapes into them from
- * the controls as it does into a recording; the annotate tools on their own
- * island while the overlay
- * draws with no recording under way; a new version while one is offered,
- * which comes out only while the island is free; and otherwise the
- * recording's, with the annotate tools under its row while the overlay
- * draws. */
+/** What the island shows: the island of the claim on top of it, in the
+ * order `claims.rs` keeps (`ISLAND_KINDS`), and once nothing holds it, the
+ * last one, as it tucks away. Notes and the recording controls show on the
+ * recording's island, which reshapes into them as it does into a
+ * recording, with the annotate tools under its row while the overlay
+ * draws; a shot just copied shows on Quick Screenshot's. */
 export function IslandContent({ island }: { island: IslandHost }) {
   const isDrawing = useAnnotateDrawing();
   const editing = useAnnotateEditing();
@@ -55,7 +44,6 @@ export function IslandContent({ island }: { island: IslandHost }) {
   const scrolling = useScrollingCaptureIsland();
   const quickScreenshot = useQuickScreenshotIsland();
   const copiedScreenshot = useCopiedScreenshotIsland();
-  const referenceDrop = useReferenceDropIsland();
   const textRecognition = useTextRecognitionIsland();
   const dictation = useDictationIsland();
   const notes = useNotesIsland();
@@ -63,58 +51,18 @@ export function IslandContent({ island }: { island: IslandHost }) {
   const status = useRecordingStore(selectStatus);
   const annotate = isDrawing ? editing : null;
   const rows = useAnnotateRows(annotate);
-  // A shot copied takes the place of the session it ended, on the same
-  // island, which tucks away showing whichever it last showed.
-  const screenshotPart = copiedScreenshot.isUp
-    ? "copied"
-    : quickScreenshot.isUp
-      ? "drawing"
-      : null;
-  const [lastScreenshotPart, setLastScreenshotPart] = useState<
-    "copied" | "drawing"
-  >("drawing");
-  if (screenshotPart && screenshotPart !== lastScreenshotPart)
-    setLastScreenshotPart(screenshotPart);
-  const showsCopied = (screenshotPart ?? lastScreenshotPart) === "copied";
-  // Notes that end leave on the island as it tucks away, rather than the
-  // controls taking their place on the way out. Out again without them, or
-  // with a recording under way, the island shows what it holds instead.
-  const [hasNotes, setHasNotes] = useState(false);
-  if (notes.isUp && !hasNotes) setHasNotes(true);
-  if (!notes.isUp && hasNotes && (island.isShown || status !== "idle"))
-    setHasNotes(false);
+  const top = useIslandClaim();
+  const { claim } = top;
+  const showsCopied = claim === "copiedScreenshot";
   const shownNotes =
-    hasNotes && notes.state
+    claim === "notes" && notes.state
       ? {
           microphone: notes.microphone,
           onAction: notes.onAction,
           state: notes.state,
         }
       : null;
-  const swap = useIslandSwap(
-    scrolling.isUp
-      ? "scrollingCapture"
-      : dictation.isUp
-        ? "dictation"
-        : referenceDrop.isUp
-          ? "referenceDrop"
-          : screenshotPart
-            ? "quickScreenshot"
-            : textRecognition.isUp
-              ? "textRecognition"
-              : ruler.isUp
-                ? "ruler"
-                : shownNotes
-                  ? "recording"
-                  : status !== "idle"
-                    ? "recording"
-                    : annotate
-                      ? "annotate"
-                      : update.isUp
-                        ? "update"
-                        : "recording",
-    island,
-  );
+  const swap = useIslandSwap(claim ? ISLAND_KINDS[claim] : "recording", island);
   // The first time one of the system's keys opens a tool, the island it
   // opens says so: Quick Screenshot's, Text Recognition's or the recording
   // controls before a recording.
@@ -135,23 +83,32 @@ export function IslandContent({ island }: { island: IslandHost }) {
         layout={swap.kind === "quickScreenshot" ? "section" : "line"}
       />
     ) : undefined;
-  const host = {
+  // Every island tucking away lets the last claim go once nothing holds the
+  // island, so it rests on the recording's.
+  const base = {
     ...swap.host,
     onHidden: () => {
       swap.host.onHidden();
+      top.onHidden();
+    },
+  };
+  const host = {
+    ...base,
+    onHidden: () => {
+      base.onHidden();
       announcement.onHidden();
     },
   };
 
   if (swap.kind === "update") {
-    return <UpdateIsland {...swap.host} {...update.props} />;
+    return <UpdateIsland {...base} {...update.props} />;
   }
   // An island keeps its tools while it tucks away after its tool stops, so
   // it leaves as it was rather than emptied.
   if (swap.kind === "scrollingCapture" && scrolling.state) {
     return (
       <ScrollingCaptureIsland
-        {...swap.host}
+        {...base}
         onCancel={scrolling.onCancel}
         state={scrolling.state}
       />
@@ -160,7 +117,7 @@ export function IslandContent({ island }: { island: IslandHost }) {
   if (swap.kind === "dictation" && dictation.state) {
     return (
       <DictationIsland
-        {...swap.host}
+        {...base}
         level={dictation.level}
         onAction={dictation.onAction}
         state={dictation.state}
@@ -168,7 +125,7 @@ export function IslandContent({ island }: { island: IslandHost }) {
     );
   }
   if (swap.kind === "referenceDrop") {
-    return <ReferenceDropIsland {...swap.host} />;
+    return <ReferenceDropIsland {...base} />;
   }
   if (
     swap.kind === "quickScreenshot" &&
@@ -202,16 +159,16 @@ export function IslandContent({ island }: { island: IslandHost }) {
     );
   }
   if (swap.kind === "ruler" && ruler.parts) {
-    return <RulerIsland {...ruler.parts} {...swap.host} />;
+    return <RulerIsland {...ruler.parts} {...base} />;
   }
   if (swap.kind === "annotate" && editing) {
     return (
       <AnnotateIsland
         {...editing}
-        isShown={swap.host.isShown}
-        notch={swap.host.notch}
-        onHidden={swap.host.onHidden}
-        onShapeChange={swap.host.onShapeChange}
+        isShown={base.isShown}
+        notch={base.notch}
+        onHidden={base.onHidden}
+        onShapeChange={base.onShapeChange}
       />
     );
   }

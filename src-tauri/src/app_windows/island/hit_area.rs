@@ -4,12 +4,14 @@
 //! Where the island's parts are in its window, as the island reports them,
 //! so clicks on them reach it and clicks anywhere else pass through.
 
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Mutex, PoisonError};
 
 use serde::Deserialize;
-use tauri::AppHandle;
+use tauri::{AppHandle, Emitter};
 
 use super::native;
+use crate::app_windows::WindowLabel;
 
 /// How far round the island the pointer still counts as on it, in points.
 /// The pointer leaving the island is then seen by the island itself, inside
@@ -44,6 +46,27 @@ pub(in crate::app_windows) fn is_on_island(rects: &[IslandRect], x: f64, y: f64)
       && y >= rect.y - MARGIN
       && y <= rect.y + rect.height + MARGIN
   })
+}
+
+/// The pointer was on the island at the last look.
+static POINTER_ON: AtomicBool = AtomicBool::new(false);
+
+/// Tells the island the pointer came onto it or left it
+/// (`island://pointer`), as the window's own look at the pointer finds it.
+/// The page does not rely on its pointer events alone to see the pointer
+/// leave: the window lets the pointer through once it is off the island's
+/// parts, and the page is then told nothing more of it, so a leaving it
+/// missed would hold open whatever hovering opened.
+#[cfg_attr(not(any(target_os = "macos", target_os = "windows")), allow(dead_code))]
+pub(in crate::app_windows) fn tell_pointer(app: &AppHandle, on: bool) {
+  if POINTER_ON.swap(on, Ordering::Relaxed) != on {
+    let _ = app.emit_to(WindowLabel::Island.as_str(), "island://pointer", on);
+  }
+}
+
+/// Whether the pointer was on the island at the last look.
+pub(super) fn pointer_on() -> bool {
+  POINTER_ON.load(Ordering::Relaxed)
 }
 
 /// Where the island's parts are, so clicks on them reach it and clicks

@@ -8,7 +8,7 @@
 
 use tauri::ipc::Invoke;
 
-const COMMANDS: [&str; 31] = [
+const COMMANDS: [&str; 32] = [
   "window_ready",
   "show_inactive_cursor",
   "close_color_panel",
@@ -20,6 +20,7 @@ const COMMANDS: [&str; 31] = [
   "display_notches",
   "finish_hiding_island",
   "island_presence",
+  "island_claims",
   "island_ready_to_move",
   "set_island_hit_area",
   "recording_ui_visible",
@@ -70,6 +71,7 @@ fn window_commands() -> impl Fn(Invoke) -> bool + Send + Sync + 'static {
     display_notch::display_notches,
     finish_hiding_island,
     island_presence,
+    island::island_claims,
     island_ready_to_move,
     set_island_hit_area,
     recording_ui_visible,

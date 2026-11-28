@@ -24,7 +24,7 @@ use ts_rs::TS;
 use screenwide_annotations::Annotation;
 
 use super::CapturedImage;
-use crate::app_windows::island_placement::IslandPlacement;
+use crate::app_windows::island::{self, IslandClaim};
 use crate::app_windows::{self, WindowLabel};
 
 const EVENT: &str = "copied-screenshot://island";
@@ -140,32 +140,23 @@ pub(crate) fn show(app: &AppHandle, shot: Shot) {
     }
     COMING.store(false, Ordering::Release);
     tell(&app, Some(preview));
+    island::claim(&app, IslandClaim::CopiedScreenshot);
     super::quick_island::give_way(&app);
     crate::app_windows::sync_recording_ui_escape(&app, crate::ruler::is_active(&app));
-    let shown = app_windows::island::place(&app, IslandPlacement::Top)
-      .and_then(|()| app_windows::island::show(&app));
-    if let Err(error) = shown {
-      eprintln!("Could not show the island for the copied screenshot: {error}");
-    }
   });
 }
 
-/// The island gives the copied shot up: it tucks away, unless Quick
-/// Screenshot has it now or something else on the island keeps it
-/// (`quick_island::keeps_island`), which takes it back where it shows.
+/// The island gives the copied shot up, unless another is coming, and goes
+/// back to whatever else holds it. A Quick Screenshot session that takes its
+/// place keeps its still out of the recording.
 fn step_back(app: &AppHandle) {
-  if super::quick_island::is_up() || is_up() {
+  if is_up() {
     return;
   }
-  let result = if super::quick_island::keeps_island(app) {
-    app_windows::island::hand_over(app, IslandPlacement::Top)
-  } else {
-    app_windows::island::hide(app)
-  };
-  if let Err(error) = result {
-    eprintln!("Could not put the island away after the copied screenshot: {error}");
+  island::release(app, IslandClaim::CopiedScreenshot);
+  if !super::quick_island::is_up() {
+    app_windows::island_overlay::keep_still_out_of_recording(app, false);
   }
-  app_windows::island_overlay::keep_still_out_of_recording(app, false);
 }
 
 /// Lets the shot held as `id` go, if it is still the one held, and the

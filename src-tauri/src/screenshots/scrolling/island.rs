@@ -9,16 +9,12 @@
 //! The island shows the capture rather than keeping its own state: each
 //! change is sent (`scrolling-capture://island`), and only a change.
 
-use std::sync::{Mutex, PoisonError};
-
 use serde::Serialize;
-use tauri::{AppHandle, Emitter};
+use tauri::AppHandle;
 use ts_rs::TS;
 
-use crate::app_windows::island_placement::IslandPlacement;
-use crate::app_windows::{self, island_overlay, WindowLabel};
-
-const EVENT: &str = "scrolling-capture://island";
+use crate::app_windows::island::{IslandClaim, IslandSlot};
+use crate::app_windows::island_overlay;
 
 /// What the capture is doing. Parking the pointer, settling, and seeking back
 /// to the top all read as one undifferentiated wait to someone watching their
@@ -47,47 +43,27 @@ pub struct ScrollingCaptureIslandState {
 }
 
 /// What the island was last told; none while no capture is on it.
-static SHOWN: Mutex<Option<ScrollingCaptureIslandState>> = Mutex::new(None);
-
-fn shown() -> std::sync::MutexGuard<'static, Option<ScrollingCaptureIslandState>> {
-  SHOWN.lock().unwrap_or_else(PoisonError::into_inner)
-}
-
-fn tell(app: &AppHandle, state: Option<ScrollingCaptureIslandState>) {
-  let mut shown = shown();
-  if *shown == state {
-    return;
-  }
-  *shown = state;
-  drop(shown);
-  // Advisory: a capture must never fail because the island did not hear.
-  let _ = app.emit_to(WindowLabel::Island.as_str(), EVENT, state);
-}
+static ISLAND: IslandSlot<ScrollingCaptureIslandState> =
+  IslandSlot::new(IslandClaim::ScrollingCapture, "scrolling-capture://island");
 
 /// The capture is starting: the island comes out at the top of the screen
 /// and is kept out of captures. Kept out after it is shown, as showing a
 /// window on Windows puts back the persistent capture preference.
 pub(super) async fn present(app: &AppHandle, escape_claimed: bool) {
-  tell(
+  ISLAND.tell(
     app,
-    Some(ScrollingCaptureIslandState {
+    ScrollingCaptureIslandState {
       phase: ScrollingCapturePhase::Working,
       escape_claimed,
-    }),
+    },
   );
-  let shown = app_windows::island::place(app, IslandPlacement::Top)
-    .and_then(|()| app_windows::island::show(app));
-  if let Err(error) = shown {
-    eprintln!("Could not show the island for a scrolling capture: {error}");
-  }
   island_overlay::keep_out_of_captures(app, true).await;
 }
 
 /// The capture moved on to `phase`.
 pub(super) fn phase(app: &AppHandle, phase: ScrollingCapturePhase) {
-  let current = *shown();
-  if let Some(state) = current {
-    tell(app, Some(ScrollingCaptureIslandState { phase, ..state }));
+  if let Some(state) = ISLAND.current() {
+    ISLAND.update(app, ScrollingCaptureIslandState { phase, ..state });
   }
 }
 
@@ -97,25 +73,17 @@ pub(super) fn phase(app: &AppHandle, phase: ScrollingCapturePhase) {
 /// unalignable seam is stitched best-effort rather than failed, and what
 /// remains is reported by the command rejecting.
 pub(super) async fn withdraw(app: &AppHandle) {
-  if shown().is_none() {
+  if !ISLAND.is_up() {
     return;
   }
   phase(app, ScrollingCapturePhase::Finishing);
-  tell(app, None);
-  let result = if crate::recording::is_idle(app) {
-    app_windows::island::hide(app)
-  } else {
-    app_windows::island::hand_over(app, IslandPlacement::Top)
-  };
-  if let Err(error) = result {
-    eprintln!("Could not put the island away after a scrolling capture: {error}");
-  }
+  ISLAND.withdraw(app);
   island_overlay::keep_out_of_captures(app, false).await;
 }
 
 #[tauri::command]
 pub fn scrolling_capture_island_state() -> Option<ScrollingCaptureIslandState> {
-  *shown()
+  ISLAND.current()
 }
 
 /// Cancel pressed on the island: the capture stops at its next step, as it

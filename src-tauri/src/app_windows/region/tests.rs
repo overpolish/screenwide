@@ -2,10 +2,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use super::{
-  recording_controls_may_raise, recording_controls_may_restore, recording_ui_may_hide,
-  region_scene_owner, region_selector_capture_affinity, region_selector_is_interactive,
-  region_selector_may_show, region_selector_restores_opacity, screenshot_region_may_restore,
-  RegionSelectorCaptureAffinity,
+  recording_controls_may_raise, recording_ui_may_hide, region_scene_owner,
+  region_selector_capture_affinity, region_selector_is_interactive, region_selector_may_show,
+  region_selector_restores_opacity, screenshot_region_may_restore, RegionSelectorCaptureAffinity,
 };
 use screenwide_osc::scene::RegionSceneOwner;
 
@@ -19,13 +18,6 @@ fn a_region_gesture_does_not_raise_the_recording_controls() {
 #[test]
 fn borrowed_recording_controls_cannot_be_raised() {
   assert!(!recording_controls_may_raise(true, false, true));
-}
-
-#[test]
-fn borrowed_recording_controls_restore_only_to_the_idle_visible_ui() {
-  assert!(recording_controls_may_restore(true, true));
-  assert!(!recording_controls_may_restore(false, true));
-  assert!(!recording_controls_may_restore(true, false));
 }
 
 #[test]

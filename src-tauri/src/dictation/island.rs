@@ -11,7 +11,6 @@
 //! of state (`dictation://island`), and the microphone's level on its own
 //! (`dictation://level`), as that changes many times a second.
 
-use std::sync::{Mutex, PoisonError};
 use std::time::Duration;
 
 use serde::{Deserialize, Serialize};
@@ -19,11 +18,14 @@ use tauri::{AppHandle, Emitter};
 use ts_rs::TS;
 
 use super::taught::DictationWordChange;
-use crate::app_windows::island_placement::IslandPlacement;
-use crate::app_windows::{self, WindowLabel};
+use crate::app_windows::island::{IslandClaim, IslandSlot};
+use crate::app_windows::WindowLabel;
 
-const EVENT: &str = "dictation://island";
 const LEVEL_EVENT: &str = "dictation://level";
+
+/// What the island was last told; none while dictation is not on it.
+static ISLAND: IslandSlot<DictationIslandState> =
+  IslandSlot::new(IslandClaim::Dictation, "dictation://island");
 
 /// What the island shows of a dictation.
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, TS)]
@@ -98,67 +100,18 @@ pub enum DictationIslandAction {
   Close,
 }
 
-/// What the island was last told; none while dictation is not on it.
-static SHOWN: Mutex<Option<DictationIslandState>> = Mutex::new(None);
-
 pub(super) fn tell(app: &AppHandle, state: DictationIslandState) {
-  let mut shown = SHOWN.lock().unwrap_or_else(PoisonError::into_inner);
-  let first = shown.is_none();
-  if shown.as_ref() == Some(&state) {
-    return;
-  }
-  *shown = Some(state.clone());
-  drop(shown);
-  let _ = app.emit_to(WindowLabel::Island.as_str(), EVENT, Some(state));
-  if first {
-    if let Err(error) = app_windows::island::place(app, IslandPlacement::Top)
-      .and_then(|()| app_windows::island::show(app))
-    {
-      eprintln!("Could not show the island for dictation: {error}");
-    }
-  }
+  ISLAND.tell(app, state);
 }
 
 pub(super) fn level(app: &AppHandle, decibels: f32) {
   let _ = app.emit_to(WindowLabel::Island.as_str(), LEVEL_EVENT, decibels);
 }
 
-/// Dictation is done with the island: it goes, unless the recording or its
-/// controls keep it, and then hands over to them.
+/// Dictation is done with the island: it goes back to whatever else holds
+/// it, or tucks away.
 pub(super) fn withdraw(app: &AppHandle) {
-  if SHOWN
-    .lock()
-    .unwrap_or_else(PoisonError::into_inner)
-    .take()
-    .is_none()
-  {
-    return;
-  }
-  let _ = app.emit_to(
-    WindowLabel::Island.as_str(),
-    EVENT,
-    None::<DictationIslandState>,
-  );
-  let keeps = !crate::recording::is_idle(app)
-    || app_windows::is_recording_ui_visible()
-    || crate::notes::island::is_shown();
-  let result = if !keeps {
-    app_windows::island::hide(app)
-  } else {
-    app_windows::island::hand_over(app, IslandPlacement::Top)
-  };
-  if let Err(error) = result {
-    eprintln!("Could not put the island away after dictation: {error}");
-  }
-}
-
-/// Whether the island shows `state` still.
-fn shows(state: &DictationIslandState) -> bool {
-  SHOWN
-    .lock()
-    .unwrap_or_else(PoisonError::into_inner)
-    .as_ref()
-    == Some(state)
+  ISLAND.withdraw(app);
 }
 
 /// How long a problem stays on the island unless it is put away first.
@@ -167,7 +120,7 @@ const PROBLEM_SHOWN: Duration = Duration::from_secs(5);
 const TAUGHT_SHOWN: Duration = Duration::from_secs(3);
 
 pub(super) fn show_problem(app: &AppHandle, problem: DictationProblem) {
-  show_for(
+  ISLAND.tell_for(
     app,
     DictationIslandState::Problem { problem },
     PROBLEM_SHOWN,
@@ -175,24 +128,12 @@ pub(super) fn show_problem(app: &AppHandle, problem: DictationProblem) {
 }
 
 pub(super) fn show_taught(app: &AppHandle, taught: Vec<DictationWordChange>) {
-  show_for(app, DictationIslandState::Taught { taught }, TAUGHT_SHOWN);
-}
-
-/// Shows `state` for `shown`, unless something else is shown first.
-fn show_for(app: &AppHandle, state: DictationIslandState, shown: Duration) {
-  tell(app, state.clone());
-  let app = app.clone();
-  std::thread::spawn(move || {
-    std::thread::sleep(shown);
-    if shows(&state) {
-      withdraw(&app);
-    }
-  });
+  ISLAND.tell_for(app, DictationIslandState::Taught { taught }, TAUGHT_SHOWN);
 }
 
 #[tauri::command]
 pub fn dictation_island_state() -> Option<DictationIslandState> {
-  SHOWN.lock().unwrap_or_else(PoisonError::into_inner).clone()
+  ISLAND.current()
 }
 
 #[tauri::command]
@@ -201,13 +142,9 @@ pub fn dictation_island_action(app: AppHandle, action: DictationIslandAction) {
     DictationIslandAction::Stop => super::finish(&app),
     DictationIslandAction::Cancel => super::cancel(&app),
     DictationIslandAction::OpenSettings => {
-      let fixed_in_settings = SHOWN
-        .lock()
-        .unwrap_or_else(PoisonError::into_inner)
-        .as_ref()
-        .is_some_and(|state| {
-          matches!(state, DictationIslandState::Problem { problem } if problem.settings_fix())
-        });
+      let fixed_in_settings = ISLAND.current().is_some_and(|state| {
+        matches!(state, DictationIslandState::Problem { problem } if problem.settings_fix())
+      });
       withdraw(&app);
       if fixed_in_settings {
         crate::settings::show_section(&app, "transcription");

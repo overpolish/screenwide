@@ -12,13 +12,12 @@ import type { DictationIslandAction } from "../../../bindings/DictationIslandAct
 import type { DictationIslandState } from "../../../bindings/DictationIslandState";
 
 /**
- * Dictation as the island shows it: `isUp` while it is on the island, and
- * `state` as last sent, kept after it goes so the island tucks away as it
- * was rather than emptied; `null` until it has first been up. `level` is the
+ * Dictation as the island shows it: `state` as last sent, kept after it
+ * goes so the island tucks away as it was rather than emptied; `null` until
+ * it has first been up. `level` is the
  * microphone's, 0 to 1.
  */
 export function useDictationIsland(): {
-  isUp: boolean;
   level: number;
   onAction: (action: DictationIslandAction) => void;
   state: DictationIslandState | null;
@@ -50,7 +49,6 @@ export function useDictationIsland(): {
   });
 
   return {
-    isUp: state !== null,
     level: state?.phase === "listening" ? level : 0,
     onAction: (action) => {
       runDictationIslandAction(action).catch((cause: unknown) => {
